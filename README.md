@@ -1,2 +1,11 @@
-# git.nvim
-One git plugin to rule them all
+# Git for Neovim (In Development)
+
+Git plugin for neovim.
+
+### Fetures
+
+- [x] Hunk signs
+- [ ] Colored hunk signs
+- [ ] Hunk preview
+- [ ] Undo a hunk
+- [ ] Show file diff
