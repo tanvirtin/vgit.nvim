@@ -2,23 +2,40 @@ local sign = {
     group = 'git',
     types = {
         add = {
-            name = 'gitadd',
-            text = '+'
+            name = 'GitAdd',
+            color = '#d7ffaf',
+            text = ' '
         },
         remove = {
-            name = 'gitremove',
-            text = '-'
+            name = 'GitRemove',
+            color = '#e95678',
+            text = ' '
         },
         change = {
-            name = 'gitchange',
-            text = '~'
+            name = 'GitChange',
+            color = '#7AA6DA',
+            text = ' '
         },
     },
-    priority = 7
+    priority = 10
 }
 
-sign.initialize = function()
-    for _, type in pairs(sign.types) do
+local function assign_config(config)
+    if config and config.colors and config.colors.add then
+        sign.types.add.color = config.colors.add
+    end
+    if config and config.colors and config.colors.remove then
+        sign.types.remove.color = config.colors.remove
+    end
+    if config and config.colors and config.colors.change then
+        sign.types.change.color = config.colors.change
+    end
+end
+
+sign.initialize = function(config)
+    assign_config(config)
+    for key, type in pairs(sign.types) do
+        vim.cmd('hi ' .. sign.types[key].name .. ' guibg=' .. sign.types[key].color)
         vim.fn.sign_define(type.name, {
             text = type.text,
             texthl = type.name
