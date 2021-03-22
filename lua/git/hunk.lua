@@ -1,7 +1,7 @@
 local Hunk = {}
 Hunk.__index = Hunk
 
-local parse_diff_header = function(line)
+local function parse_diff_header(line)
     local diffkey = vim.trim(vim.split(line, '@@', true)[2])
     return unpack(vim.tbl_map(function(s)
         return vim.split(string.sub(s, 2), ',')
@@ -18,8 +18,9 @@ function Hunk:new(filepath, header)
     local this = {
         filepath = filepath,
         header = header,
+        -- Hunk start and finish should always be relative to the current state.
         start = new_state_start,
-        finish = nil,
+        finish = new_state_start + new_state_count - 1,
         type = nil,
         original_state = {
             start = original_state_start,
@@ -33,14 +34,21 @@ function Hunk:new(filepath, header)
     }
 
     if new_state_count == 0 then
+        -- If it's a straight remove with no change, then highlight only one sign column.
         this.finish = new_state_start
         this.type = "remove"
     elseif original_state_count == 0 then
-        this.finish = new_state_start + new_state_count - 1
         this.type = "add"
     else
-        this.finish = new_state_start + math.min(new_state_count, original_state_count) - 1
         this.type = "change"
+    end
+
+    if this.start < 1 then
+        this.start = 1
+    end
+
+    if this.finish < 1 then
+        this.finish = 1
     end
 
     setmetatable(this, Hunk)

@@ -3,8 +3,7 @@ local Hunk = require('git.hunk')
 
 local git = {}
 
-git.diff = function(buf, callback)
-    local filepath = vim.api.nvim_buf_get_name(buf)
+git.diff = function(filepath, callback)
     local errResult = ''
     local hunks = {}
     local diff_algo = 'myers'
