@@ -27,16 +27,48 @@ return {
 
     preview_hunk = flow_control.async(function()
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
-        lnum = tonumber(lnum)
         for _, hunk in ipairs(memory.current_buf_hunks) do
             if lnum >= hunk.start and lnum <= hunk.finish then
-                window.popup(hunk.diff, {
-                    relative = 'cursor'
-                })
+                window.popup(hunk.diff, { relative = 'cursor' })
                 break
             end
         end
     end)(),
+
+    next_hunk = vim.schedule_wrap(function()
+        if #memory.current_buf_hunks < 1 then
+            return
+        end
+        local new_lnum = nil
+        local lnum = vim.api.nvim_win_get_cursor(0)[1]
+        for _, hunk in ipairs(memory.current_buf_hunks) do
+            if hunk.start > lnum then
+                new_lnum = hunk.start
+                break
+            end
+        end
+        if new_lnum then
+            vim.api.nvim_win_set_cursor(0, { new_lnum, 0 })
+        end
+    end),
+
+    previous_hunk = vim.schedule_wrap(function()
+        if #memory.current_buf_hunks < 1 then
+            return
+        end
+        local new_lnum = nil
+        local lnum = vim.api.nvim_win_get_cursor(0)[1]
+        for i = #memory.current_buf_hunks, 1, -1 do
+            local hunk = memory.current_buf_hunks[i]
+            if hunk.start < lnum then
+                new_lnum = hunk.start
+                break
+            end
+        end
+        if new_lnum then
+            vim.api.nvim_win_set_cursor(0, { new_lnum, 0 })
+        end
+    end),
 
     detach = function()
         memory = nil
