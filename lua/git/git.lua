@@ -44,7 +44,7 @@ git.diff = function(filepath, callback)
             callback(nil, hunks)
         end,
     })
-    job:start()
+    job:sync()
 end
 
 return git
