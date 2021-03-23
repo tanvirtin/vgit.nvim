@@ -30,6 +30,15 @@ local function assign_config(config)
     if config and config.colors and config.colors.change then
         sign.types.change.color = config.colors.change
     end
+    if config and config.signs and config.signs.add then
+        sign.types.add.name = config.signs.add
+    end
+    if config and config.signs and config.signs.remove then
+        sign.types.remove.name = config.signs.remove
+    end
+    if config and config.signs and config.signs.change then
+        sign.types.change.name = config.signs.change
+    end
 end
 
 sign.initialize = function(config)
