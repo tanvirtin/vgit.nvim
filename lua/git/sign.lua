@@ -1,18 +1,20 @@
-local sign = {
+local M = {}
+
+local state = {
     group = 'git',
     types = {
         add = {
-            name = 'GitAdd',
+            hl = 'GitAdd',
             color = '#d7ffaf',
             text = ' '
         },
         remove = {
-            name = 'GitRemove',
+            hl = 'GitRemove',
             color = '#e95678',
             text = ' '
         },
         change = {
-            name = 'GitChange',
+            hl = 'GitChange',
             color = '#7AA6DA',
             text = ' '
         },
@@ -20,53 +22,40 @@ local sign = {
     priority = 10
 }
 
-local function assign_config(config)
-    if config and config.colors and config.colors.add then
-        sign.types.add.color = config.colors.add
-    end
-    if config and config.colors and config.colors.remove then
-        sign.types.remove.color = config.colors.remove
-    end
-    if config and config.colors and config.colors.change then
-        sign.types.change.color = config.colors.change
-    end
-    if config and config.signs and config.signs.add then
-        sign.types.add.name = config.signs.add
-    end
-    if config and config.signs and config.signs.remove then
-        sign.types.remove.name = config.signs.remove
-    end
-    if config and config.signs and config.signs.change then
-        sign.types.change.name = config.signs.change
-    end
-end
-
-sign.initialize = function(config)
-    assign_config(config)
-    for key, type in pairs(sign.types) do
-        vim.cmd('hi ' .. sign.types[key].name .. ' guibg=' .. sign.types[key].color)
-        vim.fn.sign_define(type.name, {
+M.initialize = function()
+    for key, type in pairs(state.types) do
+        vim.cmd('hi ' .. state.types[key].hl .. ' guibg=' .. state.types[key].color)
+        vim.fn.sign_define(type.hl, {
             text = type.text,
-            texthl = type.name
+            texthl = type.hl
         })
     end
 end
 
-sign.clear_all = function()
+M.clear_all = function(callback)
     vim.schedule(function()
-        vim.fn.sign_unplace(sign.group)
+        vim.fn.sign_unplace(state.group)
+        if type(callback) == 'function' then
+            callback()
+        end
     end)
 end
 
-sign.place = function(hunk)
+M.tear_down = function()
+    M.clear_all(function()
+        state = nil
+    end)
+end
+
+M.place = function(hunk)
     for lnum = hunk.start, hunk.finish do
         vim.schedule(function()
-           vim.fn.sign_place(lnum, sign.group, sign.types[hunk.type].name, hunk.filepath, {
+           vim.fn.sign_place(lnum, state.group, state.types[hunk.type].hl, hunk.filepath, {
                lnum = lnum,
-               priority = sign.priority,
+               priority = state.priority,
            })
         end)
     end
 end
 
-return sign
+return M

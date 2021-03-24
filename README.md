@@ -1,5 +1,22 @@
 # Git for Neovim (In Development)
 
+<details>
+  <summary>Checkout plugin preview</summary>
+    <img width="1792" alt="Screen Shot 2021-03-21 at 9 16 08 PM" src="https://user-images.githubusercontent.com/25164326/111928772-efe7d500-8a8a-11eb-854f-b0f4b620d893.png">
+    <img width="1792" alt="Screen Shot 2021-03-22 at 1 24 18 AM" src="https://user-images.githubusercontent.com/25164326/111944347-cd1ae800-8aad-11eb-9792-f23117ffe912.png">
+</details>
+
+### Provided Features
+- [x] Hunk signs
+- [x] Undo a hunk
+- [x] Hunk preview
+- [x] Hunk navigation
+- [x] Colored hunk signs
+- [ ] Coloured hunk preview
+- [ ] Robust configuration ability
+- [ ] Show git file changes in a preview window
+- [ ] Telescope plugin to show all files with git changes
+
 ### Installation via Plug
 ```
 Plug 'tanvirtin/git.nvim'
@@ -19,24 +36,13 @@ use {
 ```
 require('git').setup()
 ```
-<img width="1792" alt="Screen Shot 2021-03-21 at 9 16 08 PM" src="https://user-images.githubusercontent.com/25164326/111928772-efe7d500-8a8a-11eb-854f-b0f4b620d893.png">
 
 ### Custom Configuration
 ```
 require('git').setup({
-    colors =  {
-        add = '#32a85b', -- #d7ffaf
-        remove = '#a83232', -- #e95678
-        change = '#a232a8', -- #7AA6DA
-    },
-    signs = {
-        add = 'CustomGitAdd', -- GitAdd
-        remove = 'CustomGitRemove', -- GitRemove
-        change = 'CustomGitChange', -- GitChange
-    }
+    -- TODO
 })
 ```
-<img width="1792" alt="Screen Shot 2021-03-21 at 9 14 08 PM" src="https://user-images.githubusercontent.com/25164326/111928766-ed857b00-8a8a-11eb-9218-6dbc15fbe04e.png">
 
 ### Configure Mappings
 ```
@@ -45,7 +51,6 @@ vim.api.nvim_set_keymap("n", '<leader>gr', ':lua require("git").hunk_reset()<CR>
 vim.api.nvim_set_keymap("n", '<space>]', ':lua require("git").hunk_up()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", '<space>[', ':lua require("git").hunk_down()<CR>', { noremap = true, silent = true })
 ```
-<img width="1792" alt="Screen Shot 2021-03-22 at 1 24 18 AM" src="https://user-images.githubusercontent.com/25164326/111944347-cd1ae800-8aad-11eb-9792-f23117ffe912.png">
 
 ### API
 | Function Name | Description |
@@ -66,13 +71,3 @@ vim.api.nvim_set_keymap("n", '<space>[', ':lua require("git").hunk_down()<CR>', 
 | signs.add | Unique name of the add sign, also dictates highlight group | GitAdd |
 | signs.remove | Unique name of the remove sign, also dictates highlight group | GitRemove |
 | signs.change | Unique name of the change sign, also dictates highlight group | GitChange |
-
-### Fetures
-
-- [x] Hunk signs
-- [x] Colored hunk signs
-- [x] Hunk preview
-- [ ] Coloured hunk preview
-- [x] Hunk navigation
-- [x] Undo a hunk
-- [ ] Show file diff

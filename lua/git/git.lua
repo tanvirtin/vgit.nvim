@@ -1,12 +1,23 @@
 local Job = require('plenary.job')
 local Hunk = require('git.hunk')
 
-local git = {}
+local M = {}
 
-git.diff = function(filepath, callback)
+local state = {
+    diff_algorithm = 'myers'
+}
+
+-- TODO Configure state here.
+M.initialize = function()
+end
+
+M.tear_down = function()
+    state = nil
+end
+
+M.diff = function(filepath, callback)
     local errResult = ''
     local hunks = {}
-    local diff_algo = 'myers'
 
     job = Job:new({
         command = 'git',
@@ -15,7 +26,7 @@ git.diff = function(filepath, callback)
             '-c', 'core.safecrlf=false',
             'diff',
             '--color=never',
-            '--diff-algorithm=' .. diff_algo,
+            '--diff-algorithm=' .. state.diff_algorithm,
             '--patch-with-raw',
             '--unified=0',
             filepath,
@@ -26,7 +37,7 @@ git.diff = function(filepath, callback)
             else
                 if #hunks > 0 then
                     lastHunk = hunks[#hunks]
-                    lastHunk:add_diff(line)
+                    lastHunk:add_line(line)
                 end
             end
         end,
@@ -47,4 +58,4 @@ git.diff = function(filepath, callback)
     job:sync()
 end
 
-return git
+return M
