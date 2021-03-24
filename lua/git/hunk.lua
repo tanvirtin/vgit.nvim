@@ -1,7 +1,7 @@
 local Hunk = {}
 Hunk.__index = Hunk
 
-local function parse_diff_header(line)
+local function parse_header(line)
     local diffkey = vim.trim(vim.split(line, '@@', true)[2])
     return unpack(vim.tbl_map(function(s)
         return vim.split(string.sub(s, 2), ',')
@@ -9,7 +9,7 @@ local function parse_diff_header(line)
 end
 
 function Hunk:new(filepath, header)
-    local original_state, current_state = parse_diff_header(header)
+    local original_state, current_state = parse_header(header)
     local original_state_start = tonumber(original_state[1])
     local original_state_count = tonumber(original_state[2]) or 1
     local current_state_start = tonumber(current_state[1])
@@ -63,27 +63,8 @@ function Hunk:new(filepath, header)
     return this
 end
 
-function Hunk:add_diff(line)
+function Hunk:add_line(line)
     table.insert(self.diff, line)
-end
-
-function Hunk:tostring()
-    local str = ''
-    str = str .. 'filepath: ' .. self.filepath .. '\n'
-    str = str .. 'header: ' .. self.header .. '\n'
-    str = str .. 'start: ' .. self.start .. '\n'
-    str = str .. 'finish: ' .. self.finish .. '\n'
-    str = str .. 'type: ' .. self.type .. '\n'
-    str = str .. 'original_state.start: ' .. self.original_state.start .. '\n'
-    str = str .. 'original_state.count: ' .. self.original_state.count .. '\n'
-    str = str .. 'current_state.start: ' .. self.current_state.start .. '\n'
-    str = str .. 'current_state.count: ' .. self.current_state.count .. '\n'
-    str = str .. 'diff:\n'
-    for _, line in ipairs(self.diff) do
-        str = str .. '  ' .. line .. '\n'
-    end
-    str = str .. '\n\n'
-    return str
 end
 
 return Hunk

@@ -1,52 +1,58 @@
 local git = require('git.git')
 local sign = require('git.sign')
-local window = require('git.window')
+local previewer = require('git.previewer')
 
-local memory = {
+local state = {
     current_buf = nil,
     current_buf_hunks = {}
 }
 
 return {
-    attach = vim.schedule_wrap(function()
-        if not memory then
+    initialize = vim.schedule_wrap(function()
+        if not state then
             return
         end
         local current_buf = vim.api.nvim_get_current_buf()
+        if not current_buf then
+            return
+        end
         local filepath = vim.api.nvim_buf_get_name(buf)
+        if not filepath or filepath == '' then
+            return
+        end
         git.diff(filepath, function(err, hunks)
             if not err then
                 sign.clear_all()
                 for _, hunk in ipairs(hunks) do
-                    table.insert(memory, hunk)
+                    table.insert(state, hunk)
                     sign.place(hunk)
                 end
-                memory.current_buf = current_buf
-                memory.current_buf_hunks = hunks
+                state.current_buf = current_buf
+                state.current_buf_hunks = hunks
             end
         end)
     end),
 
     hunk_preview = vim.schedule_wrap(function()
-        if not memory then
+        if not state then
             return
         end
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
-        for _, hunk in ipairs(memory.current_buf_hunks) do
+        for _, hunk in ipairs(state.current_buf_hunks) do
             if lnum >= hunk.start and lnum <= hunk.finish then
-                window.popup(hunk.diff, { relative = 'cursor' })
+                previewer.show_hunk(hunk)
                 break
             end
         end
     end),
 
     hunk_down = vim.schedule_wrap(function()
-        if not memory or #memory.current_buf_hunks < 1 then
+        if not state or #state.current_buf_hunks < 1 then
             return
         end
         local new_lnum = nil
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
-        for _, hunk in ipairs(memory.current_buf_hunks) do
+        for _, hunk in ipairs(state.current_buf_hunks) do
             if hunk.start > lnum then
                 new_lnum = hunk.start
                 break
@@ -61,13 +67,13 @@ return {
     end),
 
     hunk_up = vim.schedule_wrap(function()
-        if not memory or #memory.current_buf_hunks < 1 then
+        if not state or #state.current_buf_hunks < 1 then
             return
         end
         local new_lnum = nil
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
-        for i = #memory.current_buf_hunks, 1, -1 do
-            local hunk = memory.current_buf_hunks[i]
+        for i = #state.current_buf_hunks, 1, -1 do
+            local hunk = state.current_buf_hunks[i]
             if hunk.finish < lnum then
                 new_lnum = hunk.finish
                 break
@@ -82,15 +88,15 @@ return {
     end),
 
     hunk_reset = vim.schedule_wrap(function()
-        if not memory then
+        if not state then
             return
         end
-        local current_buf = memory.current_buf
+        local current_buf = state.current_buf
         local added_lines = {}
         local removed_lines = {}
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         local selected_hunk = nil
-        for _, hunk in ipairs(memory.current_buf_hunks) do
+        for _, hunk in ipairs(state.current_buf_hunks) do
             if lnum >= hunk.start and lnum <= hunk.finish then
                 selected_hunk = hunk
                 break
@@ -121,13 +127,18 @@ return {
         end
     end),
 
-    detach = function()
-        memory = nil
+    tear_down = function()
+        git.tear_down()
+        sign.tear_down()
+        previewer.tear_down()
+        state = nil
     end,
 
     setup = function(config)
-        sign.initialize(config)
-        vim.cmd('autocmd BufEnter,BufWritePost * lua require("git").attach()')
-        vim.cmd('autocmd VimLeavePre * lua require("git").detach()')
+        git.initialize()
+        previewer.initialize()
+        sign.initialize()
+        vim.cmd('autocmd BufEnter,BufWritePost * lua require("git").initialize()')
+        vim.cmd('autocmd VimLeavePre * lua require("git").tear_down()')
     end
 }
