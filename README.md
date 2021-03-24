@@ -1,7 +1,5 @@
 # Git for Neovim (In Development)
 
-Git plugin for neovim.
-
 ### Installation via Plug
 ```
 Plug 'tanvirtin/git.nvim'
@@ -43,6 +41,7 @@ require('git').setup({
 ### Configure Mappings
 ```
 vim.api.nvim_set_keymap("n", '<leader>gh', ':lua require("git").hunk_preview()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap("n", '<leader>gr', ':lua require("git").hunk_reset()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", '<space>]', ':lua require("git").hunk_up()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", '<space>[', ':lua require("git").hunk_down()<CR>', { noremap = true, silent = true })
 ```
@@ -53,6 +52,7 @@ vim.api.nvim_set_keymap("n", '<space>[', ':lua require("git").hunk_down()<CR>', 
 |---------------|-------------|
 | setup | Sets up the plugin to run necessary git commands on loaded buffers |
 | hunk_preview | If a file has a hunk of diff associated with it, invoking this function will reveal that hunk if it exists on the current cursor |
+| hunk_reset | Resets the hunk the cursor is on right now to it's previous step
 | hunk_down | Navigate downward through a github hunk |
 | hunk_up | Navigate upwards through a github hunk |
 
@@ -71,8 +71,8 @@ vim.api.nvim_set_keymap("n", '<space>[', ':lua require("git").hunk_down()<CR>', 
 
 - [x] Hunk signs
 - [x] Colored hunk signs
-- [x] Hunk View
-- [ ] Coloured hunk view
+- [x] Hunk preview
+- [ ] Coloured hunk preview
 - [x] Hunk navigation
-- [ ] Undo a hunk
+- [x] Undo a hunk
 - [ ] Show file diff
