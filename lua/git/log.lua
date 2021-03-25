@@ -1,12 +1,12 @@
 local M = {}
 
-M.log = function(...)
+M.info = function(...)
     str = ''
     for index, arg in ipairs{...} do
         if index == 1 then
             str = str .. arg
         else
-            str = '\n' .. str .. arg
+            str = str .. '\n' .. arg
         end
     end
     vim.schedule(function()

@@ -1,19 +1,23 @@
+local highlight = require('git.highlight')
+
 local M = {}
 
 local state = {
     hunk = {
         add = {
             hl = 'GitHunkAdd',
-            color = '#d7ffaf',
+            bg = nil,
+            fg = '#d7ffaf',
         },
         remove = {
             hl = 'GitHunkRemove',
-            color = '#e95678',
+            bg = nil,
+            fg = '#e95678',
         },
     }
 }
 
-local function pad_content(padding, content)
+local function pad_content(content, padding)
     pad_top = padding[1] or 0
     pad_right = padding[2] or 0
     pad_below = padding[3] or 0
@@ -22,7 +26,10 @@ local function pad_content(padding, content)
     local left_padding = string.rep(' ', pad_left)
     local right_padding = string.rep(' ', pad_right)
     for index = 1, #content do
-        content[index] = left_padding .. content[index] .. right_padding
+        local line = content[index]
+        if line ~= '' then
+            content[index] = left_padding .. line .. right_padding
+        end
     end
 
     for _ = 1, pad_top do
@@ -36,8 +43,10 @@ local function pad_content(padding, content)
     return content
 end
 
--- TODO configure state here
 M.initialize = function()
+    for _, action in pairs(state.hunk) do
+        highlight.add(action.hl, action);
+    end
 end
 
 M.tear_down = function()
@@ -45,15 +54,29 @@ M.tear_down = function()
 end
 
 M.show_hunk = function(hunk)
-    local content = hunk.diff
-    local min_width = 25
+    local padding = { 1, 3, 1, 3 }
+    local content = pad_content(vim.deepcopy(hunk.diff), padding)
     local bufnr = vim.api.nvim_create_buf(false, true)
 
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, pad_content({ 1, 0, 1, 2 }, content))
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, content)
+    vim.api.nvim_buf_set_option(bufnr, 'bufhidden', 'wipe')
+    vim.api.nvim_buf_set_option(bufnr, 'filetype', 'diff')
 
-    local width = min_width
+    for index, line in pairs(content) do
+        -- Trim the string removing empty spaces.
+        line = line:gsub('%s+', '')
+        local first_letter = line:sub(1, 1)
+        if first_letter == '+' then
+            vim.api.nvim_buf_add_highlight(bufnr, -1, state.hunk.add.hl, index - 1, 0, -1)
+        elseif first_letter == '-' then
+            vim.api.nvim_buf_add_highlight(bufnr, -1, state.hunk.remove.hl, index - 1, 0, -1)
+        end
+    end
+
+    local width = 25
+    local height = #content
     for _, line in ipairs(content) do
-        local line_width = #line + 5
+        local line_width = #line
         if line_width > width then
             width = line_width
         end
@@ -61,20 +84,14 @@ M.show_hunk = function(hunk)
 
     local win_id = vim.api.nvim_open_win(bufnr, false, {
         relative = 'cursor',
+        style = 'minimal',
+        height = height,
+        width = width,
         row = 0,
         col = 0,
-        height = #content,
-        width = width,
     })
 
-    vim.api.nvim_buf_set_option(bufnr, 'filetype', 'diff')
-    vim.api.nvim_win_set_option(win_id, 'number', false)
-    vim.api.nvim_win_set_option(win_id, 'relativenumber', false)
-
-    -- Auto close buffer when cursor is moved.
-    vim.lsp.util.close_preview_autocmd({ 'CursorMoved', 'CursorMovedI' }, win_id)
-
-    return win_id, bufnr
+    vim.lsp.util.close_preview_autocmd({ 'BufLeave', 'CursorMoved', 'CursorMovedI' }, win_id)
 end
 
 return M
