@@ -1,9 +1,9 @@
 # Git for Neovim (In Development)
 
 <details>
-  <summary>Checkout plugin preview</summary>
+    <summary>Take a look</summary>
+    <img width="1792" alt="Screen Shot 2021-03-25 at 1 51 26 PM" src="https://user-images.githubusercontent.com/25164326/112520216-9117a980-8d71-11eb-98e9-bbb62285ec5b.png">
     <img width="1792" alt="Screen Shot 2021-03-21 at 9 16 08 PM" src="https://user-images.githubusercontent.com/25164326/111928772-efe7d500-8a8a-11eb-854f-b0f4b620d893.png">
-    <img width="1792" alt="Screen Shot 2021-03-22 at 1 24 18 AM" src="https://user-images.githubusercontent.com/25164326/111944347-cd1ae800-8aad-11eb-9792-f23117ffe912.png">
 </details>
 
 ### Provided Features
@@ -12,7 +12,7 @@
 - [x] Hunk preview
 - [x] Hunk navigation
 - [x] Colored hunk signs
-- [ ] Coloured hunk preview
+- [x] Coloured hunk preview
 - [ ] Robust configuration ability
 - [ ] Show git file changes in a preview window
 - [ ] Telescope plugin to show all files with git changes
@@ -20,16 +20,12 @@
 ### Installation via Plug
 ```
 Plug 'tanvirtin/git.nvim'
-Plug 'nvim-lua/plenary.nvim'
 ```
 
 ### Installation via Packer
 
 ```
-use {
-    'tanvirtin/git.nvim'
-    requires = {{'nvim-lua/plenary.nvim'}}
-}
+use 'tanvirtin/git.nvim'
 ```
 
 ### Default Configuration

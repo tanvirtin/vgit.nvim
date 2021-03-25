@@ -1,3 +1,5 @@
+local highlight = require('git.highlight')
+
 local M = {}
 
 local state = {
@@ -5,17 +7,20 @@ local state = {
     types = {
         add = {
             hl = 'GitAdd',
-            color = '#d7ffaf',
+            bg = '#d7ffaf',
+            fg = nil,
             text = ' '
         },
         remove = {
             hl = 'GitRemove',
-            color = '#e95678',
+            bg = '#e95678',
+            fg = nil,
             text = ' '
         },
         change = {
             hl = 'GitChange',
-            color = '#7AA6DA',
+            bg = '#7AA6DA',
+            fg = nil,
             text = ' '
         },
     },
@@ -24,7 +29,7 @@ local state = {
 
 M.initialize = function()
     for key, type in pairs(state.types) do
-        vim.cmd('hi ' .. state.types[key].hl .. ' guibg=' .. state.types[key].color)
+        highlight.add(state.types[key].hl, state.types[key])
         vim.fn.sign_define(type.hl, {
             text = type.text,
             texthl = type.hl
