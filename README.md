@@ -13,9 +13,11 @@
 - [x] Hunk navigation
 - [x] Colored hunk signs
 - [x] Coloured hunk preview
+- [x] Navigatable hunk preview
 - [ ] Robust configuration ability
+- [ ] Hunk preview that can be navigated
 - [ ] Show git file changes in a preview window
-- [ ] Telescope plugin to show all files with git changes
+- [x] Telescope plugin to show all files with git changes (Even deleted ones?)
 
 ### Installation via Plug
 ```
@@ -46,6 +48,7 @@ vim.api.nvim_set_keymap("n", '<leader>gh', ':lua require("git").hunk_preview()<C
 vim.api.nvim_set_keymap("n", '<leader>gr', ':lua require("git").hunk_reset()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", '<space>]', ':lua require("git").hunk_up()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap("n", '<space>[', ':lua require("git").hunk_down()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap("n", '<leader>.', ':lua require("git").files_changed()<CR>', { noremap = true, silent = true })
 ```
 
 ### API
@@ -56,7 +59,7 @@ vim.api.nvim_set_keymap("n", '<space>[', ':lua require("git").hunk_down()<CR>', 
 | hunk_reset | Resets the hunk the cursor is on right now to it's previous step
 | hunk_down | Navigate downward through a github hunk |
 | hunk_up | Navigate upwards through a github hunk |
-
+| files_changed (requires telescope) | Telescopic preview of all the files within the cwd that has a change |
 
 ### Config
 | Option Name   | Description | Defaults |
