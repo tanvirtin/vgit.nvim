@@ -1,5 +1,6 @@
 local Job = require('git.job')
 local Hunk = require('git.hunk')
+local log = require('git.log')
 
 local M = {}
 
@@ -58,25 +59,32 @@ M.diff = function(filepath, callback)
     job:sync()
 end
 
-M.diff_files = function(callback)
+M.status = function(callback)
     local errResult = ''
     local files = {}
 
     job = Job:new({
         command = 'git',
         args = {
-            '--no-pager',
-            '-c',
-            'core.safecrlf=false',
-            'diff',
-            '--color=never',
-            '--diff-algorithm=' .. state.diff_algorithm,
-            '--patch-with-raw',
-            '--unified=0',
-            '--name-only',
+            'status',
+            '-s',
         },
-        on_stdout = function(_, file)
-            table.insert(files, file)
+        on_stdout = function(_, line)
+            -- Each line will have a format of "${status} ${filepath}"
+            local filepath_start_index = 1;
+            local filepath_end_index = #line;
+            for i = 1, #line do
+                local c = line:sub(i,i)
+                if c == ' ' then
+                    filepath_start_index = i + 1
+                    local status = line:sub(1, i - 1)
+                    if status == ' D' then
+                        return
+                    end
+                end
+            end
+            line = line:sub(filepath_start_index, filepath_end_index)
+            table.insert(files, line)
         end,
         on_stderr = function(err, line)
             if err then

@@ -1,20 +1,27 @@
 local git = require('git.git')
-local sign = require('git.sign')
-local previewer = require('git.previewer')
+local ui = require('git.ui')
 local defer = require('git.defer')
 local log = require('git.log')
-
--- Telescope
-local finders = require('telescope.finders')
-local make_entry = require('telescope.make_entry')
-local pickers = require('telescope.pickers')
-local utils = require('telescope.utils')
-local conf = require('telescope.config').values
 
 local state = {
     current_buf = nil,
     current_buf_hunks = {}
 }
+
+function is_module_available(name)
+    if package.loaded[name] then
+        return true
+    else
+        for _, searcher in ipairs(package.searchers or package.loaders) do
+            local loader = searcher(name)
+            if type(loader) == 'function' then
+                package.preload[name] = loader
+                return true
+            end
+        end
+        return false
+    end
+end
 
 return {
     initialize = vim.schedule_wrap(defer.throttle_leading(function()
@@ -31,10 +38,10 @@ return {
         end
         git.diff(filepath, function(err, hunks)
             if not err then
-                sign.clear_all()
+                ui.hide_signs()
                 for _, hunk in ipairs(hunks) do
                     table.insert(state, hunk)
-                    sign.place(hunk)
+                    ui.show_sign(hunk)
                 end
                 state.current_buf = current_buf
                 state.current_buf_hunks = hunks
@@ -49,8 +56,7 @@ return {
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         for _, hunk in ipairs(state.current_buf_hunks) do
             if lnum >= hunk.start and lnum <= hunk.finish then
-                previewer.show_hunk(hunk)
-                break
+                return ui.show_hunk(hunk)
             end
         end
     end),
@@ -138,55 +144,27 @@ return {
         end
     end),
 
-    diff_files = vim.schedule_wrap(function()
-        git.diff_files(function(err, files)
+    files_changed = vim.schedule_wrap(function()
+        if not is_module_available('telescope') then
+            return log.info('You need github.com/nvim-telescope/telescope.nvim to use this functionality')
+        end
+        git.status(function(err, files)
             if not err then
-                local str = ''
-                for _, file in ipairs(files) do
-                    str = str .. file .. '\n'
-                end
-                log.info(str)
+                ui.show_files_changed(files)
             end
         end)
     end),
 
-    files = function()
-        opts = {}
-        local show_untracked = utils.get_default(opts.show_untracked, true)
-        local recurse_submodules = utils.get_default(opts.recurse_submodules, false)
-        if show_untracked and recurse_submodules then
-            error("Git does not suppurt both --others and --recurse-submodules")
-        end
-
-        opts.entry_maker = opts.entry_maker or make_entry.gen_from_file(opts)
-
-        pickers.new(opts, {
-            prompt_title = 'Git Diff Files',
-            finder = finders.new_oneshot_job(
-                vim.tbl_flatten({
-                    "git", "ls-files", "--exclude-standard", "--cached",
-                    show_untracked and "--others" or nil,
-                    recurse_submodules and "--recurse-submodules" or nil
-                }),
-                opts
-            ),
-            previewer = conf.file_previewer(opts),
-            sorter = conf.file_sorter(opts),
-        }):find()
-    end,
-
     -- Releases all resources currently held.
     tear_down = function()
         git.tear_down()
-        sign.tear_down()
-        previewer.tear_down()
+        ui.tear_down()
         state = nil
     end,
 
     setup = function(config)
         git.initialize()
-        previewer.initialize()
-        sign.initialize()
+        ui.initialize()
         vim.cmd('autocmd BufEnter,BufWritePost * lua require("git").initialize()')
         -- Important to release all resources currently held only we quite vim.
         vim.cmd('autocmd VimLeavePre * lua require("git").tear_down()')
