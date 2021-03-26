@@ -9,6 +9,14 @@ local function parse_header(line)
 end
 
 function Hunk:new(filepath, header)
+    --[[
+        There are two states:
+          - original_state (state of file in origin)
+          - current_state (state of file in cwd)
+        The state is an array which contains two elements:
+          - the line index (0 indexed) on which hunk starts
+          - total number of lines changed
+    --]]
     local original_state, current_state = parse_header(header)
     local original_state_start = tonumber(original_state[1])
     local original_state_count = tonumber(original_state[2]) or 1
@@ -33,12 +41,15 @@ function Hunk:new(filepath, header)
         diff = {},
     }
 
+    -- If current state count is 0 and a hunk exists, then lines have been removed.
     if current_state_count == 0 then
         -- If it's a straight remove with no change, then highlight only one sign column.
         this.finish = current_state_start
         this.type = "remove"
+    -- If original state count is 0 and current state count is not 0, then lines have been added.
     elseif original_state_count == 0 then
         this.type = "add"
+    -- When neither state counts are 0, it means some lines have been added and some removed.
     else
         this.type = "change"
     end

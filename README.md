@@ -2,7 +2,7 @@
 
 <details>
     <summary>Take a look</summary>
-    <img width="1792" alt="Screen Shot 2021-03-25 at 1 51 26 PM" src="https://user-images.githubusercontent.com/25164326/112520216-9117a980-8d71-11eb-98e9-bbb62285ec5b.png">
+    <img width="1792" alt="Screen Shot 2021-03-26 at 6 51 32 PM" src="https://user-images.githubusercontent.com/25164326/112700485-a4577180-8e64-11eb-9be4-f70ba8aa733c.png">
     <img width="1792" alt="Screen Shot 2021-03-21 at 9 16 08 PM" src="https://user-images.githubusercontent.com/25164326/111928772-efe7d500-8a8a-11eb-854f-b0f4b620d893.png">
 </details>
 
