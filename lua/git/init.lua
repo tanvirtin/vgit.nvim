@@ -32,7 +32,7 @@ return {
         if not current_buf then
             return
         end
-        local filepath = vim.api.nvim_buf_get_name(buf)
+        local filepath = vim.api.nvim_buf_get_name(current_buf)
         if not filepath or filepath == '' then
             return
         end
@@ -142,6 +142,10 @@ return {
                 vim.cmd('w')
             end
         end
+    end),
+
+    show_diff = vim.schedule_wrap(function()
+        ui.show_diff()
     end),
 
     files_changed = vim.schedule_wrap(function()

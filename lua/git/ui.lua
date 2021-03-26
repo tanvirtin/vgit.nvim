@@ -6,26 +6,85 @@ local conf = require('telescope.config').values
 
 local M = {}
 
+local constants = {
+    palette = {
+        GitDiff = {
+            bg = nil,
+            fg = '#ffffff',
+        },
+        GitDiffBorder = {
+            bg = nil,
+            fg = '#464b59',
+        },
+        GitHunk = {
+            bg = nil,
+            fg = '#ffffff',
+        },
+        GitHunkBorder = {
+            bg = nil,
+            fg = '#464b59',
+        },
+        GitHunkAdd = {
+            bg = nil,
+            fg = '#d7ffaf',
+        },
+        GitHunkRemove = {
+            bg = nil,
+            fg = '#e95678',
+        },
+        GitAdd = {
+            bg = '#d7ffaf',
+            fg = nil,
+        },
+        GitChange = {
+            bg = '#7AA6DA',
+            fg = nil,
+        },
+        GitRemove = {
+            bg = '#e95678',
+            fg = nil,
+        },
+    },
+}
+
 local state = {
+    diff = {
+        window = {
+            hl_group = 'GitDiff',
+            border = {
+                { '╭', 'GitDiffBorder' },
+                { '─', 'GitDiffBorder' },
+                { '╮', 'GitDiffBorder' },
+                { '│', 'GitDiffBorder' },
+                { '╯', 'GitDiffBorder' },
+                { '─', 'GitDiffBorder' },
+                { '╰', 'GitDiffBorder' },
+                { '│', 'GitDiffBorder' },
+            }
+        },
+    },
     hunk = {
         types = {
             add = {
                 hl_group = 'GitHunkAdd',
-                bg = nil,
-                fg = '#d7ffaf',
             },
             remove = {
                 hl_group = 'GitHunkRemove',
-                bg = nil,
-                fg = '#e95678',
             },
         },
         window = {
             hl_group = 'GitHunk',
-            fg = '#ffffff',
-            bg = nil,
-            border = {{ '╭' }, { '─' }, { '╮' }, { '│' }, { '╯' }, { '─' }, { '╰' }, { '│' }}
-        }
+            border = {
+                { '╭', 'GitHunkBorder' },
+                { '─', 'GitHunkBorder' },
+                { '╮', 'GitHunkBorder' },
+                { '│', 'GitHunkBorder' },
+                { '╯', 'GitHunkBorder' },
+                { '─', 'GitHunkBorder' },
+                { '╰', 'GitHunkBorder' },
+                { '│', 'GitHunkBorder' },
+            }
+        },
     },
     sign = {
         ns_id = 'git',
@@ -33,20 +92,14 @@ local state = {
         types = {
             add = {
                 hl_group = 'GitAdd',
-                bg = '#d7ffaf',
-                fg = nil,
                 text = ' '
             },
             remove = {
                 hl_group = 'GitRemove',
-                bg = '#e95678',
-                fg = nil,
                 text = ' '
             },
             change = {
                 hl_group = 'GitChange',
-                bg = '#7AA6DA',
-                fg = nil,
                 text = ' '
             },
         },
@@ -89,17 +142,47 @@ end
 
 M.initialize = function()
     for _, action in pairs(state.hunk.types) do
-        add_highlight(action.hl_group, action);
+        local hl_group = action.hl_group
+        if constants.palette[hl_group] then
+            add_highlight(hl_group, constants.palette[hl_group]);
+        end
     end
     for key, type in pairs(state.sign.types) do
-        add_highlight(state.sign.types[key].hl_group, state.sign.types[key])
+        local hl_group = state.sign.types[key].hl_group
+        if constants.palette[hl_group] then
+            add_highlight(hl_group, constants.palette[hl_group]);
+        end
         vim.fn.sign_define(type.hl_group, {
             text = type.text,
             texthl = type.hl_group
         })
     end
-    -- TODO
-    add_highlight(state.hunk.window.hl_group, state.hunk.window)
+    local hl_group = state.hunk.window.hl_group
+    if constants.palette[hl_group] then
+        add_highlight(hl_group, constants.palette[hl_group]);
+    end
+    local hunk_border = state.hunk.window.border
+    if type(hunk_border) == 'table' then
+        for _, b in ipairs(hunk_border) do
+            if type(b) == 'table' then
+                local hl_group = b[2]
+                if hl_group and constants.palette[hl_group] then
+                    add_highlight(hl_group, constants.palette[hl_group])
+                end
+            end
+        end
+    end
+    local diff_border = state.diff.window.border
+    if type(diff_border) == 'table' then
+        for _, b in ipairs(diff_border) do
+            if type(b) == 'table' then
+                local hl_group = b[2]
+                if hl_group and constants.palette[hl_group] then
+                    add_highlight(hl_group, constants.palette[hl_group])
+                end
+            end
+        end
+    end
 end
 
 M.tear_down = function()
@@ -129,7 +212,7 @@ M.show_sign = function(hunk)
 end
 
 M.show_hunk = function(hunk)
-    local padding = { 1, 3, 1, 3 }
+    local padding = { 1, 2, 1, 2 }
     local content = pad_content(vim.deepcopy(hunk.diff), padding)
     local bufnr = vim.api.nvim_create_buf(false, true)
 
@@ -148,7 +231,7 @@ M.show_hunk = function(hunk)
         end
     end
 
-    local width = 25
+    local width = 40
     local height = #content
     for _, line in ipairs(content) do
         local line_width = #line
@@ -168,7 +251,6 @@ M.show_hunk = function(hunk)
     })
 
     vim.api.nvim_win_set_option(win_id, 'winhl', 'Normal:' .. state.hunk.window.hl_group)
-
     vim.lsp.util.close_preview_autocmd({ 'BufLeave', 'CursorMoved', 'CursorMovedI' }, win_id)
 end
 
@@ -184,5 +266,44 @@ M.show_files_changed = vim.schedule_wrap(function(files)
         sorter = conf.file_sorter(opts),
     }):find()
 end)
+
+M.show_diff = function()
+    origin_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_option(origin_buf, 'bufhidden', 'wipe')
+
+    local global_width = vim.api.nvim_get_option("columns")
+    local global_height = vim.api.nvim_get_option("lines")
+    local height = math.ceil(global_height - 4)
+    local width = math.ceil(global_width * 0.45)
+    local row = math.ceil((global_height - height) / 2 - 1)
+    local col = math.ceil((global_width - (width * 2)) / 2)
+
+    local origin_win_id = vim.api.nvim_open_win(origin_buf, true, {
+        style = "minimal",
+        relative = 'editor',
+        width = width,
+        height = height,
+        border = state.diff.window.border,
+        row = row,
+        col = col,
+    })
+
+    vim.api.nvim_win_set_option(origin_win_id, 'winhl', 'Normal:' .. state.diff.window.hl_group)
+
+    cwd_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_option(cwd_buf, 'bufhidden', 'wipe')
+
+    local cwd_win_id = vim.api.nvim_open_win(cwd_buf, true, {
+        style = "minimal",
+        relative = 'editor',
+        width = width,
+        height = height,
+        border = state.diff.window.border,
+        row = math.ceil((global_height - height) / 2 - 1),
+        col = col + width + 2,
+    })
+
+    vim.api.nvim_win_set_option(cwd_win_id, 'winhl', 'Normal:' .. state.diff.window.hl_group)
+end
 
 return M
