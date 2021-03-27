@@ -5,6 +5,7 @@ local log = require('git.log')
 
 local state = {
     current_buf = nil,
+    current_filepath = nil,
     current_buf_hunks = {}
 }
 
@@ -44,6 +45,7 @@ return {
                     ui.show_sign(hunk)
                 end
                 state.current_buf = current_buf
+                state.current_filepath = filepath
                 state.current_buf_hunks = hunks
             end
         end)
@@ -144,8 +146,18 @@ return {
         end
     end),
 
-    show_diff = vim.schedule_wrap(function()
-        ui.show_diff()
+    diff = vim.schedule_wrap(function()
+        filepath = state.current_filepath
+        bufnr = state.current_buf
+        hunks = state.current_buf_hunks
+        if not filepath or filepath == '' or not bufnr or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
+            return
+        end
+        git.get_diffed_content(filepath, hunks, function(err, cwd_content, origin_content, file_type)
+            if not err then
+                ui.show_diff(cwd_content, origin_content, file_type)
+            end
+        end)
     end),
 
     files_changed = vim.schedule_wrap(function()
