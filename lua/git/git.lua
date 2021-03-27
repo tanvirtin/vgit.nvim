@@ -1,3 +1,4 @@
+local fs = require('git.fs')
 local Job = require('git.job')
 local Hunk = require('git.hunk')
 local log = require('git.log')
@@ -57,6 +58,18 @@ M.diff = function(filepath, callback)
         end,
     })
     job:sync()
+end
+
+M.get_diffed_content = function(filepath, hunks, callback)
+    fs.read_file(filepath, vim.schedule_wrap(function(err, data)
+        if err then
+            return callback(err, nil, nil, nil)
+        end
+        local file_type = fs.get_file_type(filepath)
+        data = vim.split(data, '\n')
+        -- TODO: Compute the diff here.
+        callback(nil, data, data, file_type)
+    end));
 end
 
 M.status = function(callback)

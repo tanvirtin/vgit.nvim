@@ -1,4 +1,4 @@
-local highlight = require('git.highlight')
+local fs = require('git.fs')
 local finders = require('telescope.finders')
 local make_entry = require('telescope.make_entry')
 local pickers = require('telescope.pickers')
@@ -107,11 +107,11 @@ local state = {
 }
 
 local function add_highlight(group, color)
-    local style = color.style and "gui=" .. color.style or "gui=NONE"
-    local fg = color.fg and "guifg = " .. color.fg or "guifg = NONE"
-    local bg = color.bg and "guibg = " .. color.bg or "guibg = NONE"
-    local sp = color.sp and "guisp = " .. color.sp or ""
-    vim.api.nvim_command("highlight " .. group .. " " .. style .. " " .. fg .. " " .. bg .. " " .. sp)
+    local style = color.style and 'gui=' .. color.style or 'gui=NONE'
+    local fg = color.fg and 'guifg = ' .. color.fg or 'guifg = NONE'
+    local bg = color.bg and 'guibg = ' .. color.bg or 'guibg = NONE'
+    local sp = color.sp and 'guisp = ' .. color.sp or ''
+    vim.api.nvim_command('highlight ' .. group .. ' ' .. style .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp)
 end
 
 local function pad_content(content, padding)
@@ -138,6 +138,25 @@ local function pad_content(content, padding)
     end
 
     return content
+end
+
+local function highlight_with_ts(bufnr, ft)
+    if not has_ts then
+        has_ts, _ = pcall(require, 'nvim-treesitter')
+        if has_ts then
+            _, ts_highlight = pcall(require, 'nvim-treesitter.highlight')
+            _, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
+        end
+    end
+
+    if has_ts and ft and ft ~= '' then
+        local lang = ts_parsers.ft_to_lang(ft);
+        if ts_parsers.has_parser(lang) then
+            ts_highlight.attach(bufnr, lang)
+            return true
+        end
+    end
+    return false
 end
 
 M.initialize = function()
@@ -203,10 +222,10 @@ end
 M.show_sign = function(hunk)
     for lnum = hunk.start, hunk.finish do
         vim.schedule(function()
-           vim.fn.sign_place(lnum, state.sign.ns_id, state.sign.types[hunk.type].hl_group, hunk.filepath, {
-               lnum = lnum,
-               priority = state.sign.priority,
-           })
+            vim.fn.sign_place(lnum, state.sign.ns_id, state.sign.types[hunk.type].hl_group, hunk.filepath, {
+                lnum = lnum,
+                priority = state.sign.priority,
+            })
         end)
     end
 end
@@ -267,19 +286,36 @@ M.show_files_changed = vim.schedule_wrap(function(files)
     }):find()
 end)
 
-M.show_diff = function()
-    origin_buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(origin_buf, 'bufhidden', 'wipe')
-
-    local global_width = vim.api.nvim_get_option("columns")
-    local global_height = vim.api.nvim_get_option("lines")
+M.show_diff = function(cwd_content, origin_content, file_type)
+    local global_width = vim.api.nvim_get_option('columns')
+    local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 4)
     local width = math.ceil(global_width * 0.45)
     local row = math.ceil((global_height - height) / 2 - 1)
     local col = math.ceil((global_width - (width * 2)) / 2)
 
-    local origin_win_id = vim.api.nvim_open_win(origin_buf, true, {
-        style = "minimal",
+    local cwd_buf = vim.api.nvim_create_buf(false, true)
+    local origin_buf = vim.api.nvim_create_buf(false, true)
+
+    vim.api.nvim_buf_set_option(cwd_buf, 'bufhidden', 'wipe')
+    vim.api.nvim_buf_set_option(cwd_buf, 'buftype', 'nofile')
+    vim.api.nvim_buf_set_option(cwd_buf, 'buflisted', false)
+
+    vim.api.nvim_buf_set_option(origin_buf, 'bufhidden', 'wipe')
+    vim.api.nvim_buf_set_option(origin_buf, 'buftype', 'nofile')
+    vim.api.nvim_buf_set_option(origin_buf, 'buflisted', false)
+
+    vim.api.nvim_buf_set_lines(cwd_buf, 0, -1, false, cwd_content)
+    vim.api.nvim_buf_set_lines(origin_buf, 0, -1, false, origin_content)
+
+    highlight_with_ts(cwd_buf, file_type)
+    highlight_with_ts(origin_buf, file_type)
+
+    vim.api.nvim_buf_set_option(origin_buf, 'modifiable', false)
+    vim.api.nvim_buf_set_option(cwd_buf, 'modifiable', false)
+
+    local cwd_win_id = vim.api.nvim_open_win(cwd_buf, true, {
+        style = 'minimal',
         relative = 'editor',
         width = width,
         height = height,
@@ -288,22 +324,68 @@ M.show_diff = function()
         col = col,
     })
 
-    vim.api.nvim_win_set_option(origin_win_id, 'winhl', 'Normal:' .. state.diff.window.hl_group)
-
-    cwd_buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(cwd_buf, 'bufhidden', 'wipe')
-
-    local cwd_win_id = vim.api.nvim_open_win(cwd_buf, true, {
-        style = "minimal",
+    local origin_win_id = vim.api.nvim_open_win(origin_buf, false, {
+        style = 'minimal',
         relative = 'editor',
         width = width,
         height = height,
         border = state.diff.window.border,
         row = math.ceil((global_height - height) / 2 - 1),
         col = col + width + 2,
+        focusable = false,
     })
 
     vim.api.nvim_win_set_option(cwd_win_id, 'winhl', 'Normal:' .. state.diff.window.hl_group)
+    vim.api.nvim_win_set_option(cwd_win_id, 'cursorline', true)
+    vim.api.nvim_win_set_option(cwd_win_id, 'wrap', false)
+    -- When cursor bind on both buffer windows, moving cursor in one of the window will mimic the position in the other one.
+    vim.api.nvim_win_set_option(cwd_win_id, 'cursorbind', true)
+
+    vim.api.nvim_win_set_option(origin_win_id, 'winhl', 'Normal:' .. state.diff.window.hl_group)
+    vim.api.nvim_win_set_option(origin_win_id, 'cursorline', true)
+    vim.api.nvim_win_set_option(origin_win_id, 'wrap', false)
+    vim.api.nvim_win_set_option(origin_win_id, 'cursorbind', true)
+
+    -- Setup keymap.
+    vim.api.nvim_buf_set_keymap(
+        cwd_buf,
+        'n',
+        '<C-c>',
+        string.format(':lua vim.api.nvim_win_close(%s, false)<CR>', cwd_win_id),
+        { silent = true }
+    )
+    vim.api.nvim_buf_set_keymap(
+        cwd_buf,
+        'n',
+        '<esc>',
+        string.format(':lua vim.api.nvim_win_close(%s, false)<CR>', cwd_win_id),
+        { silent = true }
+    )
+
+    -- Create close one window when the other one closes.
+    vim.cmd(
+        string.format(
+            'autocmd BufWinLeave <buffer=%s> ++once call nvim_win_close(%s, v:false)',
+            cwd_buf,
+            origin_win_id
+        )
+    )
+    vim.cmd(
+        string.format(
+            'autocmd BufWinLeave <buffer=%s> ++once call nvim_win_close(%s, v:false)',
+            origin_buf,
+            cwd_win_id
+        )
+    )
+    -- Attach a autocmd to the original buffer, which when entered will close the window on the left.
+    -- If the window on the left is closed, the window on the right is also closed from the autocmds above.
+    vim.cmd(
+        string.format(
+            'autocmd BufWinEnter <buffer=%s> ++once call nvim_win_close(%s, v:false)',
+            bufnr,
+            cwd_win_id
+        )
+    )
 end
 
 return M
