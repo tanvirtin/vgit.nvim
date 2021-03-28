@@ -1,8 +1,4 @@
-local fs = require('git.fs')
-local finders = require('telescope.finders')
-local make_entry = require('telescope.make_entry')
-local pickers = require('telescope.pickers')
-local conf = require('telescope.config').values
+local vim = vim
 
 local M = {}
 
@@ -15,6 +11,14 @@ local constants = {
         GitDiffBorder = {
             bg = nil,
             fg = '#464b59',
+        },
+        GitDiffAdd = {
+            bg = '#4a6317',
+            fg = nil
+        },
+        GitDiffRemove = {
+            bg = '#63132f',
+            fg = nil,
         },
         GitHunk = {
             bg = nil,
@@ -62,6 +66,16 @@ local state = {
                 { '│', 'GitDiffBorder' },
             }
         },
+        types = {
+            add = {
+                sign_name = 'GitDiffAdd',
+                hl_group = 'GitDiffAdd',
+            },
+            remove = {
+                sign_name = 'GitDiffRemove',
+                hl_group = 'GitDiffRemove',
+            },
+        }
     },
     hunk = {
         types = {
@@ -91,14 +105,17 @@ local state = {
         priority = 10,
         types = {
             add = {
+                name = 'GitAdd',
                 hl_group = 'GitAdd',
                 text = ' '
             },
             remove = {
+                name = 'GitRemove',
                 hl_group = 'GitRemove',
                 text = ' '
             },
             change = {
+                name = 'GitChange',
                 hl_group = 'GitChange',
                 text = ' '
             },
@@ -115,10 +132,10 @@ local function add_highlight(group, color)
 end
 
 local function pad_content(content, padding)
-    pad_top = padding[1] or 0
-    pad_right = padding[2] or 0
-    pad_below = padding[3] or 0
-    pad_left = padding[4] or 0
+    local pad_top = padding[1] or 0
+    local pad_right = padding[2] or 0
+    local pad_below = padding[3] or 0
+    local pad_left = padding[4] or 0
 
     local left_padding = string.rep(' ', pad_left)
     local right_padding = string.rep(' ', pad_right)
@@ -141,6 +158,9 @@ local function pad_content(content, padding)
 end
 
 local function highlight_with_ts(bufnr, ft)
+    local has_ts = false
+    local ts_highlight = nil
+    local ts_parsers = nil
     if not has_ts then
         has_ts, _ = pcall(require, 'nvim-treesitter')
         if has_ts then
@@ -171,11 +191,12 @@ M.initialize = function()
         if constants.palette[hl_group] then
             add_highlight(hl_group, constants.palette[hl_group]);
         end
-        vim.fn.sign_define(type.hl_group, {
+        vim.fn.sign_define(type.name, {
             text = type.text,
             texthl = type.hl_group
         })
     end
+
     local hl_group = state.hunk.window.hl_group
     if constants.palette[hl_group] then
         add_highlight(hl_group, constants.palette[hl_group]);
@@ -184,22 +205,35 @@ M.initialize = function()
     if type(hunk_border) == 'table' then
         for _, b in ipairs(hunk_border) do
             if type(b) == 'table' then
-                local hl_group = b[2]
+                hl_group = b[2]
                 if hl_group and constants.palette[hl_group] then
                     add_highlight(hl_group, constants.palette[hl_group])
                 end
             end
         end
     end
+
     local diff_border = state.diff.window.border
     if type(diff_border) == 'table' then
         for _, b in ipairs(diff_border) do
             if type(b) == 'table' then
-                local hl_group = b[2]
+                hl_group = b[2]
                 if hl_group and constants.palette[hl_group] then
                     add_highlight(hl_group, constants.palette[hl_group])
                 end
             end
+        end
+    end
+
+    for key, _ in pairs(state.diff.types) do
+        local sign_name = state.diff.types[key].sign_name
+        hl_group = state.diff.types[key].hl_group
+        if constants.palette[hl_group] then
+            add_highlight(hl_group, constants.palette[hl_group]);
+            vim.fn.sign_define(sign_name, {
+                text = ' ',
+                texthl = hl_group
+            })
         end
     end
 end
@@ -240,7 +274,7 @@ M.show_hunk = function(hunk)
     vim.api.nvim_buf_set_option(bufnr, 'filetype', 'diff')
 
     for index, line in pairs(content) do
-        -- Trim the string removing empty spaces.
+        -- TODO: Remove unnecessary trimming by offsetting the padding instead.
         line = line:gsub('%s+', '')
         local first_letter = line:sub(1, 1)
         if first_letter == '+' then
@@ -274,7 +308,12 @@ M.show_hunk = function(hunk)
 end
 
 M.show_files_changed = vim.schedule_wrap(function(files)
-    opts = {}
+    local finders = require('telescope.finders')
+    local make_entry = require('telescope.make_entry')
+    local pickers = require('telescope.pickers')
+    local conf = require('telescope.config').values
+    local opts = {}
+
     pickers.new(opts, {
         prompt_title = 'Git Changed Files',
         finder = finders.new_table {
@@ -286,7 +325,7 @@ M.show_files_changed = vim.schedule_wrap(function(files)
     }):find()
 end)
 
-M.show_diff = function(cwd_content, origin_content, file_type)
+M.show_diff = function(current_buf, cwd_content, origin_content, lnum_changes, file_type)
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 4)
@@ -310,6 +349,36 @@ M.show_diff = function(cwd_content, origin_content, file_type)
 
     highlight_with_ts(cwd_buf, file_type)
     highlight_with_ts(origin_buf, file_type)
+
+    -- TODO: Theres one loop in git another loop in ui, is the abstraction worth it?
+    for _, lnum in ipairs(lnum_changes.origin.added) do
+        vim.api.nvim_buf_add_highlight(origin_buf, -1, state.diff.types.add.hl_group, lnum - 1, 0, -1)
+        vim.fn.sign_place(lnum, -1, state.diff.types.add.hl_group, origin_buf, {
+            lnum = lnum,
+            priority = state.sign.priority,
+        })
+    end
+    for _, lnum in ipairs(lnum_changes.origin.removed) do
+        vim.api.nvim_buf_add_highlight(origin_buf, -1, state.diff.types.remove.hl_group, lnum - 1, 0, -1)
+        vim.fn.sign_place(lnum, -1, state.diff.types.remove.hl_group, origin_buf, {
+            lnum = lnum,
+            priority = state.sign.priority,
+        })
+    end
+    for _, lnum in ipairs(lnum_changes.cwd.added) do
+        vim.api.nvim_buf_add_highlight(cwd_buf, -1, state.diff.types.add.hl_group, lnum - 1, 0, -1)
+        vim.fn.sign_place(lnum, -1, state.diff.types.add.hl_group, cwd_buf, {
+            lnum = lnum,
+            priority = state.sign.priority,
+        })
+    end
+    for _, lnum in ipairs(lnum_changes.cwd.removed) do
+        vim.api.nvim_buf_add_highlight(cwd_buf, -1, state.diff.types.remove.hl_group, lnum - 1, 0, -1)
+        vim.fn.sign_place(lnum, -1, state.diff.types.remove.hl_group, cwd_buf, {
+            lnum = lnum,
+            priority = state.sign.priority,
+        })
+    end
 
     vim.api.nvim_buf_set_option(origin_buf, 'modifiable', false)
     vim.api.nvim_buf_set_option(cwd_buf, 'modifiable', false)
@@ -335,16 +404,18 @@ M.show_diff = function(cwd_content, origin_content, file_type)
         focusable = false,
     })
 
+    -- When cursor bind on both buffer windows, moving cursor in one of the window will mimic the position in the other one.
     vim.api.nvim_win_set_option(cwd_win_id, 'winhl', 'Normal:' .. state.diff.window.hl_group)
     vim.api.nvim_win_set_option(cwd_win_id, 'cursorline', true)
     vim.api.nvim_win_set_option(cwd_win_id, 'wrap', false)
-    -- When cursor bind on both buffer windows, moving cursor in one of the window will mimic the position in the other one.
     vim.api.nvim_win_set_option(cwd_win_id, 'cursorbind', true)
+    vim.api.nvim_win_set_option(cwd_win_id, 'signcolumn', 'yes')
 
     vim.api.nvim_win_set_option(origin_win_id, 'winhl', 'Normal:' .. state.diff.window.hl_group)
     vim.api.nvim_win_set_option(origin_win_id, 'cursorline', true)
     vim.api.nvim_win_set_option(origin_win_id, 'wrap', false)
     vim.api.nvim_win_set_option(origin_win_id, 'cursorbind', true)
+    vim.api.nvim_win_set_option(origin_win_id, 'signcolumn', 'yes')
 
     -- Setup keymap.
     vim.api.nvim_buf_set_keymap(
@@ -354,35 +425,21 @@ M.show_diff = function(cwd_content, origin_content, file_type)
         string.format(':lua vim.api.nvim_win_close(%s, false)<CR>', cwd_win_id),
         { silent = true }
     )
-    vim.api.nvim_buf_set_keymap(
-        cwd_buf,
-        'n',
-        '<esc>',
-        string.format(':lua vim.api.nvim_win_close(%s, false)<CR>', cwd_win_id),
-        { silent = true }
-    )
 
-    -- Create close one window when the other one closes.
-    vim.cmd(
+    -- Close origin window when cwd window closes.
+    vim.api.nvim_command(
         string.format(
             'autocmd BufWinLeave <buffer=%s> ++once call nvim_win_close(%s, v:false)',
             cwd_buf,
             origin_win_id
         )
     )
-    vim.cmd(
-        string.format(
-            'autocmd BufWinLeave <buffer=%s> ++once call nvim_win_close(%s, v:false)',
-            origin_buf,
-            cwd_win_id
-        )
-    )
-    -- Attach a autocmd to the original buffer, which when entered will close the window on the left.
-    -- If the window on the left is closed, the window on the right is also closed from the autocmds above.
-    vim.cmd(
+    -- Attach a autocmd to the current buffer, which when entered will close cwd window.
+    -- TODO: Open two buffers and show_diff while alternating between buffers, you will notice things aren't working as expected.
+    vim.api.nvim_command(
         string.format(
             'autocmd BufWinEnter <buffer=%s> ++once call nvim_win_close(%s, v:false)',
-            bufnr,
+            current_buf,
             cwd_win_id
         )
     )

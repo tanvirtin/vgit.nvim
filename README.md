@@ -7,17 +7,13 @@
 </details>
 
 ### Provided Features
-- [x] Hunk signs
-- [x] Undo a hunk
-- [x] Hunk preview
-- [x] Hunk navigation
-- [x] Colored hunk signs
-- [x] Coloured hunk preview
-- [x] Navigatable hunk preview
 - [ ] Robust configuration ability
-- [ ] Hunk preview that can be navigated
-- [ ] Show git file changes in a preview window
-- [x] Telescope plugin to show all files with git changes (Even deleted ones?)
+- [x] Hunk signs
+- [x] Reset a hunk
+- [x] Hunk preview
+- [x] Hunk navigation in current buffer
+- [x] Show original file and current file in a split window with diffs highlighted
+- [x] Telescope plugin to show all files with git changes
 
 ### Installation via Plug
 ```
@@ -28,18 +24,6 @@ Plug 'tanvirtin/git.nvim'
 
 ```
 use 'tanvirtin/git.nvim'
-```
-
-### Default Configuration
-```
-require('git').setup()
-```
-
-### Custom Configuration
-```
-require('git').setup({
-    -- TODO
-})
 ```
 
 ### Configure Mappings

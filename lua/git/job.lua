@@ -18,7 +18,7 @@ local function close_safely(j, key)
     end
 end
 
-function if_nil(val, was_nil, was_not_nil)
+local function if_nil(val, was_nil, was_not_nil)
     if val == nil then
         return was_nil
     else
@@ -347,9 +347,9 @@ function Job:_execute()
     end
 
     self.handle, self.pid = uv.spawn(
-    options.command,
-    options,
-    shutdown_factory(self, options)
+        options.command,
+        options,
+        shutdown_factory(self, options)
     )
 
     if not self.handle then
@@ -432,7 +432,7 @@ function Job:wait(timeout, wait_interval, should_redraw)
 
     local wait_result = vim.wait(timeout, function()
         if should_redraw then
-            vim.cmd [[redraw!]]
+            vim.api.nvim_command([[redraw!]])
         end
 
         if self.is_shutdown then
@@ -444,10 +444,10 @@ function Job:wait(timeout, wait_interval, should_redraw)
 
     if not wait_result then
         error(string.format(
-        "'%s %s' was unable to complete in %s ms",
-        self.command,
-        table.concat(self.args or {}, " "),
-        timeout
+            "'%s %s' was unable to complete in %s ms",
+            self.command,
+            table.concat(self.args or {}, " "),
+            timeout
         ))
     end
 

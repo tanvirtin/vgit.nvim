@@ -1,3 +1,5 @@
+local vim = vim
+
 local Hunk = {}
 Hunk.__index = Hunk
 
