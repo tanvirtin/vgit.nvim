@@ -1,7 +1,7 @@
+local vim = vim
 local git = require('git.git')
 local ui = require('git.ui')
 local defer = require('git.defer')
-local log = require('git.log')
 
 local state = {
     current_buf = nil,
@@ -9,7 +9,7 @@ local state = {
     current_buf_hunks = {}
 }
 
-function is_module_available(name)
+local function is_module_available(name)
     if package.loaded[name] then
         return true
     else
@@ -25,7 +25,8 @@ function is_module_available(name)
 end
 
 return {
-    initialize = vim.schedule_wrap(defer.throttle_leading(function()
+    buf_attach = vim.schedule_wrap(defer.throttle_leading(function()
+        -- TODO: This function needs to not run on the split window buffer.
         if not state then
             return
         end
@@ -111,8 +112,6 @@ return {
             return
         end
         local current_buf = state.current_buf
-        local added_lines = {}
-        local removed_lines = {}
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         local selected_hunk = nil
         for _, hunk in ipairs(state.current_buf_hunks) do
@@ -124,7 +123,7 @@ return {
         if selected_hunk then
             local replaced_lines = {}
             for _, line in ipairs(selected_hunk.diff) do
-                is_line_removed = vim.startswith(line, '-')
+                local is_line_removed = vim.startswith(line, '-')
                 if is_line_removed then
                     table.insert(replaced_lines, string.sub(line, 2, -1))
                 end
@@ -141,28 +140,28 @@ return {
                     vim.api.nvim_buf_set_lines(current_buf, start - 1, finish, false, replaced_lines)
                     vim.api.nvim_win_set_cursor(0, { start - 1, 0 })
                 end
-                vim.cmd('w')
+                vim.api.nvim_command('w')
             end
         end
     end),
 
     diff = vim.schedule_wrap(function()
-        filepath = state.current_filepath
-        bufnr = state.current_buf
-        hunks = state.current_buf_hunks
+        local filepath = state.current_filepath
+        local bufnr = state.current_buf
+        local hunks = state.current_buf_hunks
         if not filepath or filepath == '' or not bufnr or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
             return
         end
-        git.get_diffed_content(filepath, hunks, function(err, cwd_content, origin_content, file_type)
+        git.get_diffed_content(filepath, hunks, function(err, cwd_content, origin_content, lnum_changes, file_type)
             if not err then
-                ui.show_diff(cwd_content, origin_content, file_type)
+                ui.show_diff(bufnr, cwd_content, origin_content, lnum_changes, file_type)
             end
         end)
     end),
 
     files_changed = vim.schedule_wrap(function()
         if not is_module_available('telescope') then
-            return log.info('You need github.com/nvim-telescope/telescope.nvim to use this functionality')
+            return print('You need github.com/nvim-telescope/telescope.nvim to use this functionality')
         end
         git.status(function(err, files)
             if not err then
@@ -171,18 +170,16 @@ return {
         end)
     end),
 
-    -- Releases all resources currently held.
-    tear_down = function()
+    buf_detach = function()
         git.tear_down()
         ui.tear_down()
         state = nil
     end,
 
-    setup = function(config)
+    setup = function()
         git.initialize()
         ui.initialize()
-        vim.cmd('autocmd BufEnter,BufWritePost * lua require("git").initialize()')
-        -- Important to release all resources currently held only we quite vim.
-        vim.cmd('autocmd VimLeavePre * lua require("git").tear_down()')
+        vim.api.nvim_command('autocmd BufEnter,BufWritePost * lua require("git").buf_attach()')
+        vim.api.nvim_command('autocmd VimLeavePre * lua require("git").buf_detach()')
     end
 }
