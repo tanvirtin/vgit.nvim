@@ -1,4 +1,5 @@
 local vim = vim
+
 local M = {}
 
 M.throttle_leading = function(fn, ms)

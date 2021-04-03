@@ -18,12 +18,16 @@
 ### Installation via Plug
 ```
 Plug 'tanvirtin/git.nvim'
+Plug 'nvim-lua/plenary.nvim'
 ```
 
 ### Installation via Packer
 
 ```
-use 'tanvirtin/git.nvim'
+use {
+    'tanvirtin/git.nvim',
+    requires = {{'nvim-lua/plenary.nvim'}}
+}
 ```
 
 ### Configure Mappings

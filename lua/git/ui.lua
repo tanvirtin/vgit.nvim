@@ -405,13 +405,13 @@ M.show_diff = function(current_buf, cwd_content, origin_content, lnum_changes, f
     })
 
     -- When cursor bind on both buffer windows, moving cursor in one of the window will mimic the position in the other one.
-    vim.api.nvim_win_set_option(cwd_win_id, 'winhl', 'Normal:' .. state.diff.window.hl_group)
+    vim.api.nvim_win_set_option(cwd_win_id, 'winhl', string.format('Normal:%s', state.diff.window.hl_group))
     vim.api.nvim_win_set_option(cwd_win_id, 'cursorline', true)
     vim.api.nvim_win_set_option(cwd_win_id, 'wrap', false)
     vim.api.nvim_win_set_option(cwd_win_id, 'cursorbind', true)
     vim.api.nvim_win_set_option(cwd_win_id, 'signcolumn', 'yes')
 
-    vim.api.nvim_win_set_option(origin_win_id, 'winhl', 'Normal:' .. state.diff.window.hl_group)
+    vim.api.nvim_win_set_option(origin_win_id, 'winhl', string.format('Normal:%s', state.diff.window.hl_group))
     vim.api.nvim_win_set_option(origin_win_id, 'cursorline', true)
     vim.api.nvim_win_set_option(origin_win_id, 'wrap', false)
     vim.api.nvim_win_set_option(origin_win_id, 'cursorbind', true)
