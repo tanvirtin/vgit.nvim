@@ -1,7 +1,8 @@
-local vim = vim
+local Job = require('plenary.job')
 local fs = require('git.fs')
-local Job = require('git.job')
 local Hunk = require('git.hunk')
+
+local vim = vim
 
 local M = {}
 
@@ -51,7 +52,7 @@ M.diff = function(filepath, callback)
             'core.safecrlf=false',
             'diff',
             '--color=never',
-            '--diff-algorithm=' .. state.diff_algorithm,
+            string.format('--diff-algorithm=%s', state.diff_algorithm),
             '--patch-with-raw',
             '--unified=0',
             filepath,

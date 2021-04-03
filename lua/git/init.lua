@@ -1,7 +1,8 @@
-local vim = vim
 local git = require('git.git')
 local ui = require('git.ui')
 local defer = require('git.defer')
+
+local vim = vim
 
 local state = {
     current_buf = nil,
@@ -26,7 +27,6 @@ end
 
 return {
     buf_attach = vim.schedule_wrap(defer.throttle_leading(function()
-        -- TODO: This function needs to not run on the split window buffer.
         if not state then
             return
         end
@@ -154,6 +154,13 @@ return {
         end
         git.get_diffed_content(filepath, hunks, function(err, cwd_content, origin_content, lnum_changes, file_type)
             if not err then
+                -- NOTE: This prevents hunk navigation, hunk preview, etc disabled on the split window.
+                -- when split window is closed buf_attach is triggered on the current buffer you will be on.
+                state = {
+                    current_buf = nil,
+                    current_filepath = nil,
+                    current_buf_hunks = {}
+                }
                 ui.show_diff(bufnr, cwd_content, origin_content, lnum_changes, file_type)
             end
         end)
