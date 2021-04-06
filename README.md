@@ -26,7 +26,7 @@ Plug 'nvim-lua/plenary.nvim'
 ```
 use {
     'tanvirtin/git.nvim',
-    requires = {{'nvim-lua/plenary.nvim'}}
+    requires = {{ 'nvim-lua/plenary.nvim' }}
 }
 ```
 

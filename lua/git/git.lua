@@ -120,6 +120,7 @@ M.get_diffed_content = function(filepath, hunks, callback)
                 -- Remove the line indicating that these lines were inserted in cwd_data.
                 for i = start, finish do
                     origin_data[i] = ''
+                    new_lines_added = new_lines_added + 1
                     table.insert(lnum_changes.cwd.added, i)
                 end
             elseif type == 'remove' then
