@@ -4,6 +4,7 @@ local it = it
 local describe = describe
 
 describe('defer:', function()
+
       describe('throttle_leading', function()
         local closure_creator = function(initial_value)
             local counter = initial_value
@@ -24,5 +25,7 @@ describe('defer:', function()
                 throttled_fn()
             end
         end)
+
     end)
+
 end)
