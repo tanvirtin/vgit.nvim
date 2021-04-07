@@ -28,21 +28,10 @@ M.read_file = function(path, callback)
 end
 
 M.get_file_type = function(filepath)
-    local os_sep = nil
-    if jit then
-        local os = string.lower(jit.os)
-        if os == 'linux' or os == 'osx' or os == 'bsd' then
-            os_sep = '/'
-        else
-            os_sep = '\\'
-        end
-    else
-        os_sep = package.config:sub(1, 1)
-    end
-    if not os_sep then
+    local extension_split = vim.split(filepath, '.', true)
+    if #extension_split == 1 then
         return ''
     end
-    local extension_split = vim.split(filepath, '.', true)
     return extension_split[#extension_split]
 end
 
