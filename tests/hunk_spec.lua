@@ -15,6 +15,7 @@ describe('Hunk:', function()
     }
 
     describe('new', function()
+
         it('should create a hunk from given parameters', function()
             local hunk = Hunk:new(path, headers['add'])
             assert.are.same(type(hunk), 'table')
@@ -49,9 +50,11 @@ describe('Hunk:', function()
             assert.are.same(change_hunk.start, 10)
             assert.are.same(change_hunk.finish, 10 + 7 - 1)
         end)
+
     end)
 
     describe('add_line', function()
+
         it('should add lines accordingly', function()
             local hunk = Hunk:new(path, headers['add'])
             local lines = {
@@ -70,5 +73,7 @@ describe('Hunk:', function()
 
             assert.are.same(#hunk.diff, #lines)
         end)
+
     end)
+
 end)
