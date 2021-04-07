@@ -134,12 +134,11 @@ return {
                 if selected_hunk.type == 'remove' then
                     -- Api says start == finish (which is the case here) all the lines are inserted from that point.
                     vim.api.nvim_buf_set_lines(current_buf, start, finish, false, replaced_lines)
-                    vim.api.nvim_win_set_cursor(0, { start + 1, 0 })
                 else
                     -- Insertion happens after the given index which is why we do start - 1
                     vim.api.nvim_buf_set_lines(current_buf, start - 1, finish, false, replaced_lines)
-                    vim.api.nvim_win_set_cursor(0, { start - 1, 0 })
                 end
+                vim.api.nvim_win_set_cursor(0, { start, 0 })
                 vim.api.nvim_command('w')
             end
         end
