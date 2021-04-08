@@ -25,13 +25,9 @@ local function is_module_available(name)
     end
 end
 
-return {
-    buf_attach = vim.schedule_wrap(defer.throttle_leading(function()
+local M = {
+    buf_attach = vim.schedule_wrap(defer.throttle_leading(function(current_buf)
         if not state then
-            return
-        end
-        local current_buf = vim.api.nvim_get_current_buf()
-        if not current_buf then
             return
         end
         local filepath = vim.api.nvim_buf_get_name(current_buf)
@@ -185,7 +181,9 @@ return {
     setup = function()
         git.initialize()
         ui.initialize()
-        vim.api.nvim_command('autocmd BufEnter,BufWritePost * lua require("git").buf_attach()')
+        vim.api.nvim_command('autocmd BufEnter,BufWritePost * lua require("git").buf_attach(vim.api.nvim_get_current_buf())')
         vim.api.nvim_command('autocmd VimLeavePre * lua require("git").buf_detach()')
     end
 }
+
+return M
