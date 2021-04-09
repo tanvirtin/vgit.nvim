@@ -58,10 +58,13 @@ describe('git:', function()
         end)
 
         it('should return only removed hunks', function()
+            local counter = 0
             clear_file_content(path)
             for i = 1, #lines do
                 if i % 2 == 0 then
                     add_line_to_file(lines[i], path)
+                else
+                    counter = counter + 1
                 end
             end
             local error = nil
@@ -72,19 +75,21 @@ describe('git:', function()
             end)
             job:wait()
             assert.are.same(error, nil)
-            assert.are.same(#results, #lines / 2)
+            assert.are.same(#results, counter)
             for _, hunk in pairs(results) do
                 assert.are.same(hunk.type, 'remove')
             end
         end)
 
         it('should return only changed hunks', function()
+            local counter = 0
             clear_file_content(path)
             for i = 1, #lines do
                 if i % 2 == 0 then
                     add_line_to_file(lines[i], path)
                 else
                     add_line_to_file(lines[i] .. '#########', path)
+                    counter = counter + 1
                 end
             end
             local error = nil
@@ -95,7 +100,7 @@ describe('git:', function()
             end)
             job:wait()
             assert.are.same(error, nil)
-            assert.are.same(#results, #lines / 2)
+            assert.are.same(#results, counter)
             for _, hunk in pairs(results) do
                 assert.are.same(hunk.type, 'change')
             end
