@@ -1,4 +1,5 @@
 local vim = vim
+local unpack = unpack
 
 local Hunk = {}
 Hunk.__index = Hunk
@@ -41,14 +42,15 @@ function Hunk:new(filepath, header)
     -- If current state count is 0 and a hunk exists, then lines have been removed.
     if current_state[2] == 0 then
         -- If it's a straight remove with no change, then highlight only one sign column.
-        this.finish = current_state[1]
-        this.type = "remove"
+        this.start = current_state[1] + 1
+        this.finish = current_state[1] + 1
+        this.type = 'remove'
     -- If original state count is 0 and current state count is not 0, then lines have been added.
     elseif original_state[2] == 0 then
-        this.type = "add"
+        this.type = 'add'
     -- When neither state counts are 0, it means some lines have been added and some removed.
     else
-        this.type = "change"
+        this.type = 'change'
     end
 
     setmetatable(this, Hunk)

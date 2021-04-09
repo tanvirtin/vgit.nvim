@@ -1,6 +1,5 @@
 local git = require('git')
 
-local vim = vim
 local it = it
 local describe = describe
 
