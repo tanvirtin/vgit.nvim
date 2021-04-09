@@ -257,6 +257,9 @@ end
 M.show_sign = function(hunk)
     for lnum = hunk.start, hunk.finish do
         vim.schedule(function()
+            if lnum < 1 then
+                return
+            end
             vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, hunk.filepath, {
                 lnum = lnum,
                 priority = state.sign.priority,

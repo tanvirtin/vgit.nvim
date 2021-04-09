@@ -55,6 +55,7 @@ local M = {
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         for _, hunk in ipairs(state.current_buf_hunks) do
             if lnum >= hunk.start and lnum <= hunk.finish then
+                -- BUG: There is no way to show the hunk removed when start = 0
                 return ui.show_hunk(hunk)
             end
         end
