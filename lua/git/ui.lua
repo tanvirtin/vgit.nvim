@@ -3,6 +3,8 @@ local vim = vim
 local M = {}
 
 local constants = {
+    group = 'tanvirtin/git.nvim',
+    ns_id = vim.api.nvim_create_namespace('tanvirtin/git.nvim'),
     palette = {
         GitDiff = {
             bg = nil,
@@ -101,7 +103,6 @@ local state = {
         },
     },
     sign = {
-        ns_id = 'git',
         priority = 10,
         types = {
             add = {
@@ -246,7 +247,7 @@ end
 
 M.hide_signs = function(callback)
     vim.schedule(function()
-        vim.fn.sign_unplace(state.sign.ns_id)
+        vim.fn.sign_unplace(constants.group)
         if type(callback) == 'function' then
             callback()
         end
@@ -256,7 +257,7 @@ end
 M.show_sign = function(hunk)
     for lnum = hunk.start, hunk.finish do
         vim.schedule(function()
-            vim.fn.sign_place(lnum, state.sign.ns_id, state.sign.types[hunk.type].hl_group, hunk.filepath, {
+            vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, hunk.filepath, {
                 lnum = lnum,
                 priority = state.sign.priority,
             })
@@ -278,9 +279,9 @@ M.show_hunk = function(hunk)
         line = line:gsub('%s+', '')
         local first_letter = line:sub(1, 1)
         if first_letter == '+' then
-            vim.api.nvim_buf_add_highlight(bufnr, -1, state.hunk.types.add.hl_group, index - 1, 0, -1)
+            vim.api.nvim_buf_add_highlight(bufnr, constants.ns_id, state.hunk.types.add.hl_group, index - 1, 0, -1)
         elseif first_letter == '-' then
-            vim.api.nvim_buf_add_highlight(bufnr, -1, state.hunk.types.remove.hl_group, index - 1, 0, -1)
+            vim.api.nvim_buf_add_highlight(bufnr, constants.ns_id, state.hunk.types.remove.hl_group, index - 1, 0, -1)
         end
     end
 
@@ -352,28 +353,28 @@ M.show_diff = function(current_buf, cwd_content, origin_content, lnum_changes, f
 
     -- TODO: Theres one loop in git another loop in ui, is the abstraction worth it?
     for _, lnum in ipairs(lnum_changes.origin.added) do
-        vim.api.nvim_buf_add_highlight(origin_buf, -1, state.diff.types.add.hl_group, lnum - 1, 0, -1)
+        vim.api.nvim_buf_add_highlight(origin_buf, constants.ns_id, state.diff.types.add.hl_group, lnum - 1, 0, -1)
         vim.fn.sign_place(lnum, -1, state.diff.types.add.hl_group, origin_buf, {
             lnum = lnum,
             priority = state.sign.priority,
         })
     end
     for _, lnum in ipairs(lnum_changes.origin.removed) do
-        vim.api.nvim_buf_add_highlight(origin_buf, -1, state.diff.types.remove.hl_group, lnum - 1, 0, -1)
+        vim.api.nvim_buf_add_highlight(origin_buf, constants.ns_id, state.diff.types.remove.hl_group, lnum - 1, 0, -1)
         vim.fn.sign_place(lnum, -1, state.diff.types.remove.hl_group, origin_buf, {
             lnum = lnum,
             priority = state.sign.priority,
         })
     end
     for _, lnum in ipairs(lnum_changes.cwd.added) do
-        vim.api.nvim_buf_add_highlight(cwd_buf, -1, state.diff.types.add.hl_group, lnum - 1, 0, -1)
+        vim.api.nvim_buf_add_highlight(cwd_buf, constants.ns_id, state.diff.types.add.hl_group, lnum - 1, 0, -1)
         vim.fn.sign_place(lnum, -1, state.diff.types.add.hl_group, cwd_buf, {
             lnum = lnum,
             priority = state.sign.priority,
         })
     end
     for _, lnum in ipairs(lnum_changes.cwd.removed) do
-        vim.api.nvim_buf_add_highlight(cwd_buf, -1, state.diff.types.remove.hl_group, lnum - 1, 0, -1)
+        vim.api.nvim_buf_add_highlight(cwd_buf, constants.ns_id, state.diff.types.remove.hl_group, lnum - 1, 0, -1)
         vim.fn.sign_place(lnum, -1, state.diff.types.remove.hl_group, cwd_buf, {
             lnum = lnum,
             priority = state.sign.priority,
