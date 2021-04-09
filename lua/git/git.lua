@@ -1,49 +1,82 @@
 local Job = require('plenary.job')
 local fs = require('git.fs')
-local Hunk = require('git.hunk')
 
 local vim = vim
+local unpack = unpack
 
-local M = {}
-
-local state = {
-    diff_algorithm = 'myers'
-}
-
-local function trim_diff_line(line)
-    return line:sub(2, #line)
-end
-
-local function get_diff_type(line)
-    return line:sub(1, 1)
-end
-
-local function parse_diff(diff)
+local function parse_hunk_diff(diff)
     local removed_lines = {}
     local added_lines = {}
     for _, line in ipairs(diff) do
-        local type = get_diff_type(line)
-        local trimmed_line = trim_diff_line(line)
+        local type = line:sub(1, 1)
+        local cleaned_diff_line = line:sub(2, #line)
         if type == '+' then
-            table.insert(added_lines, trimmed_line)
+            table.insert(added_lines, cleaned_diff_line)
         elseif type == '-' then
-            table.insert(removed_lines, trimmed_line)
+            table.insert(removed_lines, cleaned_diff_line)
         end
     end
     return removed_lines, added_lines
 end
 
+local function parse_hunk_header(line)
+    local diffkey = vim.trim(vim.split(line, '@@', true)[2])
+    local origin, current = unpack(
+        vim.tbl_map(function(s)
+            return vim.split(string.sub(s, 2), ',')
+        end,
+        vim.split(diffkey, ' '))
+    )
+    origin[1] = tonumber(origin[1])
+    origin[2] = tonumber(origin[2]) or 1
+    current[1] = tonumber(current[1])
+    current[2] = tonumber(current[2]) or 1
+    return origin, current
+end
+
+local M = {}
+
+local function get_initial_state()
+    return {
+        diff_algorithm = 'histogram'
+    }
+end
+
+local state = get_initial_state()
+
 M.initialize = function()
 end
 
 M.tear_down = function()
-    state = nil
+    state = get_initial_state()
 end
 
-M.diff = function(filepath, callback)
+M.create_hunk = function(header)
+    local origin, current = parse_hunk_header(header)
+
+    local hunk = {
+        start = current[1],
+        finish = current[1] + current[2] - 1,
+        type = nil,
+        diff = {},
+    }
+
+    if current[2] == 0 then
+        -- If it's a straight remove with no change, then highlight only one sign column.
+        hunk.finish = hunk.start
+        hunk.type = 'remove'
+    elseif origin[2] == 0 then
+        hunk.type = 'add'
+    else
+        hunk.type = 'change'
+    end
+
+    return hunk
+end
+
+M.hunks = function(filepath, callback)
     local errResult = ''
     local hunks = {}
-
     local job = Job:new({
         command = 'git',
         args = {
@@ -59,11 +92,11 @@ M.diff = function(filepath, callback)
         },
         on_stdout = function(_, line)
             if vim.startswith(line, '@@') then
-                table.insert(hunks, Hunk:new(filepath, line))
+                table.insert(hunks, M.create_hunk(line))
             else
                 if #hunks > 0 then
-                    local lastHunk = hunks[#hunks]
-                    lastHunk:add_line(line)
+                    local hunk = hunks[#hunks]
+                    table.insert(hunk.diff, line)
                 end
             end
         end,
@@ -85,57 +118,12 @@ M.diff = function(filepath, callback)
     return job
 end
 
-M.status = function(callback)
-    local errResult = ''
-    local files = {}
-
-    local job = Job:new({
-        command = 'git',
-        args = {
-            'status',
-            '-s',
-        },
-        on_stdout = function(_, line)
-            -- Each line will have a format of "${status} ${filepath}"
-            local filepath_start_index = 1;
-            local filepath_end_index = #line;
-            for i = 1, #line do
-                local c = line:sub(i,i)
-                if c == ' ' then
-                    filepath_start_index = i + 1
-                    local status = line:sub(1, i - 1)
-                    if status == ' D' then
-                        return
-                    end
-                end
-            end
-            line = line:sub(filepath_start_index, filepath_end_index)
-            table.insert(files, line)
-        end,
-        on_stderr = function(err, line)
-            if err then
-                errResult = errResult .. err
-            elseif line then
-                errResult = errResult .. line
-            end
-        end,
-        on_exit = function()
-            if errResult ~= '' then
-                return callback(errResult, nil)
-            end
-            callback(nil, files)
-        end,
-    })
-    job:sync()
-    return job
-end
-
-M.get_diffed_content = function(filepath, hunks, callback)
+M.diff = function(filepath, hunks, callback)
     fs.read_file(filepath, vim.schedule_wrap(function(err, data)
         if err then
             return callback(err, nil, nil, nil)
         end
-        local file_type = fs.get_file_type(filepath)
+        local file_type = fs.file_type(filepath)
         data = vim.split(data, '\n')
         local cwd_data = {}
         local origin_data = {}
@@ -170,16 +158,15 @@ M.get_diffed_content = function(filepath, hunks, callback)
                 end
             elseif type == 'remove' then
                 for _, line in ipairs(diff) do
+                    start = start + 1
                     new_lines_added = new_lines_added + 1
                     table.insert(cwd_data, start, '')
-                    table.insert(origin_data, start, trim_diff_line(line))
+                    table.insert(origin_data, start, line:sub(2, #line))
                     table.insert(lnum_changes.origin.removed, start)
-                    -- Since an element has already been inserted, the start index increments by one to indicte the new insertion pos.
-                    start = start + 1
                 end
             elseif type == 'change' then
                 -- Retrieve lines that have been removed and added without "-" and "+".
-                local removed_lines, added_lines = parse_diff(diff)
+                local removed_lines, added_lines = parse_hunk_diff(diff)
                 -- Max lines are the maximum number of lines found between added and removed lines.
                 local max_lines = 0
                 if #removed_lines > #added_lines then

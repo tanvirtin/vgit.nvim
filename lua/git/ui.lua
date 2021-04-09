@@ -1,7 +1,5 @@
 local vim = vim
 
-local M = {}
-
 local constants = {
     group = 'tanvirtin/git.nvim',
     ns_id = vim.api.nvim_create_namespace('tanvirtin/git.nvim'),
@@ -53,76 +51,82 @@ local constants = {
     },
 }
 
-local state = {
-    diff = {
-        window = {
-            hl_group = 'GitDiff',
-            border = {
-                { '╭', 'GitDiffBorder' },
-                { '─', 'GitDiffBorder' },
-                { '╮', 'GitDiffBorder' },
-                { '│', 'GitDiffBorder' },
-                { '╯', 'GitDiffBorder' },
-                { '─', 'GitDiffBorder' },
-                { '╰', 'GitDiffBorder' },
-                { '│', 'GitDiffBorder' },
+local function get_initial_state()
+    return {
+        diff = {
+            window = {
+                hl_group = 'GitDiff',
+                border = {
+                    { '╭', 'GitDiffBorder' },
+                    { '─', 'GitDiffBorder' },
+                    { '╮', 'GitDiffBorder' },
+                    { '│', 'GitDiffBorder' },
+                    { '╯', 'GitDiffBorder' },
+                    { '─', 'GitDiffBorder' },
+                    { '╰', 'GitDiffBorder' },
+                    { '│', 'GitDiffBorder' },
+                }
+            },
+            types = {
+                add = {
+                    sign_name = 'GitDiffAdd',
+                    hl_group = 'GitDiffAdd',
+                },
+                remove = {
+                    sign_name = 'GitDiffRemove',
+                    hl_group = 'GitDiffRemove',
+                },
             }
         },
-        types = {
-            add = {
-                sign_name = 'GitDiffAdd',
-                hl_group = 'GitDiffAdd',
+        hunk = {
+            types = {
+                add = {
+                    hl_group = 'GitHunkAdd',
+                },
+                remove = {
+                    hl_group = 'GitHunkRemove',
+                },
             },
-            remove = {
-                sign_name = 'GitDiffRemove',
-                hl_group = 'GitDiffRemove',
+            window = {
+                hl_group = 'GitHunk',
+                border = {
+                    { '╭', 'GitHunkBorder' },
+                    { '─', 'GitHunkBorder' },
+                    { '╮', 'GitHunkBorder' },
+                    { '│', 'GitHunkBorder' },
+                    { '╯', 'GitHunkBorder' },
+                    { '─', 'GitHunkBorder' },
+                    { '╰', 'GitHunkBorder' },
+                    { '│', 'GitHunkBorder' },
+                }
+            },
+        },
+        sign = {
+            priority = 10,
+            types = {
+                add = {
+                    name = 'GitAdd',
+                    hl_group = 'GitAdd',
+                    text = ' '
+                },
+                remove = {
+                    name = 'GitRemove',
+                    hl_group = 'GitRemove',
+                    text = ' '
+                },
+                change = {
+                    name = 'GitChange',
+                    hl_group = 'GitChange',
+                    text = ' '
+                },
             },
         }
-    },
-    hunk = {
-        types = {
-            add = {
-                hl_group = 'GitHunkAdd',
-            },
-            remove = {
-                hl_group = 'GitHunkRemove',
-            },
-        },
-        window = {
-            hl_group = 'GitHunk',
-            border = {
-                { '╭', 'GitHunkBorder' },
-                { '─', 'GitHunkBorder' },
-                { '╮', 'GitHunkBorder' },
-                { '│', 'GitHunkBorder' },
-                { '╯', 'GitHunkBorder' },
-                { '─', 'GitHunkBorder' },
-                { '╰', 'GitHunkBorder' },
-                { '│', 'GitHunkBorder' },
-            }
-        },
-    },
-    sign = {
-        priority = 10,
-        types = {
-            add = {
-                name = 'GitAdd',
-                hl_group = 'GitAdd',
-                text = ' '
-            },
-            remove = {
-                name = 'GitRemove',
-                hl_group = 'GitRemove',
-                text = ' '
-            },
-            change = {
-                name = 'GitChange',
-                hl_group = 'GitChange',
-                text = ' '
-            },
-        },
     }
-}
+end
+
+local state = get_initial_state()
+
+local M = {}
 
 local function add_highlight(group, color)
     local style = color.style and 'gui=' .. color.style or 'gui=NONE'
@@ -240,24 +244,28 @@ M.initialize = function()
 end
 
 M.tear_down = function()
-    M.hide_signs(function()
-        state = nil
+    M.hide_hunk_signs(function()
+        state = get_initial_state()
     end)
 end
 
-M.hide_signs = vim.schedule_wrap(function(callback)
+M.hide_hunk_signs = vim.schedule_wrap(function(callback)
     vim.fn.sign_unplace(constants.group)
     if type(callback) == 'function' then
         callback()
     end
 end)
 
-M.show_sign = vim.schedule_wrap(function(hunk)
-    for lnum = hunk.start, hunk.finish do
-        vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, hunk.filepath, {
-            lnum = lnum,
-            priority = state.sign.priority,
-        })
+M.show_hunk_signs = vim.schedule_wrap(function(filepath, hunks)
+    for _, hunk in ipairs(hunks) do
+        for i = hunk.start, hunk.finish do
+            -- NOTE: lnum cannot be 0, so when i is 0, we make lnum 1 when hunk is of type remove.
+            local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
+            vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, filepath, {
+                lnum = lnum,
+                priority = state.sign.priority,
+            })
+        end
     end
 end)
 
@@ -304,26 +312,7 @@ M.show_hunk = function(hunk)
     vim.lsp.util.close_preview_autocmd({ 'BufLeave', 'CursorMoved', 'CursorMovedI' }, win_id)
 end
 
-M.show_files_changed = vim.schedule_wrap(function(files)
-    local finders = require('telescope.finders')
-    local make_entry = require('telescope.make_entry')
-    local pickers = require('telescope.pickers')
-    local conf = require('telescope.config').values
-    local opts = {}
-
-    pickers.new(opts, {
-        prompt_title = 'Git Changed Files',
-        finder = finders.new_table {
-            results = files,
-            entry_maker = opts.entry_maker or make_entry.gen_from_string(opts),
-        },
-        previewer = conf.file_previewer(opts),
-        sorter = conf.file_sorter(opts),
-    }):find()
-end)
-
-M.show_diff = function(current_buf, cwd_content, origin_content, lnum_changes, file_type)
-    local current_win_lnum = vim.api.nvim_win_get_cursor(0)[1]
+M.show_diff = function(cwd_content, origin_content, lnum_changes, file_type)
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 4)
@@ -415,34 +404,7 @@ M.show_diff = function(current_buf, cwd_content, origin_content, lnum_changes, f
     vim.api.nvim_win_set_option(origin_win_id, 'cursorbind', true)
     vim.api.nvim_win_set_option(origin_win_id, 'signcolumn', 'yes')
 
-    vim.api.nvim_win_set_cursor(cwd_win_id, { current_win_lnum, 0 })
-
-    -- Setup keymap.
-    vim.api.nvim_buf_set_keymap(
-        cwd_buf,
-        'n',
-        '<C-c>',
-        string.format(':lua vim.api.nvim_win_close(%s, false)<CR>', cwd_win_id),
-        { silent = true }
-    )
-
-    -- Close origin window when cwd window closes.
-    vim.api.nvim_command(
-        string.format(
-            'autocmd BufWinLeave <buffer=%s> ++once call nvim_win_close(%s, v:false)',
-            cwd_buf,
-            origin_win_id
-        )
-    )
-    -- Attach a autocmd to the current buffer, which when entered will close cwd window.
-    -- TODO: Open two buffers and show_diff while alternating between buffers, you will notice things aren't working as expected.
-    vim.api.nvim_command(
-        string.format(
-            'autocmd BufWinEnter <buffer=%s> ++once call nvim_win_close(%s, v:false)',
-            current_buf,
-            cwd_win_id
-        )
-    )
+    return cwd_buf, cwd_win_id, origin_buf, origin_win_id
 end
 
 return M

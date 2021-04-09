@@ -23,27 +23,27 @@ describe('fs:', function()
 
     end)
 
-    describe('get_file_type', function()
+    describe('file_type', function()
 
         it('should return file type from a filepath', function()
-            local type = fs.get_file_type('foo.lua')
+            local type = fs.file_type('foo.lua')
             assert.are.same(type, 'lua')
 
-            type = fs.get_file_type('foo.rb')
+            type = fs.file_type('foo.rb')
             assert.are.same(type, 'rb')
 
-            type = fs.get_file_type('foo.spec.ts')
+            type = fs.file_type('foo.spec.ts')
             assert.are.same(type, 'ts')
 
-            type = fs.get_file_type('foo.js')
+            type = fs.file_type('foo.js')
             assert.are.same(type, 'js')
         end)
 
         it('should return empty string on invalid filepath', function()
-            local type = fs.get_file_type('foo')
+            local type = fs.file_type('foo')
             assert.are.same(type, '')
 
-            type = fs.get_file_type('')
+            type = fs.file_type('')
             assert.are.same(type, '')
         end)
 

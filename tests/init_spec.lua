@@ -16,8 +16,8 @@ describe('init:', function()
                 hunk_up = true,
                 hunk_down = true,
                 hunk_reset = true,
-                diff = true,
-                files_changed = true
+                diff_preview = true,
+                close_preview_window = true,
             }
             for key, _ in pairs(git) do
                 assert(known_imports[key])

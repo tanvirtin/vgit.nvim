@@ -15,6 +15,7 @@ M.throttle_leading = function(fn, ms)
             pcall(vim.schedule_wrap(fn), select(1, ...))
         end
     end
+
     return wrapped_fn, timer
 end
 
