@@ -82,6 +82,52 @@ M.diff = function(filepath, callback)
         end,
     })
     job:sync()
+    return job
+end
+
+M.status = function(callback)
+    local errResult = ''
+    local files = {}
+
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'status',
+            '-s',
+        },
+        on_stdout = function(_, line)
+            -- Each line will have a format of "${status} ${filepath}"
+            local filepath_start_index = 1;
+            local filepath_end_index = #line;
+            for i = 1, #line do
+                local c = line:sub(i,i)
+                if c == ' ' then
+                    filepath_start_index = i + 1
+                    local status = line:sub(1, i - 1)
+                    if status == ' D' then
+                        return
+                    end
+                end
+            end
+            line = line:sub(filepath_start_index, filepath_end_index)
+            table.insert(files, line)
+        end,
+        on_stderr = function(err, line)
+            if err then
+                errResult = errResult .. err
+            elseif line then
+                errResult = errResult .. line
+            end
+        end,
+        on_exit = function()
+            if errResult ~= '' then
+                return callback(errResult, nil)
+            end
+            callback(nil, files)
+        end,
+    })
+    job:sync()
+    return job
 end
 
 M.get_diffed_content = function(filepath, hunks, callback)
@@ -169,50 +215,6 @@ M.get_diffed_content = function(filepath, hunks, callback)
         end
         callback(nil, cwd_data, origin_data, lnum_changes, file_type)
     end));
-end
-
-M.status = function(callback)
-    local errResult = ''
-    local files = {}
-
-    local job = Job:new({
-        command = 'git',
-        args = {
-            'status',
-            '-s',
-        },
-        on_stdout = function(_, line)
-            -- Each line will have a format of "${status} ${filepath}"
-            local filepath_start_index = 1;
-            local filepath_end_index = #line;
-            for i = 1, #line do
-                local c = line:sub(i,i)
-                if c == ' ' then
-                    filepath_start_index = i + 1
-                    local status = line:sub(1, i - 1)
-                    if status == ' D' then
-                        return
-                    end
-                end
-            end
-            line = line:sub(filepath_start_index, filepath_end_index)
-            table.insert(files, line)
-        end,
-        on_stderr = function(err, line)
-            if err then
-                errResult = errResult .. err
-            elseif line then
-                errResult = errResult .. line
-            end
-        end,
-        on_exit = function()
-            if errResult ~= '' then
-                return callback(errResult, nil)
-            end
-            callback(nil, files)
-        end,
-    })
-    job:sync()
 end
 
 return M
