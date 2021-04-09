@@ -169,8 +169,6 @@ M.get_diffed_content = function(filepath, hunks, callback)
                     table.insert(lnum_changes.cwd.added, i)
                 end
             elseif type == 'remove' then
-                -- We need to insert the diff after this index.
-                start = start + 1
                 for _, line in ipairs(diff) do
                     new_lines_added = new_lines_added + 1
                     table.insert(cwd_data, start, '')
