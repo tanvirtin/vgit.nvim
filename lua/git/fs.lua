@@ -4,7 +4,7 @@ local uv = vim.loop
 local M = {}
 
 M.read_file = function(path, callback)
-    uv.fs_open(path, "r", 438, function(open_err, fd)
+    uv.fs_open(path, 'r', 438, function(open_err, fd)
         if open_err then
             return callback(open_err, nil)
         end

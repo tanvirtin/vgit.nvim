@@ -25,26 +25,26 @@ describe('Hunk:', function()
             end
         end)
 
-       it("should create a hunk with correct type", function()
+       it('should create a hunk with correct type', function()
             assert.are.same(Hunk:new(path, headers['add']).type, 'add')
             assert.are.same(Hunk:new(path, headers['remove']).type, 'remove')
             assert.are.same(Hunk:new(path, headers['change']).type, 'change')
         end)
 
-       it("should create a hunk with correct filepath", function()
+       it('should create a hunk with correct filepath', function()
             assert.are.same(Hunk:new(path, headers['add']).filepath, path)
             assert.are.same(Hunk:new(path, headers['remove']).filepath, path)
             assert.are.same(Hunk:new(path, headers['change']).filepath, path)
         end)
 
-       it("should create a hunk with correct start and finish", function()
+       it('should create a hunk with correct start and finish', function()
             local add_hunk = Hunk:new(path, headers['add'])
             assert.are.same(add_hunk.start, 18)
             assert.are.same(add_hunk.finish, 18 + 15 - 1)
 
             local remove_hunk = Hunk:new(path, headers['remove'])
-            assert.are.same(remove_hunk.start, 8)
-            assert.are.same(remove_hunk.finish, 8)
+            assert.are.same(remove_hunk.start, 9)
+            assert.are.same(remove_hunk.finish, 9)
 
             local change_hunk = Hunk:new(path, headers['change'])
             assert.are.same(change_hunk.start, 10)

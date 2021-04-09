@@ -32,11 +32,11 @@ use {
 
 ### Configure Mappings
 ```
-vim.api.nvim_set_keymap("n", '<leader>gh', ':lua require("git").hunk_preview()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", '<leader>gr', ':lua require("git").hunk_reset()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", '<space>]', ':lua require("git").hunk_up()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", '<space>[', ':lua require("git").hunk_down()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", '<leader>.', ':lua require("git").files_changed()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>gh', ':lua require("git").hunk_preview()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>gr', ':lua require("git").hunk_reset()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<space>]', ':lua require("git").hunk_up()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<space>[', ':lua require("git").hunk_down()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>.', ':lua require("git").files_changed()<CR>', { noremap = true, silent = true })
 ```
 
 ### API

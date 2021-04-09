@@ -55,7 +55,6 @@ local M = {
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         for _, hunk in ipairs(state.current_buf_hunks) do
             if lnum >= hunk.start and lnum <= hunk.finish then
-                -- BUG: There is no way to show the hunk removed when start = 0
                 return ui.show_hunk(hunk)
             end
         end
@@ -130,7 +129,7 @@ local M = {
             if start and finish then
                 if selected_hunk.type == 'remove' then
                     -- Api says start == finish (which is the case here) all the lines are inserted from that point.
-                    vim.api.nvim_buf_set_lines(current_buf, start, finish, false, replaced_lines)
+                    vim.api.nvim_buf_set_lines(current_buf, start - 1, finish - 1, false, replaced_lines)
                 else
                     -- Insertion happens after the given index which is why we do start - 1
                     vim.api.nvim_buf_set_lines(current_buf, start - 1, finish, false, replaced_lines)
