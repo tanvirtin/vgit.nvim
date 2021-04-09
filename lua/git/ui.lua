@@ -323,6 +323,7 @@ M.show_files_changed = vim.schedule_wrap(function(files)
 end)
 
 M.show_diff = function(current_buf, cwd_content, origin_content, lnum_changes, file_type)
+    local current_win_lnum = vim.api.nvim_win_get_cursor(0)[1]
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 4)
@@ -413,6 +414,8 @@ M.show_diff = function(current_buf, cwd_content, origin_content, lnum_changes, f
     vim.api.nvim_win_set_option(origin_win_id, 'wrap', false)
     vim.api.nvim_win_set_option(origin_win_id, 'cursorbind', true)
     vim.api.nvim_win_set_option(origin_win_id, 'signcolumn', 'yes')
+
+    vim.api.nvim_win_set_cursor(cwd_win_id, { current_win_lnum, 0 })
 
     -- Setup keymap.
     vim.api.nvim_buf_set_keymap(
