@@ -245,25 +245,21 @@ M.tear_down = function()
     end)
 end
 
-M.hide_signs = function(callback)
-    vim.schedule(function()
-        vim.fn.sign_unplace(constants.group)
-        if type(callback) == 'function' then
-            callback()
-        end
-    end)
-end
-
-M.show_sign = function(hunk)
-    for lnum = hunk.start, hunk.finish do
-        vim.schedule(function()
-            vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, hunk.filepath, {
-                lnum = lnum,
-                priority = state.sign.priority,
-            })
-        end)
+M.hide_signs = vim.schedule_wrap(function(callback)
+    vim.fn.sign_unplace(constants.group)
+    if type(callback) == 'function' then
+        callback()
     end
-end
+end)
+
+M.show_sign = vim.schedule_wrap(function(hunk)
+    for lnum = hunk.start, hunk.finish do
+        vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, hunk.filepath, {
+            lnum = lnum,
+            priority = state.sign.priority,
+        })
+    end
+end)
 
 M.show_hunk = function(hunk)
     local padding = { 1, 2, 1, 2 }
