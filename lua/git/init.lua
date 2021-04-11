@@ -126,13 +126,18 @@ local M = {
         if not filename or filename == '' or not bufnr or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
             return
         end
-        git.diff(filename, hunks, function(err, cwd_content, origin_content, lnum_changes, file_type)
+        git.diff(filename, hunks, function(err, data)
             if not err then
                 -- NOTE: This prevents hunk navigation, hunk preview, etc disabled on the split window.
-                -- when split window is closed buf_attach is triggered on the current buffer you will be on.
+                -- when split window is closed buf_attach is triggered again on the current buffer you will be on.
                 state = get_initial_state()
                 local bufs = vim.api.nvim_list_bufs()
-                local cwd_buf, cwd_win_id, _, origin_win_id = ui.show_diff(cwd_content, origin_content, lnum_changes, file_type)
+                local cwd_buf, cwd_win_id, _, origin_win_id = ui.show_diff(
+                    data.cwd_lines,
+                    data.origin_lines,
+                    data.lnum_changes,
+                    data.file_type
+                )
                 -- Close on cmd/ctrl - c.
                 vim.api.nvim_buf_set_keymap(
                     cwd_buf,

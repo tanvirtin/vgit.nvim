@@ -121,12 +121,12 @@ end
 M.diff = function(filename, hunks, callback)
     fs.read_file(filename, vim.schedule_wrap(function(err, data)
         if err then
-            return callback(err, nil, nil, nil)
+            return callback(err, nil)
         end
         local file_type = fs.file_type(filename)
         data = vim.split(data, '\n')
-        local cwd_data = {}
-        local origin_data = {}
+        local cwd_lines = {}
+        local origin_lines = {}
         local lnum_changes = {
             origin = {
                 added = {},
@@ -139,8 +139,8 @@ M.diff = function(filename, hunks, callback)
         }
         -- shallow copy
         for key, value in pairs(data) do
-            cwd_data[key] = value
-            origin_data[key] = value
+            cwd_lines[key] = value
+            origin_lines[key] = value
         end
         -- Operations below will potentially add more lines to both cwd and
         -- origin data, which means, the offset needs to be added to our hunks.
@@ -151,17 +151,17 @@ M.diff = function(filename, hunks, callback)
             local finish = hunk.finish + new_lines_added
             local diff = hunk.diff
             if type == 'add' then
-                -- Remove the line indicating that these lines were inserted in cwd_data.
+                -- Remove the line indicating that these lines were inserted in cwd_lines.
                 for i = start, finish do
-                    origin_data[i] = ''
+                    origin_lines[i] = ''
                     table.insert(lnum_changes.cwd.added, i)
                 end
             elseif type == 'remove' then
                 for _, line in ipairs(diff) do
                     start = start + 1
                     new_lines_added = new_lines_added + 1
-                    table.insert(cwd_data, start, '')
-                    table.insert(origin_data, start, line:sub(2, #line))
+                    table.insert(cwd_lines, start, '')
+                    table.insert(origin_lines, start, line:sub(2, #line))
                     table.insert(lnum_changes.origin.removed, start)
                 end
             elseif type == 'change' then
@@ -178,8 +178,8 @@ M.diff = function(filename, hunks, callback)
                 -- Which is why I am inserting empty lines into both the cwd and origin data arrays.
                 for i = finish + 1, (start + max_lines) - 1 do
                     new_lines_added = new_lines_added + 1
-                    table.insert(cwd_data, i, '')
-                    table.insert(origin_data, i, '')
+                    table.insert(cwd_lines, i, '')
+                    table.insert(origin_lines, i, '')
                 end
                 -- With the new calculated range I simply loop over and add the removed
                 -- and added lines to their corresponding arrays that contain a buffer lines.
@@ -193,12 +193,17 @@ M.diff = function(filename, hunks, callback)
                     if added_line then
                         table.insert(lnum_changes.cwd.added, i)
                     end
-                    origin_data[i] = removed_line or ''
-                    cwd_data[i] = added_line or ''
+                    origin_lines[i] = removed_line or ''
+                    cwd_lines[i] = added_line or ''
                 end
             end
         end
-        callback(nil, cwd_data, origin_data, lnum_changes, file_type)
+        callback(nil, {
+            cwd_lines = cwd_lines,
+            origin_lines = origin_lines,
+            lnum_changes = lnum_changes,
+            file_type = file_type
+        })
     end));
 end
 
