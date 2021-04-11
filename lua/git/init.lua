@@ -23,7 +23,7 @@ local M = {
         if not filepath or filepath == '' then
             return
         end
-        git.hunks(filepath, function(err, hunks)
+        git.buffer_hunks(filepath, function(err, hunks)
             if not err then
                 state.current_buf = current_buf
                 state.current_filepath = filepath
