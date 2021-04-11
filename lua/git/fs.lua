@@ -27,8 +27,8 @@ M.read_file = function(path, callback)
     end)
 end
 
-M.file_type = function(filepath)
-    local extension_split = vim.split(filepath, '.', true)
+M.file_type = function(filename)
+    local extension_split = vim.split(filename, '.', true)
     if #extension_split == 1 then
         return ''
     end

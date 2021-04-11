@@ -74,7 +74,7 @@ M.create_hunk = function(header)
     return hunk
 end
 
-M.buffer_hunks = function(filepath, callback)
+M.buffer_hunks = function(filename, callback)
     local errResult = ''
     local hunks = {}
     local job = Job:new({
@@ -88,7 +88,7 @@ M.buffer_hunks = function(filepath, callback)
             string.format('--diff-algorithm=%s', state.diff_algorithm),
             '--patch-with-raw',
             '--unified=0',
-            filepath,
+            filename,
         },
         on_stdout = function(_, line)
             if vim.startswith(line, '@@') then
@@ -118,12 +118,12 @@ M.buffer_hunks = function(filepath, callback)
     return job
 end
 
-M.diff = function(filepath, hunks, callback)
-    fs.read_file(filepath, vim.schedule_wrap(function(err, data)
+M.diff = function(filename, hunks, callback)
+    fs.read_file(filename, vim.schedule_wrap(function(err, data)
         if err then
             return callback(err, nil, nil, nil)
         end
-        local file_type = fs.file_type(filepath)
+        local file_type = fs.file_type(filename)
         data = vim.split(data, '\n')
         local cwd_data = {}
         local origin_data = {}
