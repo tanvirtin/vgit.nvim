@@ -256,12 +256,12 @@ M.hide_hunk_signs = vim.schedule_wrap(function(callback)
     end
 end)
 
-M.show_hunk_signs = vim.schedule_wrap(function(filepath, hunks)
+M.show_hunk_signs = vim.schedule_wrap(function(filename, hunks)
     for _, hunk in ipairs(hunks) do
         for i = hunk.start, hunk.finish do
             -- NOTE: lnum cannot be 0, so when i is 0, we make lnum 1 when hunk is of type remove.
             local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
-            vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, filepath, {
+            vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, filename, {
                 lnum = lnum,
                 priority = state.sign.priority,
             })

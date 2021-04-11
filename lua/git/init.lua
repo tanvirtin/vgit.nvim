@@ -6,38 +6,38 @@ local vim = vim
 
 local function get_initial_state()
     return {
-        current_buf = nil,
-        current_filepath = nil,
-        current_buf_hunks = {}
+        buf = nil,
+        hunks = {},
+        filename = nil,
     }
 end
 
 local state = get_initial_state()
 
 local M = {
-    buf_attach = vim.schedule_wrap(defer.throttle_leading(function(current_buf)
-        if not current_buf then
-            current_buf = vim.api.nvim_get_current_buf()
+    buf_attach = vim.schedule_wrap(defer.throttle_leading(function(buf)
+        if not buf then
+            buf = vim.api.nvim_get_current_buf()
         end
-        local filepath = vim.api.nvim_buf_get_name(current_buf)
-        if not filepath or filepath == '' then
+        local filename = vim.api.nvim_buf_get_name(buf)
+        if not filename or filename == '' then
             return
         end
-        git.buffer_hunks(filepath, function(err, hunks)
+        git.buffer_hunks(filename, function(err, hunks)
             if not err then
-                state.current_buf = current_buf
-                state.current_filepath = filepath
-                state.current_buf_hunks = hunks
+                state.buf = buf
+                state.filename = filename
+                state.hunks = hunks
 
                 ui.hide_hunk_signs()
-                ui.show_hunk_signs(filepath, hunks)
+                ui.show_hunk_signs(filename, hunks)
             end
         end)
     end, 100)),
 
     hunk_preview = vim.schedule_wrap(function()
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
-        for _, hunk in ipairs(state.current_buf_hunks) do
+        for _, hunk in ipairs(state.hunks) do
             -- NOTE: When hunk is of type remove in ui.lua, we set the lnum to be 1 instead of 0.
             if lnum == 1 and hunk.start == 0 and hunk.finish == 0 then
                 return ui.show_hunk(hunk)
@@ -51,7 +51,7 @@ local M = {
     hunk_down = vim.schedule_wrap(function()
         local new_lnum = nil
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
-        for _, hunk in ipairs(state.current_buf_hunks) do
+        for _, hunk in ipairs(state.hunks) do
             if hunk.start > lnum then
                 new_lnum = hunk.start
                 break
@@ -69,8 +69,8 @@ local M = {
     hunk_up = vim.schedule_wrap(function()
         local new_lnum = nil
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
-        for i = #state.current_buf_hunks, 1, -1 do
-            local hunk = state.current_buf_hunks[i]
+        for i = #state.hunks, 1, -1 do
+            local hunk = state.hunks[i]
             if hunk.finish < lnum then
                 new_lnum = hunk.finish
                 break
@@ -86,10 +86,10 @@ local M = {
     end),
 
     hunk_reset = vim.schedule_wrap(function()
-        local current_buf = state.current_buf
+        local buf = state.buf
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         local selected_hunk = nil
-        for _, hunk in ipairs(state.current_buf_hunks) do
+        for _, hunk in ipairs(state.hunks) do
             if lnum >= hunk.start and lnum <= hunk.finish then
                 selected_hunk = hunk
                 break
@@ -108,10 +108,10 @@ local M = {
             if start and finish then
                 if selected_hunk.type == 'remove' then
                     -- Api says start == finish (which is the case here) all the lines are inserted from that point.
-                    vim.api.nvim_buf_set_lines(current_buf, start, finish, false, replaced_lines)
+                    vim.api.nvim_buf_set_lines(buf, start, finish, false, replaced_lines)
                 else
                     -- Insertion happens after the given index which is why we do start - 1
-                    vim.api.nvim_buf_set_lines(current_buf, start - 1, finish, false, replaced_lines)
+                    vim.api.nvim_buf_set_lines(buf, start - 1, finish, false, replaced_lines)
                 end
                 vim.api.nvim_win_set_cursor(0, { start, 0 })
                 vim.api.nvim_command('update')
@@ -120,21 +120,17 @@ local M = {
     end),
 
     diff_preview = vim.schedule_wrap(function()
-        local filepath = state.current_filepath
-        local bufnr = state.current_buf
-        local hunks = state.current_buf_hunks
-        if not filepath or filepath == '' or not bufnr or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
+        local filename = state.filename
+        local bufnr = state.buf
+        local hunks = state.hunks
+        if not filename or filename == '' or not bufnr or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
             return
         end
-        git.diff(filepath, hunks, function(err, cwd_content, origin_content, lnum_changes, file_type)
+        git.diff(filename, hunks, function(err, cwd_content, origin_content, lnum_changes, file_type)
             if not err then
                 -- NOTE: This prevents hunk navigation, hunk preview, etc disabled on the split window.
                 -- when split window is closed buf_attach is triggered on the current buffer you will be on.
-                state = {
-                    current_buf = nil,
-                    current_filepath = nil,
-                    current_buf_hunks = {}
-                }
+                state = get_initial_state()
                 local bufs = vim.api.nvim_list_bufs()
                 local cwd_buf, cwd_win_id, _, origin_win_id = ui.show_diff(cwd_content, origin_content, lnum_changes, file_type)
                 -- Close on cmd/ctrl - c.

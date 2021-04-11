@@ -25,7 +25,7 @@ describe('fs:', function()
 
     describe('file_type', function()
 
-        it('should return file type from a filepath', function()
+        it('should return file type from a filename', function()
             local type = fs.file_type('foo.lua')
             assert.are.same(type, 'lua')
 
@@ -39,7 +39,7 @@ describe('fs:', function()
             assert.are.same(type, 'js')
         end)
 
-        it('should return empty string on invalid filepath', function()
+        it('should return empty string on invalid filename', function()
             local type = fs.file_type('foo')
             assert.are.same(type, '')
 
