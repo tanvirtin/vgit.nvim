@@ -21,12 +21,16 @@ Plug 'nvim-lua/plenary.nvim'
 ```
 
 ### Installation via Packer
-
 ```
 use {
     'tanvirtin/git.nvim',
     requires = {{ 'nvim-lua/plenary.nvim' }}
 }
+```
+
+### Recommended Settings
+```
+:set signcolumn=auto:1-9
 ```
 
 ### Configure Mappings
@@ -35,6 +39,7 @@ vim.api.nvim_set_keymap('n', '<leader>gh', ':lua require("git").hunk_preview()<C
 vim.api.nvim_set_keymap('n', '<leader>gr', ':lua require("git").hunk_reset()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<space>]', ':lua require("git").hunk_up()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<space>[', ':lua require("git").hunk_down()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<space>gd', ':lua require("git").diff_preview()<CR>', { noremap = true, silent = true })
 ```
 
 ### API
@@ -45,13 +50,4 @@ vim.api.nvim_set_keymap('n', '<space>[', ':lua require("git").hunk_down()<CR>', 
 | hunk_reset | Resets the hunk the cursor is on right now to it's previous step
 | hunk_down | Navigate downward through a github hunk |
 | hunk_up | Navigate upwards through a github hunk |
-
-### Config
-| Option Name   | Description | Defaults |
-|---------------|-------------|----------|
-| colors.add | Color when hunk contains all additions | #d7ffaf |
-| colors.remove | Color when hunk contains all removals | #e95678 |
-| colors.change | Color when hunk contains both addition and deletion | #7AA6DA |
-| signs.add | Unique name of the add sign, also dictates highlight group | GitAdd |
-| signs.remove | Unique name of the remove sign, also dictates highlight group | GitRemove |
-| signs.change | Unique name of the change sign, also dictates highlight group | GitChange |
+| diff_preview | Opens two windows, showing cwd and origin buffers and the diff between them |
