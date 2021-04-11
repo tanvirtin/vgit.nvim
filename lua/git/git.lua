@@ -74,7 +74,7 @@ M.create_hunk = function(header)
     return hunk
 end
 
-M.hunks = function(filepath, callback)
+M.buffer_hunks = function(filepath, callback)
     local errResult = ''
     local hunks = {}
     local job = Job:new({

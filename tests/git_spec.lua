@@ -86,7 +86,7 @@ describe('git:', function()
 
     end)
 
-    describe('hunks', function()
+    describe('buffer_hunks', function()
         local path = '.gitignore'
         local lines = read_file(path)
 
@@ -94,7 +94,7 @@ describe('git:', function()
             os.execute(string.format('git checkout HEAD -- %s', path))
         end)
 
-        it('should return only added hunks', function()
+        it('should return only added hunks with correct start and finish', function()
             clear_file_content(path)
             for i = 1, #lines do
                 add_line_to_file(lines[i], path)
@@ -102,19 +102,23 @@ describe('git:', function()
             end
             local error = nil
             local results = nil
-            local job = git.hunks(path, function(err, hunks)
+            local job = git.buffer_hunks(path, function(err, hunks)
                 error = err
                 results = hunks
             end)
             job:wait()
             assert.are.same(error, nil)
             assert.are.same(#results, #lines)
+            local counter = 2
             for _, hunk in pairs(results) do
                 assert.are.same(hunk.type, 'add')
+                assert.are.same(hunk.start, counter)
+                assert.are.same(hunk.finish, counter)
+                counter = counter + 2
             end
         end)
 
-        it('should return only removed hunks', function()
+        it('should return only removed hunks with correct start and finish', function()
             local counter = 0
             clear_file_content(path)
             for i = 1, #lines do
@@ -126,19 +130,21 @@ describe('git:', function()
             end
             local error = nil
             local results = nil
-            local job = git.hunks(path, function(err, hunks)
+            local job = git.buffer_hunks(path, function(err, hunks)
                 error = err
                 results = hunks
             end)
             job:wait()
             assert.are.same(error, nil)
             assert.are.same(#results, counter)
-            for _, hunk in pairs(results) do
+            for i, hunk in ipairs(results) do
                 assert.are.same(hunk.type, 'remove')
+                assert.are.same(hunk.start, i - 1)
+                assert.are.same(hunk.finish, i - 1)
             end
         end)
 
-        it('should return only changed hunks', function()
+        it('should return only changed hunks with correct start and finish', function()
             local counter = 0
             clear_file_content(path)
             for i = 1, #lines do
@@ -151,40 +157,40 @@ describe('git:', function()
             end
             local error = nil
             local results = nil
-            local job = git.hunks(path, function(err, hunks)
+            local job = git.buffer_hunks(path, function(err, hunks)
                 error = err
                 results = hunks
             end)
             job:wait()
             assert.are.same(error, nil)
             assert.are.same(#results, counter)
+            counter = 1
             for _, hunk in pairs(results) do
                 assert.are.same(hunk.type, 'change')
+                assert.are.same(hunk.start, counter)
+                assert.are.same(hunk.finish, counter)
+                counter = counter + 2
             end
         end)
 
-        it('should return all possible hunks', function()
-            local added_indices = {}
-            local changed_indices = {}
-            local removed_indices = {}
+        it('should return all possible hunks with correct start and finish', function()
             clear_file_content(path)
             for i = 1, #lines do
+                -- add
                 if i == 1 then
                     add_line_to_file('########', path)
                     add_line_to_file(lines[i], path)
-                    table.insert(added_indices, i)
+                -- change
                 elseif i == 2 then
                     add_line_to_file(lines[i] .. '#########', path)
-                    table.insert(changed_indices, i)
-                elseif i == 4 then
-                    table.insert(removed_indices, i)
-                else
+                -- i == 4 gets removed
+                elseif i ~= 4 then
                     add_line_to_file(lines[i], path)
                 end
             end
             local error = nil
             local results = nil
-            local job = git.hunks(path, function(err, hunks)
+            local job = git.buffer_hunks(path, function(err, hunks)
                 error = err
                 results = hunks
             end)
@@ -194,6 +200,25 @@ describe('git:', function()
             assert.are.same(results[1].type, 'add')
             assert.are.same(results[2].type, 'change')
             assert.are.same(results[3].type, 'remove')
+
+            for i = 1, #lines do
+                -- add
+                if i == 1 then
+                    local hunk = table.remove(results, 1)
+                    assert.are.same(hunk.start, i)
+                    assert.are.same(hunk.finish, i)
+                -- change
+                elseif i == 2 then
+                    local hunk = table.remove(results, 1)
+                    assert.are.same(hunk.start, i + 1)
+                    assert.are.same(hunk.finish, i + 1)
+                -- remove
+                elseif i == 4 then
+                    local hunk = table.remove(results, 1)
+                    assert.are.same(hunk.start, i)
+                    assert.are.same(hunk.finish, i)
+                end
+            end
         end)
 
     end)
