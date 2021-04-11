@@ -45,6 +45,9 @@ describe('fs:', function()
 
             type = fs.file_type('')
             assert.are.same(type, '')
+
+            type = fs.file_type('.gitignore')
+            assert.are.same(type, 'gitignore')
         end)
 
     end)

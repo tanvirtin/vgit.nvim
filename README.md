@@ -28,11 +28,6 @@ use {
 }
 ```
 
-### Recommended Settings
-```
-:set signcolumn=auto:1-9
-```
-
 ### Configure Mappings
 ```
 vim.api.nvim_set_keymap('n', '<leader>gh', ':lua require("git").hunk_preview()<CR>', { noremap = true, silent = true })

@@ -312,7 +312,7 @@ M.show_hunk = function(hunk)
     vim.lsp.util.close_preview_autocmd({ 'BufLeave', 'CursorMoved', 'CursorMovedI' }, win_id)
 end
 
-M.show_diff = function(cwd_content, origin_content, lnum_changes, file_type)
+M.show_diff = function(cwd_lines, origin_lines, lnum_changes, file_type)
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 4)
@@ -331,8 +331,8 @@ M.show_diff = function(cwd_content, origin_content, lnum_changes, file_type)
     vim.api.nvim_buf_set_option(origin_buf, 'buftype', 'nofile')
     vim.api.nvim_buf_set_option(origin_buf, 'buflisted', false)
 
-    vim.api.nvim_buf_set_lines(cwd_buf, 0, -1, false, cwd_content)
-    vim.api.nvim_buf_set_lines(origin_buf, 0, -1, false, origin_content)
+    vim.api.nvim_buf_set_lines(cwd_buf, 0, -1, false, cwd_lines)
+    vim.api.nvim_buf_set_lines(origin_buf, 0, -1, false, origin_lines)
 
     highlight_with_ts(cwd_buf, file_type)
     highlight_with_ts(origin_buf, file_type)
