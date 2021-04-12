@@ -302,7 +302,7 @@ describe('git:', function()
             end)
         end)
 
-        it('should have equal number of lines in cwd_lines and orgin_buf for git added file', function()
+        it('should have equal number of lines in cwd_lines and orgin_buf on file with only added lines', function()
             add_lines(filename)
             local results = nil
             local job = git.buffer_hunks(filename, function(_, hunks)
@@ -314,7 +314,41 @@ describe('git:', function()
             end)
         end)
 
-        -- os.execute(string.format('echo "%s"', #data.cwd_lines))
+        it('should have equal number of lines in cwd_lines and orgin_buf on file with only removed lines', function()
+            remove_lines(filename)
+            local results = nil
+            local job = git.buffer_hunks(filename, function(_, hunks)
+                results = hunks
+            end)
+            job:wait()
+            git.diff(filename, results, function(_, data)
+                assert.are.same(#data.origin_lines, #data.cwd_lines)
+            end)
+        end)
+
+        it('should have equal number of lines in cwd_lines and orgin_buf on file with only changed lines', function()
+            change_lines(filename)
+            local results = nil
+            local job = git.buffer_hunks(filename, function(_, hunks)
+                results = hunks
+            end)
+            job:wait()
+            git.diff(filename, results, function(_, data)
+                assert.are.same(#data.origin_lines, #data.cwd_lines)
+            end)
+        end)
+
+        it('should have equal number of lines in cwd_lines and orgin_buf on file with all sorts of changes', function()
+            augment_file(filename)
+            local results = nil
+            local job = git.buffer_hunks(filename, function(_, hunks)
+                results = hunks
+            end)
+            job:wait()
+            git.diff(filename, results, function(_, data)
+                assert.are.same(#data.origin_lines, #data.cwd_lines)
+            end)
+        end)
 
     end)
 
