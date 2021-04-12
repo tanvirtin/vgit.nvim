@@ -25,6 +25,75 @@ local function add_line_to_file(line, filename)
     os.execute(string.format('echo "%s" >> %s', line, filename))
 end
 
+local function add_lines(filename)
+    local lines = read_file(filename)
+    local added_lines = 0
+    clear_file_content(filename)
+    for i = 1, #lines do
+        add_line_to_file(lines[i], filename)
+        add_line_to_file('#', filename)
+        added_lines = added_lines + 1
+    end
+    return lines, added_lines
+end
+
+local function remove_lines(filename)
+    local lines = read_file(filename)
+    local removed_lines = 0
+    clear_file_content(filename)
+    for i = 1, #lines do
+        if i % 2 == 0 then
+            add_line_to_file(lines[i], filename)
+        else
+            removed_lines = removed_lines + 1
+        end
+    end
+    return lines, removed_lines
+end
+
+local function change_lines(filename)
+    local lines = read_file(filename)
+    local changed_lines = 0
+    clear_file_content(filename)
+    for i = 1, #lines do
+        if i % 2 == 0 then
+            add_line_to_file(lines[i], filename)
+        else
+            add_line_to_file(lines[i] .. '#########', filename)
+            changed_lines = changed_lines + 1
+        end
+    end
+    return lines, changed_lines
+end
+
+local function augment_file(filename)
+    local lines = read_file(filename)
+    local added_lines = 0
+    local removed_lines = 0
+    local changed_lines = 0
+    local altered_lines = 0
+    clear_file_content(filename)
+    for i = 1, #lines do
+        -- add
+        if i == 1 then
+            add_line_to_file('########', filename)
+            add_line_to_file(lines[i], filename)
+            added_lines = added_lines + 1
+        -- change
+        elseif i == 2 then
+            add_line_to_file(lines[i] .. '#########', filename)
+            changed_lines = changed_lines + 1
+        -- i == 4 gets removed
+        elseif i == 4 then
+            add_line_to_file(lines[i], filename)
+            removed_lines = removed_lines + 1
+        else
+            altered_lines = altered_lines + 1
+        end
+    end
+    return lines, added_lines, removed_lines, changed_lines, altered_lines
+end
+
 describe('git:', function()
 
     describe('create_hunk', function()
@@ -88,18 +157,13 @@ describe('git:', function()
 
     describe('buffer_hunks', function()
         local filename = '.gitignore'
-        local lines = read_file(filename)
 
         after_each(function()
             os.execute(string.format('git checkout HEAD -- %s', filename))
         end)
 
         it('should return only added hunks with correct start and finish', function()
-            clear_file_content(filename)
-            for i = 1, #lines do
-                add_line_to_file(lines[i], filename)
-                add_line_to_file('#', filename)
-            end
+            local lines = add_lines(filename)
             local error = nil
             local results = nil
             local job = git.buffer_hunks(filename, function(err, hunks)
@@ -119,15 +183,7 @@ describe('git:', function()
         end)
 
         it('should return only removed hunks with correct start and finish', function()
-            local counter = 0
-            clear_file_content(filename)
-            for i = 1, #lines do
-                if i % 2 == 0 then
-                    add_line_to_file(lines[i], filename)
-                else
-                    counter = counter + 1
-                end
-            end
+            local _, counter = remove_lines(filename)
             local error = nil
             local results = nil
             local job = git.buffer_hunks(filename, function(err, hunks)
@@ -145,16 +201,7 @@ describe('git:', function()
         end)
 
         it('should return only changed hunks with correct start and finish', function()
-            local counter = 0
-            clear_file_content(filename)
-            for i = 1, #lines do
-                if i % 2 == 0 then
-                    add_line_to_file(lines[i], filename)
-                else
-                    add_line_to_file(lines[i] .. '#########', filename)
-                    counter = counter + 1
-                end
-            end
+            local _, counter = change_lines(filename)
             local error = nil
             local results = nil
             local job = git.buffer_hunks(filename, function(err, hunks)
@@ -174,20 +221,7 @@ describe('git:', function()
         end)
 
         it('should return all possible hunks with correct start and finish', function()
-            clear_file_content(filename)
-            for i = 1, #lines do
-                -- add
-                if i == 1 then
-                    add_line_to_file('########', filename)
-                    add_line_to_file(lines[i], filename)
-                -- change
-                elseif i == 2 then
-                    add_line_to_file(lines[i] .. '#########', filename)
-                -- i == 4 gets removed
-                elseif i ~= 4 then
-                    add_line_to_file(lines[i], filename)
-                end
-            end
+            local lines = augment_file(filename)
             local error = nil
             local results = nil
             local job = git.buffer_hunks(filename, function(err, hunks)
@@ -225,18 +259,13 @@ describe('git:', function()
 
     describe('diff', function()
         local filename = '.gitignore'
-        local lines = read_file(filename)
 
         after_each(function()
             os.execute(string.format('git checkout HEAD -- %s', filename))
         end)
 
         it('should return data table with correct keys', function()
-            clear_file_content(filename)
-            for i = 1, #lines do
-                add_line_to_file(lines[i], filename)
-                add_line_to_file('#', filename)
-            end
+            add_lines(filename)
             local error = nil
             local results = nil
             local job = git.buffer_hunks(filename, function(err, hunks)
@@ -246,7 +275,6 @@ describe('git:', function()
             job:wait()
             assert.are.same(error, nil)
             assert.are.same(type(results), 'table')
-
             git.diff(filename, results, function(err, data)
                 assert.are.same(err, nil)
                 assert.are.same(type(data), 'table')
@@ -263,39 +291,30 @@ describe('git:', function()
         end)
 
         it('should return correct filetype', function()
-            clear_file_content(filename)
-            for i = 1, #lines do
-                add_line_to_file(lines[i], filename)
-                add_line_to_file('#', filename)
-            end
+            add_lines(filename)
             local results = nil
             local job = git.buffer_hunks(filename, function(_, hunks)
                 results = hunks
             end)
             job:wait()
-
             git.diff(filename, results, function(_, data)
                 assert.are.same(data.file_type, '.gitignore')
             end)
         end)
 
         it('should have equal number of lines in cwd_lines and orgin_buf for git added file', function()
-            clear_file_content(filename)
-            for i = 1, #lines do
-                add_line_to_file(lines[i], filename)
-                add_line_to_file('#', filename)
-            end
+            add_lines(filename)
             local results = nil
             local job = git.buffer_hunks(filename, function(_, hunks)
                 results = hunks
             end)
             job:wait()
-
             git.diff(filename, results, function(_, data)
                 assert.are.same(#data.origin_lines, #data.cwd_lines)
-                -- os.execute(string.format('echo "%s"', #data.cwd_lines))
             end)
         end)
+
+        -- os.execute(string.format('echo "%s"', #data.cwd_lines))
 
     end)
 
