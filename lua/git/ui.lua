@@ -244,16 +244,12 @@ M.initialize = function()
 end
 
 M.tear_down = function()
-    M.hide_hunk_signs(function()
-        state = get_initial_state()
-    end)
+    M.hide_hunk_signs()
+    state = get_initial_state()
 end
 
-M.hide_hunk_signs = vim.schedule_wrap(function(callback)
+M.hide_hunk_signs = vim.schedule_wrap(function()
     vim.fn.sign_unplace(constants.group)
-    if type(callback) == 'function' then
-        callback()
-    end
 end)
 
 M.show_hunk_signs = vim.schedule_wrap(function(filename, hunks)
