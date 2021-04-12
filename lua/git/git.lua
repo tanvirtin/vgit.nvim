@@ -75,7 +75,7 @@ M.create_hunk = function(header)
 end
 
 M.buffer_hunks = function(filename, callback)
-    local errResult = ''
+    local err_result = ''
     local hunks = {}
     local job = Job:new({
         command = 'git',
@@ -102,14 +102,14 @@ M.buffer_hunks = function(filename, callback)
         end,
         on_stderr = function(err, line)
             if err then
-                errResult = errResult .. err
+                err_result = err_result .. err
             elseif line then
-                errResult = errResult .. line
+                err_result = err_result .. line
             end
         end,
         on_exit = function()
-            if errResult ~= '' then
-                return callback(errResult, nil)
+            if err_result ~= '' then
+                return callback(err_result, nil)
             end
             callback(nil, hunks)
         end,
@@ -119,7 +119,7 @@ M.buffer_hunks = function(filename, callback)
 end
 
 M.diff = function(filename, hunks, callback)
-    fs.read_file(filename, vim.schedule_wrap(function(err, data)
+    return fs.read_file(filename, vim.schedule_wrap(function(err, data)
         if err then
             return callback(err, nil)
         end
