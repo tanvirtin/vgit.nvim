@@ -5,24 +5,24 @@ local vim = vim
 local describe = describe
 local after_each = after_each
 
-local function read_file(path)
-    local file = io.open(path, "rb")
+local function read_file(filename)
+    local file = io.open(filename, "rb")
     if not file then return nil end
     local lines = {}
-    for line in io.lines(path) do
+    for line in io.lines(filename) do
         table.insert(lines, line)
     end
     file:close()
     return lines;
 end
 
-local function clear_file_content(path)
-    os.execute(string.format('rm -rf %s', path))
-    os.execute(string.format('touch %s', path))
+local function clear_file_content(filename)
+    os.execute(string.format('rm -rf %s', filename))
+    os.execute(string.format('touch %s', filename))
 end
 
-local function add_line_to_file(line, path)
-    os.execute(string.format('echo "%s" >> %s', line, path))
+local function add_line_to_file(line, filename)
+    os.execute(string.format('echo "%s" >> %s', line, filename))
 end
 
 describe('git:', function()
@@ -87,22 +87,22 @@ describe('git:', function()
     end)
 
     describe('buffer_hunks', function()
-        local path = '.gitignore'
-        local lines = read_file(path)
+        local filename = '.gitignore'
+        local lines = read_file(filename)
 
         after_each(function()
-            os.execute(string.format('git checkout HEAD -- %s', path))
+            os.execute(string.format('git checkout HEAD -- %s', filename))
         end)
 
         it('should return only added hunks with correct start and finish', function()
-            clear_file_content(path)
+            clear_file_content(filename)
             for i = 1, #lines do
-                add_line_to_file(lines[i], path)
-                add_line_to_file('#', path)
+                add_line_to_file(lines[i], filename)
+                add_line_to_file('#', filename)
             end
             local error = nil
             local results = nil
-            local job = git.buffer_hunks(path, function(err, hunks)
+            local job = git.buffer_hunks(filename, function(err, hunks)
                 error = err
                 results = hunks
             end)
@@ -120,17 +120,17 @@ describe('git:', function()
 
         it('should return only removed hunks with correct start and finish', function()
             local counter = 0
-            clear_file_content(path)
+            clear_file_content(filename)
             for i = 1, #lines do
                 if i % 2 == 0 then
-                    add_line_to_file(lines[i], path)
+                    add_line_to_file(lines[i], filename)
                 else
                     counter = counter + 1
                 end
             end
             local error = nil
             local results = nil
-            local job = git.buffer_hunks(path, function(err, hunks)
+            local job = git.buffer_hunks(filename, function(err, hunks)
                 error = err
                 results = hunks
             end)
@@ -146,18 +146,18 @@ describe('git:', function()
 
         it('should return only changed hunks with correct start and finish', function()
             local counter = 0
-            clear_file_content(path)
+            clear_file_content(filename)
             for i = 1, #lines do
                 if i % 2 == 0 then
-                    add_line_to_file(lines[i], path)
+                    add_line_to_file(lines[i], filename)
                 else
-                    add_line_to_file(lines[i] .. '#########', path)
+                    add_line_to_file(lines[i] .. '#########', filename)
                     counter = counter + 1
                 end
             end
             local error = nil
             local results = nil
-            local job = git.buffer_hunks(path, function(err, hunks)
+            local job = git.buffer_hunks(filename, function(err, hunks)
                 error = err
                 results = hunks
             end)
@@ -174,23 +174,23 @@ describe('git:', function()
         end)
 
         it('should return all possible hunks with correct start and finish', function()
-            clear_file_content(path)
+            clear_file_content(filename)
             for i = 1, #lines do
                 -- add
                 if i == 1 then
-                    add_line_to_file('########', path)
-                    add_line_to_file(lines[i], path)
+                    add_line_to_file('########', filename)
+                    add_line_to_file(lines[i], filename)
                 -- change
                 elseif i == 2 then
-                    add_line_to_file(lines[i] .. '#########', path)
+                    add_line_to_file(lines[i] .. '#########', filename)
                 -- i == 4 gets removed
                 elseif i ~= 4 then
-                    add_line_to_file(lines[i], path)
+                    add_line_to_file(lines[i], filename)
                 end
             end
             local error = nil
             local results = nil
-            local job = git.buffer_hunks(path, function(err, hunks)
+            local job = git.buffer_hunks(filename, function(err, hunks)
                 error = err
                 results = hunks
             end)
@@ -219,6 +219,82 @@ describe('git:', function()
                     assert.are.same(hunk.finish, i)
                 end
             end
+        end)
+
+    end)
+
+    describe('diff', function()
+        local filename = '.gitignore'
+        local lines = read_file(filename)
+
+        after_each(function()
+            os.execute(string.format('git checkout HEAD -- %s', filename))
+        end)
+
+        it('should return data table with correct keys', function()
+            clear_file_content(filename)
+            for i = 1, #lines do
+                add_line_to_file(lines[i], filename)
+                add_line_to_file('#', filename)
+            end
+            local error = nil
+            local results = nil
+            local job = git.buffer_hunks(filename, function(err, hunks)
+                error = err
+                results = hunks
+            end)
+            job:wait()
+            assert.are.same(error, nil)
+            assert.are.same(type(results), 'table')
+
+            git.diff(filename, results, function(err, data)
+                assert.are.same(err, nil)
+                assert.are.same(type(data), 'table')
+                local known_imports = {
+                    cwd_lines = true,
+                    origin_lines = true,
+                    lnum_changes = true,
+                    file_type = true
+                }
+                for key, _ in pairs(data) do
+                    assert(known_imports[key])
+                end
+            end)
+        end)
+
+        it('should return correct filetype', function()
+            clear_file_content(filename)
+            for i = 1, #lines do
+                add_line_to_file(lines[i], filename)
+                add_line_to_file('#', filename)
+            end
+            local results = nil
+            local job = git.buffer_hunks(filename, function(_, hunks)
+                results = hunks
+            end)
+            job:wait()
+
+            git.diff(filename, results, function(_, data)
+                assert.are.same(data.file_type, '.gitignore')
+            end)
+        end)
+
+        it('should have equal number of lines in cwd_lines and orgin_buf for git added file', function()
+            clear_file_content(filename)
+            for i = 1, #lines do
+                add_line_to_file(lines[i], filename)
+                add_line_to_file('#', filename)
+            end
+            local results = nil
+            local job = git.buffer_hunks(filename, function(_, hunks)
+                results = hunks
+            end)
+            job:wait()
+
+            git.diff(filename, results, function(_, data)
+                assert.are.same(#data.origin_lines, #data.cwd_lines)
+                -- os.execute(string.format('echo "%s"', #data.cwd_lines))
+            end)
         end)
 
     end)
