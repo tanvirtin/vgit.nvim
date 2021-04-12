@@ -3,7 +3,7 @@ local vim = vim
 
 local M = {}
 
-M.read_file = function(path, callback)
+M.read_file = function(path)
     local data = ''
     local err_result = ''
     local job = Job:new({
@@ -19,15 +19,13 @@ M.read_file = function(path, callback)
                 err_result = err_result .. line
             end
         end,
-        on_exit = function()
-            if err_result ~= '' then
-                return callback(err_result, nil)
-            end
-            callback(nil, data)
-        end,
     })
     job:sync()
-    return job
+    job:wait()
+    if err_result ~= '' then
+        return err_result, nl
+    end
+    return nil, data
 end
 
 M.file_type = function(filename)

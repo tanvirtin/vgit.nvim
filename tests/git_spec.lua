@@ -164,14 +164,8 @@ describe('git:', function()
 
         it('should return only added hunks with correct start and finish', function()
             local lines = add_lines(filename)
-            local err_result = nil
-            local data = nil
-            local job = git.buffer_hunks(filename, function(err, hunks)
-                err_result = err
-                data = hunks
-            end)
-            job:wait()
-            assert.are.same(err_result, nil)
+            local err, data = git.buffer_hunks(filename)
+            assert.are.same(err, nil)
             assert.are.same(#data, #lines)
             local counter = 2
             for _, hunk in pairs(data) do
@@ -184,14 +178,8 @@ describe('git:', function()
 
         it('should return only removed hunks with correct start and finish', function()
             local _, counter = remove_lines(filename)
-            local err_result = nil
-            local data = nil
-            local job = git.buffer_hunks(filename, function(err, hunks)
-                err_result = err
-                data = hunks
-            end)
-            job:wait()
-            assert.are.same(err_result, nil)
+            local err, data = git.buffer_hunks(filename)
+            assert.are.same(err, nil)
             assert.are.same(#data, counter)
             for i, hunk in ipairs(data) do
                 assert.are.same(hunk.type, 'remove')
@@ -202,14 +190,8 @@ describe('git:', function()
 
         it('should return only changed hunks with correct start and finish', function()
             local _, counter = change_lines(filename)
-            local err_result = nil
-            local data = nil
-            local job = git.buffer_hunks(filename, function(err, hunks)
-                err_result = err
-                data = hunks
-            end)
-            job:wait()
-            assert.are.same(err_result, nil)
+            local err, data = git.buffer_hunks(filename)
+            assert.are.same(err, nil)
             assert.are.same(#data, counter)
             counter = 1
             for _, hunk in pairs(data) do
@@ -222,14 +204,8 @@ describe('git:', function()
 
         it('should return all possible hunks with correct start and finish', function()
             local lines = augment_file(filename)
-            local err_result = nil
-            local data = nil
-            local job = git.buffer_hunks(filename, function(err, hunks)
-                err_result = err
-                data = hunks
-            end)
-            job:wait()
-            assert.are.same(err_result, nil)
+            local err, data = git.buffer_hunks(filename)
+            assert.are.same(err, nil)
             assert.are.same(#data, 3)
             assert.are.same(data[1].type, 'add')
             assert.are.same(data[2].type, 'change')
@@ -266,24 +242,11 @@ describe('git:', function()
 
         it('should return data table with correct keys', function()
             add_lines(filename)
-            local err_result = nil
-            local data = nil
-            local job = git.buffer_hunks(filename, function(err, hunks)
-                err_result = err
-                data = hunks
-            end)
-            job:wait()
-            assert.are.same(err_result, nil)
-            assert.are.same(type(data), 'table')
-            err_result = nil
-            data = nil
-            job = git.diff(filename, data, function(err, diff)
-                err_result = err
-                data = diff
-                os.execute(string.format('echo "%s"', vim.inspect(vim.tbl_keys(diff))))
-            end)
-            job:wait()
-            assert.are.same(err_result, nil)
+            local err, hunks = git.buffer_hunks(filename)
+            assert.are.same(err, nil)
+            assert.are.same(type(hunks), 'table')
+            local diff_err, data = git.diff(filename, hunks)
+            assert.are.same(diff_err, nil)
             assert.are.same(type(data), 'table')
             local expected_keys = {
                 cwd_lines = true,

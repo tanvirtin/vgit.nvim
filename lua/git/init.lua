@@ -23,16 +23,16 @@ local M = {
         if not filename or filename == '' then
             return
         end
-        git.buffer_hunks(filename, function(err, hunks)
-            if not err then
-                state.buf = buf
-                state.filename = filename
-                state.hunks = hunks
+        local err, hunks = git.buffer_hunks(filename)
+        if err then
+            return
+        end
+        state.buf = buf
+        state.filename = filename
+        state.hunks = hunks
 
-                ui.hide_hunk_signs()
-                ui.show_hunk_signs(filename, hunks)
-            end
-        end)
+        ui.hide_hunk_signs()
+        ui.show_hunk_signs(filename, hunks)
     end, 100)),
 
     hunk_preview = vim.schedule_wrap(function()
@@ -126,47 +126,47 @@ local M = {
         if not filename or filename == '' or not bufnr or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
             return
         end
-        git.diff(filename, hunks, function(err, data)
-            if not err then
-                -- NOTE: This prevents hunk navigation, hunk preview, etc disabled on the split window.
-                -- when split window is closed buf_attach is triggered again on the current buffer you will be on.
-                state = get_initial_state()
-                local bufs = vim.api.nvim_list_bufs()
-                local cwd_buf, cwd_win_id, _, origin_win_id = ui.show_diff(
-                    data.cwd_lines,
-                    data.origin_lines,
-                    data.lnum_changes,
-                    data.file_type
+        local err, data = git.diff(filename, hunks)
+        if err then
+            return
+        end
+        -- NOTE: This prevents hunk navigation, hunk preview, etc disabled on the split window.
+        -- when split window is closed buf_attach is triggered again on the current buffer you will be on.
+        state = get_initial_state()
+        local bufs = vim.api.nvim_list_bufs()
+        local cwd_buf, cwd_win_id, _, origin_win_id = ui.show_diff(
+            data.cwd_lines,
+            data.origin_lines,
+            data.lnum_changes,
+            data.file_type
+        )
+        -- Close on cmd/ctrl - c.
+        vim.api.nvim_buf_set_keymap(
+            cwd_buf,
+            'n',
+            '<C-c>',
+            string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
+            { silent = true }
+        )
+        -- Close on esc.
+        vim.api.nvim_buf_set_keymap(
+            cwd_buf,
+            'n',
+            '<ESC>',
+            string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
+            { silent = true }
+        )
+        for _, buf in ipairs(bufs) do
+            -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
+            vim.api.nvim_command(
+                string.format(
+                    'autocmd BufEnter <buffer=%s> lua require("git").close_preview_window(%s, %s)',
+                    buf,
+                    cwd_win_id,
+                    origin_win_id
                 )
-                -- Close on cmd/ctrl - c.
-                vim.api.nvim_buf_set_keymap(
-                    cwd_buf,
-                    'n',
-                    '<C-c>',
-                    string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
-                    { silent = true }
-                )
-                -- Close on esc.
-                vim.api.nvim_buf_set_keymap(
-                    cwd_buf,
-                    'n',
-                    '<ESC>',
-                    string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
-                    { silent = true }
-                )
-                for _, buf in ipairs(bufs) do
-                    -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
-                    vim.api.nvim_command(
-                        string.format(
-                            'autocmd BufEnter <buffer=%s> lua require("git").close_preview_window(%s, %s)',
-                            buf,
-                            cwd_win_id,
-                            origin_win_id
-                        )
-                    )
-                end
-            end
-        end)
+            )
+        end
     end),
 
     -- Wrapper around nvim_win_close, indented for a better autocmd experience.
