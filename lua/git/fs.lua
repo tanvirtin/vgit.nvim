@@ -1,30 +1,33 @@
+local Job = require('plenary.job')
 local vim = vim
-local uv = vim.loop
 
 local M = {}
 
 M.read_file = function(path, callback)
-    uv.fs_open(path, 'r', 438, function(open_err, fd)
-        if open_err then
-            return callback(open_err, nil)
-        end
-        uv.fs_fstat(fd, function(fsstat_err, stat)
-            if fsstat_err then
-                return callback(fsstat_err, nil)
+    local data = ''
+    local err_result = ''
+    local job = Job:new({
+        command = 'cat',
+        args = { path },
+        on_stdout = function(_, line)
+            data = data .. line .. '\n'
+        end,
+        on_stderr = function(err, line)
+            if err then
+                err_result = err_result .. err
+            elseif line then
+                err_result = err_result .. line
             end
-            uv.fs_read(fd, stat.size, 0, function(read_err, data)
-                if read_err then
-                    return callback(read_err, nil)
-                end
-                uv.fs_close(fd, function(close_err)
-                    if close_err then
-                        return callback(close_err, nil)
-                    end
-                    callback(nil, data)
-                end)
-            end)
-        end)
-    end)
+        end,
+        on_exit = function()
+            if err_result ~= '' then
+                return callback(err_result, nil)
+            end
+            callback(nil, data)
+        end,
+    })
+    job:sync()
+    return job
 end
 
 M.file_type = function(filename)
