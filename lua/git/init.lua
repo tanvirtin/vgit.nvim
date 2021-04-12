@@ -48,7 +48,7 @@ local M = {
         end
     end),
 
-    hunk_down = vim.schedule_wrap(function()
+    hunk_down = function()
         local new_lnum = nil
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         for _, hunk in ipairs(state.hunks) do
@@ -64,9 +64,9 @@ local M = {
         if new_lnum then
             vim.api.nvim_win_set_cursor(0, { new_lnum, 0 })
         end
-    end),
+    end,
 
-    hunk_up = vim.schedule_wrap(function()
+    hunk_up = function()
         local new_lnum = nil
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         for i = #state.hunks, 1, -1 do
@@ -83,9 +83,9 @@ local M = {
         if new_lnum then
             vim.api.nvim_win_set_cursor(0, { new_lnum, 0 })
         end
-    end),
+    end,
 
-    hunk_reset = vim.schedule_wrap(function()
+    hunk_reset = function()
         local buf = state.buf
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         local selected_hunk = nil
@@ -117,7 +117,7 @@ local M = {
                 vim.api.nvim_command('update')
             end
         end
-    end),
+    end,
 
     diff_preview = vim.schedule_wrap(function()
         local filename = state.filename
