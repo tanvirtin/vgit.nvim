@@ -248,11 +248,11 @@ M.tear_down = function()
     state = get_initial_state()
 end
 
-M.hide_hunk_signs = vim.schedule_wrap(function()
+M.hide_hunk_signs = function()
     vim.fn.sign_unplace(constants.group)
-end)
+end
 
-M.show_hunk_signs = vim.schedule_wrap(function(filename, hunks)
+M.show_hunk_signs = function(filename, hunks)
     for _, hunk in ipairs(hunks) do
         for i = hunk.start, hunk.finish do
             -- NOTE: lnum cannot be 0, so when i is 0, we make lnum 1 when hunk is of type remove.
@@ -263,7 +263,7 @@ M.show_hunk_signs = vim.schedule_wrap(function(filename, hunks)
             })
         end
     end
-end)
+end
 
 M.show_hunk = function(hunk)
     local padding = { 1, 2, 1, 2 }

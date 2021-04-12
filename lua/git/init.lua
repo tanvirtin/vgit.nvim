@@ -15,7 +15,7 @@ end
 local state = get_initial_state()
 
 local M = {
-    buf_attach = vim.schedule_wrap(defer.throttle_leading(function(buf)
+    buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
         if not buf then
             buf = vim.api.nvim_get_current_buf()
         end
@@ -33,7 +33,7 @@ local M = {
 
         ui.hide_hunk_signs()
         ui.show_hunk_signs(filename, hunks)
-    end, 100)),
+    end), 100),
 
     hunk_preview = vim.schedule_wrap(function()
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
