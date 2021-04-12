@@ -12,11 +12,11 @@ M.throttle_leading = function(fn, ms)
                 running = false
             end)
             running = true
-            pcall(vim.schedule_wrap(fn), select(1, ...))
+            pcall(fn, select(1, ...))
         end
     end
 
-    return wrapped_fn, timer
+    return wrapped_fn
 end
 
 return M
