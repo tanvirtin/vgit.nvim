@@ -33,7 +33,7 @@ local M = {
 
         ui.hide_hunk_signs()
         ui.show_hunk_signs(filename, hunks)
-    end), 100),
+    end), 50),
 
     hunk_preview = vim.schedule_wrap(function()
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
