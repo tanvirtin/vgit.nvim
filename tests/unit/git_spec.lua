@@ -249,7 +249,7 @@ describe('git:', function()
     end)
 
     describe('diff', function()
-        local filename = 'tests/fixtures/simple_file'
+        local filename = 'tests/fixture/simple_file'
 
         after_each(function()
             os.execute(string.format('git checkout HEAD -- %s', filename))
