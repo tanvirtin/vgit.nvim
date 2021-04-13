@@ -256,6 +256,37 @@ describe('git:', function()
             for key, _ in pairs(data) do
                 assert(expected_keys[key])
             end
+            for key, _ in pairs(expected_keys) do
+                assert(data[key])
+            end
+        end)
+
+        it('should have equal number of cwd_lines and origin_lines for a file with added lines', function()
+            add_lines(filename)
+            local _, hunks = git.buffer_hunks(filename)
+            local _, data = git.diff(filename, hunks)
+            assert.are.same(#data.cwd_lines, #data.origin_lines)
+        end)
+
+        it('should have equal number of cwd_lines and origin_lines for a file with removed lines', function()
+            remove_lines(filename)
+            local _, hunks = git.buffer_hunks(filename)
+            local _, data = git.diff(filename, hunks)
+            assert.are.same(#data.cwd_lines, #data.origin_lines)
+        end)
+
+        it('should have equal number of cwd_lines and origin_lines for a file with changed lines', function()
+            change_lines(filename)
+            local _, hunks = git.buffer_hunks(filename)
+            local _, data = git.diff(filename, hunks)
+            assert.are.same(#data.cwd_lines, #data.origin_lines)
+        end)
+
+        it('should have equal number of cwd_lines and origin_lines for a file with added, removed and changed lines', function()
+            augment_file(filename)
+            local _, hunks = git.buffer_hunks(filename)
+            local _, data = git.diff(filename, hunks)
+            assert.are.same(#data.cwd_lines, #data.origin_lines)
         end)
 
     end)
