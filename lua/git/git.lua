@@ -116,7 +116,7 @@ M.buffer_hunks = function(filename)
     return nil, hunks
 end
 
-M.diff = function(filename, filetype, hunks)
+M.diff = function(filename, hunks)
     local err, data = fs.read_file(filename);
     if err then
         return err, nil
@@ -199,7 +199,6 @@ M.diff = function(filename, filetype, hunks)
         cwd_lines = cwd_lines,
         origin_lines = origin_lines,
         lnum_changes = lnum_changes,
-        filetype = filetype
     }
 end
 

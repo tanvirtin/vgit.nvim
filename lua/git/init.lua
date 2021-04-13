@@ -127,7 +127,7 @@ local M = {
             return
         end
         local filetype = vim.api.nvim_buf_get_option(buf, 'filetype')
-        local err, data = git.diff(filename, filetype, hunks)
+        local err, data = git.diff(filename, hunks)
         if err then
             return
         end
@@ -139,7 +139,7 @@ local M = {
             data.cwd_lines,
             data.origin_lines,
             data.lnum_changes,
-            data.filetype
+            filetype
         )
         -- Close on cmd/ctrl - c.
         vim.api.nvim_buf_set_keymap(
@@ -157,12 +157,12 @@ local M = {
             string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
             { silent = true }
         )
-        for _, buf in ipairs(bufs) do
+        for _, current_buf in ipairs(bufs) do
             -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
             vim.api.nvim_command(
                 string.format(
                     'autocmd BufEnter <buffer=%s> lua require("git").close_preview_window(%s, %s)',
-                    buf,
+                    current_buf,
                     cwd_win_id,
                     origin_win_id
                 )

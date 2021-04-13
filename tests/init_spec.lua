@@ -22,6 +22,9 @@ describe('init:', function()
             for key, _ in pairs(git) do
                 assert(known_imports[key])
             end
+            for key, _ in pairs(git) do
+                assert(git[key])
+            end
         end)
 
     end)

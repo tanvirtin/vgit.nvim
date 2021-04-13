@@ -23,7 +23,7 @@ M.read_file = function(path)
     job:sync()
     job:wait()
     if err_result ~= '' then
-        return err_result, nl
+        return err_result, nil
     end
     return nil, data
 end

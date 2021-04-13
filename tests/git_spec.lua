@@ -245,14 +245,13 @@ describe('git:', function()
             local err, hunks = git.buffer_hunks(filename)
             assert.are.same(err, nil)
             assert.are.same(type(hunks), 'table')
-            local diff_err, data = git.diff(filename, '', hunks)
+            local diff_err, data = git.diff(filename, hunks)
             assert.are.same(diff_err, nil)
             assert.are.same(type(data), 'table')
             local expected_keys = {
                 cwd_lines = true,
                 origin_lines = true,
                 lnum_changes = true,
-                filetype = true
             }
             for key, _ in pairs(data) do
                 assert(expected_keys[key])
