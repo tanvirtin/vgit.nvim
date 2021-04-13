@@ -37,13 +37,38 @@ local M = {
 
     hunk_preview = vim.schedule_wrap(function()
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
+        local selected_hunk = nil
         for _, hunk in ipairs(state.hunks) do
             -- NOTE: When hunk is of type remove in ui.lua, we set the lnum to be 1 instead of 0.
             if lnum == 1 and hunk.start == 0 and hunk.finish == 0 then
-                return ui.show_hunk(hunk)
+                selected_hunk = hunk
+                break
             end
             if lnum >= hunk.start and lnum <= hunk.finish then
-                return ui.show_hunk(hunk)
+                selected_hunk = hunk
+                break
+            end
+        end
+        if selected_hunk then
+            local bufs = vim.api.nvim_list_bufs()
+            local buf, win_id = ui.show_hunk(selected_hunk)
+            -- Close on cmd/ctrl - c.
+            vim.api.nvim_buf_set_keymap(
+                buf,
+                'n',
+                '<C-c>',
+                string.format(':lua require("git").close_preview_window(%s)<CR>', win_id),
+                { silent = true }
+            )
+            for _, current_buf in ipairs(bufs) do
+                -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
+                vim.api.nvim_command(
+                    string.format(
+                        'autocmd BufEnter <buffer=%s> lua require("git").close_preview_window(%s)',
+                        current_buf,
+                        win_id
+                    )
+                )
             end
         end
     end),
@@ -146,14 +171,6 @@ local M = {
             cwd_buf,
             'n',
             '<C-c>',
-            string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
-            { silent = true }
-        )
-        -- Close on esc.
-        vim.api.nvim_buf_set_keymap(
-            cwd_buf,
-            'n',
-            '<ESC>',
             string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
             { silent = true }
         )
