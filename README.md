@@ -7,7 +7,7 @@
 </details>
 
 ### Provided Features
-- [ ] Robust configuration ability
+- [ ] Provides configurations to your hearts content
 - [x] Hunk signs
 - [x] Reset a hunk
 - [x] Hunk preview

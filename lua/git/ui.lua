@@ -36,17 +36,17 @@ local constants = {
             bg = nil,
             fg = '#e95678',
         },
-        GitAdd = {
-            bg = '#d7ffaf',
-            fg = nil,
+        GitSignAdd = {
+            fg = '#d7ffaf',
+            bg = nil,
         },
-        GitChange = {
-            bg = '#7AA6DA',
-            fg = nil,
+        GitSignChange = {
+            fg = '#7AA6DA',
+            bg = nil,
         },
-        GitRemove = {
-            bg = '#e95678',
-            fg = nil,
+        GitSignRemove = {
+            fg = '#e95678',
+            bg = nil,
         },
     },
 }
@@ -105,19 +105,19 @@ local function get_initial_state()
             priority = 10,
             types = {
                 add = {
-                    name = 'GitAdd',
-                    hl_group = 'GitAdd',
-                    text = ' '
+                    name = 'GitSignAdd',
+                    hl_group = 'GitSignAdd',
+                    text = '│'
                 },
                 remove = {
-                    name = 'GitRemove',
-                    hl_group = 'GitRemove',
-                    text = ' '
+                    name = 'GitSignRemove',
+                    hl_group = 'GitSignRemove',
+                    text = '│'
                 },
                 change = {
-                    name = 'GitChange',
-                    hl_group = 'GitChange',
-                    text = ' '
+                    name = 'GitSignChange',
+                    hl_group = 'GitSignChange',
+                    text = '│'
                 },
             },
         }
