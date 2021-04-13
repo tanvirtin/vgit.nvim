@@ -121,12 +121,13 @@ local M = {
 
     diff_preview = vim.schedule_wrap(function()
         local filename = state.filename
-        local bufnr = state.buf
+        local buf = state.buf
         local hunks = state.hunks
-        if not filename or filename == '' or not bufnr or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
+        if not filename or filename == '' or not buf or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
             return
         end
-        local err, data = git.diff(filename, hunks)
+        local filetype = vim.api.nvim_buf_get_option(buf, 'filetype')
+        local err, data = git.diff(filename, filetype, hunks)
         if err then
             return
         end
@@ -138,7 +139,7 @@ local M = {
             data.cwd_lines,
             data.origin_lines,
             data.lnum_changes,
-            data.file_type
+            data.filetype
         )
         -- Close on cmd/ctrl - c.
         vim.api.nvim_buf_set_keymap(

@@ -28,12 +28,4 @@ M.read_file = function(path)
     return nil, data
 end
 
-M.file_type = function(filename)
-    local extension_split = vim.split(filename, '.', true)
-    if #extension_split == 1 then
-        return ''
-    end
-    return extension_split[#extension_split]
-end
-
 return M

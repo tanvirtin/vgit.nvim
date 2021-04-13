@@ -116,12 +116,11 @@ M.buffer_hunks = function(filename)
     return nil, hunks
 end
 
-M.diff = function(filename, hunks)
+M.diff = function(filename, filetype, hunks)
     local err, data = fs.read_file(filename);
     if err then
         return err, nil
     end
-    local file_type = fs.file_type(filename)
     data = vim.split(data, '\n')
     local cwd_lines = {}
     local origin_lines = {}
@@ -200,7 +199,7 @@ M.diff = function(filename, hunks)
         cwd_lines = cwd_lines,
         origin_lines = origin_lines,
         lnum_changes = lnum_changes,
-        file_type = file_type
+        filetype = filetype
     }
 end
 

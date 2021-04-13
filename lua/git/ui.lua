@@ -162,7 +162,7 @@ local function pad_content(content, padding)
     return content
 end
 
-local function highlight_with_ts(bufnr, ft)
+local function highlight_with_ts(buf, ft)
     local has_ts = false
     local ts_highlight = nil
     local ts_parsers = nil
@@ -177,7 +177,7 @@ local function highlight_with_ts(bufnr, ft)
     if has_ts and ft and ft ~= '' then
         local lang = ts_parsers.ft_to_lang(ft);
         if ts_parsers.has_parser(lang) then
-            ts_highlight.attach(bufnr, lang)
+            ts_highlight.attach(buf, lang)
             return true
         end
     end
@@ -268,20 +268,20 @@ end
 M.show_hunk = function(hunk)
     local padding = { 1, 2, 1, 2 }
     local content = pad_content(vim.deepcopy(hunk.diff), padding)
-    local bufnr = vim.api.nvim_create_buf(false, true)
+    local buf = vim.api.nvim_create_buf(false, true)
 
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, content)
-    vim.api.nvim_buf_set_option(bufnr, 'bufhidden', 'wipe')
-    vim.api.nvim_buf_set_option(bufnr, 'filetype', 'diff')
+    vim.api.nvim_buf_set_lines(buf, 0, -1, true, content)
+    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+    vim.api.nvim_buf_set_option(buf, 'filetype', 'diff')
 
     for index, line in pairs(content) do
         -- TODO: Remove unnecessary trimming by offsetting the padding instead.
         line = line:gsub('%s+', '')
         local first_letter = line:sub(1, 1)
         if first_letter == '+' then
-            vim.api.nvim_buf_add_highlight(bufnr, constants.ns_id, state.hunk.types.add.hl_group, index - 1, 0, -1)
+            vim.api.nvim_buf_add_highlight(buf, constants.ns_id, state.hunk.types.add.hl_group, index - 1, 0, -1)
         elseif first_letter == '-' then
-            vim.api.nvim_buf_add_highlight(bufnr, constants.ns_id, state.hunk.types.remove.hl_group, index - 1, 0, -1)
+            vim.api.nvim_buf_add_highlight(buf, constants.ns_id, state.hunk.types.remove.hl_group, index - 1, 0, -1)
         end
     end
 
@@ -294,7 +294,7 @@ M.show_hunk = function(hunk)
         end
     end
 
-    local win_id = vim.api.nvim_open_win(bufnr, false, {
+    local win_id = vim.api.nvim_open_win(buf, false, {
         relative = 'cursor',
         style = 'minimal',
         height = height,
@@ -308,7 +308,7 @@ M.show_hunk = function(hunk)
     vim.lsp.util.close_preview_autocmd({ 'BufLeave', 'CursorMoved', 'CursorMovedI' }, win_id)
 end
 
-M.show_diff = function(cwd_lines, origin_lines, lnum_changes, file_type)
+M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 4)
@@ -330,8 +330,8 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, file_type)
     vim.api.nvim_buf_set_lines(cwd_buf, 0, -1, false, cwd_lines)
     vim.api.nvim_buf_set_lines(origin_buf, 0, -1, false, origin_lines)
 
-    highlight_with_ts(cwd_buf, file_type)
-    highlight_with_ts(origin_buf, file_type)
+    highlight_with_ts(cwd_buf, filetype)
+    highlight_with_ts(origin_buf, filetype)
 
     -- TODO: Theres one loop in git another loop in ui, is the abstraction worth it?
     for _, lnum in ipairs(lnum_changes.origin.added) do
