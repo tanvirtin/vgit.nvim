@@ -36,19 +36,14 @@ end
 
 local M = {}
 
-local function get_initial_state()
-    return {
-        diff_algorithm = 'histogram'
-    }
-end
-
-local state = get_initial_state()
+local constants = {
+    diff_algorithm = 'histogram'
+}
 
 M.initialize = function()
 end
 
 M.tear_down = function()
-    state = get_initial_state()
 end
 
 M.create_hunk = function(header)
@@ -85,7 +80,7 @@ M.buffer_hunks = function(filename)
             'core.safecrlf=false',
             'diff',
             '--color=never',
-            string.format('--diff-algorithm=%s', state.diff_algorithm),
+            string.format('--diff-algorithm=%s', constants.diff_algorithm),
             '--patch-with-raw',
             '--unified=0',
             filename,
