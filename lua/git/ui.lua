@@ -28,13 +28,13 @@ local constants = {
             bg = nil,
             fg = '#464b59',
         },
-        GitHunkAdd = {
-            bg = nil,
+        GitHunkSignAdd = {
             fg = '#d7ffaf',
-        },
-        GitHunkRemove = {
             bg = nil,
+        },
+        GitHunkSignRemove = {
             fg = '#e95678',
+            bg = nil,
         },
         GitSignAdd = {
             fg = '#d7ffaf',
@@ -100,6 +100,21 @@ local function get_initial_state()
                     { '│', 'GitHunkBorder' },
                 }
             },
+            sign = {
+                priority = 10,
+                types = {
+                    add = {
+                        name = 'GitHunkSignAdd',
+                        hl_group = 'GitHunkSignAdd',
+                        text = '+'
+                    },
+                    remove = {
+                        name = 'GitHunkSignRemove',
+                        hl_group = 'GitHunkSignRemove',
+                        text = '-'
+                    },
+                },
+            }
         },
         sign = {
             priority = 10,
@@ -158,6 +173,15 @@ local function highlight_with_ts(buf, ft)
     return false
 end
 
+local function show_hunk_preview_signs(buf, lnums, type)
+    for _, lnum in ipairs(lnums) do
+        vim.fn.sign_place(lnum, constants.group, state.hunk.sign.types[type].hl_group, buf, {
+            lnum = lnum,
+            priority = state.hunk.sign.priority,
+        })
+    end
+end
+
 M.initialize = function()
     for _, action in pairs(state.hunk.types) do
         local hl_group = action.hl_group
@@ -165,8 +189,20 @@ M.initialize = function()
             add_highlight(hl_group, constants.palette[hl_group]);
         end
     end
+
     for key, type in pairs(state.sign.types) do
         local hl_group = state.sign.types[key].hl_group
+        if constants.palette[hl_group] then
+            add_highlight(hl_group, constants.palette[hl_group]);
+        end
+        vim.fn.sign_define(type.name, {
+            text = type.text,
+            texthl = type.hl_group
+        })
+    end
+
+    for key, type in pairs(state.hunk.sign.types) do
+        local hl_group = state.hunk.sign.types[key].hl_group
         if constants.palette[hl_group] then
             add_highlight(hl_group, constants.palette[hl_group]);
         end
@@ -239,32 +275,39 @@ M.show_hunk_signs = function(filename, hunks)
     end
 end
 
-M.show_hunk = function(hunk)
-    local content = hunk.diff
+M.show_hunk = function(hunk, filetype)
+    local lines = hunk.diff
     local buf = vim.api.nvim_create_buf(false, true)
 
     vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
     vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
     vim.api.nvim_buf_set_option(buf, 'buflisted', false)
 
-    vim.api.nvim_buf_set_lines(buf, 0, -1, true, content)
+    local trimmed_lines = {}
+    local added_lines = {}
+    local removed_lines = {}
 
-    for index, line in pairs(content) do
-        -- TODO: Remove unnecessary trimming by offsetting the padding instead.
-        line = line:gsub('%s+', '')
+    for index, line in pairs(lines) do
         local first_letter = line:sub(1, 1)
         if first_letter == '+' then
-            vim.api.nvim_buf_add_highlight(buf, constants.ns_id, state.hunk.types.add.hl_group, index - 1, 0, -1)
+            table.insert(added_lines, index)
         elseif first_letter == '-' then
-            vim.api.nvim_buf_add_highlight(buf, constants.ns_id, state.hunk.types.remove.hl_group, index - 1, 0, -1)
+            table.insert(removed_lines, index)
         end
+        table.insert(trimmed_lines, line:sub(2, #line))
     end
+
+    vim.api.nvim_buf_set_lines(buf, 0, -1, true, trimmed_lines)
+
+    highlight_with_ts(buf, filetype)
+    show_hunk_preview_signs(buf, added_lines, 'add')
+    show_hunk_preview_signs(buf, removed_lines, 'remove')
 
     vim.api.nvim_buf_set_option(buf, 'modifiable', false)
 
     local width = 40
-    local height = #content
-    for _, line in ipairs(content) do
+    local height = #lines
+    for _, line in ipairs(lines) do
         local line_width = #line
         if line_width > width then
             width = line_width
@@ -275,7 +318,7 @@ M.show_hunk = function(hunk)
         relative = 'cursor',
         style = 'minimal',
         height = height,
-        width = width + 5,
+        width = width + 2,
         border = state.hunk.window.border,
         row = 1,
         col = 0,
