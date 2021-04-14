@@ -51,7 +51,8 @@ local M = {
         end
         if selected_hunk then
             local bufs = vim.api.nvim_list_bufs()
-            local buf, win_id = ui.show_hunk(selected_hunk)
+            local filetype = vim.api.nvim_buf_get_option(state.current_buf, 'filetype')
+            local buf, win_id = ui.show_hunk(selected_hunk, filetype)
             -- Close on cmd/ctrl - c.
             vim.api.nvim_buf_set_keymap(
                 buf,
