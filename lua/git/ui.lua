@@ -4,7 +4,7 @@ local constants = {
     group = 'tanvirtin/git.nvim',
     ns_id = vim.api.nvim_create_namespace('tanvirtin/git.nvim'),
     palette = {
-        GitDiff = {
+        GitDiffWindow = {
             bg = nil,
             fg = '#ffffff',
         },
@@ -20,7 +20,7 @@ local constants = {
             bg = '#63132f',
             fg = nil,
         },
-        GitHunk = {
+        GitHunkWindow = {
             bg = nil,
             fg = '#ffffff',
         },
@@ -55,7 +55,7 @@ local function get_initial_state()
     return {
         diff = {
             window = {
-                hl_group = 'GitDiff',
+                hl_group = 'GitDiffWindow',
                 border = {
                     { '╭', 'GitDiffBorder' },
                     { '─', 'GitDiffBorder' },
@@ -88,7 +88,7 @@ local function get_initial_state()
                 },
             },
             window = {
-                hl_group = 'GitHunk',
+                hl_group = 'GitHunkWindow',
                 border = {
                     { '╭', 'GitHunkBorder' },
                     { '─', 'GitHunkBorder' },
