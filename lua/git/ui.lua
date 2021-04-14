@@ -28,13 +28,21 @@ local constants = {
             bg = nil,
             fg = '#464b59',
         },
+        GitHunkAdd = {
+            fg = nil,
+            bg = '#4a6317',
+        },
+        GitHunkRemove = {
+            fg = nil,
+            bg = '#63132f',
+        },
         GitHunkSignAdd = {
             fg = '#d7ffaf',
-            bg = nil,
+            bg = '#4a6317',
         },
         GitHunkSignRemove = {
             fg = '#e95678',
-            bg = nil,
+            bg = '#63132f',
         },
         GitSignAdd = {
             fg = '#d7ffaf',
@@ -173,15 +181,6 @@ local function highlight_with_ts(buf, ft)
     return false
 end
 
-local function show_hunk_preview_signs(buf, lnums, type)
-    for _, lnum in ipairs(lnums) do
-        vim.fn.sign_place(lnum, constants.group, state.hunk.sign.types[type].hl_group, buf, {
-            lnum = lnum,
-            priority = state.hunk.sign.priority,
-        })
-    end
-end
-
 M.initialize = function()
     for _, action in pairs(state.hunk.types) do
         local hl_group = action.hl_group
@@ -262,12 +261,12 @@ M.hide_hunk_signs = function()
     vim.fn.sign_unplace(constants.group)
 end
 
-M.show_hunk_signs = function(filename, hunks)
+M.show_hunk_signs = function(buf, hunks)
     for _, hunk in ipairs(hunks) do
         for i = hunk.start, hunk.finish do
             -- NOTE: lnum cannot be 0, so when i is 0, we make lnum 1 when hunk is of type remove.
             local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
-            vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, filename, {
+            vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, buf, {
                 lnum = lnum,
                 priority = state.sign.priority,
             })
@@ -287,6 +286,16 @@ M.show_hunk = function(hunk, filetype)
     local added_lines = {}
     local removed_lines = {}
 
+    local width = 40
+    local height = #lines
+
+    for _, line in pairs(lines) do
+        local line_width = #line
+        if line_width > width then
+            width = line_width
+        end
+    end
+
     for index, line in pairs(lines) do
         local first_letter = line:sub(1, 1)
         if first_letter == '+' then
@@ -294,25 +303,36 @@ M.show_hunk = function(hunk, filetype)
         elseif first_letter == '-' then
             table.insert(removed_lines, index)
         end
+        local line_width = #line
+        if line_width <= width then
+            for _ = line_width, width do
+                line = line .. ' '
+            end
+        end
         table.insert(trimmed_lines, line:sub(2, #line))
     end
 
     vim.api.nvim_buf_set_lines(buf, 0, -1, true, trimmed_lines)
 
     highlight_with_ts(buf, filetype)
-    show_hunk_preview_signs(buf, added_lines, 'add')
-    show_hunk_preview_signs(buf, removed_lines, 'remove')
+
+    for _, lnum in ipairs(added_lines) do
+        vim.api.nvim_buf_add_highlight(buf, constants.ns_id, state.hunk.types.add.hl_group, lnum - 1, 0, -1)
+        vim.fn.sign_place(lnum, constants.group, state.hunk.sign.types['add'].hl_group, buf, {
+            lnum = lnum,
+            priority = state.hunk.sign.priority,
+        })
+    end
+
+    for _, lnum in ipairs(removed_lines) do
+        vim.fn.sign_place(lnum, constants.group, state.hunk.sign.types['remove'].hl_group, buf, {
+            lnum = lnum,
+            priority = state.hunk.sign.priority,
+        })
+        vim.api.nvim_buf_add_highlight(buf, constants.ns_id, state.hunk.types.remove.hl_group, lnum - 1, 0, -1)
+    end
 
     vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-
-    local width = 40
-    local height = #lines
-    for _, line in ipairs(lines) do
-        local line_width = #line
-        if line_width > width then
-            width = line_width
-        end
-    end
 
     local win_id = vim.api.nvim_open_win(buf, true, {
         relative = 'cursor',

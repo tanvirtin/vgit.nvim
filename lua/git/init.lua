@@ -32,7 +32,7 @@ local M = {
         state.hunks = hunks
 
         ui.hide_hunk_signs()
-        ui.show_hunk_signs(filename, hunks)
+        ui.show_hunk_signs(buf, hunks)
     end), 50),
 
     hunk_preview = vim.schedule_wrap(function()
