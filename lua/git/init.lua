@@ -153,7 +153,7 @@ local M = {
             return
         end
         local filetype = vim.api.nvim_buf_get_option(buf, 'filetype')
-        local err, data = git.diff(filename, hunks)
+        local err, data = git.buffer_diff(filename, hunks)
         if err then
             return
         end

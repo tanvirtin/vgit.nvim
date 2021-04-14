@@ -260,7 +260,7 @@ describe('git:', function()
             local err, hunks = git.buffer_hunks(filename)
             assert.are.same(err, nil)
             assert.are.same(type(hunks), 'table')
-            local diff_err, data = git.diff(filename, hunks)
+            local diff_err, data = git.buffer_diff(filename, hunks)
             assert.are.same(diff_err, nil)
             assert.are.same(type(data), 'table')
             local expected_keys = {
@@ -279,35 +279,35 @@ describe('git:', function()
         it('should have equal number of cwd_lines and origin_lines for a file with added lines', function()
             add_lines(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
         end)
 
         it('should have equal number of cwd_lines and origin_lines for a file with removed lines', function()
             remove_lines(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
         end)
 
         it('should have equal number of cwd_lines and origin_lines for a file with changed lines', function()
             change_lines(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
         end)
 
         it('should have equal number of cwd_lines and origin_lines for a file with added, removed and changed lines', function()
             augment_file(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
         end)
 
         it('should have equal number of cwd_lines and origin_lines for a file with added lines', function()
             local _, _, added_lines = add_lines(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             local num_added_lines = #added_lines
             assert(#data.cwd_lines > 0)
             assert(#data.origin_lines > 0)
@@ -326,7 +326,7 @@ describe('git:', function()
         it('should have correct lnum_changes for a file with removed lines', function()
             local _, _, removed_lines = remove_lines(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             local num_removed_lines = #removed_lines
             assert(#data.cwd_lines > 0)
             assert(#data.origin_lines > 0)
@@ -346,7 +346,7 @@ describe('git:', function()
         it('should have correct lnum_changes for a file with changed lines', function()
             local _, _, changed_lines = change_lines(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             local num_changed_lines = #changed_lines
             assert(#data.cwd_lines > 0)
             assert(#data.origin_lines > 0)
@@ -372,7 +372,7 @@ describe('git:', function()
         it('should have correct lnum_changes for a file with added, removed and changed lines', function()
             local _, _, added_lines, removed_lines, changed_lines = augment_file(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             local num_added_lines = #added_lines
             local num_removed_lines = #removed_lines
             local num_changed_lines = #changed_lines
@@ -404,7 +404,7 @@ describe('git:', function()
         it('should have correct cwd_lines and origin_lines for added lines', function()
             local lines, new_lines, added_lines = add_lines(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             local cwd_lines = data.cwd_lines
             local origin_lines = data.origin_lines
             for _, index in ipairs(added_lines) do
@@ -417,7 +417,7 @@ describe('git:', function()
         it('should have correct cwd_lines and origin_lines for removed lines', function()
             local lines, new_lines, removed_lines = remove_lines(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             local cwd_lines = data.cwd_lines
             local origin_lines = data.origin_lines
             for _, index in ipairs(removed_lines) do
@@ -431,7 +431,7 @@ describe('git:', function()
         it('should have correct cwd_lines and origin_lines for changed lines', function()
             local _, new_lines, changed_lines = add_lines(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             local cwd_lines = data.cwd_lines
             local origin_lines = data.origin_lines
             for _, index in ipairs(changed_lines) do
@@ -443,7 +443,7 @@ describe('git:', function()
         it('should have correct cwd_lines and origin_lines for added, removed and changed lines', function()
             local _, new_lines, added_lines, removed_lines, changed_lines = augment_file(filename)
             local _, hunks = git.buffer_hunks(filename)
-            local _, data = git.diff(filename, hunks)
+            local _, data = git.buffer_diff(filename, hunks)
             local cwd_lines = data.cwd_lines
             for _, index in ipairs(added_lines) do
                 assert.are.same(cwd_lines[index], new_lines[index])

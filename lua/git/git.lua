@@ -111,7 +111,7 @@ M.buffer_hunks = function(filename)
     return nil, hunks
 end
 
-M.diff = function(filename, hunks)
+M.buffer_diff = function(filename, hunks)
     local err, data = fs.read_file(filename);
     if err then
         return err, nil
