@@ -14,6 +14,7 @@
 - [x] Hunk preview
 - [x] Hunk navigation in current buffer
 - [x] Show original file and current file in a split window with diffs highlighted
+- [x] Reset changes in a buffer
 
 ### Installation via Plug
 ```
@@ -35,7 +36,8 @@ vim.api.nvim_set_keymap('n', '<leader>gh', ':lua require("git").hunk_preview()<C
 vim.api.nvim_set_keymap('n', '<leader>gr', ':lua require("git").hunk_reset()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<space>]', ':lua require("git").hunk_up()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<space>[', ':lua require("git").hunk_down()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<space>gd', ':lua require("git").diff_preview()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<space>gd', ':lua require("git").buffer_preview()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<space>gd', ':lua require("git").buffer_reset()<CR>', { noremap = true, silent = true })
 ```
 
 ### API
@@ -46,4 +48,5 @@ vim.api.nvim_set_keymap('n', '<space>gd', ':lua require("git").diff_preview()<CR
 | hunk_reset | Resets the hunk the cursor is on right now to it's previous step
 | hunk_down | Navigate downward through a github hunk |
 | hunk_up | Navigate upwards through a github hunk |
-| diff_preview | Opens two windows, showing cwd and origin buffers and the diff between them |
+| buffer_preview | Opens two windows, showing cwd and origin buffers and the diff between them |
+| buffer_reset | Resets a current buffer you are on |

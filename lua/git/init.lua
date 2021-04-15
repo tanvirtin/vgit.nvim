@@ -145,7 +145,7 @@ local M = {
         end
     end,
 
-    diff_preview = vim.schedule_wrap(function()
+    buffer_preview = vim.schedule_wrap(function()
         local filename = state.filename
         local buf = state.buf
         local hunks = state.hunks
@@ -187,6 +187,19 @@ local M = {
             )
         end
     end),
+
+    buffer_reset = function()
+        local filename = state.filename
+        local buf = state.buf
+        local hunks = state.hunks
+        if not filename or filename == '' or not buf or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
+            return
+        end
+        local err = git.buffer_reset(filename)
+        if not err then
+            vim.api.nvim_command('e!')
+        end
+    end,
 
     -- Wrapper around nvim_win_close, indented for a better autocmd experience.
     close_preview_window = function(...)
