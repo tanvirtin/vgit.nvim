@@ -197,4 +197,30 @@ M.buffer_diff = function(filename, hunks)
     }
 end
 
+M.buffer_reset = function(filename)
+    local err_result = ''
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'checkout',
+            'HEAD',
+            '--',
+            filename,
+        },
+        on_stderr = function(err, line)
+            if err then
+                err_result = err_result .. err
+            elseif line then
+                err_result = err_result .. line
+            end
+        end,
+    })
+    job:sync()
+    job:wait()
+    if err_result ~= '' then
+        return err_result
+    end
+    return nil
+end
+
 return M

@@ -16,7 +16,8 @@ describe('init:', function()
                 hunk_up = true,
                 hunk_down = true,
                 hunk_reset = true,
-                diff_preview = true,
+                buffer_preview = true,
+                buffer_reset = true,
                 close_preview_window = true,
             }
             for key, _ in pairs(git) do

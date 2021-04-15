@@ -248,7 +248,7 @@ describe('git:', function()
 
     end)
 
-    describe('diff', function()
+    describe('buffer_diff', function()
         local filename = 'tests/fixture/simple_file'
 
         after_each(function()
@@ -453,6 +453,65 @@ describe('git:', function()
             end
             for _, index in ipairs(changed_lines) do
                 assert.are.same(cwd_lines[index], new_lines[index])
+            end
+        end)
+
+    end)
+
+    describe('buffer_reset', function()
+        local filename = 'tests/fixture/simple_file'
+
+        after_each(function()
+            os.execute(string.format('git checkout HEAD -- %s', filename))
+        end)
+
+        it('should reset a file with only added lines', function()
+            local lines = add_lines(filename)
+            local new_lines = read_file(filename)
+            assert.are_not.same(#lines, #new_lines)
+            local err = git.buffer_reset(filename)
+            assert.are.same(err, nil)
+            local lines_after_reset = read_file(filename)
+            for index, line in ipairs(lines_after_reset) do
+                local original_line = lines[index]
+                assert.are.same(line, original_line)
+            end
+        end)
+
+        it('should reset a file with only removed lines', function()
+            local lines = remove_lines(filename)
+            local new_lines = read_file(filename)
+            assert.are_not.same(#lines, #new_lines)
+            local err = git.buffer_reset(filename)
+            assert.are.same(err, nil)
+            local lines_after_reset = read_file(filename)
+            for index, line in ipairs(lines_after_reset) do
+                local original_line = lines[index]
+                assert.are.same(line, original_line)
+            end
+        end)
+
+        it('should reset a file with only changed lines', function()
+            local lines = change_lines(filename)
+            local err = git.buffer_reset(filename)
+            assert.are.same(err, nil)
+            local lines_after_reset = read_file(filename)
+            for index, line in ipairs(lines_after_reset) do
+                local original_line = lines[index]
+                assert.are.same(line, original_line)
+            end
+        end)
+
+        it('should reset a file with added, removed, changed lines', function()
+            local lines = augment_file(filename)
+            local new_lines = read_file(filename)
+            assert.are_not.same(#lines, #new_lines)
+            local err = git.buffer_reset(filename)
+            assert.are.same(err, nil)
+            local lines_after_reset = read_file(filename)
+            for index, line in ipairs(lines_after_reset) do
+                local original_line = lines[index]
+                assert.are.same(line, original_line)
             end
         end)
 
