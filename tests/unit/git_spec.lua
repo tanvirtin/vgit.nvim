@@ -171,7 +171,7 @@ describe('git:', function()
     end)
 
     describe('buffer_hunks', function()
-        local filename = 'tests/fixture/simple_file'
+        local filename = 'tests/fixtures/simple_file'
 
         after_each(function()
             reset_head(filename)
@@ -249,7 +249,7 @@ describe('git:', function()
     end)
 
     describe('buffer_diff', function()
-        local filename = 'tests/fixture/simple_file'
+        local filename = 'tests/fixtures/simple_file'
 
         after_each(function()
             os.execute(string.format('git checkout HEAD -- %s', filename))
@@ -459,7 +459,7 @@ describe('git:', function()
     end)
 
     describe('buffer_reset', function()
-        local filename = 'tests/fixture/simple_file'
+        local filename = 'tests/fixtures/simple_file'
 
         after_each(function()
             os.execute(string.format('git checkout HEAD -- %s', filename))
