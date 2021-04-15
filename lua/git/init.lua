@@ -221,7 +221,7 @@ local M = {
         git.initialize()
         ui.initialize()
         vim.api.nvim_command('autocmd BufEnter,BufWritePost * lua require("git").buf_attach()')
-        vim.api.nvim_command('autocmd BufLeave,VimLeavePre * lua require("git").buf_detach()')
+        vim.api.nvim_command('autocmd VimLeavePre * lua require("git").buf_detach()')
     end
 }
 
