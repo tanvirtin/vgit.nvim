@@ -16,18 +16,22 @@
 - [x] Show original file and current file in a split window with diffs highlighted
 - [x] Reset changes in a buffer
 
-### Installation via Plug
-```
-Plug 'tanvirtin/git.nvim'
-Plug 'nvim-lua/plenary.nvim'
-```
+## Installation
 
-### Installation via Packer
-```
-use {
-    'tanvirtin/git.nvim',
-    requires = {{ 'nvim-lua/plenary.nvim' }}
-}
+**NOTE**: This plugin depends on [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) and [plenary.nvim](https://github.com/nvim-lua/plenary.nvim).
+
+| Plugin Manager                                       | Command                                                                        |
+|------------------------------------------------------|--------------------------------------------------------------------------------|
+| [Packer](https://github.com/wbthomason/packer.nvim)  | `use { 'tanvirtin/vgit.nvim', requires = 'nvim-lua/plenary.nvim' }`            |
+| [Vim-plug](https://github.com/junegunn/vim-plug)     | `Plug 'tanvirtin/vgit.nvim'`                                                   |
+| [NeoBundle](https://github.com/Shougo/neobundle.vim) | `NeoBundle 'tanvirtin/vgit.nvim'`                                              |
+| [Vundle](https://github.com/VundleVim/Vundle.vim)    | `Bundle 'tanvirtin/vgit.nvim'`                                                 |
+| [Pathogen](https://github.com/tpope/vim-pathogen)    | `git clone https://github.com/tanvirtin/vgit.nvim.git ~/.vim/bundle/vgit.nvim` |
+| [Dein](https://github.com/Shougo/dein.vim)           | `call dein#add('tanvirtin/vgit.nvim')`                                         |
+
+You also use in the built-in package manager:
+```bash
+$ git clone --depth 1 https://github.com/tanvirtin/vgit.nvim $XDG_CONFIG_HOME/nvim/pack/plugins/start/vgit.nvim
 ```
 
 ### Configure Mappings
