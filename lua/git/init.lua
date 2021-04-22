@@ -5,11 +5,7 @@ local defer = require('git.defer')
 local vim = vim
 
 local function get_initial_state()
-    return {
-        buf = nil,
-        hunks = {},
-        filename = nil,
-    }
+    return { hunks = {} }
 end
 
 local state = get_initial_state()
@@ -27,10 +23,7 @@ local M = {
         if err then
             return
         end
-        state.buf = buf
-        state.filename = filename
         state.hunks = hunks
-
         ui.hide_hunk_signs()
         ui.show_hunk_signs(buf, hunks)
     end), 50),
@@ -50,27 +43,7 @@ local M = {
             end
         end
         if selected_hunk then
-            local bufs = vim.api.nvim_list_bufs()
-            local filetype = vim.api.nvim_buf_get_option(state.current_buf, 'filetype')
-            local buf, win_id = ui.show_hunk(selected_hunk, filetype)
-            -- Close on cmd/ctrl - c.
-            vim.api.nvim_buf_set_keymap(
-                buf,
-                'n',
-                '<C-c>',
-                string.format(':lua require("git").close_preview_window(%s)<CR>', win_id),
-                { silent = true }
-            )
-            for _, current_buf in ipairs(bufs) do
-                -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
-                vim.api.nvim_command(
-                    string.format(
-                        'autocmd BufEnter <buffer=%s> lua require("git").close_preview_window(%s)',
-                        current_buf,
-                        win_id
-                    )
-                )
-            end
+            ui.show_hunk(selected_hunk, vim.api.nvim_buf_get_option(0, 'filetype'))
         end
     end),
 
@@ -112,7 +85,6 @@ local M = {
     end,
 
     hunk_reset = function()
-        local buf = state.buf
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         local selected_hunk = nil
         for _, hunk in ipairs(state.hunks) do
@@ -134,10 +106,10 @@ local M = {
             if start and finish then
                 if selected_hunk.type == 'remove' then
                     -- Api says start == finish (which is the case here) all the lines are inserted from that point.
-                    vim.api.nvim_buf_set_lines(buf, start, finish, false, replaced_lines)
+                    vim.api.nvim_buf_set_lines(0, start, finish, false, replaced_lines)
                 else
                     -- Insertion happens after the given index which is why we do start - 1
-                    vim.api.nvim_buf_set_lines(buf, start - 1, finish, false, replaced_lines)
+                    vim.api.nvim_buf_set_lines(0, start - 1, finish, false, replaced_lines)
                 end
                 vim.api.nvim_win_set_cursor(0, { start, 0 })
                 vim.api.nvim_command('update')
@@ -146,56 +118,30 @@ local M = {
     end,
 
     buffer_preview = vim.schedule_wrap(function()
-        local filename = state.filename
-        local buf = state.buf
         local hunks = state.hunks
-        if not filename or filename == '' or not buf or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
+        if #hunks == 0 then
             return
         end
-        local filetype = vim.api.nvim_buf_get_option(buf, 'filetype')
-        local err, data = git.buffer_diff(filename, hunks)
+        local filetype = vim.api.nvim_buf_get_option(0, 'filetype')
+        local err, data = git.buffer_diff(vim.api.nvim_buf_get_name(0), hunks)
         if err then
             return
         end
         -- NOTE: This prevents hunk navigation, hunk preview, etc disabled on the split window.
-        -- when split window is closed buf_attach is triggered again on the current buffer you will be on.
         state = get_initial_state()
-        local bufs = vim.api.nvim_list_bufs()
-        local cwd_buf, cwd_win_id, _, origin_win_id = ui.show_diff(
+        ui.show_diff(
             data.cwd_lines,
             data.origin_lines,
             data.lnum_changes,
             filetype
         )
-        -- Close on cmd/ctrl - c.
-        vim.api.nvim_buf_set_keymap(
-            cwd_buf,
-            'n',
-            '<C-c>',
-            string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
-            { silent = true }
-        )
-        for _, current_buf in ipairs(bufs) do
-            -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
-            vim.api.nvim_command(
-                string.format(
-                    'autocmd BufEnter <buffer=%s> lua require("git").close_preview_window(%s, %s)',
-                    current_buf,
-                    cwd_win_id,
-                    origin_win_id
-                )
-            )
-        end
     end),
 
     buffer_reset = function()
-        local filename = state.filename
-        local buf = state.buf
-        local hunks = state.hunks
-        if not filename or filename == '' or not buf or not hunks or type(hunks) ~= 'table' or #hunks == 0 then
+        if #state.hunks == 0 then
             return
         end
-        local err = git.buffer_reset(filename)
+        local err = git.buffer_reset(vim.api.nvim_buf_get_name(0))
         if not err then
             vim.api.nvim_command('e!')
         end

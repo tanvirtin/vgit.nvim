@@ -349,6 +349,26 @@ M.show_hunk = function(hunk, filetype)
     vim.api.nvim_win_set_option(win_id, 'wrap', false)
     vim.api.nvim_win_set_option(win_id, 'signcolumn', 'yes')
 
+    local bufs = vim.api.nvim_list_bufs()
+    -- Close on cmd/ctrl - c.
+    vim.api.nvim_buf_set_keymap(
+        buf,
+        'n',
+        '<C-c>',
+        string.format(':lua require("git").close_preview_window(%s)<CR>', win_id),
+        { silent = true }
+    )
+    for _, current_buf in ipairs(bufs) do
+        -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
+        vim.api.nvim_command(
+            string.format(
+                'autocmd BufEnter <buffer=%s> lua require("git").close_preview_window(%s)',
+                current_buf,
+                win_id
+            )
+        )
+    end
+
     return buf, win_id
 end
 
@@ -442,6 +462,27 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
     vim.api.nvim_win_set_option(origin_win_id, 'wrap', false)
     vim.api.nvim_win_set_option(origin_win_id, 'cursorbind', true)
     vim.api.nvim_win_set_option(origin_win_id, 'signcolumn', 'yes')
+
+    local bufs = vim.api.nvim_list_bufs()
+    -- Close on cmd/ctrl - c.
+    vim.api.nvim_buf_set_keymap(
+        cwd_buf,
+        'n',
+        '<C-c>',
+        string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
+        { silent = true }
+    )
+    for _, current_buf in ipairs(bufs) do
+        -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
+        vim.api.nvim_command(
+            string.format(
+                'autocmd BufEnter <buffer=%s> lua require("git").close_preview_window(%s, %s)',
+                current_buf,
+                cwd_win_id,
+                origin_win_id
+            )
+        )
+    end
 
     return cwd_buf, cwd_win_id, origin_buf, origin_win_id
 end

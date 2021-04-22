@@ -1,5 +1,4 @@
 local Job = require('plenary.job')
-local vim = vim
 
 local M = {}
 
