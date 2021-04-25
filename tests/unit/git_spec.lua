@@ -312,13 +312,12 @@ describe('git:', function()
             assert(#data.cwd_lines > 0)
             assert(#data.origin_lines > 0)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
-            assert.are.same(#data.lnum_changes.cwd.added, num_added_lines)
-            assert.are.same(#data.lnum_changes.cwd.removed, 0)
-            assert.are.same(#data.lnum_changes.origin.added, 0)
-            assert.are.same(#data.lnum_changes.origin.removed, 0)
+            assert.are.same(#data.lnum_changes, num_added_lines)
             local counter = 2
-            for _, value in ipairs(data.lnum_changes.cwd.added) do
-                assert.are.same(value, counter)
+            for _, lnum_data in ipairs(data.lnum_changes) do
+                assert.are.same(lnum_data.lnum, counter)
+                assert.are.same(lnum_data.type, 'add')
+                assert.are.same(lnum_data.buftype, 'cwd')
                 counter = counter + 2
             end
         end)
@@ -332,13 +331,12 @@ describe('git:', function()
             assert(#data.origin_lines > 0)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
-            assert.are.same(#data.lnum_changes.cwd.removed, 0)
-            assert.are.same(#data.lnum_changes.cwd.added, 0)
-            assert.are.same(#data.lnum_changes.origin.added, 0)
-            assert.are.same(#data.lnum_changes.origin.removed, num_removed_lines)
+            assert.are.same(#data.lnum_changes, num_removed_lines)
             local counter = 1
-            for _, value in ipairs(data.lnum_changes.origin.removed) do
-                assert.are.same(value, counter)
+            for _, lnum_data in ipairs(data.lnum_changes) do
+                assert.are.same(lnum_data.lnum, counter)
+                assert.are.same(lnum_data.type, 'remove')
+                assert.are.same(lnum_data.buftype, 'origin')
                 counter = counter + 2
             end
         end)
@@ -353,20 +351,32 @@ describe('git:', function()
             assert.are.same(#data.cwd_lines, #data.origin_lines)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
-            assert.are.same(#data.lnum_changes.cwd.removed, 0)
-            assert.are.same(#data.lnum_changes.cwd.added, num_changed_lines)
-            assert.are.same(#data.lnum_changes.origin.added, 0)
-            assert.are.same(#data.lnum_changes.origin.removed, num_changed_lines)
             local counter = 1
-            for _, value in ipairs(data.lnum_changes.origin.removed) do
-                assert.are.same(value, counter)
-                counter = counter + 2
+            local added_cwd_lines = 0
+            local removed_origin_lines = 0
+            for _, lnum_data in ipairs(data.lnum_changes) do
+                if lnum_data.buftype == 'origin' and lnum_data.type == 'remove' then
+                    assert.are.same(lnum_data.lnum, counter)
+                    counter = counter + 2
+                end
+                if lnum_data.buftype == 'cwd' then
+                    assert.are_not.same(lnum_data.type, 'remove')
+                    added_cwd_lines = added_cwd_lines + 1
+                end
             end
             counter = 1
-            for _, value in ipairs(data.lnum_changes.origin.added) do
-                assert.are.same(value, counter)
-                counter = counter + 2
+            for _, lnum_data in ipairs(data.lnum_changes) do
+                if lnum_data.buftype == 'origin' and lnum_data.type == 'add' then
+                    assert.are.same(lnum_data.lnum, counter)
+                    counter = counter + 2
+                end
+                if lnum_data.buftype == 'origin' then
+                    assert.are_not.same(lnum_data.type, 'added')
+                    removed_origin_lines = removed_origin_lines + 1
+                end
             end
+            assert.are.same(num_changed_lines, added_cwd_lines)
+            assert.are.same(num_changed_lines, removed_origin_lines)
         end)
 
         it('should have correct lnum_changes for a file with added, removed and changed lines', function()
@@ -381,24 +391,38 @@ describe('git:', function()
             assert.are.same(#data.cwd_lines, #data.origin_lines)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
             assert.are.same(#data.cwd_lines, #data.origin_lines)
-            assert.are.same(#data.lnum_changes.cwd.removed, 0)
-            assert.are.same(#data.lnum_changes.cwd.added, num_added_lines + num_changed_lines)
-            assert.are.same(#data.lnum_changes.origin.added, 0)
-            assert.are.same(#data.lnum_changes.origin.removed, num_removed_lines + num_changed_lines)
+            local added_cwd_lines = 0
+            local removed_origin_lines = 0
             local counter = 1
-            for _, value in ipairs(data.lnum_changes.cwd.added) do
-                assert.are.same(value, counter)
-                counter = counter + 2
-            end
-            counter = 5
-            for index, value in ipairs(data.lnum_changes.origin.removed) do
-                if index == 1 then
-                    assert.are.same(value, 3)
-                else
-                    assert.are.same(value, counter)
-                    counter = counter + 1
+            for _, lnum_data in ipairs(data.lnum_changes) do
+                if lnum_data.buftype == 'cwd' and lnum_data.type == 'add' then
+                    assert.are.same(lnum_data.lnum, counter)
+                    counter = counter + 2
+                end
+                if lnum_data.buftype == 'cwd' then
+                    assert.are_not.same(lnum_data.type, 'remove')
+                    added_cwd_lines = added_cwd_lines + 1
                 end
             end
+            counter = 5
+            local first = false
+            for _, lnum_data in ipairs(data.lnum_changes) do
+                if lnum_data.buftype == 'origin' and lnum_data.type == 'remove' then
+                    if not first then
+                        assert.are.same(lnum_data.lnum, 3)
+                    else
+                        assert.are.same(lnum_data.lnum, counter)
+                        counter = counter + 1
+                    end
+                    first = true
+                end
+                if lnum_data.buftype == 'origin' then
+                    assert.are_not.same(lnum_data.type, 'added')
+                    removed_origin_lines = removed_origin_lines + 1
+                end
+            end
+            assert.are.same(added_cwd_lines, num_added_lines + num_changed_lines)
+            assert.are.same(removed_origin_lines, num_removed_lines + num_changed_lines)
         end)
 
         it('should have correct cwd_lines and origin_lines for added lines', function()
