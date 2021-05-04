@@ -16,8 +16,16 @@ local constants = {
             bg = '#4a6317',
             fg = nil
         },
+        GitDiffChangeAdd = {
+            bg = '#85b329',
+            fg = nil
+        },
         GitDiffRemove = {
             bg = '#63132f',
+            fg = nil,
+        },
+        GitDiffChangeRemove = {
+            bg = '#b82156',
             fg = nil,
         },
         GitHunkWindow = {
@@ -79,12 +87,14 @@ local function get_initial_state()
                 add = {
                     sign_name = 'GitDiffAdd',
                     hl_group = 'GitDiffAdd',
+                    change_hl_group = 'GitDiffChangeAdd'
                 },
                 remove = {
                     sign_name = 'GitDiffRemove',
                     hl_group = 'GitDiffRemove',
+                    change_hl_group = 'GitDiffChangeRemove'
                 },
-            }
+            },
         },
         hunk = {
             types = {
@@ -242,8 +252,10 @@ M.initialize = function()
     for key, _ in pairs(state.diff.types) do
         local sign_name = state.diff.types[key].sign_name
         hl_group = state.diff.types[key].hl_group
+        local change_hl_group = state.diff.types[key].change_hl_group
         if constants.palette[hl_group] then
             add_highlight(hl_group, constants.palette[hl_group]);
+            add_highlight(change_hl_group, constants.palette[change_hl_group]);
             vim.fn.sign_define(sign_name, {
                 text = ' ',
                 texthl = hl_group
@@ -373,63 +385,48 @@ M.show_hunk = function(hunk, filetype)
 end
 
 M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 4)
     local width = math.ceil(global_width * 0.45)
     local row = math.ceil((global_height - height) / 2 - 1)
     local col = math.ceil((global_width - (width * 2)) / 2)
+    local current_line = vim.api.nvim_buf_get_lines(0, lnum - 1, -1, false)[1]
 
-    local cwd_buf = vim.api.nvim_create_buf(false, true)
-    local origin_buf = vim.api.nvim_create_buf(false, true)
+    local windows = {
+        origin = {
+            buf = vim.api.nvim_create_buf(false, true),
+            lines = origin_lines
+        },
+        cwd = {
+            buf = vim.api.nvim_create_buf(false, true),
+            lines = cwd_lines
+        }
+    }
 
-    vim.api.nvim_buf_set_option(cwd_buf, 'bufhidden', 'wipe')
-    vim.api.nvim_buf_set_option(cwd_buf, 'buftype', 'nofile')
-    vim.api.nvim_buf_set_option(cwd_buf, 'buflisted', false)
-
-    vim.api.nvim_buf_set_option(origin_buf, 'bufhidden', 'wipe')
-    vim.api.nvim_buf_set_option(origin_buf, 'buftype', 'nofile')
-    vim.api.nvim_buf_set_option(origin_buf, 'buflisted', false)
-
-    vim.api.nvim_buf_set_lines(cwd_buf, 0, -1, false, cwd_lines)
-    vim.api.nvim_buf_set_lines(origin_buf, 0, -1, false, origin_lines)
-
-    highlight_with_ts(cwd_buf, filetype)
-    highlight_with_ts(origin_buf, filetype)
-
-    for _, lnum in ipairs(lnum_changes.origin.added) do
-        vim.api.nvim_buf_add_highlight(origin_buf, constants.ns_id, state.diff.types.add.hl_group, lnum - 1, 0, -1)
-        vim.fn.sign_place(lnum, -1, state.diff.types.add.hl_group, origin_buf, {
-            lnum = lnum,
-            priority = state.sign.priority,
-        })
+    for _, window in pairs(windows) do
+        vim.api.nvim_buf_set_option(window.buf, 'bufhidden', 'wipe')
+        vim.api.nvim_buf_set_option(window.buf, 'buftype', 'nofile')
+        vim.api.nvim_buf_set_option(window.buf, 'buflisted', false)
+        vim.api.nvim_buf_set_lines(window.buf, 0, -1, false, window.lines)
+        highlight_with_ts(window.buf, filetype)
     end
-    for _, lnum in ipairs(lnum_changes.origin.removed) do
-        vim.api.nvim_buf_add_highlight(origin_buf, constants.ns_id, state.diff.types.remove.hl_group, lnum - 1, 0, -1)
-        vim.fn.sign_place(lnum, -1, state.diff.types.remove.hl_group, origin_buf, {
-            lnum = lnum,
-            priority = state.sign.priority,
-        })
-    end
-    for _, lnum in ipairs(lnum_changes.cwd.added) do
-        vim.api.nvim_buf_add_highlight(cwd_buf, constants.ns_id, state.diff.types.add.hl_group, lnum - 1, 0, -1)
-        vim.fn.sign_place(lnum, -1, state.diff.types.add.hl_group, cwd_buf, {
-            lnum = lnum,
-            priority = state.sign.priority,
-        })
-    end
-    for _, lnum in ipairs(lnum_changes.cwd.removed) do
-        vim.api.nvim_buf_add_highlight(cwd_buf, constants.ns_id, state.diff.types.remove.hl_group, lnum - 1, 0, -1)
-        vim.fn.sign_place(lnum, -1, state.diff.types.remove.hl_group, cwd_buf, {
-            lnum = lnum,
+
+    for _, data in ipairs(lnum_changes) do
+        local buf = windows[data.buftype].buf
+        vim.api.nvim_buf_add_highlight(buf, constants.ns_id, state.diff.types[data.type].hl_group, data.lnum - 1, 0, -1)
+        vim.fn.sign_place(data.lnum, -1, state.diff.types[data.type].hl_group, buf, {
+            lnum = data.lnum,
             priority = state.sign.priority,
         })
     end
 
-    vim.api.nvim_buf_set_option(origin_buf, 'modifiable', false)
-    vim.api.nvim_buf_set_option(cwd_buf, 'modifiable', false)
+    for _, window in pairs(windows) do
+        vim.api.nvim_buf_set_option(window.buf, 'modifiable', false)
+    end
 
-    local cwd_win_id = vim.api.nvim_open_win(cwd_buf, true, {
+    windows.cwd.win_id = vim.api.nvim_open_win(windows.cwd.buf, true, {
         style = 'minimal',
         relative = 'editor',
         width = width,
@@ -439,7 +436,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         col = col,
     })
 
-    local origin_win_id = vim.api.nvim_open_win(origin_buf, false, {
+    windows.origin.win_id = vim.api.nvim_open_win(windows.origin.buf, false, {
         style = 'minimal',
         relative = 'editor',
         width = width,
@@ -450,41 +447,45 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         focusable = false,
     })
 
-    -- When cursor bind on both buffer windows, moving cursor in one of the window will mimic the position in the other one.
-    vim.api.nvim_win_set_option(cwd_win_id, 'winhl', string.format('Normal:%s', state.diff.window.hl_group))
-    vim.api.nvim_win_set_option(cwd_win_id, 'cursorline', true)
-    vim.api.nvim_win_set_option(cwd_win_id, 'wrap', false)
-    vim.api.nvim_win_set_option(cwd_win_id, 'cursorbind', true)
-    vim.api.nvim_win_set_option(cwd_win_id, 'signcolumn', 'yes')
+    for _, window in pairs(windows) do
+        vim.api.nvim_win_set_option(window.win_id, 'winhl', string.format('Normal:%s', state.diff.window.hl_group))
+        vim.api.nvim_win_set_option(window.win_id, 'cursorline', true)
+        vim.api.nvim_win_set_option(window.win_id, 'wrap', false)
+        vim.api.nvim_win_set_option(window.win_id, 'cursorbind', true)
+        vim.api.nvim_win_set_option(window.win_id, 'scrollbind', true)
+        vim.api.nvim_win_set_option(window.win_id, 'signcolumn', 'yes')
+    end
 
-    vim.api.nvim_win_set_option(origin_win_id, 'winhl', string.format('Normal:%s', state.diff.window.hl_group))
-    vim.api.nvim_win_set_option(origin_win_id, 'cursorline', true)
-    vim.api.nvim_win_set_option(origin_win_id, 'wrap', false)
-    vim.api.nvim_win_set_option(origin_win_id, 'cursorbind', true)
-    vim.api.nvim_win_set_option(origin_win_id, 'signcolumn', 'yes')
-
-    local bufs = vim.api.nvim_list_bufs()
+    local current_bufs = vim.api.nvim_list_bufs()
     -- Close on cmd/ctrl - c.
     vim.api.nvim_buf_set_keymap(
-        cwd_buf,
+        windows.cwd.buf,
         'n',
         '<C-c>',
-        string.format(':lua require("git").close_preview_window(%s, %s)<CR>', cwd_win_id, origin_win_id),
+        string.format(':lua require("git").close_preview_window(%s, %s)<CR>', windows.cwd.win_id, windows.cwd.origin_id),
         { silent = true }
     )
-    for _, current_buf in ipairs(bufs) do
+
+    for _, current_buf in ipairs(current_bufs) do
         -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
         vim.api.nvim_command(
             string.format(
                 'autocmd BufEnter <buffer=%s> lua require("git").close_preview_window(%s, %s)',
                 current_buf,
-                cwd_win_id,
-                origin_win_id
+                windows.cwd.win_id,
+                windows.origin.win_id
             )
         )
     end
 
-    return cwd_buf, cwd_win_id, origin_buf, origin_win_id
+    for index, line in ipairs(cwd_lines) do
+        if line == current_line and index >= lnum then
+            vim.api.nvim_win_set_cursor(windows.cwd.win_id, { index, 0 })
+            break
+        end
+    end
+
+    return windows.cwd.buf, windows.cwd.win_id, windows.origin.buf, windows.origin.win_id
 end
 
 return M

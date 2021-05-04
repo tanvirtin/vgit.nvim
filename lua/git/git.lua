@@ -119,16 +119,7 @@ M.buffer_diff = function(filename, hunks)
     data = vim.split(data, '\n')
     local cwd_lines = {}
     local origin_lines = {}
-    local lnum_changes = {
-        origin = {
-            added = {},
-            removed = {}
-        },
-        cwd = {
-            added = {},
-            removed = {}
-        },
-    }
+    local lnum_changes = {}
     -- shallow copy
     for key, value in pairs(data) do
         cwd_lines[key] = value
@@ -146,7 +137,11 @@ M.buffer_diff = function(filename, hunks)
             -- Remove the line indicating that these lines were inserted in cwd_lines.
             for i = start, finish do
                 origin_lines[i] = ''
-                table.insert(lnum_changes.cwd.added, i)
+                table.insert(lnum_changes, {
+                    lnum = i,
+                    buftype = 'cwd',
+                    type = 'add'
+                })
             end
         elseif type == 'remove' then
             for _, line in ipairs(diff) do
@@ -154,7 +149,11 @@ M.buffer_diff = function(filename, hunks)
                 new_lines_added = new_lines_added + 1
                 table.insert(cwd_lines, start, '')
                 table.insert(origin_lines, start, line:sub(2, #line))
-                table.insert(lnum_changes.origin.removed, start)
+                table.insert(lnum_changes, {
+                    lnum = start,
+                    buftype = 'origin',
+                    type = 'remove'
+                })
             end
         elseif type == 'change' then
             -- Retrieve lines that have been removed and added without "-" and "+".
@@ -180,10 +179,18 @@ M.buffer_diff = function(filename, hunks)
                 local added_line = added_lines[recalculated_index]
                 local removed_line = removed_lines[recalculated_index]
                 if removed_line then
-                    table.insert(lnum_changes.origin.removed, i)
+                    table.insert(lnum_changes, {
+                        lnum = i,
+                        buftype = 'origin',
+                        type = 'remove'
+                    })
                 end
                 if added_line then
-                    table.insert(lnum_changes.cwd.added, i)
+                    table.insert(lnum_changes, {
+                        lnum = i,
+                        buftype = 'cwd',
+                        type = 'add'
+                    })
                 end
                 origin_lines[i] = removed_line or ''
                 cwd_lines[i] = added_line or ''
