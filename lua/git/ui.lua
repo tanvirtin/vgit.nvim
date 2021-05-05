@@ -12,13 +12,21 @@ local constants = {
             bg = nil,
             fg = '#464b59',
         },
-        GitDiffAdd = {
+        GitDiffAddSign = {
             bg = '#3d5213',
             fg = nil,
         },
-        GitDiffRemove = {
+        GitDiffRemoveSign = {
             bg = '#4a0f23',
             fg = nil,
+        },
+        GitDiffAddText = {
+            fg = '#6a8f1f',
+            bg = '#3d5213',
+        },
+        GitDiffRemoveText = {
+            fg = '#a3214c',
+            bg = '#4a0f23',
         },
         GitHunkWindow = {
             bg = nil,
@@ -28,13 +36,21 @@ local constants = {
             bg = nil,
             fg = '#464b59',
         },
-        GitHunkAdd = {
+        GitHunkAddSign = {
             bg = '#3d5213',
             fg = nil,
         },
-        GitHunkRemove = {
+        GitHunkRemoveSign = {
             bg = '#4a0f23',
             fg = nil,
+        },
+        GitHunkAddText = {
+            fg = '#6a8f1f',
+            bg = '#3d5213',
+        },
+        GitHunkRemoveText = {
+            fg = '#a3214c',
+            bg = '#4a0f23',
         },
         GitHunkSignAdd = {
             fg = '#d7ffaf',
@@ -77,13 +93,15 @@ local function get_initial_state()
             },
             types = {
                 add = {
-                    name = 'GitDiffAdd',
-                    hl_group = 'GitDiffAdd',
+                    name = 'GitDiffAddSign',
+                    sign_hl_group = 'GitDiffAddSign',
+                    text_hl_group = 'GitDiffAddText',
                     text = '+'
                 },
                 remove = {
-                    name = 'GitDiffRemove',
-                    hl_group = 'GitDiffRemove',
+                    name = 'GitDiffRemoveSign',
+                    sign_hl_group = 'GitDiffRemoveSign',
+                    text_hl_group = 'GitDiffRemoveText',
                     text = '-'
                 },
             },
@@ -91,13 +109,15 @@ local function get_initial_state()
         hunk = {
             types = {
                 add = {
-                    name = 'GitHunkAdd',
-                    hl_group = 'GitHunkAdd',
+                    name = 'GitHunkAddSign',
+                    sign_hl_group = 'GitHunkAddSign',
+                    text_hl_group = 'GitHunkAddText',
                     text = '+'
                 },
                 remove = {
-                    name = 'GitHunkRemove',
-                    hl_group = 'GitHunkRemove',
+                    name = 'GitHunkRemoveSign',
+                    sign_hl_group = 'GitHunkRemoveSign',
+                    text_hl_group = 'GitHunkRemoveText',
                     text = '-'
                 },
             },
@@ -213,13 +233,15 @@ M.initialize = function()
     end
 
     for _, action in pairs(state.hunk.types) do
-        local sign_hl_group = action.hl_group
+        local sign_hl_group = action.sign_hl_group
+        local text_hl_group = action.text_hl_group
         if constants.palette[sign_hl_group] then
             add_highlight(sign_hl_group, constants.palette[sign_hl_group]);
+            add_highlight(text_hl_group, constants.palette[text_hl_group]);
         end
         vim.fn.sign_define(action.name, {
             text = action.text,
-            texthl = sign_hl_group,
+            texthl = text_hl_group,
             linehl = sign_hl_group,
         })
     end
@@ -227,13 +249,15 @@ M.initialize = function()
     for _, action in pairs(state.diff.types) do
         local name = action.name
         local text = action.text
-        local sign_hl_group = action.hl_group
+        local sign_hl_group = action.sign_hl_group
+        local text_hl_group = action.text_hl_group
         if constants.palette[sign_hl_group] then
             add_highlight(sign_hl_group, constants.palette[sign_hl_group]);
+            add_highlight(text_hl_group, constants.palette[text_hl_group]);
         end
         vim.fn.sign_define(name, {
             text = text,
-            texthl = sign_hl_group,
+            texthl = text_hl_group,
             linehl = sign_hl_group,
         })
     end
@@ -291,14 +315,14 @@ M.show_hunk = function(hunk, filetype)
     highlight_with_ts(buf, filetype)
 
     for _, lnum in ipairs(added_lines) do
-        vim.fn.sign_place(lnum, constants.group, state.hunk.types['add'].hl_group, buf, {
+        vim.fn.sign_place(lnum, constants.group, state.hunk.types['add'].sign_hl_group, buf, {
             lnum = lnum,
             priority = state.sign.priority,
         })
     end
 
     for _, lnum in ipairs(removed_lines) do
-        vim.fn.sign_place(lnum, constants.group, state.hunk.types['remove'].hl_group, buf, {
+        vim.fn.sign_place(lnum, constants.group, state.hunk.types['remove'].sign_hl_group, buf, {
             lnum = lnum,
             priority = state.sign.priority,
         })
@@ -375,7 +399,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
 
     for _, data in ipairs(lnum_changes) do
         local buf = windows[data.buftype].buf
-        vim.fn.sign_place(data.lnum, constants.group, state.diff.types[data.type].hl_group, buf, {
+        vim.fn.sign_place(data.lnum, constants.group, state.diff.types[data.type].sign_hl_group, buf, {
             lnum = data.lnum,
             priority = state.sign.priority,
         })
