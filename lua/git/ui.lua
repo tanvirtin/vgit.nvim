@@ -1,9 +1,15 @@
 local vim = vim
 
 local constants = {
-    group = 'tanvirtin/vgit.nvim',
-    ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim'),
+    hunk_signs_group = 'tanvirtin/vgit.nvim/hunk/signs',
+    blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
     palette = {
+        GitBlame = {
+            bg = nil,
+            fg = '#b1b1b1',
+            -- TODO: Why does this not work
+            style = 'italic',
+        },
         GitDiffWindow = {
             bg = nil,
             fg = '#ffffff',
@@ -77,6 +83,9 @@ local constants = {
 
 local function get_initial_state()
     return {
+        blame = {
+            hl_group = 'GitBlame',
+        },
         diff = {
             window = {
                 hl_group = 'GitDiffWindow',
@@ -193,6 +202,12 @@ local function highlight_with_ts(buf, ft)
 end
 
 M.initialize = function()
+    local blame_hl_group = state.blame.hl_group
+
+    if constants.palette[blame_hl_group] then
+        add_highlight(blame_hl_group, constants.palette[blame_hl_group]);
+    end
+
     for key, type in pairs(state.sign.types) do
         local hl_group = state.sign.types[key].hl_group
         if constants.palette[hl_group] then
@@ -268,8 +283,25 @@ M.tear_down = function()
     state = get_initial_state()
 end
 
+M.show_blame = function(buf, blames)
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local blame = blames[lnum]
+    local info = 'Not Committed Yet'
+    if blame then
+        info = string.format('Author: %s', blame.author)
+    end
+    vim.api.nvim_buf_set_extmark(buf, constants.blame_namespace, lnum - 1, 0, {
+        id = 1,
+        virt_text = { { '    ' .. info, state.blame.hl_group } },
+    })
+end
+
+M.hide_blame = function(buf)
+    vim.api.nvim_buf_del_extmark(buf, constants.blame_namespace, 1)
+end
+
 M.hide_hunk_signs = function()
-    vim.fn.sign_unplace(constants.group)
+    vim.fn.sign_unplace(constants.hunk_signs_group)
 end
 
 M.show_hunk_signs = function(buf, hunks)
@@ -277,7 +309,7 @@ M.show_hunk_signs = function(buf, hunks)
         for i = hunk.start, hunk.finish do
             -- NOTE: lnum cannot be 0, so when i is 0, we make lnum 1 when hunk is of type remove.
             local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
-            vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, buf, {
+            vim.fn.sign_place(lnum, constants.hunk_signs_group, state.sign.types[hunk.type].hl_group, buf, {
                 lnum = lnum,
                 priority = state.sign.priority,
             })
@@ -315,14 +347,14 @@ M.show_hunk = function(hunk, filetype)
     highlight_with_ts(buf, filetype)
 
     for _, lnum in ipairs(added_lines) do
-        vim.fn.sign_place(lnum, constants.group, state.hunk.types['add'].sign_hl_group, buf, {
+        vim.fn.sign_place(lnum, constants.hunk_signs_group, state.hunk.types['add'].sign_hl_group, buf, {
             lnum = lnum,
             priority = state.sign.priority,
         })
     end
 
     for _, lnum in ipairs(removed_lines) do
-        vim.fn.sign_place(lnum, constants.group, state.hunk.types['remove'].sign_hl_group, buf, {
+        vim.fn.sign_place(lnum, constants.hunk_signs_group, state.hunk.types['remove'].sign_hl_group, buf, {
             lnum = lnum,
             priority = state.sign.priority,
         })
@@ -399,7 +431,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
 
     for _, data in ipairs(lnum_changes) do
         local buf = windows[data.buftype].buf
-        vim.fn.sign_place(data.lnum, constants.group, state.diff.types[data.type].sign_hl_group, buf, {
+        vim.fn.sign_place(data.lnum, constants.hunk_signs_group, state.diff.types[data.type].sign_hl_group, buf, {
             lnum = data.lnum,
             priority = state.sign.priority,
         })
