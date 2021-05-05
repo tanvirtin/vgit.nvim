@@ -48,6 +48,9 @@ local M = {
     end),
 
     hunk_down = function()
+        if #state.hunks == 0 then
+            return
+        end
         local new_lnum = nil
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         for _, hunk in ipairs(state.hunks) do
@@ -62,10 +65,17 @@ local M = {
         end
         if new_lnum then
             vim.api.nvim_win_set_cursor(0, { new_lnum, 0 })
+            vim.api.nvim_command('norm! zz')
+        else
+            vim.api.nvim_win_set_cursor(0, { state.hunks[1].start, 0 })
+            vim.api.nvim_command('norm! zz')
         end
     end,
 
     hunk_up = function()
+        if #state.hunks == 0 then
+            return
+        end
         local new_lnum = nil
         local lnum = vim.api.nvim_win_get_cursor(0)[1]
         for i = #state.hunks, 1, -1 do
@@ -81,6 +91,10 @@ local M = {
         end
         if new_lnum then
             vim.api.nvim_win_set_cursor(0, { new_lnum, 0 })
+            vim.api.nvim_command('norm! zz')
+        else
+            vim.api.nvim_win_set_cursor(0, { state.hunks[#state.hunks].start, 0 })
+            vim.api.nvim_command('norm! zz')
         end
     end,
 
