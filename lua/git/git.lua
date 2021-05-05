@@ -34,6 +34,14 @@ local function parse_hunk_header(line)
     return origin, current
 end
 
+local function split_by_whitespace(s)
+    local chunks = {}
+    for substring in s:gmatch('%S+') do
+       table.insert(chunks, substring)
+    end
+    return chunks
+end
+
 local M = {}
 
 local constants = {
@@ -109,6 +117,88 @@ M.buffer_hunks = function(filename)
         return err_result, nil
     end
     return nil, hunks
+end
+
+M.create_blame = function(info)
+    local hash_info = split_by_whitespace(info[1])
+    local author_info = split_by_whitespace(info[2])
+    local author_mail_info = split_by_whitespace(info[3])
+    local author_time_info = split_by_whitespace(info[4])
+    local author_tz_info = split_by_whitespace(info[5])
+    local committer_info = split_by_whitespace(info[6])
+    local committer_mail_info = split_by_whitespace(info[7])
+    local committer_time_info = split_by_whitespace(info[8])
+    local committer_tz_info = split_by_whitespace(info[9])
+    local author = author_info[2]
+    local author_mail = author_mail_info[2]
+    local committer = committer_info[2]
+    local committer_mail = committer_mail_info[2]
+    local lnum = tonumber(hash_info[3])
+    if author == 'Not' and committer == 'Not' and author_mail == '<not.committed.yet>' and committer_mail == '<not.committed.yet>' then
+        return nil
+    end
+    return {
+        lnum = lnum,
+        hash = hash_info[1],
+        author = author,
+        author_mail = (function()
+            local mail = author_mail
+            if mail:sub(1, 1) == '<' and mail:sub(#mail, #mail) then
+                mail = mail:sub(2, #mail - 1)
+            end
+            return mail
+        end)(),
+        author_time = author_time_info[2],
+        author_tz = author_tz_info[2],
+        committer = committer,
+        committer_mail = (function()
+            local mail = committer_mail
+            if mail:sub(1, 1) == '<' and mail:sub(#mail, #mail) then
+                mail = mail:sub(2, #mail - 1)
+            end
+            return mail
+        end)(),
+        committer_time = committer_time_info[2],
+        committer_tz = committer_tz_info[2],
+    }
+end
+
+M.buffer_blames = function(filename)
+    local err_result = ''
+    local blames = {}
+    local blame_info = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'blame',
+            '--line-porcelain',
+            filename,
+        },
+        on_stdout = function(_, line)
+            if string.byte(line:sub(1, 3)) ~= 9 then
+                table.insert(blame_info, line)
+            else
+                local blame = M.create_blame(blame_info)
+                if blame then
+                    blames[blame.lnum] = blame
+                end
+                blame_info = {}
+            end
+        end,
+        on_stderr = function(err, line)
+            if err then
+                err_result = err_result .. err
+            elseif line then
+                err_result = err_result .. line
+            end
+        end,
+    })
+    job:sync()
+    job:wait()
+    if err_result ~= '' then
+        return err_result, nil
+    end
+    return nil, blames
 end
 
 M.buffer_diff = function(filename, hunks)
