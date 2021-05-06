@@ -2,9 +2,10 @@
 
 <details>
     <summary>Take a look</summary>
-    <img width="1792" alt="Screen Shot 2021-04-13 at 10 23 40 PM" src="https://user-images.githubusercontent.com/25164326/114645560-b714d780-9ca7-11eb-9669-24fe60b50fa6.png">
-    <img width="1792" alt="Screen Shot 2021-04-13 at 10 24 01 PM" src="https://user-images.githubusercontent.com/25164326/114645565-b8460480-9ca7-11eb-9fab-28a74cc4c4f3.png">
-    <img width="1792" alt="Screen Shot 2021-04-13 at 10 28 10 PM" src="https://user-images.githubusercontent.com/25164326/114645566-b8460480-9ca7-11eb-95a9-c7b69304860d.png">
+    ![hunk_signs](https://user-images.githubusercontent.com/25164326/117378542-acfb8880-aea3-11eb-93e5-30a9c4d45250.gif)
+    ![hunk_navigation](https://user-images.githubusercontent.com/25164326/117378065-ad475400-aea2-11eb-8cf0-babd0babdaf4.gif)
+    ![hunk_preview](https://user-images.githubusercontent.com/25164326/117378594-c997c080-aea3-11eb-9597-b08e7055b3f2.gif)
+    ![blame](https://user-images.githubusercontent.com/25164326/117378560-b97fe100-aea3-11eb-841e-2aaa863224b4.gif)
 </details>
 
 ### Provided Features
