@@ -5,75 +5,75 @@ local constants = {
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
     blame_line_id = 1,
     palette = {
-        GitBlame = {
+        VGitBlame = {
             bg = nil,
             fg = '#b1b1b1',
         },
-        GitDiffWindow = {
+        VGitDiffWindow = {
             bg = nil,
             fg = '#ffffff',
         },
-        GitDiffBorder = {
+        VGitDiffBorder = {
             bg = nil,
             fg = '#464b59',
         },
-        GitDiffAddSign = {
+        VGitDiffAddSign = {
             bg = '#3d5213',
             fg = nil,
         },
-        GitDiffRemoveSign = {
+        VGitDiffRemoveSign = {
             bg = '#4a0f23',
             fg = nil,
         },
-        GitDiffAddText = {
+        VGitDiffAddText = {
             fg = '#6a8f1f',
             bg = '#3d5213',
         },
-        GitDiffRemoveText = {
+        VGitDiffRemoveText = {
             fg = '#a3214c',
             bg = '#4a0f23',
         },
-        GitHunkWindow = {
+        VGitHunkWindow = {
             bg = nil,
             fg = '#ffffff',
         },
-        GitHunkBorder = {
+        VGitHunkBorder = {
             bg = nil,
             fg = '#464b59',
         },
-        GitHunkAddSign = {
+        VGitHunkAddSign = {
             bg = '#3d5213',
             fg = nil,
         },
-        GitHunkRemoveSign = {
+        VGitHunkRemoveSign = {
             bg = '#4a0f23',
             fg = nil,
         },
-        GitHunkAddText = {
+        VGitHunkAddText = {
             fg = '#6a8f1f',
             bg = '#3d5213',
         },
-        GitHunkRemoveText = {
+        VGitHunkRemoveText = {
             fg = '#a3214c',
             bg = '#4a0f23',
         },
-        GitHunkSignAdd = {
+        VGitHunkSignAdd = {
             fg = '#d7ffaf',
             bg = '#4a6317',
         },
-        GitHunkSignRemove = {
+        VGitHunkSignRemove = {
             fg = '#e95678',
             bg = '#63132f',
         },
-        GitSignAdd = {
+        VGitSignAdd = {
             fg = '#d7ffaf',
             bg = nil,
         },
-        GitSignChange = {
+        VGitSignChange = {
             fg = '#7AA6DA',
             bg = nil,
         },
-        GitSignRemove = {
+        VGitSignRemove = {
             fg = '#e95678',
             bg = nil,
         },
@@ -87,7 +87,7 @@ end
 local function get_initial_state()
     return {
         blame = {
-            hl_group = 'GitBlame',
+            hl_group = 'VGitBlame',
             format = function(blame, git_config)
                 local config_author = git_config['user.name']
                 local author = blame.author
@@ -127,29 +127,29 @@ local function get_initial_state()
         },
         diff = {
             window = {
-                hl_group = 'GitDiffWindow',
+                hl_group = 'VGitDiffWindow',
                 border = {
-                    { '╭', 'GitDiffBorder' },
-                    { '─', 'GitDiffBorder' },
-                    { '╮', 'GitDiffBorder' },
-                    { '│', 'GitDiffBorder' },
-                    { '╯', 'GitDiffBorder' },
-                    { '─', 'GitDiffBorder' },
-                    { '╰', 'GitDiffBorder' },
-                    { '│', 'GitDiffBorder' },
+                    { '╭', 'VGitDiffBorder' },
+                    { '─', 'VGitDiffBorder' },
+                    { '╮', 'VGitDiffBorder' },
+                    { '│', 'VGitDiffBorder' },
+                    { '╯', 'VGitDiffBorder' },
+                    { '─', 'VGitDiffBorder' },
+                    { '╰', 'VGitDiffBorder' },
+                    { '│', 'VGitDiffBorder' },
                 }
             },
             types = {
                 add = {
-                    name = 'GitDiffAddSign',
-                    sign_hl_group = 'GitDiffAddSign',
-                    text_hl_group = 'GitDiffAddText',
+                    name = 'VGitDiffAddSign',
+                    sign_hl_group = 'VGitDiffAddSign',
+                    text_hl_group = 'VGitDiffAddText',
                     text = '+'
                 },
                 remove = {
-                    name = 'GitDiffRemoveSign',
-                    sign_hl_group = 'GitDiffRemoveSign',
-                    text_hl_group = 'GitDiffRemoveText',
+                    name = 'VGitDiffRemoveSign',
+                    sign_hl_group = 'VGitDiffRemoveSign',
+                    text_hl_group = 'VGitDiffRemoveText',
                     text = '-'
                 },
             },
@@ -157,29 +157,29 @@ local function get_initial_state()
         hunk = {
             types = {
                 add = {
-                    name = 'GitHunkAddSign',
-                    sign_hl_group = 'GitHunkAddSign',
-                    text_hl_group = 'GitHunkAddText',
+                    name = 'VGitHunkAddSign',
+                    sign_hl_group = 'VGitHunkAddSign',
+                    text_hl_group = 'VGitHunkAddText',
                     text = '+'
                 },
                 remove = {
-                    name = 'GitHunkRemoveSign',
-                    sign_hl_group = 'GitHunkRemoveSign',
-                    text_hl_group = 'GitHunkRemoveText',
+                    name = 'VGitHunkRemoveSign',
+                    sign_hl_group = 'VGitHunkRemoveSign',
+                    text_hl_group = 'VGitHunkRemoveText',
                     text = '-'
                 },
             },
             window = {
-                hl_group = 'GitHunkWindow',
+                hl_group = 'VGitHunkWindow',
                 border = {
-                    { '', 'GitHunkBorder' },
-                    { '─', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
-                    { '─', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '─', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '─', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
                 }
             },
         },
@@ -187,18 +187,18 @@ local function get_initial_state()
             priority = 10,
             types = {
                 add = {
-                    name = 'GitSignAdd',
-                    hl_group = 'GitSignAdd',
+                    name = 'VGitSignAdd',
+                    hl_group = 'VGitSignAdd',
                     text = '│'
                 },
                 remove = {
-                    name = 'GitSignRemove',
-                    hl_group = 'GitSignRemove',
+                    name = 'VGitSignRemove',
+                    hl_group = 'VGitSignRemove',
                     text = '│'
                 },
                 change = {
-                    name = 'GitSignChange',
-                    hl_group = 'GitSignChange',
+                    name = 'VGitSignChange',
+                    hl_group = 'VGitSignChange',
                     text = '│'
                 },
             },
