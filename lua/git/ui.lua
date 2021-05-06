@@ -3,12 +3,11 @@ local vim = vim
 local constants = {
     hunk_signs_group = 'tanvirtin/vgit.nvim/hunk/signs',
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
+    blame_line_id = 1,
     palette = {
         GitBlame = {
             bg = nil,
             fg = '#b1b1b1',
-            -- TODO: Why does this not work
-            style = 'italic',
         },
         GitDiffWindow = {
             bg = nil,
@@ -81,10 +80,50 @@ local constants = {
     },
 }
 
+local function round(x)
+    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
+end
+
 local function get_initial_state()
     return {
         blame = {
             hl_group = 'GitBlame',
+            format = function(blame, git_config)
+                local config_author = git_config['user.name']
+                local author = blame.author
+                if config_author == author then
+                    author = 'You'
+                end
+                local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
+                local time_format = string.format('%s days ago', round(time))
+                local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
+                local division_counter = 1
+
+                while time < 1 and division_counter ~= #time_divisions do
+                    local division = time_divisions[division_counter]
+                    time = time * division[1]
+                    time_format = string.format('%s %s ago', round(time), division[2])
+                    division_counter = division_counter + 1
+                end
+
+                local commit_message = blame.commit_message
+
+                if not blame.committed then
+                    author = 'You'
+                    commit_message = 'Uncommitted changes'
+                    local info = string.format('%s • %s', author, commit_message)
+                    return string.format(' %s', info)
+                end
+
+                local max_commit_message_length = 255
+
+                if #commit_message > max_commit_message_length then
+                    commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
+                end
+
+                local info = string.format('%s, %s • %s', author, time_format, commit_message)
+                return string.format(' %s', info)
+            end
         },
         diff = {
             window = {
@@ -283,21 +322,17 @@ M.tear_down = function()
     state = get_initial_state()
 end
 
-M.show_blame = function(buf, blames)
+M.show_blame = function(buf, blames, git_config)
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local blame = blames[lnum]
-    local info = 'Not Committed Yet'
-    if blame then
-        info = string.format('Author: %s', blame.author)
-    end
     vim.api.nvim_buf_set_extmark(buf, constants.blame_namespace, lnum - 1, 0, {
-        id = 1,
-        virt_text = { { '    ' .. info, state.blame.hl_group } },
+        id = constants.blame_line_id,
+        virt_text = { { state.blame.format(blame, git_config), state.blame.hl_group } },
     })
 end
 
 M.hide_blame = function(buf)
-    vim.api.nvim_buf_del_extmark(buf, constants.blame_namespace, 1)
+    vim.api.nvim_buf_del_extmark(buf, constants.blame_namespace, constants.blame_line_id)
 end
 
 M.hide_hunk_signs = function()

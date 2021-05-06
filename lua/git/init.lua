@@ -6,9 +6,12 @@ local vim = vim
 
 local function get_initial_state()
     return {
+        config = {},
         hunks = {},
         blames = {},
-        blames_enabled = false,
+        hunks_enabled = true,
+        blames_enabled = true,
+        blame_is_shown = false,
     }
 end
 
@@ -20,17 +23,19 @@ M.buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
     if not buf then
         buf = vim.api.nvim_get_current_buf()
     end
+    state.hunks = {}
+    state.blames = {}
     local filename = vim.api.nvim_buf_get_name(buf)
     if not filename or filename == '' then
         return
     end
-    local err, hunks = git.buffer_hunks(filename)
-    if err then
-        return
+    if state.hunks_enabled then
+        local hunks_err, hunks = git.buffer_hunks(filename)
+        if not hunks_err then
+            state.hunks = hunks
+            ui.show_hunk_signs(buf, hunks)
+        end
     end
-    state.hunks = hunks
-    ui.hide_hunk_signs()
-    ui.show_hunk_signs(buf, hunks)
     if state.blames_enabled then
         local blames_err, blames = git.buffer_blames(filename)
         if not blames_err then
@@ -54,6 +59,8 @@ M.hunk_preview = vim.schedule_wrap(function()
         end
     end
     if selected_hunk then
+        state.hunks = {}
+        state.blames = {}
         ui.show_hunk(selected_hunk, vim.api.nvim_buf_get_option(0, 'filetype'))
     end
 end)
@@ -142,41 +149,82 @@ M.hunk_reset = function()
     end
 end
 
+M.toggle_buffer_hunks = vim.schedule_wrap(function()
+    local filename = vim.api.nvim_buf_get_name(0)
+    if not filename or filename == '' then
+        return
+    end
+    if state.hunks_enabled then
+        state.hunks_enabled = false
+        state.hunks = {}
+        ui.hide_hunk_signs()
+        return
+    end
+    local hunks_err, hunks = git.buffer_hunks(filename)
+    if not hunks_err then
+        state.hunks_enabled = true
+        state.hunks = hunks
+        local buf = vim.api.nvim_get_current_buf()
+        ui.show_hunk_signs(buf, hunks)
+    end
+end)
+
 M.toggle_buffer_blames = vim.schedule_wrap(function()
+    local filename = vim.api.nvim_buf_get_name(0)
+    if not filename or filename == '' then
+        return
+    end
     vim.api.nvim_command('augroup tanvirtin/vgit/blame | autocmd! | augroup END')
     if state.blames_enabled then
         state.blames_enabled = false
+        state.blames = {}
+        M.unblame_line()
         return
     end
-    state.blames_enabled = true
     vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("git").blame_line()')
     vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("git").unblame_line()')
-    local err, blames = git.buffer_blames(vim.api.nvim_buf_get_name(0))
+    local err, blames = git.buffer_blames(filename)
     if not err then
+        state.blames_enabled = true
         state.blames = blames
     end
 end)
 
 M.blame_line = vim.schedule_wrap(function(buf)
-    local filename = vim.api.nvim_buf_get_name(buf)
-    if #state.blames == 0 or not filename or filename == '' then
+    if #state.blames == 0 then
         return
     end
     if not buf then
         buf = vim.api.nvim_get_current_buf()
     end
-    ui.show_blame(buf, state.blames)
+    ui.show_blame(buf, state.blames, git.state().config)
+    state.blame_is_shown = true
 end)
 
-M.unblame_line = function(buf)
+M.unblame_line = defer.throttle_leading(function(buf)
+    if not state.blame_is_shown then
+        return
+    end
     if not buf then
         buf = vim.api.nvim_get_current_buf()
     end
     ui.hide_blame(buf)
-end
+    state.blame_is_shown = false
+end, vim.o.updatetime)
 
 M.buffer_preview = vim.schedule_wrap(function()
+    local buf = vim.api.nvim_get_current_buf()
+    local filename = vim.api.nvim_buf_get_name(buf)
+    if not filename or filename == '' then
+        return
+    end
     local hunks = state.hunks
+    if not state.hunks_enabled then
+        local err, computed_hunks = git.buffer_hunks(filename)
+        if not err then
+            hunks = computed_hunks
+        end
+    end
     if #hunks == 0 then
         return
     end
@@ -185,8 +233,8 @@ M.buffer_preview = vim.schedule_wrap(function()
     if err then
         return
     end
-    -- NOTE: This prevents hunk navigation, hunk preview, etc disabled on the split window.
-    state = get_initial_state()
+    state.hunks = {}
+    state.blames = {}
     ui.show_diff(
         data.cwd_lines,
         data.origin_lines,
@@ -227,6 +275,12 @@ M.setup = function()
     vim.api.nvim_command('augroup tanvirtin/vgit | autocmd! | augroup END')
     vim.api.nvim_command('autocmd tanvirtin/vgit BufEnter,BufWritePost * lua require("git").buf_attach()')
     vim.api.nvim_command('autocmd tanvirtin/vgit VimLeavePre * lua require("git").buf_detach()')
+
+    if state.blames_enabled then
+        vim.api.nvim_command('augroup tanvirtin/vgit/blame | autocmd! | augroup END')
+        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("git").blame_line()')
+        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("git").unblame_line()')
+    end
 end
 
 return M

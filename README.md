@@ -15,6 +15,7 @@
 - [x] Hunk navigation in current buffer
 - [x] Show original file and current file in a split window with diffs highlighted
 - [x] Reset changes in a buffer
+- [x] Blame a line
 
 ## Installation
 

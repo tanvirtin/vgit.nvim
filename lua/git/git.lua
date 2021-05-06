@@ -34,10 +34,13 @@ local function parse_hunk_header(line)
     return origin, current
 end
 
-local function split_by_whitespace(s)
+local function split_by(str, sep)
+    if sep == nil then
+        sep = "%s"
+    end
     local chunks = {}
-    for substring in s:gmatch('%S+') do
-       table.insert(chunks, substring)
+    for s in string.gmatch(str, '([^' .. sep .. ']+)') do
+        table.insert(chunks, s)
     end
     return chunks
 end
@@ -48,10 +51,55 @@ local constants = {
     diff_algorithm = 'histogram'
 }
 
+local function get_initial_state()
+    return { config = {} }
+end
+
+local state = get_initial_state()
+
 M.initialize = function()
+    local err, config = M.config()
+    if not err then
+        state.config = config
+    end
 end
 
 M.tear_down = function()
+    state = get_initial_state()
+end
+
+M.state = function()
+    -- TODO: Directly returning object in memory (Pros: No computation wasted for cloning, Cons: Mutable object)
+    return state
+end
+
+M.config = function()
+    local config = {}
+    local err_result = ''
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'config',
+            '--list',
+        },
+        on_stdout = function(_, line)
+            local line_chunks = split_by(line, '=')
+            config[line_chunks[1]] = line_chunks[2]
+        end,
+        on_stderr = function(err, line)
+            if err then
+                err_result = err_result .. err
+            elseif line then
+                err_result = err_result .. line
+            end
+        end,
+    })
+    job:sync()
+    job:wait()
+    if err_result ~= '' then
+        return err_result, nil
+    end
+    return nil, config
 end
 
 M.create_hunk = function(header)
@@ -120,6 +168,9 @@ M.buffer_hunks = function(filename)
 end
 
 M.create_blame = function(info)
+    local function split_by_whitespace(str)
+        return split_by(str, ' ')
+    end
     local hash_info = split_by_whitespace(info[1])
     local author_info = split_by_whitespace(info[2])
     local author_mail_info = split_by_whitespace(info[3])
@@ -129,17 +180,23 @@ M.create_blame = function(info)
     local committer_mail_info = split_by_whitespace(info[7])
     local committer_time_info = split_by_whitespace(info[8])
     local committer_tz_info = split_by_whitespace(info[9])
+    local previous_hash_info = split_by_whitespace(info[11])
     local author = author_info[2]
     local author_mail = author_mail_info[2]
     local committer = committer_info[2]
     local committer_mail = committer_mail_info[2]
     local lnum = tonumber(hash_info[3])
-    if author == 'Not' and committer == 'Not' and author_mail == '<not.committed.yet>' and committer_mail == '<not.committed.yet>' then
-        return nil
+    local committed = true
+    if author == 'Not'
+        and committer == 'Not'
+        and author_mail == '<not.committed.yet>'
+        and committer_mail == '<not.committed.yet>' then
+        committed = false
     end
     return {
         lnum = lnum,
         hash = hash_info[1],
+        previous_hash = previous_hash_info[2],
         author = author,
         author_mail = (function()
             local mail = author_mail
@@ -148,7 +205,7 @@ M.create_blame = function(info)
             end
             return mail
         end)(),
-        author_time = author_time_info[2],
+        author_time = tonumber(author_time_info[2]),
         author_tz = author_tz_info[2],
         committer = committer,
         committer_mail = (function()
@@ -158,8 +215,10 @@ M.create_blame = function(info)
             end
             return mail
         end)(),
-        committer_time = committer_time_info[2],
+        committer_time = tonumber(committer_time_info[2]),
         committer_tz = committer_tz_info[2],
+        commit_message = info[10],
+        committed = committed,
     }
 end
 
