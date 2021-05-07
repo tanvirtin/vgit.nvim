@@ -5,7 +5,7 @@ Visual Git Plugin for Neovim to enhance your git experience.
 ### Features
 - [x] Hunk signs
 
- ![hunk_signs](https://user-images.githubusercontent.com/25164326/117380418-a3741f80-aea7-11eb-87f8-1eb0093cb6a5.gif)
+ ![hunk_signs](https://user-images.githubusercontent.com/25164326/117505704-7df02000-af52-11eb-996b-91063b5dd832.gif)
 
 - [x] Reset a hunk
 
@@ -29,7 +29,7 @@ Visual Git Plugin for Neovim to enhance your git experience.
 
 - [x] Blame a line
 
-![blame](https://user-images.githubusercontent.com/25164326/117380374-8dfef580-aea7-11eb-8349-ff7941337419.gif)
+![blames](https://user-images.githubusercontent.com/25164326/117505703-7d578980-af52-11eb-82c8-22ea0c4bbd2a.gif)
 
 
 ## Prerequisites
