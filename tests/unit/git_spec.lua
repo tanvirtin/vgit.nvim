@@ -541,4 +541,10 @@ describe('git:', function()
 
     end)
 
+    describe('config', function()
+
+        it('', function() end)
+
+    end)
+
 end)
