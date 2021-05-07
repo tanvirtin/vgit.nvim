@@ -6,8 +6,11 @@ Visual Git Plugin for Neovim to enhance your git experience.
 - [x] Hunk signs
 
  ![hunk_signs](https://user-images.githubusercontent.com/25164326/117380418-a3741f80-aea7-11eb-87f8-1eb0093cb6a5.gif)
- 
+
 - [x] Reset a hunk
+
+![hunk_reset](https://user-images.githubusercontent.com/25164326/117384279-9dcf0780-aeb0-11eb-96d8-0b85239d94f7.gif)
+
 - [x] Hunk preview
 
 ![hunk_preview](https://user-images.githubusercontent.com/25164326/117380403-9a834e00-aea7-11eb-9117-f90cb4ab2ff1.gif)
@@ -21,6 +24,9 @@ Visual Git Plugin for Neovim to enhance your git experience.
 ![diff_preview](https://user-images.githubusercontent.com/25164326/117380396-95be9a00-aea7-11eb-8fad-f9b6c6b87a5f.gif)
 
 - [x] Reset changes in a buffer
+
+![buffer_reset](https://user-images.githubusercontent.com/25164326/117384280-9e679e00-aeb0-11eb-850a-551925c81d3e.gif)
+
 - [x] Blame a line
 
 ![blame](https://user-images.githubusercontent.com/25164326/117380374-8dfef580-aea7-11eb-8349-ff7941337419.gif)
