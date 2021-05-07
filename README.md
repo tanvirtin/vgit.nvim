@@ -1,24 +1,37 @@
 # Git for Neovim (In Development)
 
-![blame](https://user-images.githubusercontent.com/25164326/117380374-8dfef580-aea7-11eb-8349-ff7941337419.gif)
-![diff_preview](https://user-images.githubusercontent.com/25164326/117380396-95be9a00-aea7-11eb-8fad-f9b6c6b87a5f.gif)
-![hunk_preview](https://user-images.githubusercontent.com/25164326/117380403-9a834e00-aea7-11eb-9117-f90cb4ab2ff1.gif)
-![hunk_navigation](https://user-images.githubusercontent.com/25164326/117380412-9f480200-aea7-11eb-8630-c70781e7e2ce.gif)
-![hunk_signs](https://user-images.githubusercontent.com/25164326/117380418-a3741f80-aea7-11eb-87f8-1eb0093cb6a5.gif)
+Visual Git Plugin for Neovim to enhance your git experience.
 
-### Provided Features
-- [ ] Provides configurations to your hearts content
+### Features
 - [x] Hunk signs
+
+ ![hunk_signs](https://user-images.githubusercontent.com/25164326/117380418-a3741f80-aea7-11eb-87f8-1eb0093cb6a5.gif)
+ 
 - [x] Reset a hunk
 - [x] Hunk preview
+
+![hunk_preview](https://user-images.githubusercontent.com/25164326/117380403-9a834e00-aea7-11eb-9117-f90cb4ab2ff1.gif)
+
 - [x] Hunk navigation in current buffer
+
+![hunk_navigation](https://user-images.githubusercontent.com/25164326/117380412-9f480200-aea7-11eb-8630-c70781e7e2ce.gif)
+
 - [x] Show original file and current file in a split window with diffs highlighted
+
+![diff_preview](https://user-images.githubusercontent.com/25164326/117380396-95be9a00-aea7-11eb-8fad-f9b6c6b87a5f.gif)
+
 - [x] Reset changes in a buffer
 - [x] Blame a line
 
-## Installation
+![blame](https://user-images.githubusercontent.com/25164326/117380374-8dfef580-aea7-11eb-8349-ff7941337419.gif)
 
-**NOTE**: This plugin depends on [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) and [plenary.nvim](https://github.com/nvim-lua/plenary.nvim).
+
+## Prerequisites
+- [Git](https://git-scm.com/)
+- [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
+- [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
+
+## Installation
 
 | Plugin Manager                                       | Command                                                                        |
 |------------------------------------------------------|--------------------------------------------------------------------------------|
