@@ -10,6 +10,7 @@ describe('init:', function()
         it('should make sure all necessary functionalities get exposed', function()
             local known_imports = {
                 setup = true,
+                tear_down = true,
                 buf_attach = true,
                 buf_detach = true,
                 hunk_preview = true,

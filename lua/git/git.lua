@@ -57,7 +57,7 @@ end
 
 local state = get_initial_state()
 
-M.initialize = function()
+M.setup = function()
     local err, config = M.config()
     if not err then
         state.config = config
@@ -68,7 +68,7 @@ M.tear_down = function()
     state = get_initial_state()
 end
 
-M.state = function()
+M.get_state = function()
     -- TODO: Directly returning object in memory (Pros: No computation wasted for cloning, Cons: Mutable object)
     return state
 end

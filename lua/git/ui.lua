@@ -240,7 +240,7 @@ local function highlight_with_ts(buf, ft)
     return false
 end
 
-M.initialize = function()
+M.setup = function()
     local blame_hl_group = state.blame.hl_group
 
     if constants.palette[blame_hl_group] then
@@ -318,7 +318,6 @@ M.initialize = function()
 end
 
 M.tear_down = function()
-    M.hide_hunk_signs()
     state = get_initial_state()
 end
 
@@ -328,6 +327,7 @@ M.show_blame = function(buf, blames, git_config)
     vim.api.nvim_buf_set_extmark(buf, constants.blame_namespace, lnum - 1, 0, {
         id = constants.blame_line_id,
         virt_text = { { state.blame.format(blame, git_config), state.blame.hl_group } },
+        virt_text_pos = 'eol',
     })
 end
 
@@ -335,21 +335,23 @@ M.hide_blame = function(buf)
     vim.api.nvim_buf_del_extmark(buf, constants.blame_namespace, constants.blame_line_id)
 end
 
-M.hide_hunk_signs = function()
-    vim.fn.sign_unplace(constants.hunk_signs_group)
-end
-
 M.show_hunk_signs = function(buf, hunks)
+    local hunk_signs_group = string.format('%s/%s', constants.hunk_signs_group, buf)
     for _, hunk in ipairs(hunks) do
         for i = hunk.start, hunk.finish do
             -- NOTE: lnum cannot be 0, so when i is 0, we make lnum 1 when hunk is of type remove.
             local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
-            vim.fn.sign_place(lnum, constants.hunk_signs_group, state.sign.types[hunk.type].hl_group, buf, {
+            vim.fn.sign_place(lnum, hunk_signs_group, state.sign.types[hunk.type].hl_group, buf, {
                 lnum = lnum,
                 priority = state.sign.priority,
             })
         end
     end
+end
+
+M.hide_hunk_signs = function(buf)
+    local hunk_signs_group = string.format('%s/%s', constants.hunk_signs_group, buf)
+    vim.fn.sign_unplace(hunk_signs_group)
 end
 
 M.show_hunk = function(hunk, filetype)
@@ -528,7 +530,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         )
     end
 
-    -- BUG: Does not work when diff is called on empty lines.
+    -- TODO: Does not work when diff is called on empty lines.
     for index, line in ipairs(cwd_lines) do
         if line == current_line and index >= lnum then
             vim.api.nvim_win_set_cursor(windows.cwd.win_id, { index, 0 })
