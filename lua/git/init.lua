@@ -6,9 +6,8 @@ local vim = vim
 
 local function get_initial_state()
     return {
+        bufs = {},
         config = {},
-        hunks = {},
-        blames = {},
         hunks_enabled = true,
         blames_enabled = true,
         blame_is_shown = false,
@@ -23,8 +22,10 @@ M.buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
     if not buf then
         buf = vim.api.nvim_get_current_buf()
     end
-    state.hunks = {}
-    state.blames = {}
+    state.bufs[buf] = {
+        hunks = {},
+        blames = {},
+    }
     local filename = vim.api.nvim_buf_get_name(buf)
     if not filename or filename == '' then
         return
@@ -32,14 +33,15 @@ M.buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
     if state.hunks_enabled then
         local hunks_err, hunks = git.buffer_hunks(filename)
         if not hunks_err then
-            state.hunks = hunks
+            state.bufs[buf].hunks = hunks
+            ui.hide_hunk_signs()
             ui.show_hunk_signs(buf, hunks)
         end
     end
     if state.blames_enabled then
         local blames_err, blames = git.buffer_blames(filename)
         if not blames_err then
-            state.blames = blames
+            state.bufs[buf].blames = blames
         end
     end
 end), 50)
@@ -47,7 +49,9 @@ end), 50)
 M.hunk_preview = vim.schedule_wrap(function()
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local selected_hunk = nil
-    for _, hunk in ipairs(state.hunks) do
+    local buf = vim.api.nvim_get_current_buf()
+    local hunks = state.bufs[buf].hunks
+    for _, hunk in ipairs(hunks) do
         -- NOTE: When hunk is of type remove in ui.lua, we set the lnum to be 1 instead of 0.
         if lnum == 1 and hunk.start == 0 and hunk.finish == 0 then
             selected_hunk = hunk
@@ -59,19 +63,19 @@ M.hunk_preview = vim.schedule_wrap(function()
         end
     end
     if selected_hunk then
-        state.hunks = {}
-        state.blames = {}
         ui.show_hunk(selected_hunk, vim.api.nvim_buf_get_option(0, 'filetype'))
     end
 end)
 
 M.hunk_down = function()
-    if #state.hunks == 0 then
+    local buf = vim.api.nvim_get_current_buf()
+    local hunks = state.bufs[buf].hunks
+    if #hunks == 0 then
         return
     end
     local new_lnum = nil
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
-    for _, hunk in ipairs(state.hunks) do
+    for _, hunk in ipairs(hunks) do
         if hunk.start > lnum then
             new_lnum = hunk.start
             break
@@ -85,19 +89,21 @@ M.hunk_down = function()
         vim.api.nvim_win_set_cursor(0, { new_lnum, 0 })
         vim.api.nvim_command('norm! zz')
     else
-        vim.api.nvim_win_set_cursor(0, { state.hunks[1].start, 0 })
+        vim.api.nvim_win_set_cursor(0, { hunks[1].start, 0 })
         vim.api.nvim_command('norm! zz')
     end
 end
 
 M.hunk_up = function()
-    if #state.hunks == 0 then
+    local buf = vim.api.nvim_get_current_buf()
+    local hunks = state.bufs[buf].hunks
+    if #hunks == 0 then
         return
     end
     local new_lnum = nil
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
-    for i = #state.hunks, 1, -1 do
-        local hunk = state.hunks[i]
+    for i = #hunks, 1, -1 do
+        local hunk = hunks[i]
         if hunk.finish < lnum then
             new_lnum = hunk.finish
             break
@@ -111,16 +117,18 @@ M.hunk_up = function()
         vim.api.nvim_win_set_cursor(0, { new_lnum, 0 })
         vim.api.nvim_command('norm! zz')
     else
-        vim.api.nvim_win_set_cursor(0, { state.hunks[#state.hunks].start, 0 })
+        vim.api.nvim_win_set_cursor(0, { hunks[#hunks].start, 0 })
         vim.api.nvim_command('norm! zz')
     end
 end
 
 M.hunk_reset = function()
+    local buf = vim.api.nvim_get_current_buf()
+    local hunks = state.bufs[buf].hunks
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local selected_hunk = nil
     local selected_hunk_index = nil
-    for index, hunk in ipairs(state.hunks) do
+    for index, hunk in ipairs(hunks) do
         if lnum >= hunk.start and lnum <= hunk.finish then
             selected_hunk = hunk
             selected_hunk_index = index
@@ -147,9 +155,9 @@ M.hunk_reset = function()
             end
             vim.api.nvim_win_set_cursor(0, { start, 0 })
             vim.api.nvim_command('update')
-            table.remove(state.hunks, selected_hunk_index)
+            table.remove(hunks, selected_hunk_index)
             ui.hide_hunk_signs()
-            ui.show_hunk_signs(vim.api.nvim_get_current_buf(), state.hunks)
+            ui.show_hunk_signs(buf, hunks)
         end
     end
 end
@@ -159,17 +167,17 @@ M.toggle_buffer_hunks = vim.schedule_wrap(function()
     if not filename or filename == '' then
         return
     end
+    local buf = vim.api.nvim_get_current_buf()
     if state.hunks_enabled then
         state.hunks_enabled = false
-        state.hunks = {}
+        state.bufs[buf].hunks = {}
         ui.hide_hunk_signs()
         return
     end
     local hunks_err, hunks = git.buffer_hunks(filename)
     if not hunks_err then
         state.hunks_enabled = true
-        state.hunks = hunks
-        local buf = vim.api.nvim_get_current_buf()
+        state.bufs[buf].hunks = hunks
         ui.show_hunk_signs(buf, hunks)
     end
 end)
@@ -179,10 +187,11 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
     if not filename or filename == '' then
         return
     end
+    local buf = vim.api.nvim_get_current_buf()
     vim.api.nvim_command('augroup tanvirtin/vgit/blame | autocmd! | augroup END')
     if state.blames_enabled then
         state.blames_enabled = false
-        state.blames = {}
+        state.bufs[buf].hunks = {}
         M.unblame_line()
         return
     end
@@ -191,18 +200,18 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
     local err, blames = git.buffer_blames(filename)
     if not err then
         state.blames_enabled = true
-        state.blames = blames
+        state.bufs[buf].blames = blames
     end
 end)
 
 M.blame_line = vim.schedule_wrap(function(buf)
-    if #state.blames == 0 then
-        return
-    end
     if not buf then
         buf = vim.api.nvim_get_current_buf()
     end
-    ui.show_blame(buf, state.blames, git.state().config)
+    if #state.bufs[buf].blames == 0 then
+        return
+    end
+    ui.show_blame(buf, state.bufs[buf].blames, git.state().config)
     state.blame_is_shown = true
 end)
 
@@ -223,7 +232,7 @@ M.buffer_preview = vim.schedule_wrap(function()
     if not filename or filename == '' then
         return
     end
-    local hunks = state.hunks
+    local hunks = state.bufs[buf].hunks
     if not state.hunks_enabled then
         local err, computed_hunks = git.buffer_hunks(filename)
         if not err then
@@ -238,8 +247,6 @@ M.buffer_preview = vim.schedule_wrap(function()
     if err then
         return
     end
-    state.hunks = {}
-    state.blames = {}
     ui.show_diff(
         data.cwd_lines,
         data.origin_lines,
@@ -249,13 +256,15 @@ M.buffer_preview = vim.schedule_wrap(function()
 end)
 
 M.buffer_reset = function()
-    if #state.hunks == 0 then
+    local buf = vim.api.nvim_get_current_buf()
+    local hunks = state.bufs[buf].hunks
+    if #hunks == 0 then
         return
     end
     local err = git.buffer_reset(vim.api.nvim_buf_get_name(0))
     if not err then
         vim.api.nvim_command('e!')
-        state.hunks = {}
+        state.bufs[buf].hunks = {}
         ui.hide_hunk_signs()
     end
 end
