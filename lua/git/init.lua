@@ -119,9 +119,11 @@ end
 M.hunk_reset = function()
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local selected_hunk = nil
-    for _, hunk in ipairs(state.hunks) do
+    local selected_hunk_index = nil
+    for index, hunk in ipairs(state.hunks) do
         if lnum >= hunk.start and lnum <= hunk.finish then
             selected_hunk = hunk
+            selected_hunk_index = index
             break
         end
     end
@@ -145,6 +147,9 @@ M.hunk_reset = function()
             end
             vim.api.nvim_win_set_cursor(0, { start, 0 })
             vim.api.nvim_command('update')
+            table.remove(state.hunks, selected_hunk_index)
+            ui.hide_hunk_signs()
+            ui.show_hunk_signs(vim.api.nvim_get_current_buf(), state.hunks)
         end
     end
 end
@@ -250,6 +255,8 @@ M.buffer_reset = function()
     local err = git.buffer_reset(vim.api.nvim_buf_get_name(0))
     if not err then
         vim.api.nvim_command('e!')
+        state.hunks = {}
+        ui.hide_hunk_signs()
     end
 end
 
