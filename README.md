@@ -1,13 +1,10 @@
 # Git for Neovim (In Development)
 
-<details>
-    <summary>Take a look</summary>
-    ![hunk_signs](https://user-images.githubusercontent.com/25164326/117378542-acfb8880-aea3-11eb-93e5-30a9c4d45250.gif)
-    ![hunk_navigation](https://user-images.githubusercontent.com/25164326/117378065-ad475400-aea2-11eb-8cf0-babd0babdaf4.gif)
-    ![hunk_preview](https://user-images.githubusercontent.com/25164326/117378594-c997c080-aea3-11eb-9597-b08e7055b3f2.gif)
-    ![blame](https://user-images.githubusercontent.com/25164326/117378560-b97fe100-aea3-11eb-841e-2aaa863224b4.gif)
-    ![diff_preview](https://user-images.githubusercontent.com/25164326/117379606-cdc4dd80-aea5-11eb-8e30-25fee1b2ca92.gif)
-</details>
+![blame](https://user-images.githubusercontent.com/25164326/117380374-8dfef580-aea7-11eb-8349-ff7941337419.gif)
+![diff_preview](https://user-images.githubusercontent.com/25164326/117380396-95be9a00-aea7-11eb-8fad-f9b6c6b87a5f.gif)
+![hunk_preview](https://user-images.githubusercontent.com/25164326/117380403-9a834e00-aea7-11eb-9117-f90cb4ab2ff1.gif)
+![hunk_navigation](https://user-images.githubusercontent.com/25164326/117380412-9f480200-aea7-11eb-8630-c70781e7e2ce.gif)
+![hunk_signs](https://user-images.githubusercontent.com/25164326/117380418-a3741f80-aea7-11eb-87f8-1eb0093cb6a5.gif)
 
 ### Provided Features
 - [ ] Provides configurations to your hearts content
