@@ -6,6 +6,7 @@
     ![hunk_navigation](https://user-images.githubusercontent.com/25164326/117378065-ad475400-aea2-11eb-8cf0-babd0babdaf4.gif)
     ![hunk_preview](https://user-images.githubusercontent.com/25164326/117378594-c997c080-aea3-11eb-9597-b08e7055b3f2.gif)
     ![blame](https://user-images.githubusercontent.com/25164326/117378560-b97fe100-aea3-11eb-841e-2aaa863224b4.gif)
+    ![diff_preview](https://user-images.githubusercontent.com/25164326/117379606-cdc4dd80-aea5-11eb-8e30-25fee1b2ca92.gif)
 </details>
 
 ### Provided Features
