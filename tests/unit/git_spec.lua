@@ -645,4 +645,44 @@ describe('git:', function()
 
     end)
 
+    describe('buffer_blames', function()
+        local filename = 'tests/fixtures/simple_file'
+
+        after_each(function()
+            os.execute(string.format('git checkout HEAD -- %s', filename))
+        end)
+
+        it('should return array with blames same size as the number of lines in the file', function()
+            local lines = read_file(filename)
+            local err, blames = git.buffer_blames(filename)
+            assert.are.same(err, nil)
+            assert.are.same(#blames, #lines)
+        end)
+
+        it('should return array with only commited blames', function()
+            local err, blames = git.buffer_blames(filename)
+            assert.are.same(err, nil)
+            for _, blame in ipairs(blames) do
+                assert.are.same(blame.committed, true)
+            end
+        end)
+
+        it('should return uncommitted blames for lines which has been added', function()
+            local _, _, added_line_indices = add_lines(filename)
+            local err, blames = git.buffer_blames(filename)
+            assert.are.same(err, nil)
+            local index_map = {}
+            for _, index in ipairs(added_line_indices) do
+                assert.are.same(blames[index].committed, false)
+                index_map[tostring(index)] = true
+            end
+            for index, blame in ipairs(blames) do
+                if not index_map[tostring(index)] then
+                    assert.are.same(blame.committed, true)
+                end
+            end
+        end)
+
+    end)
+
 end)
