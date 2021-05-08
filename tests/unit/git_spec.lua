@@ -552,24 +552,95 @@ describe('git:', function()
         it('should contain necessary git config information equivalent to what you see in "git config --list"', function()
             local err, config = git.config()
             assert.are.same(err, nil)
-            assert.are.same(config['branch.git-blame.merge'], 'refs/heads/git-blame')
-            assert.are.same(config['branch.git-blame.remote'], 'origin')
-            assert.are.same(config['branch.main.merge'], 'refs/heads/main')
-            assert.are.same(config['branch.main.remote'], 'origin')
-            assert.are.same(config['core.bare'], 'false')
-            assert.are.same(config['core.filemode'], 'true')
-            assert.are.same(config['core.ignorecase'], 'true')
-            assert.are.same(config['core.logallrefupdates'], 'true')
-            assert.are.same(config['core.precomposeunicode'], 'true')
-            assert.are.same(config['core.repositoryformatversion'], '0')
-            assert.are.same(config['credential.helper'], 'cache')
-            assert.are.same(config['init.defaultbranch'], 'main')
-            assert.are.same(config['interactive.difffilter'], 'delta --color-only')
-            assert.are.same(config['push.default'], 'simple')
-            assert.are.same(config['remote.origin.fetch'], '+refs/heads/*:refs/remotes/origin/*')
-            assert.are.same(config['remote.origin.url'], 'https://github.com/tanvirtin/vgit.nvim')
-            assert.are.same(config['user.email'], 'tanvir.tinz@gmail.com')
-            assert.are.same(config['user.name'], 'tanvirtin')
+            assert(config['branch.git-blame.merge'])
+            assert(config['branch.git-blame.remote'])
+            assert(config['branch.main.merge'])
+            assert(config['branch.main.remote'])
+            assert(config['core.bare'])
+            assert(config['core.filemode'])
+            assert(config['core.ignorecase'])
+            assert(config['core.logallrefupdates'])
+            assert(config['core.precomposeunicode'])
+            assert(config['core.repositoryformatversion'])
+            assert(config['credential.helper'])
+            assert(config['init.defaultbranch'])
+            assert(config['interactive.difffilter'])
+            assert(config['push.default'])
+            assert(config['remote.origin.fetch'])
+            assert(config['remote.origin.url'])
+            assert(config['user.email'])
+            assert(config['user.name'])
+        end)
+
+    end)
+
+    describe('create_blame', function()
+        local committed_info = {
+            'e71cf398fdbe7f13560d65b72d6ec111c4c2c837 131 183',
+            'author tanvirtin',
+            'author-mail <tinman@tinman.com>',
+            'author-time 1620254313',
+            'author-tz -0400',
+            'committer tanvirtin',
+            'committer-mail <tinman@tinman.com>',
+            'committer-time 1620254313',
+            'committer-tz -0400',
+            'summary blame is now parsed and shown as a virtual text',
+            'previous bc019ecab452195b1d044998efb7994a6467cca7 lua/git/git.lua',
+            'filename lua/git/git.lua',
+        }
+        local uncommitted_info = {
+            '0000000000000000000000000000000000000000 94 94',
+            'author Not Committed Yet',
+            'author-mail <not.committed.yet>',
+            'author-time 1620420779',
+            'author-tz -0400',
+            'committer Not Committed Yet',
+            "committer-mail <not.committed.yet>",
+            "committer-time 1620420779",
+            "committer-tz -0400",
+            "summary Version of README.md from README.md",
+            "previous a08d97a4bd97574460f33fc1b9e645bfa9d2f703 README.md",
+            "filename README.md"
+        }
+
+        it('should create a committed blame with proper information populated', function()
+            local blame = git.create_blame(committed_info)
+            assert.are.same(blame, {
+                lnum = 183,
+                hash = 'e71cf398fdbe7f13560d65b72d6ec111c4c2c837',
+                previous_hash = 'bc019ecab452195b1d044998efb7994a6467cca7',
+                author = 'tanvirtin',
+                author_mail = 'tinman@tinman.com',
+                author_time = 1620254313,
+                author_tz = '-0400',
+                committer = 'tanvirtin',
+                committer_mail = 'tinman@tinman.com',
+                committer_time = 1620254313,
+                committer_tz = '-0400',
+                commit_message = 'blame is now parsed and shown as a virtual text',
+                committed = true,
+            })
+        end)
+
+        it('should create a uncommitted blame with proper information populated', function()
+            local blame = git.create_blame(uncommitted_info)
+            assert.are.same(blame, {
+                lnum = 94,
+                hash = '0000000000000000000000000000000000000000',
+                previous_hash = 'a08d97a4bd97574460f33fc1b9e645bfa9d2f703',
+                author = 'Not Committed Yet',
+                author_mail = 'not.committed.yet',
+                author_time = 1620420779,
+                author_tz = '-0400',
+                committer = 'Not Committed Yet',
+                committer_mail = 'not.committed.yet',
+                committer_time = 1620420779,
+                committer_tz = '-0400',
+                commit_message = 'Version of README.md from README.md',
+                committed = false,
+
+            })
         end)
 
     end)
