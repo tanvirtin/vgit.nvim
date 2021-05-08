@@ -1,107 +1,155 @@
 local vim = vim
 
 local constants = {
-    group = 'tanvirtin/vgit.nvim',
-    ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim'),
+    hunk_signs_group = 'tanvirtin/vgit.nvim/hunk/signs',
+    blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
+    blame_line_id = 1,
     palette = {
-        GitDiffWindow = {
+        VGitBlame = {
+            bg = nil,
+            fg = '#b1b1b1',
+        },
+        VGitDiffWindow = {
             bg = nil,
             fg = '#ffffff',
         },
-        GitDiffBorder = {
+        VGitDiffBorder = {
             bg = nil,
             fg = '#464b59',
         },
-        GitDiffAddSign = {
+        VGitDiffAddSign = {
             bg = '#3d5213',
             fg = nil,
         },
-        GitDiffRemoveSign = {
+        VGitDiffRemoveSign = {
             bg = '#4a0f23',
             fg = nil,
         },
-        GitDiffAddText = {
+        VGitDiffAddText = {
             fg = '#6a8f1f',
             bg = '#3d5213',
         },
-        GitDiffRemoveText = {
+        VGitDiffRemoveText = {
             fg = '#a3214c',
             bg = '#4a0f23',
         },
-        GitHunkWindow = {
+        VGitHunkWindow = {
             bg = nil,
             fg = '#ffffff',
         },
-        GitHunkBorder = {
+        VGitHunkBorder = {
             bg = nil,
             fg = '#464b59',
         },
-        GitHunkAddSign = {
+        VGitHunkAddSign = {
             bg = '#3d5213',
             fg = nil,
         },
-        GitHunkRemoveSign = {
+        VGitHunkRemoveSign = {
             bg = '#4a0f23',
             fg = nil,
         },
-        GitHunkAddText = {
+        VGitHunkAddText = {
             fg = '#6a8f1f',
             bg = '#3d5213',
         },
-        GitHunkRemoveText = {
+        VGitHunkRemoveText = {
             fg = '#a3214c',
             bg = '#4a0f23',
         },
-        GitHunkSignAdd = {
+        VGitHunkSignAdd = {
             fg = '#d7ffaf',
             bg = '#4a6317',
         },
-        GitHunkSignRemove = {
+        VGitHunkSignRemove = {
             fg = '#e95678',
             bg = '#63132f',
         },
-        GitSignAdd = {
+        VGitSignAdd = {
             fg = '#d7ffaf',
             bg = nil,
         },
-        GitSignChange = {
+        VGitSignChange = {
             fg = '#7AA6DA',
             bg = nil,
         },
-        GitSignRemove = {
+        VGitSignRemove = {
             fg = '#e95678',
             bg = nil,
         },
     },
 }
 
+local function round(x)
+    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
+end
+
 local function get_initial_state()
     return {
+        blame = {
+            hl_group = 'VGitBlame',
+            format = function(blame, git_config)
+                local config_author = git_config['user.name']
+                local author = blame.author
+                if config_author == author then
+                    author = 'You'
+                end
+                local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
+                local time_format = string.format('%s days ago', round(time))
+                local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
+                local division_counter = 1
+
+                while time < 1 and division_counter ~= #time_divisions do
+                    local division = time_divisions[division_counter]
+                    time = time * division[1]
+                    time_format = string.format('%s %s ago', round(time), division[2])
+                    division_counter = division_counter + 1
+                end
+
+                local commit_message = blame.commit_message
+
+                if not blame.committed then
+                    author = 'You'
+                    commit_message = 'Uncommitted changes'
+                    local info = string.format('%s • %s', author, commit_message)
+                    return string.format(' %s', info)
+                end
+
+                local max_commit_message_length = 255
+
+                if #commit_message > max_commit_message_length then
+                    commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
+                end
+
+                local info = string.format('%s, %s • %s', author, time_format, commit_message)
+                return string.format(' %s', info)
+            end
+        },
         diff = {
             window = {
-                hl_group = 'GitDiffWindow',
+                hl_group = 'VGitDiffWindow',
                 border = {
-                    { '╭', 'GitDiffBorder' },
-                    { '─', 'GitDiffBorder' },
-                    { '╮', 'GitDiffBorder' },
-                    { '│', 'GitDiffBorder' },
-                    { '╯', 'GitDiffBorder' },
-                    { '─', 'GitDiffBorder' },
-                    { '╰', 'GitDiffBorder' },
-                    { '│', 'GitDiffBorder' },
+                    { '╭', 'VGitDiffBorder' },
+                    { '─', 'VGitDiffBorder' },
+                    { '╮', 'VGitDiffBorder' },
+                    { '│', 'VGitDiffBorder' },
+                    { '╯', 'VGitDiffBorder' },
+                    { '─', 'VGitDiffBorder' },
+                    { '╰', 'VGitDiffBorder' },
+                    { '│', 'VGitDiffBorder' },
                 }
             },
             types = {
                 add = {
-                    name = 'GitDiffAddSign',
-                    sign_hl_group = 'GitDiffAddSign',
-                    text_hl_group = 'GitDiffAddText',
+                    name = 'VGitDiffAddSign',
+                    sign_hl_group = 'VGitDiffAddSign',
+                    text_hl_group = 'VGitDiffAddText',
                     text = '+'
                 },
                 remove = {
-                    name = 'GitDiffRemoveSign',
-                    sign_hl_group = 'GitDiffRemoveSign',
-                    text_hl_group = 'GitDiffRemoveText',
+                    name = 'VGitDiffRemoveSign',
+                    sign_hl_group = 'VGitDiffRemoveSign',
+                    text_hl_group = 'VGitDiffRemoveText',
                     text = '-'
                 },
             },
@@ -109,29 +157,29 @@ local function get_initial_state()
         hunk = {
             types = {
                 add = {
-                    name = 'GitHunkAddSign',
-                    sign_hl_group = 'GitHunkAddSign',
-                    text_hl_group = 'GitHunkAddText',
+                    name = 'VGitHunkAddSign',
+                    sign_hl_group = 'VGitHunkAddSign',
+                    text_hl_group = 'VGitHunkAddText',
                     text = '+'
                 },
                 remove = {
-                    name = 'GitHunkRemoveSign',
-                    sign_hl_group = 'GitHunkRemoveSign',
-                    text_hl_group = 'GitHunkRemoveText',
+                    name = 'VGitHunkRemoveSign',
+                    sign_hl_group = 'VGitHunkRemoveSign',
+                    text_hl_group = 'VGitHunkRemoveText',
                     text = '-'
                 },
             },
             window = {
-                hl_group = 'GitHunkWindow',
+                hl_group = 'VGitHunkWindow',
                 border = {
-                    { '', 'GitHunkBorder' },
-                    { '─', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
-                    { '─', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
-                    { '', 'GitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '─', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '─', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
+                    { '', 'VGitHunkBorder' },
                 }
             },
         },
@@ -139,18 +187,18 @@ local function get_initial_state()
             priority = 10,
             types = {
                 add = {
-                    name = 'GitSignAdd',
-                    hl_group = 'GitSignAdd',
+                    name = 'VGitSignAdd',
+                    hl_group = 'VGitSignAdd',
                     text = '│'
                 },
                 remove = {
-                    name = 'GitSignRemove',
-                    hl_group = 'GitSignRemove',
+                    name = 'VGitSignRemove',
+                    hl_group = 'VGitSignRemove',
                     text = '│'
                 },
                 change = {
-                    name = 'GitSignChange',
-                    hl_group = 'GitSignChange',
+                    name = 'VGitSignChange',
+                    hl_group = 'VGitSignChange',
                     text = '│'
                 },
             },
@@ -192,7 +240,13 @@ local function highlight_with_ts(buf, ft)
     return false
 end
 
-M.initialize = function()
+M.setup = function()
+    local blame_hl_group = state.blame.hl_group
+
+    if constants.palette[blame_hl_group] then
+        add_highlight(blame_hl_group, constants.palette[blame_hl_group]);
+    end
+
     for key, type in pairs(state.sign.types) do
         local hl_group = state.sign.types[key].hl_group
         if constants.palette[hl_group] then
@@ -264,25 +318,40 @@ M.initialize = function()
 end
 
 M.tear_down = function()
-    M.hide_hunk_signs()
     state = get_initial_state()
 end
 
-M.hide_hunk_signs = function()
-    vim.fn.sign_unplace(constants.group)
+M.show_blame = function(buf, blames, git_config)
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local blame = blames[lnum]
+    vim.api.nvim_buf_set_extmark(buf, constants.blame_namespace, lnum - 1, 0, {
+        id = constants.blame_line_id,
+        virt_text = { { state.blame.format(blame, git_config), state.blame.hl_group } },
+        virt_text_pos = 'eol',
+    })
+end
+
+M.hide_blame = function(buf)
+    vim.api.nvim_buf_del_extmark(buf, constants.blame_namespace, constants.blame_line_id)
 end
 
 M.show_hunk_signs = function(buf, hunks)
+    local hunk_signs_group = string.format('%s/%s', constants.hunk_signs_group, buf)
     for _, hunk in ipairs(hunks) do
         for i = hunk.start, hunk.finish do
             -- NOTE: lnum cannot be 0, so when i is 0, we make lnum 1 when hunk is of type remove.
             local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
-            vim.fn.sign_place(lnum, constants.group, state.sign.types[hunk.type].hl_group, buf, {
+            vim.fn.sign_place(lnum, hunk_signs_group, state.sign.types[hunk.type].hl_group, buf, {
                 lnum = lnum,
                 priority = state.sign.priority,
             })
         end
     end
+end
+
+M.hide_hunk_signs = function(buf)
+    local hunk_signs_group = string.format('%s/%s', constants.hunk_signs_group, buf)
+    vim.fn.sign_unplace(hunk_signs_group)
 end
 
 M.show_hunk = function(hunk, filetype)
@@ -315,14 +384,14 @@ M.show_hunk = function(hunk, filetype)
     highlight_with_ts(buf, filetype)
 
     for _, lnum in ipairs(added_lines) do
-        vim.fn.sign_place(lnum, constants.group, state.hunk.types['add'].sign_hl_group, buf, {
+        vim.fn.sign_place(lnum, constants.hunk_signs_group, state.hunk.types['add'].sign_hl_group, buf, {
             lnum = lnum,
             priority = state.sign.priority,
         })
     end
 
     for _, lnum in ipairs(removed_lines) do
-        vim.fn.sign_place(lnum, constants.group, state.hunk.types['remove'].sign_hl_group, buf, {
+        vim.fn.sign_place(lnum, constants.hunk_signs_group, state.hunk.types['remove'].sign_hl_group, buf, {
             lnum = lnum,
             priority = state.sign.priority,
         })
@@ -399,7 +468,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
 
     for _, data in ipairs(lnum_changes) do
         local buf = windows[data.buftype].buf
-        vim.fn.sign_place(data.lnum, constants.group, state.diff.types[data.type].sign_hl_group, buf, {
+        vim.fn.sign_place(data.lnum, constants.hunk_signs_group, state.diff.types[data.type].sign_hl_group, buf, {
             lnum = data.lnum,
             priority = state.sign.priority,
         })
@@ -461,7 +530,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         )
     end
 
-    -- BUG: Does not work when diff is called on empty lines.
+    -- TODO: Does not work when diff is called on empty lines.
     for index, line in ipairs(cwd_lines) do
         if line == current_line and index >= lnum then
             vim.api.nvim_win_set_cursor(windows.cwd.win_id, { index, 0 })
