@@ -1,24 +1,43 @@
 # Git for Neovim (In Development)
 
-<details>
-    <summary>Take a look</summary>
-    <img width="1792" alt="Screen Shot 2021-04-13 at 10 23 40 PM" src="https://user-images.githubusercontent.com/25164326/114645560-b714d780-9ca7-11eb-9669-24fe60b50fa6.png">
-    <img width="1792" alt="Screen Shot 2021-04-13 at 10 24 01 PM" src="https://user-images.githubusercontent.com/25164326/114645565-b8460480-9ca7-11eb-9fab-28a74cc4c4f3.png">
-    <img width="1792" alt="Screen Shot 2021-04-13 at 10 28 10 PM" src="https://user-images.githubusercontent.com/25164326/114645566-b8460480-9ca7-11eb-95a9-c7b69304860d.png">
-</details>
+Visual Git Plugin for Neovim to enhance your git experience.
 
-### Provided Features
-- [ ] Provides configurations to your hearts content
+### Features
 - [x] Hunk signs
+
+ ![hunk_signs](https://user-images.githubusercontent.com/25164326/117505704-7df02000-af52-11eb-996b-91063b5dd832.gif)
+
 - [x] Reset a hunk
+
+![hunk_reset](https://user-images.githubusercontent.com/25164326/117384279-9dcf0780-aeb0-11eb-96d8-0b85239d94f7.gif)
+
 - [x] Hunk preview
+
+![hunk_preview](https://user-images.githubusercontent.com/25164326/117380403-9a834e00-aea7-11eb-9117-f90cb4ab2ff1.gif)
+
 - [x] Hunk navigation in current buffer
+
+![hunk_navigation](https://user-images.githubusercontent.com/25164326/117380412-9f480200-aea7-11eb-8630-c70781e7e2ce.gif)
+
 - [x] Show original file and current file in a split window with diffs highlighted
+
+![diff_preview](https://user-images.githubusercontent.com/25164326/117380396-95be9a00-aea7-11eb-8fad-f9b6c6b87a5f.gif)
+
 - [x] Reset changes in a buffer
 
-## Installation
+![buffer_reset](https://user-images.githubusercontent.com/25164326/117384280-9e679e00-aeb0-11eb-850a-551925c81d3e.gif)
 
-**NOTE**: This plugin depends on [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) and [plenary.nvim](https://github.com/nvim-lua/plenary.nvim).
+- [x] Blame a line
+
+![blames](https://user-images.githubusercontent.com/25164326/117505703-7d578980-af52-11eb-82c8-22ea0c4bbd2a.gif)
+
+
+## Prerequisites
+- [Git](https://git-scm.com/)
+- [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
+- [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
+
+## Installation
 
 | Plugin Manager                                       | Command                                                                        |
 |------------------------------------------------------|--------------------------------------------------------------------------------|
