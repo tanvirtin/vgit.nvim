@@ -172,23 +172,21 @@ M.create_blame = function(info)
         return split_by(str, ' ')
     end
     local hash_info = split_by_whitespace(info[1])
-    local author_info = split_by_whitespace(info[2])
     local author_mail_info = split_by_whitespace(info[3])
     local author_time_info = split_by_whitespace(info[4])
     local author_tz_info = split_by_whitespace(info[5])
-    local committer_info = split_by_whitespace(info[6])
     local committer_mail_info = split_by_whitespace(info[7])
     local committer_time_info = split_by_whitespace(info[8])
     local committer_tz_info = split_by_whitespace(info[9])
     local previous_hash_info = split_by_whitespace(info[11])
-    local author = author_info[2]
+    local author = info[2]:sub(8, #info[2])
     local author_mail = author_mail_info[2]
-    local committer = committer_info[2]
+    local committer = info[6]:sub(11, #info[6])
     local committer_mail = committer_mail_info[2]
     local lnum = tonumber(hash_info[3])
     local committed = true
-    if author == 'Not'
-        and committer == 'Not'
+    if author == 'Not Committed Yet'
+        and committer == 'Not Committed Yet'
         and author_mail == '<not.committed.yet>'
         and committer_mail == '<not.committed.yet>' then
         committed = false
@@ -217,7 +215,7 @@ M.create_blame = function(info)
         end)(),
         committer_time = tonumber(committer_time_info[2]),
         committer_tz = committer_tz_info[2],
-        commit_message = info[10],
+        commit_message = info[10]:sub(9, #info[10]),
         committed = committed,
     }
 end
