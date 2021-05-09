@@ -22,6 +22,7 @@ local function create_buf_state(buf)
         hunks = {},
         blames = {},
         blame_is_shown = false,
+        last_lnum = 1
     }
     state.bufs[tostring(buf)] = buf_state
     return buf_state
@@ -273,6 +274,9 @@ M.blame_line = vim.schedule_wrap(function(buf)
     if is_buf_modified  then
         return
     end
+    local win = vim.api.nvim_get_current_win()
+    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    buf_state.last_lnum = lnum
     ui.show_blame(buf, buf_state.blames, git.get_state().config)
     buf_state.blame_is_shown = true
 end)
@@ -286,8 +290,12 @@ M.unblame_line = function(buf)
     if not buf_state.blame_is_shown then
         return
     end
-    ui.hide_blame(buf)
-    buf_state.blame_is_shown = false
+    local win = vim.api.nvim_get_current_win()
+    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    if buf_state.last_lnum ~= lnum then
+        ui.hide_blame(buf)
+        buf_state.blame_is_shown = false
+    end
 end
 
 M.buffer_preview = vim.schedule_wrap(function(buf)

@@ -37,8 +37,10 @@ Visual Git Plugin for Neovim to enhance your git experience.
 - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 
-## Installation
+## Recommended Settings
+- `vim.o.updatetime = 100` (see :help updatetime).
 
+## Installation
 | Plugin Manager                                       | Command                                                                        |
 |------------------------------------------------------|--------------------------------------------------------------------------------|
 | [Packer](https://github.com/wbthomason/packer.nvim)  | `use { 'tanvirtin/vgit.nvim', requires = 'nvim-lua/plenary.nvim' }`            |
