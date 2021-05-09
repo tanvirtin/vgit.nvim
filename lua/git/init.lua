@@ -376,7 +376,6 @@ M.setup = function()
     vim.api.nvim_command('autocmd tanvirtin/vgit BufEnter,BufWritePost * lua require("git").buf_attach()')
     vim.api.nvim_command('autocmd tanvirtin/vgit BufWipeout * lua require("git").buf_detach()')
     vim.api.nvim_command('autocmd tanvirtin/vgit VimLeavePre * lua require("git").tear_down()')
-
     if state.blames_enabled then
         vim.api.nvim_command('augroup tanvirtin/vgit/blame | autocmd! | augroup END')
         vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("git").blame_line()')
