@@ -57,21 +57,24 @@ $ git clone --depth 1 https://github.com/tanvirtin/vgit.nvim $XDG_CONFIG_HOME/nv
 
 ### Configure Mappings
 ```
-vim.api.nvim_set_keymap('n', '<leader>gh', ':lua require("git").hunk_preview()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>gr', ':lua require("git").hunk_reset()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<space>]', ':lua require("git").hunk_up()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<space>[', ':lua require("git").hunk_down()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<space>gd', ':lua require("git").buffer_preview()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<space>gd', ':lua require("git").buffer_reset()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>gh', ':VGit hunk_preview()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>gr', ':VGit hunk_reset()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<space>]', ':VGit hunk_up()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<space>[', ':VGit hunk_down()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<space>gd', ':VGit buffer_preview()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<space>gd', ':VGit buffer_reset()<CR>', { noremap = true, silent = true })
 ```
 
 ### API
 | Function Name | Description |
 |---------------|-------------|
 | setup | Sets up the plugin to run necessary git commands on loaded buffers |
+| toggle_buffer_hunks | Shows hunk signs on current buffer, if hunks are shown then hides them |
+| toggle_buffer_blames | Enables blames feature on current buffer, if blames are enabled then disables it instead |
 | hunk_preview | If a file has a hunk of diff associated with it, invoking this function will reveal that hunk if it exists on the current cursor |
 | hunk_reset | Resets the hunk the cursor is on right now to it's previous step
 | hunk_down | Navigate downward through a github hunk |
 | hunk_up | Navigate upwards through a github hunk |
 | buffer_preview | Opens two windows, showing cwd and origin buffers and the diff between them |
 | buffer_reset | Resets a current buffer you are on |
+
