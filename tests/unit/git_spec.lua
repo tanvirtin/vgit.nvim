@@ -1,4 +1,4 @@
-local git = require('git.git')
+local git = require('vgit.git')
 
 local it = it
 local vim = vim

@@ -420,14 +420,14 @@ M.show_hunk = function(hunk, filetype)
         buf,
         'n',
         '<C-c>',
-        string.format(':lua require("git")._close_preview_window(%s)<CR>', win_id),
+        string.format(':lua require("vgit")._close_preview_window(%s)<CR>', win_id),
         { silent = true }
     )
     for _, current_buf in ipairs(bufs) do
         -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
         vim.api.nvim_command(
             string.format(
-                'autocmd BufEnter <buffer=%s> lua require("git")._close_preview_window(%s)',
+                'autocmd BufEnter <buffer=%s> lua require("vgit")._close_preview_window(%s)',
                 current_buf,
                 win_id
             )
@@ -514,7 +514,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         windows.cwd.buf,
         'n',
         '<C-c>',
-        string.format(':lua require("git")._close_preview_window(%s, %s)<CR>', windows.cwd.win_id, windows.cwd.origin_id),
+        string.format(':lua require("vgit")._close_preview_window(%s, %s)<CR>', windows.cwd.win_id, windows.cwd.origin_id),
         { silent = true }
     )
 
@@ -522,7 +522,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         -- Once split windows are shown, anytime when any other buf currently available enters any window the splits close.
         vim.api.nvim_command(
             string.format(
-                'autocmd BufEnter <buffer=%s> lua require("git")._close_preview_window(%s, %s)',
+                'autocmd BufEnter <buffer=%s> lua require("vgit")._close_preview_window(%s, %s)',
                 current_buf,
                 windows.cwd.win_id,
                 windows.origin.win_id

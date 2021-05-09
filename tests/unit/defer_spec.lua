@@ -1,4 +1,4 @@
-local defer = require('git.defer')
+local defer = require('vgit.defer')
 
 local it = it
 local describe = describe

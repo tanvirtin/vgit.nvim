@@ -1,6 +1,6 @@
-local git = require('git.git')
-local ui = require('git.ui')
-local defer = require('git.defer')
+local git = require('vgit.git')
+local ui = require('vgit.ui')
+local defer = require('vgit.defer')
 
 local vim = vim
 
@@ -321,8 +321,8 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
         end
         return
     end
-    vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("git")._blame_line()')
-    vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("git")._unblame_line()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("vgit")._blame_line()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("vgit")._unblame_line()')
 
     local bufs = state.bufs
     for buf, _ in pairs(bufs) do
@@ -397,15 +397,15 @@ M.setup = function()
     git.setup()
     ui.setup()
     vim.api.nvim_command('augroup tanvirtin/vgit | autocmd! | augroup END')
-    vim.api.nvim_command('autocmd tanvirtin/vgit BufEnter,BufWritePost * lua require("git")._buf_attach()')
-    vim.api.nvim_command('autocmd tanvirtin/vgit BufWipeout * lua require("git")._buf_detach()')
-    vim.api.nvim_command('autocmd tanvirtin/vgit VimLeavePre * lua require("git")._tear_down()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit BufEnter,BufWritePost * lua require("vgit")._buf_attach()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit BufWipeout * lua require("vgit")._buf_detach()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit VimLeavePre * lua require("vgit")._tear_down()')
     if state.blames_enabled then
         vim.api.nvim_command('augroup tanvirtin/vgit/blame | autocmd! | augroup END')
-        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("git")._blame_line()')
-        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("git")._unblame_line()')
+        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("vgit")._blame_line()')
+        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("vgit")._unblame_line()')
     end
-   vim.cmd('command! -nargs=+ VGit lua require("git")._run(<f-args>)')
+   vim.cmd('command! -nargs=+ VGit lua require("vgit")._run(<f-args>)')
 end
 
 return M
