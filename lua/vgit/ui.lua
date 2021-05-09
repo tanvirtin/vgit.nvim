@@ -438,14 +438,12 @@ M.show_hunk = function(hunk, filetype)
 end
 
 M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
-    local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 4)
     local width = math.ceil(global_width * 0.45)
     local row = math.ceil((global_height - height) / 2 - 1)
     local col = math.ceil((global_width - (width * 2)) / 2)
-    local current_line = vim.api.nvim_buf_get_lines(0, lnum - 1, -1, false)[1]
 
     local windows = {
         origin = {
@@ -529,16 +527,6 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
             )
         )
     end
-
-    -- TODO: Does not work when diff is called on empty lines.
-    for index, line in ipairs(cwd_lines) do
-        if line == current_line and index >= lnum then
-            vim.api.nvim_win_set_cursor(windows.cwd.win_id, { index, 0 })
-            break
-        end
-    end
-
-    vim.api.nvim_command('norm! zz')
 
     return windows.cwd.buf, windows.cwd.win_id, windows.origin.buf, windows.origin.win_id
 end
