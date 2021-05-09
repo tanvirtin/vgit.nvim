@@ -1,4 +1,4 @@
-local fs = require('git.fs')
+local fs = require('vgit.fs')
 
 local it = it
 local describe = describe

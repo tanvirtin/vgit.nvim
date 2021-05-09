@@ -1,5 +1,5 @@
 local Job = require('plenary.job')
-local fs = require('git.fs')
+local fs = require('vgit.fs')
 
 local vim = vim
 local unpack = unpack

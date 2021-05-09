@@ -1,4 +1,4 @@
-local git = require('git')
+local vgit = require('vgit')
 
 local it = it
 local describe = describe
@@ -26,11 +26,11 @@ describe('init:', function()
                 buffer_preview = true,
                 buffer_reset = true,
             }
-            for key, _ in pairs(git) do
+            for key, _ in pairs(vgit) do
                 assert(known_imports[key])
             end
-            for key, _ in pairs(git) do
-                assert(git[key])
+            for key, _ in pairs(vgit) do
+                assert(vgit[key])
             end
         end)
 
