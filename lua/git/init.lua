@@ -13,6 +13,12 @@ local function get_initial_state()
     }
 end
 
+local function log_error(msg)
+    vim.cmd('echohl ErrorMsg')
+    vim.cmd(string.format('echo "%s"', msg))
+    vim.cmd('echohl None')
+end
+
 local state = get_initial_state()
 
 local M = {}
@@ -38,7 +44,7 @@ local function clear_buf_state(buf)
     return buf_state
 end
 
-M.buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
+M._buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
     buf = buf or vim.api.nvim_get_current_buf()
     local buf_state = create_buf_state(buf)
     local filename = vim.api.nvim_buf_get_name(buf)
@@ -60,6 +66,77 @@ M.buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
         end
     end
 end), 50)
+
+M._buf_detach = function(buf)
+    buf = buf or vim.api.nvim_get_current_buf()
+    clear_buf_state(buf)
+end
+
+M._close_preview_window = function(...)
+    local args = {...}
+    for _, win in ipairs(args) do
+        if vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_close(win, false)
+        end
+    end
+end
+
+M._tear_down = function()
+    git.tear_down()
+    ui.tear_down()
+    state = get_initial_state()
+end
+
+M._blame_line = vim.schedule_wrap(function(buf)
+    buf = buf or vim.api.nvim_get_current_buf()
+    local buf_state = get_buf_state(buf)
+    if not buf_state then
+        return
+    end
+    if #buf_state.blames == 0 then
+        return
+    end
+    local is_buf_modified = vim.api.nvim_buf_get_option(buf, 'modified')
+    if is_buf_modified  then
+        return
+    end
+    local win = vim.api.nvim_get_current_win()
+    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    buf_state.last_lnum = lnum
+    ui.show_blame(buf, buf_state.blames, git.get_state().config)
+    buf_state.blame_is_shown = true
+end)
+
+M._unblame_line = function(buf, override)
+    buf = buf or vim.api.nvim_get_current_buf()
+    local buf_state = get_buf_state(buf)
+    if not buf_state then
+        return
+    end
+    if not buf_state.blame_is_shown then
+        return
+    end
+    local win = vim.api.nvim_get_current_win()
+    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    if override then
+        ui.hide_blame(buf)
+        buf_state.blame_is_shown = false
+        return
+    end
+    if buf_state.last_lnum ~= lnum then
+        ui.hide_blame(buf)
+        buf_state.blame_is_shown = false
+    end
+end
+
+M._run = function(command, ...)
+    local starts_with = command:sub(1, 1)
+    if starts_with == '_' or not M[command] then
+        log_error('Invalid argument for VGit')
+        return
+    end
+    M[command](...)
+end
 
 M.hunk_preview = vim.schedule_wrap(function(buf, win)
     buf = buf or vim.api.nvim_get_current_buf()
@@ -203,6 +280,7 @@ M.toggle_buffer_hunks = vim.schedule_wrap(function()
             if buf_state then
                 buf_state.hunks = {}
                 ui.hide_hunk_signs(buf)
+                return
             end
         end
         return
@@ -220,6 +298,7 @@ M.toggle_buffer_hunks = vim.schedule_wrap(function()
                 if buf_state then
                     buf_state.hunks = hunks
                     ui.show_hunk_signs(bufnr, hunks)
+                    return
                 end
             end
         end
@@ -234,15 +313,16 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
         for buf, _ in pairs(bufs) do
             local buf_state = get_buf_state(buf)
             if buf_state then
-                buf_state.blames = {}
                 local bufnr = tonumber(buf)
-                M.unblame_line(bufnr)
+                M._unblame_line(bufnr, true)
+                buf_state.blames = {}
+                return
             end
         end
         return
     end
-    vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("git").blame_line()')
-    vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("git").unblame_line()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("git")._blame_line()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("git")._unblame_line()')
 
     local bufs = state.bufs
     for buf, _ in pairs(bufs) do
@@ -255,48 +335,12 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
                 local buf_state = get_buf_state(buf)
                 if buf_state then
                     buf_state.blames = blames
+                    return
                 end
             end
         end
     end
 end)
-
-M.blame_line = vim.schedule_wrap(function(buf)
-    buf = buf or vim.api.nvim_get_current_buf()
-    local buf_state = get_buf_state(buf)
-    if not buf_state then
-        return
-    end
-    if #buf_state.blames == 0 then
-        return
-    end
-    local is_buf_modified = vim.api.nvim_buf_get_option(buf, 'modified')
-    if is_buf_modified  then
-        return
-    end
-    local win = vim.api.nvim_get_current_win()
-    local lnum = vim.api.nvim_win_get_cursor(win)[1]
-    buf_state.last_lnum = lnum
-    ui.show_blame(buf, buf_state.blames, git.get_state().config)
-    buf_state.blame_is_shown = true
-end)
-
-M.unblame_line = function(buf)
-    buf = buf or vim.api.nvim_get_current_buf()
-    local buf_state = get_buf_state(buf)
-    if not buf_state then
-        return
-    end
-    if not buf_state.blame_is_shown then
-        return
-    end
-    local win = vim.api.nvim_get_current_win()
-    local lnum = vim.api.nvim_win_get_cursor(win)[1]
-    if buf_state.last_lnum ~= lnum then
-        ui.hide_blame(buf)
-        buf_state.blame_is_shown = false
-    end
-end
 
 M.buffer_preview = vim.schedule_wrap(function(buf)
     buf = buf or vim.api.nvim_get_current_buf()
@@ -349,38 +393,19 @@ M.buffer_reset = function(buf)
     end
 end
 
-M.close_preview_window = function(...)
-    local args = {...}
-    for _, win in ipairs(args) do
-        if vim.api.nvim_win_is_valid(win) then
-            vim.api.nvim_win_close(win, false)
-        end
-    end
-end
-
-M.buf_detach = function(buf)
-    buf = buf or vim.api.nvim_get_current_buf()
-    clear_buf_state(buf)
-end
-
-M.tear_down = function()
-    git.tear_down()
-    ui.tear_down()
-    state = get_initial_state()
-end
-
 M.setup = function()
     git.setup()
     ui.setup()
     vim.api.nvim_command('augroup tanvirtin/vgit | autocmd! | augroup END')
-    vim.api.nvim_command('autocmd tanvirtin/vgit BufEnter,BufWritePost * lua require("git").buf_attach()')
-    vim.api.nvim_command('autocmd tanvirtin/vgit BufWipeout * lua require("git").buf_detach()')
-    vim.api.nvim_command('autocmd tanvirtin/vgit VimLeavePre * lua require("git").tear_down()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit BufEnter,BufWritePost * lua require("git")._buf_attach()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit BufWipeout * lua require("git")._buf_detach()')
+    vim.api.nvim_command('autocmd tanvirtin/vgit VimLeavePre * lua require("git")._tear_down()')
     if state.blames_enabled then
         vim.api.nvim_command('augroup tanvirtin/vgit/blame | autocmd! | augroup END')
-        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("git").blame_line()')
-        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("git").unblame_line()')
+        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("git")._blame_line()')
+        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("git")._unblame_line()')
     end
+   vim.cmd('command! -nargs=+ VGit lua require("git")._run(<f-args>)')
 end
 
 return M
