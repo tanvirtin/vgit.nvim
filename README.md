@@ -55,6 +55,132 @@ You also use in the built-in package manager:
 $ git clone --depth 1 https://github.com/tanvirtin/vgit.nvim $XDG_CONFIG_HOME/nvim/pack/plugins/start/vgit.nvim
 ```
 
+### Configure your own settings
+By default these are the default settings provided by the app, you can change them to your liking.
+```
+:lua require('vgit').setup({
+    hunks_enabled = true,
+    blames_enabled = true,
+    blame = {
+        hl_group = 'VGitBlame',
+        format = function(blame, git_config)
+            local config_author = git_config['user.name']
+            local author = blame.author
+            if config_author == author then
+                author = 'You'
+            end
+            local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
+            local time_format = string.format('%s days ago', round(time))
+            local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
+            local division_counter = 1
+
+            while time < 1 and division_counter ~= #time_divisions do
+                local division = time_divisions[division_counter]
+                time = time * division[1]
+                time_format = string.format('%s %s ago', round(time), division[2])
+                division_counter = division_counter + 1
+            end
+
+            local commit_message = blame.commit_message
+
+            if not blame.committed then
+                author = 'You'
+                commit_message = 'Uncommitted changes'
+                local info = string.format('%s • %s', author, commit_message)
+                return string.format(' %s', info)
+            end
+
+            local max_commit_message_length = 255
+
+            if #commit_message > max_commit_message_length then
+                commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
+            end
+
+            local info = string.format('%s, %s • %s', author, time_format, commit_message)
+            return string.format(' %s', info)
+        end
+    },
+    diff = {
+        window = {
+            hl_group = 'VGitDiffWindow',
+            border = {
+                { '╭', 'VGitDiffBorder' },
+                { '─', 'VGitDiffBorder' },
+                { '╮', 'VGitDiffBorder' },
+                { '│', 'VGitDiffBorder' },
+                { '╯', 'VGitDiffBorder' },
+                { '─', 'VGitDiffBorder' },
+                { '╰', 'VGitDiffBorder' },
+                { '│', 'VGitDiffBorder' },
+            }
+        },
+        types = {
+            add = {
+                name = 'VGitDiffAddSign',
+                sign_hl_group = 'VGitDiffAddSign',
+                text_hl_group = 'VGitDiffAddText',
+                text = '+'
+            },
+            remove = {
+                name = 'VGitDiffRemoveSign',
+                sign_hl_group = 'VGitDiffRemoveSign',
+                text_hl_group = 'VGitDiffRemoveText',
+                text = '-'
+            },
+        },
+    },
+    hunk = {
+        types = {
+            add = {
+                name = 'VGitHunkAddSign',
+                sign_hl_group = 'VGitHunkAddSign',
+                text_hl_group = 'VGitHunkAddText',
+                text = '+'
+            },
+            remove = {
+                name = 'VGitHunkRemoveSign',
+                sign_hl_group = 'VGitHunkRemoveSign',
+                text_hl_group = 'VGitHunkRemoveText',
+                text = '-'
+            },
+        },
+        window = {
+            hl_group = 'VGitHunkWindow',
+            border = {
+                { '', 'VGitHunkBorder' },
+                { '─', 'VGitHunkBorder' },
+                { '', 'VGitHunkBorder' },
+                { '', 'VGitHunkBorder' },
+                { '', 'VGitHunkBorder' },
+                { '─', 'VGitHunkBorder' },
+                { '', 'VGitHunkBorder' },
+                { '', 'VGitHunkBorder' },
+            }
+        },
+    },
+    hunk_sign = {
+        priority = 10,
+        types = {
+            add = {
+                name = 'VGitSignAdd',
+                hl_group = 'VGitSignAdd',
+                text = '│'
+            },
+            remove = {
+                name = 'VGitSignRemove',
+                hl_group = 'VGitSignRemove',
+                text = '│'
+            },
+            change = {
+                name = 'VGitSignChange',
+                hl_group = 'VGitSignChange',
+                text = '│'
+            },
+        },
+    }
+})
+```
+
 ### Configure Mappings
 ```
 vim.api.nvim_set_keymap('n', '<leader>gh', ':VGit hunk_preview<CR>', {
