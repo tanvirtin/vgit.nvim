@@ -1,6 +1,7 @@
 local git = require('vgit.git')
 local ui = require('vgit.ui')
 local defer = require('vgit.defer')
+local configurer = require('vgit.configurer')
 
 local vim = vim
 
@@ -129,7 +130,7 @@ M._unblame_line = function(buf, override)
     end
 end
 
-M._run = function(command, ...)
+M._run_command = function(command, ...)
     local starts_with = command:sub(1, 1)
     if starts_with == '_' or not M[command] then
         log_error('Invalid argument for VGit')
@@ -256,10 +257,8 @@ M.hunk_reset = function(buf, win)
         local finish = selected_hunk.finish
         if start and finish then
             if selected_hunk.type == 'remove' then
-                -- Api says start == finish (which is the case here) all the lines are inserted from that point.
                 vim.api.nvim_buf_set_lines(0, start, finish, false, replaced_lines)
             else
-                -- Insertion happens after the given index which is why we do start - 1
                 vim.api.nvim_buf_set_lines(0, start - 1, finish, false, replaced_lines)
             end
             vim.api.nvim_win_set_cursor(win, { start, 0 })
@@ -285,7 +284,6 @@ M.toggle_buffer_hunks = vim.schedule_wrap(function()
         end
         return
     end
-
     local bufs = state.bufs
     for buf, _ in pairs(bufs) do
         local bufnr = tonumber(buf)
@@ -323,7 +321,6 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
     end
     vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("vgit")._blame_line()')
     vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("vgit")._unblame_line()')
-
     local bufs = state.bufs
     for buf, _ in pairs(bufs) do
         local bufnr = tonumber(buf)
@@ -393,9 +390,10 @@ M.buffer_reset = function(buf)
     end
 end
 
-M.setup = function()
-    git.setup()
-    ui.setup()
+M.setup = function(config)
+    state = configurer.assign(state, config)
+    git.setup(config)
+    ui.setup(config)
     vim.api.nvim_command('augroup tanvirtin/vgit | autocmd! | augroup END')
     vim.api.nvim_command('autocmd tanvirtin/vgit BufEnter,BufWritePost * lua require("vgit")._buf_attach()')
     vim.api.nvim_command('autocmd tanvirtin/vgit BufWipeout * lua require("vgit")._buf_detach()')
@@ -405,7 +403,7 @@ M.setup = function()
         vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("vgit")._blame_line()')
         vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("vgit")._unblame_line()')
     end
-   vim.cmd('command! -nargs=+ VGit lua require("vgit")._run(<f-args>)')
+   vim.cmd('command! -nargs=+ VGit lua require("vgit")._run_command(<f-args>)')
 end
 
 return M

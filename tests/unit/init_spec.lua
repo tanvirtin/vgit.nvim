@@ -15,7 +15,7 @@ describe('init:', function()
                 _close_preview_window = true,
                 _blame_line = true,
                 _unblame_line = true,
-                _run = true,
+                _run_command = true,
                 setup = true,
                 toggle_buffer_hunks = true,
                 toggle_buffer_blames = true,
