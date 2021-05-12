@@ -1,5 +1,6 @@
 local Job = require('plenary.job')
 local fs = require('vgit.fs')
+local configurer = require('vgit.configurer')
 
 local vim = vim
 local unpack = unpack
@@ -39,7 +40,8 @@ local function split_by(str, sep)
         sep = "%s"
     end
     local chunks = {}
-    for s in string.gmatch(str, '([^' .. sep .. ']+)') do
+    local match = string.gmatch(str, '([^' .. sep .. ']+)')
+    for s in match do
         table.insert(chunks, s)
     end
     return chunks
@@ -57,10 +59,11 @@ end
 
 local state = get_initial_state()
 
-M.setup = function()
-    local err, config = M.config()
+M.setup = function(config)
+    state = configurer.assign(state, config)
+    local err, git_config = M.config()
     if not err then
-        state.config = config
+        state.config = git_config
     end
 end
 
@@ -104,14 +107,12 @@ end
 
 M.create_hunk = function(header)
     local origin, current = parse_hunk_header(header)
-
     local hunk = {
         start = current[1],
         finish = current[1] + current[2] - 1,
         type = nil,
         diff = {},
     }
-
     if current[2] == 0 then
         -- If it's a straight remove with no change, then highlight only one sign column.
         hunk.finish = hunk.start
@@ -121,7 +122,6 @@ M.create_hunk = function(header)
     else
         hunk.type = 'change'
     end
-
     return hunk
 end
 
