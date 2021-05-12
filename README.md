@@ -1,4 +1,4 @@
-# Git for Neovim (In Development)
+# Git for Neovim
 
 Visual Git Plugin for Neovim to enhance your git experience.
 
