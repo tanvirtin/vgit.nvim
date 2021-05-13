@@ -31,6 +31,10 @@ Visual Git Plugin for Neovim to enhance your git experience.
 
 ![blames](https://user-images.githubusercontent.com/25164326/117505703-7d578980-af52-11eb-82c8-22ea0c4bbd2a.gif)
 
+- [x] Quickfix your hunks
+
+![hunks_quickfix](https://user-images.githubusercontent.com/25164326/118189592-fc940400-b40f-11eb-9741-75bb81d5ed64.gif)
+
 
 ## Prerequisites
 - [Git](https://git-scm.com/)
