@@ -676,4 +676,26 @@ describe('git:', function()
 
     end)
 
+    describe('buffer_blames', function()
+        local filename = 'tests/fixtures/simple_file'
+
+        after_each(function()
+            os.execute(string.format('git checkout HEAD -- %s', filename))
+        end)
+
+        it('should return empty array when there are no changes', function()
+            local err, filenames = git.ls();
+            assert.are.same(err, nil)
+            assert.are.same(filenames, {})
+        end)
+
+        it('should return the correct number of filenames when there are changes in the repository', function()
+            add_lines(filename)
+            local err, filenames = git.ls();
+            assert.are.same(err, nil)
+            assert.are.same(filenames, { filename })
+        end)
+
+    end)
+
 end)

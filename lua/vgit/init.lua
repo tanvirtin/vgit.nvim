@@ -222,7 +222,7 @@ M.hunk_up = function(buf, win)
         vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
         vim.api.nvim_command('norm! zz')
     else
-        vim.api.nvim_win_set_cursor(win, { hunks[#hunks].start, 0 })
+        vim.api.nvim_win_set_cursor(win, { hunks[#hunks].finish, 0 })
         vim.api.nvim_command('norm! zz')
     end
 end
