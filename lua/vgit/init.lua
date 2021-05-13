@@ -218,7 +218,7 @@ M.hunk_up = function(buf, win)
             break
         end
     end
-    if new_lnum then
+    if new_lnum and lnum ~= new_lnum then
         vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
         vim.api.nvim_command('norm! zz')
     else
@@ -267,6 +267,28 @@ M.hunk_reset = function(buf, win)
             ui.hide_hunk_signs(buf)
             ui.show_hunk_signs(buf, hunks)
         end
+    end
+end
+
+M.hunks_quickfix = function()
+    local err, filenames = git.ls()
+    if not err then
+        local qf_entries = {}
+        for _, filename in ipairs(filenames) do
+            local hunks_err, hunks = git.buffer_hunks(filename)
+            if not hunks_err then
+                for _, hunk in ipairs(hunks) do
+                    table.insert(qf_entries, {
+                        text = hunk.header,
+                        filename = filename,
+                        lnum = hunk.start,
+                        col = 0,
+                    })
+                end
+            end
+        end
+        vim.fn.setqflist(qf_entries, 'r')
+        vim.api.nvim_command('copen')
     end
 end
 

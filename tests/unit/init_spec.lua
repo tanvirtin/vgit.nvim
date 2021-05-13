@@ -25,6 +25,7 @@ describe('init:', function()
                 hunk_reset = true,
                 buffer_preview = true,
                 buffer_reset = true,
+                hunks_quickfix = true,
             }
             for key, _ in pairs(vgit) do
                 assert(known_imports[key])
