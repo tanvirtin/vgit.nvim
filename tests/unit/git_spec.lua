@@ -139,11 +139,9 @@ describe('git:', function()
             local add_hunk = git.create_hunk(headers['add'])
             assert.are.same(add_hunk.start, 18)
             assert.are.same(add_hunk.finish, 18 + 15 - 1)
-
             local remove_hunk = git.create_hunk(headers['remove'])
             assert.are.same(remove_hunk.start, 8)
             assert.are.same(remove_hunk.finish, 8)
-
             local change_hunk = git.create_hunk(headers['change'])
             assert.are.same(change_hunk.start, 10)
             assert.are.same(change_hunk.finish, 10 + 7 - 1)
@@ -156,15 +154,12 @@ describe('git:', function()
                 'world',
                 'this is program speaking',
             }
-
             for _, line in ipairs(lines) do
                 table.insert(hunk.diff, line)
             end
-
             for i, line in ipairs(hunk.diff) do
                 assert.are.same(lines[i], line)
             end
-
             assert.are.same(#hunk.diff, #lines)
         end)
 
@@ -225,7 +220,6 @@ describe('git:', function()
             assert.are.same(data[1].type, 'add')
             assert.are.same(data[2].type, 'change')
             assert.are.same(data[3].type, 'remove')
-
             for i = 1, #lines do
                 -- add
                 if i == 1 then
