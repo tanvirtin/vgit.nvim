@@ -77,7 +77,7 @@ M._close_preview_window = function(...)
     local args = {...}
     for _, win in ipairs(args) do
         if vim.api.nvim_win_is_valid(win) then
-            vim.api.nvim_win_close(win, false)
+            vim.api.nvim_win_close(win, true)
         end
     end
 end

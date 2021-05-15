@@ -395,13 +395,16 @@ M.show_hunk = function(hunk, filetype)
     vim.api.nvim_win_set_option(win_id, 'wrap', false)
     vim.api.nvim_win_set_option(win_id, 'signcolumn', 'yes')
     local bufs = vim.api.nvim_list_bufs()
-    vim.api.nvim_buf_set_keymap(
-        buf,
-        'n',
-        '<C-c>',
-        string.format(':lua require("vgit")._close_preview_window(%s)<CR>', win_id),
-        { silent = true }
-    )
+    local mappings = {'<esc>', '<C-c>'}
+    for _, mapping in ipairs(mappings) do
+        vim.api.nvim_buf_set_keymap(
+            buf,
+            'n',
+            mapping,
+            string.format(':lua require("vgit")._close_preview_window(%s)<CR>', win_id),
+            { silent = true }
+        )
+    end
     for _, current_buf in ipairs(bufs) do
         vim.api.nvim_command(
             string.format(
@@ -432,9 +435,6 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         }
     }
     for _, window in pairs(windows) do
-        vim.api.nvim_buf_set_option(window.buf, 'bufhidden', 'wipe')
-        vim.api.nvim_buf_set_option(window.buf, 'buftype', 'nofile')
-        vim.api.nvim_buf_set_option(window.buf, 'buflisted', false)
         vim.api.nvim_buf_set_lines(window.buf, 0, -1, false, window.lines)
         highlight_with_ts(window.buf, filetype)
     end
@@ -465,7 +465,6 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         border = state.diff.window.border,
         row = math.ceil((global_height - height) / 2 - 1),
         col = col + width + 2,
-        focusable = false,
     })
     for _, window in pairs(windows) do
         vim.api.nvim_win_set_option(window.win_id, 'winhl', string.format('Normal:%s', state.diff.window.hl_group))
@@ -475,22 +474,21 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         vim.api.nvim_win_set_option(window.win_id, 'scrollbind', true)
         vim.api.nvim_win_set_option(window.win_id, 'signcolumn', 'yes')
     end
-    local current_bufs = vim.api.nvim_list_bufs()
-    vim.api.nvim_buf_set_keymap(
-        windows.cwd.buf,
-        'n',
-        '<C-c>',
-        string.format(':lua require("vgit")._close_preview_window(%s, %s)<CR>', windows.cwd.win_id, windows.cwd.origin_id),
-        { silent = true }
-    )
-    for _, current_buf in ipairs(current_bufs) do
-        vim.api.nvim_command(
-            string.format(
-                'autocmd BufEnter <buffer=%s> lua require("vgit")._close_preview_window(%s, %s)',
-                current_buf,
-                windows.cwd.win_id,
-                windows.origin.win_id
-            )
+    local mappings = {'<esc>', '<C-c>'}
+    for _, mapping in ipairs(mappings) do
+        vim.api.nvim_buf_set_keymap(
+            windows.cwd.buf,
+            'n',
+            mapping,
+            string.format(':lua require("vgit")._close_preview_window(%s, %s)<CR>', windows.cwd.win_id, windows.origin.win_id),
+            { silent = true }
+        )
+        vim.api.nvim_buf_set_keymap(
+            windows.origin.buf,
+            'n',
+            mapping,
+            string.format(':lua require("vgit")._close_preview_window(%s, %s)<CR>', windows.cwd.win_id, windows.origin.win_id),
+            { silent = true }
         )
     end
     return windows.cwd.buf, windows.cwd.win_id, windows.origin.buf, windows.origin.win_id
