@@ -33,7 +33,7 @@ Visual Git Plugin for Neovim to enhance your git experience.
 
 - [x] Quickfix your hunks
 
-![hunks_quickfix](https://user-images.githubusercontent.com/25164326/118189592-fc940400-b40f-11eb-9741-75bb81d5ed64.gif)
+![hunks_quickfix_list](https://user-images.githubusercontent.com/25164326/118189592-fc940400-b40f-11eb-9741-75bb81d5ed64.gif)
 
 
 ## Prerequisites
@@ -211,7 +211,7 @@ vim.api.nvim_set_keymap('n', '<leader>gu', ':VGit buffer_reset<CR>', {
     noremap = true,
     silent = true,
 })
-vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix<CR>', {
+vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
     noremap = true,
     silent = true,
 })
@@ -229,5 +229,5 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix<CR>', {
 | hunk_up | Navigate upwards through a github hunk |
 | buffer_preview | Opens two windows, showing cwd and origin buffers and the diff between them |
 | buffer_reset | Resets a current buffer you are on |
-| hunks_quickfix | Opens a populated quickfix window with all the hunks of the project |
+| hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
 

@@ -270,7 +270,7 @@ M.hunk_reset = function(buf, win)
     end
 end
 
-M.hunks_quickfix = function()
+M.hunks_quickfix_list = function()
     local err, filenames = git.ls()
     if not err then
         local qf_entries = {}
