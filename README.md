@@ -211,6 +211,10 @@ vim.api.nvim_set_keymap('n', '<leader>gu', ':VGit buffer_reset<CR>', {
     noremap = true,
     silent = true,
 })
+vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix<CR>', {
+    noremap = true,
+    silent = true,
+})
 ```
 
 ### API
@@ -225,4 +229,5 @@ vim.api.nvim_set_keymap('n', '<leader>gu', ':VGit buffer_reset<CR>', {
 | hunk_up | Navigate upwards through a github hunk |
 | buffer_preview | Opens two windows, showing cwd and origin buffers and the diff between them |
 | buffer_reset | Resets a current buffer you are on |
+| hunks_quickfix | Opens a populated quickfix window with all the hunks of the project |
 
