@@ -120,10 +120,17 @@ describe('git:', function()
             invalid_zero = '@@ -0,0 +0,0 @@ foo bar',
         }
 
+        it('should store the headers passed in', function()
+            for _, value in pairs(headers) do
+                local hunk = git.create_hunk(value)
+                assert.are.same(hunk.header, value)
+            end
+        end)
+
         it('should create a hunk from given parameters', function()
             local hunk = git.create_hunk(headers['add'])
             assert.are.same(type(hunk), 'table')
-            local hunk_keys = { 'start', 'finish', 'type', 'diff' }
+            local hunk_keys = { 'header', 'start', 'finish', 'type', 'diff' }
             for key, _ in pairs(hunk) do
                 assert(vim.tbl_contains(hunk_keys, key))
             end
@@ -665,6 +672,28 @@ describe('git:', function()
                     assert.are.same(blame.committed, true)
                 end
             end
+        end)
+
+    end)
+
+    describe('buffer_blames', function()
+        local filename = 'tests/fixtures/simple_file'
+
+        after_each(function()
+            os.execute(string.format('git checkout HEAD -- %s', filename))
+        end)
+
+        it('should return empty array when there are no changes', function()
+            local err, filenames = git.ls();
+            assert.are.same(err, nil)
+            assert.are.same(filenames, {})
+        end)
+
+        it('should return the correct number of filenames when there are changes in the repository', function()
+            add_lines(filename)
+            local err, filenames = git.ls();
+            assert.are.same(err, nil)
+            assert.are.same(filenames, { filename })
         end)
 
     end)
