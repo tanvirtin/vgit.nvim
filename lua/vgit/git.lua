@@ -35,18 +35,6 @@ local function parse_hunk_header(line)
     return origin, current
 end
 
-local function split_by(str, sep)
-    if sep == nil then
-        sep = "%s"
-    end
-    local chunks = {}
-    local match = string.gmatch(str, '([^' .. sep .. ']+)')
-    for s in match do
-        table.insert(chunks, s)
-    end
-    return chunks
-end
-
 local M = {}
 
 local constants = {
@@ -72,7 +60,6 @@ M.tear_down = function()
 end
 
 M.get_state = function()
-    -- TODO: Directly returning object in memory (Pros: No computation wasted for cloning, Cons: Mutable object)
     return state
 end
 
@@ -86,7 +73,7 @@ M.config = function()
             '--list',
         },
         on_stdout = function(_, line)
-            local line_chunks = split_by(line, '=')
+            local line_chunks = vim.split(line, '=')
             config[line_chunks[1]] = line_chunks[2]
         end,
         on_stderr = function(err, line)
@@ -108,6 +95,7 @@ end
 M.create_hunk = function(header)
     local origin, current = parse_hunk_header(header)
     local hunk = {
+        header = header,
         start = current[1],
         finish = current[1] + current[2] - 1,
         type = nil,
@@ -169,7 +157,7 @@ end
 
 M.create_blame = function(info)
     local function split_by_whitespace(str)
-        return split_by(str, ' ')
+        return vim.split(str, ' ')
     end
     local hash_info = split_by_whitespace(info[1])
     local author_mail_info = split_by_whitespace(info[3])
@@ -375,6 +363,34 @@ M.buffer_reset = function(filename)
         return err_result
     end
     return nil
+end
+
+M.ls = function()
+    local filenames = {}
+    local err_result = ''
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'diff',
+            '--name-only',
+        },
+        on_stdout = function(_, line)
+            table.insert(filenames, line)
+        end,
+        on_stderr = function(err, line)
+            if err then
+                err_result = err_result .. err
+            elseif line then
+                err_result = err_result .. line
+            end
+        end,
+    })
+    job:sync()
+    job:wait()
+    if err_result ~= '' then
+        return err_result, nil
+    end
+    return nil, filenames
 end
 
 return M
