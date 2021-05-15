@@ -60,7 +60,6 @@ M.tear_down = function()
 end
 
 M.get_state = function()
-    -- TODO: Directly returning object in memory (Pros: No computation wasted for cloning, Cons: Mutable object)
     return state
 end
 
