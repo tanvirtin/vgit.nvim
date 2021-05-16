@@ -475,7 +475,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
         vim.api.nvim_win_set_option(window.win_id, 'scrollbind', true)
         vim.api.nvim_win_set_option(window.win_id, 'signcolumn', 'yes')
     end
-    local mappings = {'<esc>', '<C-c>'}
+    local mappings = { '<esc>', '<C-c>', ':' }
     for _, mapping in ipairs(mappings) do
         for _, window in pairs(windows) do
             vim.api.nvim_buf_set_keymap(
