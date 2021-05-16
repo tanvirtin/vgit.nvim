@@ -73,13 +73,19 @@ M._buf_detach = function(buf)
     clear_buf_state(buf)
 end
 
-M._close_preview_window = function(...)
-    local args = {...}
-    for _, win in ipairs(args) do
+M._close_preview_window = function(wins, bufs)
+    for _, win in ipairs(wins) do
         if vim.api.nvim_win_is_valid(win) then
             vim.api.nvim_win_close(win, true)
         end
     end
+    vim.schedule(function()
+        for _, buf in ipairs(bufs) do
+            if vim.api.nvim_buf_is_valid(buf) then
+                vim.api.nvim_buf_delete(buf, { force = true })
+            end
+        end
+    end)
 end
 
 M._tear_down = function()

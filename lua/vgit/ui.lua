@@ -401,16 +401,17 @@ M.show_hunk = function(hunk, filetype)
             buf,
             'n',
             mapping,
-            string.format(':lua require("vgit")._close_preview_window(%s)<CR>', win_id),
+            string.format(':lua require("vgit")._close_preview_window({ %s }, { %s })<CR>', win_id, buf),
             { silent = true }
         )
     end
     for _, current_buf in ipairs(bufs) do
         vim.api.nvim_command(
             string.format(
-                'autocmd BufEnter <buffer=%s> lua require("vgit")._close_preview_window(%s)',
+                'autocmd BufEnter <buffer=%s> lua require("vgit")._close_preview_window({ %s }, { %s })',
                 current_buf,
-                win_id
+                win_id,
+                buf
             )
         )
     end
@@ -476,19 +477,32 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
     end
     local mappings = {'<esc>', '<C-c>'}
     for _, mapping in ipairs(mappings) do
-        vim.api.nvim_buf_set_keymap(
-            windows.cwd.buf,
-            'n',
-            mapping,
-            string.format(':lua require("vgit")._close_preview_window(%s, %s)<CR>', windows.cwd.win_id, windows.origin.win_id),
-            { silent = true }
-        )
-        vim.api.nvim_buf_set_keymap(
-            windows.origin.buf,
-            'n',
-            mapping,
-            string.format(':lua require("vgit")._close_preview_window(%s, %s)<CR>', windows.cwd.win_id, windows.origin.win_id),
-            { silent = true }
+        for _, window in pairs(windows) do
+            vim.api.nvim_buf_set_keymap(
+                window.buf,
+                'n',
+                mapping,
+                string.format(
+                    ':lua require("vgit")._close_preview_window({ %s, %s }, { %s, %s })<CR>',
+                    windows.cwd.win_id,
+                    windows.origin.win_id,
+                    windows.cwd.buf,
+                    windows.origin.buf
+                ),
+                { silent = true }
+            )
+        end
+    end
+    for _, window in pairs(windows) do
+        vim.api.nvim_command(
+            string.format(
+                'autocmd BufWinLeave <buffer=%s> lua require("vgit")._close_preview_window({ %s, %s }, { %s, %s })',
+                window.buf,
+                windows.cwd.win_id,
+                windows.origin.win_id,
+                windows.cwd.buf,
+                windows.origin.buf
+            )
         )
     end
     return windows.cwd.buf, windows.cwd.win_id, windows.origin.buf, windows.origin.win_id
