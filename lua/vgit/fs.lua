@@ -1,5 +1,7 @@
 local Job = require('plenary.job')
 
+local vim = vim
+
 local M = {}
 
 M.read_file = function(path)
@@ -24,6 +26,7 @@ M.read_file = function(path)
     if err_result ~= '' then
         return err_result, nil
     end
+    data = vim.split(data, '\n')
     return nil, data
 end
 

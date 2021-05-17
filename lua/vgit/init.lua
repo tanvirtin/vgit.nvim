@@ -20,6 +20,14 @@ local function log_error(msg)
     vim.cmd('echohl None')
 end
 
+local function get_relative_path(buf)
+    return vim.fn.bufname(buf)
+end
+
+local function get_absolute_path(buf)
+    return vim.api.nvim_buf_get_name(buf)
+end
+
 local state = get_initial_state()
 
 local M = {}
@@ -48,7 +56,7 @@ end
 M._buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
     buf = buf or vim.api.nvim_get_current_buf()
     local buf_state = create_buf_state(buf)
-    local filename = vim.api.nvim_buf_get_name(buf)
+    local filename = get_absolute_path(buf)
     if not filename or filename == '' then
         return
     end
@@ -315,7 +323,7 @@ M.toggle_buffer_hunks = vim.schedule_wrap(function()
     local bufs = state.bufs
     for buf, _ in pairs(bufs) do
         local bufnr = tonumber(buf)
-        local filename = vim.api.nvim_buf_get_name(bufnr)
+        local filename = get_absolute_path(bufnr)
         if filename and filename ~= '' then
             local hunks_err, hunks = git.hunks(filename)
             if not hunks_err then
@@ -352,7 +360,7 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
     local bufs = state.bufs
     for buf, _ in pairs(bufs) do
         local bufnr = tonumber(buf)
-        local filename = vim.api.nvim_buf_get_name(bufnr)
+        local filename = get_absolute_path(bufnr)
         if filename and filename ~= '' then
             local err, blames = git.blames(filename)
             if not err then
@@ -367,37 +375,51 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
     end
 end)
 
-M.buffer_preview = vim.schedule_wrap(function(buf)
+M.buffer_diff = vim.schedule_wrap(function(buf, head)
     buf = buf or vim.api.nvim_get_current_buf()
-    local filename = vim.api.nvim_buf_get_name(buf)
-    if not filename or filename == '' then
-        return
+    local filename = nil
+    local commit_hash = nil
+    local hunks = nil
+    if head and head > 0 then
+        filename = get_relative_path(buf)
+        local logs_err, logs = git.logs(filename)
+        if not logs_err then
+            local log = logs[head]
+            if log then
+                local hunks_err, computed_hunks = git.hunks(filename, log.parent_hash, log.commit_hash)
+                if hunks_err then
+                    return
+                end
+                hunks = computed_hunks
+                commit_hash = log.parent_hash
+            end
+        end
+    else
+        local buf_state = get_buf_state(buf)
+        if not buf_state then
+            return
+        end
+        hunks = buf_state.hunks
+        filename = get_absolute_path(buf)
     end
-    local buf_state = get_buf_state(buf)
-    if not buf_state then
-        return
-    end
-    local hunks = buf_state.hunks
-    if not state.hunks_enabled then
-        local err, computed_hunks = git.hunks(filename)
-        if not err then
-            hunks = computed_hunks
+    if hunks and #hunks > 0 and filename and filename ~= '' then
+        local filetype = vim.api.nvim_buf_get_option(0, 'filetype')
+        local diff_err, data = git.diff(filename, hunks, commit_hash)
+        if not diff_err then
+            ui.show_diff(
+                data.cwd_lines,
+                data.origin_lines,
+                data.lnum_changes,
+                filetype
+            )
         end
     end
-    if #hunks == 0 then
-        return
+end)
+
+M.buffer_preview = vim.schedule_wrap(function(buf)
+    if state.hunks_enabled then
+        M.buffer_diff(buf)
     end
-    local filetype = vim.api.nvim_buf_get_option(0, 'filetype')
-    local err, data = git.diff(vim.api.nvim_buf_get_name(buf), hunks)
-    if err then
-        return
-    end
-    ui.show_diff(
-        data.cwd_lines,
-        data.origin_lines,
-        data.lnum_changes,
-        filetype
-    )
 end)
 
 M.buffer_reset = function(buf)
@@ -410,7 +432,8 @@ M.buffer_reset = function(buf)
     if #hunks == 0 then
         return
     end
-    local err = git.reset(vim.api.nvim_buf_get_name(buf))
+    local filename = get_absolute_path(buf)
+    local err = git.reset(filename)
     if not err then
         vim.api.nvim_command('e!')
         buf_state.hunks = {}
