@@ -391,7 +391,7 @@ M.buffer_diff = vim.schedule_wrap(function(buf, head)
                     return
                 end
                 hunks = computed_hunks
-                commit_hash = log.parent_hash
+                commit_hash = log.commit_hash
             end
         end
     else
