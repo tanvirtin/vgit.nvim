@@ -599,8 +599,8 @@ describe('git:', function()
             local blame = git.create_blame(committed_info)
             assert.are.same(blame, {
                 lnum = 183,
-                hash = 'e71cf398fdbe7f13560d65b72d6ec111c4c2c837',
-                previous_hash = 'bc019ecab452195b1d044998efb7994a6467cca7',
+                commit_hash = 'e71cf398fdbe7f13560d65b72d6ec111c4c2c837',
+                parent_hash = 'bc019ecab452195b1d044998efb7994a6467cca7',
                 author = 'tanvirtin',
                 author_mail = 'tinman@tinman.com',
                 author_time = 1620254313,
@@ -618,8 +618,8 @@ describe('git:', function()
             local blame = git.create_blame(uncommitted_info)
             assert.are.same(blame, {
                 lnum = 94,
-                hash = '0000000000000000000000000000000000000000',
-                previous_hash = 'a08d97a4bd97574460f33fc1b9e645bfa9d2f703',
+                commit_hash = '0000000000000000000000000000000000000000',
+                parent_hash = 'a08d97a4bd97574460f33fc1b9e645bfa9d2f703',
                 author = 'Not Committed Yet',
                 author_mail = 'not.committed.yet',
                 author_time = 1620420779,

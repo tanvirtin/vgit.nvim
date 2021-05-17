@@ -129,19 +129,19 @@ M.create_blame = function(info)
     local function split_by_whitespace(str)
         return vim.split(str, ' ')
     end
-    local hash_info = split_by_whitespace(info[1])
+    local commit_hash_info = split_by_whitespace(info[1])
     local author_mail_info = split_by_whitespace(info[3])
     local author_time_info = split_by_whitespace(info[4])
     local author_tz_info = split_by_whitespace(info[5])
     local committer_mail_info = split_by_whitespace(info[7])
     local committer_time_info = split_by_whitespace(info[8])
     local committer_tz_info = split_by_whitespace(info[9])
-    local previous_hash_info = split_by_whitespace(info[11])
+    local parent_hash_info = split_by_whitespace(info[11])
     local author = info[2]:sub(8, #info[2])
     local author_mail = author_mail_info[2]
     local committer = info[6]:sub(11, #info[6])
     local committer_mail = committer_mail_info[2]
-    local lnum = tonumber(hash_info[3])
+    local lnum = tonumber(commit_hash_info[3])
     local committed = true
     if author == 'Not Committed Yet'
         and committer == 'Not Committed Yet'
@@ -151,8 +151,8 @@ M.create_blame = function(info)
     end
     return {
         lnum = lnum,
-        hash = hash_info[1],
-        previous_hash = previous_hash_info[2],
+        commit_hash = commit_hash_info[1],
+        parent_hash = parent_hash_info[2],
         author = author,
         author_mail = (function()
             local mail = author_mail
@@ -246,7 +246,7 @@ M.logs = function(filename)
     return nil, logs
 end
 
-M.hunks = function(filename, head)
+M.hunks = function(filename, parent_hash, commit_hash)
     local args = {
         '--no-pager',
         '-c',
@@ -258,28 +258,20 @@ M.hunks = function(filename, head)
         '--unified=0',
         filename,
     }
-    if head then
-        local logs_err, logs = M.logs(filename)
-        if not logs_err then
-            local log = logs[head]
-            local commit_hash = log.commit_hash
-            local parent_hash = log.parent_hash
-            args = {
-                '--no-pager',
-                '-c',
-                'core.safecrlf=false',
-                'diff',
-                '--color=never',
-                string.format('--diff-algorithm=%s', constants.diff_algorithm),
-                '--patch-with-raw',
-                '--unified=0',
-                parent_hash,
-                commit_hash,
-                filename,
-            }
-        else
-            return logs_err, nil
-        end
+    if parent_hash and commit_hash then
+        args = {
+            '--no-pager',
+            '-c',
+            'core.safecrlf=false',
+            'diff',
+            '--color=never',
+            string.format('--diff-algorithm=%s', constants.diff_algorithm),
+            '--patch-with-raw',
+            '--unified=0',
+            parent_hash,
+            commit_hash,
+            filename,
+        }
     end
     local err_result = ''
     local hunks = {}
@@ -312,12 +304,45 @@ M.hunks = function(filename, head)
     return nil, hunks
 end
 
-M.diff = function(filename, hunks)
-    local err, data = fs.read_file(filename);
+M.show = function(commit_hash, filename)
+    local err_result = ''
+    local data = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'show',
+            string.format('%s:%s', commit_hash, filename),
+        },
+        on_stdout = function(_, line)
+            table.insert(data, line)
+        end,
+        on_stderr = function(err, line)
+            if err then
+                err_result = err_result .. err
+            elseif line then
+                err_result = err_result .. line
+            end
+        end,
+    })
+    job:sync()
+    job:wait()
+    if err_result ~= '' then
+        return err_result, nil
+    end
+    return nil, data
+end
+
+M.diff = function(filename, hunks, commit_hash)
+    local err = nil
+    local data = nil
+    if commit_hash then
+        err, data = M.show(commit_hash, filename)
+    else
+        err, data = fs.read_file(filename);
+    end
     if err then
         return err, nil
     end
-    data = vim.split(data, '\n')
     local cwd_lines = {}
     local origin_lines = {}
     local lnum_changes = {}

@@ -23,6 +23,7 @@ describe('init:', function()
                 hunk_up = true,
                 hunk_down = true,
                 hunk_reset = true,
+                buffer_diff = true,
                 buffer_preview = true,
                 buffer_reset = true,
                 hunks_quickfix_list = true,
