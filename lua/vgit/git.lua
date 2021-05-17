@@ -92,6 +92,18 @@ M.config = function()
     return nil, config
 end
 
+M.create_log = function(line)
+    local log = vim.split(line, '-')
+    return {
+        commit_hash = log[1]:sub(2, #log[1]),
+        parent_hash = log[2],
+        timestamp = log[3],
+        author_name = log[4],
+        author_email = log[5],
+        summary = log[6]:sub(1, #log[6] - 1),
+    }
+end
+
 M.create_hunk = function(header)
     local origin, current = parse_hunk_header(header)
     local hunk = {
@@ -111,48 +123,6 @@ M.create_hunk = function(header)
         hunk.type = 'change'
     end
     return hunk
-end
-
-M.buffer_hunks = function(filename)
-    local err_result = ''
-    local hunks = {}
-    local job = Job:new({
-        command = 'git',
-        args = {
-            '--no-pager',
-            '-c',
-            'core.safecrlf=false',
-            'diff',
-            '--color=never',
-            string.format('--diff-algorithm=%s', constants.diff_algorithm),
-            '--patch-with-raw',
-            '--unified=0',
-            filename,
-        },
-        on_stdout = function(_, line)
-            if vim.startswith(line, '@@') then
-                table.insert(hunks, M.create_hunk(line))
-            else
-                if #hunks > 0 then
-                    local hunk = hunks[#hunks]
-                    table.insert(hunk.diff, line)
-                end
-            end
-        end,
-        on_stderr = function(err, line)
-            if err then
-                err_result = err_result .. err
-            elseif line then
-                err_result = err_result .. line
-            end
-        end,
-    })
-    job:sync()
-    job:wait()
-    if err_result ~= '' then
-        return err_result, nil
-    end
-    return nil, hunks
 end
 
 M.create_blame = function(info)
@@ -208,7 +178,7 @@ M.create_blame = function(info)
     }
 end
 
-M.buffer_blames = function(filename)
+M.blames = function(filename)
     local err_result = ''
     local blames = {}
     local blame_info = {}
@@ -246,7 +216,103 @@ M.buffer_blames = function(filename)
     return nil, blames
 end
 
-M.buffer_diff = function(filename, hunks)
+M.logs = function(filename)
+    local err_result = ''
+    local logs = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'log',
+            '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
+            '--',
+            filename,
+        },
+        on_stdout = function(_, line)
+            table.insert(logs, M.create_log(line))
+        end,
+        on_stderr = function(err, line)
+            if err then
+                err_result = err_result .. err
+            elseif line then
+                err_result = err_result .. line
+            end
+        end,
+    })
+    job:sync()
+    job:wait()
+    if err_result ~= '' then
+        return err_result, nil
+    end
+    return nil, logs
+end
+
+M.hunks = function(filename, head)
+    local args = {
+        '--no-pager',
+        '-c',
+        'core.safecrlf=false',
+        'diff',
+        '--color=never',
+        string.format('--diff-algorithm=%s', constants.diff_algorithm),
+        '--patch-with-raw',
+        '--unified=0',
+        filename,
+    }
+    if head then
+        local logs_err, logs = M.logs(filename)
+        if not logs_err then
+            local log = logs[head]
+            local commit_hash = log.commit_hash
+            local parent_hash = log.parent_hash
+            args = {
+                '--no-pager',
+                '-c',
+                'core.safecrlf=false',
+                'diff',
+                '--color=never',
+                string.format('--diff-algorithm=%s', constants.diff_algorithm),
+                '--patch-with-raw',
+                '--unified=0',
+                parent_hash,
+                commit_hash,
+                filename,
+            }
+        else
+            return logs_err, nil
+        end
+    end
+    local err_result = ''
+    local hunks = {}
+    local job = Job:new({
+        command = 'git',
+        args = args,
+        on_stdout = function(_, line)
+            if vim.startswith(line, '@@') then
+                table.insert(hunks, M.create_hunk(line))
+            else
+                if #hunks > 0 then
+                    local hunk = hunks[#hunks]
+                    table.insert(hunk.diff, line)
+                end
+            end
+        end,
+        on_stderr = function(err, line)
+            if err then
+                err_result = err_result .. err
+            elseif line then
+                err_result = err_result .. line
+            end
+        end,
+    })
+    job:sync()
+    job:wait()
+    if err_result ~= '' then
+        return err_result, nil
+    end
+    return nil, hunks
+end
+
+M.diff = function(filename, hunks)
     local err, data = fs.read_file(filename);
     if err then
         return err, nil
@@ -339,7 +405,7 @@ M.buffer_diff = function(filename, hunks)
     }
 end
 
-M.buffer_reset = function(filename)
+M.reset = function(filename)
     local err_result = ''
     local job = Job:new({
         command = 'git',
