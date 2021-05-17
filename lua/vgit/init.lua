@@ -53,7 +53,7 @@ M._buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
         return
     end
     if state.hunks_enabled then
-        local hunks_err, hunks = git.buffer_hunks(filename)
+        local hunks_err, hunks = git.hunks(filename)
         if not hunks_err then
             buf_state.hunks = hunks
             ui.hide_hunk_signs(buf)
@@ -61,7 +61,7 @@ M._buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
         end
     end
     if state.blames_enabled then
-        local blames_err, blames = git.buffer_blames(filename)
+        local blames_err, blames = git.blames(filename)
         if not blames_err then
             buf_state.blames = blames
         end
@@ -281,7 +281,7 @@ M.hunks_quickfix_list = function()
     if not err then
         local qf_entries = {}
         for _, filename in ipairs(filenames) do
-            local hunks_err, hunks = git.buffer_hunks(filename)
+            local hunks_err, hunks = git.hunks(filename)
             if not hunks_err then
                 for _, hunk in ipairs(hunks) do
                     table.insert(qf_entries, {
@@ -317,7 +317,7 @@ M.toggle_buffer_hunks = vim.schedule_wrap(function()
         local bufnr = tonumber(buf)
         local filename = vim.api.nvim_buf_get_name(bufnr)
         if filename and filename ~= '' then
-            local hunks_err, hunks = git.buffer_hunks(filename)
+            local hunks_err, hunks = git.hunks(filename)
             if not hunks_err then
                 state.hunks_enabled = true
                 local buf_state = get_buf_state(buf)
@@ -354,7 +354,7 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
         local bufnr = tonumber(buf)
         local filename = vim.api.nvim_buf_get_name(bufnr)
         if filename and filename ~= '' then
-            local err, blames = git.buffer_blames(filename)
+            local err, blames = git.blames(filename)
             if not err then
                 state.blames_enabled = true
                 local buf_state = get_buf_state(buf)
@@ -379,7 +379,7 @@ M.buffer_preview = vim.schedule_wrap(function(buf)
     end
     local hunks = buf_state.hunks
     if not state.hunks_enabled then
-        local err, computed_hunks = git.buffer_hunks(filename)
+        local err, computed_hunks = git.hunks(filename)
         if not err then
             hunks = computed_hunks
         end
@@ -388,7 +388,7 @@ M.buffer_preview = vim.schedule_wrap(function(buf)
         return
     end
     local filetype = vim.api.nvim_buf_get_option(0, 'filetype')
-    local err, data = git.buffer_diff(vim.api.nvim_buf_get_name(buf), hunks)
+    local err, data = git.diff(vim.api.nvim_buf_get_name(buf), hunks)
     if err then
         return
     end
@@ -410,7 +410,7 @@ M.buffer_reset = function(buf)
     if #hunks == 0 then
         return
     end
-    local err = git.buffer_reset(vim.api.nvim_buf_get_name(buf))
+    local err = git.reset(vim.api.nvim_buf_get_name(buf))
     if not err then
         vim.api.nvim_command('e!')
         buf_state.hunks = {}
