@@ -1,4 +1,4 @@
-# Git for Neovim
+# Visual Git Plugin for Neovim
 
 Visual Git Plugin for Neovim to enhance your git experience.
 
@@ -35,13 +35,17 @@ Visual Git Plugin for Neovim to enhance your git experience.
 
 ![hunks_quickfix_list](https://user-images.githubusercontent.com/25164326/118189592-fc940400-b40f-11eb-9741-75bb81d5ed64.gif)
 
+- [x] Check how your file looked in previous versions
+
+![history](https://user-images.githubusercontent.com/25164326/118910341-4be7a200-b8f2-11eb-9dae-1888486c2d4d.gif)
 
 ## Prerequisites
 - [Git](https://git-scm.com/)
 - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 
-## Recommended Settings
+## Recommended
+- Have neovim be open inside the current git working directory.
 - `vim.o.updatetime = 100` (see :help updatetime).
 
 ## Installation
@@ -65,9 +69,98 @@ By default these are the default settings provided by the app, you can change th
 :lua require('vgit').setup({
     hunks_enabled = true,
     blames_enabled = true,
+    hl_groups = {
+        VGitBlame = {
+            bg = nil,
+            fg = '#b1b1b1',
+        },
+        VGitDiffWindow = {
+            bg = nil,
+            fg = '#ffffff',
+        },
+        VGitDiffBorder = {
+            bg = nil,
+            fg = '#464b59',
+        },
+        VGitDiffAddSign = {
+            bg = '#3d5213',
+            fg = nil,
+        },
+        VGitDiffRemoveSign = {
+            bg = '#4a0f23',
+            fg = nil,
+        },
+        VGitDiffAddText = {
+            fg = '#6a8f1f',
+            bg = '#3d5213',
+        },
+        VGitDiffRemoveText = {
+            fg = '#a3214c',
+            bg = '#4a0f23',
+        },
+        VGitHunkWindow = {
+            bg = nil,
+            fg = '#ffffff',
+        },
+        VGitHunkBorder = {
+            bg = nil,
+            fg = '#464b59',
+        },
+        VGitHunkAddSign = {
+            bg = '#3d5213',
+            fg = nil,
+        },
+        VGitHunkRemoveSign = {
+            bg = '#4a0f23',
+            fg = nil,
+        },
+        VGitHunkAddText = {
+            fg = '#6a8f1f',
+            bg = '#3d5213',
+        },
+        VGitHunkRemoveText = {
+            fg = '#a3214c',
+            bg = '#4a0f23',
+        },
+        VGitHunkSignAdd = {
+            fg = '#d7ffaf',
+            bg = '#4a6317',
+        },
+        VGitHunkSignRemove = {
+            fg = '#e95678',
+            bg = '#63132f',
+        },
+        VGitSignAdd = {
+            fg = '#d7ffaf',
+            bg = nil,
+        },
+        VGitSignChange = {
+            fg = '#7AA6DA',
+            bg = nil,
+        },
+        VGitSignRemove = {
+            fg = '#e95678',
+            bg = nil,
+        },
+        VGitLogsWindow = {
+            bg = nil,
+            fg = '#ffffff',
+        },
+        VGitLogsBorder = {
+            bg = nil,
+            fg = '#464b59',
+        },
+        VGitLogsIndicator = {
+            fg = '#a6e22e',
+            bg = nil,
+        }
+    },
     blame = {
         hl_group = 'VGitBlame',
         format = function(blame, git_config)
+            local round = function(x)
+                return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
+            end
             local config_author = git_config['user.name']
             local author = blame.author
             if config_author == author then
@@ -77,29 +170,23 @@ By default these are the default settings provided by the app, you can change th
             local time_format = string.format('%s days ago', round(time))
             local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
             local division_counter = 1
-
             while time < 1 and division_counter ~= #time_divisions do
                 local division = time_divisions[division_counter]
                 time = time * division[1]
                 time_format = string.format('%s %s ago', round(time), division[2])
                 division_counter = division_counter + 1
             end
-
             local commit_message = blame.commit_message
-
             if not blame.committed then
                 author = 'You'
                 commit_message = 'Uncommitted changes'
                 local info = string.format('%s • %s', author, commit_message)
                 return string.format(' %s', info)
             end
-
             local max_commit_message_length = 255
-
             if #commit_message > max_commit_message_length then
                 commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
             end
-
             local info = string.format('%s, %s • %s', author, time_format, commit_message)
             return string.format(' %s', info)
         end
@@ -187,7 +274,7 @@ By default these are the default settings provided by the app, you can change th
 
 ### Configure Mappings
 ```
-vim.api.nvim_set_keymap('n', '<leader>gh', ':VGit hunk_preview<CR>', {
+vim.api.nvim_set_keymap('n', '<leader>gp', ':VGit hunk_preview<CR>', {
     noremap = true,
     silent = true,
 })
@@ -195,15 +282,19 @@ vim.api.nvim_set_keymap('n', '<leader>gr', ':VGit hunk_reset<CR>', {
     noremap = true,
     silent = true,
 })
-vim.api.nvim_set_keymap('n', '<space>[', ':VGit hunk_up<CR>', {
+vim.api.nvim_set_keymap('n', '<C-k>', ':VGit hunk_up<CR>', {
     noremap = true,
     silent = true,
 })
-vim.api.nvim_set_keymap('n', '<space>]', ':VGit hunk_down<CR>', {
+vim.api.nvim_set_keymap('n', '<C-j>', ':VGit hunk_down<CR>', {
     noremap = true,
     silent = true,
 })
 vim.api.nvim_set_keymap('n', '<leader>gd', ':VGit buffer_preview<CR>', {
+    noremap = true,
+    silent = true,
+})
+vim.api.nvim_set_keymap('n', '<leader>gh', ':VGit buffer_history<CR>', {
     noremap = true,
     silent = true,
 })
@@ -227,7 +318,7 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | hunk_reset | Resets the hunk the cursor is on right now to it's previous step
 | hunk_down | Navigate downward through a github hunk |
 | hunk_up | Navigate upwards through a github hunk |
-| buffer_preview | Opens two windows, showing cwd and origin buffers and the diff between them |
+| buffer_preview | Opens two windows, showing origin and cwd buffers and the diff between them |
+| buffer_history | Opens two windows, showing origin and cwd buffers and the diff between them, with a list of history logs associated with the buffer |
 | buffer_reset | Resets a current buffer you are on |
 | hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
-
