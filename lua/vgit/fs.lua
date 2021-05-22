@@ -1,5 +1,3 @@
-local Job = require('plenary.job')
-
 local vim = vim
 
 local M = {}
@@ -23,29 +21,19 @@ M.filename = function(buf)
 end
 
 M.read_file = function(filepath)
-    local data = ''
-    local err_result = ''
-    local job = Job:new({
-        command = 'cat',
-        args = { filepath },
-        on_stdout = function(_, line)
-            data = data .. line .. '\n'
-        end,
-        on_stderr = function(err, line)
-            if err then
-                err_result = err_result .. err
-            elseif line then
-                err_result = err_result .. line
-            end
-        end,
-    })
-    job:sync()
-    job:wait()
-    if err_result ~= '' then
-        return err_result, nil
+    local fd = vim.loop.fs_open(filepath, 'r', 438)
+    if fd == nil then
+        return { 'ENOENT: File not found' }, nil
     end
-    data = vim.split(data, '\n')
-    return nil, data
+    local stat = vim.loop.fs_fstat(fd)
+    if stat.type ~= 'file' then
+        return { 'File not found' }, nil
+    end
+    local data = vim.loop.fs_read(fd, stat.size, 0)
+    if not vim.loop.fs_close(fd) then
+        return { 'Failed to close file' }, nil
+    end
+    return nil, vim.split(data, '\n')
 end
 
 return M
