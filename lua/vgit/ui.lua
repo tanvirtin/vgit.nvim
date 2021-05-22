@@ -1,96 +1,17 @@
 local configurer = require('vgit.configurer')
+local popup = require('vgit.popup')
+local highlighter = require('vgit.highlighter')
 
 local vim = vim
-
-local constants = {
-    hunk_signs_group = 'tanvirtin/vgit.nvim/hunk/signs',
-    blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
-    blame_line_id = 1,
-    palette = {
-        VGitBlame = {
-            bg = nil,
-            fg = '#b1b1b1',
-        },
-        VGitDiffWindow = {
-            bg = nil,
-            fg = '#ffffff',
-        },
-        VGitDiffBorder = {
-            bg = nil,
-            fg = '#464b59',
-        },
-        VGitDiffAddSign = {
-            bg = '#3d5213',
-            fg = nil,
-        },
-        VGitDiffRemoveSign = {
-            bg = '#4a0f23',
-            fg = nil,
-        },
-        VGitDiffAddText = {
-            fg = '#6a8f1f',
-            bg = '#3d5213',
-        },
-        VGitDiffRemoveText = {
-            fg = '#a3214c',
-            bg = '#4a0f23',
-        },
-        VGitHunkWindow = {
-            bg = nil,
-            fg = '#ffffff',
-        },
-        VGitHunkBorder = {
-            bg = nil,
-            fg = '#464b59',
-        },
-        VGitHunkAddSign = {
-            bg = '#3d5213',
-            fg = nil,
-        },
-        VGitHunkRemoveSign = {
-            bg = '#4a0f23',
-            fg = nil,
-        },
-        VGitHunkAddText = {
-            fg = '#6a8f1f',
-            bg = '#3d5213',
-        },
-        VGitHunkRemoveText = {
-            fg = '#a3214c',
-            bg = '#4a0f23',
-        },
-        VGitHunkSignAdd = {
-            fg = '#d7ffaf',
-            bg = '#4a6317',
-        },
-        VGitHunkSignRemove = {
-            fg = '#e95678',
-            bg = '#63132f',
-        },
-        VGitSignAdd = {
-            fg = '#d7ffaf',
-            bg = nil,
-        },
-        VGitSignChange = {
-            fg = '#7AA6DA',
-            bg = nil,
-        },
-        VGitSignRemove = {
-            fg = '#e95678',
-            bg = nil,
-        },
-    },
-}
-
-local function round(x)
-    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
-end
 
 local function get_initial_state()
     return {
         blame = {
             hl_group = 'VGitBlame',
             format = function(blame, git_config)
+                local round = function(x)
+                    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
+                end
                 local config_author = git_config['user.name']
                 local author = blame.author
                 if config_author == author then
@@ -135,6 +56,7 @@ local function get_initial_state()
                     { '│', 'VGitDiffBorder' },
                 }
             },
+            priority = 10,
             types = {
                 add = {
                     name = 'VGitDiffAddSign',
@@ -151,6 +73,7 @@ local function get_initial_state()
             },
         },
         hunk = {
+            priority = 10,
             types = {
                 add = {
                     name = 'VGitHunkAddSign',
@@ -198,107 +121,93 @@ local function get_initial_state()
                     text = '│'
                 },
             },
+        },
+        logs = {
+            indicator = {
+                hl_group = 'VGitLogsIndicator'
+            },
+            window = {
+                hl_group = 'VGitLogsWindow',
+                border = {
+                    { '╭', 'VGitLogsBorder' },
+                    { '─', 'VGitLogsBorder' },
+                    { '╮', 'VGitLogsBorder' },
+                    { '│', 'VGitLogsBorder' },
+                    { '╯', 'VGitLogsBorder' },
+                    { '─', 'VGitLogsBorder' },
+                    { '╰', 'VGitLogsBorder' },
+                    { '│', 'VGitLogsBorder' },
+                }
+            },
         }
     }
 end
 
-local state = get_initial_state()
-
 local M = {}
 
-local function add_highlight(group, color)
-    local gui = color.gui and 'gui=' .. color.gui or 'gui=NONE'
-    local fg = color.fg and 'guifg = ' .. color.fg or 'guifg = NONE'
-    local bg = color.bg and 'guibg = ' .. color.bg or 'guibg = NONE'
-    local sp = color.sp and 'guisp = ' .. color.sp or ''
-    vim.api.nvim_command('highlight ' .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp)
-end
+M.constants = {
+    hunk_signs_group = 'tanvirtin/vgit.nvim/hunk/signs',
+    logs_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/logs'),
+    blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
+    blame_line_id = 1,
+}
 
-local function highlight_with_ts(buf, ft)
-    local has_ts = false
-    local ts_highlight = nil
-    local ts_parsers = nil
-    if not has_ts then
-        has_ts, _ = pcall(require, 'nvim-treesitter')
-        if has_ts then
-            _, ts_highlight = pcall(require, 'nvim-treesitter.highlight')
-            _, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
-        end
-    end
-    if has_ts and ft and ft ~= '' then
-        local lang = ts_parsers.ft_to_lang(ft);
-        if ts_parsers.has_parser(lang) then
-            ts_highlight.attach(buf, lang)
-            return true
-        end
-    end
-    return false
-end
+M.state = get_initial_state()
 
 M.setup = function(config)
-    state = configurer.assign(state, config)
-    local blame_hl_group = state.blame.hl_group
-    if constants.palette[blame_hl_group] then
-        add_highlight(blame_hl_group, constants.palette[blame_hl_group]);
-    end
-    for key, type in pairs(state.hunk_sign.types) do
-        local hl_group = state.hunk_sign.types[key].hl_group
-        if constants.palette[hl_group] then
-            add_highlight(hl_group, constants.palette[hl_group]);
-        end
+    M.state = configurer.assign(M.state, config)
+    highlighter.define(M.state.blame.hl_group);
+    for _, type in pairs(M.state.hunk_sign.types) do
+        highlighter.define(type.hl_group)
         vim.fn.sign_define(type.name, {
             text = type.text,
             texthl = type.hl_group
         })
     end
-    local hl_group = state.hunk.window.hl_group
-    if constants.palette[hl_group] then
-        add_highlight(hl_group, constants.palette[hl_group]);
-    end
-    local hunk_border = state.hunk.window.border
+    highlighter.define(M.state.hunk.window.hl_group)
+    local hunk_border = M.state.hunk.window.border
     if type(hunk_border) == 'table' then
         for _, b in ipairs(hunk_border) do
             if type(b) == 'table' then
-                hl_group = b[2]
-                if hl_group and constants.palette[hl_group] then
-                    add_highlight(hl_group, constants.palette[hl_group])
-                end
+                highlighter.define(b[2])
             end
         end
     end
-    local diff_border = state.diff.window.border
+    local diff_border = M.state.diff.window.border
     if type(diff_border) == 'table' then
         for _, b in ipairs(diff_border) do
             if type(b) == 'table' then
-                hl_group = b[2]
-                if hl_group and constants.palette[hl_group] then
-                    add_highlight(hl_group, constants.palette[hl_group])
-                end
+                highlighter.define(b[2])
             end
         end
     end
-    for _, action in pairs(state.hunk.types) do
+    highlighter.define(M.state.logs.indicator.hl_group)
+    local logs_border = M.state.logs.window.border
+    if type(logs_border) == 'table' then
+        for _, b in ipairs(logs_border) do
+            if type(b) == 'table' then
+                highlighter.define(b[2])
+            end
+        end
+    end
+    for _, action in pairs(M.state.hunk.types) do
         local sign_hl_group = action.sign_hl_group
         local text_hl_group = action.text_hl_group
-        if constants.palette[sign_hl_group] then
-            add_highlight(sign_hl_group, constants.palette[sign_hl_group]);
-            add_highlight(text_hl_group, constants.palette[text_hl_group]);
-        end
+        highlighter.define(sign_hl_group)
+        highlighter.define(text_hl_group)
         vim.fn.sign_define(action.name, {
             text = action.text,
             texthl = text_hl_group,
             linehl = sign_hl_group,
         })
     end
-    for _, action in pairs(state.diff.types) do
+    for _, action in pairs(M.state.diff.types) do
         local name = action.name
         local text = action.text
         local sign_hl_group = action.sign_hl_group
         local text_hl_group = action.text_hl_group
-        if constants.palette[sign_hl_group] then
-            add_highlight(sign_hl_group, constants.palette[sign_hl_group]);
-            add_highlight(text_hl_group, constants.palette[text_hl_group]);
-        end
+        highlighter.define(sign_hl_group)
+        highlighter.define(text_hl_group)
         vim.fn.sign_define(name, {
             text = text,
             texthl = text_hl_group,
@@ -307,51 +216,43 @@ M.setup = function(config)
     end
 end
 
-M.tear_down = function()
-    state = get_initial_state()
-end
-
 M.show_blame = function(buf, blames, git_config)
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local blame = blames[lnum]
-    local virt_text = state.blame.format(blame, git_config)
+    local virt_text = M.state.blame.format(blame, git_config)
     if type(virt_text) == 'string' then
-        vim.api.nvim_buf_set_extmark(buf, constants.blame_namespace, lnum - 1, 0, {
-            id = constants.blame_line_id,
-            virt_text = { { virt_text, state.blame.hl_group } },
+        vim.api.nvim_buf_set_extmark(buf, M.constants.blame_namespace, lnum - 1, 0, {
+            id = M.constants.blame_line_id,
+            virt_text = { { virt_text, M.state.blame.hl_group } },
             virt_text_pos = 'eol',
         })
     end
 end
 
 M.hide_blame = function(buf)
-    vim.api.nvim_buf_del_extmark(buf, constants.blame_namespace, constants.blame_line_id)
+    vim.api.nvim_buf_del_extmark(buf, M.constants.blame_namespace, M.constants.blame_line_id)
 end
 
 M.show_hunk_signs = function(buf, hunks)
-    local hunk_signs_group = string.format('%s/%s', constants.hunk_signs_group, buf)
+    local hunk_signs_group = string.format('%s/%s', M.constants.hunk_signs_group, buf)
     for _, hunk in ipairs(hunks) do
         for i = hunk.start, hunk.finish do
             local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
-            vim.fn.sign_place(lnum, hunk_signs_group, state.hunk_sign.types[hunk.type].hl_group, buf, {
+            vim.fn.sign_place(lnum, hunk_signs_group, M.state.hunk_sign.types[hunk.type].hl_group, buf, {
                 lnum = lnum,
-                priority = state.hunk_sign.priority,
+                priority = M.state.hunk_sign.priority,
             })
         end
     end
 end
 
 M.hide_hunk_signs = function(buf)
-    local hunk_signs_group = string.format('%s/%s', constants.hunk_signs_group, buf)
+    local hunk_signs_group = string.format('%s/%s', M.constants.hunk_signs_group, buf)
     vim.fn.sign_unplace(hunk_signs_group)
 end
 
 M.show_hunk = function(hunk, filetype)
     local lines = hunk.diff
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
-    vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
-    vim.api.nvim_buf_set_option(buf, 'buflisted', false)
     local trimmed_lines = {}
     local added_lines = {}
     local removed_lines = {}
@@ -366,146 +267,322 @@ M.show_hunk = function(hunk, filetype)
         end
         table.insert(trimmed_lines, line:sub(2, #line))
     end
-    vim.api.nvim_buf_set_lines(buf, 0, -1, true, trimmed_lines)
-    highlight_with_ts(buf, filetype)
-    for _, lnum in ipairs(added_lines) do
-        vim.fn.sign_place(lnum, constants.hunk_signs_group, state.hunk.types['add'].sign_hl_group, buf, {
-            lnum = lnum,
-            priority = state.hunk_sign.priority,
+    local windows = {
+        hunk = popup.create({
+            filetype = filetype,
+            lines = trimmed_lines,
+            buf_options = {
+                ['modifiable'] = false,
+                ['bufhidden'] = 'delete',
+                ['buftype'] = 'nofile',
+                ['buflisted'] = false,
+            },
+            win_options = {
+                ['winhl'] = string.format('Normal:%s', M.state.hunk.window.hl_group),
+                ['cursorline'] = true,
+                ['wrap'] = false,
+                ['signcolumn'] = 'yes',
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'cursor',
+                width = width,
+                height = height,
+                border = M.state.hunk.window.border,
+                row = 1,
+                col = 0,
+            },
         })
+    }
+    popup.close_mappings({ '<esc>', '<C-c>', ':' }, windows)
+    popup.connect_closing_windows(windows)
+    for _, lnum in ipairs(added_lines) do
+        vim.fn.sign_place(
+            lnum,
+            M.constants.hunk_signs_group,
+            M.state.hunk.types['add'].sign_hl_group,
+            windows.hunk.buf,
+            {
+                lnum = lnum,
+                priority = M.state.hunk_sign.priority,
+            }
+        )
     end
     for _, lnum in ipairs(removed_lines) do
-        vim.fn.sign_place(lnum, constants.hunk_signs_group, state.hunk.types['remove'].sign_hl_group, buf, {
-            lnum = lnum,
-            priority = state.hunk_sign.priority,
-        })
-    end
-    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-    local win_id = vim.api.nvim_open_win(buf, true, {
-        relative = 'cursor',
-        style = 'minimal',
-        height = height,
-        width = width,
-        border = state.hunk.window.border,
-        row = 1,
-        col = 0,
-    })
-    vim.api.nvim_win_set_option(win_id, 'winhl', 'Normal:' .. state.hunk.window.hl_group)
-    vim.api.nvim_win_set_option(win_id, 'cursorline', true)
-    vim.api.nvim_win_set_option(win_id, 'wrap', false)
-    vim.api.nvim_win_set_option(win_id, 'signcolumn', 'yes')
-    local bufs = vim.api.nvim_list_bufs()
-    local mappings = {'<esc>', '<C-c>'}
-    for _, mapping in ipairs(mappings) do
-        vim.api.nvim_buf_set_keymap(
-            buf,
-            'n',
-            mapping,
-            string.format(':lua require("vgit")._close_preview_window({ %s }, { %s })<CR>', win_id, buf),
-            { silent = true }
+        vim.fn.sign_place(
+            lnum,
+            M.constants.hunk_signs_group,
+            M.state.hunk.types['remove'].sign_hl_group,
+            windows.hunk.buf,
+            {
+                lnum = lnum,
+                priority = M.state.hunk_sign.priority,
+            }
         )
     end
-    for _, current_buf in ipairs(bufs) do
-        vim.api.nvim_command(
-            string.format(
-                'autocmd BufEnter <buffer=%s> lua require("vgit")._close_preview_window({ %s }, { %s })',
-                current_buf,
-                win_id,
-                buf
-            )
-        )
-    end
-    return buf, win_id
 end
 
 M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
-    local height = math.ceil(global_height - 4)
-    local width = math.ceil(global_width * 0.45)
-    local row = math.ceil((global_height - height) / 2 - 1)
-    local col = math.ceil((global_width - (width * 2)) / 2)
+    local height = math.ceil(global_height)
+    local width = math.ceil(global_width * 0.48)
+    local col = math.ceil((global_width - (width * 2)) / 2) - 2
     local windows = {
-        origin = {
-            buf = vim.api.nvim_create_buf(false, true),
-            lines = origin_lines
-        },
-        cwd = {
-            buf = vim.api.nvim_create_buf(false, true),
-            lines = cwd_lines
-        }
+        origin = popup.create({
+            filetype = filetype,
+            lines = origin_lines,
+            buf_options = {
+                ['modifiable'] = false,
+                ['bufhidden'] = 'delete',
+                ['buftype'] = 'nofile',
+                ['buflisted'] = false,
+            },
+            win_options = {
+                ['winhl'] = string.format('Normal:%s', M.state.diff.window.hl_group),
+                ['cursorline'] = true,
+                ['wrap'] = false,
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
+                ['signcolumn'] = 'yes',
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = width,
+                height = height,
+                border = M.state.diff.window.border,
+                row = 0,
+                col = col,
+            },
+        }),
+        cwd = popup.create({
+            lines = cwd_lines,
+            filetype = filetype,
+            buf_options = {
+                ['modifiable'] = false,
+                ['bufhidden'] = 'delete',
+                ['buftype'] = 'nofile',
+                ['buflisted'] = false,
+            },
+            win_options = {
+                ['winhl'] = string.format('Normal:%s', M.state.diff.window.hl_group),
+                ['cursorline'] = true,
+                ['wrap'] = false,
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
+                ['signcolumn'] = 'yes',
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = width,
+                height = height,
+                border = M.state.diff.window.border,
+                row = 0,
+                col = col + width + 2,
+            }
+        }),
     }
-    for _, window in pairs(windows) do
-        vim.api.nvim_buf_set_lines(window.buf, 0, -1, false, window.lines)
-        highlight_with_ts(window.buf, filetype)
-    end
+    popup.close_mappings({ '<esc>', '<C-c>', ':' }, windows)
+    popup.connect_closing_windows(windows)
     for _, data in ipairs(lnum_changes) do
         local buf = windows[data.buftype].buf
-        vim.fn.sign_place(data.lnum, constants.hunk_signs_group, state.diff.types[data.type].sign_hl_group, buf, {
+        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.diff.types[data.type].sign_hl_group, buf, {
             lnum = data.lnum,
-            priority = state.hunk_sign.priority,
+            priority = M.state.diff.priority,
         })
     end
-    for _, window in pairs(windows) do
-        vim.api.nvim_buf_set_option(window.buf, 'modifiable', false)
+end
+
+M.change_history = function(
+    origin_win_id,
+    cwd_win_id,
+    origin_buf,
+    cwd_buf,
+    logs_buf,
+    cwd_lines,
+    origin_lines,
+    selected_log,
+    lnum_changes
+)
+    vim.api.nvim_win_set_cursor(origin_win_id, { 1, 0 })
+    vim.api.nvim_win_set_cursor(cwd_win_id, { 1, 0 })
+    local windows = {
+        origin = { buf = origin_buf },
+        cwd = { buf = cwd_buf }
+    }
+    vim.fn.sign_unplace(M.constants.hunk_signs_group)
+    for _, data in ipairs(lnum_changes) do
+        local buf = windows[data.buftype].buf
+        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.diff.types[data.type].sign_hl_group, buf, {
+            lnum = data.lnum,
+            priority = M.state.diff.priority,
+        })
     end
-    windows.cwd.win_id = vim.api.nvim_open_win(windows.cwd.buf, true, {
-        style = 'minimal',
-        relative = 'editor',
-        width = width,
-        height = height,
-        border = state.diff.window.border,
-        row = row,
-        col = col,
-    })
-    windows.origin.win_id = vim.api.nvim_open_win(windows.origin.buf, false, {
-        style = 'minimal',
-        relative = 'editor',
-        width = width,
-        height = height,
-        border = state.diff.window.border,
-        row = math.ceil((global_height - height) / 2 - 1),
-        col = col + width + 2,
-    })
-    for _, window in pairs(windows) do
-        vim.api.nvim_win_set_option(window.win_id, 'winhl', string.format('Normal:%s', state.diff.window.hl_group))
-        vim.api.nvim_win_set_option(window.win_id, 'cursorline', true)
-        vim.api.nvim_win_set_option(window.win_id, 'wrap', false)
-        vim.api.nvim_win_set_option(window.win_id, 'cursorbind', true)
-        vim.api.nvim_win_set_option(window.win_id, 'scrollbind', true)
-        vim.api.nvim_win_set_option(window.win_id, 'signcolumn', 'yes')
-    end
-    local mappings = { '<esc>', '<C-c>', ':' }
-    for _, mapping in ipairs(mappings) do
-        for _, window in pairs(windows) do
-            vim.api.nvim_buf_set_keymap(
-                window.buf,
-                'n',
-                mapping,
-                string.format(
-                    ':lua require("vgit")._close_preview_window({ %s, %s }, { %s, %s })<CR>',
-                    windows.cwd.win_id,
-                    windows.origin.win_id,
-                    windows.cwd.buf,
-                    windows.origin.buf
-                ),
-                { silent = true }
-            )
+    local logs_lines = vim.api.nvim_buf_get_lines(logs_buf, 0, -1, false)
+    for index, line in ipairs(logs_lines) do
+        if index == selected_log then
+            logs_lines[index] = string.format('>%s', line:sub(2, #line))
+        else
+            logs_lines[index] = string.format(' %s', line:sub(2, #line))
         end
     end
-    for _, window in pairs(windows) do
-        vim.api.nvim_command(
-            string.format(
-                'autocmd BufWinLeave <buffer=%s> lua require("vgit")._close_preview_window({ %s, %s }, { %s, %s })',
-                window.buf,
-                windows.cwd.win_id,
-                windows.origin.win_id,
-                windows.cwd.buf,
-                windows.origin.buf
-            )
+    popup.set_lines(logs_buf, logs_lines)
+    popup.set_lines(cwd_buf, cwd_lines)
+    popup.set_lines(origin_buf, origin_lines)
+    local lnum = selected_log - 1
+    vim.highlight.range(logs_buf, M.constants.logs_namespace, M.state.logs.indicator.hl_group, { lnum, 0 }, { lnum, 1 })
+end
+
+M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
+    local current_buf = vim.api.nvim_get_current_buf()
+    local global_width = vim.api.nvim_get_option('columns')
+    local global_height = vim.api.nvim_get_option('lines')
+    local height = math.ceil(global_height - 12)
+    local width = math.ceil(global_width * 0.48)
+    local logs_width = width * 2 + 2
+    local col = math.ceil((global_width - (width * 2)) / 2) - 2
+    local padding_right = 2
+    local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
+    local rows = {}
+    for index, log in ipairs(logs) do
+        local row = {
+            index - 1 == 0 and string.format('>  HEAD~%s', index - 1) or string.format('   HEAD~%s', index - 1),
+            log.author_name or '',
+            log.commit_hash or '',
+            log.summary or '', (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or ''
+        }
+        for i, item in ipairs(row) do
+            if #item + 1 > table_title_space[i] then
+                table_title_space[i] = #item + padding_right
+            end
+        end
+        table.insert(rows, row)
+    end
+    local logs_lines = {}
+    for _, row in ipairs(rows) do
+        local line = ''
+        for index, item in ipairs(row) do
+           line = line .. item .. string.rep(' ',  table_title_space[index] - #item)
+           if index ~= #table_title_space then
+               line = line
+           end
+        end
+        table.insert(logs_lines, line)
+    end
+    local windows = {
+        origin = popup.create({
+            filetype = filetype,
+            lines = origin_lines,
+            buf_options = {
+                ['modifiable'] = false,
+                ['buftype'] = 'nofile',
+                ['buflisted'] = false,
+            },
+            win_options = {
+                ['winhl'] = string.format('Normal:%s', M.state.diff.window.hl_group),
+                ['cursorline'] = true,
+                ['wrap'] = false,
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
+                ['signcolumn'] = 'yes',
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = width,
+                height = height,
+                border = M.state.diff.window.border,
+                row = 0,
+                col = col,
+            },
+        }),
+        cwd = popup.create({
+            lines = cwd_lines,
+            filetype = filetype,
+            buf_options = {
+                ['modifiable'] = false,
+                ['buftype'] = 'nofile',
+                ['buflisted'] = false,
+            },
+            win_options = {
+                ['winhl'] = string.format('Normal:%s', M.state.diff.window.hl_group),
+                ['cursorline'] = true,
+                ['wrap'] = false,
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
+                ['signcolumn'] = 'yes',
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = width,
+                height = height,
+                border = M.state.diff.window.border,
+                row = 0,
+                col = col + width + 2,
+            }
+        }),
+        logs =  popup.create({
+            lines = logs_lines,
+            buf_options = {
+                ['modifiable'] = false,
+                ['buftype'] = 'nofile',
+                ['buflisted'] = false,
+            },
+            win_options = {
+                ['winhl'] = string.format('Normal:%s', M.state.logs.window.hl_group),
+                ['cursorline'] = true,
+                ['cursorbind'] = false,
+                ['scrollbind'] = false,
+                ['wrap'] = false,
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = logs_width,
+                height = 7,
+                border = M.state.logs.window.border,
+                row = height + 3,
+                col = col,
+            }
+        }),
+    }
+    popup.close_mappings({ '<esc>', '<C-c>', ':' }, windows)
+    popup.connect_closing_windows(windows)
+    popup.add_keymap(
+        windows.logs.buf,
+        '<enter>',
+        string.format(
+            '_change_history(%s, %s, %s, %s, %s, %s)',
+            current_buf,
+            windows.origin.win_id,
+            windows.cwd.win_id,
+            windows.origin.buf,
+            windows.cwd.buf,
+            windows.logs.buf
+        )
+    )
+    for _, data in ipairs(lnum_changes) do
+        local buf = windows[data.buftype].buf
+        vim.fn.sign_place(
+            data.lnum,
+            M.constants.hunk_signs_group,
+            M.state.diff.types[data.type].sign_hl_group,
+            buf,
+            {
+                lnum = data.lnum,
+                priority = M.state.diff.priority,
+            }
         )
     end
-    return windows.cwd.buf, windows.cwd.win_id, windows.origin.buf, windows.origin.win_id
+    vim.highlight.range(
+        windows.logs.buf,
+        M.constants.logs_namespace,
+        M.state.logs.indicator.hl_group,
+        { 0, 0 }, { 0, 1 }
+    )
 end
 
 return M
