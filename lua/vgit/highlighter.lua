@@ -11,14 +11,6 @@ local function get_initial_state()
                 bg = nil,
                 fg = '#b1b1b1',
             },
-            VGitDiffWindow = {
-                bg = nil,
-                fg = '#ffffff',
-            },
-            VGitDiffBorder = {
-                bg = nil,
-                fg = '#464b59',
-            },
             VGitDiffAddSign = {
                 bg = '#3d5213',
                 fg = nil,
@@ -34,14 +26,6 @@ local function get_initial_state()
             VGitDiffRemoveText = {
                 fg = '#a3214c',
                 bg = '#4a0f23',
-            },
-            VGitHunkWindow = {
-                bg = nil,
-                fg = '#ffffff',
-            },
-            VGitHunkBorder = {
-                bg = nil,
-                fg = '#464b59',
             },
             VGitHunkAddSign = {
                 bg = '#3d5213',
@@ -78,14 +62,6 @@ local function get_initial_state()
             VGitSignRemove = {
                 fg = '#e95678',
                 bg = nil,
-            },
-            VGitLogsWindow = {
-                bg = nil,
-                fg = '#ffffff',
-            },
-            VGitLogsBorder = {
-                bg = nil,
-                fg = '#464b59',
             },
             VGitLogsIndicator = {
                 fg = '#a6e22e',
