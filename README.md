@@ -66,10 +66,16 @@ You also use in the built-in package manager:
 $ git clone --depth 1 https://github.com/tanvirtin/vgit.nvim $XDG_CONFIG_HOME/nvim/pack/plugins/start/vgit.nvim
 ```
 
+### Setup
+You must instantiate the plugin in order for the features to work.
+```lua
+require('vgit').setup()
+```
+
 ### Configure your own settings
 By default these are the default settings provided by the app, you can change them to your liking.
-```
-:lua require('vgit').setup({
+```lua
+require('vgit').setup({
     hunks_enabled = true,
     blames_enabled = true,
     hl_groups = {
@@ -275,8 +281,9 @@ By default these are the default settings provided by the app, you can change th
 })
 ```
 
-### Configure Mappings
-```
+### Recommended Mappings
+You can always call these commands yourself, but I find these mappings to be very helpful.
+```lua
 vim.api.nvim_set_keymap('n', '<leader>gp', ':VGit hunk_preview<CR>', {
     noremap = true,
     silent = true,
