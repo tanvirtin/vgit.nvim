@@ -12,7 +12,7 @@ describe('highlighter:', function()
             highlighter.setup({
                 hl_groups = {
                     VGitSignAdd = {
-                        fg = '#25382a',
+                        fg = 'red',
                         bg = nil,
                     },
                 },
@@ -22,14 +22,6 @@ describe('highlighter:', function()
                     VGitBlame = {
                         bg = nil,
                         fg = '#b1b1b1',
-                    },
-                    VGitDiffWindow = {
-                        bg = nil,
-                        fg = '#ffffff',
-                    },
-                    VGitDiffBorder = {
-                        bg = nil,
-                        fg = '#464b59',
                     },
                     VGitDiffAddSign = {
                         bg = '#3d5213',
@@ -46,14 +38,6 @@ describe('highlighter:', function()
                     VGitDiffRemoveText = {
                         fg = '#a3214c',
                         bg = '#4a0f23',
-                    },
-                    VGitHunkWindow = {
-                        bg = nil,
-                        fg = '#ffffff',
-                    },
-                    VGitHunkBorder = {
-                        bg = nil,
-                        fg = '#464b59',
                     },
                     VGitHunkAddSign = {
                         bg = '#3d5213',
@@ -80,7 +64,7 @@ describe('highlighter:', function()
                         bg = '#63132f',
                     },
                     VGitSignAdd = {
-                        fg = '#25382a',
+                        fg = 'red',
                         bg = nil,
                     },
                     VGitSignChange = {
@@ -91,20 +75,12 @@ describe('highlighter:', function()
                         fg = '#e95678',
                         bg = nil,
                     },
-                    VGitLogsWindow = {
-                        bg = nil,
-                        fg = '#ffffff',
-                    },
-                    VGitLogsBorder = {
-                        bg = nil,
-                        fg = '#464b59',
-                    },
                     VGitLogsIndicator = {
                         fg = '#a6e22e',
                         bg = nil,
                     }
-                }
-            });
+                },
+           });
         end)
 
     end)

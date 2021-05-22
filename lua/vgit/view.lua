@@ -1,8 +1,10 @@
+local border = require('vgit.border')
+
 local M = {}
 
 local vim = vim
 
-M.highlight_with_ts = function(buf, ft)
+local function highlight_with_ts(buf, ft)
     local has_ts = false
     local ts_highlight = nil
     local ts_parsers = nil
@@ -29,12 +31,15 @@ M.create = function(options)
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, options.lines)
     end
     if options.filetype then
-        M.highlight_with_ts(buf, options.filetype)
+        highlight_with_ts(buf, options.filetype)
     end
     if options.buf_options then
         for key, value in pairs(options.buf_options) do
             vim.api.nvim_buf_set_option(buf, key, value)
         end
+    end
+    if not options.title then
+        options.window_props.border = options.border
     end
     local win_id = vim.api.nvim_open_win(buf, true, options.window_props)
     if options.win_options then
@@ -44,6 +49,11 @@ M.create = function(options)
     end
     options.buf = buf
     options.win_id = win_id
+    if options.border and options.title then
+        local created_border = border.create(options.title, buf, win_id, options.window_props, options.border)
+        options.border_win_id = created_border.win_id
+        options.border_buf = created_border.bufnr
+    end
     return options
 end
 
@@ -73,46 +83,6 @@ M.set_lines = function(buf, lines)
         vim.api.nvim_buf_set_option(buf, 'modifiable', false)
     else
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    end
-end
-
-M.close = function(wins)
-    if type(wins) == 'table' then
-        for _, win in ipairs(wins) do
-            if vim.api.nvim_win_is_valid(win) then
-                vim.api.nvim_win_close(win, true)
-            end
-        end
-    end
-end
-
-M.close_mappings = function(mappings, windows)
-    local all_wins = {}
-    for _, window in pairs(windows) do
-        table.insert(all_wins, window.win_id)
-    end
-    for _, mapping in ipairs(mappings) do
-        for _, window in pairs(windows) do
-            M.add_keymap(
-                window.buf,
-                mapping,
-                string.format('_run_submodule_command("popup", "close", %s)', vim.inspect(all_wins))
-            )
-        end
-    end
-end
-
-M.connect_closing_windows = function(windows)
-    local all_wins = {}
-    for _, window in pairs(windows) do
-        table.insert(all_wins, window.win_id)
-    end
-    for _, window in pairs(windows) do
-        M.add_autocmd(
-            window.buf,
-            'BufWinLeave',
-            string.format('_run_submodule_command("popup", "close", %s)', vim.inspect(all_wins))
-        )
     end
 end
 

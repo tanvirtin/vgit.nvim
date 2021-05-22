@@ -1,5 +1,5 @@
 local configurer = require('vgit.configurer')
-local popup = require('vgit.popup')
+local view = require('vgit.view')
 local highlighter = require('vgit.highlighter')
 
 local vim = vim
@@ -24,7 +24,7 @@ local function get_initial_state()
                 while time < 1 and division_counter ~= #time_divisions do
                     local division = time_divisions[division_counter]
                     time = time * division[1]
-                    time_format = string.format('%s %s ago', round(time), division[2])
+                   time_format = string.format('%s %s ago', round(time), division[2])
                     division_counter = division_counter + 1
                 end
                 local commit_message = blame.commit_message
@@ -43,21 +43,16 @@ local function get_initial_state()
             end
         },
         diff = {
-            window = {
-                hl_group = 'VGitDiffWindow',
-                border = {
-                    { '╭', 'VGitDiffBorder' },
-                    { '─', 'VGitDiffBorder' },
-                    { '╮', 'VGitDiffBorder' },
-                    { '│', 'VGitDiffBorder' },
-                    { '╯', 'VGitDiffBorder' },
-                    { '─', 'VGitDiffBorder' },
-                    { '╰', 'VGitDiffBorder' },
-                    { '│', 'VGitDiffBorder' },
-                }
-            },
             priority = 10,
-            types = {
+            cwd_window = {
+                title = 'Current',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' }
+            },
+            origin_window = {
+                title = 'Previous',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' }
+            },
+            signs = {
                 add = {
                     name = 'VGitDiffAddSign',
                     sign_hl_group = 'VGitDiffAddSign',
@@ -72,9 +67,21 @@ local function get_initial_state()
                 },
             },
         },
+        logs = {
+            indicator = {
+                hl_group = 'VGitLogsIndicator'
+            },
+            window = {
+                title = 'Git History',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' }
+            },
+        },
         hunk = {
             priority = 10,
-            types = {
+            window = {
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' }
+            },
+            signs = {
                 add = {
                     name = 'VGitHunkAddSign',
                     sign_hl_group = 'VGitHunkAddSign',
@@ -88,23 +95,10 @@ local function get_initial_state()
                     text = '-'
                 },
             },
-            window = {
-                hl_group = 'VGitHunkWindow',
-                border = {
-                    { '', 'VGitHunkBorder' },
-                    { '─', 'VGitHunkBorder' },
-                    { '', 'VGitHunkBorder' },
-                    { '', 'VGitHunkBorder' },
-                    { '', 'VGitHunkBorder' },
-                    { '─', 'VGitHunkBorder' },
-                    { '', 'VGitHunkBorder' },
-                    { '', 'VGitHunkBorder' },
-                }
-            },
         },
         hunk_sign = {
             priority = 10,
-            types = {
+            signs = {
                 add = {
                     name = 'VGitSignAdd',
                     hl_group = 'VGitSignAdd',
@@ -122,24 +116,6 @@ local function get_initial_state()
                 },
             },
         },
-        logs = {
-            indicator = {
-                hl_group = 'VGitLogsIndicator'
-            },
-            window = {
-                hl_group = 'VGitLogsWindow',
-                border = {
-                    { '╭', 'VGitLogsBorder' },
-                    { '─', 'VGitLogsBorder' },
-                    { '╮', 'VGitLogsBorder' },
-                    { '│', 'VGitLogsBorder' },
-                    { '╯', 'VGitLogsBorder' },
-                    { '─', 'VGitLogsBorder' },
-                    { '╰', 'VGitLogsBorder' },
-                    { '│', 'VGitLogsBorder' },
-                }
-            },
-        }
     }
 end
 
@@ -154,43 +130,61 @@ M.constants = {
 
 M.state = get_initial_state()
 
+M.close_windows = function(wins)
+    if type(wins) == 'table' then
+        for _, win in ipairs(wins) do
+            if vim.api.nvim_win_is_valid(win) then
+                vim.api.nvim_win_close(win, true)
+            end
+        end
+    end
+end
+
+M.connect_closing_windows = function(windows)
+    local all_wins = {}
+    for _, window in pairs(windows) do
+        table.insert(all_wins, window.win_id)
+        if window.border_win_id then
+            table.insert(all_wins, window.border_win_id)
+        end
+    end
+    for _, window in pairs(windows) do
+        view.add_autocmd(
+            window.buf,
+            'BufWinLeave',
+            string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(all_wins))
+        )
+    end
+end
+
+M.define_close_mappings_on_windows = function(mappings, windows)
+    local all_wins = {}
+    for _, window in pairs(windows) do
+        table.insert(all_wins, window.win_id)
+    end
+    for _, mapping in ipairs(mappings) do
+        for _, window in pairs(windows) do
+            view.add_keymap(
+                window.buf,
+                mapping,
+                string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(all_wins))
+            )
+        end
+    end
+end
+
 M.setup = function(config)
     M.state = configurer.assign(M.state, config)
     highlighter.define(M.state.blame.hl_group);
-    for _, type in pairs(M.state.hunk_sign.types) do
+    for _, type in pairs(M.state.hunk_sign.signs) do
         highlighter.define(type.hl_group)
         vim.fn.sign_define(type.name, {
             text = type.text,
             texthl = type.hl_group
         })
     end
-    highlighter.define(M.state.hunk.window.hl_group)
-    local hunk_border = M.state.hunk.window.border
-    if type(hunk_border) == 'table' then
-        for _, b in ipairs(hunk_border) do
-            if type(b) == 'table' then
-                highlighter.define(b[2])
-            end
-        end
-    end
-    local diff_border = M.state.diff.window.border
-    if type(diff_border) == 'table' then
-        for _, b in ipairs(diff_border) do
-            if type(b) == 'table' then
-                highlighter.define(b[2])
-            end
-        end
-    end
     highlighter.define(M.state.logs.indicator.hl_group)
-    local logs_border = M.state.logs.window.border
-    if type(logs_border) == 'table' then
-        for _, b in ipairs(logs_border) do
-            if type(b) == 'table' then
-                highlighter.define(b[2])
-            end
-        end
-    end
-    for _, action in pairs(M.state.hunk.types) do
+    for _, action in pairs(M.state.hunk.signs) do
         local sign_hl_group = action.sign_hl_group
         local text_hl_group = action.text_hl_group
         highlighter.define(sign_hl_group)
@@ -201,7 +195,7 @@ M.setup = function(config)
             linehl = sign_hl_group,
         })
     end
-    for _, action in pairs(M.state.diff.types) do
+    for _, action in pairs(M.state.diff.signs) do
         local name = action.name
         local text = action.text
         local sign_hl_group = action.sign_hl_group
@@ -238,7 +232,7 @@ M.show_hunk_signs = function(buf, hunks)
     for _, hunk in ipairs(hunks) do
         for i = hunk.start, hunk.finish do
             local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
-            vim.fn.sign_place(lnum, hunk_signs_group, M.state.hunk_sign.types[hunk.type].hl_group, buf, {
+            vim.fn.sign_place(lnum, hunk_signs_group, M.state.hunk_sign.signs[hunk.type].hl_group, buf, {
                 lnum = lnum,
                 priority = M.state.hunk_sign.priority,
             })
@@ -268,9 +262,10 @@ M.show_hunk = function(hunk, filetype)
         table.insert(trimmed_lines, line:sub(2, #line))
     end
     local windows = {
-        hunk = popup.create({
+        hunk = view.create({
             filetype = filetype,
             lines = trimmed_lines,
+            border = M.state.hunk.window.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['bufhidden'] = 'delete',
@@ -278,7 +273,7 @@ M.show_hunk = function(hunk, filetype)
                 ['buflisted'] = false,
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', M.state.hunk.window.hl_group),
+                ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['signcolumn'] = 'yes',
@@ -288,19 +283,18 @@ M.show_hunk = function(hunk, filetype)
                 relative = 'cursor',
                 width = width,
                 height = height,
-                border = M.state.hunk.window.border,
-                row = 1,
+                row = 0,
                 col = 0,
             },
         })
     }
-    popup.close_mappings({ '<esc>', '<C-c>', ':' }, windows)
-    popup.connect_closing_windows(windows)
+    M.define_close_mappings_on_windows({ '<esc>', '<C-c>', ':' }, windows)
+    M.connect_closing_windows(windows)
     for _, lnum in ipairs(added_lines) do
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
-            M.state.hunk.types['add'].sign_hl_group,
+            M.state.hunk.signs['add'].sign_hl_group,
             windows.hunk.buf,
             {
                 lnum = lnum,
@@ -312,7 +306,7 @@ M.show_hunk = function(hunk, filetype)
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
-            M.state.hunk.types['remove'].sign_hl_group,
+            M.state.hunk.signs['remove'].sign_hl_group,
             windows.hunk.buf,
             {
                 lnum = lnum,
@@ -325,13 +319,15 @@ end
 M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
-    local height = math.ceil(global_height)
+    local height = math.ceil(global_height - 4)
     local width = math.ceil(global_width * 0.48)
-    local col = math.ceil((global_width - (width * 2)) / 2) - 2
+    local col = math.ceil((global_width - (width * 2)) / 2) - 1
     local windows = {
-        origin = popup.create({
+        origin = view.create({
             filetype = filetype,
             lines = origin_lines,
+            title = M.state.diff.origin_window.title,
+            border = M.state.diff.origin_window.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['bufhidden'] = 'delete',
@@ -339,7 +335,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
                 ['buflisted'] = false,
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', M.state.diff.window.hl_group),
+                ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -351,14 +347,15 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
                 relative = 'editor',
                 width = width,
                 height = height,
-                border = M.state.diff.window.border,
-                row = 0,
+                row = 2,
                 col = col,
             },
         }),
-        cwd = popup.create({
+        cwd = view.create({
             lines = cwd_lines,
             filetype = filetype,
+            title = M.state.diff.cwd_window.title,
+            border = M.state.diff.cwd_window.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['bufhidden'] = 'delete',
@@ -366,7 +363,7 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
                 ['buflisted'] = false,
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', M.state.diff.window.hl_group),
+                ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -378,17 +375,16 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
                 relative = 'editor',
                 width = width,
                 height = height,
-                border = M.state.diff.window.border,
-                row = 0,
+                row = 2,
                 col = col + width + 2,
-            }
+            },
         }),
     }
-    popup.close_mappings({ '<esc>', '<C-c>', ':' }, windows)
-    popup.connect_closing_windows(windows)
+    M.define_close_mappings_on_windows({ '<esc>', '<C-c>', ':' }, windows)
+    M.connect_closing_windows(windows)
     for _, data in ipairs(lnum_changes) do
         local buf = windows[data.buftype].buf
-        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.diff.types[data.type].sign_hl_group, buf, {
+        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.diff.signs[data.type].sign_hl_group, buf, {
             lnum = data.lnum,
             priority = M.state.diff.priority,
         })
@@ -415,7 +411,7 @@ M.change_history = function(
     vim.fn.sign_unplace(M.constants.hunk_signs_group)
     for _, data in ipairs(lnum_changes) do
         local buf = windows[data.buftype].buf
-        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.diff.types[data.type].sign_hl_group, buf, {
+        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.diff.signs[data.type].sign_hl_group, buf, {
             lnum = data.lnum,
             priority = M.state.diff.priority,
         })
@@ -428,9 +424,9 @@ M.change_history = function(
             logs_lines[index] = string.format(' %s', line:sub(2, #line))
         end
     end
-    popup.set_lines(logs_buf, logs_lines)
-    popup.set_lines(cwd_buf, cwd_lines)
-    popup.set_lines(origin_buf, origin_lines)
+    view.set_lines(logs_buf, logs_lines)
+    view.set_lines(cwd_buf, cwd_lines)
+    view.set_lines(origin_buf, origin_lines)
     local lnum = selected_log - 1
     vim.highlight.range(logs_buf, M.constants.logs_namespace, M.state.logs.indicator.hl_group, { lnum, 0 }, { lnum, 1 })
 end
@@ -439,10 +435,10 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
     local current_buf = vim.api.nvim_get_current_buf()
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
-    local height = math.ceil(global_height - 12)
+    local height = math.ceil(global_height - 13)
     local width = math.ceil(global_width * 0.48)
     local logs_width = width * 2 + 2
-    local col = math.ceil((global_width - (width * 2)) / 2) - 2
+    local col = math.ceil((global_width - (width * 2)) / 2) - 1
     local padding_right = 2
     local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
     local rows = {}
@@ -472,16 +468,18 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
         table.insert(logs_lines, line)
     end
     local windows = {
-        origin = popup.create({
+        origin = view.create({
             filetype = filetype,
             lines = origin_lines,
+            border = M.state.diff.origin_window.border,
+            title = M.state.diff.origin_window.title,
             buf_options = {
                 ['modifiable'] = false,
                 ['buftype'] = 'nofile',
                 ['buflisted'] = false,
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', M.state.diff.window.hl_group),
+                ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -493,21 +491,22 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
                 relative = 'editor',
                 width = width,
                 height = height,
-                border = M.state.diff.window.border,
-                row = 0,
+                row = 1,
                 col = col,
             },
         }),
-        cwd = popup.create({
+        cwd = view.create({
             lines = cwd_lines,
             filetype = filetype,
+            title = M.state.diff.cwd_window.title,
+            border = M.state.diff.cwd_window.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['buftype'] = 'nofile',
                 ['buflisted'] = false,
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', M.state.diff.window.hl_group),
+                ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -519,20 +518,21 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
                 relative = 'editor',
                 width = width,
                 height = height,
-                border = M.state.diff.window.border,
-                row = 0,
+                row = 1,
                 col = col + width + 2,
-            }
+            },
         }),
-        logs =  popup.create({
+        logs =  view.create({
             lines = logs_lines,
+            title = M.state.logs.window.title,
+            border = M.state.logs.window.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['buftype'] = 'nofile',
                 ['buflisted'] = false,
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', M.state.logs.window.hl_group),
+                ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
                 ['cursorbind'] = false,
                 ['scrollbind'] = false,
@@ -543,15 +543,14 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
                 relative = 'editor',
                 width = logs_width,
                 height = 7,
-                border = M.state.logs.window.border,
                 row = height + 3,
                 col = col,
-            }
+            },
         }),
     }
-    popup.close_mappings({ '<esc>', '<C-c>', ':' }, windows)
-    popup.connect_closing_windows(windows)
-    popup.add_keymap(
+    M.define_close_mappings_on_windows({ '<esc>', '<C-c>', ':' }, windows)
+    M.connect_closing_windows(windows)
+    view.add_keymap(
         windows.logs.buf,
         '<enter>',
         string.format(
@@ -569,7 +568,7 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
         vim.fn.sign_place(
             data.lnum,
             M.constants.hunk_signs_group,
-            M.state.diff.types[data.type].sign_hl_group,
+            M.state.diff.signs[data.type].sign_hl_group,
             buf,
             {
                 lnum = data.lnum,
