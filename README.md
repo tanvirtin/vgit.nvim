@@ -1,6 +1,6 @@
 # vgit.nvim
 
-[![CI](https://github.com/tanvirtin/vgit.nvim/workflows/CI/badge.svg?branch=main)](https://github.com/tanvirtin/vgit.nvim/actions?query=workflow%3ACI)
+[![CI](https://github.com/tanvirtin/vgit.nvim/workflows/CI/badge.svg?branch=develop)](https://github.com/tanvirtin/vgit.nvim/actions?query=workflow%3ACI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Visual Git Plugin for Neovim to enhance your git experience.
