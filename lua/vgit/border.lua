@@ -42,44 +42,36 @@ local function create_lines(title, content_win_options, border)
     return border_lines
 end
 
-M.create = function(title, content_bufnr, content_win_id, content_win_options, border)
-    local obj = {}
+M.create = function(content_buf, title, window_props, border, border_hl)
     local thickness = {
         top = 1,
         right = 1,
         bot = 1,
         left = 1,
     }
-    obj.bufnr = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(obj.bufnr, "bufhidden", "wipe")
-    vim.api.nvim_buf_set_lines(obj.bufnr, 0, -1, false, create_lines(title, content_win_options, border))
-    obj.win_id = vim.api.nvim_open_win(obj.bufnr, false, {
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, create_lines(title, window_props, border))
+    local win_id = vim.api.nvim_open_win(buf, false, {
         relative = 'editor',
-        style = "minimal",
-        row = content_win_options.row - thickness.top,
-        col = content_win_options.col - thickness.left,
-        width = content_win_options.width + thickness.left + thickness.right,
-        height = content_win_options.height + thickness.top + thickness.bot,
+        style = 'minimal',
         focusable = false,
+        row = window_props.row - thickness.top,
+        col = window_props.col - thickness.left,
+        width = window_props.width + thickness.left + thickness.right,
+        height = window_props.height + thickness.top + thickness.bot,
     })
-    vim.api.nvim_win_set_option(obj.win_id, 'cursorbind', false)
-    vim.api.nvim_win_set_option(obj.win_id, 'scrollbind', false)
-    vim.cmd(
-        string.format(
-            "autocmd BufDelete <buffer=%s> ++nested ++once :lua require('plenary.window').close_related_win(%s, %s)",
-            content_bufnr,
-            content_win_id,
-            obj.win_id
-        )
-    )
+    vim.api.nvim_win_set_option(win_id, 'cursorbind', false)
+    vim.api.nvim_win_set_option(win_id, 'scrollbind', false)
+    vim.api.nvim_win_set_option(win_id, 'winhl', string.format('Normal:%s', border_hl))
     vim.cmd(
         string.format(
             "autocmd WinClosed <buffer=%s> ++nested ++once :lua require('plenary.window').try_close(%s, true)",
-            content_bufnr,
-            obj.win_id
+            content_buf,
+            win_id
         )
     )
-    return obj
+    return buf, win_id
 end
 
 return M

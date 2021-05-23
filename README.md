@@ -78,7 +78,7 @@ By default these are the default settings provided by the app, you can change th
 require('vgit').setup({
     hunks_enabled = true,
     blames_enabled = true,
-    hl_groups = {
+    hls = {
         VGitBlame = {
             bg = nil,
             fg = '#b1b1b1',
@@ -165,7 +165,7 @@ require('vgit').setup({
         }
     },
     blame = {
-        hl_group = 'VGitBlame',
+        hl = 'VGitBlame',
         format = function(blame, git_config)
             local round = function(x)
                 return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
@@ -202,7 +202,7 @@ require('vgit').setup({
     },
     diff = {
         window = {
-            hl_group = 'VGitDiffWindow',
+            hl = 'VGitDiffWindow',
             border = {
                 { '╭', 'VGitDiffBorder' },
                 { '─', 'VGitDiffBorder' },
@@ -217,14 +217,14 @@ require('vgit').setup({
         types = {
             add = {
                 name = 'VGitDiffAddSign',
-                sign_hl_group = 'VGitDiffAddSign',
-                text_hl_group = 'VGitDiffAddText',
+                sign_hl = 'VGitDiffAddSign',
+                text_hl = 'VGitDiffAddText',
                 text = '+'
             },
             remove = {
                 name = 'VGitDiffRemoveSign',
-                sign_hl_group = 'VGitDiffRemoveSign',
-                text_hl_group = 'VGitDiffRemoveText',
+                sign_hl = 'VGitDiffRemoveSign',
+                text_hl = 'VGitDiffRemoveText',
                 text = '-'
             },
         },
@@ -233,19 +233,19 @@ require('vgit').setup({
         types = {
             add = {
                 name = 'VGitHunkAddSign',
-                sign_hl_group = 'VGitHunkAddSign',
-                text_hl_group = 'VGitHunkAddText',
+                sign_hl = 'VGitHunkAddSign',
+                text_hl = 'VGitHunkAddText',
                 text = '+'
             },
             remove = {
                 name = 'VGitHunkRemoveSign',
-                sign_hl_group = 'VGitHunkRemoveSign',
-                text_hl_group = 'VGitHunkRemoveText',
+                sign_hl = 'VGitHunkRemoveSign',
+                text_hl = 'VGitHunkRemoveText',
                 text = '-'
             },
         },
         window = {
-            hl_group = 'VGitHunkWindow',
+            hl = 'VGitHunkWindow',
             border = {
                 { '', 'VGitHunkBorder' },
                 { '─', 'VGitHunkBorder' },
@@ -263,17 +263,17 @@ require('vgit').setup({
         types = {
             add = {
                 name = 'VGitSignAdd',
-                hl_group = 'VGitSignAdd',
+                hl = 'VGitSignAdd',
                 text = '│'
             },
             remove = {
                 name = 'VGitSignRemove',
-                hl_group = 'VGitSignRemove',
+                hl = 'VGitSignRemove',
                 text = '│'
             },
             change = {
                 name = 'VGitSignChange',
-                hl_group = 'VGitSignChange',
+                hl = 'VGitSignChange',
                 text = '│'
             },
         },
