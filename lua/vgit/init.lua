@@ -1,5 +1,4 @@
 local git = require('vgit.git')
-local popup = require('vgit.popup')
 local ui = require('vgit.ui')
 local fs = require('vgit.fs')
 local defer = require('vgit.defer')
@@ -180,9 +179,7 @@ M._run_submodule_command = function(name, command, ...)
         return
     end
     local submodules = {
-        git = git,
-        popup = popup,
-        highlighter = highlighter,
+        ui = ui,
     }
     local submodule = submodules[name]
     local starts_with = command:sub(1, 1)
@@ -244,8 +241,6 @@ M._change_history = function(buf, origin_win_id, cwd_win_id, origin_buf, cwd_buf
             selected_log,
             data.lnum_changes
         )
-    else
-        print(string.format('TODO: ', vim.inspect(diff_err)))
     end
 end
 
