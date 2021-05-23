@@ -39,7 +39,23 @@ M.create = function(options)
         end
     end
     if not options.title then
-        options.window_props.border = options.border
+        if options.border_hl then
+            local new_border = {}
+            -- Two types of array can be given:
+            --  - { '', '', '', '' }
+            --  - { { '', '' } , { '', '' }, { '', '' }, { '', '' } }
+            for _, value in pairs(options.border) do
+                if type(value) == 'table' then
+                    value[2] = options.border_hl
+                    table.insert(new_border, value)
+                else
+                    table.insert(new_border, { value, options.border_hl })
+                end
+            end
+            options.window_props.border = new_border
+        else
+            options.window_props.border = options.border
+        end
     end
     local win_id = vim.api.nvim_open_win(buf, true, options.window_props)
     if options.win_options then
@@ -50,9 +66,15 @@ M.create = function(options)
     options.buf = buf
     options.win_id = win_id
     if options.border and options.title then
-        local created_border = border.create(options.title, buf, win_id, options.window_props, options.border)
-        options.border_win_id = created_border.win_id
-        options.border_buf = created_border.bufnr
+        local border_buf, border_win_id = border.create(
+            buf,
+            options.title,
+            options.window_props,
+            options.border,
+            options.border_hl
+        )
+        options.border_buf = border_buf
+        options.border_win_id = border_win_id
     end
     return options
 end

@@ -6,7 +6,7 @@ local M = {}
 
 local function get_initial_state()
     return {
-        hl_groups = {
+        hls = {
             VGitBlame = {
                 bg = nil,
                 fg = '#b1b1b1',
@@ -66,7 +66,23 @@ local function get_initial_state()
             VGitLogsIndicator = {
                 fg = '#a6e22e',
                 bg = nil,
-            }
+            },
+            VGitDiffCurrentBorder = {
+                fg = '#a1b5b1',
+                bg = nil,
+            },
+            VGitDiffPreviousBorder = {
+                fg = '#a1b5b1',
+                bg = nil,
+            },
+            VGitLogsBorder = {
+                fg = '#a1b5b1',
+                bg = nil,
+            },
+            VGitHunkBorder = {
+                fg = '#a1b5b1',
+                bg = nil,
+            },
         },
     }
 end
@@ -85,10 +101,10 @@ M.create = function(group, color)
     vim.api.nvim_command('highlight ' .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp)
 end
 
-M.define = function(hl_group)
-    local color = M.state.hl_groups[hl_group]
+M.define = function(hl)
+    local color = M.state.hls[hl]
     if color then
-        M.create(hl_group, color)
+        M.create(hl, color)
         return true
     end
     return false
