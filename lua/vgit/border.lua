@@ -64,13 +64,11 @@ M.create = function(content_buf, title, window_props, border, border_hl)
     vim.api.nvim_win_set_option(win_id, 'cursorbind', false)
     vim.api.nvim_win_set_option(win_id, 'scrollbind', false)
     vim.api.nvim_win_set_option(win_id, 'winhl', string.format('Normal:%s', border_hl))
-    vim.cmd(
-        string.format(
-            "autocmd WinClosed <buffer=%s> ++nested ++once :lua require('plenary.window').try_close(%s, true)",
-            content_buf,
-            win_id
-        )
-    )
+    vim.cmd(string.format(
+        "autocmd WinClosed <buffer=%s> ++nested ++once :lua require('plenary.window').try_close(%s, true)",
+        content_buf,
+        win_id
+    ))
     return buf, win_id
 end
 
