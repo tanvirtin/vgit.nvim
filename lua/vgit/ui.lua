@@ -254,6 +254,7 @@ M.hide_hunk_signs = function(buf)
 end
 
 M.show_hunk = function(hunk, filetype)
+    local current_buf = vim.api.nvim_get_current_buf()
     local lines = hunk.diff
     local trimmed_lines = {}
     local added_lines = {}
@@ -323,9 +324,15 @@ M.show_hunk = function(hunk, filetype)
             }
         )
     end
+    view.add_autocmd(
+        current_buf,
+        'BufEnter',
+        string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect({ windows.hunk.win_id }))
+    )
 end
 
 M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
+    local current_buf = vim.api.nvim_get_current_buf()
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 4)
@@ -400,6 +407,11 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
             priority = M.state.diff.priority,
         })
     end
+    view.add_autocmd(
+        current_buf,
+        'BufEnter',
+        string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect({ windows.cwd.win_id, windows.origin.win_id }))
+    )
 end
 
 M.change_history = function(
@@ -595,6 +607,11 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
         M.constants.logs_namespace,
         M.state.logs.indicator.hl,
         { 0, 0 }, { 0, 1 }
+    )
+    view.add_autocmd(
+        current_buf,
+        'BufEnter',
+        string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect({ windows.cwd.win_id, windows.origin.win_id, windows.logs.win_id }))
     )
 end
 

@@ -1,10 +1,10 @@
 # VGit
-<tr>
 <table>
-<td>
-  <strong>Visual Git Plugin for Neovim to enhance your git experience.</strong>
-</tr>
-</td>
+    <tr>
+        <td>
+            <strong>Visual Git Plugin for Neovim to enhance your git experience.</strong>
+        </tr>
+    </td>
 </table>
 <br />
 
