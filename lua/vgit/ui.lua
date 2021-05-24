@@ -42,14 +42,14 @@ local function get_initial_state()
                 return string.format(' %s', info)
             end
         },
-        diff = {
+        preview = {
             priority = 10,
-            cwd_window = {
+            current_window = {
                 title = 'Current',
                 border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
                 border_hl = 'VGitDiffCurrentBorder',
             },
-            origin_window = {
+            previous_window = {
                 title = 'Previous',
                 border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
                 border_hl = 'VGitDiffPreviousBorder',
@@ -69,14 +69,24 @@ local function get_initial_state()
                 },
             },
         },
-        logs = {
+        history = {
             indicator = {
-                hl = 'VGitLogsIndicator'
+                hl = 'VGitHistoryIndicator'
             },
-            window = {
+            current_window = {
+                title = 'Current',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+                border_hl = 'VGitHistoryCurrentBorder',
+            },
+            previous_window = {
+                title = 'Previous',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+                border_hl = 'VGitHistoryPreviousBorder',
+            },
+            history_window = {
                 title = 'Git History',
                 border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitLogsBorder',
+                border_hl = 'VGitHistoryBorder',
             },
         },
         hunk = {
@@ -127,7 +137,7 @@ local M = {}
 
 M.constants = {
     hunk_signs_group = 'tanvirtin/vgit.nvim/hunk/signs',
-    logs_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/logs'),
+    history_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/history'),
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
     blame_line_id = 1,
 }
@@ -187,7 +197,7 @@ M.setup = function(config)
             texthl = type.hl
         })
     end
-    highlighter.define(M.state.logs.indicator.hl)
+    highlighter.define(M.state.history.indicator.hl)
     for _, action in pairs(M.state.hunk.signs) do
         local sign_hl = action.sign_hl
         local text_hl = action.text_hl
@@ -199,7 +209,7 @@ M.setup = function(config)
             linehl = sign_hl,
         })
     end
-    for _, action in pairs(M.state.diff.signs) do
+    for _, action in pairs(M.state.preview.signs) do
         local name = action.name
         local text = action.text
         local sign_hl = action.sign_hl
@@ -212,9 +222,11 @@ M.setup = function(config)
             linehl = sign_hl,
         })
     end
-    highlighter.define(M.state.diff.cwd_window.border_hl);
-    highlighter.define(M.state.diff.origin_window.border_hl);
-    highlighter.define(M.state.logs.window.border_hl);
+    highlighter.define(M.state.preview.current_window.border_hl);
+    highlighter.define(M.state.preview.previous_window.border_hl);
+    highlighter.define(M.state.history.previous_window.border_hl);
+    highlighter.define(M.state.history.current_window.border_hl);
+    highlighter.define(M.state.history.history_window.border_hl);
     highlighter.define(M.state.hunk.window.border_hl);
 end
 
@@ -331,7 +343,7 @@ M.show_hunk = function(hunk, filetype)
     )
 end
 
-M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
+M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
     local current_buf = vim.api.nvim_get_current_buf()
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
@@ -339,12 +351,12 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
     local width = math.ceil(global_width * 0.49)
     local col = math.ceil((global_width - (width * 2)) / 2) - 1
     local windows = {
-        origin = view.create({
+        previous = view.create({
             filetype = filetype,
-            lines = origin_lines,
-            title = M.state.diff.origin_window.title,
-            border = M.state.diff.origin_window.border,
-            border_hl = M.state.diff.origin_window.border_hl,
+            lines = previous_lines,
+            title = M.state.preview.previous_window.title,
+            border = M.state.preview.previous_window.border,
+            border_hl = M.state.preview.previous_window.border_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['bufhidden'] = 'delete',
@@ -368,12 +380,12 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
                 col = col,
             },
         }),
-        cwd = view.create({
-            lines = cwd_lines,
+        current = view.create({
+            lines = current_lines,
             filetype = filetype,
-            title = M.state.diff.cwd_window.title,
-            border = M.state.diff.cwd_window.border,
-            border_hl = M.state.diff.cwd_window.border_hl,
+            title = M.state.preview.current_window.title,
+            border = M.state.preview.current_window.border,
+            border_hl = M.state.preview.current_window.border_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['bufhidden'] = 'delete',
@@ -402,68 +414,74 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
     M.connect_closing_windows(windows)
     for _, data in ipairs(lnum_changes) do
         local buf = windows[data.buftype].buf
-        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.diff.signs[data.type].sign_hl, buf, {
+        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.preview.signs[data.type].sign_hl, buf, {
             lnum = data.lnum,
-            priority = M.state.diff.priority,
+            priority = M.state.preview.priority,
         })
     end
     view.add_autocmd(
         current_buf,
         'BufEnter',
         string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect({
-            windows.cwd.win_id,
-            windows.origin.win_id
+            windows.current.win_id,
+            windows.previous.win_id
         }))
     )
 end
 
 M.change_history = function(
-    origin_win_id,
-    cwd_win_id,
-    origin_buf,
-    cwd_buf,
-    logs_buf,
-    cwd_lines,
-    origin_lines,
+    previous_win_id,
+    current_win_id,
+    previous_buf,
+    current_buf,
+    history_buf,
+    current_lines,
+    previous_lines,
     selected_log,
     lnum_changes
 )
-    vim.api.nvim_win_set_cursor(origin_win_id, { 1, 0 })
-    vim.api.nvim_win_set_cursor(cwd_win_id, { 1, 0 })
+    vim.api.nvim_win_set_cursor(previous_win_id, { 1, 0 })
+    vim.api.nvim_win_set_cursor(current_win_id, { 1, 0 })
     local windows = {
-        origin = { buf = origin_buf },
-        cwd = { buf = cwd_buf }
+        previous = { buf = previous_buf },
+        current = { buf = current_buf }
     }
     vim.fn.sign_unplace(M.constants.hunk_signs_group)
     for _, data in ipairs(lnum_changes) do
         local buf = windows[data.buftype].buf
-        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.diff.signs[data.type].sign_hl, buf, {
+        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.preview.signs[data.type].sign_hl, buf, {
             lnum = data.lnum,
-            priority = M.state.diff.priority,
+            priority = M.state.preview.priority,
         })
     end
-    local logs_lines = vim.api.nvim_buf_get_lines(logs_buf, 0, -1, false)
-    for index, line in ipairs(logs_lines) do
+    local history_lines = vim.api.nvim_buf_get_lines(history_buf, 0, -1, false)
+    for index, line in ipairs(history_lines) do
         if index == selected_log then
-            logs_lines[index] = string.format('>%s', line:sub(2, #line))
+            history_lines[index] = string.format('>%s', line:sub(2, #line))
         else
-            logs_lines[index] = string.format(' %s', line:sub(2, #line))
+            history_lines[index] = string.format(' %s', line:sub(2, #line))
         end
     end
-    view.set_lines(logs_buf, logs_lines)
-    view.set_lines(cwd_buf, cwd_lines)
-    view.set_lines(origin_buf, origin_lines)
+    view.set_lines(history_buf, history_lines)
+    view.set_lines(current_buf, current_lines)
+    view.set_lines(previous_buf, previous_lines)
     local lnum = selected_log - 1
-    vim.highlight.range(logs_buf, M.constants.logs_namespace, M.state.logs.indicator.hl, { lnum, 0 }, { lnum, 1 })
+    vim.highlight.range(
+        history_buf,
+        M.constants.history_namespace,
+        M.state.history.indicator.hl,
+        { lnum, 0 },
+        { lnum, 1 }
+    )
 end
 
-M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
+M.show_history = function(current_lines, previous_lines, logs, lnum_changes, filetype)
     local current_buf = vim.api.nvim_get_current_buf()
     local global_width = vim.api.nvim_get_option('columns')
     local global_height = vim.api.nvim_get_option('lines')
     local height = math.ceil(global_height - 13)
     local width = math.ceil(global_width * 0.49)
-    local logs_width = width * 2 + 2
+    local history_width = width * 2 + 2
     local col = math.ceil((global_width - (width * 2)) / 2) - 1
     local padding_right = 2
     local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
@@ -482,7 +500,7 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
         end
         table.insert(rows, row)
     end
-    local logs_lines = {}
+    local history_lines = {}
     for _, row in ipairs(rows) do
         local line = ''
         for index, item in ipairs(row) do
@@ -491,15 +509,15 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
                line = line
            end
         end
-        table.insert(logs_lines, line)
+        table.insert(history_lines, line)
     end
     local windows = {
-        origin = view.create({
+        previous = view.create({
             filetype = filetype,
-            lines = origin_lines,
-            border = M.state.diff.origin_window.border,
-            border_hl = M.state.diff.origin_window.border_hl,
-            title = M.state.diff.origin_window.title,
+            lines = previous_lines,
+            border = M.state.history.previous_window.border,
+            border_hl = M.state.history.previous_window.border_hl,
+            title = M.state.history.previous_window.title,
             buf_options = {
                 ['modifiable'] = false,
                 ['buftype'] = 'nofile',
@@ -522,12 +540,12 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
                 col = col,
             },
         }),
-        cwd = view.create({
-            lines = cwd_lines,
+        current = view.create({
+            lines = current_lines,
             filetype = filetype,
-            title = M.state.diff.cwd_window.title,
-            border = M.state.diff.cwd_window.border,
-            border_hl = M.state.diff.cwd_window.border_hl,
+            title = M.state.history.current_window.title,
+            border = M.state.history.current_window.border,
+            border_hl = M.state.history.current_window.border_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buftype'] = 'nofile',
@@ -550,11 +568,11 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
                 col = col + width + 2,
             },
         }),
-        logs =  view.create({
-            lines = logs_lines,
-            title = M.state.logs.window.title,
-            border = M.state.logs.window.border,
-            border_hl = M.state.logs.window.border_hl,
+        history =  view.create({
+            lines = history_lines,
+            title = M.state.history.history_window.title,
+            border = M.state.history.history_window.border,
+            border_hl = M.state.history.history_window.border_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buftype'] = 'nofile',
@@ -570,7 +588,7 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = logs_width,
+                width = history_width,
                 height = 7,
                 row = height + 3,
                 col = col,
@@ -580,16 +598,16 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
     M.define_close_mappings_on_windows({ '<esc>', '<C-c>', ':' }, windows)
     M.connect_closing_windows(windows)
     view.add_keymap(
-        windows.logs.buf,
+        windows.history.buf,
         '<enter>',
         string.format(
             '_change_history(%s, %s, %s, %s, %s, %s)',
             current_buf,
-            windows.origin.win_id,
-            windows.cwd.win_id,
-            windows.origin.buf,
-            windows.cwd.buf,
-            windows.logs.buf
+            windows.previous.win_id,
+            windows.current.win_id,
+            windows.previous.buf,
+            windows.current.buf,
+            windows.history.buf
         )
     )
     for _, data in ipairs(lnum_changes) do
@@ -597,27 +615,27 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
         vim.fn.sign_place(
             data.lnum,
             M.constants.hunk_signs_group,
-            M.state.diff.signs[data.type].sign_hl,
+            M.state.preview.signs[data.type].sign_hl,
             buf,
             {
                 lnum = data.lnum,
-                priority = M.state.diff.priority,
+                priority = M.state.preview.priority,
             }
         )
     end
     vim.highlight.range(
-        windows.logs.buf,
-        M.constants.logs_namespace,
-        M.state.logs.indicator.hl,
+        windows.history.buf,
+        M.constants.history_namespace,
+        M.state.history.indicator.hl,
         { 0, 0 }, { 0, 1 }
     )
     view.add_autocmd(
         current_buf,
         'BufEnter',
         string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect({
-            windows.cwd.win_id,
-            windows.origin.win_id,
-            windows.logs.win_id
+            windows.current.win_id,
+            windows.previous.win_id,
+            windows.history.win_id
         }))
     )
 end
