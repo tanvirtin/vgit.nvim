@@ -309,7 +309,7 @@ vim.api.nvim_set_keymap('n', '<C-j>', ':VGit hunk_down<CR>', {
     noremap = true,
     silent = true,
 })
-vim.api.nvim_set_keymap('n', '<leader>gd', ':VGit buffer_preview<CR>', {
+vim.api.nvim_set_keymap('n', '<leader>gf', ':VGit buffer_preview<CR>', {
     noremap = true,
     silent = true,
 })
@@ -318,6 +318,10 @@ vim.api.nvim_set_keymap('n', '<leader>gh', ':VGit buffer_history<CR>', {
     silent = true,
 })
 vim.api.nvim_set_keymap('n', '<leader>gu', ':VGit buffer_reset<CR>', {
+    noremap = true,
+    silent = true,
+})
+vim.api.nvim_set_keymap('n', '<leader>gd', ':VGit diff<CR>', {
     noremap = true,
     silent = true,
 })
@@ -330,17 +334,18 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 ### API
 | Function Name | Description |
 |---------------|-------------|
-| setup | Sets up the plugin to run necessary git commands on loaded buffers |
-| toggle_buffer_hunks | Shows hunk signs on current buffer, if hunks are shown then hides them |
-| toggle_buffer_blames | Enables blames feature on current buffer, if blames are enabled then disables it instead |
-| hunk_preview | If a file has a hunk of diff associated with it, invoking this function will reveal that hunk if it exists on the current cursor |
-| hunk_reset | Resets the hunk the cursor is on right now to it's previous step
-| hunk_down | Navigate downward through a github hunk |
-| hunk_up | Navigate upwards through a github hunk |
-| buffer_preview | Opens two windows, showing origin and cwd buffers and the diff between them |
-| buffer_history | Opens two windows, showing origin and cwd buffers and the diff between them, with a list of history logs associated with the buffer |
-| buffer_reset | Resets a current buffer you are on |
+| setup | Sets up the plugin for success |
+| toggle_buffer_hunks | Shows hunk signs on buffers/Hides hunk signs on buffers |
+| toggle_buffer_blames | Enables blames feature on buffers /Disables blames feature on buffers |
+| hunk_preview | Opens a VGit view of a hunk, if cursor is on a line with a git change |
+| hunk_reset | Removes the hunk from the buffer |
+| hunk_down | Navigate downward through a hunk |
+| hunk_up | Navigate upwards through a hunk |
+| buffer_preview | Opens two VGit views, one showing the previous version of the buffer and the second showing the new changes in the buffer |
+| buffer_history | Opens a buffer preview along with a table of logs, enabling users to see different iterations of the buffer in the git history |
+| buffer_reset | Resets the current buffer to HEAD |
 | hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
+| diff | Opens a populated quickfix window showing all the files that have a change in it |
 
 ### Similar Git Plugins
 - [vim-fugitive](https://github.com/tpope/vim-fugitive) :crown:

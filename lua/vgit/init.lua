@@ -412,6 +412,10 @@ M.hunks_quickfix_list = function()
     end
 end
 
+M.diff = function()
+    M.hunks_quickfix_list()
+end
+
 M.toggle_buffer_hunks = vim.schedule_wrap(function()
     if state.disabled == true then
         return
