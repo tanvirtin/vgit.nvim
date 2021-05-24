@@ -18,7 +18,7 @@
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=shields" alt="CI" />
 </a>
 
-### Features
+## Features
 <details>
     <summary>Hunk as signs</summary>
     <br />
@@ -83,13 +83,13 @@
 | [Pathogen](https://github.com/tpope/vim-pathogen)    | `git clone https://github.com/tanvirtin/vgit.nvim.git ~/.vim/bundle/vgit.nvim` |
 | [Dein](https://github.com/Shougo/dein.vim)           | `call dein#add('tanvirtin/vgit.nvim')`                                         |
 
-### Setup
+## Setup
 You must instantiate the plugin in order for the features to work.
 ```lua
 require('vgit').setup()
 ```
 
-### Configure your own settings
+## Configure your own settings
 By default these are the default settings provided by the app, you can change them to your liking.
 ```lua
 require('vgit').setup({
@@ -152,7 +152,7 @@ require('vgit').setup({
             fg = '#e95678',
             bg = nil,
         },
-        VGitLogsIndicator = {
+        VGitHistoryIndicator = {
             fg = '#a6e22e',
             bg = nil,
         },
@@ -164,7 +164,15 @@ require('vgit').setup({
             fg = '#a1b5b1',
             bg = nil,
         },
-        VGitLogsBorder = {
+        VGitHistoryCurrentBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHistoryPreviousBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHistoryBorder = {
             fg = '#a1b5b1',
             bg = nil,
         },
@@ -209,14 +217,14 @@ require('vgit').setup({
             return string.format(' %s', info)
         end
     },
-    diff = {
+    preview = {
         priority = 10,
-        cwd_window = {
+        current_window = {
             title = 'Current',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitDiffCurrentBorder',
         },
-        origin_window = {
+        previous_window = {
             title = 'Previous',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitDiffPreviousBorder',
@@ -236,15 +244,35 @@ require('vgit').setup({
             },
         },
     },
-    logs = {
+    history = {
         indicator = {
-            hl = 'VGitLogsIndicator'
+            hl = 'VGitHistoryIndicator'
         },
         window = {
             title = 'Git History',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitLogsBorder',
+            border_hl = 'VGitHistoryBorder',
         },
+        history: {
+            indicator = {
+                hl = 'VGitHistoryIndicator'
+            },
+            current_window = {
+                title = 'Current',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+                border_hl = 'VGitHistoryCurrentBorder',
+            },
+            previous_window = {
+                title = 'Previous',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+                border_hl = 'VGitHistoryPreviousBorder',
+            },
+            history_window = {
+                title = 'Git History',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+                border_hl = 'VGitHistoryBorder',
+            },
+        }
     },
     hunk = {
         priority = 10,
@@ -290,7 +318,7 @@ require('vgit').setup({
 })
 ```
 
-### Recommended Mappings
+## Recommended Mappings
 You can always call these commands yourself, but I find these mappings to be very helpful.
 ```lua
 vim.api.nvim_set_keymap('n', '<leader>gp', ':VGit hunk_preview<CR>', {
@@ -331,7 +359,7 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 })
 ```
 
-### API
+## API
 | Function Name | Description |
 |---------------|-------------|
 | setup | Sets up the plugin for success |
@@ -347,7 +375,7 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
 | diff | Opens a populated quickfix window showing all the files that have a change in it |
 
-### Similar Git Plugins
+## Similar Git Plugins
 - [vim-fugitive](https://github.com/tpope/vim-fugitive) :crown:
 - [vim-gitgutter](https://github.com/airblade/vim-gitgutter)
 - [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)

@@ -193,13 +193,13 @@ M._run_submodule_command = function(name, command, ...)
     end
 end
 
-M._change_history = function(buf, origin_win_id, cwd_win_id, origin_buf, cwd_buf, logs_buf)
+M._change_history = function(current_buf, wins_to_update, bufs_to_update)
     if state.disabled == true then
         return
     end
     local selected_log = vim.api.nvim_win_get_cursor(0)[1]
-    local filename = fs.filename(buf)
-    local buf_state = get_buf_state(buf)
+    local filename = fs.filename(current_buf)
+    local buf_state = get_buf_state(current_buf)
     if not buf_state then
         return
     end
@@ -231,14 +231,11 @@ M._change_history = function(buf, origin_win_id, cwd_win_id, origin_buf, cwd_buf
     local diff_err, data = git.diff(lines, hunks)
     if not diff_err then
         ui.change_history(
-            origin_win_id,
-            cwd_win_id,
-            origin_buf,
-            cwd_buf,
-            logs_buf,
-            data.cwd_lines,
-            data.origin_lines,
+            wins_to_update,
+            bufs_to_update,
             selected_log,
+            data.current_lines,
+            data.previous_lines,
             data.lnum_changes
         )
     end
@@ -512,8 +509,8 @@ M.buffer_history = vim.schedule_wrap(function(buf)
         local diff_err, data = git.diff(lines, hunks)
         if not diff_err then
             ui.show_history(
-                data.cwd_lines,
-                data.origin_lines,
+                data.current_lines,
+                data.previous_lines,
                 logs,
                 data.lnum_changes,
                 filetype
@@ -540,9 +537,9 @@ M.buffer_preview = vim.schedule_wrap(function(buf)
             if not err then
                 local diff_err, data = git.diff(lines, hunks)
                 if not diff_err then
-                    ui.show_diff(
-                        data.cwd_lines,
-                        data.origin_lines,
+                    ui.show_preview(
+                        data.current_lines,
+                        data.previous_lines,
                         data.lnum_changes,
                         filetype
                     )
