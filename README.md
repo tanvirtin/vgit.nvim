@@ -9,7 +9,7 @@
 <br />
 
 <a href="https://github.com/tanvirtin/vgit.nvim/actions?query=workflow%3ACI">
-    <img src="https://github.com/tanvirtin/vgit.nvim/workflows/CI/badge.svg?branch=develop" alt="CI" />
+    <img src="https://github.com/tanvirtin/vgit.nvim/workflows/CI/badge.svg?branch=main" alt="CI" />
 </a>
 <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
