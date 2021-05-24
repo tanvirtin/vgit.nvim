@@ -193,13 +193,13 @@ M._run_submodule_command = function(name, command, ...)
     end
 end
 
-M._change_history = function(buf, previous_win_id, current_win_id, previous_buf, current_buf, logs_buf)
+M._change_history = function(current_buf, wins_to_update, bufs_to_update)
     if state.disabled == true then
         return
     end
     local selected_log = vim.api.nvim_win_get_cursor(0)[1]
-    local filename = fs.filename(buf)
-    local buf_state = get_buf_state(buf)
+    local filename = fs.filename(current_buf)
+    local buf_state = get_buf_state(current_buf)
     if not buf_state then
         return
     end
@@ -231,14 +231,11 @@ M._change_history = function(buf, previous_win_id, current_win_id, previous_buf,
     local diff_err, data = git.diff(lines, hunks)
     if not diff_err then
         ui.change_history(
-            previous_win_id,
-            current_win_id,
-            previous_buf,
-            current_buf,
-            logs_buf,
+            wins_to_update,
+            bufs_to_update,
+            selected_log,
             data.current_lines,
             data.previous_lines,
-            selected_log,
             data.lnum_changes
         )
     end

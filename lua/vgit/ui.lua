@@ -430,31 +430,30 @@ M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
 end
 
 M.change_history = function(
-    previous_win_id,
-    current_win_id,
-    previous_buf,
-    current_buf,
-    history_buf,
+    wins_to_update,
+    bufs_to_update,
+    selected_log,
     current_lines,
     previous_lines,
-    selected_log,
     lnum_changes
 )
-    vim.api.nvim_win_set_cursor(previous_win_id, { 1, 0 })
-    vim.api.nvim_win_set_cursor(current_win_id, { 1, 0 })
-    local windows = {
-        previous = { buf = previous_buf },
-        current = { buf = current_buf }
+    local bufs = {
+        current = bufs_to_update[1],
+        previous = bufs_to_update[2],
+        history = bufs_to_update[3],
     }
+    for _, win in pairs(wins_to_update) do
+        vim.api.nvim_win_set_cursor(win, { 1, 0 })
+    end
     vim.fn.sign_unplace(M.constants.hunk_signs_group)
     for _, data in ipairs(lnum_changes) do
-        local buf = windows[data.buftype].buf
+        local buf = bufs[data.buftype]
         vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.preview.signs[data.type].sign_hl, buf, {
             lnum = data.lnum,
             priority = M.state.preview.priority,
         })
     end
-    local history_lines = vim.api.nvim_buf_get_lines(history_buf, 0, -1, false)
+    local history_lines = vim.api.nvim_buf_get_lines(bufs.history, 0, -1, false)
     for index, line in ipairs(history_lines) do
         if index == selected_log then
             history_lines[index] = string.format('>%s', line:sub(2, #line))
@@ -462,12 +461,12 @@ M.change_history = function(
             history_lines[index] = string.format(' %s', line:sub(2, #line))
         end
     end
-    view.set_lines(history_buf, history_lines)
-    view.set_lines(current_buf, current_lines)
-    view.set_lines(previous_buf, previous_lines)
+    view.set_lines(bufs.history, history_lines)
+    view.set_lines(bufs.current, current_lines)
+    view.set_lines(bufs.previous, previous_lines)
     local lnum = selected_log - 1
     vim.highlight.range(
-        history_buf,
+        bufs.history,
         M.constants.history_namespace,
         M.state.history.indicator.hl,
         { lnum, 0 },
@@ -601,13 +600,14 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
         windows.history.buf,
         '<enter>',
         string.format(
-            '_change_history(%s, %s, %s, %s, %s, %s)',
+            '_change_history(%s, %s, %s)',
             current_buf,
-            windows.previous.win_id,
-            windows.current.win_id,
-            windows.previous.buf,
-            windows.current.buf,
-            windows.history.buf
+            vim.inspect({ windows.current.win_id, windows.previous.win_id }),
+            vim.inspect({
+                windows.current.buf,
+                windows.previous.buf,
+                windows.history.buf
+            })
         )
     )
     for _, data in ipairs(lnum_changes) do
