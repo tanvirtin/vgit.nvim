@@ -63,7 +63,7 @@ local function get_initial_state()
                 fg = '#e95678',
                 bg = nil,
             },
-            VGitLogsIndicator = {
+            VGitHistoryIndicator = {
                 fg = '#a6e22e',
                 bg = nil,
             },
@@ -75,7 +75,15 @@ local function get_initial_state()
                 fg = '#a1b5b1',
                 bg = nil,
             },
-            VGitLogsBorder = {
+            VGitHistoryCurrentBorder = {
+                fg = '#a1b5b1',
+                bg = nil,
+            },
+            VGitHistoryPreviousBorder = {
+                fg = '#a1b5b1',
+                bg = nil,
+            },
+            VGitHistoryBorder = {
                 fg = '#a1b5b1',
                 bg = nil,
             },

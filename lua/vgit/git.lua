@@ -21,17 +21,17 @@ end
 
 local function parse_hunk_header(line)
     local diffkey = vim.trim(vim.split(line, '@@', true)[2])
-    local origin, current = unpack(
+    local previous, current = unpack(
         vim.tbl_map(function(s)
             return vim.split(string.sub(s, 2), ',')
         end,
         vim.split(diffkey, ' '))
     )
-    origin[1] = tonumber(origin[1])
-    origin[2] = tonumber(origin[2]) or 1
+    previous[1] = tonumber(previous[1])
+    previous[2] = tonumber(previous[2]) or 1
     current[1] = tonumber(current[1])
     current[2] = tonumber(current[2]) or 1
-    return origin, current
+    return previous, current
 end
 
 local function get_initial_state()
@@ -114,7 +114,7 @@ M.create_log = function(line)
 end
 
 M.create_hunk = function(header)
-    local origin, current = parse_hunk_header(header)
+    local previous, current = parse_hunk_header(header)
     local hunk = {
         header = header,
         start = current[1],
@@ -126,7 +126,7 @@ M.create_hunk = function(header)
         -- If it's a straight remove with no change, then highlight only one sign column.
         hunk.finish = hunk.start
         hunk.type = 'remove'
-    elseif origin[2] == 0 then
+    elseif previous[2] == 0 then
         hunk.type = 'add'
     else
         hunk.type = 'change'
@@ -376,21 +376,21 @@ end
 M.diff = function(lines, hunks)
     if #hunks == 0 then
         return nil, {
-            cwd_lines = lines,
-            origin_lines = lines,
+            current_lines = lines,
+            previous_lines = lines,
             lnum_changes = {},
         }
     end
-    local cwd_lines = {}
-    local origin_lines = {}
+    local current_lines = {}
+    local previous_lines = {}
     local lnum_changes = {}
     -- shallow copy
     for key, value in pairs(lines) do
-        cwd_lines[key] = value
-        origin_lines[key] = value
+        current_lines[key] = value
+        previous_lines[key] = value
     end
-    -- Operations below will potentially add more lines to both cwd and
-    -- origin data, which means, the offset needs to be added to our hunks.
+    -- Operations below will potentially add more lines to both current and
+    -- previous data, which means, the offset needs to be added to our hunks.
     local new_lines_added = 0
     for _, hunk in ipairs(hunks) do
         local type = hunk.type
@@ -398,12 +398,12 @@ M.diff = function(lines, hunks)
         local finish = hunk.finish + new_lines_added
         local diff = hunk.diff
         if type == 'add' then
-            -- Remove the line indicating that these lines were inserted in cwd_lines.
+            -- Remove the line indicating that these lines were inserted in current_lines.
             for i = start, finish do
-                origin_lines[i] = ''
+                previous_lines[i] = ''
                 table.insert(lnum_changes, {
                     lnum = i,
-                    buftype = 'cwd',
+                    buftype = 'current',
                     type = 'add'
                 })
             end
@@ -411,11 +411,11 @@ M.diff = function(lines, hunks)
             for _, line in ipairs(diff) do
                 start = start + 1
                 new_lines_added = new_lines_added + 1
-                table.insert(cwd_lines, start, '')
-                table.insert(origin_lines, start, line:sub(2, #line))
+                table.insert(current_lines, start, '')
+                table.insert(previous_lines, start, line:sub(2, #line))
                 table.insert(lnum_changes, {
                     lnum = start,
-                    buftype = 'origin',
+                    buftype = 'previous',
                     type = 'remove'
                 })
             end
@@ -430,11 +430,11 @@ M.diff = function(lines, hunks)
                 max_lines = #added_lines
             end
             -- Hunk finish index does not indicate the total number of lines that may have a diff.
-            -- Which is why I am inserting empty lines into both the cwd and origin data arrays.
+            -- Which is why I am inserting empty lines into both the current and previous data arrays.
             for i = finish + 1, (start + max_lines) - 1 do
                 new_lines_added = new_lines_added + 1
-                table.insert(cwd_lines, i, '')
-                table.insert(origin_lines, i, '')
+                table.insert(current_lines, i, '')
+                table.insert(previous_lines, i, '')
             end
             -- With the new calculated range I simply loop over and add the removed
             -- and added lines to their corresponding arrays that contain a buffer lines.
@@ -445,25 +445,25 @@ M.diff = function(lines, hunks)
                 if removed_line then
                     table.insert(lnum_changes, {
                         lnum = i,
-                        buftype = 'origin',
+                        buftype = 'previous',
                         type = 'remove'
                     })
                 end
                 if added_line then
                     table.insert(lnum_changes, {
                         lnum = i,
-                        buftype = 'cwd',
+                        buftype = 'current',
                         type = 'add'
                     })
                 end
-                origin_lines[i] = removed_line or ''
-                cwd_lines[i] = added_line or ''
+                previous_lines[i] = removed_line or ''
+                current_lines[i] = added_line or ''
             end
         end
     end
     return nil, {
-        cwd_lines = cwd_lines,
-        origin_lines = origin_lines,
+        current_lines = current_lines,
+        previous_lines = previous_lines,
         lnum_changes = lnum_changes,
     }
 end
