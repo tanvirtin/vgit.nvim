@@ -281,8 +281,8 @@ describe('git:', function()
             assert.are.same(diff_err, nil)
             assert.are.same(type(data), 'table')
             local expected_keys = {
-                cwd_lines = true,
-                origin_lines = true,
+                current_lines = true,
+                previous_lines = true,
                 lnum_changes = true,
             }
             for key, _ in pairs(data) do
@@ -293,48 +293,48 @@ describe('git:', function()
             end
         end)
 
-        it('should have equal number of cwd_lines and origin_lines for a file with added lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with added lines', function()
             local _, lines= add_lines(filename)
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(lines, hunks)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
+            assert.are.same(#data.current_lines, #data.previous_lines)
         end)
 
-        it('should have equal number of cwd_lines and origin_lines for a file with removed lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with removed lines', function()
             local _, lines = remove_lines(filename)
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(lines, hunks)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
+            assert.are.same(#data.current_lines, #data.previous_lines)
         end)
 
-        it('should have equal number of cwd_lines and origin_lines for a file with changed lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with changed lines', function()
             local _, lines = change_lines(filename)
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(lines, hunks)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
+            assert.are.same(#data.current_lines, #data.previous_lines)
         end)
 
-        it('should have equal number of cwd_lines and origin_lines for a file with added, removed and changed lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with added, removed and changed lines', function()
             local _,lines = augment_file(filename)
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(lines, hunks)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
+            assert.are.same(#data.current_lines, #data.previous_lines)
         end)
 
-        it('should have equal number of cwd_lines and origin_lines for a file with added lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with added lines', function()
             local _, lines, added_lines = add_lines(filename)
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(lines, hunks)
             local num_added_lines = #added_lines
-            assert(#data.cwd_lines > 0)
-            assert(#data.origin_lines > 0)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
+            assert(#data.current_lines > 0)
+            assert(#data.previous_lines > 0)
+            assert.are.same(#data.current_lines, #data.previous_lines)
             assert.are.same(#data.lnum_changes, num_added_lines)
             local counter = 2
             for _, lnum_data in ipairs(data.lnum_changes) do
                 assert.are.same(lnum_data.lnum, counter)
                 assert.are.same(lnum_data.type, 'add')
-                assert.are.same(lnum_data.buftype, 'cwd')
+                assert.are.same(lnum_data.buftype, 'current')
                 counter = counter + 2
             end
         end)
@@ -344,16 +344,16 @@ describe('git:', function()
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(lines, hunks)
             local num_removed_lines = #removed_lines
-            assert(#data.cwd_lines > 0)
-            assert(#data.origin_lines > 0)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
+            assert(#data.current_lines > 0)
+            assert(#data.previous_lines > 0)
+            assert.are.same(#data.current_lines, #data.previous_lines)
+            assert.are.same(#data.current_lines, #data.previous_lines)
             assert.are.same(#data.lnum_changes, num_removed_lines)
             local counter = 1
             for _, lnum_data in ipairs(data.lnum_changes) do
                 assert.are.same(lnum_data.lnum, counter)
                 assert.are.same(lnum_data.type, 'remove')
-                assert.are.same(lnum_data.buftype, 'origin')
+                assert.are.same(lnum_data.buftype, 'previous')
                 counter = counter + 2
             end
         end)
@@ -363,37 +363,37 @@ describe('git:', function()
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(lines, hunks)
             local num_changed_lines = #changed_lines
-            assert(#data.cwd_lines > 0)
-            assert(#data.origin_lines > 0)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
+            assert(#data.current_lines > 0)
+            assert(#data.previous_lines > 0)
+            assert.are.same(#data.current_lines, #data.previous_lines)
+            assert.are.same(#data.current_lines, #data.previous_lines)
+            assert.are.same(#data.current_lines, #data.previous_lines)
             local counter = 1
-            local added_cwd_lines = 0
-            local removed_origin_lines = 0
+            local added_current_lines = 0
+            local removed_previous_lines = 0
             for _, lnum_data in ipairs(data.lnum_changes) do
-                if lnum_data.buftype == 'origin' and lnum_data.type == 'remove' then
+                if lnum_data.buftype == 'previous' and lnum_data.type == 'remove' then
                     assert.are.same(lnum_data.lnum, counter)
                     counter = counter + 2
                 end
-                if lnum_data.buftype == 'cwd' then
+                if lnum_data.buftype == 'current' then
                     assert.are_not.same(lnum_data.type, 'remove')
-                    added_cwd_lines = added_cwd_lines + 1
+                    added_current_lines = added_current_lines + 1
                 end
             end
             counter = 1
             for _, lnum_data in ipairs(data.lnum_changes) do
-                if lnum_data.buftype == 'origin' and lnum_data.type == 'add' then
+                if lnum_data.buftype == 'previous' and lnum_data.type == 'add' then
                     assert.are.same(lnum_data.lnum, counter)
                     counter = counter + 2
                 end
-                if lnum_data.buftype == 'origin' then
+                if lnum_data.buftype == 'previous' then
                     assert.are_not.same(lnum_data.type, 'added')
-                    removed_origin_lines = removed_origin_lines + 1
+                    removed_previous_lines = removed_previous_lines + 1
                 end
             end
-            assert.are.same(num_changed_lines, added_cwd_lines)
-            assert.are.same(num_changed_lines, removed_origin_lines)
+            assert.are.same(num_changed_lines, added_current_lines)
+            assert.are.same(num_changed_lines, removed_previous_lines)
         end)
 
         it('should have correct lnum_changes for a file with added, removed and changed lines', function()
@@ -403,28 +403,28 @@ describe('git:', function()
             local num_added_lines = #added_lines
             local num_removed_lines = #removed_lines
             local num_changed_lines = #changed_lines
-            assert(#data.cwd_lines > 0)
-            assert(#data.origin_lines > 0)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
-            assert.are.same(#data.cwd_lines, #data.origin_lines)
-            local added_cwd_lines = 0
-            local removed_origin_lines = 0
+            assert(#data.current_lines > 0)
+            assert(#data.previous_lines > 0)
+            assert.are.same(#data.current_lines, #data.previous_lines)
+            assert.are.same(#data.current_lines, #data.previous_lines)
+            assert.are.same(#data.current_lines, #data.previous_lines)
+            local added_current_lines = 0
+            local removed_previous_lines = 0
             local counter = 1
             for _, lnum_data in ipairs(data.lnum_changes) do
-                if lnum_data.buftype == 'cwd' and lnum_data.type == 'add' then
+                if lnum_data.buftype == 'current' and lnum_data.type == 'add' then
                     assert.are.same(lnum_data.lnum, counter)
                     counter = counter + 2
                 end
-                if lnum_data.buftype == 'cwd' then
+                if lnum_data.buftype == 'current' then
                     assert.are_not.same(lnum_data.type, 'remove')
-                    added_cwd_lines = added_cwd_lines + 1
+                    added_current_lines = added_current_lines + 1
                 end
             end
             counter = 5
             local first = false
             for _, lnum_data in ipairs(data.lnum_changes) do
-                if lnum_data.buftype == 'origin' and lnum_data.type == 'remove' then
+                if lnum_data.buftype == 'previous' and lnum_data.type == 'remove' then
                     if not first then
                         assert.are.same(lnum_data.lnum, 3)
                     else
@@ -433,67 +433,67 @@ describe('git:', function()
                     end
                     first = true
                 end
-                if lnum_data.buftype == 'origin' then
+                if lnum_data.buftype == 'previous' then
                     assert.are_not.same(lnum_data.type, 'added')
-                    removed_origin_lines = removed_origin_lines + 1
+                    removed_previous_lines = removed_previous_lines + 1
                 end
             end
-            assert.are.same(added_cwd_lines, num_added_lines + num_changed_lines)
-            assert.are.same(removed_origin_lines, num_removed_lines + num_changed_lines)
+            assert.are.same(added_current_lines, num_added_lines + num_changed_lines)
+            assert.are.same(removed_previous_lines, num_removed_lines + num_changed_lines)
         end)
 
-        it('should have correct cwd_lines and origin_lines for added lines', function()
+        it('should have correct current_lines and previous_lines for added lines', function()
             local lines, new_lines, added_lines = add_lines(filename)
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(new_lines, hunks)
-            local cwd_lines = data.cwd_lines
-            local origin_lines = data.origin_lines
+            local current_lines = data.current_lines
+            local previous_lines = data.previous_lines
             for _, index in ipairs(added_lines) do
-                assert.are.same(cwd_lines[index], new_lines[index])
-                assert.are_not.same(cwd_lines[index], lines[index])
-                assert.are.same(origin_lines[index], '')
+                assert.are.same(current_lines[index], new_lines[index])
+                assert.are_not.same(current_lines[index], lines[index])
+                assert.are.same(previous_lines[index], '')
             end
         end)
 
-        it('should have correct cwd_lines and origin_lines for removed lines', function()
+        it('should have correct current_lines and previous_lines for removed lines', function()
             local lines, new_lines, removed_lines = remove_lines(filename)
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(new_lines, hunks)
-            local cwd_lines = data.cwd_lines
-            local origin_lines = data.origin_lines
+            local current_lines = data.current_lines
+            local previous_lines = data.previous_lines
             for _, index in ipairs(removed_lines) do
-                assert.are.same(cwd_lines[index], new_lines[index])
-                assert.are_not.same(cwd_lines[index], lines[index])
-                assert.are_not.same(origin_lines[index], new_lines[index])
+                assert.are.same(current_lines[index], new_lines[index])
+                assert.are_not.same(current_lines[index], lines[index])
+                assert.are_not.same(previous_lines[index], new_lines[index])
                 assert.are.same(new_lines[index], '')
             end
         end)
 
-        it('should have correct cwd_lines and origin_lines for changed lines', function()
+        it('should have correct current_lines and previous_lines for changed lines', function()
             local _, new_lines, changed_lines = add_lines(filename)
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(new_lines, hunks)
-            local cwd_lines = data.cwd_lines
-            local origin_lines = data.origin_lines
+            local current_lines = data.current_lines
+            local previous_lines = data.previous_lines
             for _, index in ipairs(changed_lines) do
-                assert.are.same(cwd_lines[index], new_lines[index])
-                assert.are_not.same(cwd_lines[index], origin_lines[index])
+                assert.are.same(current_lines[index], new_lines[index])
+                assert.are_not.same(current_lines[index], previous_lines[index])
             end
         end)
 
-        it('should have correct cwd_lines and origin_lines for added, removed and changed lines', function()
+        it('should have correct current_lines and previous_lines for added, removed and changed lines', function()
             local _, new_lines, added_lines, removed_lines, changed_lines = augment_file(filename)
             local _, hunks = git.hunks(filename)
             local _, data = git.diff(new_lines, hunks)
-            local cwd_lines = data.cwd_lines
+            local current_lines = data.current_lines
             for _, index in ipairs(added_lines) do
-                assert.are.same(cwd_lines[index], new_lines[index])
+                assert.are.same(current_lines[index], new_lines[index])
             end
             for _, index in ipairs(removed_lines) do
-                assert.are.same(cwd_lines[index], new_lines[index])
+                assert.are.same(current_lines[index], new_lines[index])
             end
             for _, index in ipairs(changed_lines) do
-                assert.are.same(cwd_lines[index], new_lines[index])
+                assert.are.same(current_lines[index], new_lines[index])
             end
         end)
 
@@ -514,8 +514,8 @@ describe('git:', function()
             assert.are.same(err, nil)
             local lines_after_reset = read_file(filename)
             for index, line in ipairs(lines_after_reset) do
-                local original_line = lines[index]
-                assert.are.same(line, original_line)
+                local previousal_line = lines[index]
+                assert.are.same(line, previousal_line)
             end
         end)
 
@@ -527,8 +527,8 @@ describe('git:', function()
             assert.are.same(err, nil)
             local lines_after_reset = read_file(filename)
             for index, line in ipairs(lines_after_reset) do
-                local original_line = lines[index]
-                assert.are.same(line, original_line)
+                local previousal_line = lines[index]
+                assert.are.same(line, previousal_line)
             end
         end)
 
@@ -538,8 +538,8 @@ describe('git:', function()
             assert.are.same(err, nil)
             local lines_after_reset = read_file(filename)
             for index, line in ipairs(lines_after_reset) do
-                local original_line = lines[index]
-                assert.are.same(line, original_line)
+                local previousal_line = lines[index]
+                assert.are.same(line, previousal_line)
             end
         end)
 
@@ -551,8 +551,8 @@ describe('git:', function()
             assert.are.same(err, nil)
             local lines_after_reset = read_file(filename)
             for index, line in ipairs(lines_after_reset) do
-                local original_line = lines[index]
-                assert.are.same(line, original_line)
+                local previousal_line = lines[index]
+                assert.are.same(line, previousal_line)
             end
         end)
 

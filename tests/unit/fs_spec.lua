@@ -9,9 +9,9 @@ describe('fs:', function()
     describe('filename', function()
 
         it('should return the relative path associated with the buffer', function()
-            local cwd = vim.loop.cwd()
+            local current = vim.loop.cwd()
             local filename = 'lua/vgit/init.lua'
-            local filepath = cwd .. '/' .. filename
+            local filepath = current .. '/' .. filename
             local buf = vim.api.nvim_create_buf(false, true)
             vim.api.nvim_buf_set_name(buf, filepath)
             assert.are.same(fs.filename(buf), filename)
@@ -27,8 +27,8 @@ describe('fs:', function()
     describe('relative_path', function()
 
         it('should convert an absolute path to a relative path', function()
-            local cwd = vim.loop.cwd()
-            local path = cwd .. '/lua/vgit/init.lua'
+            local current = vim.loop.cwd()
+            local path = current .. '/lua/vgit/init.lua'
             local filepath = fs.relative_path(path)
             assert.are.same(filepath, 'lua/vgit/init.lua')
         end)

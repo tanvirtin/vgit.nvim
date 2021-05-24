@@ -152,7 +152,7 @@ require('vgit').setup({
             fg = '#e95678',
             bg = nil,
         },
-        VGitLogsIndicator = {
+        VGitHistoryIndicator = {
             fg = '#a6e22e',
             bg = nil,
         },
@@ -164,7 +164,15 @@ require('vgit').setup({
             fg = '#a1b5b1',
             bg = nil,
         },
-        VGitLogsBorder = {
+        VGitHistoryCurrentBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHistoryPreviousBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHistoryBorder = {
             fg = '#a1b5b1',
             bg = nil,
         },
@@ -209,14 +217,14 @@ require('vgit').setup({
             return string.format(' %s', info)
         end
     },
-    diff = {
+    preview = {
         priority = 10,
-        cwd_window = {
+        current_window = {
             title = 'Current',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitDiffCurrentBorder',
         },
-        origin_window = {
+        previous_window = {
             title = 'Previous',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitDiffPreviousBorder',
@@ -236,15 +244,35 @@ require('vgit').setup({
             },
         },
     },
-    logs = {
+    history = {
         indicator = {
-            hl = 'VGitLogsIndicator'
+            hl = 'VGitHistoryIndicator'
         },
         window = {
             title = 'Git History',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitLogsBorder',
+            border_hl = 'VGitHistoryBorder',
         },
+        history: {
+            indicator = {
+                hl = 'VGitHistoryIndicator'
+            },
+            current_window = {
+                title = 'Current',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+                border_hl = 'VGitHistoryCurrentBorder',
+            },
+            previous_window = {
+                title = 'Previous',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+                border_hl = 'VGitHistoryPreviousBorder',
+            },
+            history_window = {
+                title = 'Git History',
+                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+                border_hl = 'VGitHistoryBorder',
+            },
+        }
     },
     hunk = {
         priority = 10,
