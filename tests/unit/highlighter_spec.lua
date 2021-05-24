@@ -17,84 +17,10 @@ describe('highlighter:', function()
                     },
                 },
             })
-            assert.are.same(highlighter.state.hls, {
-                VGitBlame = {
-                    bg = nil,
-                    fg = '#b1b1b1',
-                },
-                VGitDiffAddSign = {
-                    bg = '#3d5213',
-                    fg = nil,
-                },
-                VGitDiffRemoveSign = {
-                    bg = '#4a0f23',
-                    fg = nil,
-                },
-                VGitDiffAddText = {
-                    fg = '#6a8f1f',
-                    bg = '#3d5213',
-                },
-                VGitDiffRemoveText = {
-                    fg = '#a3214c',
-                    bg = '#4a0f23',
-                },
-                VGitHunkAddSign = {
-                    bg = '#3d5213',
-                    fg = nil,
-                },
-                VGitHunkRemoveSign = {
-                    bg = '#4a0f23',
-                    fg = nil,
-                },
-                VGitHunkAddText = {
-                    fg = '#6a8f1f',
-                    bg = '#3d5213',
-                },
-                VGitHunkRemoveText = {
-                    fg = '#a3214c',
-                    bg = '#4a0f23',
-                },
-                VGitHunkSignAdd = {
-                    fg = '#d7ffaf',
-                    bg = '#4a6317',
-                },
-                VGitHunkSignRemove = {
-                    fg = '#e95678',
-                    bg = '#63132f',
-                },
-                VGitSignAdd = {
-                    fg = 'red',
-                    bg = nil,
-                },
-                VGitSignChange = {
-                    fg = '#7AA6DA',
-                    bg = nil,
-                },
-                VGitSignRemove = {
-                    fg = '#e95678',
-                    bg = nil,
-                },
-                VGitLogsIndicator = {
-                    fg = '#a6e22e',
-                    bg = nil,
-                },
-                VGitDiffCurrentBorder = {
-                    fg = '#a1b5b1',
-                    bg = nil,
-                },
-                VGitDiffPreviousBorder = {
-                    fg = '#a1b5b1',
-                    bg = nil,
-                },
-                VGitLogsBorder = {
-                    fg = '#a1b5b1',
-                    bg = nil,
-                },
-                VGitHunkBorder = {
-                    fg = '#a1b5b1',
-                    bg = nil,
-                },
-           });
+            assert.are.same(highlighter.state.hls.VGitSignAdd, {
+                fg = 'red',
+                bg = nil,
+            });
         end)
 
     end)
