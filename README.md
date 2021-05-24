@@ -1,54 +1,76 @@
-# vgit.nvim
+# VGit
+<tr>
+<table>
+<td>
+  <strong>Visual Git Plugin for Neovim to enhance your git experience.</strong>
+</tr>
+</td>
+</table>
+<br />
 
-[![CI](https://github.com/tanvirtin/vgit.nvim/workflows/CI/badge.svg?branch=develop)](https://github.com/tanvirtin/vgit.nvim/actions?query=workflow%3ACI)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-Visual Git Plugin for Neovim to enhance your git experience.
+<a href="https://github.com/tanvirtin/vgit.nvim/actions?query=workflow%3ACI">
+    <img src="https://github.com/tanvirtin/vgit.nvim/workflows/CI/badge.svg?branch=develop" alt="CI" />
+</a>
+<a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
+</a>
+<a href="http://makeapullrequest.com">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=shields" alt="CI" />
+</a>
 
 ### Features
-- [x] Hunk signs
-
- ![hunk_signs](https://user-images.githubusercontent.com/25164326/117505704-7df02000-af52-11eb-996b-91063b5dd832.gif)
-
-- [x] Reset a hunk
-
-![hunk_reset](https://user-images.githubusercontent.com/25164326/117384279-9dcf0780-aeb0-11eb-96d8-0b85239d94f7.gif)
-
-- [x] Hunk preview
-
-![hunk_preview](https://user-images.githubusercontent.com/25164326/117380403-9a834e00-aea7-11eb-9117-f90cb4ab2ff1.gif)
-
-- [x] Hunk navigation in current buffer
-
-![hunk_navigation](https://user-images.githubusercontent.com/25164326/117380412-9f480200-aea7-11eb-8630-c70781e7e2ce.gif)
-
-- [x] Show original file and current file in a split window with diffs highlighted
-
-![diff_preview](https://user-images.githubusercontent.com/25164326/117380396-95be9a00-aea7-11eb-8fad-f9b6c6b87a5f.gif)
-
-- [x] Reset changes in a buffer
-
-![buffer_reset](https://user-images.githubusercontent.com/25164326/117384280-9e679e00-aeb0-11eb-850a-551925c81d3e.gif)
-
-- [x] Blame a line
-
-![blames](https://user-images.githubusercontent.com/25164326/117505703-7d578980-af52-11eb-82c8-22ea0c4bbd2a.gif)
-
-- [x] Quickfix your hunks
-
-![hunks_quickfix_list](https://user-images.githubusercontent.com/25164326/118189592-fc940400-b40f-11eb-9741-75bb81d5ed64.gif)
-
-- [x] Check how your file looked in previous versions
-
-![history](https://user-images.githubusercontent.com/25164326/118910341-4be7a200-b8f2-11eb-9dae-1888486c2d4d.gif)
+<details>
+    <summary>Hunk as signs</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/117505704-7df02000-af52-11eb-996b-91063b5dd832.gif" alt="hunk_signs" />
+</details>
+<details>
+    <summary>Preview a hunk</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/117380403-9a834e00-aea7-11eb-9117-f90cb4ab2ff1.gif" alt="hunk_preview" />
+</details>
+<details>
+    <summary>Reset a hunk</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/117384279-9dcf0780-aeb0-11eb-96d8-0b85239d94f7.gif" alt="reset_hunk" />
+</details>
+<details>
+    <summary>Navigate through hunks</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/117380412-9f480200-aea7-11eb-8630-c70781e7e2ce.gif" alt="hunk_navigation" />
+</details>
+<details>
+    <summary>Diff a buffer with HEAD</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/117380396-95be9a00-aea7-11eb-8fad-f9b6c6b87a5f.gif" alt="diff_preview" />
+</details>
+<details>
+    <summary>Reset a buffer to HEAD</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/117384280-9e679e00-aeb0-11eb-850a-551925c81d3e.gif" alt="buffer_reset" />
+</details>
+<details>
+    <summary>Blame a line</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/117505703-7d578980-af52-11eb-82c8-22ea0c4bbd2a.gif" alt="blame_a_line" />
+</details>
+<details>
+    <summary>Quickfix your hunks (a.k.a git diff)</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/118189592-fc940400-b40f-11eb-9741-75bb81d5ed64.gif" alt="hunks_quickfix_list" />
+</details>
+<details>
+    <summary>Git History</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/118910341-4be7a200-b8f2-11eb-9dae-1888486c2d4d.gif" alt="history" />
+</details>
 
 ## Prerequisites
 - [Git](https://git-scm.com/)
 - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 
-## Recommended
-- Have neovim be open inside the current git working directory.
+## Recommended Settings
 - `vim.o.updatetime = 100` (see :help updatetime).
 
 ## Installation
@@ -60,11 +82,6 @@ Visual Git Plugin for Neovim to enhance your git experience.
 | [Vundle](https://github.com/VundleVim/Vundle.vim)    | `Bundle 'tanvirtin/vgit.nvim'`                                                 |
 | [Pathogen](https://github.com/tpope/vim-pathogen)    | `git clone https://github.com/tanvirtin/vgit.nvim.git ~/.vim/bundle/vgit.nvim` |
 | [Dein](https://github.com/Shougo/dein.vim)           | `call dein#add('tanvirtin/vgit.nvim')`                                         |
-
-You also use in the built-in package manager:
-```bash
-$ git clone --depth 1 https://github.com/tanvirtin/vgit.nvim $XDG_CONFIG_HOME/nvim/pack/plugins/start/vgit.nvim
-```
 
 ### Setup
 You must instantiate the plugin in order for the features to work.
@@ -325,7 +342,7 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | buffer_reset | Resets a current buffer you are on |
 | hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
 
-### Some Amazing other Git Plugins
+### Similar Git Plugins
 - [vim-fugitive](https://github.com/tpope/vim-fugitive) :crown:
 - [vim-gitgutter](https://github.com/airblade/vim-gitgutter)
 - [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
