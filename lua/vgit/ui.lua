@@ -410,7 +410,10 @@ M.show_diff = function(cwd_lines, origin_lines, lnum_changes, filetype)
     view.add_autocmd(
         current_buf,
         'BufEnter',
-        string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect({ windows.cwd.win_id, windows.origin.win_id }))
+        string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect({
+            windows.cwd.win_id,
+            windows.origin.win_id
+        }))
     )
 end
 
@@ -611,7 +614,11 @@ M.show_history = function(cwd_lines, origin_lines, logs, lnum_changes, filetype)
     view.add_autocmd(
         current_buf,
         'BufEnter',
-        string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect({ windows.cwd.win_id, windows.origin.win_id, windows.logs.win_id }))
+        string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect({
+            windows.cwd.win_id,
+            windows.origin.win_id,
+            windows.logs.win_id
+        }))
     )
 end
 
