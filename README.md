@@ -83,14 +83,6 @@ require('vgit').setup({
             bg = nil,
             fg = '#b1b1b1',
         },
-        VGitDiffWindow = {
-            bg = nil,
-            fg = '#ffffff',
-        },
-        VGitDiffBorder = {
-            bg = nil,
-            fg = '#464b59',
-        },
         VGitDiffAddSign = {
             bg = '#3d5213',
             fg = nil,
@@ -106,14 +98,6 @@ require('vgit').setup({
         VGitDiffRemoveText = {
             fg = '#a3214c',
             bg = '#4a0f23',
-        },
-        VGitHunkWindow = {
-            bg = nil,
-            fg = '#ffffff',
-        },
-        VGitHunkBorder = {
-            bg = nil,
-            fg = '#464b59',
         },
         VGitHunkAddSign = {
             bg = '#3d5213',
@@ -151,18 +135,26 @@ require('vgit').setup({
             fg = '#e95678',
             bg = nil,
         },
-        VGitLogsWindow = {
-            bg = nil,
-            fg = '#ffffff',
-        },
-        VGitLogsBorder = {
-            bg = nil,
-            fg = '#464b59',
-        },
         VGitLogsIndicator = {
             fg = '#a6e22e',
             bg = nil,
-        }
+        },
+        VGitDiffCurrentBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitDiffPreviousBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitLogsBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHunkBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
     },
     blame = {
         hl = 'VGitBlame',
@@ -182,7 +174,7 @@ require('vgit').setup({
             while time < 1 and division_counter ~= #time_divisions do
                 local division = time_divisions[division_counter]
                 time = time * division[1]
-                time_format = string.format('%s %s ago', round(time), division[2])
+               time_format = string.format('%s %s ago', round(time), division[2])
                 division_counter = division_counter + 1
             end
             local commit_message = blame.commit_message
@@ -201,20 +193,18 @@ require('vgit').setup({
         end
     },
     diff = {
-        window = {
-            hl = 'VGitDiffWindow',
-            border = {
-                { '╭', 'VGitDiffBorder' },
-                { '─', 'VGitDiffBorder' },
-                { '╮', 'VGitDiffBorder' },
-                { '│', 'VGitDiffBorder' },
-                { '╯', 'VGitDiffBorder' },
-                { '─', 'VGitDiffBorder' },
-                { '╰', 'VGitDiffBorder' },
-                { '│', 'VGitDiffBorder' },
-            }
+        priority = 10,
+        cwd_window = {
+            title = 'Current',
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitDiffCurrentBorder',
         },
-        types = {
+        origin_window = {
+            title = 'Previous',
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitDiffPreviousBorder',
+        },
+        signs = {
             add = {
                 name = 'VGitDiffAddSign',
                 sign_hl = 'VGitDiffAddSign',
@@ -230,7 +220,12 @@ require('vgit').setup({
         },
     },
     hunk = {
-        types = {
+        priority = 10,
+        window = {
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitHunkBorder',
+        },
+        signs = {
             add = {
                 name = 'VGitHunkAddSign',
                 sign_hl = 'VGitHunkAddSign',
@@ -244,23 +239,10 @@ require('vgit').setup({
                 text = '-'
             },
         },
-        window = {
-            hl = 'VGitHunkWindow',
-            border = {
-                { '', 'VGitHunkBorder' },
-                { '─', 'VGitHunkBorder' },
-                { '', 'VGitHunkBorder' },
-                { '', 'VGitHunkBorder' },
-                { '', 'VGitHunkBorder' },
-                { '─', 'VGitHunkBorder' },
-                { '', 'VGitHunkBorder' },
-                { '', 'VGitHunkBorder' },
-            }
-        },
     },
     hunk_sign = {
         priority = 10,
-        types = {
+        signs = {
             add = {
                 name = 'VGitSignAdd',
                 hl = 'VGitSignAdd',
@@ -332,3 +314,9 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | buffer_history | Opens two windows, showing origin and cwd buffers and the diff between them, with a list of history logs associated with the buffer |
 | buffer_reset | Resets a current buffer you are on |
 | hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
+
+### Some Amazing other Git Plugins
+- [vim-fugitive](https://github.com/tpope/vim-fugitive) :crown:
+- [vim-gitgutter](https://github.com/airblade/vim-gitgutter)
+- [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
+- [neogit](https://github.com/TimUntersberger/neogit)
