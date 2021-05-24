@@ -219,6 +219,16 @@ require('vgit').setup({
             },
         },
     },
+    logs = {
+        indicator = {
+            hl = 'VGitLogsIndicator'
+        },
+        window = {
+            title = 'Git History',
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitLogsBorder',
+        },
+    },
     hunk = {
         priority = 10,
         window = {
