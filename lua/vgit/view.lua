@@ -41,9 +41,6 @@ M.create = function(options)
     if not options.title then
         if options.border_hl then
             local new_border = {}
-            -- Two types of array can be given:
-            --  - { '', '', '', '' }
-            --  - { { '', '' } , { '', '' }, { '', '' }, { '', '' } }
             for _, value in pairs(options.border) do
                 if type(value) == 'table' then
                     value[2] = options.border_hl
@@ -76,6 +73,11 @@ M.create = function(options)
         options.border_buf = border_buf
         options.border_win_id = border_win_id
     end
+    vim.cmd(string.format(
+        "autocmd WinClosed <buffer=%s> ++nested ++once :lua require('plenary.window').try_close(%s, true)",
+        buf,
+        win_id
+    ))
     return options
 end
 
@@ -89,7 +91,7 @@ end
 M.add_autocmd = function(buf, cmd, action)
     vim.api.nvim_command(
         string.format(
-            'autocmd %s <buffer=%s> lua require("vgit").%s',
+            'autocmd %s <buffer=%s> ++nested ++once :lua require("vgit").%s',
             cmd,
             buf,
             action
