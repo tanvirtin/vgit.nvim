@@ -193,7 +193,7 @@ M._run_submodule_command = function(name, command, ...)
     end
 end
 
-M._change_history = function(current_buf, wins_to_update, bufs_to_update)
+M._change_history = vim.schedule_wrap(function(current_buf, wins_to_update, bufs_to_update)
     if state.disabled == true then
         return
     end
@@ -239,7 +239,7 @@ M._change_history = function(current_buf, wins_to_update, bufs_to_update)
             data.lnum_changes
         )
     end
-end
+end)
 
 M.hunk_preview = vim.schedule_wrap(function(buf, win)
     if state.disabled == true then
@@ -384,7 +384,7 @@ M.hunk_reset = function(buf, win)
     end
 end
 
-M.hunks_quickfix_list = function()
+M.hunks_quickfix_list = vim.schedule_wrap(function()
     if state.disabled == true then
         return
     end
@@ -407,11 +407,9 @@ M.hunks_quickfix_list = function()
         vim.fn.setqflist(qf_entries, 'r')
         vim.api.nvim_command('copen')
     end
-end
+end)
 
-M.diff = function()
-    M.hunks_quickfix_list()
-end
+M.diff = M.hunks_quickfix_list
 
 M.toggle_buffer_hunks = vim.schedule_wrap(function()
     if state.disabled == true then

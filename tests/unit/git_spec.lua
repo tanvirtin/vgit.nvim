@@ -111,6 +111,17 @@ end
 
 describe('git:', function()
 
+    describe('constants', function()
+
+        it('should have the correct shape', function()
+            assert.are.same(git.constants, {
+                diff_algorithm = 'histogram',
+                empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+            })
+        end)
+
+    end)
+
     describe('setup', function()
 
         it('should store git config as a state', function()
@@ -746,6 +757,41 @@ describe('git:', function()
 
         it('should return true if user is currently inside a git tree', function()
             assert(git.is_inside_work_tree())
+        end)
+
+    end)
+
+    describe('ls', function()
+
+        it('should return all files associated with the project', function()
+            local err, files = git.ls()
+            assert.are.same(err, nil)
+            assert.are.same(files, {
+                '.github/ISSUE_TEMPLATE/bug_report.md',
+                '.github/ISSUE_TEMPLATE/feature_request.md',
+                '.github/workflows/ci.yml',
+                '.gitignore',
+                '.luacheckrc',
+                'LICENSE',
+                'Makefile',
+                'README.md',
+                'lua/vgit/border.lua',
+                'lua/vgit/configurer.lua',
+                'lua/vgit/defer.lua',
+                'lua/vgit/fs.lua',
+                'lua/vgit/git.lua',
+                'lua/vgit/highlighter.lua',
+                'lua/vgit/init.lua',
+                'lua/vgit/ui.lua',
+                'lua/vgit/view.lua',
+                'tests/fixtures/simple_file',
+                'tests/unit/configurer_spec.lua',
+                'tests/unit/defer_spec.lua',
+                'tests/unit/fs_spec.lua',
+                'tests/unit/git_spec.lua',
+                'tests/unit/highlighter_spec.lua',
+                'tests/unit/init_spec.lua',
+            })
         end)
 
     end)
