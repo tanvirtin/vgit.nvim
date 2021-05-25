@@ -189,7 +189,6 @@ end
 
 M.setup = function(config)
     M.state = configurer.assign(M.state, config)
-    highlighter.define(M.state.blame.hl);
     for _, type in pairs(M.state.hunk_sign.signs) do
         highlighter.define(type.hl)
         vim.fn.sign_define(type.name, {
@@ -197,7 +196,6 @@ M.setup = function(config)
             texthl = type.hl
         })
     end
-    highlighter.define(M.state.history.indicator.hl)
     for _, action in pairs(M.state.hunk.signs) do
         local sign_hl = action.sign_hl
         local text_hl = action.text_hl
@@ -222,12 +220,14 @@ M.setup = function(config)
             linehl = sign_hl,
         })
     end
-    highlighter.define(M.state.preview.current_window.border_hl);
-    highlighter.define(M.state.preview.previous_window.border_hl);
-    highlighter.define(M.state.history.previous_window.border_hl);
-    highlighter.define(M.state.history.current_window.border_hl);
-    highlighter.define(M.state.history.history_window.border_hl);
-    highlighter.define(M.state.hunk.window.border_hl);
+    highlighter.define(M.state.blame.hl)
+    highlighter.define(M.state.history.indicator.hl)
+    highlighter.define(M.state.preview.current_window.border_hl)
+    highlighter.define(M.state.preview.previous_window.border_hl)
+    highlighter.define(M.state.history.previous_window.border_hl)
+    highlighter.define(M.state.history.current_window.border_hl)
+    highlighter.define(M.state.history.history_window.border_hl)
+    highlighter.define(M.state.hunk.window.border_hl)
 end
 
 M.show_blame = function(buf, blames, git_config)
