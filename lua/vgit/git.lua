@@ -1,5 +1,5 @@
 local Job = require('plenary.job')
-local configurer = require('vgit.configurer')
+local State = require('vgit.State')
 
 local vim = vim
 local unpack = unpack
@@ -34,10 +34,6 @@ local function parse_hunk_header(line)
     return previous, current
 end
 
-local function get_initial_state()
-    return { config = {} }
-end
-
 local M = {}
 
 M.constants = {
@@ -45,13 +41,13 @@ M.constants = {
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 }
 
-M.state = get_initial_state()
+M.state = State.new({ config = {} })
 
 M.setup = function(config)
-    M.state = configurer.assign(M.state, config)
+    M.state:assign(config)
     local err, git_config = M.config()
     if not err then
-        M.state.config = git_config
+        M.state:set('config', git_config)
     end
 end
 
@@ -221,8 +217,8 @@ end
 
 M.logs = function(filename)
     local logs = {{
-        author_name = M.state.config['user.name'],
-        author_email = M.state.config['user.email'],
+        author_name = M.state:get('config')['user.name'],
+        author_email = M.state:get('config')['user.email'],
         commit_hash = nil,
         parent_hash = nil,
         summary = nil,
@@ -356,12 +352,31 @@ M.current_file_changes = function()
     return nil, job:result()
 end
 
-M.ls = function()
+M.ls_tracked = function()
     local job = Job:new({
         command = 'git',
         args = {
             'ls-files',
             '--full-name',
+        },
+    })
+    job:sync()
+    job:wait()
+    local stderr_result = job:stderr_result()
+    if #stderr_result ~= 0 then
+        return stderr_result, nil
+    end
+    return nil, job:result()
+end
+
+M.ls_untracked = function()
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'ls-files',
+            '--full-name',
+            '--others',
+            '--exclude-standard',
         },
     })
     job:sync()

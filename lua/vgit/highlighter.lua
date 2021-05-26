@@ -1,104 +1,100 @@
-local configurer = require('vgit.configurer')
+local State = require('vgit.State')
 
 local vim = vim
 
 local M = {}
 
-local function get_initial_state()
-    return {
-        hls = {
-            VGitBlame = {
-                bg = nil,
-                fg = '#b1b1b1',
-            },
-            VGitDiffAddSign = {
-                bg = '#3d5213',
-                fg = nil,
-            },
-            VGitDiffRemoveSign = {
-                bg = '#4a0f23',
-                fg = nil,
-            },
-            VGitDiffAddText = {
-                fg = '#6a8f1f',
-                bg = '#3d5213',
-            },
-            VGitDiffRemoveText = {
-                fg = '#a3214c',
-                bg = '#4a0f23',
-            },
-            VGitHunkAddSign = {
-                bg = '#3d5213',
-                fg = nil,
-            },
-            VGitHunkRemoveSign = {
-                bg = '#4a0f23',
-                fg = nil,
-            },
-            VGitHunkAddText = {
-                fg = '#6a8f1f',
-                bg = '#3d5213',
-            },
-            VGitHunkRemoveText = {
-                fg = '#a3214c',
-                bg = '#4a0f23',
-            },
-            VGitHunkSignAdd = {
-                fg = '#d7ffaf',
-                bg = '#4a6317',
-            },
-            VGitHunkSignRemove = {
-                fg = '#e95678',
-                bg = '#63132f',
-            },
-            VGitSignAdd = {
-                fg = '#d7ffaf',
-                bg = nil,
-            },
-            VGitSignChange = {
-                fg = '#7AA6DA',
-                bg = nil,
-            },
-            VGitSignRemove = {
-                fg = '#e95678',
-                bg = nil,
-            },
-            VGitHistoryIndicator = {
-                fg = '#a6e22e',
-                bg = nil,
-            },
-            VGitDiffCurrentBorder = {
-                fg = '#a1b5b1',
-                bg = nil,
-            },
-            VGitDiffPreviousBorder = {
-                fg = '#a1b5b1',
-                bg = nil,
-            },
-            VGitHistoryCurrentBorder = {
-                fg = '#a1b5b1',
-                bg = nil,
-            },
-            VGitHistoryPreviousBorder = {
-                fg = '#a1b5b1',
-                bg = nil,
-            },
-            VGitHistoryBorder = {
-                fg = '#a1b5b1',
-                bg = nil,
-            },
-            VGitHunkBorder = {
-                fg = '#a1b5b1',
-                bg = nil,
-            },
+M.state = State.new({
+    hls = {
+        VGitBlame = {
+            bg = nil,
+            fg = '#b1b1b1',
         },
-    }
-end
-
-M.state = get_initial_state()
+        VGitDiffAddSign = {
+            bg = '#3d5213',
+            fg = nil,
+        },
+        VGitDiffRemoveSign = {
+            bg = '#4a0f23',
+            fg = nil,
+        },
+        VGitDiffAddText = {
+            fg = '#6a8f1f',
+            bg = '#3d5213',
+        },
+        VGitDiffRemoveText = {
+            fg = '#a3214c',
+            bg = '#4a0f23',
+        },
+        VGitHunkAddSign = {
+            bg = '#3d5213',
+            fg = nil,
+        },
+        VGitHunkRemoveSign = {
+            bg = '#4a0f23',
+            fg = nil,
+        },
+        VGitHunkAddText = {
+            fg = '#6a8f1f',
+            bg = '#3d5213',
+        },
+        VGitHunkRemoveText = {
+            fg = '#a3214c',
+            bg = '#4a0f23',
+        },
+        VGitHunkSignAdd = {
+            fg = '#d7ffaf',
+            bg = '#4a6317',
+        },
+        VGitHunkSignRemove = {
+            fg = '#e95678',
+            bg = '#63132f',
+        },
+        VGitSignAdd = {
+            fg = '#d7ffaf',
+            bg = nil,
+        },
+        VGitSignChange = {
+            fg = '#7AA6DA',
+            bg = nil,
+        },
+        VGitSignRemove = {
+            fg = '#e95678',
+            bg = nil,
+        },
+        VGitHistoryIndicator = {
+            fg = '#a6e22e',
+            bg = nil,
+        },
+        VGitDiffCurrentBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitDiffPreviousBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHistoryCurrentBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHistoryPreviousBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHistoryBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHunkBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+    },
+})
 
 M.setup = function(config)
-    M.state = configurer.assign(M.state, config)
+    M.state:assign(config)
 end
 
 M.create = function(group, color)
@@ -110,7 +106,7 @@ M.create = function(group, color)
 end
 
 M.define = function(hl)
-    local color = M.state.hls[hl]
+    local color = M.state:get('hls')[hl]
     if color then
         M.create(hl, color)
         return true

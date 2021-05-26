@@ -1,139 +1,10 @@
-local configurer = require('vgit.configurer')
+local State = require('vgit.State')
 local view = require('vgit.view')
 local highlighter = require('vgit.highlighter')
 local widget = require('vgit.widget')
 local buffer = require('vgit.buffer')
 
 local vim = vim
-
-local function get_initial_state()
-    return {
-        blame = {
-            hl = 'VGitBlame',
-            format = function(blame, git_config)
-                local round = function(x)
-                    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
-                end
-                local config_author = git_config['user.name']
-                local author = blame.author
-                if config_author == author then
-                    author = 'You'
-                end
-                local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
-                local time_format = string.format('%s days ago', round(time))
-                local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
-                local division_counter = 1
-                while time < 1 and division_counter ~= #time_divisions do
-                    local division = time_divisions[division_counter]
-                    time = time * division[1]
-                   time_format = string.format('%s %s ago', round(time), division[2])
-                    division_counter = division_counter + 1
-                end
-                local commit_message = blame.commit_message
-                if not blame.committed then
-                    author = 'You'
-                    commit_message = 'Uncommitted changes'
-                    local info = string.format('%s • %s', author, commit_message)
-                    return string.format(' %s', info)
-                end
-                local max_commit_message_length = 255
-                if #commit_message > max_commit_message_length then
-                    commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
-                end
-                local info = string.format('%s, %s • %s', author, time_format, commit_message)
-                return string.format(' %s', info)
-            end
-        },
-        preview = {
-            priority = 10,
-            current_window = {
-                title = 'Current',
-                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitDiffCurrentBorder',
-            },
-            previous_window = {
-                title = 'Previous',
-                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitDiffPreviousBorder',
-            },
-            signs = {
-                add = {
-                    name = 'VGitDiffAddSign',
-                    sign_hl = 'VGitDiffAddSign',
-                    text_hl = 'VGitDiffAddText',
-                    text = '+'
-                },
-                remove = {
-                    name = 'VGitDiffRemoveSign',
-                    sign_hl = 'VGitDiffRemoveSign',
-                    text_hl = 'VGitDiffRemoveText',
-                    text = '-'
-                },
-            },
-        },
-        history = {
-            indicator = {
-                hl = 'VGitHistoryIndicator'
-            },
-            current_window = {
-                title = 'Current',
-                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitHistoryCurrentBorder',
-            },
-            previous_window = {
-                title = 'Previous',
-                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitHistoryPreviousBorder',
-            },
-            history_window = {
-                title = 'Git History',
-                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitHistoryBorder',
-            },
-        },
-        hunk = {
-            priority = 10,
-            window = {
-                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitHunkBorder',
-            },
-            signs = {
-                add = {
-                    name = 'VGitHunkAddSign',
-                    sign_hl = 'VGitHunkAddSign',
-                    text_hl = 'VGitHunkAddText',
-                    text = '+'
-                },
-                remove = {
-                    name = 'VGitHunkRemoveSign',
-                    sign_hl = 'VGitHunkRemoveSign',
-                    text_hl = 'VGitHunkRemoveText',
-                    text = '-'
-                },
-            },
-        },
-        hunk_sign = {
-            priority = 10,
-            signs = {
-                add = {
-                    name = 'VGitSignAdd',
-                    hl = 'VGitSignAdd',
-                    text = '│'
-                },
-                remove = {
-                    name = 'VGitSignRemove',
-                    hl = 'VGitSignRemove',
-                    text = '│'
-                },
-                change = {
-                    name = 'VGitSignChange',
-                    hl = 'VGitSignChange',
-                    text = '│'
-                },
-            },
-        },
-    }
-end
 
 local M = {}
 
@@ -144,7 +15,132 @@ M.constants = {
     blame_line_id = 1,
 }
 
-M.state = get_initial_state()
+M.state = State.new({
+    blame = {
+        hl = 'VGitBlame',
+        format = function(blame, git_config)
+            local round = function(x)
+                return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
+            end
+            local config_author = git_config['user.name']
+            local author = blame.author
+            if config_author == author then
+                author = 'You'
+            end
+            local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
+            local time_format = string.format('%s days ago', round(time))
+            local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
+            local division_counter = 1
+            while time < 1 and division_counter ~= #time_divisions do
+                local division = time_divisions[division_counter]
+                time = time * division[1]
+               time_format = string.format('%s %s ago', round(time), division[2])
+                division_counter = division_counter + 1
+            end
+            local commit_message = blame.commit_message
+            if not blame.committed then
+                author = 'You'
+                commit_message = 'Uncommitted changes'
+                local info = string.format('%s • %s', author, commit_message)
+                return string.format(' %s', info)
+            end
+            local max_commit_message_length = 255
+            if #commit_message > max_commit_message_length then
+                commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
+            end
+            local info = string.format('%s, %s • %s', author, time_format, commit_message)
+            return string.format(' %s', info)
+        end
+    },
+    preview = {
+        priority = 10,
+        current_window = {
+            title = 'Current',
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitDiffCurrentBorder',
+        },
+        previous_window = {
+            title = 'Previous',
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitDiffPreviousBorder',
+        },
+        signs = {
+            add = {
+                name = 'VGitDiffAddSign',
+                sign_hl = 'VGitDiffAddSign',
+                text_hl = 'VGitDiffAddText',
+                text = '+'
+            },
+            remove = {
+                name = 'VGitDiffRemoveSign',
+                sign_hl = 'VGitDiffRemoveSign',
+                text_hl = 'VGitDiffRemoveText',
+                text = '-'
+            },
+        },
+    },
+    history = {
+        indicator = {
+            hl = 'VGitHistoryIndicator'
+        },
+        current_window = {
+            title = 'Current',
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitHistoryCurrentBorder',
+        },
+        previous_window = {
+            title = 'Previous',
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitHistoryPreviousBorder',
+        },
+        history_window = {
+            title = 'Git History',
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitHistoryBorder',
+        },
+    },
+    hunk = {
+        priority = 10,
+        window = {
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitHunkBorder',
+        },
+        signs = {
+            add = {
+                name = 'VGitHunkAddSign',
+                sign_hl = 'VGitHunkAddSign',
+                text_hl = 'VGitHunkAddText',
+                text = '+'
+            },
+            remove = {
+                name = 'VGitHunkRemoveSign',
+                sign_hl = 'VGitHunkRemoveSign',
+                text_hl = 'VGitHunkRemoveText',
+                text = '-'
+            },
+        },
+    },
+    hunk_sign = {
+        priority = 10,
+        signs = {
+            add = {
+                name = 'VGitSignAdd',
+                hl = 'VGitSignAdd',
+                text = '│'
+            },
+            remove = {
+                name = 'VGitSignRemove',
+                hl = 'VGitSignRemove',
+                text = '│'
+            },
+            change = {
+                name = 'VGitSignChange',
+                hl = 'VGitSignChange',
+                text = '│'
+            },
+        },
+    },
+})
 
 M.close_windows = function(wins)
     for _, win in ipairs(wins) do
@@ -155,15 +151,15 @@ M.close_windows = function(wins)
 end
 
 M.setup = function(config)
-    M.state = configurer.assign(M.state, config)
-    for _, type in pairs(M.state.hunk_sign.signs) do
+    M.state:assign(config)
+    for _, type in pairs(M.state:get('hunk_sign').signs) do
         highlighter.define(type.hl)
         vim.fn.sign_define(type.name, {
             text = type.text,
             texthl = type.hl
         })
     end
-    for _, action in pairs(M.state.hunk.signs) do
+    for _, action in pairs(M.state:get('hunk').signs) do
         local sign_hl = action.sign_hl
         local text_hl = action.text_hl
         highlighter.define(sign_hl)
@@ -174,7 +170,7 @@ M.setup = function(config)
             linehl = sign_hl,
         })
     end
-    for _, action in pairs(M.state.preview.signs) do
+    for _, action in pairs(M.state:get('preview').signs) do
         local name = action.name
         local text = action.text
         local sign_hl = action.sign_hl
@@ -187,24 +183,25 @@ M.setup = function(config)
             linehl = sign_hl,
         })
     end
-    highlighter.define(M.state.blame.hl)
-    highlighter.define(M.state.history.indicator.hl)
-    highlighter.define(M.state.preview.current_window.border_hl)
-    highlighter.define(M.state.preview.previous_window.border_hl)
-    highlighter.define(M.state.history.previous_window.border_hl)
-    highlighter.define(M.state.history.current_window.border_hl)
-    highlighter.define(M.state.history.history_window.border_hl)
-    highlighter.define(M.state.hunk.window.border_hl)
+    highlighter.define(M.state:get('blame').hl)
+    highlighter.define(M.state:get('history').indicator.hl)
+    highlighter.define(M.state:get('preview').current_window.border_hl)
+    highlighter.define(M.state:get('preview').previous_window.border_hl)
+    highlighter.define(M.state:get('history').previous_window.border_hl)
+    highlighter.define(M.state:get('history').current_window.border_hl)
+    highlighter.define(M.state:get('history').history_window.border_hl)
+    highlighter.define(M.state:get('hunk').window.border_hl)
 end
 
 M.show_blame = function(buf, blames, git_config)
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
     local blame = blames[lnum]
-    local virt_text = M.state.blame.format(blame, git_config)
+    local virt_text = M.state:get('blame').format(blame, git_config)
     if type(virt_text) == 'string' then
+        -- BUG: Possble bug invalid lnum probably :(
         vim.api.nvim_buf_set_extmark(buf, M.constants.blame_namespace, lnum - 1, 0, {
             id = M.constants.blame_line_id,
-            virt_text = { { virt_text, M.state.blame.hl } },
+            virt_text = { { virt_text, M.state:get('blame').hl } },
             virt_text_pos = 'eol',
         })
     end
@@ -219,9 +216,9 @@ M.show_hunk_signs = function(buf, hunks)
     for _, hunk in ipairs(hunks) do
         for i = hunk.start, hunk.finish do
             local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
-            vim.fn.sign_place(lnum, hunk_signs_group, M.state.hunk_sign.signs[hunk.type].hl, buf, {
+            vim.fn.sign_place(lnum, hunk_signs_group, M.state:get('hunk_sign').signs[hunk.type].hl, buf, {
                 lnum = lnum,
-                priority = M.state.hunk_sign.priority,
+                priority = M.state:get('hunk_sign').priority,
             })
         end
     end
@@ -254,8 +251,8 @@ M.show_hunk = function(hunk, filetype)
             hunk = view.create({
                 filetype = filetype,
                 lines = trimmed_lines,
-                border = M.state.hunk.window.border,
-                border_hl = M.state.hunk.window.border_hl,
+                border = M.state:get('hunk').window.border,
+                border_hl = M.state:get('hunk').window.border_hl,
                 buf_options = {
                     ['modifiable'] = false,
                     ['bufhidden'] = 'wipe',
@@ -282,11 +279,11 @@ M.show_hunk = function(hunk, filetype)
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
-            M.state.hunk.signs['add'].sign_hl,
+            M.state:get('hunk').signs['add'].sign_hl,
             widget_options.views.hunk.buf,
             {
                 lnum = lnum,
-                priority = M.state.hunk_sign.priority,
+                priority = M.state:get('hunk_sign').priority,
             }
         )
     end
@@ -294,11 +291,11 @@ M.show_hunk = function(hunk, filetype)
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
-            M.state.hunk.signs['remove'].sign_hl,
+            M.state:get('hunk').signs['remove'].sign_hl,
             widget_options.views.hunk.buf,
             {
                 lnum = lnum,
-                priority = M.state.hunk_sign.priority,
+                priority = M.state:get('hunk_sign').priority,
             }
         )
     end
@@ -316,9 +313,9 @@ M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
             previous = view.create({
                 filetype = filetype,
                 lines = previous_lines,
-                title = M.state.preview.previous_window.title,
-                border = M.state.preview.previous_window.border,
-                border_hl = M.state.preview.previous_window.border_hl,
+                title = M.state:get('preview').previous_window.title,
+                border = M.state:get('preview').previous_window.border,
+                border_hl = M.state:get('preview').previous_window.border_hl,
                 buf_options = {
                     ['modifiable'] = false,
                     ['buflisted'] = false,
@@ -344,9 +341,9 @@ M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
             current = view.create({
                 lines = current_lines,
                 filetype = filetype,
-                title = M.state.preview.current_window.title,
-                border = M.state.preview.current_window.border,
-                border_hl = M.state.preview.current_window.border_hl,
+                title = M.state:get('preview').current_window.title,
+                border = M.state:get('preview').current_window.border,
+                border_hl = M.state:get('preview').current_window.border_hl,
                 buf_options = {
                     ['modifiable'] = false,
                     ['buflisted'] = false,
@@ -373,10 +370,15 @@ M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
     })
     for _, data in ipairs(lnum_changes) do
         local buf = widget_options.views[data.buftype].buf
-        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.preview.signs[data.type].sign_hl, buf, {
-            lnum = data.lnum,
-            priority = M.state.preview.priority,
-        })
+        vim.fn.sign_place(
+            data.lnum, M.constants.hunk_signs_group,
+            M.state:get('preview').signs[data.type].sign_hl,
+            buf,
+            {
+                lnum = data.lnum,
+                priority = M.state:get('preview').priority,
+            }
+        )
     end
 end
 
@@ -399,10 +401,16 @@ M.change_history = function(
     vim.fn.sign_unplace(M.constants.hunk_signs_group)
     for _, data in ipairs(lnum_changes) do
         local buf = bufs[data.buftype]
-        vim.fn.sign_place(data.lnum, M.constants.hunk_signs_group, M.state.preview.signs[data.type].sign_hl, buf, {
-            lnum = data.lnum,
-            priority = M.state.preview.priority,
-        })
+        vim.fn.sign_place(
+            data.lnum,
+            M.constants.hunk_signs_group,
+            M.state:get('preview').signs[data.type].sign_hl,
+            buf,
+            {
+                lnum = data.lnum,
+                priority = M.state:get('preview').priority,
+            }
+        )
     end
     local history_lines = buffer.get_lines(bufs.history)
     for index, line in ipairs(history_lines) do
@@ -419,7 +427,7 @@ M.change_history = function(
     vim.highlight.range(
         bufs.history,
         M.constants.history_namespace,
-        M.state.history.indicator.hl,
+        M.state:get('history').indicator.hl,
         { lnum, 0 },
         { lnum, 1 }
     )
@@ -467,9 +475,9 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
             previous = view.create({
                 filetype = filetype,
                 lines = previous_lines,
-                border = M.state.history.previous_window.border,
-                border_hl = M.state.history.previous_window.border_hl,
-                title = M.state.history.previous_window.title,
+                border = M.state:get('history').previous_window.border,
+                border_hl = M.state:get('history').previous_window.border_hl,
+                title = M.state:get('history').previous_window.title,
                 buf_options = {
                     ['modifiable'] = false,
                     ['buflisted'] = false,
@@ -495,9 +503,9 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
             current = view.create({
                 lines = current_lines,
                 filetype = filetype,
-                title = M.state.history.current_window.title,
-                border = M.state.history.current_window.border,
-                border_hl = M.state.history.current_window.border_hl,
+                title = M.state:get('history').current_window.title,
+                border = M.state:get('history').current_window.border,
+                border_hl = M.state:get('history').current_window.border_hl,
                 buf_options = {
                     ['modifiable'] = false,
                     ['buflisted'] = false,
@@ -522,9 +530,9 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
             }),
             history =  view.create({
                 lines = history_lines,
-                title = M.state.history.history_window.title,
-                border = M.state.history.history_window.border,
-                border_hl = M.state.history.history_window.border_hl,
+                title = M.state:get('history').history_window.title,
+                border = M.state:get('history').history_window.border,
+                border_hl = M.state:get('history').history_window.border_hl,
                 buf_options = {
                     ['modifiable'] = false,
                     ['buflisted'] = false,
@@ -568,18 +576,18 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
         vim.fn.sign_place(
             data.lnum,
             M.constants.hunk_signs_group,
-            M.state.preview.signs[data.type].sign_hl,
+            M.state:get('preview').signs[data.type].sign_hl,
             buf,
             {
                 lnum = data.lnum,
-                priority = M.state.preview.priority,
+                priority = M.state:get('preview').priority,
             }
         )
     end
     vim.highlight.range(
         widget_options.views.history.buf,
         M.constants.history_namespace,
-        M.state.history.indicator.hl,
+        M.state:get('history').indicator.hl,
         { 0, 0 }, { 0, 1 }
     )
 end

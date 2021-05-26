@@ -15,6 +15,29 @@ M.relative_path = function(filepath)
     return filepath
 end
 
+M.project_relative_path = function(filepath, project_files)
+    if filepath == '' then
+        return filepath
+    end
+    for i = #filepath, 1, -1 do
+        local letter = filepath:sub(i, i)
+        local new_project_files = {}
+        for _, candidate in ipairs(project_files) do
+            local corrected_index = #candidate - (#filepath - i)
+            local candidate_letter = candidate:sub(corrected_index, corrected_index)
+            if letter == candidate_letter then
+                table.insert(new_project_files, candidate)
+            end
+        end
+        project_files = new_project_files
+    end
+    return project_files[1] or filepath
+end
+
+M.filetype = function(buf)
+    return vim.api.nvim_buf_get_option(buf, 'filetype')
+end
+
 M.filename = function(buf)
     local filepath = vim.api.nvim_buf_get_name(buf)
     return M.relative_path(filepath)

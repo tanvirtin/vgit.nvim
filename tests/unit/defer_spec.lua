@@ -2,6 +2,7 @@ local defer = require('vgit.defer')
 
 local it = it
 local describe = describe
+local eq = assert.are.same
 
 describe('defer:', function()
 
@@ -19,7 +20,7 @@ describe('defer:', function()
             local closure = closure_creator(1)
             local throttled_fn = defer.throttle_leading(function()
                 result = closure()
-                assert.are.same(result, 1)
+                eq(result, 1)
             end, 100)
             for _ = 1, 1000 do
                 throttled_fn()
