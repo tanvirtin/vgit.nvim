@@ -12,13 +12,13 @@ describe('fs:', function()
             local current = vim.loop.cwd()
             local filename = 'lua/vgit/init.lua'
             local filepath = current .. '/' .. filename
-            local buf = vim.api.nvim_create_buf(false, true)
+            local buf = vim.api.nvim_create_buf(true, true)
             vim.api.nvim_buf_set_name(buf, filepath)
             assert.are.same(fs.filename(buf), filename)
         end)
 
         it('should return empty string if buffer has no name', function()
-            local buf = vim.api.nvim_create_buf(false, true)
+            local buf = vim.api.nvim_create_buf(true, true)
             assert.are.same(fs.filename(buf), '')
         end)
 

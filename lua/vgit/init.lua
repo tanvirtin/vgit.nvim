@@ -70,7 +70,6 @@ end
 
 M._buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
     buf = buf or vim.api.nvim_get_current_buf()
-    local buf_state = create_buf_state(buf)
     local filename = fs.filename(buf)
     if not filename or filename == '' then
         return
@@ -81,6 +80,7 @@ M._buf_attach = defer.throttle_leading(vim.schedule_wrap(function(buf)
     else
         state.disabled = false
     end
+    local buf_state = create_buf_state(buf)
     if state.hunks_enabled then
         local hunks_err, hunks = git.hunks(filename)
         if not hunks_err then
@@ -423,10 +423,11 @@ M.toggle_buffer_hunks = vim.schedule_wrap(function()
             if buf_state then
                 buf_state.hunks = {}
                 ui.hide_hunk_signs(buf)
-                return
             end
         end
         return
+    else
+        state.hunks_enabled = true
     end
     local bufs = state.bufs
     for buf, _ in pairs(bufs) do
@@ -440,7 +441,6 @@ M.toggle_buffer_hunks = vim.schedule_wrap(function()
                 if buf_state then
                     buf_state.hunks = hunks
                     ui.show_hunk_signs(bufnr, hunks)
-                    return
                 end
             end
         end
@@ -461,10 +461,11 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
                 local bufnr = tonumber(buf)
                 M._unblame_line(bufnr, true)
                 buf_state.blames = {}
-                return
             end
         end
         return
+    else
+        state.blames_enabled = true
     end
     vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("vgit")._blame_line()')
     vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("vgit")._unblame_line()')
@@ -479,7 +480,6 @@ M.toggle_buffer_blames = vim.schedule_wrap(function()
                 local buf_state = get_buf_state(buf)
                 if buf_state then
                     buf_state.blames = blames
-                    return
                 end
             end
         end

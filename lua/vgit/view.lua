@@ -1,4 +1,5 @@
 local border = require('vgit.border')
+local buffer = require('vgit.buffer')
 
 local M = {}
 
@@ -26,7 +27,7 @@ local function highlight_with_ts(buf, ft)
 end
 
 M.create = function(options)
-    local buf = vim.api.nvim_create_buf(false, true)
+    local buf = vim.api.nvim_create_buf(true, true)
     if options.lines then
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, options.lines)
     end
@@ -34,9 +35,7 @@ M.create = function(options)
         highlight_with_ts(buf, options.filetype)
     end
     if options.buf_options then
-        for key, value in pairs(options.buf_options) do
-            vim.api.nvim_buf_set_option(buf, key, value)
-        end
+        buffer.assign_options(buf, options.buf_options)
     end
     if not options.title then
         if options.border_hl then
@@ -73,41 +72,12 @@ M.create = function(options)
         options.border_buf = border_buf
         options.border_win_id = border_win_id
     end
-    vim.cmd(string.format(
-        "autocmd WinClosed <buffer=%s> ++nested ++once :lua require('plenary.window').try_close(%s, true)",
+    buffer.add_autocmd(
         buf,
-        win_id
-    ))
-    return options
-end
-
-M.add_keymap = function(buf, key, action)
-    vim.api.nvim_buf_set_keymap(buf, 'n', key, string.format(':lua require("vgit").%s<CR>', action), {
-        silent = true,
-        noremap = true
-    })
-end
-
-M.add_autocmd = function(buf, cmd, action)
-    vim.api.nvim_command(
-        string.format(
-            'autocmd %s <buffer=%s> ++nested ++once :lua require("vgit").%s',
-            cmd,
-            buf,
-            action
-        )
+        'BufWinLeave',
+        string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id)
     )
-end
-
-M.set_lines = function(buf, lines)
-    local modifiable = vim.api.nvim_buf_get_option(buf, 'modifiable')
-    if not modifiable then
-        vim.api.nvim_buf_set_option(buf, 'modifiable', true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-        vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-    else
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-    end
+    return options
 end
 
 return M
