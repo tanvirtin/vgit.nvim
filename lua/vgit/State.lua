@@ -1,8 +1,42 @@
-local M = {}
+local State = {}
+State.__index = State
 
-M.assign = function(state, config)
+local function new(state)
+    if type(state) ~= 'table' then
+        return setmetatable({
+            initial = {},
+            current = {},
+        }, State)
+    end
+    return setmetatable({
+        initial = state,
+        current = state,
+    }, State)
+end
+
+function State:get(key)
+    if self.current[key] ~= nil then
+        return self.current[key]
+    else
+        error(debug.traceback('Key does not exist'))
+    end
+end
+
+function State:set(key, value)
+    if self.current[key] ~= nil then
+        if type(self.current[key]) == type(value) then
+            self.current[key] = value
+        else
+            error(debug.traceback('Invalid data type'))
+        end
+    else
+        error(debug.traceback('Key does not exist'))
+    end
+end
+
+function State:assign(config)
     if not config then
-        return state
+        return
     end
     local function assign(state_segment, config_segment)
         local state_segment_type = type(state_segment)
@@ -24,8 +58,11 @@ M.assign = function(state, config)
             end
         end
     end
-    assign(state, config)
-    return state
+    assign(self.current, config)
+    return
 end
 
-return M
+return {
+    new = new,
+    __object = State,
+}
