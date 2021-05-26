@@ -22,47 +22,47 @@
 <details>
     <summary>Hunk as signs</summary>
     <br />
-    <img src="https://user-images.githubusercontent.com/25164326/117505704-7df02000-af52-11eb-996b-91063b5dd832.gif" alt="hunk_signs" />
+    <img src="https://user-images.githubusercontent.com/25164326/119602593-771e3580-bdb9-11eb-95f6-3758394bc297.gif" alt="hunk_signs" />
 </details>
 <details>
     <summary>Preview a hunk</summary>
     <br />
-    <img src="https://user-images.githubusercontent.com/25164326/117380403-9a834e00-aea7-11eb-9117-f90cb4ab2ff1.gif" alt="hunk_preview" />
+    <img src="https://user-images.githubusercontent.com/25164326/119602591-771e3580-bdb9-11eb-9a48-18f473bd99a3.gif" alt="hunk_preview" />
 </details>
 <details>
     <summary>Reset a hunk</summary>
     <br />
-    <img src="https://user-images.githubusercontent.com/25164326/117384279-9dcf0780-aeb0-11eb-96d8-0b85239d94f7.gif" alt="reset_hunk" />
+    <img src="https://user-images.githubusercontent.com/25164326/119602598-79808f80-bdb9-11eb-974c-aaa2a4445313.gif" alt="reset_hunk" />
 </details>
 <details>
     <summary>Navigate through hunks</summary>
     <br />
-    <img src="https://user-images.githubusercontent.com/25164326/117380412-9f480200-aea7-11eb-8630-c70781e7e2ce.gif" alt="hunk_navigation" />
+    <img src="https://user-images.githubusercontent.com/25164326/119602585-75547200-bdb9-11eb-868c-0e43c41c378f.gif" alt="hunk_navigation" />
 </details>
 <details>
     <summary>Diff a buffer with HEAD</summary>
     <br />
-    <img src="https://user-images.githubusercontent.com/25164326/117380396-95be9a00-aea7-11eb-8fad-f9b6c6b87a5f.gif" alt="diff_preview" />
+    <img src="https://user-images.githubusercontent.com/25164326/119602595-77b6cc00-bdb9-11eb-94c8-f62478ff8a16.gif" alt="diff_preview" />
 </details>
 <details>
     <summary>Reset a buffer to HEAD</summary>
     <br />
-    <img src="https://user-images.githubusercontent.com/25164326/117384280-9e679e00-aeb0-11eb-850a-551925c81d3e.gif" alt="buffer_reset" />
+    <img src="https://user-images.githubusercontent.com/25164326/119602597-79808f80-bdb9-11eb-94ed-8bd557164f84.gif" alt="buffer_reset" />
 </details>
 <details>
     <summary>Blame a line</summary>
     <br />
-    <img src="https://user-images.githubusercontent.com/25164326/117505703-7d578980-af52-11eb-82c8-22ea0c4bbd2a.gif" alt="blame_a_line" />
+    <img src="https://user-images.githubusercontent.com/25164326/119602582-74bbdb80-bdb9-11eb-8f70-1ab43e9213df.gif" alt="blame_a_line" />
 </details>
 <details>
     <summary>Quickfix your hunks (a.k.a git diff)</summary>
     <br />
-    <img src="https://user-images.githubusercontent.com/25164326/118189592-fc940400-b40f-11eb-9741-75bb81d5ed64.gif" alt="hunks_quickfix_list" />
+    <img src="https://user-images.githubusercontent.com/25164326/119602589-75ed0880-bdb9-11eb-98fa-9e5a615dae31.gif" alt="hunks_quickfix_list" />
 </details>
 <details>
     <summary>Git History</summary>
     <br />
-    <img src="https://user-images.githubusercontent.com/25164326/118910341-4be7a200-b8f2-11eb-9dae-1888486c2d4d.gif" alt="history" />
+    <img src="https://user-images.githubusercontent.com/25164326/119602600-7a192600-bdb9-11eb-9ef9-709ea154aeaa.gif" alt="history" />
 </details>
 
 ## Prerequisites

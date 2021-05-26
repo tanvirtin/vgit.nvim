@@ -1,3 +1,5 @@
+local buffer = require('vgit.buffer')
+
 local vim = vim
 
 local M = {}
@@ -43,15 +45,14 @@ local function create_lines(title, content_win_options, border)
 end
 
 M.create = function(content_buf, title, window_props, border, border_hl)
-    local thickness = {
-        top = 1,
-        right = 1,
-        bot = 1,
-        left = 1,
-    }
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, create_lines(title, window_props, border))
+    local thickness = { top = 1, right = 1, bot = 1, left = 1 }
+    local buf = vim.api.nvim_create_buf(true, true)
+    buffer.set_lines(buf, create_lines(title, window_props, border))
+    buffer.assign_options(buf, {
+        ['modifiable'] = false,
+        ['bufhidden'] = 'wipe',
+        ['buflisted'] = false,
+    })
     local win_id = vim.api.nvim_open_win(buf, false, {
         relative = 'editor',
         style = 'minimal',
@@ -64,11 +65,11 @@ M.create = function(content_buf, title, window_props, border, border_hl)
     vim.api.nvim_win_set_option(win_id, 'cursorbind', false)
     vim.api.nvim_win_set_option(win_id, 'scrollbind', false)
     vim.api.nvim_win_set_option(win_id, 'winhl', string.format('Normal:%s', border_hl))
-    vim.cmd(string.format(
-        "autocmd WinClosed <buffer=%s> ++nested ++once :lua require('plenary.window').try_close(%s, true)",
+    buffer.add_autocmd(
         content_buf,
-        win_id
-    ))
+        'WinClosed',
+        string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id)
+    )
     return buf, win_id
 end
 
