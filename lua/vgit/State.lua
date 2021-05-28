@@ -15,23 +15,14 @@ local function new(state)
 end
 
 function State:get(key)
-    if self.current[key] ~= nil then
-        return self.current[key]
-    else
-        error(debug.traceback('Key does not exist'))
-    end
+    assert(self.current[key] ~= nil, 'Key does not exist')
+    return self.current[key]
 end
 
 function State:set(key, value)
-    if self.current[key] ~= nil then
-        if type(self.current[key]) == type(value) then
-            self.current[key] = value
-        else
-            error(debug.traceback('Invalid data type'))
-        end
-    else
-        error(debug.traceback('Key does not exist'))
-    end
+    assert(self.current[key] ~= nil, 'Key does not exist')
+    assert(self.current[key] ~= type(value), 'Invalid data type')
+    self.current[key] = value
 end
 
 function State:assign(config)
