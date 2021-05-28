@@ -1,5 +1,10 @@
 local Job = require('plenary.job')
 local State = require('vgit.State')
+local a = require('plenary.async_lib.async')
+local wrap = a.wrap
+local await = a.await
+local async = a.async
+local scheduler = a.scheduler
 
 local vim = vim
 local unpack = unpack
@@ -42,60 +47,6 @@ M.constants = {
 }
 
 M.state = State.new({ config = {} })
-
-M.setup = function(config)
-    M.state:assign(config)
-    local err, git_config = M.config()
-    if not err then
-        M.state:set('config', git_config)
-    end
-end
-
-M.config = function()
-    local config = {}
-    local err_result = ''
-    local job = Job:new({
-        command = 'git',
-        args = {
-            'config',
-            '--list',
-        },
-        on_stdout = function(_, line)
-            local line_chunks = vim.split(line, '=')
-            config[line_chunks[1]] = line_chunks[2]
-        end,
-        on_stderr = function(err, line)
-            if err then
-                err_result = err_result .. err
-            elseif line then
-                err_result = err_result .. line
-            end
-        end,
-    })
-    job:sync()
-    job:wait()
-    if err_result ~= '' then
-        return err_result, nil
-    end
-    return nil, config
-end
-
-M.is_inside_work_tree = function()
-    local job = Job:new({
-        command = 'git',
-        args = {
-            'rev-parse',
-            '--is-inside-work-tree',
-        },
-    })
-    job:sync()
-    job:wait()
-    local stderr_result = job:stderr_result()
-    if #stderr_result ~= 0 then
-        return false
-    end
-    return true
-end
 
 M.create_log = function(line)
     local log = vim.split(line, '-')
@@ -183,39 +134,92 @@ M.create_blame = function(info)
     }
 end
 
-M.blames = function(filename)
+M.setup = async(function(config)
+    M.state:assign(config)
+    local err, git_config = await(M.config())
+    await(scheduler())
+    if not err then
+        M.state:set('config', git_config)
+    end
+end)
+
+M.config = wrap(function(callback)
+    local err = {}
+    local result = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'config',
+            '--list',
+        },
+        on_stdout = function(_, line)
+            local line_chunks = vim.split(line, '=')
+            result[line_chunks[1]] = line_chunks[2]
+        end,
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, nil)
+            end
+            callback(nil, result)
+        end,
+    })
+    job:start()
+end, 1)
+
+M.is_inside_work_tree = wrap(function(callback)
+    local err = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'rev-parse',
+            '--is-inside-work-tree',
+        },
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(false)
+            end
+            callback(true)
+        end,
+    })
+    job:start()
+end, 1)
+
+M.blame_line = wrap(function(filename, lnum, callback)
+    local err = {}
+    local result = {}
     local job = Job:new({
         command = 'git',
         args = {
             'blame',
+            '-L',
+            string.format('%s,+1', lnum),
             '--line-porcelain',
+            '--',
             filename,
         },
-    })
-    job:sync()
-    job:wait()
-    local stderr_result = job:stderr_result()
-    if #stderr_result ~= 0 then
-        return stderr_result, nil
-    end
-    local result = job:result()
-    local blames = {}
-    local blame_info = {}
-    for _, line in ipairs(result) do
-        if string.byte(line:sub(1, 3)) ~= 9 then
-            table.insert(blame_info, line)
-        else
-            local blame = M.create_blame(blame_info)
-            if blame then
-                blames[blame.lnum] = blame
+        on_stdout = function(_, data, _)
+            table.insert(result, data)
+        end,
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, nil)
             end
-            blame_info = {}
-        end
-    end
-    return nil, blames
-end
+            callback(nil, M.create_blame(result))
+        end,
+    })
+    job:start()
+end, 3)
 
-M.logs = function(filename)
+M.logs = wrap(function(filename, callback)
     local logs = {{
         author_name = M.state:get('config')['user.name'],
         author_email = M.state:get('config')['user.email'],
@@ -233,20 +237,23 @@ M.logs = function(filename)
             filename,
         },
     })
-    job:sync()
+    job:start()
+    -- BUG: Plenary Job bug, prevents last line to be read.
     job:wait()
     local result = job:result()
     for _, line in ipairs(result) do
         table.insert(logs, M.create_log(line))
     end
-    local stderr_result = job:stderr_result()
-    if #stderr_result ~= 0 then
-        return stderr_result, nil
+    local err = job:stderr_result()
+    if #err ~= 0 then
+        return callback(err, nil)
     end
-    return nil, logs
-end
+    return callback(nil, logs)
+end, 2)
 
-M.hunks = function(filename, parent_hash, commit_hash)
+M.hunks = wrap(function(filename, parent_hash, commit_hash, callback)
+    local result = {}
+    local err = {}
     local args = {
         '--no-pager',
         '-c',
@@ -256,6 +263,7 @@ M.hunks = function(filename, parent_hash, commit_hash)
         string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
         '--patch-with-raw',
         '--unified=0',
+        '--',
         filename,
     }
     if parent_hash and commit_hash then
@@ -270,53 +278,68 @@ M.hunks = function(filename, parent_hash, commit_hash)
             '--unified=0',
             #parent_hash > 0 and parent_hash or M.constants.empty_tree_hash,
             commit_hash,
+            '--',
             filename,
         }
     end
     local job = Job:new({
         command = 'git',
         args = args,
-    })
-    job:sync()
-    job:wait()
-    local stderr_result = job:stderr_result()
-    if #stderr_result ~= 0 then
-        return stderr_result, nil
-    end
-    local result = job:result()
-    local hunks = {}
-    for _, line in ipairs(result) do
-        if vim.startswith(line, '@@') then
-            table.insert(hunks, M.create_hunk(line))
-        else
-            if #hunks > 0 then
-                local hunk = hunks[#hunks]
-                table.insert(hunk.diff, line)
+        on_stdout = function(_, data, _)
+            table.insert(result, data)
+        end,
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, nil)
             end
-        end
-    end
-    return nil, hunks
-end
+            local hunks = {}
+            for _, line in ipairs(result) do
+                if vim.startswith(line, '@@') then
+                    table.insert(hunks, M.create_hunk(line))
+                else
+                    if #hunks > 0 then
+                        local hunk = hunks[#hunks]
+                        table.insert(hunk.diff, line)
+                    end
+                end
+            end
+            return callback(nil, hunks)
+        end,
+    })
+    job:start()
+end, 4)
 
-M.show = function(filename, commit_hash)
+M.show = wrap(function(filename, commit_hash, callback)
+    local err = {}
+    local result = {}
     commit_hash = commit_hash or ''
     local job = Job:new({
         command = 'git',
         args = {
             'show',
             string.format('%s:%s', commit_hash, filename),
-        }
+        },
+        on_stdout = function(_, data, _)
+            table.insert(result, data)
+        end,
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, nil)
+            end
+            callback(nil, result)
+        end,
     })
     job:sync()
-    job:wait()
-    local stderr_result = job:stderr_result()
-    if #stderr_result ~= 0 then
-        return stderr_result, nil
-    end
-    return nil, job:result()
-end
+end, 3)
 
-M.reset = function(filename)
+M.reset = wrap(function(filename, callback)
+    local err = {}
     local job = Job:new({
         command = 'git',
         args = {
@@ -325,76 +348,51 @@ M.reset = function(filename)
             '--',
             filename,
         },
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err)
+            end
+            callback(nil)
+        end,
     })
-    job:sync()
-    job:wait()
-    local stderr_result = job:stderr_result()
-    if #stderr_result ~= 0 then
-        return stderr_result
-    end
-    return nil
-end
+    job:start()
+end, 2)
 
-M.current_file_changes = function()
-    local job = Job:new({
-        command = 'git',
-        args = {
-            'diff',
-            '--name-only',
-        },
-    })
-    job:sync()
-    job:wait()
-    local stderr_result = job:stderr_result()
-    if #stderr_result ~= 0 then
-        return stderr_result, nil
-    end
-    return nil, job:result()
-end
-
-M.ls_tracked = function()
+M.ls_tracked = wrap(function(callback)
+    local err = {}
+    local result = {}
     local job = Job:new({
         command = 'git',
         args = {
             'ls-files',
             '--full-name',
         },
+        on_stdout = function(_, data, _)
+            table.insert(result, data)
+        end,
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, result)
+            end
+            callback(nil, result)
+        end,
     })
-    job:sync()
-    job:wait()
-    local stderr_result = job:stderr_result()
-    if #stderr_result ~= 0 then
-        return stderr_result, nil
-    end
-    return nil, job:result()
-end
+    job:start()
+end, 1)
 
-M.ls_untracked = function()
-    local job = Job:new({
-        command = 'git',
-        args = {
-            'ls-files',
-            '--full-name',
-            '--others',
-            '--exclude-standard',
-        },
-    })
-    job:sync()
-    job:wait()
-    local stderr_result = job:stderr_result()
-    if #stderr_result ~= 0 then
-        return stderr_result, nil
-    end
-    return nil, job:result()
-end
-
-M.diff = function(lines, hunks)
+M.vertical_diff = wrap(function(lines, hunks, callback)
     if #hunks == 0 then
-        return nil, {
+        return callback(nil, {
             current_lines = lines,
             previous_lines = lines,
             lnum_changes = {},
-        }
+        })
     end
     local current_lines = {}
     local previous_lines = {}
@@ -476,11 +474,11 @@ M.diff = function(lines, hunks)
             end
         end
     end
-    return nil, {
+    return callback(nil, {
         current_lines = current_lines,
         previous_lines = previous_lines,
         lnum_changes = lnum_changes,
-    }
-end
+    })
+end, 3)
 
 return M

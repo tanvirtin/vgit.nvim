@@ -15,7 +15,7 @@ M.relative_path = function(filepath)
     return filepath
 end
 
-M.project_relative_path = function(filepath, project_files)
+M.project_relative_filename = function(filepath, project_files)
     if filepath == '' then
         return filepath
     end
@@ -31,7 +31,7 @@ M.project_relative_path = function(filepath, project_files)
         end
         project_files = new_project_files
     end
-    return project_files[1] or filepath
+    return project_files[1]
 end
 
 M.filetype = function(buf)
