@@ -356,7 +356,7 @@ M.hunk_reset = throttle_leading(function(buf, win)
             end
         end
     end
-end)
+end, throttle_ms)
 
 M.hunks_quickfix_list = async_void(throttle_leading(function()
     if not state:get('disabled') then
