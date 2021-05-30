@@ -5,17 +5,19 @@ local highlighter = require('vgit.highlighter')
 local State = require('vgit.State')
 local Bstate = require('vgit.Bstate')
 local buffer = require('vgit.buffer')
+local throttle_leading = require('vgit.defer').throttle_leading
 local logger = require('plenary.log')
 local a = require('plenary.async_lib.async')
+local t = require('vgit.localization').translate
 local async_void = a.async_void
 local await = a.await
 local scheduler = a.scheduler
-local t = require('vgit.localization').translate
 
 local vim = vim
 
 local M = {}
 
+local throttle_ms = 250
 local bstate = Bstate.new()
 local state = State.new({
     config = {},
@@ -92,7 +94,7 @@ M._buf_attach = async_void(function(buf)
     end
 end)
 
-M._blame_line = async_void(function(buf)
+M._blame_line = async_void(throttle_leading(function(buf)
     if not state:get('disabled')
         and not state:get('processing')
         and buffer.is_valid(buf)
@@ -122,9 +124,9 @@ M._blame_line = async_void(function(buf)
             end
         end
     end
-end)
+end, throttle_ms))
 
-M._unblame_line = function(buf, override)
+M._unblame_line = throttle_leading(function(buf, override)
     if bstate:contains(buf) and buffer.is_valid(buf) then
         if override then
             return ui.hide_blame(buf)
@@ -136,7 +138,7 @@ M._unblame_line = function(buf, override)
             ui.hide_blame(buf)
         end
     end
-end
+end, throttle_ms)
 
 M._run_command = function(command, ...)
     if not state:get('disabled') then
@@ -164,7 +166,7 @@ M._run_submodule_command = function(name, command, ...)
     end
 end
 
-M._change_history = async_void(function(buf, wins_to_update, bufs_to_update)
+M._change_history = async_void(throttle_leading(function(buf, wins_to_update, bufs_to_update)
     if not state:get('disabled') and buffer.is_valid(buf) then
         local selected_log = vim.api.nvim_win_get_cursor(0)[1]
         if bstate:contains(buf) then
@@ -212,7 +214,7 @@ M._change_history = async_void(function(buf, wins_to_update, bufs_to_update)
             end
         end
     end
-end)
+end, throttle_ms))
 
 M._command_autocompletes = function(arglead, line)
     local parsed_line = #vim.split(line, '%s+')
@@ -227,7 +229,7 @@ M._command_autocompletes = function(arglead, line)
     return matches
 end
 
-M.hunk_preview = function(buf, win)
+M.hunk_preview = throttle_leading(function(buf, win)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) then
         win = win or vim.api.nvim_get_current_win()
@@ -250,7 +252,7 @@ M.hunk_preview = function(buf, win)
             end
         end
     end
-end
+end, throttle_ms)
 
 M.hunk_down = function(buf, win)
     buf = buf or buffer.current()
@@ -313,7 +315,7 @@ M.hunk_up = function(buf, win)
     end
 end
 
-M.hunk_reset = function(buf, win)
+M.hunk_reset = throttle_leading(function(buf, win)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) then
         win = win or vim.api.nvim_get_current_win()
@@ -354,9 +356,9 @@ M.hunk_reset = function(buf, win)
             end
         end
     end
-end
+end)
 
-M.hunks_quickfix_list = async_void(function()
+M.hunks_quickfix_list = async_void(throttle_leading(function()
     if not state:get('disabled') then
         local qf_entries = {}
         local filenames = state:get('tracked_files')
@@ -379,11 +381,11 @@ M.hunks_quickfix_list = async_void(function()
         vim.fn.setqflist(qf_entries, 'r')
         vim.api.nvim_command('copen')
     end
-end)
+end, throttle_ms))
 
 M.diff = M.hunks_quickfix_list
 
-M.toggle_buffer_hunks = async_void(function()
+M.toggle_buffer_hunks = async_void(throttle_leading(function()
     if not state:get('disabled') then
         if state:get('hunks_enabled') then
             state:set('hunks_enabled', false)
@@ -413,9 +415,9 @@ M.toggle_buffer_hunks = async_void(function()
         end)
     end
     return state:get('hunks_enabled')
-end)
+end, throttle_ms))
 
-M.toggle_buffer_blames = async_void(function()
+M.toggle_buffer_blames = async_void(throttle_leading(function()
     if not state:get('disabled') then
         vim.api.nvim_command('augroup tanvirtin/vgit/blame | autocmd! | augroup END')
         if state:get('blames_enabled') then
@@ -452,9 +454,9 @@ M.toggle_buffer_blames = async_void(function()
         end)
         return state:get('blames_enabled')
     end
-end)
+end, throttle_ms))
 
-M.buffer_history = async_void(function(buf)
+M.buffer_history = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) then
         if bstate:contains(buf) then
@@ -488,9 +490,9 @@ M.buffer_history = async_void(function(buf)
             end
         end
     end
-end)
+end, throttle_ms))
 
-M.buffer_preview = async_void(function(buf)
+M.buffer_preview = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) then
         if state:get('hunks_enabled') then
@@ -518,9 +520,9 @@ M.buffer_preview = async_void(function(buf)
             end
         end
     end
-end)
+end, throttle_ms))
 
-M.buffer_reset = async_void(function(buf)
+M.buffer_reset = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) then
         if bstate:contains(buf) then
@@ -537,7 +539,7 @@ M.buffer_reset = async_void(function(buf)
             end
         end
     end
-end)
+end, throttle_ms))
 
 M.enabled = function()
     return not state:get('disabled')

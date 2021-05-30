@@ -43,7 +43,7 @@ M.create = function(options)
     for _, buf in ipairs(bufs) do
         local is_buf_listed = vim.api.nvim_buf_get_option(buf, 'buflisted') == true
         if is_buf_listed then
-            if vim.api.nvim_buf_is_loaded(buf) then
+            if buffer.is_valid(buf) then
                 buffer.add_autocmd(
                     buf,
                     'BufEnter',
