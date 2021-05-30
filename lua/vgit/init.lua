@@ -52,12 +52,14 @@ M._buf_attach = async_void(function(buf)
                         bstate:set(buf, 'project_relative_filename', project_relative_filename)
                         vim.api.nvim_command(string.format('augroup tanvirtin/vgit/%s | autocmd! | augroup END', buf))
                         vim.api.nvim_command(string.format(
-                            'autocmd tanvirtin/vgit/%s CursorHold * lua require("vgit")._blame_line(%s)',
+                            'autocmd tanvirtin/vgit/%s CursorHold <buffer=%s> :lua require("vgit")._blame_line(%s)',
+                            buf,
                             buf,
                             buf
                         ))
                         vim.api.nvim_command(string.format(
-                            'autocmd tanvirtin/vgit/%s CursorMoved * lua require("vgit")._unblame_line(%s)',
+                            'autocmd tanvirtin/vgit/%s CursorMoved <buffer=%s> :lua require("vgit")._unblame_line(%s)',
+                            buf,
                             buf,
                             buf
                         ))
