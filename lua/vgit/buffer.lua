@@ -2,12 +2,22 @@ local M = {}
 
 local vim = vim
 
-M.add_autocmd = function(buf, cmd, action)
+M.current = function()
+    return vim.api.nvim_get_current_buf()
+end
+
+M.add_autocmd = function(buf, cmd, action, options)
+    local persist = (options and options.persist) or false
+    local override = (options and options.override) or false
+    local nested = (options and options.nested) or false
     vim.api.nvim_command(
         string.format(
-            'autocmd %s <buffer=%s> ++nested ++once :lua require("vgit").%s',
+            'autocmd%s %s <buffer=%s> %s %s :lua require("vgit").%s',
+            override and '!' or '',
             cmd,
             buf,
+            nested and '++nested' or '',
+            persist and '' or '++once',
             action
         )
     )
@@ -41,6 +51,10 @@ M.assign_options = function(buf, options)
     for key, value in pairs(options) do
         vim.api.nvim_buf_set_option(buf, key, value)
     end
+end
+
+M.is_valid = function(buf)
+    return vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf)
 end
 
 return M

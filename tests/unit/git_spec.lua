@@ -4,6 +4,11 @@ local it = it
 local vim = vim
 local describe = describe
 local after_each = after_each
+local eq = assert.are.same
+local a = require('plenary.async_lib.async')
+local async_void = a.async_void
+local await = a.await
+local scheduler = a.scheduler
 
 local function read_file(filename)
     local file = io.open(filename, "rb")
@@ -114,7 +119,7 @@ describe('git:', function()
     describe('constants', function()
 
         it('should have the correct shape', function()
-            assert.are.same(git.constants, {
+            eq(git.constants, {
                 diff_algorithm = 'histogram',
                 empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
             })
@@ -124,11 +129,11 @@ describe('git:', function()
 
     describe('setup', function()
 
-        it('should store git config as a state', function()
-            git.setup()
-            local config = git.state.config
-            assert.are.same(type(config), 'table')
-        end)
+        it('should store git config as a state', async_void(function()
+            await(git.setup())
+            local config = git.state:get('config')
+            eq(type(config), 'table')
+        end))
 
     end)
 
@@ -144,13 +149,13 @@ describe('git:', function()
         it('should store the headers passed in', function()
             for _, value in pairs(headers) do
                 local hunk = git.create_hunk(value)
-                assert.are.same(hunk.header, value)
+                eq(hunk.header, value)
             end
         end)
 
         it('should create a hunk from given parameters', function()
             local hunk = git.create_hunk(headers['add'])
-            assert.are.same(type(hunk), 'table')
+            eq(type(hunk), 'table')
             local hunk_keys = { 'header', 'start', 'finish', 'type', 'diff' }
             for key, _ in pairs(hunk) do
                 assert(vim.tbl_contains(hunk_keys, key))
@@ -158,23 +163,23 @@ describe('git:', function()
         end)
 
        it('should create a hunk with correct type', function()
-            assert.are.same(git.create_hunk(headers['add']).type, 'add')
-            assert.are.same(git.create_hunk(headers['remove']).type, 'remove')
-            assert.are.same(git.create_hunk(headers['change']).type, 'change')
+            eq(git.create_hunk(headers['add']).type, 'add')
+            eq(git.create_hunk(headers['remove']).type, 'remove')
+            eq(git.create_hunk(headers['change']).type, 'change')
         end)
 
        it('should create a hunk with correct start and finish', function()
             local add_hunk = git.create_hunk(headers['add'])
-            assert.are.same(add_hunk.start, 18)
-            assert.are.same(add_hunk.finish, 18 + 15 - 1)
+            eq(add_hunk.start, 18)
+            eq(add_hunk.finish, 18 + 15 - 1)
 
             local remove_hunk = git.create_hunk(headers['remove'])
-            assert.are.same(remove_hunk.start, 8)
-            assert.are.same(remove_hunk.finish, 8)
+            eq(remove_hunk.start, 8)
+            eq(remove_hunk.finish, 8)
 
             local change_hunk = git.create_hunk(headers['change'])
-            assert.are.same(change_hunk.start, 10)
-            assert.are.same(change_hunk.finish, 10 + 7 - 1)
+            eq(change_hunk.start, 10)
+            eq(change_hunk.finish, 10 + 7 - 1)
         end)
 
         it('will allow lines to be added to the diff of the hunk created', function()
@@ -190,10 +195,10 @@ describe('git:', function()
             end
 
             for i, line in ipairs(hunk.diff) do
-                assert.are.same(lines[i], line)
+                eq(lines[i], line)
             end
 
-            assert.are.same(#hunk.diff, #lines)
+            eq(#hunk.diff, #lines)
         end)
 
     end)
@@ -205,74 +210,74 @@ describe('git:', function()
             reset_head(filename)
         end)
 
-        it('should return only added hunks with correct start and finish', function()
+        it('should return only added hunks with correct start and finish', async_void(function()
             local lines = add_lines(filename)
-            local err, data = git.hunks(filename)
-            assert.are.same(err, nil)
-            assert.are.same(#data, #lines)
+            local err, data = await(git.hunks(filename))
+            eq(err, nil)
+            eq(#data, #lines)
             local counter = 2
             for _, hunk in pairs(data) do
-                assert.are.same(hunk.type, 'add')
-                assert.are.same(hunk.start, counter)
-                assert.are.same(hunk.finish, counter)
+                eq(hunk.type, 'add')
+                eq(hunk.start, counter)
+                eq(hunk.finish, counter)
                 counter = counter + 2
             end
-        end)
+        end))
 
-        it('should return only removed hunks with correct start and finish', function()
+        it('should return only removed hunks with correct start and finish', async_void(function()
             local _, _, removed_lines = remove_lines(filename)
-            local err, data = git.hunks(filename)
-            assert.are.same(err, nil)
-            assert.are.same(#data, #removed_lines)
+            local err, data = await(git.hunks(filename))
+            eq(err, nil)
+            eq(#data, #removed_lines)
             for i, hunk in ipairs(data) do
-                assert.are.same(hunk.type, 'remove')
-                assert.are.same(hunk.start, i - 1)
-                assert.are.same(hunk.finish, i - 1)
+                eq(hunk.type, 'remove')
+                eq(hunk.start, i - 1)
+                eq(hunk.finish, i - 1)
             end
-        end)
+        end))
 
-        it('should return only changed hunks with correct start and finish', function()
+        it('should return only changed hunks with correct start and finish', async_void(function()
             local _, _, changed_lines = change_lines(filename)
-            local err, data = git.hunks(filename)
-            assert.are.same(err, nil)
-            assert.are.same(#data, #changed_lines)
+            local err, data = await(git.hunks(filename))
+            eq(err, nil)
+            eq(#data, #changed_lines)
             local counter = 1
             for _, hunk in pairs(data) do
-                assert.are.same(hunk.type, 'change')
-                assert.are.same(hunk.start, counter)
-                assert.are.same(hunk.finish, counter)
+                eq(hunk.type, 'change')
+                eq(hunk.start, counter)
+                eq(hunk.finish, counter)
                 counter = counter + 2
             end
-        end)
+        end))
 
-        it('should return all possible hunks with correct start and finish', function()
+        it('should return all possible hunks with correct start and finish', async_void(function()
             local lines = augment_file(filename)
-            local err, data = git.hunks(filename)
-            assert.are.same(err, nil)
-            assert.are.same(#data, 3)
-            assert.are.same(data[1].type, 'add')
-            assert.are.same(data[2].type, 'change')
-            assert.are.same(data[3].type, 'remove')
+            local err, data = await(git.hunks(filename))
+            eq(err, nil)
+            eq(#data, 3)
+            eq(data[1].type, 'add')
+            eq(data[2].type, 'change')
+            eq(data[3].type, 'remove')
 
             for i = 1, #lines do
                 -- add
                 if i == 1 then
                     local hunk = table.remove(data, 1)
-                    assert.are.same(hunk.start, i)
-                    assert.are.same(hunk.finish, i)
+                    eq(hunk.start, i)
+                    eq(hunk.finish, i)
                 -- change
                 elseif i == 2 then
                     local hunk = table.remove(data, 1)
-                    assert.are.same(hunk.start, i + 1)
-                    assert.are.same(hunk.finish, i + 1)
+                    eq(hunk.start, i + 1)
+                    eq(hunk.finish, i + 1)
                 -- remove
                 elseif i == 4 then
                     local hunk = table.remove(data, 1)
-                    assert.are.same(hunk.start, i)
-                    assert.are.same(hunk.finish, i)
+                    eq(hunk.start, i)
+                    eq(hunk.finish, i)
                 end
             end
-        end)
+        end))
 
     end)
 
@@ -283,14 +288,14 @@ describe('git:', function()
             os.execute(string.format('git checkout HEAD -- %s', filename))
         end)
 
-        it('should return data table with correct keys', function()
+        it('should return data table with correct keys', async_void(function()
             local _, lines = add_lines(filename)
-            local err, hunks = git.hunks(filename)
-            assert.are.same(err, nil)
-            assert.are.same(type(hunks), 'table')
-            local diff_err, data = git.diff(lines, hunks)
-            assert.are.same(diff_err, nil)
-            assert.are.same(type(data), 'table')
+            local err, hunks = await(git.hunks(filename))
+            eq(err, nil)
+            eq(type(hunks), 'table')
+            local diff_err, data = await(git.vertical_diff(lines, hunks))
+            eq(diff_err, nil)
+            eq(type(data), 'table')
             local expected_keys = {
                 current_lines = true,
                 previous_lines = true,
@@ -302,89 +307,89 @@ describe('git:', function()
             for key, _ in pairs(expected_keys) do
                 assert(data[key])
             end
-        end)
+        end))
 
-        it('should have equal number of current_lines and previous_lines for a file with added lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with added lines', async_void(function()
             local _, lines= add_lines(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(lines, hunks)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-        end)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(lines, hunks))
+            eq(#data.current_lines, #data.previous_lines)
+        end))
 
-        it('should have equal number of current_lines and previous_lines for a file with removed lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with removed lines', async_void(function()
             local _, lines = remove_lines(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(lines, hunks)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-        end)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(lines, hunks))
+            eq(#data.current_lines, #data.previous_lines)
+        end))
 
-        it('should have equal number of current_lines and previous_lines for a file with changed lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with changed lines', async_void(function()
             local _, lines = change_lines(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(lines, hunks)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-        end)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(lines, hunks))
+            eq(#data.current_lines, #data.previous_lines)
+        end))
 
-        it('should have equal number of current_lines and previous_lines for a file with added, removed and changed lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with added, removed and changed lines', async_void(function()
             local _,lines = augment_file(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(lines, hunks)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-        end)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(lines, hunks))
+            eq(#data.current_lines, #data.previous_lines)
+        end))
 
-        it('should have equal number of current_lines and previous_lines for a file with added lines', function()
+        it('should have equal number of current_lines and previous_lines for a file with added lines', async_void(function()
             local _, lines, added_lines = add_lines(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(lines, hunks)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(lines, hunks))
             local num_added_lines = #added_lines
             assert(#data.current_lines > 0)
             assert(#data.previous_lines > 0)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-            assert.are.same(#data.lnum_changes, num_added_lines)
+            eq(#data.current_lines, #data.previous_lines)
+            eq(#data.lnum_changes, num_added_lines)
             local counter = 2
             for _, lnum_data in ipairs(data.lnum_changes) do
-                assert.are.same(lnum_data.lnum, counter)
-                assert.are.same(lnum_data.type, 'add')
-                assert.are.same(lnum_data.buftype, 'current')
+                eq(lnum_data.lnum, counter)
+                eq(lnum_data.type, 'add')
+                eq(lnum_data.buftype, 'current')
                 counter = counter + 2
             end
-        end)
+        end))
 
-        it('should have correct lnum_changes for a file with removed lines', function()
+        it('should have correct lnum_changes for a file with removed lines', async_void(function()
             local _, lines, removed_lines = remove_lines(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(lines, hunks)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(lines, hunks))
             local num_removed_lines = #removed_lines
             assert(#data.current_lines > 0)
             assert(#data.previous_lines > 0)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-            assert.are.same(#data.lnum_changes, num_removed_lines)
+            eq(#data.current_lines, #data.previous_lines)
+            eq(#data.current_lines, #data.previous_lines)
+            eq(#data.lnum_changes, num_removed_lines)
             local counter = 1
             for _, lnum_data in ipairs(data.lnum_changes) do
-                assert.are.same(lnum_data.lnum, counter)
-                assert.are.same(lnum_data.type, 'remove')
-                assert.are.same(lnum_data.buftype, 'previous')
+                eq(lnum_data.lnum, counter)
+                eq(lnum_data.type, 'remove')
+                eq(lnum_data.buftype, 'previous')
                 counter = counter + 2
             end
-        end)
+        end))
 
-        it('should have correct lnum_changes for a file with changed lines', function()
+        it('should have correct lnum_changes for a file with changed lines', async_void(function()
             local _, lines, changed_lines = change_lines(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(lines, hunks)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(lines, hunks))
             local num_changed_lines = #changed_lines
             assert(#data.current_lines > 0)
             assert(#data.previous_lines > 0)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-            assert.are.same(#data.current_lines, #data.previous_lines)
+            eq(#data.current_lines, #data.previous_lines)
+            eq(#data.current_lines, #data.previous_lines)
+            eq(#data.current_lines, #data.previous_lines)
             local counter = 1
             local added_current_lines = 0
             local removed_previous_lines = 0
             for _, lnum_data in ipairs(data.lnum_changes) do
                 if lnum_data.buftype == 'previous' and lnum_data.type == 'remove' then
-                    assert.are.same(lnum_data.lnum, counter)
+                    eq(lnum_data.lnum, counter)
                     counter = counter + 2
                 end
                 if lnum_data.buftype == 'current' then
@@ -395,7 +400,7 @@ describe('git:', function()
             counter = 1
             for _, lnum_data in ipairs(data.lnum_changes) do
                 if lnum_data.buftype == 'previous' and lnum_data.type == 'add' then
-                    assert.are.same(lnum_data.lnum, counter)
+                    eq(lnum_data.lnum, counter)
                     counter = counter + 2
                 end
                 if lnum_data.buftype == 'previous' then
@@ -403,28 +408,28 @@ describe('git:', function()
                     removed_previous_lines = removed_previous_lines + 1
                 end
             end
-            assert.are.same(num_changed_lines, added_current_lines)
-            assert.are.same(num_changed_lines, removed_previous_lines)
-        end)
+            eq(num_changed_lines, added_current_lines)
+            eq(num_changed_lines, removed_previous_lines)
+        end))
 
-        it('should have correct lnum_changes for a file with added, removed and changed lines', function()
+        it('should have correct lnum_changes for a file with added, removed and changed lines', async_void(function()
             local _, lines, added_lines, removed_lines, changed_lines = augment_file(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(lines, hunks)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(lines, hunks))
             local num_added_lines = #added_lines
             local num_removed_lines = #removed_lines
             local num_changed_lines = #changed_lines
             assert(#data.current_lines > 0)
             assert(#data.previous_lines > 0)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-            assert.are.same(#data.current_lines, #data.previous_lines)
-            assert.are.same(#data.current_lines, #data.previous_lines)
+            eq(#data.current_lines, #data.previous_lines)
+            eq(#data.current_lines, #data.previous_lines)
+            eq(#data.current_lines, #data.previous_lines)
             local added_current_lines = 0
             local removed_previous_lines = 0
             local counter = 1
             for _, lnum_data in ipairs(data.lnum_changes) do
                 if lnum_data.buftype == 'current' and lnum_data.type == 'add' then
-                    assert.are.same(lnum_data.lnum, counter)
+                    eq(lnum_data.lnum, counter)
                     counter = counter + 2
                 end
                 if lnum_data.buftype == 'current' then
@@ -437,9 +442,9 @@ describe('git:', function()
             for _, lnum_data in ipairs(data.lnum_changes) do
                 if lnum_data.buftype == 'previous' and lnum_data.type == 'remove' then
                     if not first then
-                        assert.are.same(lnum_data.lnum, 3)
+                        eq(lnum_data.lnum, 3)
                     else
-                        assert.are.same(lnum_data.lnum, counter)
+                        eq(lnum_data.lnum, counter)
                         counter = counter + 1
                     end
                     first = true
@@ -449,64 +454,64 @@ describe('git:', function()
                     removed_previous_lines = removed_previous_lines + 1
                 end
             end
-            assert.are.same(added_current_lines, num_added_lines + num_changed_lines)
-            assert.are.same(removed_previous_lines, num_removed_lines + num_changed_lines)
-        end)
+            eq(added_current_lines, num_added_lines + num_changed_lines)
+            eq(removed_previous_lines, num_removed_lines + num_changed_lines)
+        end))
 
-        it('should have correct current_lines and previous_lines for added lines', function()
+        it('should have correct current_lines and previous_lines for added lines', async_void(function()
             local lines, new_lines, added_lines = add_lines(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(new_lines, hunks)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(new_lines, hunks))
             local current_lines = data.current_lines
             local previous_lines = data.previous_lines
             for _, index in ipairs(added_lines) do
-                assert.are.same(current_lines[index], new_lines[index])
+                eq(current_lines[index], new_lines[index])
                 assert.are_not.same(current_lines[index], lines[index])
-                assert.are.same(previous_lines[index], '')
+                eq(previous_lines[index], '')
             end
-        end)
+        end))
 
-        it('should have correct current_lines and previous_lines for removed lines', function()
+        it('should have correct current_lines and previous_lines for removed lines', async_void(function()
             local lines, new_lines, removed_lines = remove_lines(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(new_lines, hunks)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(new_lines, hunks))
             local current_lines = data.current_lines
             local previous_lines = data.previous_lines
             for _, index in ipairs(removed_lines) do
-                assert.are.same(current_lines[index], new_lines[index])
+                eq(current_lines[index], new_lines[index])
                 assert.are_not.same(current_lines[index], lines[index])
                 assert.are_not.same(previous_lines[index], new_lines[index])
-                assert.are.same(new_lines[index], '')
+                eq(new_lines[index], '')
             end
-        end)
+        end))
 
-        it('should have correct current_lines and previous_lines for changed lines', function()
+        it('should have correct current_lines and previous_lines for changed lines', async_void(function()
             local _, new_lines, changed_lines = add_lines(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(new_lines, hunks)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(new_lines, hunks))
             local current_lines = data.current_lines
             local previous_lines = data.previous_lines
             for _, index in ipairs(changed_lines) do
-                assert.are.same(current_lines[index], new_lines[index])
+                eq(current_lines[index], new_lines[index])
                 assert.are_not.same(current_lines[index], previous_lines[index])
             end
-        end)
+        end))
 
-        it('should have correct current_lines and previous_lines for added, removed and changed lines', function()
+        it('should have correct current_lines and previous_lines for added, removed and changed lines', async_void(function()
             local _, new_lines, added_lines, removed_lines, changed_lines = augment_file(filename)
-            local _, hunks = git.hunks(filename)
-            local _, data = git.diff(new_lines, hunks)
+            local _, hunks = await(git.hunks(filename))
+            local _, data = await(git.vertical_diff(new_lines, hunks))
             local current_lines = data.current_lines
             for _, index in ipairs(added_lines) do
-                assert.are.same(current_lines[index], new_lines[index])
+                eq(current_lines[index], new_lines[index])
             end
             for _, index in ipairs(removed_lines) do
-                assert.are.same(current_lines[index], new_lines[index])
+                eq(current_lines[index], new_lines[index])
             end
             for _, index in ipairs(changed_lines) do
-                assert.are.same(current_lines[index], new_lines[index])
+                eq(current_lines[index], new_lines[index])
             end
-        end)
+        end))
 
     end)
 
@@ -517,71 +522,71 @@ describe('git:', function()
             os.execute(string.format('git checkout HEAD -- %s', filename))
         end)
 
-        it('should reset a file with only added lines', function()
+        it('should reset a file with only added lines', async_void(function()
             local lines = add_lines(filename)
             local new_lines = read_file(filename)
             assert.are_not.same(#lines, #new_lines)
-            local err = git.reset(filename)
-            assert.are.same(err, nil)
+            local err = await(git.reset(filename))
+            eq(err, nil)
             local lines_after_reset = read_file(filename)
             for index, line in ipairs(lines_after_reset) do
                 local previousal_line = lines[index]
-                assert.are.same(line, previousal_line)
+                eq(line, previousal_line)
             end
-        end)
+        end))
 
-        it('should reset a file with only removed lines', function()
+        it('should reset a file with only removed lines', async_void(function()
             local lines = remove_lines(filename)
             local new_lines = read_file(filename)
             assert.are_not.same(#lines, #new_lines)
-            local err = git.reset(filename)
-            assert.are.same(err, nil)
+            local err = await(git.reset(filename))
+            eq(err, nil)
             local lines_after_reset = read_file(filename)
             for index, line in ipairs(lines_after_reset) do
                 local previousal_line = lines[index]
-                assert.are.same(line, previousal_line)
+                eq(line, previousal_line)
             end
-        end)
+        end))
 
-        it('should reset a file with only changed lines', function()
+        it('should reset a file with only changed lines', async_void(function()
             local lines = change_lines(filename)
-            local err = git.reset(filename)
-            assert.are.same(err, nil)
+            local err = await(git.reset(filename))
+            eq(err, nil)
             local lines_after_reset = read_file(filename)
             for index, line in ipairs(lines_after_reset) do
                 local previousal_line = lines[index]
-                assert.are.same(line, previousal_line)
+                eq(line, previousal_line)
             end
-        end)
+        end))
 
-        it('should reset a file with added, removed, changed lines', function()
+        it('should reset a file with added, removed, changed lines', async_void(function()
             local lines = augment_file(filename)
             local new_lines = read_file(filename)
             assert.are_not.same(#lines, #new_lines)
-            local err = git.reset(filename)
-            assert.are.same(err, nil)
+            local err = await(git.reset(filename))
+            eq(err, nil)
             local lines_after_reset = read_file(filename)
             for index, line in ipairs(lines_after_reset) do
                 local previousal_line = lines[index]
-                assert.are.same(line, previousal_line)
+                eq(line, previousal_line)
             end
-        end)
+        end))
 
     end)
 
     describe('config', function()
 
-        it('should return a table', function()
-            local err, config = git.config()
-            assert.are.same(err, nil)
-            assert.are.same(type(config), 'table')
-        end)
+        it('should return a table', async_void(function()
+            local err, config = await(git.config())
+            eq(err, nil)
+            eq(type(config), 'table')
+        end))
 
-        it('should contain necessary git config information equivalent to what you see in "git config --list"', function()
-            local err, config = git.config()
-            assert.are.same(err, nil)
-            assert.are.same(type(config), 'table')
-        end)
+        it('should contain necessary git config information equivalent to what you see in "git config --list"', async_void(function()
+            local err, config = await(git.config())
+            eq(err, nil)
+            eq(type(config), 'table')
+        end))
 
     end)
 
@@ -617,7 +622,7 @@ describe('git:', function()
 
         it('should create a committed blame with proper information populated', function()
             local blame = git.create_blame(committed_info)
-            assert.are.same(blame, {
+            eq(blame, {
                 lnum = 183,
                 commit_hash = 'e71cf398fdbe7f13560d65b72d6ec111c4c2c837',
                 parent_hash = 'bc019ecab452195b1d044998efb7994a6467cca7',
@@ -636,7 +641,7 @@ describe('git:', function()
 
         it('should create a uncommitted blame with proper information populated', function()
             local blame = git.create_blame(uncommitted_info)
-            assert.are.same(blame, {
+            eq(blame, {
                 lnum = 94,
                 commit_hash = '0000000000000000000000000000000000000000',
                 parent_hash = 'a08d97a4bd97574460f33fc1b9e645bfa9d2f703',
@@ -656,80 +661,24 @@ describe('git:', function()
 
     end)
 
-    describe('blames', function()
-        local filename = 'tests/fixtures/simple_file'
-
-        after_each(function()
-            os.execute(string.format('git checkout HEAD -- %s', filename))
-        end)
-
-        it('should return array with blames same size as the number of lines in the file', function()
-            local lines = read_file(filename)
-            local err, blames = git.blames(filename)
-            assert.are.same(err, nil)
-            assert.are.same(#blames, #lines)
-        end)
-
-        it('should return array with only commited blames', function()
-            local err, blames = git.blames(filename)
-            assert.are.same(err, nil)
-            for _, blame in ipairs(blames) do
-                assert.are.same(blame.committed, true)
-            end
-        end)
-
-        it('should return uncommitted blames for lines which has been added', function()
-            local _, _, added_line_indices = add_lines(filename)
-            local err, blames = git.blames(filename)
-            assert.are.same(err, nil)
-            local index_map = {}
-            for _, index in ipairs(added_line_indices) do
-                assert.are.same(blames[index].committed, false)
-                index_map[tostring(index)] = true
-            end
-            for index, blame in ipairs(blames) do
-                if not index_map[tostring(index)] then
-                    assert.are.same(blame.committed, true)
-                end
-            end
-        end)
-
-    end)
-
-    describe('current_file_changes', function()
-        local filename = 'tests/fixtures/simple_file'
-
-        after_each(function()
-            os.execute(string.format('git checkout HEAD -- %s', filename))
-        end)
-
-        it('should return the correct number of filenames when there are changes in the repository', function()
-            add_lines(filename)
-            local err, filenames = git.current_file_changes();
-            assert.are.same(err, nil)
-            assert.are.same(true, vim.tbl_contains(filenames, filename))
-        end)
-
-    end)
-
     describe('show', function()
         local filename = 'tests/fixtures/simple_file'
 
-        it('should retrieve the contents of the current file with a given filename', function()
-            local err, data = git.show(filename)
+        it('should retrieve the contents of the current file with a given filename', async_void(function()
+            local err, data = await(git.show(filename))
             local lines = read_file(filename)
-            assert.are.same(err, nil)
-            assert.are.same(data, lines)
-        end)
+            eq(err, nil)
+            eq(data, lines)
+        end))
 
     end)
 
     describe('create_log', function()
         local raw_log = '"1ee1810cd9baee8cf5d750e9c1398f058fd39d5d-e2f47d90fbffc15b95c015e140d8bfb600d49904-1618464789-tanvirtin-tanvir.tinz@gmail.com-fix fixture"'
 
-        it('should create a log object from a given raw log entry', function()
+        it('should create a log object from a given raw log entry', async_void(function()
             local log = git.create_log(raw_log)
-            assert.are.same(log, {
+            eq(log, {
                 author_email = 'tanvir.tinz@gmail.com',
                 author_name = 'tanvirtin',
                 commit_hash = '1ee1810cd9baee8cf5d750e9c1398f058fd39d5d',
@@ -737,36 +686,36 @@ describe('git:', function()
                 summary = 'fix fixture',
                 timestamp = '1618464789',
             })
-        end)
+        end))
 
     end)
 
     describe('logs', function()
         local filename = 'tests/fixtures/simple_file'
 
-        it('should always have an initial entry indicating the current head', function()
-            local err, logs = git.logs(filename)
-            assert.are.same(err, nil)
+        it('should always have an initial entry indicating the current head', async_void(function()
+            local err, logs = await(git.logs(filename))
+            eq(err, nil)
             local head_log = logs[1]
             assert.are_not.same(head_log, nil)
-        end)
+        end))
 
     end)
 
     describe('is_inside_work_tree', function()
 
-        it('should return true if user is currently inside a git tree', function()
-            assert(git.is_inside_work_tree())
-        end)
+        it('should return true if user is currently inside a git tree', async_void(function()
+            assert(await(git.is_inside_work_tree()))
+        end))
 
     end)
 
-    describe('ls', function()
+    describe('ls_tracked', function()
 
-        it('should return all files associated with the project', function()
-            local err, files = git.ls()
-            assert.are.same(err, nil)
-            assert.are.same(files, {
+        it('should return all files associated with the project', async_void(function()
+            local err, files = await(git.ls_tracked())
+            eq(err, nil)
+            eq(files, {
                 '.github/ISSUE_TEMPLATE/bug_report.md',
                 '.github/ISSUE_TEMPLATE/feature_request.md',
                 '.github/workflows/ci.yml',
@@ -775,9 +724,10 @@ describe('git:', function()
                 'LICENSE',
                 'Makefile',
                 'README.md',
+                'lua/vgit/Bstate.lua',
+                'lua/vgit/State.lua',
                 'lua/vgit/border.lua',
                 'lua/vgit/buffer.lua',
-                'lua/vgit/configurer.lua',
                 'lua/vgit/defer.lua',
                 'lua/vgit/fs.lua',
                 'lua/vgit/git.lua',
@@ -787,14 +737,15 @@ describe('git:', function()
                 'lua/vgit/view.lua',
                 'lua/vgit/widget.lua',
                 'tests/fixtures/simple_file',
-                'tests/unit/configurer_spec.lua',
+                'tests/unit/Bstate_spec.lua',
+                'tests/unit/State_spec.lua',
                 'tests/unit/defer_spec.lua',
                 'tests/unit/fs_spec.lua',
                 'tests/unit/git_spec.lua',
                 'tests/unit/highlighter_spec.lua',
                 'tests/unit/init_spec.lua',
             })
-        end)
+        end))
 
     end)
 
