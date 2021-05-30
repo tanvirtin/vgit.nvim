@@ -3,6 +3,7 @@ local highlighter = require('vgit.highlighter')
 local vim = vim
 local it = it
 local describe = describe
+local eq = assert.are.same
 
 describe('highlighter:', function()
 
@@ -17,7 +18,7 @@ describe('highlighter:', function()
                     },
                 },
             })
-            assert.are.same(highlighter.state.hls.VGitSignAdd, {
+            eq(highlighter.state.current.hls.VGitSignAdd, {
                 fg = 'red',
                 bg = nil,
             });
@@ -46,13 +47,13 @@ describe('highlighter:', function()
             assert.has_error(function()
                 vim.cmd(string.format('hi %s', hl))
             end)
-            assert.are.same(result, false)
+            eq(result, false)
         end)
 
          it('should successfully define a highlight group since it exists in the state hls', function()
             local hl = 'VGitBlame'
             local result = highlighter.define(hl)
-            assert.are.same(result, true)
+            eq(result, true)
             vim.cmd(string.format('hi %s', hl))
         end)
 

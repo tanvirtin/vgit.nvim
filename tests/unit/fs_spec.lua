@@ -3,6 +3,7 @@ local fs = require('vgit.fs')
 local vim = vim
 local it = it
 local describe = describe
+local eq = assert.are.same
 
 describe('fs:', function()
 
@@ -14,12 +15,12 @@ describe('fs:', function()
             local filepath = current .. '/' .. filename
             local buf = vim.api.nvim_create_buf(true, true)
             vim.api.nvim_buf_set_name(buf, filepath)
-            assert.are.same(fs.filename(buf), filename)
+            eq(fs.filename(buf), filename)
         end)
 
         it('should return empty string if buffer has no name', function()
             local buf = vim.api.nvim_create_buf(true, true)
-            assert.are.same(fs.filename(buf), '')
+            eq(fs.filename(buf), '')
         end)
 
     end)
@@ -30,13 +31,13 @@ describe('fs:', function()
             local current = vim.loop.cwd()
             local path = current .. '/lua/vgit/init.lua'
             local filepath = fs.relative_path(path)
-            assert.are.same(filepath, 'lua/vgit/init.lua')
+            eq(filepath, 'lua/vgit/init.lua')
         end)
 
         it('should return the unchanged path if it is not absolute', function()
             local path = 'lua/vgit/init.lua'
             local filepath = fs.relative_path(path)
-            assert.are.same(filepath, 'lua/vgit/init.lua')
+            eq(filepath, 'lua/vgit/init.lua')
         end)
 
     end)
@@ -46,7 +47,7 @@ describe('fs:', function()
         it('should retrieve an err_result for a given file path that does not exist', function()
             local err, data = fs.read_file('IDONTEXIST.md')
             assert.are_not.same(err, nil)
-            assert.are.same(data, nil)
+            eq(data, nil)
         end)
 
     end)
