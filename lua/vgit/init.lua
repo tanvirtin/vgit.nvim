@@ -586,7 +586,7 @@ M.setup = async_void(function(config)
     ui.setup(config)
     vim.cmd('aug tanvirtin/vgit | autocmd! | aug END')
     vim.cmd('au tanvirtin/vgit BufWinEnter * lua require("vgit")._buf_attach()')
-    vim.cmd('au tanvirtin/vgit BufWritePost * lua require("vgit")._buf_update()')
+    vim.cmd('au tanvirtin/vgit BufWrite * lua require("vgit")._buf_update()')
     vim.cmd(string.format(
         'com! -nargs=+ %s %s',
         '-complete=customlist,v:lua.package.loaded.vgit._command_autocompletes',
