@@ -10,9 +10,9 @@ M.add_autocmd = function(buf, cmd, action, options)
     local persist = (options and options.persist) or false
     local override = (options and options.override) or false
     local nested = (options and options.nested) or false
-    vim.api.nvim_command(
+    vim.cmd(
         string.format(
-            'autocmd%s %s <buffer=%s> %s %s :lua require("vgit").%s',
+            'au%s %s <buffer=%s> %s %s :lua require("vgit").%s',
             override and '!' or '',
             cmd,
             buf,
