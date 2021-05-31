@@ -91,7 +91,7 @@ By default these are the default settings provided by the app, you can change th
 ```lua
 require('vgit').setup({
     hunks_enabled = true,
-    blames_enabled = false,
+    blames_enabled = true,
     hls = {
         VGitBlame = {
             bg = nil,
