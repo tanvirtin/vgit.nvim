@@ -4,6 +4,8 @@ local highlighter = require('vgit.highlighter')
 local view_factory = require('vgit.view_factory')
 local widget_factory = require('vgit.widget_factory')
 local localization = require('vgit.localization')
+local View = require('vgit.View')
+local Widget = require('vgit.Widget')
 local t = localization.translate
 
 local vim = vim
@@ -247,8 +249,6 @@ M.show_hunk = function(hunk, filetype)
     local trimmed_lines = {}
     local added_lines = {}
     local removed_lines = {}
-    local height = #lines
-    local width = vim.api.nvim_get_option('columns')
     for index, line in pairs(lines) do
         local first_letter = line:sub(1, 1)
         if first_letter == '+' then
@@ -258,42 +258,29 @@ M.show_hunk = function(hunk, filetype)
         end
         table.insert(trimmed_lines, line:sub(2, #line))
     end
-    local widget_options = widget_factory.create({
-        close_mappings = { '<esc>', '<C-c>' },
-        views = {
-            hunk = view_factory.create({
-                filetype = filetype,
-                lines = trimmed_lines,
-                border = M.state:get('hunk').window.border,
-                border_hl = M.state:get('hunk').window.border_hl,
-                buf_options = {
-                    ['modifiable'] = false,
-                    ['bufhidden'] = 'wipe',
-                    ['buflisted'] = false,
-                },
-                win_options = {
-                    ['winhl'] = 'Normal:',
-                    ['cursorline'] = true,
-                    ['wrap'] = false,
-                    ['signcolumn'] = 'yes',
-                },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'cursor',
-                    width = width,
-                    height = height,
-                    row = 0,
-                    col = 0,
-                },
-            })
-        }
+    local view = View.new({
+        filetype = filetype,
+        lines = trimmed_lines,
+        border = M.state:get('hunk').window.border,
+        border_hl = M.state:get('hunk').window.border_hl,
+        win_options = { ['cursorline'] = true},
+        window_props = {
+            style = 'minimal',
+            relative = 'cursor',
+            height = #lines,
+            width = vim.api.nvim_get_option('columns'),
+            row = 0,
+            col = 0,
+        },
     })
+    local widget = Widget.new({ view }, { '<esc>', '<C-c>' })
+    widget:render()
     for _, lnum in ipairs(added_lines) do
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
             M.state:get('hunk').signs['add'].sign_hl,
-            widget_options.views.hunk.buf,
+            view:get_buf(),
             {
                 lnum = lnum,
                 priority = M.state:get('hunk_sign').priority,
@@ -305,7 +292,7 @@ M.show_hunk = function(hunk, filetype)
             lnum,
             M.constants.hunk_signs_group,
             M.state:get('hunk').signs['remove'].sign_hl,
-            widget_options.views.hunk.buf,
+            view:get_buf(),
             {
                 lnum = lnum,
                 priority = M.state:get('hunk_sign').priority,
@@ -315,78 +302,59 @@ M.show_hunk = function(hunk, filetype)
 end
 
 M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
-    local global_width = vim.api.nvim_get_option('columns')
-    local global_height = vim.api.nvim_get_option('lines')
-    local height = math.ceil(global_height - 4)
-    local width = math.ceil(global_width * 0.485)
-    local col = math.ceil((global_width - (width * 2)) / 2) - 1
-    local widget_options = widget_factory.create({
-        close_mappings = { '<esc>', '<C-c>' },
-        views = {
-            previous = view_factory.create({
-                filetype = filetype,
-                lines = previous_lines,
-                title = M.state:get('preview').previous_window.title,
-                border = M.state:get('preview').previous_window.border,
-                border_hl = M.state:get('preview').previous_window.border_hl,
-                buf_options = {
-                    ['modifiable'] = false,
-                    ['buflisted'] = false,
-                    ['bufhidden'] = 'wipe',
-                },
-                win_options = {
-                    ['winhl'] = 'Normal:',
-                    ['cursorline'] = true,
-                    ['wrap'] = false,
-                    ['cursorbind'] = true,
-                    ['scrollbind'] = true,
-                    ['signcolumn'] = 'yes',
-                },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'editor',
-                    width = width,
-                    height = height,
-                    row = 1,
-                    col = col,
-                },
-            }),
-            current = view_factory.create({
-                lines = current_lines,
-                filetype = filetype,
-                title = M.state:get('preview').current_window.title,
-                border = M.state:get('preview').current_window.border,
-                border_hl = M.state:get('preview').current_window.border_hl,
-                buf_options = {
-                    ['modifiable'] = false,
-                    ['buflisted'] = false,
-                    ['bufhidden'] = 'wipe',
-                },
-                win_options = {
-                    ['winhl'] = 'Normal:',
-                    ['cursorline'] = true,
-                    ['wrap'] = false,
-                    ['cursorbind'] = true,
-                    ['scrollbind'] = true,
-                    ['signcolumn'] = 'yes',
-                },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'editor',
-                    width = width,
-                    height = height,
-                    row = 1,
-                    col = col + width + 2,
-                },
-            }),
-        }
+    local height = math.ceil(View.global_height() - 4)
+    local width = math.ceil(View.global_width() * 0.485)
+    local col = math.ceil((View.global_width() - (width * 2)) / 2) - 1
+    local previous_view = View.new({
+        filetype = filetype,
+        lines = previous_lines,
+        title = M.state:get('preview').previous_window.title,
+        border = M.state:get('preview').previous_window.border,
+        border_hl = M.state:get('preview').previous_window.border_hl,
+        win_options = {
+            ['cursorbind'] = true,
+            ['scrollbind'] = true,
+            ['cursorline'] = true,
+        },
+        window_props = {
+            style = 'minimal',
+            relative = 'editor',
+            width = width,
+            height = height,
+            row = 1,
+            col = col,
+        },
     })
+    local current_view = View.new({
+        lines = current_lines,
+        filetype = filetype,
+        title = M.state:get('preview').current_window.title,
+        border = M.state:get('preview').current_window.border,
+        border_hl = M.state:get('preview').current_window.border_hl,
+        win_options = {
+            ['cursorbind'] = true,
+            ['scrollbind'] = true,
+            ['cursorline'] = true,
+        },
+        window_props = {
+            style = 'minimal',
+            relative = 'editor',
+            width = width,
+            height = height,
+            row = 1,
+            col = col + width + 2,
+        },
+    })
+    Widget.new({ previous_view, current_view }, { '<esc>', '<C-c>' }):render()
+    local views = {
+        previous = previous_view,
+        current = current_view
+    }
     for _, data in ipairs(lnum_changes) do
-        local buf = widget_options.views[data.buftype].buf
         vim.fn.sign_place(
             data.lnum, M.constants.hunk_signs_group,
             M.state:get('preview').signs[data.type].sign_hl,
-            buf,
+            views[data.buftype]:get_buf(),
             {
                 lnum = data.lnum,
                 priority = M.state:get('preview').priority,
