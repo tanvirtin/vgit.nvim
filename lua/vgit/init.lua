@@ -17,7 +17,7 @@ local vim = vim
 
 local M = {}
 
-local throttle_ms = 250
+local throttle_ms = 300
 local bstate = Bstate.new()
 local state = State.new({
     config = {},
@@ -28,6 +28,17 @@ local state = State.new({
     blames_enabled = true,
     processing = false,
 })
+
+local function attach_blames_autocmd(buf)
+    local f = string.format
+    vim.cmd(f('aug tanvirtin/vgit/%s | autocmd! | aug END', buf))
+    vim.cmd(f('au tanvirtin/vgit/%s CursorHold <buffer=%s> :lua require("vgit")._blame_line(%s)', buf, buf, buf))
+    vim.cmd(f('au tanvirtin/vgit/%s CursorMoved <buffer=%s> :lua require("vgit")._unblame_line(%s)', buf, buf, buf))
+end
+
+local function detach_blames_autocmd(buf)
+    vim.cmd(string.format('aug tanvirtin/vgit/%s | au! | aug END', buf))
+end
 
 M._buf_attach = async_void(function(buf)
     buf = buf or buffer.current()
@@ -52,30 +63,18 @@ M._buf_attach = async_void(function(buf)
                         buf_just_cached = true
                         bstate:set(buf, 'filename', filename)
                         bstate:set(buf, 'project_relative_filename', project_relative_filename)
-                        vim.api.nvim_command(string.format('augroup tanvirtin/vgit/%s | autocmd! | augroup END', buf))
-                        vim.api.nvim_command(string.format(
-                            'autocmd tanvirtin/vgit/%s CursorHold <buffer=%s> :lua require("vgit")._blame_line(%s)',
-                            buf,
-                            buf,
-                            buf
-                        ))
-                        vim.api.nvim_command(string.format(
-                            'autocmd tanvirtin/vgit/%s CursorMoved <buffer=%s> :lua require("vgit")._unblame_line(%s)',
-                            buf,
-                            buf,
-                            buf
-                        ))
+                        if state:get('blames_enabled') then
+                            attach_blames_autocmd(buf)
+                        end
                         vim.api.nvim_buf_attach(buf, false, {
                             on_detach = function(_, cbuf)
                                 if bstate:contains(cbuf) then
                                     bstate:remove(cbuf)
-                                    vim.api.nvim_command(string.format(
-                                        'augroup tanvirtin/vgit/%s | autocmd! | augroup END',
-                                        buf
-                                    ))
+                                    detach_blames_autocmd(cbuf)
                                 end
                             end,
                         })
+                        await(scheduler())
                     end
                 end
                 if (buf_is_cached or buf_just_cached) and state:get('hunks_enabled') then
@@ -90,6 +89,23 @@ M._buf_attach = async_void(function(buf)
                     end
                 end
             end
+        end
+    end
+end)
+
+M._buf_update = async_void(function(buf)
+    buf = buf or buffer.current()
+    if state:get('hunks_enabled') and buffer.is_valid(buf) and bstate:contains(buf) then
+        local filename = bstate:get(buf, 'filename')
+        local err, hunks = await(git.hunks(filename))
+        await(scheduler())
+        if not err then
+            bstate:set(buf, 'hunks', hunks)
+            ui.hide_hunk_signs(buf)
+            ui.show_hunk_signs(buf, hunks)
+            await(scheduler())
+        else
+            logger.error(t('errors/buf_attach_hunks', filename))
         end
     end
 end)
@@ -117,6 +133,7 @@ M._blame_line = async_void(throttle_leading(function(buf)
                             ui.show_blame(buf, blame, lnum, git.state:get('config'))
                             bstate:set(buf, 'last_lnum_blamed', lnum)
                         end
+                        await(scheduler())
                     end
                 else
                     logger.error(t('errors/blame_line', filename))
@@ -209,6 +226,7 @@ M._change_history = async_void(throttle_leading(function(buf, wins_to_update, bu
                     data.previous_lines,
                     data.lnum_changes
                 )
+                await(scheduler())
             else
                 logger.error(t('errors/change_history_diff'))
             end
@@ -274,10 +292,10 @@ M.hunk_down = function(buf, win)
                 end
                 if new_lnum then
                     vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
-                    vim.api.nvim_command('norm! zz')
+                    vim.cmd('norm! zz')
                 else
                     vim.api.nvim_win_set_cursor(win, { hunks[1].start, 0 })
-                    vim.api.nvim_command('norm! zz')
+                    vim.cmd('norm! zz')
                 end
             end
         end
@@ -305,10 +323,10 @@ M.hunk_up = function(buf, win)
                 end
                 if new_lnum and lnum ~= new_lnum then
                     vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
-                    vim.api.nvim_command('norm! zz')
+                    vim.cmd('norm! zz')
                 else
                     vim.api.nvim_win_set_cursor(win, { hunks[#hunks].finish, 0 })
-                    vim.api.nvim_command('norm! zz')
+                    vim.cmd('norm! zz')
                 end
             end
         end
@@ -348,7 +366,7 @@ M.hunk_reset = throttle_leading(function(buf, win)
                         vim.api.nvim_buf_set_lines(0, start - 1, finish, false, replaced_lines)
                     end
                     vim.api.nvim_win_set_cursor(win, { start, 0 })
-                    vim.api.nvim_command('update')
+                    vim.cmd('update')
                     table.remove(hunks, selected_hunk_index)
                     ui.hide_hunk_signs(buf)
                     ui.show_hunk_signs(buf, hunks)
@@ -379,7 +397,7 @@ M.hunks_quickfix_list = async_void(throttle_leading(function()
             end
         end
         vim.fn.setqflist(qf_entries, 'r')
-        vim.api.nvim_command('copen')
+        vim.cmd('copen')
     end
 end, throttle_ms))
 
@@ -419,11 +437,12 @@ end, throttle_ms))
 
 M.toggle_buffer_blames = async_void(throttle_leading(function()
     if not state:get('disabled') then
-        vim.api.nvim_command('augroup tanvirtin/vgit/blame | autocmd! | augroup END')
+        vim.cmd('aug tanvirtin/vgit/blame | autocmd! | aug END')
         if state:get('blames_enabled') then
             state:set('blames_enabled', false)
             bstate:for_each_buf(function(buf, buf_state)
                 if buffer.is_valid(buf) then
+                    detach_blames_autocmd(buf)
                     local bufnr = tonumber(buf)
                     buf_state:set('blames', {})
                     M._unblame_line(bufnr, true)
@@ -433,14 +452,13 @@ M.toggle_buffer_blames = async_void(throttle_leading(function()
         else
             state:set('blames_enabled', true)
         end
-        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorHold * lua require("vgit")._blame_line()')
-        vim.api.nvim_command('autocmd tanvirtin/vgit/blame CursorMoved * lua require("vgit")._unblame_line()')
         bstate:for_each_buf(function(buf, buf_state)
             if buffer.is_valid(buf) then
                 local win = vim.api.nvim_get_current_win()
                 local lnum = vim.api.nvim_win_get_cursor(win)[1]
                 local filename = buf_state:get('filename')
                 local err, blame = await(git.blame_line(filename, lnum))
+                attach_blames_autocmd(buf)
                 await(scheduler())
                 if not err then
                     ui.hide_blame(buf)
@@ -479,6 +497,7 @@ M.buffer_history = async_void(throttle_leading(function(buf)
                             data.lnum_changes,
                             filetype
                         )
+                        await(scheduler())
                     else
                         logger.error(t('errors/buffer_history_diff', filename))
                     end
@@ -512,6 +531,7 @@ M.buffer_preview = async_void(throttle_leading(function(buf)
                                 data.lnum_changes,
                                 filetype
                             )
+                            await(scheduler())
                         else
                             logger.error(t('errors/buffer_preview_diff', filename))
                         end
@@ -532,7 +552,7 @@ M.buffer_reset = async_void(throttle_leading(function(buf)
                 local err = await(git.reset(filename))
                 await(scheduler())
                 if not err then
-                    vim.api.nvim_command('e!')
+                    vim.cmd('e!')
                 else
                     logger.error(t('errors/buffer_reset', filename))
                 end
@@ -564,11 +584,9 @@ M.setup = async_void(function(config)
     await(git.setup(config))
     await(scheduler())
     ui.setup(config)
-    vim.api.nvim_command('augroup tanvirtin/vgit | autocmd! | augroup END')
-    vim.api.nvim_command('autocmd tanvirtin/vgit BufEnter,BufWritePost * lua require("vgit")._buf_attach()')
-    if state:get('blames_enabled') then
-        vim.api.nvim_command('augroup tanvirtin/vgit/blame | autocmd! | augroup END')
-    end
+    vim.cmd('aug tanvirtin/vgit | autocmd! | aug END')
+    vim.cmd('au tanvirtin/vgit BufWinEnter * lua require("vgit")._buf_attach()')
+    vim.cmd('au tanvirtin/vgit BufWritePost * lua require("vgit")._buf_update()')
     vim.cmd(string.format(
         'com! -nargs=+ %s %s',
         '-complete=customlist,v:lua.package.loaded.vgit._command_autocompletes',

@@ -26,6 +26,7 @@ describe('init:', function()
                 hunks_quickfix_list = true,
                 toggle_buffer_blames = true,
                 _buf_attach = true,
+                _buf_update = true,
                 _blame_line = true,
                 _run_command = true,
                 _unblame_line = true,
