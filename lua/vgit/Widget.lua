@@ -21,13 +21,25 @@ local function new(views)
     }, Widget)
 end
 
-function Widget:views()
-    return self.views
+function Widget:set_loading(value)
+    assert(type(value) == 'boolean', 'Invalid type')
+    for _, v in pairs(self.views) do
+        v:set_loading(value)
+    end
+    return self
+end
+
+function Widget:set_error(value)
+    assert(type(value) == 'boolean', 'Invalid type')
+    for _, v in pairs(self.views) do
+        v:set_error(value)
+    end
+    return self
 end
 
 function Widget:render()
     if self.internals.rendered then
-        return
+        return self
     end
     for _, v in pairs(self.views) do
         v:render()
@@ -56,6 +68,7 @@ function Widget:render()
         end
     end
     self.internals.rendered = true
+    return self
 end
 
 return {
