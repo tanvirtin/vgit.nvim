@@ -13,12 +13,10 @@ local function global_height()
     return vim.o.lines
 end
 
-local function new(views, close_mappings, actions)
+local function new(views)
     assert(type(views) == 'table', 'Invalid options provided for Widget')
     return setmetatable({
         views = views,
-        actions = actions,
-        close_mappings = close_mappings,
         internals = { rendered = false }
     }, Widget)
 end
@@ -31,54 +29,30 @@ function Widget:render()
     if self.internals.rendered then
         return
     end
-    for _, v in ipairs(self.views) do
+    for _, v in pairs(self.views) do
         v:render()
     end
-    local all_wins = {}
-    for _, v in ipairs(self.views) do
-        table.insert(all_wins, v:get_win_id())
-        table.insert(all_wins, v:get_border_win_id())
+    local win_ids = {}
+    for _, v in pairs(self.views) do
+        table.insert(win_ids, v:get_win_id())
+        table.insert(win_ids, v:get_border_win_id())
     end
-    for _, v in ipairs(self.views) do
-        local buf = v:get_buf()
-        buffer.add_autocmd(
-            buf,
-            'BufWinLeave',
-            string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(all_wins))
+    for _, v in pairs(self.views) do
+        v:add_autocmd(
+            'BufWinLeave', string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(win_ids))
         )
-        if self.actions then
-            for _, action in ipairs(self.actions) do
-                buffer.add_keymap(
-                    buf,
-                    action.mapping,
-                    (type(action.action) == 'function' and action.action(v)) or action.action
-                )
-            end
-        end
-    end
-    if self.close_mappings then
-        for _, mapping in ipairs(self.close_mappings) do
-            for _, v in ipairs(self.views) do
-                local buf = v:get_buf()
-                buffer.add_keymap(
-                    buf,
-                    mapping,
-                    string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(all_wins))
-                )
-            end
-        end
     end
     local bufs = vim.api.nvim_list_bufs()
     for _, buf in ipairs(bufs) do
         local is_buf_listed = vim.api.nvim_buf_get_option(buf, 'buflisted') == true
-        if is_buf_listed then
-            if buffer.is_valid(buf) then
-                buffer.add_autocmd(
-                    buf,
-                    'BufEnter',
-                    string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(all_wins))
-                )
-            end
+        local buf_name = vim.api.nvim_buf_get_name(buf)
+        local buf_has_name = buf_name and buf_name ~= ''
+        if is_buf_listed and buf_has_name and buffer.is_valid(buf) then
+            buffer.add_autocmd(
+                buf,
+                'BufEnter',
+                string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(win_ids))
+            )
         end
     end
     self.internals.rendered = true
