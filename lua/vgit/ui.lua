@@ -146,9 +146,11 @@ M.state = State.new({
             },
         },
     },
+    _displayed_widget = {}
 })
 
 M.close_windows = function(wins)
+    M.state:set('_displayed_widget', {})
     local existing_wins = vim.api.nvim_list_wins()
     for _, win in ipairs(wins) do
         if vim.api.nvim_win_is_valid(win) and vim.tbl_contains(existing_wins, win) then
@@ -354,9 +356,11 @@ M.show_preview = async_void(function(fetch, filetype)
     local widget = Widget.new(views)
         :render()
         :set_loading(true)
+    await(scheduler())
     local err, data = await(fetch())
     await(scheduler())
     widget:set_loading(false)
+    await(scheduler())
     if not err then
         views.previous:set_lines(data.previous_lines)
         views.current:set_lines(data.current_lines)
@@ -373,40 +377,43 @@ M.show_preview = async_void(function(fetch, filetype)
         end
     else
         widget:set_error(true)
+        await(scheduler())
     end
 end)
 
-M.change_history = function(
-    wins_to_update,
-    bufs_to_update,
-    selected_log,
-    current_lines,
-    previous_lines,
-    lnum_changes
-)
-    local bufs = {
-        current = bufs_to_update[1],
-        previous = bufs_to_update[2],
-        history = bufs_to_update[3],
-    }
-    for _, win in pairs(wins_to_update) do
-        vim.api.nvim_win_set_cursor(win, { 1, 0 })
+M.change_history = function(fetch, selected_log)
+    local widget = M.state:get('_displayed_widget')
+    local views = widget:get_views()
+    views.previous:set_loading(true)
+    views.current:set_loading(true)
+    local err, data = await(fetch())
+    await(scheduler())
+    views.previous:set_loading(false)
+    views.current:set_loading(false)
+    await(scheduler())
+    if err then
+        views.previous:set_error(true)
+        views.current:set_error(true)
+        await(scheduler())
+        return
     end
+    vim.api.nvim_win_set_cursor(views.previous:get_win_id(), { 1, 0 })
+    vim.api.nvim_win_set_cursor(views.current:get_win_id(), { 1, 0 })
     vim.fn.sign_unplace(M.constants.hunk_signs_group)
-    for _, data in ipairs(lnum_changes) do
-        local buf = bufs[data.buftype]
+    for _, datum in ipairs(data.lnum_changes) do
+        local view = views[datum.buftype]
         vim.fn.sign_place(
-            data.lnum,
+            datum.lnum,
             M.constants.hunk_signs_group,
-            M.state:get('preview').signs[data.type].sign_hl,
-            buf,
+            M.state:get('preview').signs[datum.type].sign_hl,
+            view:get_buf(),
             {
-                lnum = data.lnum,
+                lnum = datum.lnum,
                 priority = M.state:get('preview').priority,
             }
         )
     end
-    local history_lines = buffer.get_lines(bufs.history)
+    local history_lines = views.history:get_lines()
     for index, line in ipairs(history_lines) do
         if index == selected_log then
             history_lines[index] = string.format('>%s', line:sub(2, #line))
@@ -414,12 +421,12 @@ M.change_history = function(
             history_lines[index] = string.format(' %s', line:sub(2, #line))
         end
     end
-    buffer.set_lines(bufs.history, history_lines)
-    buffer.set_lines(bufs.current, current_lines)
-    buffer.set_lines(bufs.previous, previous_lines)
+    views.history:set_lines(history_lines)
+    views.current:set_lines(data.current_lines)
+    views.previous:set_lines(data.previous_lines)
     local lnum = selected_log - 1
     vim.highlight.range(
-        bufs.history,
+        views.history:get_buf(),
         M.constants.history_namespace,
         M.state:get('history').indicator.hl,
         { lnum, 0 },
@@ -427,43 +434,14 @@ M.change_history = function(
     )
 end
 
-M.show_history = function(current_lines, previous_lines, logs, lnum_changes, filetype)
+M.show_history = function(fetch, filetype)
     local parent_buf = vim.api.nvim_get_current_buf()
     local height = math.ceil(View.global_height() - 13)
     local width = math.ceil(View.global_width() * 0.485)
     local col = math.ceil((View.global_width() - (width * 2)) / 2) - 1
-    local padding_right = 2
-    local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
-    local rows = {}
-    for index, log in ipairs(logs) do
-        local row = {
-            index - 1 == 0 and string.format('>  HEAD~%s', index - 1) or string.format('   HEAD~%s', index - 1),
-            log.author_name or '',
-            log.commit_hash or '',
-            log.summary or '', (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or ''
-        }
-        for i, item in ipairs(row) do
-            if #item + 1 > table_title_space[i] then
-                table_title_space[i] = #item + padding_right
-            end
-        end
-        table.insert(rows, row)
-    end
-    local history_lines = {}
-    for _, row in ipairs(rows) do
-        local line = ''
-        for index, item in ipairs(row) do
-           line = line .. item .. string.rep(' ',  table_title_space[index] - #item)
-           if index ~= #table_title_space then
-               line = line
-           end
-        end
-        table.insert(history_lines, line)
-    end
     local views = {
         previous = View.new({
             filetype = filetype,
-            lines = previous_lines,
             border = M.state:get('history').previous_window.border,
             border_hl = M.state:get('history').previous_window.border_hl,
             title = M.state:get('history').previous_window.title,
@@ -490,7 +468,6 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
             },
         }),
         current = View.new({
-            lines = current_lines,
             filetype = filetype,
             title = M.state:get('history').current_window.title,
             border = M.state:get('history').current_window.border,
@@ -518,7 +495,6 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
             },
         }),
         history = View.new({
-            lines = history_lines,
             title = M.state:get('history').history_window.title,
             border = M.state:get('history').history_window.border,
             border_hl = M.state:get('history').history_window.border_hl,
@@ -545,29 +521,60 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
         }),
     }
     local widget = Widget.new(views)
-    widget:render()
-    views.history:add_keymap('<enter>', string.format(
-        '_change_history(%s, %s, %s)',
-        parent_buf,
-        vim.inspect({
-            views.current:get_win_id(),
-            views.previous:get_win_id()
-        }),
-        vim.inspect({
-            views.current:get_buf(),
-            views.previous:get_buf(),
-            views.history:get_buf(),
-        })
-    ))
-    for _, data in ipairs(lnum_changes) do
-        local view = views[data.buftype]
+        :render()
+        :set_loading(true)
+    M.state:set('_displayed_widget', widget)
+    await(scheduler())
+    local err, data = await(fetch())
+    await(scheduler())
+    widget:set_loading(false)
+    await(scheduler())
+    if err then
+        widget:set_error(true)
+        await(scheduler())
+        return
+    end
+    local padding_right = 2
+    local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
+    local rows = {}
+    for index, log in ipairs(data.logs) do
+        local row = {
+            index - 1 == 0 and string.format('>  HEAD~%s', index - 1) or string.format('   HEAD~%s', index - 1),
+            log.author_name or '',
+            log.commit_hash or '',
+            log.summary or '', (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or ''
+        }
+        for i, item in ipairs(row) do
+            if #item + 1 > table_title_space[i] then
+                table_title_space[i] = #item + padding_right
+            end
+        end
+        table.insert(rows, row)
+    end
+    local history_lines = {}
+    for _, row in ipairs(rows) do
+        local line = ''
+        for index, item in ipairs(row) do
+           line = line .. item .. string.rep(' ',  table_title_space[index] - #item)
+           if index ~= #table_title_space then
+               line = line
+           end
+        end
+        table.insert(history_lines, line)
+    end
+    views.previous:set_lines(data.previous_lines)
+    views.current:set_lines(data.current_lines)
+    views.history:set_lines(history_lines)
+    views.history:add_keymap('<enter>', string.format('_change_history(%s)', parent_buf))
+    for _, datum in ipairs(data.lnum_changes) do
+        local view = views[datum.buftype]
         vim.fn.sign_place(
-            data.lnum,
+            datum.lnum,
             M.constants.hunk_signs_group,
-            M.state:get('preview').signs[data.type].sign_hl,
+            M.state:get('preview').signs[datum.type].sign_hl,
             view:get_buf(),
             {
-                lnum = data.lnum,
+                lnum = datum.lnum,
                 priority = M.state:get('preview').priority,
             }
         )

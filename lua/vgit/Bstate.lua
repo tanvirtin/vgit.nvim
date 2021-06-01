@@ -19,6 +19,7 @@ end
 function Bstate:add(buf)
     self.bufs[translate_buf(buf)] = State.new({
         filename = '',
+        filetype = '',
         project_relative_filename = '',
         logs = {},
         hunks = {},
