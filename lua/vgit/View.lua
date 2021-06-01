@@ -219,6 +219,28 @@ function View:set_loading(value)
     end
 end
 
+function View:add_autocmd(cmd, action, options)
+    local buf = self:get_buf()
+    local persist = (options and options.persist) or false
+    local override = (options and options.override) or false
+    local nested = (options and options.nested) or false
+    vim.cmd(
+        string.format(
+            'au%s %s <buffer=%s> %s %s :lua require("vgit").%s',
+            override and '!' or '',
+            cmd,
+            buf,
+            nested and '++nested' or '',
+            persist and '' or '++once',
+            action
+        )
+    )
+end
+
+function View:add_keymap(key, action)
+    buffer.add_keymap(self:get_buf(), key, action)
+end
+
 function View:render()
     if self.internals.rendered then
         return
@@ -260,7 +282,7 @@ function View:render()
         self.internals.border.buf = border_buf
         self.internals.border.win_id = border_win_id
     end
-    buffer.add_autocmd(buf, 'BufWinLeave', string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id))
+    self:add_autocmd('BufWinLeave', string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id))
     self.internals.rendered = true
 end
 
