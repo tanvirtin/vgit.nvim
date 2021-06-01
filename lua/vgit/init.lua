@@ -9,6 +9,7 @@ local throttle_leading = require('vgit.defer').throttle_leading
 local logger = require('plenary.log')
 local a = require('plenary.async_lib.async')
 local t = require('vgit.localization').translate
+local async = a.async
 local async_void = a.async_void
 local await = a.await
 local scheduler = a.scheduler
@@ -17,7 +18,7 @@ local vim = vim
 
 local M = {}
 
-local throttle_ms = 300
+local throttle_ms = 150
 local bstate = Bstate.new()
 local state = State.new({
     config = {},
@@ -71,6 +72,7 @@ M._buf_attach = async_void(function(buf)
                     local project_relative_filename = fs.project_relative_filename(filename, tracked_files)
                     if project_relative_filename and project_relative_filename ~= '' then
                         bstate:add(buf)
+                        bstate:set(buf, 'filetype', fs.filetype(buf))
                         buf_just_cached = true
                         bstate:set(buf, 'filename', filename)
                         bstate:set(buf, 'project_relative_filename', project_relative_filename)
@@ -94,9 +96,11 @@ M._buf_attach = async_void(function(buf)
                     if not err then
                         bstate:set(buf, 'hunks', hunks)
                         ui.hide_hunk_signs(buf)
+                        await(scheduler())
                         ui.show_hunk_signs(buf, hunks)
+                        await(scheduler())
                     else
-                        logger.error(t('errors/buf_attach_hunks', filename))
+                        logger.error(t('errors/compute_hunks', filename))
                     end
                 end
             end
@@ -113,10 +117,11 @@ M._buf_update = async_void(function(buf)
         if not err then
             bstate:set(buf, 'hunks', hunks)
             ui.hide_hunk_signs(buf)
+            await(scheduler())
             ui.show_hunk_signs(buf, hunks)
             await(scheduler())
         else
-            logger.error(t('errors/buf_attach_hunks', filename))
+            logger.error(t('errors/compute_hunks', filename))
         end
     end
 end)
@@ -135,16 +140,17 @@ M._blame_line = async_void(throttle_leading(function(buf)
                 local filename = bstate:get(buf, 'filename')
                 state:set('processing', true)
                 local err, blame = await(git.blame_line(filename, lnum))
-                state:set('processing', false)
                 await(scheduler())
+                state:set('processing', false)
                 if not err then
                     if not state:get('processing') then
                         ui.hide_blame(buf)
+                        await(scheduler())
                         if vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())[1] == lnum then
                             ui.show_blame(buf, blame, lnum, git.state:get('config'))
+                            await(scheduler())
                             bstate:set(buf, 'last_lnum_blamed', lnum)
                         end
-                        await(scheduler())
                     end
                 else
                     logger.error(t('errors/blame_line', filename))
@@ -154,7 +160,7 @@ M._blame_line = async_void(throttle_leading(function(buf)
     end
 end, throttle_ms))
 
-M._unblame_line = throttle_leading(function(buf, override)
+M._unblame_line = function(buf, override)
     if bstate:contains(buf) and buffer.is_valid(buf) then
         if override then
             return ui.hide_blame(buf)
@@ -166,7 +172,7 @@ M._unblame_line = throttle_leading(function(buf, override)
             ui.hide_blame(buf)
         end
     end
-end, throttle_ms)
+end
 
 M._run_command = function(command, ...)
     if not state:get('disabled') then
@@ -194,53 +200,45 @@ M._run_submodule_command = function(name, command, ...)
     end
 end
 
-M._change_history = async_void(throttle_leading(function(buf, wins_to_update, bufs_to_update)
+M._change_history = async_void(throttle_leading(function(buf)
     if not state:get('disabled') and buffer.is_valid(buf) then
         local selected_log = vim.api.nvim_win_get_cursor(0)[1]
         if bstate:contains(buf) then
-            local filename = bstate:get(buf, 'filename')
-            local logs = bstate:get(buf, 'logs')
-            local log = logs[selected_log]
-            local hunks = nil
-            local commit_hash = nil
-            if log then
-                local err, computed_hunks = await(git.hunks(filename, log.parent_hash, log.commit_hash))
-                await(scheduler())
-                if err then
-                    logger.error(t('errors/change_history_hunks', log.parent_hash, log.commit_hash))
-                    return
+            ui.change_history(async(function()
+                local filename = bstate:get(buf, 'filename')
+                local logs = bstate:get(buf, 'logs')
+                local log = logs[selected_log]
+                local hunks = nil
+                local commit_hash = nil
+                if log then
+                    local err, computed_hunks = await(git.hunks(filename, log.parent_hash, log.commit_hash))
+                    await(scheduler())
+                    if err then
+                        return err, nil
+                    end
+                    hunks = computed_hunks
+                    commit_hash = log.commit_hash
                 end
-                hunks = computed_hunks
-                commit_hash = log.commit_hash
-            end
-            local err
-            local lines
-            if commit_hash then
-                local project_filename = bstate:get(buf, 'project_relative_filename')
-                err, lines = await(git.show(project_filename, commit_hash))
+                local err
+                local lines
+                if commit_hash then
+                    local project_filename = bstate:get(buf, 'project_relative_filename')
+                    err, lines = await(git.show(project_filename, commit_hash))
+                    await(scheduler())
+                else
+                    err, lines = fs.read_file(filename);
+                end
+                if err then
+                    return err, nil
+                end
+                local diff_err, data = await(git.vertical_diff(lines, hunks))
                 await(scheduler())
-            else
-                err, lines = fs.read_file(filename);
-            end
-            if err then
-                logger.error(t('errors/change_history_show'))
-                return
-            end
-            local diff_err, data = await(git.vertical_diff(lines, hunks))
-            await(scheduler())
-            if not diff_err then
-                ui.change_history(
-                    wins_to_update,
-                    bufs_to_update,
-                    selected_log,
-                    data.current_lines,
-                    data.previous_lines,
-                    data.lnum_changes
-                )
-                await(scheduler())
-            else
-                logger.error(t('errors/change_history_diff'))
-            end
+                if not diff_err then
+                    return nil, data
+                else
+                    return diff_err, nil
+                end
+            end), selected_log)
         end
     end
 end, throttle_ms))
@@ -277,7 +275,7 @@ M.hunk_preview = throttle_leading(function(buf, win)
                 end
             end
             if selected_hunk then
-                ui.show_hunk(selected_hunk, vim.api.nvim_buf_get_option(buf, 'filetype'))
+                ui.show_hunk(selected_hunk, bstate:get(buf, 'filetype'))
             end
         end
     end
@@ -422,6 +420,7 @@ M.toggle_buffer_hunks = async_void(throttle_leading(function()
                 if buffer.is_valid(buf) then
                     buf_state:set('hunks', {})
                     ui.hide_hunk_signs(buf)
+                    await(scheduler())
                 end
             end)
             return state:get('hunks_enabled')
@@ -437,6 +436,7 @@ M.toggle_buffer_hunks = async_void(throttle_leading(function()
                     state:set('hunks_enabled', true)
                     buf_state:set('hunks', hunks)
                     ui.show_hunk_signs(buf, hunks)
+                    await(scheduler())
                 else
                     logger.error(t('errors/toggle_buffer_hunks', filename))
                 end
@@ -473,8 +473,10 @@ M.toggle_buffer_blames = async_void(throttle_leading(function()
                 await(scheduler())
                 if not err then
                     ui.hide_blame(buf)
+                    await(scheduler())
                     if vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())[1] == lnum then
                         ui.show_blame(buf, blame, lnum, git.state:get('config'))
+                        await(scheduler())
                     end
                 else
                     logger.error(t('errors/toggle_buffer_blames', filename))
@@ -489,35 +491,33 @@ M.buffer_history = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) then
         if bstate:contains(buf) then
-            local filename = bstate:get(buf, 'filename')
-            local logs_err, logs = await(git.logs(filename))
-            await(scheduler())
-            if not logs_err then
-                bstate:set(buf, 'logs', logs)
-                local hunks = bstate:get(buf, 'hunks')
-                local filetype = fs.filetype(buf)
-                local err, lines = fs.read_file(filename);
-                if not err then
-                    local diff_err, data = await(git.vertical_diff(lines, hunks))
+            ui.show_history(
+                async(function()
+                    local filename = bstate:get(buf, 'filename')
+                    local logs_err, logs = await(git.logs(filename))
                     await(scheduler())
-                    if not diff_err then
-                        ui.show_history(
-                            data.current_lines,
-                            data.previous_lines,
-                            logs,
-                            data.lnum_changes,
-                            filetype
-                        )
-                        await(scheduler())
+                    if not logs_err then
+                        bstate:set(buf, 'logs', logs)
+                        local hunks = bstate:get(buf, 'hunks')
+                        local read_file_err, lines = fs.read_file(filename);
+                        if not read_file_err then
+                            local diff_err, data = await(git.vertical_diff(lines, hunks))
+                            await(scheduler())
+                            if not diff_err then
+                                data.logs = logs
+                                return diff_err, data
+                            else
+                                return nil
+                            end
+                        else
+                            return read_file_err, nil
+                        end
                     else
-                        logger.error(t('errors/buffer_history_diff', filename))
+                        return logs_err, nil
                     end
-                else
-                    logger.error(t('errors/buffer_history_file', filename))
-                end
-            else
-                logger.error(t('errors/buffer_history_logs', filename))
-            end
+                end),
+                bstate:get(buf, 'filetype')
+            )
         end
     end
 end, throttle_ms))
@@ -527,20 +527,18 @@ M.buffer_preview = async_void(throttle_leading(function(buf)
     if not state:get('disabled') and buffer.is_valid(buf) then
         if state:get('hunks_enabled') then
             if bstate:contains(buf) then
-                local filename = bstate:get(buf, 'filename')
-                local hunks = bstate:get(buf, 'hunks')
-                if hunks and #hunks > 0 and filename and filename ~= '' then
-                    local filetype = fs.filetype(buf)
-                    local err, lines = fs.read_file(filename);
-                    if not err then
-                        ui.show_preview(
-                            function()
-                                return git.vertical_diff(lines, hunks)
-                            end,
-                            filetype
-                        )
-                    end
-                end
+                ui.show_preview(
+                    async(function()
+                        local read_file_err, lines = fs.read_file(bstate:get(buf, 'filename'));
+                        if read_file_err then
+                            return read_file_err, nil
+                        end
+                        local diff_err, data = await(git.vertical_diff(lines, bstate:get(buf, 'hunks')))
+                        await(scheduler())
+                        return diff_err, data
+                    end),
+                    bstate:get(buf, 'filetype')
+                )
             end
         end
     end

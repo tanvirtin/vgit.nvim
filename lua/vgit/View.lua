@@ -1,5 +1,6 @@
 local buffer = require('vgit.buffer')
 local State = require('vgit.State')
+local t = require('vgit.localization').translate
 
 local vim = vim
 
@@ -208,6 +209,10 @@ function View:set_lines(lines)
     return self
 end
 
+function View:get_lines()
+    return buffer.get_lines(self:get_buf())
+end
+
 function View:set_loading(value)
     assert(type(value) == 'boolean', 'Invalid type')
     if value == self.state.loading then
@@ -221,7 +226,7 @@ function View:set_loading(value)
         for _ = 1, height do
             table.insert(loading_lines, '')
         end
-        local loading_text = 'Loading...'
+        local loading_text = t('loading')
         local rep = math.ceil((width / 2) - math.ceil(#loading_text / 2))
         if rep < 0 then
             rep = 0
@@ -252,12 +257,12 @@ function View:set_error(value)
         for _ = 1, height do
             table.insert(loading_lines, '')
         end
-        local loading_text = 'An error has occured'
-        local rep = math.ceil((width / 2) - math.ceil(#loading_text / 2))
+        local error_text = t('error')
+        local rep = math.ceil((width / 2) - math.ceil(#error_text / 2))
         if rep < 0 then
             rep = 0
         end
-        loading_lines[math.floor(height / 2)] = string.rep(' ',  rep) .. loading_text
+        loading_lines[math.floor(height / 2)] = string.rep(' ',  rep) .. error_text
         self:set_win_option('cursorline', false)
         buffer.set_lines(self.state.buf, loading_lines)
         self.state.lines = buffer.get_lines(self:get_buf())
