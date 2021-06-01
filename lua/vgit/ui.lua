@@ -1,9 +1,9 @@
 local State = require('vgit.State')
 local buffer = require('vgit.buffer')
 local highlighter = require('vgit.highlighter')
-local view_factory = require('vgit.view_factory')
-local widget_factory = require('vgit.widget_factory')
 local localization = require('vgit.localization')
+local View = require('vgit.View')
+local Widget = require('vgit.Widget')
 local t = localization.translate
 
 local vim = vim
@@ -145,10 +145,13 @@ M.state = State.new({
 })
 
 M.close_windows = function(wins)
+    local existing_wins = vim.api.nvim_list_wins()
     for _, win in ipairs(wins) do
-        if vim.api.nvim_win_is_valid(win) then
-            if vim.api.nvim_win_is_valid(win) then
-                vim.api.nvim_win_close(win, false)
+        if vim.api.nvim_win_is_valid(win) and vim.tbl_contains(existing_wins, win) then
+            local buf = vim.api.nvim_win_get_buf(win)
+            pcall(vim.api.nvim_win_close, win, true)
+            if buffer.is_valid(buf) then
+                pcall(vim.api.nvim_buf_delete, buf)
             end
         end
     end
@@ -247,8 +250,6 @@ M.show_hunk = function(hunk, filetype)
     local trimmed_lines = {}
     local added_lines = {}
     local removed_lines = {}
-    local height = #lines
-    local width = vim.api.nvim_get_option('columns')
     for index, line in pairs(lines) do
         local first_letter = line:sub(1, 1)
         if first_letter == '+' then
@@ -258,42 +259,29 @@ M.show_hunk = function(hunk, filetype)
         end
         table.insert(trimmed_lines, line:sub(2, #line))
     end
-    local widget_options = widget_factory.create({
-        close_mappings = { '<esc>', '<C-c>' },
-        views = {
-            hunk = view_factory.create({
-                filetype = filetype,
-                lines = trimmed_lines,
-                border = M.state:get('hunk').window.border,
-                border_hl = M.state:get('hunk').window.border_hl,
-                buf_options = {
-                    ['modifiable'] = false,
-                    ['bufhidden'] = 'wipe',
-                    ['buflisted'] = false,
-                },
-                win_options = {
-                    ['winhl'] = 'Normal:',
-                    ['cursorline'] = true,
-                    ['wrap'] = false,
-                    ['signcolumn'] = 'yes',
-                },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'cursor',
-                    width = width,
-                    height = height,
-                    row = 0,
-                    col = 0,
-                },
-            })
-        }
+    local view = View.new({
+        filetype = filetype,
+        lines = trimmed_lines,
+        border = M.state:get('hunk').window.border,
+        border_hl = M.state:get('hunk').window.border_hl,
+        win_options = { ['cursorline'] = true},
+        window_props = {
+            style = 'minimal',
+            relative = 'cursor',
+            height = #lines,
+            width = vim.api.nvim_get_option('columns'),
+            row = 0,
+            col = 0,
+        },
     })
+    local widget = Widget.new({ view })
+    widget:render()
     for _, lnum in ipairs(added_lines) do
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
             M.state:get('hunk').signs['add'].sign_hl,
-            widget_options.views.hunk.buf,
+            view:get_buf(),
             {
                 lnum = lnum,
                 priority = M.state:get('hunk_sign').priority,
@@ -305,7 +293,7 @@ M.show_hunk = function(hunk, filetype)
             lnum,
             M.constants.hunk_signs_group,
             M.state:get('hunk').signs['remove'].sign_hl,
-            widget_options.views.hunk.buf,
+            view:get_buf(),
             {
                 lnum = lnum,
                 priority = M.state:get('hunk_sign').priority,
@@ -315,78 +303,57 @@ M.show_hunk = function(hunk, filetype)
 end
 
 M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
-    local global_width = vim.api.nvim_get_option('columns')
-    local global_height = vim.api.nvim_get_option('lines')
-    local height = math.ceil(global_height - 4)
-    local width = math.ceil(global_width * 0.485)
-    local col = math.ceil((global_width - (width * 2)) / 2) - 1
-    local widget_options = widget_factory.create({
-        close_mappings = { '<esc>', '<C-c>' },
-        views = {
-            previous = view_factory.create({
-                filetype = filetype,
-                lines = previous_lines,
-                title = M.state:get('preview').previous_window.title,
-                border = M.state:get('preview').previous_window.border,
-                border_hl = M.state:get('preview').previous_window.border_hl,
-                buf_options = {
-                    ['modifiable'] = false,
-                    ['buflisted'] = false,
-                    ['bufhidden'] = 'wipe',
-                },
-                win_options = {
-                    ['winhl'] = 'Normal:',
-                    ['cursorline'] = true,
-                    ['wrap'] = false,
-                    ['cursorbind'] = true,
-                    ['scrollbind'] = true,
-                    ['signcolumn'] = 'yes',
-                },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'editor',
-                    width = width,
-                    height = height,
-                    row = 1,
-                    col = col,
-                },
-            }),
-            current = view_factory.create({
-                lines = current_lines,
-                filetype = filetype,
-                title = M.state:get('preview').current_window.title,
-                border = M.state:get('preview').current_window.border,
-                border_hl = M.state:get('preview').current_window.border_hl,
-                buf_options = {
-                    ['modifiable'] = false,
-                    ['buflisted'] = false,
-                    ['bufhidden'] = 'wipe',
-                },
-                win_options = {
-                    ['winhl'] = 'Normal:',
-                    ['cursorline'] = true,
-                    ['wrap'] = false,
-                    ['cursorbind'] = true,
-                    ['scrollbind'] = true,
-                    ['signcolumn'] = 'yes',
-                },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'editor',
-                    width = width,
-                    height = height,
-                    row = 1,
-                    col = col + width + 2,
-                },
-            }),
-        }
-    })
+    local height = math.ceil(View.global_height() - 4)
+    local width = math.ceil(View.global_width() * 0.485)
+    local col = math.ceil((View.global_width() - (width * 2)) / 2) - 1
+    local views = {
+        previous = View.new({
+            filetype = filetype,
+            lines = previous_lines,
+            title = M.state:get('preview').previous_window.title,
+            border = M.state:get('preview').previous_window.border,
+            border_hl = M.state:get('preview').previous_window.border_hl,
+            win_options = {
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
+                ['cursorline'] = true,
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = width,
+                height = height,
+                row = 1,
+                col = col,
+            },
+        }),
+        current = View.new({
+            lines = current_lines,
+            filetype = filetype,
+            title = M.state:get('preview').current_window.title,
+            border = M.state:get('preview').current_window.border,
+            border_hl = M.state:get('preview').current_window.border_hl,
+            win_options = {
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
+                ['cursorline'] = true,
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = width,
+                height = height,
+                row = 1,
+                col = col + width + 2,
+            },
+        })
+    }
+    Widget.new(views):render()
     for _, data in ipairs(lnum_changes) do
-        local buf = widget_options.views[data.buftype].buf
         vim.fn.sign_place(
             data.lnum, M.constants.hunk_signs_group,
             M.state:get('preview').signs[data.type].sign_hl,
-            buf,
+            (views[data.buftype]):get_buf(),
             {
                 lnum = data.lnum,
                 priority = M.state:get('preview').priority,
@@ -448,12 +415,9 @@ end
 
 M.show_history = function(current_lines, previous_lines, logs, lnum_changes, filetype)
     local parent_buf = vim.api.nvim_get_current_buf()
-    local global_width = vim.api.nvim_get_option('columns')
-    local global_height = vim.api.nvim_get_option('lines')
-    local height = math.ceil(global_height - 13)
-    local width = math.ceil(global_width * 0.485)
-    local history_width = width * 2 + 2
-    local col = math.ceil((global_width - (width * 2)) / 2) - 1
+    local height = math.ceil(View.global_height() - 13)
+    local width = math.ceil(View.global_width() * 0.485)
+    local col = math.ceil((View.global_width() - (width * 2)) / 2) - 1
     local padding_right = 2
     local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
     local rows = {}
@@ -482,115 +446,112 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
         end
         table.insert(history_lines, line)
     end
-    local widget_options = widget_factory.create({
-        close_mappings = { '<esc>', '<C-c>' },
-        views = {
-            previous = view_factory.create({
-                filetype = filetype,
-                lines = previous_lines,
-                border = M.state:get('history').previous_window.border,
-                border_hl = M.state:get('history').previous_window.border_hl,
-                title = M.state:get('history').previous_window.title,
-                buf_options = {
-                    ['modifiable'] = false,
-                    ['buflisted'] = false,
-                    ['bufhidden'] = 'wipe',
-                },
-                win_options = {
-                    ['winhl'] = 'Normal:',
-                    ['cursorline'] = true,
-                    ['wrap'] = false,
-                    ['cursorbind'] = true,
-                    ['scrollbind'] = true,
-                    ['signcolumn'] = 'yes',
-                },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'editor',
-                    width = width,
-                    height = height,
-                    row = 1,
-                    col = col,
-                },
-            }),
-            current = view_factory.create({
-                lines = current_lines,
-                filetype = filetype,
-                title = M.state:get('history').current_window.title,
-                border = M.state:get('history').current_window.border,
-                border_hl = M.state:get('history').current_window.border_hl,
-                buf_options = {
-                    ['modifiable'] = false,
-                    ['buflisted'] = false,
-                    ['bufhidden'] = 'wipe',
-                },
-                win_options = {
-                    ['winhl'] = 'Normal:',
-                    ['cursorline'] = true,
-                    ['wrap'] = false,
-                    ['cursorbind'] = true,
-                    ['scrollbind'] = true,
-                    ['signcolumn'] = 'yes',
-                },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'editor',
-                    width = width,
-                    height = height,
-                    row = 1,
-                    col = col + width + 2,
-                },
-            }),
-            history =  view_factory.create({
-                lines = history_lines,
-                title = M.state:get('history').history_window.title,
-                border = M.state:get('history').history_window.border,
-                border_hl = M.state:get('history').history_window.border_hl,
-                buf_options = {
-                    ['modifiable'] = false,
-                    ['buflisted'] = false,
-                    ['bufhidden'] = 'wipe',
-                },
-                win_options = {
-                    ['winhl'] = 'Normal:',
-                    ['cursorline'] = true,
-                    ['cursorbind'] = false,
-                    ['scrollbind'] = false,
-                    ['wrap'] = false,
-                },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'editor',
-                    width = history_width,
-                    height = 7,
-                    row = height + 3,
-                    col = col,
-                },
-                actions = {{
-                    mapping = '<enter>',
-                    action = function(options)
-                        return string.format(
-                            '_change_history(%s, %s, %s)',
-                            parent_buf,
-                            vim.inspect({ options.views.current.win_id, options.views.previous.win_id }),
-                            vim.inspect({
-                                options.views.current.buf,
-                                options.views.previous.buf,
-                                options.views.history.buf
-                            })
-                        )
-                    end
-                }}
-            }),
-        },
-    })
+    local views = {
+        previous = View.new({
+            filetype = filetype,
+            lines = previous_lines,
+            border = M.state:get('history').previous_window.border,
+            border_hl = M.state:get('history').previous_window.border_hl,
+            title = M.state:get('history').previous_window.title,
+            buf_options = {
+                ['modifiable'] = false,
+                ['buflisted'] = false,
+                ['bufhidden'] = 'wipe',
+            },
+            win_options = {
+                ['winhl'] = 'Normal:',
+                ['cursorline'] = true,
+                ['wrap'] = false,
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
+                ['signcolumn'] = 'yes',
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = width,
+                height = height,
+                row = 1,
+                col = col,
+            },
+        }),
+        current = View.new({
+            lines = current_lines,
+            filetype = filetype,
+            title = M.state:get('history').current_window.title,
+            border = M.state:get('history').current_window.border,
+            border_hl = M.state:get('history').current_window.border_hl,
+            buf_options = {
+                ['modifiable'] = false,
+                ['buflisted'] = false,
+                ['bufhidden'] = 'wipe',
+            },
+            win_options = {
+                ['winhl'] = 'Normal:',
+                ['cursorline'] = true,
+                ['wrap'] = false,
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
+                ['signcolumn'] = 'yes',
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = width,
+                height = height,
+                row = 1,
+                col = col + width + 2,
+            },
+        }),
+        history = View.new({
+            lines = history_lines,
+            title = M.state:get('history').history_window.title,
+            border = M.state:get('history').history_window.border,
+            border_hl = M.state:get('history').history_window.border_hl,
+            buf_options = {
+                ['modifiable'] = false,
+                ['buflisted'] = false,
+                ['bufhidden'] = 'wipe',
+            },
+            win_options = {
+                ['winhl'] = 'Normal:',
+                ['cursorline'] = true,
+                ['cursorbind'] = false,
+                ['scrollbind'] = false,
+                ['wrap'] = false,
+            },
+            window_props = {
+                style = 'minimal',
+                relative = 'editor',
+                width = width * 2 + 2,
+                height = 7,
+                row = height + 3,
+                col = col,
+            },
+        }),
+    }
+    local widget = Widget.new(views)
+    widget:render()
+    views.history:add_keymap('<enter>', string.format(
+        '_change_history(%s, %s, %s)',
+        parent_buf,
+        vim.inspect({
+            views.current:get_win_id(),
+            views.previous:get_win_id()
+        }),
+        vim.inspect({
+            views.current:get_buf(),
+            views.previous:get_buf(),
+            views.history:get_buf(),
+        })
+    ))
     for _, data in ipairs(lnum_changes) do
-        local buf = widget_options.views[data.buftype].buf
+        local view = views[data.buftype]
         vim.fn.sign_place(
             data.lnum,
             M.constants.hunk_signs_group,
             M.state:get('preview').signs[data.type].sign_hl,
-            buf,
+            view:get_buf(),
             {
                 lnum = data.lnum,
                 priority = M.state:get('preview').priority,
@@ -598,7 +559,7 @@ M.show_history = function(current_lines, previous_lines, logs, lnum_changes, fil
         )
     end
     vim.highlight.range(
-        widget_options.views.history.buf,
+        views.history:get_buf(),
         M.constants.history_namespace,
         M.state:get('history').indicator.hl,
         { 0, 0 }, { 0, 1 }

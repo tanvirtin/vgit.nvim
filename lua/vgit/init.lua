@@ -27,6 +27,7 @@ local state = State.new({
     hunks_enabled = true,
     blames_enabled = true,
     processing = false,
+    are_files_tracked = false,
 })
 
 local function attach_blames_autocmd(buf)
@@ -52,6 +53,16 @@ M._buf_attach = async_void(function(buf)
             else
                 if state:get('disabled') == true then
                     state:set('disabled', false)
+                end
+                if not state:get('are_files_tracked') then
+                    local tracked_files_err, tracked_files = await(git.ls_tracked())
+                    await(scheduler())
+                    if not tracked_files_err then
+                        state:set('tracked_files', tracked_files)
+                        state:set('are_files_tracked', true)
+                    else
+                        logger.error(t('errors/setup_tracked_file'))
+                    end
                 end
                 local tracked_files = state:get('tracked_files')
                 local buf_just_cached = false
@@ -586,19 +597,12 @@ M.setup = async_void(function(config)
     ui.setup(config)
     vim.cmd('aug tanvirtin/vgit | autocmd! | aug END')
     vim.cmd('au tanvirtin/vgit BufWinEnter * lua require("vgit")._buf_attach()')
-    vim.cmd('au tanvirtin/vgit BufWritePost * lua require("vgit")._buf_update()')
+    vim.cmd('au tanvirtin/vgit BufWrite * lua require("vgit")._buf_update()')
     vim.cmd(string.format(
         'com! -nargs=+ %s %s',
         '-complete=customlist,v:lua.package.loaded.vgit._command_autocompletes',
         'VGit lua require("vgit")._run_command(<f-args>)'
     ))
-    local tracked_files_err, tracked_files = await(git.ls_tracked())
-    await(scheduler())
-    if not tracked_files_err then
-        state:set('tracked_files', tracked_files)
-    else
-        logger.error(t('errors/setup_tracked_file'))
-    end
 end)
 
 return M
