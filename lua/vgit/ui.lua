@@ -4,7 +4,11 @@ local highlighter = require('vgit.highlighter')
 local localization = require('vgit.localization')
 local View = require('vgit.View')
 local Widget = require('vgit.Widget')
+local a = require('plenary.async_lib.async')
 local t = localization.translate
+local async_void = a.async_void
+local await = a.await
+local scheduler = a.scheduler
 
 local vim = vim
 
@@ -276,6 +280,7 @@ M.show_hunk = function(hunk, filetype)
     })
     local widget = Widget.new({ view })
     widget:render()
+    view:set_lines(trimmed_lines)
     for _, lnum in ipairs(added_lines) do
         vim.fn.sign_place(
             lnum,
@@ -302,14 +307,13 @@ M.show_hunk = function(hunk, filetype)
     end
 end
 
-M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
+M.show_preview = async_void(function(fetch, filetype)
     local height = math.ceil(View.global_height() - 4)
     local width = math.ceil(View.global_width() * 0.485)
     local col = math.ceil((View.global_width() - (width * 2)) / 2) - 1
     local views = {
         previous = View.new({
             filetype = filetype,
-            lines = previous_lines,
             title = M.state:get('preview').previous_window.title,
             border = M.state:get('preview').previous_window.border,
             border_hl = M.state:get('preview').previous_window.border_hl,
@@ -328,7 +332,6 @@ M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
             },
         }),
         current = View.new({
-            lines = current_lines,
             filetype = filetype,
             title = M.state:get('preview').current_window.title,
             border = M.state:get('preview').current_window.border,
@@ -348,19 +351,30 @@ M.show_preview = function(current_lines, previous_lines, lnum_changes, filetype)
             },
         })
     }
-    Widget.new(views):render()
-    for _, data in ipairs(lnum_changes) do
-        vim.fn.sign_place(
-            data.lnum, M.constants.hunk_signs_group,
-            M.state:get('preview').signs[data.type].sign_hl,
-            (views[data.buftype]):get_buf(),
-            {
-                lnum = data.lnum,
-                priority = M.state:get('preview').priority,
-            }
-        )
+    local widget = Widget.new(views)
+        :render()
+        :set_loading(true)
+    local err, data = await(fetch())
+    await(scheduler())
+    widget:set_loading(false)
+    if not err then
+        views.previous:set_lines(data.previous_lines)
+        views.current:set_lines(data.current_lines)
+        for _, datum in ipairs(data.lnum_changes) do
+            vim.fn.sign_place(
+                datum.lnum, M.constants.hunk_signs_group,
+                M.state:get('preview').signs[datum.type].sign_hl,
+                (views[datum.buftype]):get_buf(),
+                {
+                    lnum = datum.lnum,
+                    priority = M.state:get('preview').priority,
+                }
+            )
+        end
+    else
+        widget:set_error(true)
     end
-end
+end)
 
 M.change_history = function(
     wins_to_update,

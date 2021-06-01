@@ -533,19 +533,12 @@ M.buffer_preview = async_void(throttle_leading(function(buf)
                     local filetype = fs.filetype(buf)
                     local err, lines = fs.read_file(filename);
                     if not err then
-                        local diff_err, data = await(git.vertical_diff(lines, hunks))
-                        await(scheduler())
-                        if not diff_err then
-                            ui.show_preview(
-                                data.current_lines,
-                                data.previous_lines,
-                                data.lnum_changes,
-                                filetype
-                            )
-                            await(scheduler())
-                        else
-                            logger.error(t('errors/buffer_preview_diff', filename))
-                        end
+                        ui.show_preview(
+                            function()
+                                return git.vertical_diff(lines, hunks)
+                            end,
+                            filetype
+                        )
                     end
                 end
             end
