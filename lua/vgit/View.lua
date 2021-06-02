@@ -1,5 +1,6 @@
 local buffer = require('vgit.buffer')
 local State = require('vgit.State')
+local t = require('vgit.localization').translate
 
 local vim = vim
 
@@ -144,7 +145,7 @@ local function new(options)
     })
     config:assign(options)
     return setmetatable({
-        internals = {
+        state = {
             buf = nil,
             win_id = nil,
             border = {
@@ -152,71 +153,126 @@ local function new(options)
                 win_id = nil,
             },
             loading = false,
+            error = false,
             rendered = false,
-            lines = options.lines,
+            lines = {},
         },
         config = config
     }, View)
 end
 
 function View:get_win_id()
-    return self.internals.win_id
+    return self.state.win_id
 end
 
 function View:get_buf()
-    return self.internals.buf
+    return self.state.buf
 end
 
 function View:get_border_buf()
-    return self.internals.border.buf
+    return self.state.border.buf
 end
 
 function View:get_border_win_id()
-    return self.internals.border.win_id
-end
-
-function View:set_buf_option(option)
-    return vim.api.nvim_buf_set_option(self.internals.buf, option)
-end
-
-function View:set_win_option(option)
-    return vim.api.nvim_win_set_option(self.internals.win_id, option)
+    return self.state.border.win_id
 end
 
 function View:get_buf_option(key)
-    return vim.api.nvim_buf_get_option(self.internals.buf, key)
+    return vim.api.nvim_buf_get_option(self.state.buf, key)
 end
 
 function View:get_win_option(key)
-    return vim.api.nvim_win_get_option(self.internals.win_id, key)
+    return vim.api.nvim_win_get_option(self.state.win_id, key)
+end
+
+function View:set_buf_option(option, value)
+    vim.api.nvim_buf_set_option(self.state.buf, option, value)
+    return self
+end
+
+function View:set_win_option(option, value)
+    vim.api.nvim_win_set_option(self.state.win_id, option, value)
+    return self
+end
+
+function View:set_title(title)
+    local get_state = state_getter(self.config)
+    buffer.set_lines(
+        self.state.border.buf,
+        create_border_lines(title, get_state('window_props'), get_state('border'))
+    )
+    return self
+end
+
+function View:set_lines(lines)
+    buffer.set_lines(self:get_buf(), lines)
+    return self
+end
+
+function View:get_lines()
+    return buffer.get_lines(self:get_buf())
 end
 
 function View:set_loading(value)
     assert(type(value) == 'boolean', 'Invalid type')
-    if value == self.internals.loading then
-        return
+    if value == self.state.loading then
+        return self
     end
     if value then
-        self.internals.loading = value
-        self.internals.cache = buffer.get_lines(self.internals.buf)
+        self.state.loading = value
         local loading_lines = {}
-        local height = vim.api.nvim_win_get_height(self.internals.win_id)
-        local width = vim.api.nvim_win_get_width(self.internals.win_id)
+        local height = vim.api.nvim_win_get_height(self.state.win_id)
+        local width = vim.api.nvim_win_get_width(self.state.win_id)
         for _ = 1, height do
             table.insert(loading_lines, '')
         end
-        local loading_text = 'Loading...'
-        local rep = math.ceil((width / 2) - #loading_text + 2)
+        local loading_text = t('loading')
+        local rep = math.ceil((width / 2) - math.ceil(#loading_text / 2))
         if rep < 0 then
             rep = 0
         end
         loading_lines[math.floor(height / 2)] = string.rep(' ',  rep) .. loading_text
-        buffer.set_lines(self.internals.buf, loading_lines)
+        self:set_win_option('cursorline', false)
+        self.state.lines = buffer.get_lines(self:get_buf())
+        buffer.set_lines(self.state.buf, loading_lines)
     else
-        self.internals.loading = value
-        buffer.set_lines(self.internals.buf, self.internals.cache)
-        self.internals.cache = nil
+        self.state.loading = value
+        buffer.set_lines(self.state.buf, self.state.lines)
+        self:set_win_option('cursorline', self.config:get('win_options').cursorline)
+        self.state.lines = {}
     end
+    return self
+end
+
+function View:set_error(value)
+    assert(type(value) == 'boolean', 'Invalid type')
+    if value == self.state.error then
+        return self
+    end
+    if value then
+        self.state.loading = value
+        local loading_lines = {}
+        local height = vim.api.nvim_win_get_height(self.state.win_id)
+        local width = vim.api.nvim_win_get_width(self.state.win_id)
+        for _ = 1, height do
+            table.insert(loading_lines, '')
+        end
+        local error_text = t('error')
+        local rep = math.ceil((width / 2) - math.ceil(#error_text / 2))
+        if rep < 0 then
+            rep = 0
+        end
+        loading_lines[math.floor(height / 2)] = string.rep(' ',  rep) .. error_text
+        self:set_win_option('cursorline', false)
+        buffer.set_lines(self.state.buf, loading_lines)
+        self.state.lines = buffer.get_lines(self:get_buf())
+    else
+        self.state.loading = value
+        buffer.set_lines(self.state.buf, self.state.lines)
+        self:set_win_option('cursorline', self.config:get('win_options').cursorline)
+        self.state.lines = {}
+    end
+    return self
 end
 
 function View:add_autocmd(cmd, action, options)
@@ -235,22 +291,23 @@ function View:add_autocmd(cmd, action, options)
             action
         )
     )
+    return self
 end
 
 function View:add_keymap(key, action)
     buffer.add_keymap(self:get_buf(), key, action)
+    return self
 end
 
 function View:render()
-    if self.internals.rendered then
-        return
+    if self.state.rendered then
+        return self
     end
     local get_state = state_getter(self.config)
     local buf = vim.api.nvim_create_buf(true, true)
     local filetype, buf_options = get_state('filetype'), get_state('buf_options')
     local title, border, border_hl = get_state('title'), get_state('border'), get_state('border_hl')
     local window_props, win_options = get_state('window_props'), get_state('win_options')
-    buffer.set_lines(buf, self.internals.lines)
     if filetype ~= '' then
         highlight_with_ts(buf, filetype)
     end
@@ -275,15 +332,16 @@ function View:render()
     for key, value in pairs(win_options) do
         vim.api.nvim_win_set_option(win_id, key, value)
     end
-    self.internals.buf = buf
-    self.internals.win_id = win_id
+    self.state.buf = buf
+    self.state.win_id = win_id
     if border and title ~= '' then
         local border_buf, border_win_id = create_border(buf, title, window_props, border, border_hl)
-        self.internals.border.buf = border_buf
-        self.internals.border.win_id = border_win_id
+        self.state.border.buf = border_buf
+        self.state.border.win_id = border_win_id
     end
     self:add_autocmd('BufWinLeave', string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id))
-    self.internals.rendered = true
+    self.state.rendered = true
+    return self
 end
 
 return {

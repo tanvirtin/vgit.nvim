@@ -36,14 +36,16 @@ M.get_lines = function(buf, start, finish)
     return vim.api.nvim_buf_get_lines(buf, start, finish, false)
 end
 
-M.set_lines = function(buf, lines)
+M.set_lines = function(buf, lines, start, finish)
+    start = start or 0
+    finish = finish or -1
     local modifiable = vim.api.nvim_buf_get_option(buf, 'modifiable')
     if not modifiable then
         vim.api.nvim_buf_set_option(buf, 'modifiable', true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+        vim.api.nvim_buf_set_lines(buf, start, finish, false, lines)
         vim.api.nvim_buf_set_option(buf, 'modifiable', false)
     else
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+        vim.api.nvim_buf_set_lines(buf, start, finish, false, lines)
     end
 end
 

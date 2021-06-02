@@ -17,17 +17,33 @@ local function new(views)
     assert(type(views) == 'table', 'Invalid options provided for Widget')
     return setmetatable({
         views = views,
-        internals = { rendered = false }
+        state = { rendered = false }
     }, Widget)
 end
 
-function Widget:views()
+function Widget:set_loading(value)
+    assert(type(value) == 'boolean', 'Invalid type')
+    for _, v in pairs(self.views) do
+        v:set_loading(value)
+    end
+    return self
+end
+
+function Widget:set_error(value)
+    assert(type(value) == 'boolean', 'Invalid type')
+    for _, v in pairs(self.views) do
+        v:set_error(value)
+    end
+    return self
+end
+
+function Widget:get_views()
     return self.views
 end
 
 function Widget:render()
-    if self.internals.rendered then
-        return
+    if self.state.rendered then
+        return self
     end
     for _, v in pairs(self.views) do
         v:render()
@@ -55,7 +71,8 @@ function Widget:render()
             )
         end
     end
-    self.internals.rendered = true
+    self.state.rendered = true
+    return self
 end
 
 return {
