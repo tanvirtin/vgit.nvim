@@ -11,6 +11,7 @@ describe('Bstate:', function()
         blames = {},
         disabled = false,
         filename = '',
+        filetype = '',
         project_relative_filename = '',
         hunks = {},
         logs = {},
