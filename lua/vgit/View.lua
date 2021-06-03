@@ -97,7 +97,7 @@ local function create_border(content_buf, title, window_props, border, border_hl
     return buf, win_id
 end
 
-local function state_getter(state)
+local function bind_state(state)
     return function(key)
         return state:get(key)
     end
@@ -144,9 +144,15 @@ local function new(options)
         },
     })
     config:assign(options)
+    local get_config = bind_state(config)
+    local buf = vim.api.nvim_create_buf(true, true)
+    local filetype = get_config('filetype')
+    if filetype ~= '' then
+        highlight_with_ts(buf, filetype)
+    end
     return setmetatable({
         state = {
-            buf = nil,
+            buf = buf,
             win_id = nil,
             border = {
                 buf = nil,
@@ -196,10 +202,10 @@ function View:set_win_option(option, value)
 end
 
 function View:set_title(title)
-    local get_state = state_getter(self.config)
+    local get_config = bind_state(self.config)
     buffer.set_lines(
         self.state.border.buf,
-        create_border_lines(title, get_state('window_props'), get_state('border'))
+        create_border_lines(title, get_config('window_props'), get_config('border'))
     )
     return self
 end
@@ -303,14 +309,14 @@ function View:render()
     if self.state.rendered then
         return self
     end
-    local get_state = state_getter(self.config)
-    local buf = vim.api.nvim_create_buf(true, true)
-    local filetype, buf_options = get_state('filetype'), get_state('buf_options')
-    local title, border, border_hl = get_state('title'), get_state('border'), get_state('border_hl')
-    local window_props, win_options = get_state('window_props'), get_state('win_options')
-    if filetype ~= '' then
-        highlight_with_ts(buf, filetype)
-    end
+    local get_config = bind_state(self.config)
+    local buf_options = get_config('buf_options')
+    local title = get_config('title')
+    local border = get_config('border')
+    local border_hl = get_config('border_hl')
+    local window_props = get_config('window_props')
+    local win_options = get_config('win_options')
+    local buf = self:get_buf()
     buffer.assign_options(buf, buf_options)
     if title == '' then
         if border_hl then
