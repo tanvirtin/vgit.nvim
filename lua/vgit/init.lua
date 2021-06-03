@@ -387,6 +387,16 @@ end, throttle_ms)
 
 M.hunks_quickfix_list = async_void(throttle_leading(function()
     if not state:get('disabled') then
+        if not state:get('are_files_tracked') then
+            local tracked_files_err, tracked_files = await(git.ls_tracked())
+            await(scheduler())
+            if not tracked_files_err then
+                state:set('tracked_files', tracked_files)
+                state:set('are_files_tracked', true)
+            else
+                logger.error(t('errors/setup_tracked_file'))
+            end
+        end
         local qf_entries = {}
         local filenames = state:get('tracked_files')
         for _, filename in ipairs(filenames) do
