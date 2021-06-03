@@ -128,6 +128,26 @@ describe('State:', function()
             });
         end)
 
+
+        it('should assign tables which are lists', function()
+            local initial = {
+                is_list = { 1, 2, 3, 4, 5 },
+                isnt_list = { a = 1, b = 2 }
+            }
+            local state = State.new(initial)
+            state:assign({
+                is_list = { 'a', 'b' },
+                isnt_list = { a = 1, b = 2 }
+            });
+            eq(state, {
+                initial = initial,
+                current = {
+                    is_list = { 'a', 'b' },
+                    isnt_list = { a = 1, b = 2 }
+                },
+            });
+        end)
+
         it('should throw error when there is a type mismatch', function()
             local state = State.new({
                 foo = true,
