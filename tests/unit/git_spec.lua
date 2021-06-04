@@ -8,7 +8,6 @@ local eq = assert.are.same
 local a = require('plenary.async_lib.async')
 local async_void = a.async_void
 local await = a.await
-local scheduler = a.scheduler
 
 local function read_file(filename)
     local file = io.open(filename, "rb")
@@ -745,6 +744,47 @@ describe('git:', function()
                 'tests/unit/highlighter_spec.lua',
                 'tests/unit/init_spec.lua',
             })
+        end))
+
+    end)
+
+    describe('is_commit_valid', function()
+
+        it('should return false if a commit is invalid', async_void(function()
+            local commit_hash = 'someinvalidhash'
+            local is_valid = await(git.is_commit_valid(commit_hash))
+            eq(is_valid, false)
+        end))
+
+        it('should return true if a commit is valid', async_void(function()
+            local commit_hash = '490a4b2928b1fd418a4143f4f0945faf3a15dbf0'
+            local is_valid = await(git.is_commit_valid(commit_hash))
+            eq(is_valid, true)
+        end))
+
+    end)
+
+    describe('get_diff_base', function()
+
+        it('should return "HEAD" when no other diff base has been set', async_void(function()
+            eq(git.get_diff_base(), 'HEAD')
+        end))
+
+
+        it('should return "6a08d97a4bd97574460f33fc1b9e645bfa9d2f703" after diff base is changed', async_void(function()
+            local new_base = '6a08d97a4bd97574460f33fc1b9e645bfa9d2f703'
+            git.set_diff_base(new_base)
+            eq(git.get_diff_base(), new_base)
+        end))
+
+    end)
+
+    describe('set_diff_base', function()
+
+        it('should set the diff base to the new commit hash', async_void(function()
+            local new_base = '6a08d97a4bd97574460f33fc1b9e645bfa9d2f703'
+            git.set_diff_base(new_base)
+            eq(git.get_diff_base(), new_base)
         end))
 
     end)

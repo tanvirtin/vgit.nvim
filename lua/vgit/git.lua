@@ -46,7 +46,51 @@ M.constants = {
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 }
 
-M.state = State.new({ config = {} })
+M.state = State.new({
+    diff_base = 'HEAD',
+    config = {},
+})
+
+M.get_diff_base = function()
+    return M.state:get('diff_base')
+end
+
+M.set_diff_base = function(diff_base)
+    M.state:set('diff_base', diff_base)
+end
+
+M.is_commit_valid = wrap(function(commit, callback)
+    local result = {}
+    local err = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'show',
+            '--abbrev-commit',
+            '--oneline',
+            '--no-notes',
+            '--no-patch',
+            '--no-color',
+            commit,
+        },
+        on_stdout = function(_, data, _)
+            table.insert(result, data)
+        end,
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(false)
+            end
+            if #result == 0 then
+                return callback(false)
+            end
+            callback(true)
+        end,
+    })
+    job:start()
+end, 2)
 
 M.create_log = function(line)
     local log = vim.split(line, '-')
@@ -263,9 +307,25 @@ M.hunks = wrap(function(filename, parent_hash, commit_hash, callback)
         string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
         '--patch-with-raw',
         '--unified=0',
+        M.state:get('diff_base'),
         '--',
         filename,
     }
+    if parent_hash and not commit_hash then
+        args = {
+            '--no-pager',
+            '-c',
+            'core.safecrlf=false',
+            'diff',
+            '--color=never',
+            string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+            '--patch-with-raw',
+            '--unified=0',
+            parent_hash,
+            '--',
+            filename,
+        }
+    end
     if parent_hash and commit_hash then
         args = {
             '--no-pager',
