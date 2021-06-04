@@ -25,6 +25,8 @@ describe('init:', function()
                 toggle_buffer_hunks = true,
                 hunks_quickfix_list = true,
                 toggle_buffer_blames = true,
+                set_diff_base = true,
+                get_diff_base = true,
                 _buf_attach = true,
                 _buf_update = true,
                 _blame_line = true,
