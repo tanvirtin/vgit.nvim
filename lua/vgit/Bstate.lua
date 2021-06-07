@@ -4,7 +4,7 @@ local Bstate = {}
 Bstate.__index = Bstate
 
 local function new()
-    return setmetatable({ bufs = {} }, Bstate)
+    return setmetatable({ buf_states = {} }, Bstate)
 end
 
 local function translate_buf(buf)
@@ -13,11 +13,11 @@ local function translate_buf(buf)
 end
 
 function Bstate:contains(buf)
-    return self.bufs[translate_buf(buf)] ~= nil
+    return self.buf_states[translate_buf(buf)] ~= nil
 end
 
 function Bstate:add(buf)
-    self.bufs[translate_buf(buf)] = State.new({
+    self.buf_states[translate_buf(buf)] = State.new({
         filename = '',
         filetype = '',
         project_relative_filename = '',
@@ -30,28 +30,32 @@ function Bstate:add(buf)
 end
 
 function Bstate:remove(buf)
-    local buf_state = self.bufs[translate_buf(buf)]
+    local buf_state = self.buf_states[translate_buf(buf)]
     assert(buf_state ~= nil, 'Buffer is not tracked by VGit')
-    self.bufs[translate_buf(buf)] = nil
+    self.buf_states[translate_buf(buf)] = nil
 end
 
 function Bstate:get(buf, key)
-    local buf_state = self.bufs[translate_buf(buf)]
+    local buf_state = self.buf_states[translate_buf(buf)]
     assert(buf_state ~= nil, 'Buffer is not tracked by VGit')
     return buf_state:get(key)
 end
 
 function Bstate:set(buf, key, value)
-    local buf_state = self.bufs[translate_buf(buf)]
+    local buf_state = self.buf_states[translate_buf(buf)]
     assert(buf_state ~= nil, 'Buffer is not tracked by VGit')
     buf_state:set(key, value)
 end
 
-function Bstate:for_each_buf(fn)
+function Bstate:for_each(fn)
     assert(type(fn) == 'function', 'Invalid function type provided')
-    for key, value in pairs(self.bufs) do
+    for key, value in pairs(self.buf_states) do
         fn(tonumber(key), value)
     end
+end
+
+function Bstate:get_buf_states()
+    return self.buf_states
 end
 
 return {
