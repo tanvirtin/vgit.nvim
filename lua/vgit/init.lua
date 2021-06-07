@@ -211,7 +211,12 @@ M._change_history = async_void(throttle_leading(function(buf)
                 local hunks = nil
                 local commit_hash = nil
                 if log then
-                    local err, computed_hunks = await(git.hunks(filename, log.parent_hash, log.commit_hash))
+                    local err, computed_hunks
+                    if selected_log == 1 then
+                        err, computed_hunks = await(git.hunks(filename, 'HEAD'))
+                    else
+                        err, computed_hunks = await(git.hunks(filename, log.parent_hash, log.commit_hash))
+                    end
                     await(scheduler())
                     if err then
                         return err, nil
@@ -426,7 +431,7 @@ M.toggle_buffer_hunks = async_void(throttle_leading(function()
     if not state:get('disabled') then
         if state:get('hunks_enabled') then
             state:set('hunks_enabled', false)
-            bstate:for_each_buf(function(buf, buf_state)
+            bstate:for_each(function(buf, buf_state)
                 if buffer.is_valid(buf) then
                     buf_state:set('hunks', {})
                     ui.hide_hunk_signs(buf)
@@ -437,7 +442,7 @@ M.toggle_buffer_hunks = async_void(throttle_leading(function()
         else
             state:set('hunks_enabled', true)
         end
-        bstate:for_each_buf(function(buf, buf_state)
+        bstate:for_each(function(buf, buf_state)
             if buffer.is_valid(buf) then
                 local filename = bstate:get(buf, 'filename')
                 local hunks_err, hunks = await(git.hunks(filename))
@@ -461,7 +466,7 @@ M.toggle_buffer_blames = async_void(throttle_leading(function()
         vim.cmd('aug tanvirtin/vgit/blame | autocmd! | aug END')
         if state:get('blames_enabled') then
             state:set('blames_enabled', false)
-            bstate:for_each_buf(function(buf, buf_state)
+            bstate:for_each(function(buf, buf_state)
                 if buffer.is_valid(buf) then
                     detach_blames_autocmd(buf)
                     local bufnr = tonumber(buf)
@@ -473,7 +478,7 @@ M.toggle_buffer_blames = async_void(throttle_leading(function()
         else
             state:set('blames_enabled', true)
         end
-        bstate:for_each_buf(function(buf, buf_state)
+        bstate:for_each(function(buf, buf_state)
             if buffer.is_valid(buf) then
                 local win = vim.api.nvim_get_current_win()
                 local lnum = vim.api.nvim_win_get_cursor(win)[1]
@@ -508,7 +513,22 @@ M.buffer_history = async_void(throttle_leading(function(buf)
                     await(scheduler())
                     if not logs_err then
                         bstate:set(buf, 'logs', logs)
-                        local hunks = bstate:get(buf, 'hunks')
+                        local hunks
+                        local current_diff_base = git.state:get('diff_base')
+                        if current_diff_base ~= 'HEAD' or not state:get('hunks_enabled') then
+                            local hunks_err, computed_hunks = await(git.hunks(filename, 'HEAD'))
+                            await(scheduler())
+                            if hunks_err then
+                                return hunks_err, nil
+                            else
+                                hunks = computed_hunks
+                            end
+                        else
+                            hunks = bstate:get(buf, 'hunks')
+                        end
+                        if not hunks then
+                            return { 'Failed to retrieve hunks for the current buffer' }, nil
+                        end
                         local read_file_err, lines = fs.read_file(filename);
                         if not read_file_err then
                             local diff_err, data = await(git.vertical_diff(lines, hunks))
@@ -535,21 +555,35 @@ end, throttle_ms))
 M.buffer_preview = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) then
-        if state:get('hunks_enabled') then
-            if bstate:contains(buf) then
-                ui.show_preview(
-                    async(function()
-                        local read_file_err, lines = fs.read_file(bstate:get(buf, 'filename'));
-                        if read_file_err then
-                            return read_file_err, nil
-                        end
-                        local diff_err, data = await(git.vertical_diff(lines, bstate:get(buf, 'hunks')))
+        if bstate:contains(buf) then
+            ui.show_preview(
+                async(function()
+                    local filename = bstate:get(buf, 'filename')
+                    local hunks
+                    if state:get('hunks_enabled') then
+                        hunks = bstate:get(buf, 'hunks')
+                    else
+                        local hunks_err, computed_hunks = await(git.hunks(filename))
                         await(scheduler())
-                        return diff_err, data
-                    end),
-                    bstate:get(buf, 'filetype')
-                )
-            end
+                        if hunks_err then
+                            return hunks_err, nil
+                        else
+                            hunks = computed_hunks
+                        end
+                    end
+                    if not hunks then
+                        return { 'Failed to retrieve hunks for the current buffer' }, nil
+                    end
+                    local read_file_err, lines = fs.read_file(filename);
+                    if read_file_err then
+                        return read_file_err, nil
+                    end
+                    local diff_err, data = await(git.vertical_diff(lines, hunks))
+                    await(scheduler())
+                    return diff_err, data
+                end),
+                bstate:get(buf, 'filetype')
+            )
         end
     end
 end, throttle_ms))
@@ -584,6 +618,43 @@ end
 M.apply_highlights = function()
     ui.apply_highlights()
 end
+
+M.get_diff_base = function()
+    return git.get_diff_base()
+end
+
+M.set_diff_base = async_void(throttle_leading(function(diff_base)
+    if not diff_base or type(diff_base) ~= 'string' then
+        logger.error(t('errors/set_diff_base', diff_base))
+        return
+    end
+    if git.state:get('diff_base') == diff_base then
+        return
+    end
+    local is_commit_valid = await(git.is_commit_valid(diff_base))
+    await(scheduler())
+    if not is_commit_valid then
+        logger.error(t('errors/set_diff_base', diff_base))
+    else
+        git.set_diff_base(diff_base)
+        local buf_states = bstate:get_buf_states()
+        for key, buf_state in pairs(buf_states) do
+            local buf = tonumber(key)
+            local filename = buf_state:get('filename')
+            local hunks_err, hunks = await(git.hunks(filename))
+            await(scheduler())
+            if not hunks_err then
+                buf_state:set('hunks', hunks)
+                ui.hide_hunk_signs(buf)
+                await(scheduler())
+                ui.show_hunk_signs(buf, hunks)
+                await(scheduler())
+            else
+                logger.error(t('errors/compute_hunks', filename))
+            end
+        end
+    end
+end, throttle_ms))
 
 M.setup = async_void(function(config)
     if state:get('instantiated') then

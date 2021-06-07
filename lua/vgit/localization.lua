@@ -29,6 +29,7 @@ M.state = State.new({
         toggle_buffer_blames = 'VGit: Failed to retrieve line blame on toggle for the file "%s"',
         buffer_reset = 'VGit: Failed to reset buffer for the file, "%s"',
         setup_tracked_file = 'VGit: Failed to retrieve tracked files for the project',
+        set_diff_base = 'VGit: Failed to set diff base, the commit "%s" is invalid'
     }
 })
 

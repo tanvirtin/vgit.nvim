@@ -371,6 +371,10 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | buffer_reset | Resets the current buffer to HEAD |
 | hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
 | diff | Opens a populated quickfix window showing all the files that have a change in it |
+| instantiated | Returns true if setup has been called, false otherwise |
+| enabled | Returns true, if plugin is enabled, false otherwise |
+| get_diff_base | Returns the current diff base that all diff and hunks are being compared for all buffers |
+| set_diff_base | Sets the current diff base to a different commit, going forward all future hunks and diffs for a given buffer will be against this commit |
 
 ## Similar Git Plugins
 - [vim-fugitive](https://github.com/tpope/vim-fugitive) :crown:
