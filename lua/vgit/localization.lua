@@ -1,12 +1,9 @@
--- luacheck: max line length 300
-
 local State = require('vgit.State')
 
 local vim = vim
 
 local M = {}
 
--- Any string put here is for the end user.
 M.state = State.new({
     loading = 'Loading...',
     error = 'An error has occured',
