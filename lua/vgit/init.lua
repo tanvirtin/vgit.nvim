@@ -43,7 +43,6 @@ local function detach_blames_autocmd(buf)
 end
 
 M._buf_attach = async_void(function(buf)
-    await(scheduler())
     buf = buf or buffer.current()
     if buffer.is_valid(buf) then
         local filename = fs.filename(buf)
@@ -107,10 +106,10 @@ M._buf_attach = async_void(function(buf)
             end
         end
     end
+    await(scheduler())
 end)
 
 M._buf_update = async_void(function(buf)
-    await(scheduler())
     buf = buf or buffer.current()
     if state:get('hunks_enabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local filename = bstate:get(buf, 'filename')
@@ -126,10 +125,10 @@ M._buf_update = async_void(function(buf)
             logger.error(t('errors/compute_hunks', filename))
         end
     end
+    await(scheduler())
 end)
 
 M._blame_line = async_void(throttle_leading(function(buf)
-    await(scheduler())
     if not state:get('disabled')
         and not state:get('processing')
         and buffer.is_valid(buf)
@@ -161,6 +160,7 @@ M._blame_line = async_void(throttle_leading(function(buf)
             end
         end
     end
+    await(scheduler())
 end, throttle_ms))
 
 M._unblame_line = function(buf, override)
@@ -204,7 +204,6 @@ M._run_submodule_command = function(name, command, ...)
 end
 
 M._change_history = async_void(throttle_leading(function(buf)
-    await(scheduler())
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local selected_log = vim.api.nvim_win_get_cursor(0)[1]
         ui.change_history(async(function()
@@ -248,6 +247,7 @@ M._change_history = async_void(throttle_leading(function(buf)
             end
         end), selected_log)
     end
+    await(scheduler())
 end, throttle_ms))
 
 M._command_autocompletes = function(arglead, line)
@@ -399,7 +399,6 @@ M.hunk_reset = throttle_leading(function(buf, win)
 end, throttle_ms)
 
 M.hunks_quickfix_list = async_void(throttle_leading(function()
-    await(scheduler())
     if not state:get('disabled') then
         if not state:get('are_files_tracked') then
             local tracked_files_err, tracked_files = await(git.ls_tracked())
@@ -432,12 +431,12 @@ M.hunks_quickfix_list = async_void(throttle_leading(function()
         vim.fn.setqflist(qf_entries, 'r')
         vim.cmd('copen')
     end
+    await(scheduler())
 end, throttle_ms))
 
 M.diff = M.hunks_quickfix_list
 
 M.toggle_buffer_hunks = async_void(throttle_leading(function()
-    await(scheduler())
     if not state:get('disabled') then
         if state:get('hunks_enabled') then
             state:set('hunks_enabled', false)
@@ -468,11 +467,11 @@ M.toggle_buffer_hunks = async_void(throttle_leading(function()
             end
         end)
     end
+    await(scheduler())
     return state:get('hunks_enabled')
 end, throttle_ms))
 
 M.toggle_buffer_blames = async_void(throttle_leading(function()
-    await(scheduler())
     if not state:get('disabled') then
         vim.cmd('aug tanvirtin/vgit/blame | autocmd! | aug END')
         if state:get('blames_enabled') then
@@ -511,10 +510,10 @@ M.toggle_buffer_blames = async_void(throttle_leading(function()
         end)
         return state:get('blames_enabled')
     end
+    await(scheduler())
 end, throttle_ms))
 
 M.buffer_history = async_void(throttle_leading(function(buf)
-    await(scheduler())
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         ui.show_history(
@@ -560,10 +559,10 @@ M.buffer_history = async_void(throttle_leading(function(buf)
             bstate:get(buf, 'filetype')
         )
     end
+    await(scheduler())
 end, throttle_ms))
 
 M.buffer_preview = async_void(throttle_leading(function(buf)
-    await(scheduler())
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         ui.show_preview(
@@ -595,10 +594,10 @@ M.buffer_preview = async_void(throttle_leading(function(buf)
             bstate:get(buf, 'filetype')
         )
     end
+    await(scheduler())
 end, throttle_ms))
 
 M.buffer_reset = async_void(throttle_leading(function(buf)
-    await(scheduler())
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local hunks = bstate:get(buf, 'hunks')
@@ -614,6 +613,7 @@ M.buffer_reset = async_void(throttle_leading(function(buf)
             end
         end
     end
+    await(scheduler())
 end, throttle_ms))
 
 M.enabled = function()
@@ -633,7 +633,6 @@ M.get_diff_base = function()
 end
 
 M.set_diff_base = async_void(throttle_leading(function(diff_base)
-    await(scheduler())
     if not diff_base or type(diff_base) ~= 'string' then
         logger.error(t('errors/set_diff_base', diff_base))
         return
@@ -664,10 +663,10 @@ M.set_diff_base = async_void(throttle_leading(function(diff_base)
             end
         end
     end
+    await(scheduler())
 end, throttle_ms))
 
 M.setup = async_void(function(config)
-    await(scheduler())
     if state:get('instantiated') then
         return
     else
@@ -686,6 +685,7 @@ M.setup = async_void(function(config)
         '-complete=customlist,v:lua.package.loaded.vgit._command_autocompletes',
         'VGit lua require("vgit")._run_command(<f-args>)'
     ))
+    await(scheduler())
 end)
 
 return M
