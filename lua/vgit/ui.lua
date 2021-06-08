@@ -310,6 +310,7 @@ M.show_hunk = function(hunk, filetype)
 end
 
 M.show_preview = async_void(function(fetch, filetype)
+    local signs_group = string.format('%s/preview', M.constants.hunk_signs_group)
     local height = math.ceil(View.global_height() - 4)
     local width = math.ceil(View.global_width() * 0.485)
     local col = math.ceil((View.global_width() - (width * 2)) / 2) - 1
@@ -366,7 +367,8 @@ M.show_preview = async_void(function(fetch, filetype)
         views.current:set_lines(data.current_lines)
         for _, datum in ipairs(data.lnum_changes) do
             vim.fn.sign_place(
-                datum.lnum, M.constants.hunk_signs_group,
+                datum.lnum,
+                signs_group,
                 M.state:get('preview').signs[datum.type].sign_hl,
                 (views[datum.buftype]):get_buf(),
                 {
@@ -383,6 +385,7 @@ M.show_preview = async_void(function(fetch, filetype)
 end)
 
 M.change_history = function(fetch, selected_log)
+    local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
     local widget = M.state:get('_displayed_widget')
     local views = widget:get_views()
     views.previous:set_loading(true)
@@ -393,6 +396,7 @@ M.change_history = function(fetch, selected_log)
     views.current:set_loading(false)
     await(scheduler())
     if err then
+        vim.fn.sign_unplace(signs_group)
         views.previous:set_error(true)
         views.current:set_error(true)
         await(scheduler())
@@ -405,7 +409,7 @@ M.change_history = function(fetch, selected_log)
         local view = views[datum.buftype]
         vim.fn.sign_place(
             datum.lnum,
-            M.constants.hunk_signs_group,
+            signs_group,
             M.state:get('preview').signs[datum.type].sign_hl,
             view:get_buf(),
             {
@@ -436,6 +440,7 @@ M.change_history = function(fetch, selected_log)
 end
 
 M.show_history = function(fetch, filetype)
+    local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
     local parent_buf = vim.api.nvim_get_current_buf()
     local height = math.ceil(View.global_height() - 13)
     local width = math.ceil(View.global_width() * 0.485)
@@ -571,7 +576,7 @@ M.show_history = function(fetch, filetype)
         local view = views[datum.buftype]
         vim.fn.sign_place(
             datum.lnum,
-            M.constants.hunk_signs_group,
+            signs_group,
             M.state:get('preview').signs[datum.type].sign_hl,
             view:get_buf(),
             {
