@@ -305,6 +305,10 @@ function View:add_keymap(key, action)
     return self
 end
 
+function View:focus()
+    vim.api.nvim_set_current_win(self.state.win_id)
+end
+
 function View:render()
     if self.state.rendered then
         return self
