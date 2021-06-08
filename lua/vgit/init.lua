@@ -304,11 +304,18 @@ M.hunk_down = function(buf, win)
                         break
                     end
                 end
+                if new_lnum and new_lnum < 1 then
+                    new_lnum = 1
+                end
                 if new_lnum then
                     vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
                     vim.cmd('norm! zz')
                 else
-                    vim.api.nvim_win_set_cursor(win, { hunks[1].start, 0 })
+                    local first_hunk_start_lnum = hunks[1].start
+                    if first_hunk_start_lnum < 1 then
+                        first_hunk_start_lnum = 1
+                    end
+                    vim.api.nvim_win_set_cursor(win, { first_hunk_start_lnum, 0 })
                     vim.cmd('norm! zz')
                 end
             end
@@ -335,11 +342,18 @@ M.hunk_up = function(buf, win)
                         break
                     end
                 end
+                if new_lnum and new_lnum < 1 then
+                    new_lnum = 1
+                end
                 if new_lnum and lnum ~= new_lnum then
                     vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
                     vim.cmd('norm! zz')
                 else
-                    vim.api.nvim_win_set_cursor(win, { hunks[#hunks].finish, 0 })
+                    local finish_hunks_lnum = hunks[#hunks].finish
+                    if finish_hunks_lnum < 1 then
+                        finish_hunks_lnum = 1
+                    end
+                    vim.api.nvim_win_set_cursor(win, { finish_hunks_lnum, 0 })
                     vim.cmd('norm! zz')
                 end
             end
