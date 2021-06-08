@@ -375,6 +375,7 @@ M.show_preview = async_void(function(fetch, filetype)
                 }
             )
         end
+        views.current:focus()
     else
         widget:set_error(true)
         await(scheduler())
@@ -585,6 +586,7 @@ M.show_history = function(fetch, filetype)
         M.state:get('history').indicator.hl,
         { 0, 0 }, { 0, 1 }
     )
+    views.history:focus()
 end
 
 return M
