@@ -29,6 +29,7 @@ local state = State.new({
     blames_enabled = true,
     processing = false,
     are_files_tracked = false,
+    diff_preference = 'vertical',
 })
 
 local function attach_blames_autocmd(buf)
@@ -206,7 +207,12 @@ end
 M._change_history = async_void(throttle_leading(function(buf)
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local selected_log = vim.api.nvim_win_get_cursor(0)[1]
-        ui.change_history(async(function()
+        local diff_preference = state:get('diff_preference')
+        local change_history = (diff_preference == 'horizontal' and ui.change_horizontal_history)
+            or ui.change_vertical_history
+        local diff = (diff_preference == 'horizontal' and git.horizontal_diff)
+            or git.vertical_diff
+        change_history(async(function()
             local filename = bstate:get(buf, 'filename')
             local logs = bstate:get(buf, 'logs')
             local log = logs[selected_log]
@@ -238,7 +244,7 @@ M._change_history = async_void(throttle_leading(function(buf)
             if err then
                 return err, nil
             end
-            local diff_err, data = await(git.vertical_diff(lines, hunks))
+            local diff_err, data = await(diff(lines, hunks))
             await(scheduler())
             if not diff_err then
                 return nil, data
@@ -516,7 +522,12 @@ end, throttle_ms))
 M.buffer_history = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
-        ui.show_history(
+        local diff_preference = state:get('diff_preference')
+        local show_history = (diff_preference == 'horizontal' and ui.show_horizontal_history)
+            or ui.show_vertical_history
+        local diff = (diff_preference == 'horizontal' and git.horizontal_diff)
+            or git.vertical_diff
+        show_history(
             async(function()
                 local filename = bstate:get(buf, 'filename')
                 local logs_err, logs = await(git.logs(filename))
@@ -541,7 +552,7 @@ M.buffer_history = async_void(throttle_leading(function(buf)
                     end
                     local read_file_err, lines = fs.read_file(filename);
                     if not read_file_err then
-                        local diff_err, data = await(git.vertical_diff(lines, hunks))
+                        local diff_err, data = await(diff(lines, hunks))
                         await(scheduler())
                         if not diff_err then
                             data.logs = logs
@@ -565,7 +576,12 @@ end, throttle_ms))
 M.buffer_preview = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
-        ui.show_preview(
+        local diff_preference = state:get('diff_preference')
+        local show_preview = (diff_preference == 'horizontal' and ui.show_horizontal_preview)
+            or ui.show_vertical_preview
+        local diff = (diff_preference == 'horizontal' and git.horizontal_diff)
+            or git.vertical_diff
+        show_preview(
             async(function()
                 local filename = bstate:get(buf, 'filename')
                 local hunks
@@ -587,7 +603,7 @@ M.buffer_preview = async_void(throttle_leading(function(buf)
                 if read_file_err then
                     return read_file_err, nil
                 end
-                local diff_err, data = await(git.vertical_diff(lines, hunks))
+                local diff_err, data = await(diff(lines, hunks))
                 await(scheduler())
                 return diff_err, data
             end),
@@ -665,6 +681,37 @@ M.set_diff_base = async_void(throttle_leading(function(diff_base)
     end
     await(scheduler())
 end, throttle_ms))
+
+M.set_diff_preference = async_void(throttle_leading(function(preference)
+    if preference ~= 'horizontal' and preference ~= 'vertical' then
+        return logger.error(t('errors/set_diff_preference', preference))
+    end
+    local current_preference = state:get('diff_preference')
+    if current_preference == preference then
+        return
+    end
+    state:set('diff_preference', preference)
+    local widget = ui.get_current_widget()
+    if not vim.tbl_isempty(widget) then
+        local view_fn_map = {
+            horizontal_preview = M.buffer_preview,
+            vertical_preview = M.buffer_preview,
+            horizontal_history = M.buffer_history,
+            vertical_history = M.buffer_history,
+        }
+        local widget_name = widget:get_name()
+        local fn = view_fn_map[widget_name]
+        if fn then
+            local win_ids = widget:get_win_ids()
+            ui.close_windows(win_ids)
+            fn(buffer.current())
+        end
+    end
+end, throttle_ms))
+
+M.get_diff_preference = function()
+    return state:get('diff_preference')
+end
 
 M.setup = async_void(function(config)
     if state:get('instantiated') then
