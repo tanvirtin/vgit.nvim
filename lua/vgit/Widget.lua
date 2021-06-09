@@ -13,9 +13,10 @@ local function global_height()
     return vim.o.lines
 end
 
-local function new(views)
+local function new(views, name)
     assert(type(views) == 'table', 'Invalid options provided for Widget')
     return setmetatable({
+        name = name,
         views = views,
         state = { rendered = false }
     }, Widget)
@@ -37,8 +38,28 @@ function Widget:set_error(value)
     return self
 end
 
+function Widget:get_name()
+    return self.name
+end
+
 function Widget:get_views()
     return self.views
+end
+
+function Widget:get_win_ids()
+    local win_ids = {}
+    for _, v in pairs(self.views) do
+        table.insert(win_ids, v:get_win_id())
+    end
+    return win_ids
+end
+
+function Widget:get_bufs()
+    local bufs = {}
+    for _, v in pairs(self.views) do
+        table.insert(bufs, v:get_buf())
+    end
+    return bufs
 end
 
 function Widget:render()

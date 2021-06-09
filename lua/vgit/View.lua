@@ -22,10 +22,8 @@ local function highlight_with_ts(buf, ft)
         local lang = ts_parsers.ft_to_lang(ft);
         if ts_parsers.has_parser(lang) then
             ts_highlight.attach(buf, lang)
-            return true
         end
     end
-    return false
 end
 
 local function create_border_lines(title, content_win_options, border)
@@ -307,6 +305,7 @@ end
 
 function View:focus()
     vim.api.nvim_set_current_win(self.state.win_id)
+    return self
 end
 
 function View:render()
