@@ -66,11 +66,19 @@ M.state = State.new({
             fg = '#a6e22e',
             bg = nil,
         },
+        VGitDiffHorizontalBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
         VGitDiffCurrentBorder = {
             fg = '#a1b5b1',
             bg = nil,
         },
         VGitDiffPreviousBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHistoryHistoryBorder = {
             fg = '#a1b5b1',
             bg = nil,
         },

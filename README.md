@@ -61,6 +61,11 @@
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/119602600-7a192600-bdb9-11eb-9ef9-709ea154aeaa.gif" alt="history" />
 </details>
+<details>
+    <summary>Switch between different way you want to see diffs</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/121595739-95687000-ca0c-11eb-8f1d-9b5b398e3b0d.gif" alt="diff_preference" />
+</details>
 
 ## Prerequisites
 - [Git](https://git-scm.com/)
@@ -92,6 +97,7 @@ By default these are the default settings provided by the app, you can change th
 require('vgit').setup({
     hunks_enabled = true,
     blames_enabled = true,
+    diff_preference = 'vertical',
     hls = {
         VGitBlame = {
             bg = nil,
@@ -375,6 +381,8 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | enabled | Returns true, if plugin is enabled, false otherwise |
 | get_diff_base | Returns the current diff base that all diff and hunks are being compared for all buffers |
 | set_diff_base | Sets the current diff base to a different commit, going forward all future hunks and diffs for a given buffer will be against this commit |
+| get_diff_preference | Returns the current diff preference of the diff, the value will either be "horizontal" or "vertical" |
+| set_diff_preference | Sets the diff preference to your given output , the value can only be "horizontal" or "vertical" |
 
 ## Similar Git Plugins
 - [vim-fugitive](https://github.com/tpope/vim-fugitive) :crown:

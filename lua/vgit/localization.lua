@@ -8,10 +8,12 @@ M.state = State.new({
     loading = 'Loading...',
     error = 'An error has occured',
     preview = {
+        horizontal = 'Preview',
         current = 'Current',
         previous = 'Previous',
     },
     history = {
+        horizontal = 'Preview',
         history = 'Git History',
         current = 'Current',
         previous = 'Previous',
@@ -26,7 +28,8 @@ M.state = State.new({
         toggle_buffer_blames = 'VGit: Failed to retrieve line blame on toggle for the file "%s"',
         buffer_reset = 'VGit: Failed to reset buffer for the file, "%s"',
         setup_tracked_file = 'VGit: Failed to retrieve tracked files for the project',
-        set_diff_base = 'VGit: Failed to set diff base, the commit "%s" is invalid'
+        set_diff_base = 'VGit: Failed to set diff base, the commit "%s" is invalid',
+        set_diff_preference = 'VGit: Failed to set diff preferece, "%s" is invalid',
     }
 })
 
