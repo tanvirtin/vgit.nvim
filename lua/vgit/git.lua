@@ -446,6 +446,69 @@ M.ls_tracked = wrap(function(callback)
     job:start()
 end, 1)
 
+M.horizontal_diff = wrap(function(lines, hunks, callback)
+    if #hunks == 0 then
+        return callback(nil, {
+            lines = lines,
+            lnum_changes = {},
+        })
+    end
+    local new_lines = {}
+    local lnum_changes = {}
+    for key, value in pairs(lines) do
+        new_lines[key] = value
+    end
+    local new_lines_added = 0
+    for _, hunk in ipairs(hunks) do
+        local type = hunk.type
+        local diff = hunk.diff
+        local start = hunk.start + new_lines_added
+        local finish = hunk.finish + new_lines_added
+        if type == 'add' then
+            for i = start, finish do
+                table.insert(lnum_changes, {
+                    lnum = i,
+                    type = 'add'
+                })
+            end
+        elseif type == 'remove' then
+            local s = start
+            for _, line in ipairs(diff) do
+                s = s + 1
+                new_lines_added = new_lines_added + 1
+                table.insert(new_lines, s, line:sub(2, #line))
+                table.insert(lnum_changes, {
+                    lnum = s,
+                    type = 'remove'
+                })
+            end
+        elseif type == 'change' then
+            local s = start
+            for _, line in ipairs(diff) do
+                local line_type = line:sub(1, 1)
+                if line_type == '-' then
+                    new_lines_added = new_lines_added + 1
+                    table.insert(new_lines, s, line:sub(2, #line))
+                    table.insert(lnum_changes, {
+                        lnum = s,
+                        type = 'remove'
+                    })
+                elseif line_type == '+' then
+                    table.insert(lnum_changes, {
+                        lnum = s,
+                        type = 'add'
+                    })
+                end
+                s = s + 1
+            end
+        end
+    end
+    return callback(nil, {
+        lines = new_lines,
+        lnum_changes = lnum_changes,
+    })
+end, 3)
+
 M.vertical_diff = wrap(function(lines, hunks, callback)
     if #hunks == 0 then
         return callback(nil, {
