@@ -78,7 +78,7 @@ M.state = State.new({
             fg = '#a1b5b1',
             bg = nil,
         },
-        VGitHistoryHistoryBorder = {
+        VGitHistoryHorizontalBorder = {
             fg = '#a1b5b1',
             bg = nil,
         },

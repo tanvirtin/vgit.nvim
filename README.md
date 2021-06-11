@@ -97,7 +97,7 @@ By default these are the default settings provided by the app, you can change th
 require('vgit').setup({
     hunks_enabled = true,
     blames_enabled = true,
-    diff_preference = 'vertical',
+    diff_preference = 'horizontal',
     hls = {
         VGitBlame = {
             bg = nil,
@@ -385,7 +385,7 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | set_diff_preference | Sets the diff preference to your given output , the value can only be "horizontal" or "vertical" |
 
 ## Similar Git Plugins
-- [vim-fugitive](https://github.com/tpope/vim-fugitive) :crown:
+- [vim-fugitive](https://github.com/tpope/vim-fugitive)
 - [vim-gitgutter](https://github.com/airblade/vim-gitgutter)
 - [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
 - [neogit](https://github.com/TimUntersberger/neogit)
