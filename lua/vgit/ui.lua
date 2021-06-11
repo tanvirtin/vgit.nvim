@@ -210,10 +210,11 @@ M.apply_highlights = function()
         })
     end
     highlighter.define(M.state:get('blame').hl)
-    highlighter.define(M.state:get('history').indicator.hl)
     highlighter.define(M.state:get('preview').horizontal_window.border_hl)
     highlighter.define(M.state:get('preview').current_window.border_hl)
     highlighter.define(M.state:get('preview').previous_window.border_hl)
+    highlighter.define(M.state:get('history').indicator.hl)
+    highlighter.define(M.state:get('history').horizontal_window.border_hl)
     highlighter.define(M.state:get('history').previous_window.border_hl)
     highlighter.define(M.state:get('history').current_window.border_hl)
     highlighter.define(M.state:get('history').history_window.border_hl)
@@ -562,7 +563,7 @@ M.show_horizontal_history = async_void(function(fetch, filetype)
     local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
     local parent_buf = vim.api.nvim_get_current_buf()
     local height = math.ceil(View.global_height() - 13)
-    local width = math.ceil(View.global_width() * 0.74)
+    local width = math.ceil(View.global_width() * 0.75)
     local col = math.ceil((View.global_width() - width) / 2) - 1
     local views = {
         preview = View.new({
