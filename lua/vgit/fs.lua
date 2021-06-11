@@ -1,3 +1,5 @@
+local pfiletype = require('plenary.filetype')
+
 local vim = vim
 
 local M = {}
@@ -37,6 +39,8 @@ end
 M.filetype = function(buf)
     return vim.api.nvim_buf_get_option(buf, 'filetype')
 end
+
+M.detect_filetype = pfiletype.detect
 
 M.filename = function(buf)
     local filepath = vim.api.nvim_buf_get_name(buf)
