@@ -7,7 +7,10 @@ local vim = vim
 local View = {}
 View.__index = View
 
-local function highlight_with_ts(buf, ft)
+local function attach_treesitter(buf, filetype)
+    if not filetype or filetype == '' then
+        return
+    end
     local has_ts = false
     local ts_highlight = nil
     local ts_parsers = nil
@@ -18,8 +21,8 @@ local function highlight_with_ts(buf, ft)
             _, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
         end
     end
-    if has_ts and ft and ft ~= '' then
-        local lang = ts_parsers.ft_to_lang(ft);
+    if has_ts and filetype and filetype ~= '' then
+        local lang = ts_parsers.ft_to_lang(filetype);
         if ts_parsers.has_parser(lang) then
             ts_highlight.attach(buf, lang)
         end
@@ -95,12 +98,6 @@ local function create_border(content_buf, title, window_props, border, border_hl
     return buf, win_id
 end
 
-local function bind_state(state)
-    return function(key)
-        return state:get(key)
-    end
-end
-
 local function global_width()
     return vim.o.columns
 end
@@ -142,15 +139,9 @@ local function new(options)
         },
     })
     config:assign(options)
-    local get_config = bind_state(config)
-    local buf = vim.api.nvim_create_buf(true, true)
-    local filetype = get_config('filetype')
-    if filetype ~= '' then
-        highlight_with_ts(buf, filetype)
-    end
     return setmetatable({
         state = {
-            buf = buf,
+            buf = vim.api.nvim_create_buf(true, true),
             win_id = nil,
             border = {
                 buf = nil,
@@ -200,10 +191,9 @@ function View:set_win_option(option, value)
 end
 
 function View:set_title(title)
-    local get_config = bind_state(self.config)
     buffer.set_lines(
         self.state.border.buf,
-        create_border_lines(title, get_config('window_props'), get_config('border'))
+        create_border_lines(title, self.state:config('window_props'), self.state:config('border'))
     )
     return self
 end
@@ -312,13 +302,13 @@ function View:render()
     if self.state.rendered then
         return self
     end
-    local get_config = bind_state(self.config)
-    local buf_options = get_config('buf_options')
-    local title = get_config('title')
-    local border = get_config('border')
-    local border_hl = get_config('border_hl')
-    local window_props = get_config('window_props')
-    local win_options = get_config('win_options')
+    local buf_options = self.config:get('buf_options')
+    local title = self.config:get('title')
+    local border = self.config:get('border')
+    local border_hl = self.config:get('border_hl')
+    local window_props = self.config:get('window_props')
+    local win_options = self.config:get('win_options')
+    local filetype = self.config:get('filetype')
     local buf = self:get_buf()
     buffer.assign_options(buf, buf_options)
     if title == '' then
@@ -349,6 +339,7 @@ function View:render()
         self.state.border.win_id = border_win_id
     end
     self:add_autocmd('BufWinLeave', string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id))
+    attach_treesitter(buf, filetype)
     self.state.rendered = true
     return self
 end
