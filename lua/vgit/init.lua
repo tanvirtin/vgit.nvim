@@ -114,11 +114,15 @@ M._buf_attach = async_void(function(buf)
                                             await(scheduler())
                                             ui.show_hunk_signs(cbuf, hunks)
                                             await(scheduler())
+                                        else
+                                            logger.debug(hunks_err, 'init.lua/_buf_attach')
                                         end
                                         -- No matter what happens these temporary files will always be deleted.
                                         fs.remove_file(temp_filename_a)
                                         fs.remove_file(temp_filename_b)
                                         await(scheduler())
+                                    else
+                                        logger.debug(show_err, 'init.lua/_buf_attach')
                                     end
                                 end
                             end, state:get('predict_hunk_throttle_ms'))),
