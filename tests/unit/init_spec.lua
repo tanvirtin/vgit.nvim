@@ -13,6 +13,7 @@ describe('init:', function()
                 setup = true,
                 enabled = true,
                 hunk_up = true,
+                show_logs = true,
                 hunk_down = true,
                 hunk_reset = true,
                 buffer_diff = true,
