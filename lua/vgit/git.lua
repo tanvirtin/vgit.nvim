@@ -295,6 +295,52 @@ M.logs = wrap(function(filename, callback)
     return callback(nil, logs)
 end, 2)
 
+M.file_hunks = wrap(function(filename_a, filename_b, callback)
+    local result = {}
+    local err = {}
+    local args = {
+        '--no-pager',
+        '-c',
+        'core.safecrlf=false',
+        'diff',
+        '--color=never',
+        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+        '--patch-with-raw',
+        '--unified=0',
+        '--no-index',
+        filename_a,
+        filename_b,
+    }
+    local job = Job:new({
+        command = 'git',
+        args = args,
+        on_stdout = function(_, data, _)
+            table.insert(result, data)
+        end,
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, nil)
+            end
+            local hunks = {}
+            for _, line in ipairs(result) do
+                if vim.startswith(line, '@@') then
+                    table.insert(hunks, M.create_hunk(line))
+                else
+                    if #hunks > 0 then
+                        local hunk = hunks[#hunks]
+                        table.insert(hunk.diff, line)
+                    end
+                end
+            end
+            return callback(nil, hunks)
+        end,
+    })
+    job:start()
+end, 3)
+
 M.hunks = wrap(function(filename, parent_hash, commit_hash, callback)
     local result = {}
     local err = {}

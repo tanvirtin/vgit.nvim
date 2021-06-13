@@ -47,6 +47,10 @@ M.filename = function(buf)
     return M.relative_path(filepath)
 end
 
+M.tmpname = function()
+    return string.format('%s_vgit', os.tmpname())
+end
+
 M.read_file = function(filepath)
     local fd = vim.loop.fs_open(filepath, 'r', 438)
     if fd == nil then
@@ -62,5 +66,16 @@ M.read_file = function(filepath)
     end
     return nil, vim.split(data, '\n')
 end
+
+M.write_file = function(filepath, lines)
+    local f = io.open(filepath, 'wb')
+    for _, l in ipairs(lines) do
+        f:write(l)
+        f:write('\n')
+    end
+    f:close()
+end
+
+M.remove_file = os.remove
 
 return M
