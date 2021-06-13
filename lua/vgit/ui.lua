@@ -252,6 +252,7 @@ M.show_hunk_signs = function(buf, hunks)
             for i = hunk.start, hunk.finish do
                 local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
                 vim.fn.sign_place(lnum, hunk_signs_group, M.state:get('hunk_sign').signs[hunk.type].hl, buf, {
+                    id = lnum,
                     lnum = lnum,
                     priority = M.state:get('hunk_sign').priority,
                 })

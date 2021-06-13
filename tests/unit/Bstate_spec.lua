@@ -96,7 +96,7 @@ describe('Bstate:', function()
             local buf_states = bstate:get_buf_states()
             eq(#vim.tbl_keys(buf_states), num_bufs)
             for _, buf_state in pairs(buf_states) do
-                assert(buf_state, initial_state)
+                assert(buf_state, nil)
             end
         end)
 
