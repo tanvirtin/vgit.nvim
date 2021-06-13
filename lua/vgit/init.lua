@@ -109,10 +109,9 @@ M._buf_attach = async_void(function(buf)
                                         await(scheduler())
                                         if not hunks_err then
                                             bstate:set(cbuf, 'hunks', hunks)
+                                            pcall(ui.hide_hunk_signs, cbuf)
                                             await(scheduler())
-                                            ui.hide_hunk_signs(cbuf)
-                                            await(scheduler())
-                                            ui.show_hunk_signs(cbuf, hunks)
+                                            pcall(ui.show_hunk_signs, cbuf, hunks)
                                             await(scheduler())
                                         else
                                             logger.debug(hunks_err, 'init.lua/_buf_attach')
@@ -125,6 +124,7 @@ M._buf_attach = async_void(function(buf)
                                         logger.debug(show_err, 'init.lua/_buf_attach')
                                     end
                                 end
+                                await(scheduler())
                             end, state:get('predict_hunk_throttle_ms'))),
                             on_detach = function(_, cbuf)
                                 if bstate:contains(cbuf) then
