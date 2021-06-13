@@ -6,7 +6,7 @@ local State = require('vgit.State')
 local Bstate = require('vgit.Bstate')
 local buffer = require('vgit.buffer')
 local throttle_leading = require('vgit.defer').throttle_leading
-local logger = require('plenary.log')
+local logger = require('vgit.logger')
 local a = require('plenary.async_lib.async')
 local t = require('vgit.localization').translate
 local async = a.async
@@ -65,7 +65,7 @@ M._buf_attach = async_void(function(buf)
                         state:set('tracked_files', tracked_files)
                         state:set('are_files_tracked', true)
                     else
-                        logger.error(t('errors/setup_tracked_file'))
+                        logger.debug(tracked_files_err, 'init.lua/_buf_attach')
                     end
                 end
                 local tracked_files = state:get('tracked_files')
@@ -140,7 +140,7 @@ M._buf_attach = async_void(function(buf)
                         ui.show_hunk_signs(buf, hunks)
                         await(scheduler())
                     else
-                        logger.error(t('errors/compute_hunks', filename))
+                        logger.debug(err, 'init.lua/_buf_attach')
                     end
                 end
             end
@@ -162,7 +162,7 @@ M._buf_update = async_void(function(buf)
             ui.show_hunk_signs(buf, hunks)
             await(scheduler())
         else
-            logger.error(t('errors/compute_hunks', filename))
+            logger.debug(err, 'init.lua/_buf_update')
         end
     end
     await(scheduler())
@@ -195,7 +195,7 @@ M._blame_line = async_void(throttle_leading(function(buf)
                         end
                     end
                 else
-                    logger.error(t('errors/blame_line', filename))
+                    logger.debug(err, 'init.lua/_blame_line')
                 end
             end
         end
@@ -221,7 +221,7 @@ M._run_command = function(command, ...)
     if not state:get('disabled') then
         local starts_with = command:sub(1, 1)
         if starts_with == '_' or not M[command] or not type(M[command]) == 'function' then
-            logger.error(t('errors/invalid_command'))
+            logger.error(t('errors/invalid_command', command))
             return
         end
         return M[command](...)
@@ -236,7 +236,7 @@ M._run_submodule_command = function(name, command, ...)
         if not submodule and starts_with == '_'
             or not submodule[command]
             or not type(submodule[command]) == 'function' then
-            logger.error(t('errors/invalid_submodule_command'))
+            logger.debug('invalid submodule command', 'init.lua/_run_submodule_command')
             return
         end
         return submodule[command](...)
@@ -452,7 +452,7 @@ M.hunks_quickfix_list = async_void(throttle_leading(function()
                 state:set('tracked_files', tracked_files)
                 state:set('are_files_tracked', true)
             else
-                logger.error(t('errors/setup_tracked_file'))
+                logger.debug(tracked_files_err, 'init.lua/hunks_quickfix_list')
             end
         end
         local qf_entries = {}
@@ -470,7 +470,7 @@ M.hunks_quickfix_list = async_void(throttle_leading(function()
                     })
                 end
             else
-                logger.error(t('errors/quickfix_list_hunks'))
+                logger.debug(hunks_err, 'init.lua/hunks_quickfix_list')
             end
         end
         vim.fn.setqflist(qf_entries, 'r')
@@ -507,7 +507,7 @@ M.toggle_buffer_hunks = async_void(throttle_leading(function()
                     ui.show_hunk_signs(buf, hunks)
                     await(scheduler())
                 else
-                    logger.error(t('errors/toggle_buffer_hunks', filename))
+                    logger.debug(hunks_err, 'init.lua/toggle_buffer_hunks')
                 end
             end
         end)
@@ -549,7 +549,7 @@ M.toggle_buffer_blames = async_void(throttle_leading(function()
                         await(scheduler())
                     end
                 else
-                    logger.error(t('errors/toggle_buffer_blames', filename))
+                    logger.debug(err, 'init.lua/toggle_buffer_hunks')
                 end
             end
         end)
@@ -664,7 +664,7 @@ M.buffer_reset = async_void(throttle_leading(function(buf)
                 buffer.set_lines(buf, lines)
                 vim.cmd('update')
             else
-                logger.error(t('errors/buffer_reset', filename))
+                logger.debug(err, 'init.lua/buffer_reset')
             end
         end
     end
@@ -714,7 +714,7 @@ M.set_diff_base = async_void(throttle_leading(function(diff_base)
                 ui.show_hunk_signs(buf, hunks)
                 await(scheduler())
             else
-                logger.error(t('errors/compute_hunks', filename))
+                logger.debug(hunks_err, 'init.lua/set_diff_base')
             end
         end
     end
@@ -752,6 +752,15 @@ M.get_diff_preference = function()
     return state:get('diff_preference')
 end
 
+M.show_logs = function()
+    if logger.state:get('debug') then
+        local logs = logger.state:get('logs')
+        for _, log in ipairs(logs) do
+            logger.error(log)
+        end
+    end
+end
+
 M.setup = async_void(function(config)
     if state:get('instantiated') then
         return
@@ -760,6 +769,7 @@ M.setup = async_void(function(config)
     end
     state:assign(config)
     highlighter.setup(config)
+    logger.setup(config)
     await(git.setup(config))
     await(scheduler())
     ui.setup(config)
