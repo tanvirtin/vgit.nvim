@@ -74,6 +74,7 @@
 
 ## Recommended Settings
 - `vim.o.updatetime = 100` (see :help updatetime).
+- `vim.wo.signcolumn = 'yes'` (see :help signcolumn)
 
 ## Installation
 | Plugin Manager                                       | Command                                                                        |
@@ -98,6 +99,7 @@ require('vgit').setup({
     hunks_enabled = true,
     blames_enabled = true,
     diff_preference = 'horizontal',
+    predict_hunk_signs = true,
     hls = {
         VGitBlame = {
             bg = nil,
