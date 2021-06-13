@@ -29,7 +29,9 @@ local state = State.new({
     processing = false,
     are_files_tracked = false,
     diff_preference = 'horizontal',
-    throttle_ms = 150,
+    predict_hunk_signs = true,
+    action_throttle_ms = 150,
+    predict_hunk_throttle_ms = 10,
 })
 
 local function attach_blames_autocmd(buf)
@@ -85,6 +87,41 @@ M._buf_attach = async_void(function(buf)
                             attach_blames_autocmd(buf)
                         end
                         vim.api.nvim_buf_attach(buf, false, {
+                            on_lines = async_void(throttle_leading(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
+                                if state:get('predict_hunk_signs') then
+                                    await(scheduler())
+                                    if p_lnum == n_lnum and byte_count == 0 then
+                                        return
+                                    end
+                                    local show_err, original_lines = await(
+                                        git.show(project_relative_filename, M.get_diff_base())
+                                    )
+                                    await(scheduler())
+                                    if not show_err then
+                                        local current_lines = buffer.get_lines(cbuf)
+                                        await(scheduler())
+                                        -- Temporary files to compute hunks on the fly.
+                                        local temp_filename_b = fs.tmpname()
+                                        local temp_filename_a = fs.tmpname()
+                                        fs.write_file(temp_filename_a, original_lines)
+                                        fs.write_file(temp_filename_b, current_lines)
+                                        local hunks_err, hunks = await(git.file_hunks(temp_filename_a, temp_filename_b))
+                                        await(scheduler())
+                                        if not hunks_err then
+                                            bstate:set(cbuf, 'hunks', hunks)
+                                            await(scheduler())
+                                            ui.hide_hunk_signs(cbuf)
+                                            await(scheduler())
+                                            ui.show_hunk_signs(cbuf, hunks)
+                                            await(scheduler())
+                                        end
+                                        -- No matter what happens these temporary files will always be deleted.
+                                        fs.remove_file(temp_filename_a)
+                                        fs.remove_file(temp_filename_b)
+                                        await(scheduler())
+                                    end
+                                end
+                            end, state:get('predict_hunk_throttle_ms'))),
                             on_detach = function(_, cbuf)
                                 if bstate:contains(cbuf) then
                                     bstate:remove(cbuf)
@@ -100,8 +137,6 @@ M._buf_attach = async_void(function(buf)
                     await(scheduler())
                     if not err then
                         bstate:set(buf, 'hunks', hunks)
-                        ui.hide_hunk_signs(buf)
-                        await(scheduler())
                         ui.show_hunk_signs(buf, hunks)
                         await(scheduler())
                     else
@@ -131,7 +166,7 @@ M._buf_update = async_void(function(buf)
         end
     end
     await(scheduler())
-end)
+end, state:get('action_throttle_ms'))
 
 M._blame_line = async_void(throttle_leading(function(buf)
     if not state:get('disabled')
@@ -166,7 +201,7 @@ M._blame_line = async_void(throttle_leading(function(buf)
         end
     end
     await(scheduler())
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M._unblame_line = function(buf, override)
     if bstate:contains(buf) and buffer.is_valid(buf) then
@@ -258,7 +293,7 @@ M._change_history = async_void(throttle_leading(function(buf)
         end), selected_log)
     end
     await(scheduler())
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M._command_autocompletes = function(arglead, line)
     local parsed_line = #vim.split(line, '%s+')
@@ -294,7 +329,7 @@ M.hunk_preview = throttle_leading(function(buf, win)
             ui.show_hunk(selected_hunk, bstate:get(buf, 'filetype'))
         end
     end
-end, state:get('throttle_ms'))
+end, state:get('action_throttle_ms'))
 
 M.hunk_down = function(buf, win)
     buf = buf or buffer.current()
@@ -406,7 +441,7 @@ M.hunk_reset = throttle_leading(function(buf, win)
             end
         end
     end
-end, state:get('throttle_ms'))
+end, state:get('action_throttle_ms'))
 
 M.hunks_quickfix_list = async_void(throttle_leading(function()
     if not state:get('disabled') then
@@ -442,7 +477,7 @@ M.hunks_quickfix_list = async_void(throttle_leading(function()
         vim.cmd('copen')
     end
     await(scheduler())
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M.diff = M.hunks_quickfix_list
 
@@ -479,7 +514,7 @@ M.toggle_buffer_hunks = async_void(throttle_leading(function()
     end
     await(scheduler())
     return state:get('hunks_enabled')
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M.toggle_buffer_blames = async_void(throttle_leading(function()
     if not state:get('disabled') then
@@ -521,7 +556,7 @@ M.toggle_buffer_blames = async_void(throttle_leading(function()
         return state:get('blames_enabled')
     end
     await(scheduler())
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M.buffer_history = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
@@ -575,7 +610,7 @@ M.buffer_history = async_void(throttle_leading(function(buf)
         )
     end
     await(scheduler())
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M.buffer_preview = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
@@ -615,7 +650,7 @@ M.buffer_preview = async_void(throttle_leading(function(buf)
         )
     end
     await(scheduler())
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M.buffer_reset = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
@@ -634,7 +669,7 @@ M.buffer_reset = async_void(throttle_leading(function(buf)
         end
     end
     await(scheduler())
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M.enabled = function()
     return not state:get('disabled')
@@ -684,7 +719,7 @@ M.set_diff_base = async_void(throttle_leading(function(diff_base)
         end
     end
     await(scheduler())
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M.set_diff_preference = async_void(throttle_leading(function(preference)
     if preference ~= 'horizontal' and preference ~= 'vertical' then
@@ -711,7 +746,7 @@ M.set_diff_preference = async_void(throttle_leading(function(preference)
             fn(buffer.current())
         end
     end
-end, state:get('throttle_ms')))
+end, state:get('action_throttle_ms')))
 
 M.get_diff_preference = function()
     return state:get('diff_preference')
