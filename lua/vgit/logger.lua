@@ -6,7 +6,7 @@ local M = {}
 
 M.state = State.new({
     debug = false,
-    logs = {},
+    debug_logs = {},
 })
 
 M.setup = function(config)
@@ -30,7 +30,7 @@ M.debug = function(msg, fn)
       else
          new_msg = msg
       end
-      table.insert(M.state:get('logs'), string.format('VGit[%s][%s]: %s', os.date('%H:%M:%S'), fn, new_msg))
+      table.insert(M.state:get('debug_logs'), string.format('VGit[%s][%s]: %s', os.date('%H:%M:%S'), fn, new_msg))
    end
 end
 

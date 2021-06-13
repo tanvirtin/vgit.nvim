@@ -96,6 +96,7 @@ require('vgit').setup()
 By default these are the default settings provided by the app, you can change them to your liking.
 ```lua
 require('vgit').setup({
+    debug = false,
     hunks_enabled = true,
     blames_enabled = true,
     diff_preference = 'horizontal',
@@ -385,6 +386,7 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | set_diff_base | Sets the current diff base to a different commit, going forward all future hunks and diffs for a given buffer will be against this commit |
 | get_diff_preference | Returns the current diff preference of the diff, the value will either be "horizontal" or "vertical" |
 | set_diff_preference | Sets the diff preference to your given output , the value can only be "horizontal" or "vertical" |
+| show_debug_logs | Shows all errors that has occured during program execution |
 
 ## Similar Git Plugins
 - [vim-fugitive](https://github.com/tpope/vim-fugitive)

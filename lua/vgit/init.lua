@@ -752,10 +752,10 @@ M.get_diff_preference = function()
     return state:get('diff_preference')
 end
 
-M.show_logs = function()
+M.show_debug_logs = function()
     if logger.state:get('debug') then
-        local logs = logger.state:get('logs')
-        for _, log in ipairs(logs) do
+        local debug_logs = logger.state:get('debug_logs')
+        for _, log in ipairs(debug_logs) do
             logger.error(log)
         end
     end
