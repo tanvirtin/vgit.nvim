@@ -45,7 +45,7 @@ local function detach_blames_autocmd(buf)
     vim.cmd(string.format('aug tanvirtin/vgit/%s | au! | aug END', buf))
 end
 
-M._buf_attach = async_void(function(buf)
+M._buf_attach = async_void(throttle_leading(function(buf)
     buf = buf or buffer.current()
     if buffer.is_valid(buf) then
         local filename = fs.filename(buf)
@@ -91,6 +91,7 @@ M._buf_attach = async_void(function(buf)
                                 if state:get('predict_hunk_signs') then
                                     await(scheduler())
                                     if p_lnum == n_lnum and byte_count == 0 then
+                                        await(scheduler())
                                         return
                                     end
                                     local show_err, original_lines = await(
@@ -104,7 +105,9 @@ M._buf_attach = async_void(function(buf)
                                         local temp_filename_b = fs.tmpname()
                                         local temp_filename_a = fs.tmpname()
                                         fs.write_file(temp_filename_a, original_lines)
+                                        await(scheduler())
                                         fs.write_file(temp_filename_b, current_lines)
+                                        await(scheduler())
                                         local hunks_err, hunks = await(git.file_hunks(temp_filename_a, temp_filename_b))
                                         await(scheduler())
                                         if not hunks_err then
@@ -118,6 +121,7 @@ M._buf_attach = async_void(function(buf)
                                         end
                                         -- No matter what happens these temporary files will always be deleted.
                                         fs.remove_file(temp_filename_a)
+                                        await(scheduler())
                                         fs.remove_file(temp_filename_b)
                                         await(scheduler())
                                     else
@@ -151,7 +155,7 @@ M._buf_attach = async_void(function(buf)
         end
     end
     await(scheduler())
-end)
+end, state:get('action_throttle_ms')))
 
 M._buf_update = async_void(function(buf)
     buf = buf or buffer.current()
