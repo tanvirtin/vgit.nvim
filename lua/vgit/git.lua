@@ -264,6 +264,7 @@ M.blame_line = wrap(function(filename, lnum, callback)
 end, 3)
 
 M.logs = wrap(function(filename, callback)
+    local timeout = 30000
     local logs = {{
         author_name = M.state:get('config')['user.name'],
         author_email = M.state:get('config')['user.email'],
@@ -276,14 +277,14 @@ M.logs = wrap(function(filename, callback)
         command = 'git',
         args = {
             'log',
+            '--color=never',
             '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
             '--',
             filename,
         },
     })
-    job:start()
     -- BUG: Plenary Job bug, prevents last line to be read.
-    job:wait()
+    job:sync(timeout)
     local result = job:result()
     for _, line in ipairs(result) do
         table.insert(logs, M.create_log(line))
@@ -486,7 +487,7 @@ M.show = wrap(function(filename, commit_hash, callback)
             callback(nil, result)
         end,
     })
-    job:sync()
+    job:start()
 end, 3)
 
 M.reset = wrap(function(filename, callback)
