@@ -22,6 +22,7 @@ M.state = State.new({
         invalid_command = 'Invalid command "%s"',
         set_diff_base = 'Failed to set diff base, the commit "%s" is invalid',
         set_diff_preference = 'Failed to set diff preferece, "%s" is invalid',
+        set_diff_strategy = 'Failed to set diff strategy, "%s" is invalid',
     }
 })
 

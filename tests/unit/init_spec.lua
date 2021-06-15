@@ -25,6 +25,8 @@ describe('init:', function()
                 buffer_history = true,
                 show_debug_logs = true,
                 apply_highlights = true,
+                get_diff_strategy = true,
+                set_diff_strategy = true,
                 get_diff_preference = true,
                 set_diff_preference = true,
                 toggle_buffer_hunks = true,

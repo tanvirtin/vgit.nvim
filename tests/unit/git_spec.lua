@@ -202,7 +202,7 @@ describe('git:', function()
 
     end)
 
-    describe('hunks', function()
+    describe('remote_hunks', function()
         local filename = 'tests/fixtures/simple_file'
 
         after_each(function()
@@ -211,7 +211,7 @@ describe('git:', function()
 
         it('should return only added hunks with correct start and finish', async_void(function()
             local lines = add_lines(filename)
-            local err, data = await(git.hunks(filename))
+            local err, data = await(git.remote_hunks(filename))
             eq(err, nil)
             eq(#data, #lines)
             local counter = 2
@@ -225,7 +225,7 @@ describe('git:', function()
 
         it('should return only removed hunks with correct start and finish', async_void(function()
             local _, _, removed_lines = remove_lines(filename)
-            local err, data = await(git.hunks(filename))
+            local err, data = await(git.remote_hunks(filename))
             eq(err, nil)
             eq(#data, #removed_lines)
             for i, hunk in ipairs(data) do
@@ -237,7 +237,7 @@ describe('git:', function()
 
         it('should return only changed hunks with correct start and finish', async_void(function()
             local _, _, changed_lines = change_lines(filename)
-            local err, data = await(git.hunks(filename))
+            local err, data = await(git.remote_hunks(filename))
             eq(err, nil)
             eq(#data, #changed_lines)
             local counter = 1
@@ -251,7 +251,7 @@ describe('git:', function()
 
         it('should return all possible hunks with correct start and finish', async_void(function()
             local lines = augment_file(filename)
-            local err, data = await(git.hunks(filename))
+            local err, data = await(git.remote_hunks(filename))
             eq(err, nil)
             eq(#data, 3)
             eq(data[1].type, 'add')
@@ -289,7 +289,7 @@ describe('git:', function()
 
         it('should return data table with correct keys', async_void(function()
             local _, lines = add_lines(filename)
-            local err, hunks = await(git.hunks(filename))
+            local err, hunks = await(git.remote_hunks(filename))
             eq(err, nil)
             eq(type(hunks), 'table')
             local diff_err, data = await(git.vertical_diff(lines, hunks))
@@ -310,35 +310,35 @@ describe('git:', function()
 
         it('should have equal number of current_lines and previous_lines for a file with added lines', async_void(function()
             local _, lines= add_lines(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(lines, hunks))
             eq(#data.current_lines, #data.previous_lines)
         end))
 
         it('should have equal number of current_lines and previous_lines for a file with removed lines', async_void(function()
             local _, lines = remove_lines(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(lines, hunks))
             eq(#data.current_lines, #data.previous_lines)
         end))
 
         it('should have equal number of current_lines and previous_lines for a file with changed lines', async_void(function()
             local _, lines = change_lines(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(lines, hunks))
             eq(#data.current_lines, #data.previous_lines)
         end))
 
         it('should have equal number of current_lines and previous_lines for a file with added, removed and changed lines', async_void(function()
             local _,lines = augment_file(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(lines, hunks))
             eq(#data.current_lines, #data.previous_lines)
         end))
 
         it('should have equal number of current_lines and previous_lines for a file with added lines', async_void(function()
             local _, lines, added_lines = add_lines(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(lines, hunks))
             local num_added_lines = #added_lines
             assert(#data.current_lines > 0)
@@ -356,7 +356,7 @@ describe('git:', function()
 
         it('should have correct lnum_changes for a file with removed lines', async_void(function()
             local _, lines, removed_lines = remove_lines(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(lines, hunks))
             local num_removed_lines = #removed_lines
             assert(#data.current_lines > 0)
@@ -375,7 +375,7 @@ describe('git:', function()
 
         it('should have correct lnum_changes for a file with changed lines', async_void(function()
             local _, lines, changed_lines = change_lines(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(lines, hunks))
             local num_changed_lines = #changed_lines
             assert(#data.current_lines > 0)
@@ -413,7 +413,7 @@ describe('git:', function()
 
         it('should have correct lnum_changes for a file with added, removed and changed lines', async_void(function()
             local _, lines, added_lines, removed_lines, changed_lines = augment_file(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(lines, hunks))
             local num_added_lines = #added_lines
             local num_removed_lines = #removed_lines
@@ -459,7 +459,7 @@ describe('git:', function()
 
         it('should have correct current_lines and previous_lines for added lines', async_void(function()
             local lines, new_lines, added_lines = add_lines(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(new_lines, hunks))
             local current_lines = data.current_lines
             local previous_lines = data.previous_lines
@@ -472,7 +472,7 @@ describe('git:', function()
 
         it('should have correct current_lines and previous_lines for removed lines', async_void(function()
             local lines, new_lines, removed_lines = remove_lines(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(new_lines, hunks))
             local current_lines = data.current_lines
             local previous_lines = data.previous_lines
@@ -486,7 +486,7 @@ describe('git:', function()
 
         it('should have correct current_lines and previous_lines for changed lines', async_void(function()
             local _, new_lines, changed_lines = add_lines(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(new_lines, hunks))
             local current_lines = data.current_lines
             local previous_lines = data.previous_lines
@@ -498,7 +498,7 @@ describe('git:', function()
 
         it('should have correct current_lines and previous_lines for added, removed and changed lines', async_void(function()
             local _, new_lines, added_lines, removed_lines, changed_lines = augment_file(filename)
-            local _, hunks = await(git.hunks(filename))
+            local _, hunks = await(git.remote_hunks(filename))
             local _, data = await(git.vertical_diff(new_lines, hunks))
             local current_lines = data.current_lines
             for _, index in ipairs(added_lines) do
