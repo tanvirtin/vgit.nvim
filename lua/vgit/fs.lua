@@ -4,14 +4,6 @@ local vim = vim
 
 local M = {}
 
-local function random_string(length)
-    local res = ''
-    for _ = 1, length do
-        res = res .. string.char(math.random(97, 122))
-    end
-    return res
-end
-
 M.relative_path = function(filepath)
     local cwd = vim.loop.cwd()
     if not cwd or not filepath then return filepath end
@@ -56,7 +48,12 @@ M.filename = function(buf)
 end
 
 M.tmpname = function()
-    return string.format('%s_vgit', random_string(6))
+    local length = 6
+    local res = ''
+    for _ = 1, length do
+        res = res .. string.char(math.random(97, 122))
+    end
+    return string.format('/tmp/%s_vgit', res)
 end
 
 M.read_file = function(filepath)
