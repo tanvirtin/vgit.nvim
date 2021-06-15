@@ -100,6 +100,7 @@ require('vgit').setup({
     hunks_enabled = true,
     blames_enabled = true,
     diff_preference = 'horizontal',
+    diff_strategy = 'remote',
     predict_hunk_signs = true,
     hls = {
         VGitBlame = {
@@ -385,7 +386,9 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | get_diff_base | Returns the current diff base that all diff and hunks are being compared for all buffers |
 | set_diff_base | Sets the current diff base to a different commit, going forward all future hunks and diffs for a given buffer will be against this commit |
 | get_diff_preference | Returns the current diff preference of the diff, the value will either be "horizontal" or "vertical" |
-| set_diff_preference | Sets the diff preference to your given output , the value can only be "horizontal" or "vertical" |
+| set_diff_preference | Sets the diff preference to your given output, the value can only be "horizontal" or "vertical" |
+| get_diff_strategy | Returns the current diff strategy used to compute hunk signs and buffer preview, the value will either be "remote" or "index" |
+| set_diff_strategy | Sets the diff strategy that will be used to show hunk signs and buffer preview, the value can only be "remote" or "index" |
 | show_debug_logs | Shows all errors that has occured during program execution |
 
 ## Similar Git Plugins

@@ -264,6 +264,7 @@ M.blame_line = wrap(function(filename, lnum, callback)
 end, 3)
 
 M.logs = wrap(function(filename, callback)
+    local timeout = 30000
     local logs = {{
         author_name = M.state:get('config')['user.name'],
         author_email = M.state:get('config')['user.email'],
@@ -276,14 +277,14 @@ M.logs = wrap(function(filename, callback)
         command = 'git',
         args = {
             'log',
+            '--color=never',
             '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
             '--',
             filename,
         },
     })
-    job:start()
     -- BUG: Plenary Job bug, prevents last line to be read.
-    job:wait()
+    job:sync(timeout)
     local result = job:result()
     for _, line in ipairs(result) do
         table.insert(logs, M.create_log(line))
@@ -341,7 +342,52 @@ M.file_hunks = wrap(function(filename_a, filename_b, callback)
     job:start()
 end, 3)
 
-M.hunks = wrap(function(filename, parent_hash, commit_hash, callback)
+M.index_hunks = wrap(function(filename, callback)
+    local result = {}
+    local err = {}
+    local args = {
+        '--no-pager',
+        '-c',
+        'core.safecrlf=false',
+        'diff',
+        '--color=never',
+        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+        '--patch-with-raw',
+        '--unified=0',
+        '--',
+        filename,
+    }
+    local job = Job:new({
+        command = 'git',
+        args = args,
+        on_stdout = function(_, data, _)
+            table.insert(result, data)
+        end,
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, nil)
+            end
+            local hunks = {}
+            for _, line in ipairs(result) do
+                if vim.startswith(line, '@@') then
+                    table.insert(hunks, M.create_hunk(line))
+                else
+                    if #hunks > 0 then
+                        local hunk = hunks[#hunks]
+                        table.insert(hunk.diff, line)
+                    end
+                end
+            end
+            return callback(nil, hunks)
+        end,
+    })
+    job:start()
+end, 2)
+
+M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
     local result = {}
     local err = {}
     local args = {
@@ -441,7 +487,7 @@ M.show = wrap(function(filename, commit_hash, callback)
             callback(nil, result)
         end,
     })
-    job:sync()
+    job:start()
 end, 3)
 
 M.reset = wrap(function(filename, callback)
