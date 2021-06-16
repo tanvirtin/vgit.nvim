@@ -15,6 +15,7 @@ describe('init:', function()
                 hunk_up = true,
                 hunk_down = true,
                 hunk_reset = true,
+                show_blame = true,
                 buffer_diff = true,
                 buffer_reset = true,
                 instantiated = true,

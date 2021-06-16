@@ -52,6 +52,11 @@
     <img src="https://user-images.githubusercontent.com/25164326/119602582-74bbdb80-bdb9-11eb-8f70-1ab43e9213df.gif" alt="blame_a_line" />
 </details>
 <details>
+    <summary>Show Blame</summary>
+    <br />
+    <img width="1792" alt="show_blame" src="https://user-images.githubusercontent.com/25164326/122292020-83cb1080-cec3-11eb-9a46-b07dddb4bd65.png">
+</details>
+<details>
     <summary>Quickfix your hunks (a.k.a git diff)</summary>
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/119602589-75ed0880-bdb9-11eb-98fa-9e5a615dae31.gif" alt="hunks_quickfix_list" />
@@ -376,7 +381,7 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | hunk_reset | Removes the hunk from the buffer |
 | hunk_down | Navigate downward through a hunk |
 | hunk_up | Navigate upwards through a hunk |
-| buffer_preview | Opens two VGit views, one showing the previous version of the buffer and the second showing the new changes in the buffer |
+| buffer_preview | Shows the current differences in lines in the current buffer |
 | buffer_history | Opens a buffer preview along with a table of logs, enabling users to see different iterations of the buffer in the git history |
 | buffer_reset | Resets the current buffer to HEAD |
 | hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
@@ -390,6 +395,7 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | get_diff_strategy | Returns the current diff strategy used to compute hunk signs and buffer preview, the value will either be "remote" or "index" |
 | set_diff_strategy | Sets the diff strategy that will be used to show hunk signs and buffer preview, the value can only be "remote" or "index" |
 | show_debug_logs | Shows all errors that has occured during program execution |
+| show_blame | Opens a VGit view detailing the blame of the line that the user is currently on |
 
 ## Similar Git Plugins
 - [vim-fugitive](https://github.com/tpope/vim-fugitive)
