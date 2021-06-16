@@ -17,6 +17,7 @@ M.state = State.new({
         history = 'Git History',
         current = 'Current',
         previous = 'Previous',
+        no_commits = 'No commits to show',
     },
     errors = {
         invalid_command = 'Invalid command "%s"',

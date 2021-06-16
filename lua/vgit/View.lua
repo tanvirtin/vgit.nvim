@@ -269,6 +269,25 @@ function View:set_error(value)
     return self
 end
 
+function View:set_centered_text(text)
+    assert(type(text) == 'string', 'Invalid type')
+    local lines = {}
+    local height = vim.api.nvim_win_get_height(self.state.win_id)
+    local width = vim.api.nvim_win_get_width(self.state.win_id)
+    for _ = 1, height do
+        table.insert(lines, '')
+    end
+    local rep = math.ceil((width / 2) - math.ceil(#text / 2))
+    if rep < 0 then
+        rep = 0
+    end
+    lines[math.floor(height / 2)] = string.rep(' ',  rep) .. text
+    self:set_win_option('cursorline', false)
+    self.state.lines = buffer.get_lines(self:get_buf())
+    buffer.set_lines(self.state.buf, lines)
+    return self
+end
+
 function View:add_autocmd(cmd, action, options)
     local buf = self:get_buf()
     local persist = (options and options.persist) or false
