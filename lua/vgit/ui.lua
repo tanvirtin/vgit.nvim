@@ -28,6 +28,10 @@ M.constants = {
 M.state = State.new({
     blame = {
         hl = 'VGitBlame',
+        window = {
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitBlameBorder',
+        },
         format = function(blame, git_config)
             local config_author = git_config['user.name']
             local author = blame.author
@@ -211,6 +215,7 @@ M.apply_highlights = function()
         })
     end
     highlighter.define(M.state:get('blame').hl)
+    highlighter.define(M.state:get('blame').window.border_hl)
     highlighter.define(M.state:get('preview').horizontal_window.border_hl)
     highlighter.define(M.state:get('preview').current_window.border_hl)
     highlighter.define(M.state:get('preview').previous_window.border_hl)
@@ -244,8 +249,8 @@ M.show_blame = async_void(function(fetch)
     local max_commit_message_length = 88
     local view = View.new({
         lines = {},
-        border = M.state:get('hunk').window.border,
-        border_hl = M.state:get('hunk').window.border_hl,
+        border = M.state:get('blame').window.border,
+        border_hl = M.state:get('blame').window.border_hl,
         win_options = { ['cursorline'] = true},
         window_props = {
             style = 'minimal',
@@ -256,7 +261,7 @@ M.show_blame = async_void(function(fetch)
             col = 0,
         },
     })
-    local widget = Widget.new({ view }, 'hunk')
+    local widget = Widget.new({ view }, 'blame')
         :render()
         :set_loading(true)
     M.state:set('current_widget', widget)
