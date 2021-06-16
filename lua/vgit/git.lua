@@ -513,6 +513,31 @@ M.reset = wrap(function(filename, callback)
     job:start()
 end, 2)
 
+M.current_branch = wrap(function(callback)
+    local err = {}
+    local result = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'branch',
+            '--show-current',
+        },
+        on_stdout = function(_, data, _)
+            table.insert(result, data)
+        end,
+        on_stderr = function(_, data, _)
+            table.insert(err, data)
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, result)
+            end
+            callback(nil, result)
+        end,
+    })
+    job:start()
+end, 1)
+
 M.ls_tracked = wrap(function(callback)
     local err = {}
     local result = {}

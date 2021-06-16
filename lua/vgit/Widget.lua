@@ -30,6 +30,14 @@ function Widget:set_loading(value)
     return self
 end
 
+function Widget:set_centered_text(text)
+    assert(type(text) == 'string', 'Invalid type')
+    for _, v in pairs(self.views) do
+        v:set_centered_text(text)
+    end
+    return self
+end
+
 function Widget:set_error(value)
     assert(type(value) == 'boolean', 'Invalid type')
     for _, v in pairs(self.views) do

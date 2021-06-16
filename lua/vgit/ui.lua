@@ -629,6 +629,14 @@ M.show_horizontal_history = async_void(function(fetch, filetype)
     widget:set_loading(false)
     await(scheduler())
     if err then
+        local no_commits_str = 'does not have any commits yet'
+        if type(err) == 'table'
+            and #err > 0
+            and type(err[1]) == 'string'
+            and err[1]:sub(#err[1] - #no_commits_str + 1, #err[1]) == no_commits_str then
+            widget:set_centered_text(t('history/no_commits'))
+            return
+        end
         widget:set_error(true)
         await(scheduler())
         return
@@ -783,6 +791,14 @@ M.show_vertical_history = async_void(function(fetch, filetype)
     widget:set_loading(false)
     await(scheduler())
     if err then
+        local no_commits_str = 'does not have any commits yet'
+        if type(err) == 'table'
+            and #err > 0
+            and type(err[1]) == 'string'
+            and err[1]:sub(#err[1] - #no_commits_str + 1, #err[1]) == no_commits_str then
+            widget:set_centered_text(t('history/no_commits'))
+            return
+        end
         widget:set_error(true)
         await(scheduler())
         return
