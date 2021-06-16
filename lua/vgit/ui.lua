@@ -12,6 +12,10 @@ local scheduler = a.scheduler
 
 local vim = vim
 
+local function round(x)
+    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
+end
+
 local M = {}
 
 M.constants = {
@@ -25,9 +29,6 @@ M.state = State.new({
     blame = {
         hl = 'VGitBlame',
         format = function(blame, git_config)
-            local round = function(x)
-                return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
-            end
             local config_author = git_config['user.name']
             local author = blame.author
             if config_author == author then
@@ -226,7 +227,7 @@ M.setup = function(config)
     M.apply_highlights()
 end
 
-M.show_blame = function(buf, blame, lnum, git_config)
+M.show_blame_line = function(buf, blame, lnum, git_config)
     if buffer.is_valid(buf) then
         local virt_text = M.state:get('blame').format(blame, git_config)
         if type(virt_text) == 'string' then
@@ -238,6 +239,91 @@ M.show_blame = function(buf, blame, lnum, git_config)
         end
     end
 end
+
+M.show_blame = async_void(function(fetch)
+    local max_commit_message_length = 88
+    local view = View.new({
+        lines = {},
+        border = M.state:get('hunk').window.border,
+        border_hl = M.state:get('hunk').window.border_hl,
+        win_options = { ['cursorline'] = true},
+        window_props = {
+            style = 'minimal',
+            relative = 'cursor',
+            height = 5,
+            width = max_commit_message_length,
+            row = 0,
+            col = 0,
+        },
+    })
+    local widget = Widget.new({ view }, 'hunk')
+        :render()
+        :set_loading(true)
+    M.state:set('current_widget', widget)
+    await(scheduler())
+    local err, blame = await(fetch())
+    await(scheduler())
+    widget:set_loading(false)
+    await(scheduler())
+    if err then
+        widget:set_error(true)
+        return
+    else
+        local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
+        local time_format = string.format('%s days ago', round(time))
+        local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
+        local division_counter = 1
+        while time < 1 and division_counter ~= #time_divisions do
+            local division = time_divisions[division_counter]
+            time = time * division[1]
+            time_format = string.format('%s %s ago', round(time), division[2])
+            division_counter = division_counter + 1
+        end
+        local commit_message = blame.commit_message
+        if not blame.committed then
+            commit_message = 'Uncommitted changes'
+            local new_lines = {
+                '',
+                string.format('%sLine #%s', '  ', blame.lnum),
+                '',
+                string.format('%s%s', '  ', commit_message),
+                '',
+                string.format('%s%s -> %s', '  ', blame.parent_hash, blame.commit_hash),
+                '',
+            }
+            view:set_lines(new_lines)
+            view:set_height(#new_lines)
+            return
+        end
+        if #commit_message > max_commit_message_length then
+            commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
+        end
+        local new_lines = {
+            '',
+            string.format('%sLine #%s', '  ', blame.lnum),
+            '',
+            string.format(
+                '%s%s',
+                '  ',
+                string.format('%s (%s)', blame.author, blame.author_mail)
+            ),
+            '',
+            string.format(
+                '%s%s (%s)',
+                '  ',
+                time_format,
+                os.date('%c', blame.author_time)
+            ),
+            '',
+            string.format('%s%s', '  ', commit_message),
+            '',
+            string.format('%s%s -> %s', '  ', blame.parent_hash, blame.commit_hash),
+            '',
+        }
+        view:set_lines(new_lines)
+        view:set_height(#new_lines)
+    end
+end)
 
 M.hide_blame = function(buf)
     if buffer.is_valid(buf) then

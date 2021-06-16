@@ -9,5 +9,7 @@ assignees: ''
 
 ### Description
 
+A clear and concise description of your bug.
+
 - nvim --version output: 
 - Operating system: 
