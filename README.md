@@ -168,11 +168,19 @@ require('vgit').setup({
             fg = '#a6e22e',
             bg = nil,
         },
+        VGitDiffHorizontalBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
         VGitDiffCurrentBorder = {
             fg = '#a1b5b1',
             bg = nil,
         },
         VGitDiffPreviousBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
+        VGitHistoryHorizontalBorder = {
             fg = '#a1b5b1',
             bg = nil,
         },
@@ -192,9 +200,17 @@ require('vgit').setup({
             fg = '#a1b5b1',
             bg = nil,
         },
+        VGitBlameBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
     },
     blame = {
         hl = 'VGitBlame',
+        window = {
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitBlameBorder',
+        },
         format = function(blame, git_config)
             local round = function(x)
                 return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)

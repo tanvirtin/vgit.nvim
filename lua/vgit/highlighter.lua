@@ -98,6 +98,10 @@ M.state = State.new({
             fg = '#a1b5b1',
             bg = nil,
         },
+        VGitBlameBorder = {
+            fg = '#a1b5b1',
+            bg = nil,
+        },
     },
 })
 
