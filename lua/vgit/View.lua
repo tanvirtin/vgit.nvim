@@ -98,6 +98,14 @@ local function create_border(content_buf, title, window_props, border, border_hl
     return buf, win_id
 end
 
+local function calculate_center(text, width)
+    local rep = math.ceil((width / 2) - math.ceil(#text / 2))
+    if rep < 0 then
+        rep = 0
+    end
+    return rep
+end
+
 local function global_width()
     return vim.o.columns
 end
@@ -221,11 +229,7 @@ function View:set_loading(value)
             table.insert(loading_lines, '')
         end
         local loading_text = t('loading')
-        local rep = math.ceil((width / 2) - math.ceil(#loading_text / 2))
-        if rep < 0 then
-            rep = 0
-        end
-        loading_lines[math.floor(height / 2)] = string.rep(' ',  rep) .. loading_text
+        loading_lines[math.ceil(height / 2)] = string.rep(' ', calculate_center(loading_text, width)) .. loading_text
         self:set_win_option('cursorline', false)
         self.state.lines = buffer.get_lines(self:get_buf())
         buffer.set_lines(self.state.buf, loading_lines)
@@ -252,11 +256,7 @@ function View:set_error(value)
             table.insert(loading_lines, '')
         end
         local error_text = t('error')
-        local rep = math.ceil((width / 2) - math.ceil(#error_text / 2))
-        if rep < 0 then
-            rep = 0
-        end
-        loading_lines[math.floor(height / 2)] = string.rep(' ',  rep) .. error_text
+        loading_lines[math.ceil(height / 2)] = string.rep(' ', calculate_center(error_text, width)) .. error_text
         self:set_win_option('cursorline', false)
         buffer.set_lines(self.state.buf, loading_lines)
         self.state.lines = buffer.get_lines(self:get_buf())
@@ -277,11 +277,7 @@ function View:set_centered_text(text)
     for _ = 1, height do
         table.insert(lines, '')
     end
-    local rep = math.ceil((width / 2) - math.ceil(#text / 2))
-    if rep < 0 then
-        rep = 0
-    end
-    lines[math.floor(height / 2)] = string.rep(' ',  rep) .. text
+    lines[math.ceil(height / 2)] = string.rep(' ', calculate_center(text, width)) .. text
     self:set_win_option('cursorline', false)
     self.state.lines = buffer.get_lines(self:get_buf())
     buffer.set_lines(self.state.buf, lines)
@@ -314,6 +310,18 @@ end
 
 function View:focus()
     vim.api.nvim_set_current_win(self.state.win_id)
+    return self
+end
+
+function View:set_height(value)
+    assert(type(value) == 'number', 'Invalid type')
+    vim.api.nvim_win_set_height(self:get_win_id(), value)
+    return self
+end
+
+function View:set_width(value)
+    assert(type(value) == 'number', 'Invalid type')
+    vim.api.nvim_win_set_width(self:get_win_id(), value)
     return self
 end
 

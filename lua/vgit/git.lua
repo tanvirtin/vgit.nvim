@@ -213,6 +213,23 @@ M.config = wrap(function(callback)
     job:start()
 end, 1)
 
+M.has_commits = wrap(function(callback)
+    local result = true
+    local job = Job:new({
+        command = 'git',
+        args = { 'status' },
+        on_stdout = function(_, line)
+            if line == 'No commits yet' then
+                result = false
+            end
+        end,
+        on_exit = function()
+            callback(result)
+        end,
+    })
+    job:start()
+end, 1)
+
 M.is_inside_work_tree = wrap(function(callback)
     local err = {}
     local job = Job:new({

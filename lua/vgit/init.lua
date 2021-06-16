@@ -26,13 +26,13 @@ local state = State.new({
     instantiated = false,
     hunks_enabled = true,
     blames_enabled = true,
-    processing = false,
     are_files_tracked = false,
+    diff_strategy = 'remote',
     diff_preference = 'horizontal',
     predict_hunk_signs = true,
     action_throttle_ms = 150,
-    predict_hunk_throttle_ms = 10,
-    diff_strategy = 'remote',
+    blame_line_throttle_ms = 150,
+    predict_hunk_throttle_ms = 30,
 })
 
 local function attach_blames_autocmd(buf)
@@ -46,7 +46,35 @@ local function detach_blames_autocmd(buf)
     vim.cmd(string.format('aug tanvirtin/vgit/%s | au! | aug END', buf))
 end
 
-M._buf_attach = async_void(throttle_leading(function(buf)
+local predict_hunk_signs = async_void(function(buf, current_lines, original_lines)
+    await(scheduler())
+    local temp_filename_b = fs.tmpname()
+    await(scheduler())
+    local temp_filename_a = fs.tmpname()
+    await(scheduler())
+    fs.write_file(temp_filename_a, original_lines)
+    await(scheduler())
+    fs.write_file(temp_filename_b, current_lines)
+    await(scheduler())
+    local hunks_err, hunks = await(git.file_hunks(temp_filename_a, temp_filename_b))
+    await(scheduler())
+    if not hunks_err then
+        bstate:set(buf, 'hunks', hunks)
+        await(scheduler())
+        pcall(ui.hide_hunk_signs, buf)
+        pcall(ui.show_hunk_signs, buf, hunks)
+        await(scheduler())
+    else
+        logger.debug(hunks_err, 'init.lua/_buf_attach')
+        await(scheduler())
+    end
+    fs.remove_file(temp_filename_a)
+    await(scheduler())
+    fs.remove_file(temp_filename_b)
+    await(scheduler())
+end)
+
+M._buf_attach = throttle_leading(async_void(function(buf)
     buf = buf or buffer.current()
     if buffer.is_valid(buf) then
         local filename = fs.filename(buf)
@@ -88,9 +116,9 @@ M._buf_attach = async_void(throttle_leading(function(buf)
                             attach_blames_autocmd(buf)
                         end
                         vim.api.nvim_buf_attach(buf, false, {
-                            on_lines = async_void(throttle_leading(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
+                            on_lines = throttle_leading(async_void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
+                                await(scheduler())
                                 if state:get('predict_hunk_signs') then
-                                    await(scheduler())
                                     if p_lnum == n_lnum and byte_count == 0 then
                                         await(scheduler())
                                         return
@@ -101,42 +129,18 @@ M._buf_attach = async_void(throttle_leading(function(buf)
                                             git.show(project_relative_filename, M.get_diff_base())
                                         )
                                     else
-                                        show_err, original_lines = await(
-                                            git.show(project_relative_filename, '')
-                                        )
+                                        show_err, original_lines = await(git.show(project_relative_filename, ''))
                                     end
                                     await(scheduler())
                                     if not show_err then
-                                        local current_lines = buffer.get_lines(cbuf)
-                                        await(scheduler())
-                                        -- Temporary files to compute hunks on the fly.
-                                        local temp_filename_b = fs.tmpname()
-                                        local temp_filename_a = fs.tmpname()
-                                        fs.write_file(temp_filename_a, original_lines)
-                                        await(scheduler())
-                                        fs.write_file(temp_filename_b, current_lines)
-                                        await(scheduler())
-                                        local hunks_err, hunks = await(git.file_hunks(temp_filename_a, temp_filename_b))
-                                        await(scheduler())
-                                        if not hunks_err then
-                                            bstate:set(cbuf, 'hunks', hunks)
-                                            pcall(ui.hide_hunk_signs, cbuf)
-                                            await(scheduler())
-                                            pcall(ui.show_hunk_signs, cbuf, hunks)
-                                            await(scheduler())
-                                        else
-                                            logger.debug(hunks_err, 'init.lua/_buf_attach')
-                                        end
-                                        fs.remove_file(temp_filename_a)
-                                        await(scheduler())
-                                        fs.remove_file(temp_filename_b)
+                                        predict_hunk_signs(cbuf, buffer.get_lines(cbuf), original_lines)
                                         await(scheduler())
                                     else
                                         logger.debug(show_err, 'init.lua/_buf_attach')
                                     end
                                 end
                                 await(scheduler())
-                            end, state:get('predict_hunk_throttle_ms'))),
+                            end), state:get('predict_hunk_throttle_ms')),
                             on_detach = function(_, cbuf)
                                 if bstate:contains(cbuf) then
                                     bstate:remove(cbuf)
@@ -164,7 +168,7 @@ M._buf_attach = async_void(throttle_leading(function(buf)
         end
     end
     await(scheduler())
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
 M._buf_update = async_void(function(buf)
     buf = buf or buffer.current()
@@ -184,11 +188,11 @@ M._buf_update = async_void(function(buf)
         end
     end
     await(scheduler())
-end, state:get('action_throttle_ms'))
+end)
 
-M._blame_line = async_void(throttle_leading(function(buf)
+M._blame_line = throttle_leading(async_void(function(buf)
+    await(scheduler())
     if not state:get('disabled')
-        and not state:get('processing')
         and buffer.is_valid(buf)
         and bstate:contains(buf) then
         local is_buf_modified = vim.api.nvim_buf_get_option(buf, 'modified')
@@ -198,19 +202,15 @@ M._blame_line = async_void(throttle_leading(function(buf)
             local lnum = vim.api.nvim_win_get_cursor(win)[1]
             if last_lnum_blamed ~= lnum then
                 local filename = bstate:get(buf, 'filename')
-                state:set('processing', true)
                 local err, blame = await(git.blame_line(filename, lnum))
                 await(scheduler())
-                state:set('processing', false)
                 if not err then
-                    if not state:get('processing') then
-                        ui.hide_blame(buf)
+                    ui.hide_blame(buf)
+                    await(scheduler())
+                    if vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())[1] == lnum then
+                        ui.show_blame_line(buf, blame, lnum, git.state:get('config'))
                         await(scheduler())
-                        if vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())[1] == lnum then
-                            ui.show_blame(buf, blame, lnum, git.state:get('config'))
-                            await(scheduler())
-                            bstate:set(buf, 'last_lnum_blamed', lnum)
-                        end
+                        bstate:set(buf, 'last_lnum_blamed', lnum)
                     end
                 else
                     logger.debug(err, 'init.lua/_blame_line')
@@ -219,7 +219,7 @@ M._blame_line = async_void(throttle_leading(function(buf)
         end
     end
     await(scheduler())
-end, state:get('action_throttle_ms')))
+end), state:get('blame_line_throttle_ms'))
 
 M._unblame_line = function(buf, override)
     if bstate:contains(buf) and buffer.is_valid(buf) then
@@ -261,7 +261,7 @@ M._run_submodule_command = function(name, command, ...)
     end
 end
 
-M._change_history = async_void(throttle_leading(function(buf)
+M._change_history = throttle_leading(async_void(function(buf)
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local selected_log = vim.api.nvim_win_get_cursor(0)[1]
         local diff_preference = state:get('diff_preference')
@@ -314,7 +314,7 @@ M._change_history = async_void(throttle_leading(function(buf)
         end), selected_log)
     end
     await(scheduler())
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
 M._command_autocompletes = function(arglead, line)
     local parsed_line = #vim.split(line, '%s+')
@@ -464,7 +464,7 @@ M.hunk_reset = throttle_leading(function(buf, win)
     end
 end, state:get('action_throttle_ms'))
 
-M.hunks_quickfix_list = async_void(throttle_leading(function()
+M.hunks_quickfix_list = throttle_leading(async_void(function()
     if not state:get('disabled') then
         if not state:get('are_files_tracked') then
             local tracked_files_err, tracked_files = await(git.ls_tracked())
@@ -499,11 +499,11 @@ M.hunks_quickfix_list = async_void(throttle_leading(function()
         vim.cmd('copen')
     end
     await(scheduler())
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
 M.diff = M.hunks_quickfix_list
 
-M.toggle_buffer_hunks = async_void(throttle_leading(function()
+M.toggle_buffer_hunks = throttle_leading(async_void(function()
     if not state:get('disabled') then
         if state:get('hunks_enabled') then
             state:set('hunks_enabled', false)
@@ -539,9 +539,9 @@ M.toggle_buffer_hunks = async_void(throttle_leading(function()
     end
     await(scheduler())
     return state:get('hunks_enabled')
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
-M.toggle_buffer_blames = async_void(throttle_leading(function()
+M.toggle_buffer_blames = throttle_leading(async_void(function()
     if not state:get('disabled') then
         vim.cmd('aug tanvirtin/vgit/blame | autocmd! | aug END')
         if state:get('blames_enabled') then
@@ -566,9 +566,9 @@ M.toggle_buffer_blames = async_void(throttle_leading(function()
         return state:get('blames_enabled')
     end
     await(scheduler())
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
-M.buffer_history = async_void(throttle_leading(function(buf)
+M.buffer_history = throttle_leading(async_void(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local diff_preference = state:get('diff_preference')
@@ -613,9 +613,9 @@ M.buffer_history = async_void(throttle_leading(function(buf)
         )
     end
     await(scheduler())
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
-M.buffer_preview = async_void(throttle_leading(function(buf)
+M.buffer_preview = throttle_leading(async_void(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local diff_preference = state:get('diff_preference')
@@ -657,9 +657,9 @@ M.buffer_preview = async_void(throttle_leading(function(buf)
         )
     end
     await(scheduler())
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
-M.buffer_reset = async_void(throttle_leading(function(buf)
+M.buffer_reset = throttle_leading(async_void(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local hunks = bstate:get(buf, 'hunks')
@@ -687,7 +687,28 @@ M.buffer_reset = async_void(throttle_leading(function(buf)
         end
     end
     await(scheduler())
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
+
+M.show_blame = throttle_leading(async_void(function(buf)
+    buf = buf or buffer.current()
+    if not state:get('disabled')
+        and buffer.is_valid(buf)
+        and bstate:contains(buf) then
+        local has_commits = await(git.has_commits())
+        await(scheduler())
+        if has_commits then
+            local win = vim.api.nvim_get_current_win()
+            local lnum = vim.api.nvim_win_get_cursor(win)[1]
+            ui.show_blame(async(function()
+                local filename = bstate:get(buf, 'filename')
+                local err, blame = await(git.blame_line(filename, lnum))
+                await(scheduler())
+                return err, blame
+            end))
+        end
+    end
+    await(scheduler())
+end), state:get('action_throttle_ms'))
 
 M.enabled = function()
     return not state:get('disabled')
@@ -705,7 +726,7 @@ M.get_diff_base = function()
     return git.get_diff_base()
 end
 
-M.set_diff_base = async_void(throttle_leading(function(diff_base)
+M.set_diff_base = throttle_leading(async_void(function(diff_base)
     if not diff_base or type(diff_base) ~= 'string' then
         logger.error(t('errors/set_diff_base', diff_base))
         return
@@ -739,9 +760,9 @@ M.set_diff_base = async_void(throttle_leading(function(diff_base)
         end
     end
     await(scheduler())
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
-M.set_diff_preference = async_void(throttle_leading(function(preference)
+M.set_diff_preference = throttle_leading(async_void(function(preference)
     if preference ~= 'horizontal' and preference ~= 'vertical' then
         return logger.error(t('errors/set_diff_preference', preference))
     end
@@ -766,9 +787,9 @@ M.set_diff_preference = async_void(throttle_leading(function(preference)
             fn(buffer.current())
         end
     end
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
-M.set_diff_strategy = async_void(throttle_leading(function(preference)
+M.set_diff_strategy = throttle_leading(async_void(function(preference)
     if preference ~= 'remote' and preference ~= 'index' then
         return logger.error(t('errors/set_diff_strategy', preference))
     end
@@ -795,7 +816,7 @@ M.set_diff_strategy = async_void(throttle_leading(function(preference)
             end
         end
     end)
-end, state:get('action_throttle_ms')))
+end), state:get('action_throttle_ms'))
 
 M.get_diff_strategy = function()
     return state:get('diff_strategy')
