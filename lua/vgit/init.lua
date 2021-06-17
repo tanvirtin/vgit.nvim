@@ -154,7 +154,7 @@ M._buf_attach = throttle_leading(async_void(function(buf)
                 if (buf_is_cached or buf_just_cached) and state:get('hunks_enabled') then
                     local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks)
                         or git.index_hunks
-                    local err, hunks = await(calculate_hunks(filename))
+                    local err, hunks = await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
                     await(scheduler())
                     if not err then
                         bstate:set(buf, 'hunks', hunks)
@@ -173,9 +173,8 @@ end), state:get('action_throttle_ms'))
 M._buf_update = async_void(function(buf)
     buf = buf or buffer.current()
     if state:get('hunks_enabled') and buffer.is_valid(buf) and bstate:contains(buf) then
-        local filename = bstate:get(buf, 'filename')
         local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks) or git.index_hunks
-        local err, hunks = await(calculate_hunks(filename))
+        local err, hunks = await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
         await(scheduler())
         if not err then
             bstate:set(buf, 'hunks', hunks)
@@ -201,8 +200,7 @@ M._blame_line = throttle_leading(async_void(function(buf)
             local last_lnum_blamed = bstate:get(buf, 'last_lnum_blamed')
             local lnum = vim.api.nvim_win_get_cursor(win)[1]
             if last_lnum_blamed ~= lnum then
-                local filename = bstate:get(buf, 'filename')
-                local err, blame = await(git.blame_line(filename, lnum))
+                local err, blame = await(git.blame_line(bstate:get(buf, 'project_relative_filename'), lnum))
                 await(scheduler())
                 if not err then
                     ui.hide_blame(buf)
@@ -270,7 +268,7 @@ M._change_history = throttle_leading(async_void(function(buf)
         local diff = (diff_preference == 'horizontal' and git.horizontal_diff)
             or git.vertical_diff
         change_history(async(function()
-            local filename = bstate:get(buf, 'filename')
+            local project_relative_filename = bstate:get(buf, 'project_relative_filename')
             local logs = bstate:get(buf, 'logs')
             local log = logs[selected_log]
             local hunks = nil
@@ -278,9 +276,9 @@ M._change_history = throttle_leading(async_void(function(buf)
             if log then
                 local err, computed_hunks
                 if selected_log == 1 then
-                    err, computed_hunks = await(git.remote_hunks(filename, 'HEAD'))
+                    err, computed_hunks = await(git.remote_hunks(project_relative_filename, 'HEAD'))
                 else
-                    err, computed_hunks = await(git.remote_hunks(filename, log.parent_hash, log.commit_hash))
+                    err, computed_hunks = await(git.remote_hunks(project_relative_filename, log.parent_hash, log.commit_hash))
                 end
                 await(scheduler())
                 if err then
@@ -293,11 +291,10 @@ M._change_history = throttle_leading(async_void(function(buf)
             local err
             local lines
             if commit_hash then
-                local project_filename = bstate:get(buf, 'project_relative_filename')
-                err, lines = await(git.show(project_filename, commit_hash))
+                err, lines = await(git.show(project_relative_filename, commit_hash))
                 await(scheduler())
             else
-                err, lines = fs.read_file(filename);
+                err, lines = fs.read_file(project_relative_filename);
             end
             if err then
                 logger.debug(err, 'init.lua/_change_history')
@@ -520,9 +517,8 @@ M.toggle_buffer_hunks = throttle_leading(async_void(function()
         end
         bstate:for_each(function(buf, buf_state)
             if buffer.is_valid(buf) then
-                local filename = bstate:get(buf, 'filename')
                 local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks) or git.index_hunks
-                local hunks_err, hunks = await(calculate_hunks(filename))
+                local hunks_err, hunks = await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
                 await(scheduler())
                 if not hunks_err then
                     state:set('hunks_enabled', true)
@@ -578,18 +574,18 @@ M.buffer_history = throttle_leading(async_void(function(buf)
             or git.vertical_diff
         show_history(
             async(function()
-                local filename = bstate:get(buf, 'filename')
-                local logs_err, logs = await(git.logs(filename))
+                local project_relative_filename = bstate:get(buf, 'project_relative_filename')
+                local logs_err, logs = await(git.logs(project_relative_filename))
                 await(scheduler())
                 if not logs_err then
                     bstate:set(buf, 'logs', logs)
-                    local hunks_err, hunks = await(git.remote_hunks(filename, 'HEAD'))
+                    local hunks_err, hunks = await(git.remote_hunks(project_relative_filename, 'HEAD'))
                     await(scheduler())
                     if hunks_err then
                         logger.debug(hunks_err, 'init.lua/buffer_history')
                         return hunks_err, nil
                     end
-                    local read_file_err, lines = fs.read_file(filename);
+                    local read_file_err, lines = fs.read_file(project_relative_filename);
                     if not read_file_err then
                         local diff_err, data = await(diff(lines, hunks))
                         await(scheduler())
@@ -625,14 +621,14 @@ M.buffer_preview = throttle_leading(async_void(function(buf)
             or git.vertical_diff
         show_preview(
             async(function()
-                local filename = bstate:get(buf, 'filename')
+                local project_relative_filename = bstate:get(buf, 'project_relative_filename')
                 local hunks
                 if state:get('hunks_enabled') then
                     hunks = bstate:get(buf, 'hunks')
                 else
                     local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks)
                         or git.index_hunks
-                    local hunks_err, computed_hunks = await(calculate_hunks(filename))
+                    local hunks_err, computed_hunks = await(calculate_hunks(project_relative_filename))
                     await(scheduler())
                     if hunks_err then
                         logger.debug(hunks_err, 'init.lua/buffer_preview')
@@ -644,7 +640,7 @@ M.buffer_preview = throttle_leading(async_void(function(buf)
                 if not hunks then
                     return { 'Failed to retrieve hunks for the current buffer' }, nil
                 end
-                local read_file_err, lines = fs.read_file(filename);
+                local read_file_err, lines = fs.read_file(project_relative_filename);
                 if read_file_err then
                     logger.debug(read_file_err, 'init.lua/buffer_preview')
                     return read_file_err, nil
@@ -700,8 +696,7 @@ M.show_blame = throttle_leading(async_void(function(buf)
             local win = vim.api.nvim_get_current_win()
             local lnum = vim.api.nvim_win_get_cursor(win)[1]
             ui.show_blame(async(function()
-                local filename = bstate:get(buf, 'filename')
-                local err, blame = await(git.blame_line(filename, lnum))
+                local err, blame = await(git.blame_line(bstate:get(buf, 'project_relative_filename'), lnum))
                 await(scheduler())
                 return err, blame
             end))
@@ -744,8 +739,7 @@ M.set_diff_base = throttle_leading(async_void(function(diff_base)
             local buf_states = bstate:get_buf_states()
             for key, buf_state in pairs(buf_states) do
                 local buf = tonumber(key)
-                local filename = buf_state:get('filename')
-                local hunks_err, hunks = await(git.remote_hunks(filename))
+                local hunks_err, hunks = await(git.remote_hunks(buf_state:get('project_relative_filename')))
                 await(scheduler())
                 if not hunks_err then
                     buf_state:set('hunks', hunks)
@@ -800,11 +794,10 @@ M.set_diff_strategy = throttle_leading(async_void(function(preference)
     state:set('diff_strategy', preference)
     bstate:for_each(function(buf, buf_state)
         if buffer.is_valid(buf) then
-            local filename = bstate:get(buf, 'filename')
             local calculate_hunks = (preference == 'remote' and git.remote_hunks) or git.index_hunks
             ui.hide_hunk_signs(buf)
             await(scheduler())
-            local hunks_err, hunks = await(calculate_hunks(filename))
+            local hunks_err, hunks = await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
             await(scheduler())
             if not hunks_err then
                 state:set('hunks_enabled', true)
