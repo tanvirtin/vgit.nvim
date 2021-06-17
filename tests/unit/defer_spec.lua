@@ -20,11 +20,22 @@ describe('defer:', function()
             local closure = closure_creator(1)
             local throttled_fn = defer.throttle_leading(function()
                 result = closure()
-                eq(result, 1)
+                eq(result, 2)
             end, 100)
             for _ = 1, 1000 do
                 throttled_fn()
             end
+        end)
+
+        it('should throw errors if an error occurs within the wrapped function', function()
+            local throttled_fn = defer.throttle_leading(function()
+                assert(false, 'an error has occured')
+            end, 100)
+            assert.has_error(function()
+                for _ = 1, 1000 do
+                    throttled_fn()
+                end
+            end)
         end)
 
     end)
