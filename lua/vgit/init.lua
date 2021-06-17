@@ -278,7 +278,9 @@ M._change_history = throttle_leading(async_void(function(buf)
                 if selected_log == 1 then
                     err, computed_hunks = await(git.remote_hunks(project_relative_filename, 'HEAD'))
                 else
-                    err, computed_hunks = await(git.remote_hunks(project_relative_filename, log.parent_hash, log.commit_hash))
+                    err, computed_hunks = await(
+                        git.remote_hunks(project_relative_filename, log.parent_hash, log.commit_hash)
+                    )
                 end
                 await(scheduler())
                 if err then
