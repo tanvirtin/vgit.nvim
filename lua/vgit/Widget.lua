@@ -14,7 +14,7 @@ local function global_height()
 end
 
 local function new(views, name)
-    assert(type(views) == 'table', 'type error :: expected table')
+    assert(type(views) == 'table', 'Invalid options provided for Widget')
     return setmetatable({
         name = name,
         views = views,
@@ -23,7 +23,7 @@ local function new(views, name)
 end
 
 function Widget:set_loading(value)
-    assert(type(value) == 'boolean', 'type error :: expected boolean')
+    assert(type(value) == 'boolean', 'Invalid type')
     for _, v in pairs(self.views) do
         v:set_loading(value)
     end
@@ -31,7 +31,7 @@ function Widget:set_loading(value)
 end
 
 function Widget:set_centered_text(text)
-    assert(type(text) == 'string', 'type error :: expected string')
+    assert(type(text) == 'string', 'Invalid type')
     for _, v in pairs(self.views) do
         v:set_centered_text(text)
     end
@@ -39,7 +39,7 @@ function Widget:set_centered_text(text)
 end
 
 function Widget:set_error(value)
-    assert(type(value) == 'boolean', 'type error :: expected boolean')
+    assert(type(value) == 'boolean', 'Invalid type')
     for _, v in pairs(self.views) do
         v:set_error(value)
     end

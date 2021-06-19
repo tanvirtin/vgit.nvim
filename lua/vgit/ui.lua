@@ -4,9 +4,11 @@ local highlighter = require('vgit.highlighter')
 local localization = require('vgit.localization')
 local View = require('vgit.View')
 local Widget = require('vgit.Widget')
-local t = localization.translate
 local a = require('plenary.async_lib.async')
-local autil = require('plenary.async.util')
+local t = localization.translate
+local async_void = a.async_void
+local await = a.await
+local scheduler = a.scheduler
 
 local vim = vim
 
@@ -243,7 +245,7 @@ M.show_blame_line = function(buf, blame, lnum, git_config)
     end
 end
 
-M.show_blame = a.async_void(function(fetch)
+M.show_blame = async_void(function(fetch)
     local max_commit_message_length = 88
     local view = View.new({
         lines = {},
@@ -263,11 +265,11 @@ M.show_blame = a.async_void(function(fetch)
         :render()
         :set_loading(true)
     M.state:set('current_widget', widget)
-    autil.scheduler()
-    local err, blame = a.await(fetch())
-    autil.scheduler()
+    await(scheduler())
+    local err, blame = await(fetch())
+    await(scheduler())
     widget:set_loading(false)
-    autil.scheduler()
+    await(scheduler())
     if err then
         widget:set_error(true)
         return
@@ -415,7 +417,7 @@ M.show_hunk = function(hunk, filetype)
     end
 end
 
-M.show_horizontal_preview = a.async_void(function(fetch, filetype)
+M.show_horizontal_preview = async_void(function(fetch, filetype)
     local signs_group = string.format('%s/preview', M.constants.hunk_signs_group)
     local height = math.ceil(View.global_height() - 4)
     local width = math.ceil(View.global_width() * 0.7)
@@ -443,11 +445,11 @@ M.show_horizontal_preview = a.async_void(function(fetch, filetype)
         :render()
         :set_loading(true)
     M.state:set('current_widget', widget)
-    autil.scheduler()
-    local err, data = a.await(fetch())
-    autil.scheduler()
+    await(scheduler())
+    local err, data = await(fetch())
+    await(scheduler())
     widget:set_loading(false)
-    autil.scheduler()
+    await(scheduler())
     if not err then
         views.preview:set_lines(data.lines)
         for _, datum in ipairs(data.lnum_changes) do
@@ -464,11 +466,11 @@ M.show_horizontal_preview = a.async_void(function(fetch, filetype)
         end
     else
         widget:set_error(true)
-        autil.scheduler()
+        await(scheduler())
     end
 end)
 
-M.show_vertical_preview = a.async_void(function(fetch, filetype)
+M.show_vertical_preview = async_void(function(fetch, filetype)
     local signs_group = string.format('%s/preview', M.constants.hunk_signs_group)
     local height = math.ceil(View.global_height() - 4)
     local width = math.ceil(View.global_width() * 0.485)
@@ -518,11 +520,11 @@ M.show_vertical_preview = a.async_void(function(fetch, filetype)
         :set_loading(true)
     views.current:focus()
     M.state:set('current_widget', widget)
-    autil.scheduler()
-    local err, data = a.await(fetch())
-    autil.scheduler()
+    await(scheduler())
+    local err, data = await(fetch())
+    await(scheduler())
     widget:set_loading(false)
-    autil.scheduler()
+    await(scheduler())
     if not err then
         views.previous:set_lines(data.previous_lines)
         views.current:set_lines(data.current_lines)
@@ -540,23 +542,23 @@ M.show_vertical_preview = a.async_void(function(fetch, filetype)
         end
     else
         widget:set_error(true)
-        autil.scheduler()
+        await(scheduler())
     end
 end)
 
-M.change_horizontal_history = a.async_void(function(fetch, selected_log)
+M.change_horizontal_history = async_void(function(fetch, selected_log)
     local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
     local widget = M.state:get('current_widget')
     local views = widget:get_views()
     vim.fn.sign_unplace(signs_group)
     views.preview:set_loading(true)
-    local err, data = a.await(fetch())
-    autil.scheduler()
+    local err, data = await(fetch())
+    await(scheduler())
     views.preview:set_loading(false)
-    autil.scheduler()
+    await(scheduler())
     if err then
         views.preview:set_error(true)
-        autil.scheduler()
+        await(scheduler())
         return
     end
     vim.api.nvim_win_set_cursor(views.preview:get_win_id(), { 1, 0 })
@@ -594,22 +596,22 @@ M.change_horizontal_history = a.async_void(function(fetch, selected_log)
     )
 end)
 
-M.change_vertical_history = a.async_void(function(fetch, selected_log)
+M.change_vertical_history = async_void(function(fetch, selected_log)
     local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
     local widget = M.state:get('current_widget')
     local views = widget:get_views()
     vim.fn.sign_unplace(signs_group)
     views.previous:set_loading(true)
     views.current:set_loading(true)
-    local err, data = a.await(fetch())
-    autil.scheduler()
+    local err, data = await(fetch())
+    await(scheduler())
     views.previous:set_loading(false)
     views.current:set_loading(false)
-    autil.scheduler()
+    await(scheduler())
     if err then
         views.previous:set_error(true)
         views.current:set_error(true)
-        autil.scheduler()
+        await(scheduler())
         return
     end
     vim.api.nvim_win_set_cursor(views.previous:get_win_id(), { 1, 0 })
@@ -649,7 +651,7 @@ M.change_vertical_history = a.async_void(function(fetch, selected_log)
     )
 end)
 
-M.show_horizontal_history = a.async_void(function(fetch, filetype)
+M.show_horizontal_history = async_void(function(fetch, filetype)
     local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
     local parent_buf = vim.api.nvim_get_current_buf()
     local height = math.ceil(View.global_height() - 13)
@@ -669,7 +671,7 @@ M.show_horizontal_history = a.async_void(function(fetch, filetype)
             win_options = {
                 ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
-                ['a.wrap'] = false,
+                ['wrap'] = false,
                 ['signcolumn'] = 'yes',
             },
             window_props = {
@@ -695,7 +697,7 @@ M.show_horizontal_history = a.async_void(function(fetch, filetype)
                 ['cursorline'] = true,
                 ['cursorbind'] = false,
                 ['scrollbind'] = false,
-                ['a.wrap'] = false,
+                ['wrap'] = false,
             },
             window_props = {
                 style = 'minimal',
@@ -712,11 +714,11 @@ M.show_horizontal_history = a.async_void(function(fetch, filetype)
         :set_loading(true)
     views.history:focus()
     M.state:set('current_widget', widget)
-    autil.scheduler()
-    local err, data = a.await(fetch())
-    autil.scheduler()
+    await(scheduler())
+    local err, data = await(fetch())
+    await(scheduler())
     widget:set_loading(false)
-    autil.scheduler()
+    await(scheduler())
     if err then
         local no_commits_str = 'does not have any commits yet'
         if type(err) == 'table'
@@ -727,7 +729,7 @@ M.show_horizontal_history = a.async_void(function(fetch, filetype)
             return
         end
         widget:set_error(true)
-        autil.scheduler()
+        await(scheduler())
         return
     end
     local padding_right = 2
@@ -782,7 +784,7 @@ M.show_horizontal_history = a.async_void(function(fetch, filetype)
     )
 end)
 
-M.show_vertical_history = a.async_void(function(fetch, filetype)
+M.show_vertical_history = async_void(function(fetch, filetype)
     local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
     local parent_buf = vim.api.nvim_get_current_buf()
     local height = math.ceil(View.global_height() - 13)
@@ -802,7 +804,7 @@ M.show_vertical_history = a.async_void(function(fetch, filetype)
             win_options = {
                 ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
-                ['a.wrap'] = false,
+                ['wrap'] = false,
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
                 ['signcolumn'] = 'yes',
@@ -829,7 +831,7 @@ M.show_vertical_history = a.async_void(function(fetch, filetype)
             win_options = {
                 ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
-                ['a.wrap'] = false,
+                ['wrap'] = false,
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
                 ['signcolumn'] = 'yes',
@@ -857,7 +859,7 @@ M.show_vertical_history = a.async_void(function(fetch, filetype)
                 ['cursorline'] = true,
                 ['cursorbind'] = false,
                 ['scrollbind'] = false,
-                ['a.wrap'] = false,
+                ['wrap'] = false,
             },
             window_props = {
                 style = 'minimal',
@@ -874,11 +876,11 @@ M.show_vertical_history = a.async_void(function(fetch, filetype)
         :set_loading(true)
     views.history:focus()
     M.state:set('current_widget', widget)
-    autil.scheduler()
-    local err, data = a.await(fetch())
-    autil.scheduler()
+    await(scheduler())
+    local err, data = await(fetch())
+    await(scheduler())
     widget:set_loading(false)
-    autil.scheduler()
+    await(scheduler())
     if err then
         local no_commits_str = 'does not have any commits yet'
         if type(err) == 'table'
@@ -889,7 +891,7 @@ M.show_vertical_history = a.async_void(function(fetch, filetype)
             return
         end
         widget:set_error(true)
-        autil.scheduler()
+        await(scheduler())
         return
     end
     local padding_right = 2
