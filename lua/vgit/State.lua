@@ -4,7 +4,6 @@ State.__index = State
 local vim = vim
 
 local function new(state)
-    assert(type(state) == 'nil' or type(state) == 'table', 'type error :: expected table or nil')
     if type(state) ~= 'table' then
         return setmetatable({
             initial = {},
@@ -18,14 +17,13 @@ local function new(state)
 end
 
 function State:get(key)
-    assert(type(key) == 'string', 'type error :: expected string')
     assert(self.current[key] ~= nil, string.format('Key "%s" does not exist', key))
     return self.current[key]
 end
 
 function State:set(key, value)
-    assert(self.current[key] ~= nil, string.format('key "%s" does not exist', key))
-    assert(self.current[key] ~= type(value), string.format('type error :: expected %s', key))
+    assert(self.current[key] ~= nil, string.format('Key "%s" does not exist', key))
+    assert(self.current[key] ~= type(value), string.format('Invalid data type for key "%s"', key))
     self.current[key] = value
 end
 
