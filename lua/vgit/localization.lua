@@ -40,7 +40,7 @@ M.translate = function(key, ...)
            translation = M.state:get(frag)
         else
             translation = translation[frag]
-            assert(type(translation) == 'string', 'Invalid translation string')
+            assert(type(translation) == 'string', 'type error :: expected string')
         end
     end
     return string.format(translation, ...)
