@@ -1,16 +1,18 @@
+local git = require('vgit.git')
 local ui = require('vgit.ui')
 local fs = require('vgit.fs')
-local git = require('vgit.git')
 local highlighter = require('vgit.highlighter')
 local State = require('vgit.State')
 local Bstate = require('vgit.Bstate')
 local buffer = require('vgit.buffer')
 local throttle_leading = require('vgit.defer').throttle_leading
 local logger = require('vgit.logger')
-local localization = require('vgit.localization')
-local t = localization.translate
 local a = require('plenary.async_lib.async')
-local autil = require('plenary.async.util')
+local t = require('vgit.localization').translate
+local async = a.async
+local async_void = a.async_void
+local await = a.await
+local scheduler = a.scheduler
 
 local vim = vim
 
@@ -44,41 +46,41 @@ local function detach_blames_autocmd(buf)
     vim.cmd(string.format('aug tanvirtin/vgit/%s | au! | aug END', buf))
 end
 
-local predict_hunk_signs = a.async_void(function(buf, current_lines, original_lines)
-    autil.scheduler()
+local predict_hunk_signs = async_void(function(buf, current_lines, original_lines)
+    await(scheduler())
     local temp_filename_b = fs.tmpname()
-    autil.scheduler()
+    await(scheduler())
     local temp_filename_a = fs.tmpname()
-    autil.scheduler()
+    await(scheduler())
     fs.write_file(temp_filename_a, original_lines)
-    autil.scheduler()
+    await(scheduler())
     fs.write_file(temp_filename_b, current_lines)
-    autil.scheduler()
-    local hunks_err, hunks = a.await(git.file_hunks(temp_filename_a, temp_filename_b))
-    autil.scheduler()
+    await(scheduler())
+    local hunks_err, hunks = await(git.file_hunks(temp_filename_a, temp_filename_b))
+    await(scheduler())
     if not hunks_err then
         bstate:set(buf, 'hunks', hunks)
-        autil.scheduler()
+        await(scheduler())
         pcall(ui.hide_hunk_signs, buf)
         pcall(ui.show_hunk_signs, buf, hunks)
-        autil.scheduler()
+        await(scheduler())
     else
         logger.debug(hunks_err, 'init.lua/_buf_attach')
-        autil.scheduler()
+        await(scheduler())
     end
     fs.remove_file(temp_filename_a)
-    autil.scheduler()
+    await(scheduler())
     fs.remove_file(temp_filename_b)
-    autil.scheduler()
+    await(scheduler())
 end)
 
-M._buf_attach = throttle_leading(a.async_void(function(buf)
+M._buf_attach = throttle_leading(async_void(function(buf)
     buf = buf or buffer.current()
     if buffer.is_valid(buf) then
         local filename = fs.filename(buf)
         if filename and filename ~= '' then
-            local is_inside_work_tree = a.await(git.is_inside_work_tree())
-            autil.scheduler()
+            local is_inside_work_tree = await(git.is_inside_work_tree())
+            await(scheduler())
             if not is_inside_work_tree then
                 state:set('disabled', true)
             else
@@ -86,8 +88,8 @@ M._buf_attach = throttle_leading(a.async_void(function(buf)
                     state:set('disabled', false)
                 end
                 if not state:get('are_files_tracked') then
-                    local tracked_files_err, tracked_files = a.await(git.ls_tracked())
-                    autil.scheduler()
+                    local tracked_files_err, tracked_files = await(git.ls_tracked())
+                    await(scheduler())
                     if not tracked_files_err then
                         state:set('tracked_files', tracked_files)
                         state:set('are_files_tracked', true)
@@ -114,30 +116,30 @@ M._buf_attach = throttle_leading(a.async_void(function(buf)
                             attach_blames_autocmd(buf)
                         end
                         vim.api.nvim_buf_attach(buf, false, {
-                            on_lines = throttle_leading(a.async_void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
-                                autil.scheduler()
+                            on_lines = throttle_leading(async_void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
+                                await(scheduler())
                                 if state:get('predict_hunk_signs') then
                                     if p_lnum == n_lnum and byte_count == 0 then
-                                        autil.scheduler()
+                                        await(scheduler())
                                         return
                                     end
                                     local show_err, original_lines
                                     if state:get('diff_strategy') == 'remote' then
-                                        show_err, original_lines = a.await(
+                                        show_err, original_lines = await(
                                             git.show(project_relative_filename, M.get_diff_base())
                                         )
                                     else
-                                        show_err, original_lines = a.await(git.show(project_relative_filename, ''))
+                                        show_err, original_lines = await(git.show(project_relative_filename, ''))
                                     end
-                                    autil.scheduler()
+                                    await(scheduler())
                                     if not show_err then
                                         predict_hunk_signs(cbuf, buffer.get_lines(cbuf), original_lines)
-                                        autil.scheduler()
+                                        await(scheduler())
                                     else
                                         logger.debug(show_err, 'init.lua/_buf_attach')
                                     end
                                 end
-                                autil.scheduler()
+                                await(scheduler())
                             end), state:get('predict_hunk_throttle_ms')),
                             on_detach = function(_, cbuf)
                                 if bstate:contains(cbuf) then
@@ -146,18 +148,18 @@ M._buf_attach = throttle_leading(a.async_void(function(buf)
                                 end
                             end,
                         })
-                        autil.scheduler()
+                        await(scheduler())
                     end
                 end
                 if (buf_is_cached or buf_just_cached) and state:get('hunks_enabled') then
                     local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks)
                         or git.index_hunks
-                    local err, hunks = a.await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
-                    autil.scheduler()
+                    local err, hunks = await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
+                    await(scheduler())
                     if not err then
                         bstate:set(buf, 'hunks', hunks)
                         ui.show_hunk_signs(buf, hunks)
-                        autil.scheduler()
+                        await(scheduler())
                     else
                         logger.debug(err, 'init.lua/_buf_attach')
                     end
@@ -165,30 +167,30 @@ M._buf_attach = throttle_leading(a.async_void(function(buf)
             end
         end
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('action_throttle_ms'))
 
-M._buf_update = a.async_void(function(buf)
+M._buf_update = async_void(function(buf)
     buf = buf or buffer.current()
     if state:get('hunks_enabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks) or git.index_hunks
-        local err, hunks = a.await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
-        autil.scheduler()
+        local err, hunks = await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
+        await(scheduler())
         if not err then
             bstate:set(buf, 'hunks', hunks)
             ui.hide_hunk_signs(buf)
-            autil.scheduler()
+            await(scheduler())
             ui.show_hunk_signs(buf, hunks)
-            autil.scheduler()
+            await(scheduler())
         else
             logger.debug(err, 'init.lua/_buf_update')
         end
     end
-    autil.scheduler()
+    await(scheduler())
 end)
 
-M._blame_line = throttle_leading(a.async_void(function(buf)
-    autil.scheduler()
+M._blame_line = throttle_leading(async_void(function(buf)
+    await(scheduler())
     if not state:get('disabled')
         and buffer.is_valid(buf)
         and bstate:contains(buf) then
@@ -198,14 +200,14 @@ M._blame_line = throttle_leading(a.async_void(function(buf)
             local last_lnum_blamed = bstate:get(buf, 'last_lnum_blamed')
             local lnum = vim.api.nvim_win_get_cursor(win)[1]
             if last_lnum_blamed ~= lnum then
-                local err, blame = a.await(git.blame_line(bstate:get(buf, 'project_relative_filename'), lnum))
-                autil.scheduler()
+                local err, blame = await(git.blame_line(bstate:get(buf, 'project_relative_filename'), lnum))
+                await(scheduler())
                 if not err then
                     ui.hide_blame(buf)
-                    autil.scheduler()
+                    await(scheduler())
                     if vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())[1] == lnum then
                         ui.show_blame_line(buf, blame, lnum, git.state:get('config'))
-                        autil.scheduler()
+                        await(scheduler())
                         bstate:set(buf, 'last_lnum_blamed', lnum)
                     end
                 else
@@ -214,7 +216,7 @@ M._blame_line = throttle_leading(a.async_void(function(buf)
             end
         end
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('blame_line_throttle_ms'))
 
 M._unblame_line = function(buf, override)
@@ -257,7 +259,7 @@ M._run_submodule_command = function(name, command, ...)
     end
 end
 
-M._change_history = throttle_leading(a.async_void(function(buf)
+M._change_history = throttle_leading(async_void(function(buf)
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local selected_log = vim.api.nvim_win_get_cursor(0)[1]
         local diff_preference = state:get('diff_preference')
@@ -265,7 +267,7 @@ M._change_history = throttle_leading(a.async_void(function(buf)
             or ui.change_vertical_history
         local diff = (diff_preference == 'horizontal' and git.horizontal_diff)
             or git.vertical_diff
-        change_history(a.async(function()
+        change_history(async(function()
             local project_relative_filename = bstate:get(buf, 'project_relative_filename')
             local logs = bstate:get(buf, 'logs')
             local log = logs[selected_log]
@@ -274,13 +276,13 @@ M._change_history = throttle_leading(a.async_void(function(buf)
             if log then
                 local err, computed_hunks
                 if selected_log == 1 then
-                    err, computed_hunks = a.await(git.remote_hunks(project_relative_filename, 'HEAD'))
+                    err, computed_hunks = await(git.remote_hunks(project_relative_filename, 'HEAD'))
                 else
-                    err, computed_hunks = a.await(
+                    err, computed_hunks = await(
                         git.remote_hunks(project_relative_filename, log.parent_hash, log.commit_hash)
                     )
                 end
-                autil.scheduler()
+                await(scheduler())
                 if err then
                     logger.debug(err, 'init.lua/_change_history')
                     return err, nil
@@ -291,8 +293,8 @@ M._change_history = throttle_leading(a.async_void(function(buf)
             local err
             local lines
             if commit_hash then
-                err, lines = a.await(git.show(project_relative_filename, commit_hash))
-                autil.scheduler()
+                err, lines = await(git.show(project_relative_filename, commit_hash))
+                await(scheduler())
             else
                 err, lines = fs.read_file(project_relative_filename);
             end
@@ -300,8 +302,8 @@ M._change_history = throttle_leading(a.async_void(function(buf)
                 logger.debug(err, 'init.lua/_change_history')
                 return err, nil
             end
-            local diff_err, data = a.await(diff(lines, hunks))
-            autil.scheduler()
+            local diff_err, data = await(diff(lines, hunks))
+            await(scheduler())
             if not diff_err then
                 return nil, data
             else
@@ -310,7 +312,7 @@ M._change_history = throttle_leading(a.async_void(function(buf)
             end
         end), selected_log)
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('action_throttle_ms'))
 
 M._command_autocompletes = function(arglead, line)
@@ -461,11 +463,11 @@ M.hunk_reset = throttle_leading(function(buf, win)
     end
 end, state:get('action_throttle_ms'))
 
-M.hunks_quickfix_list = throttle_leading(a.async_void(function()
+M.hunks_quickfix_list = throttle_leading(async_void(function()
     if not state:get('disabled') then
         if not state:get('are_files_tracked') then
-            local tracked_files_err, tracked_files = a.await(git.ls_tracked())
-            autil.scheduler()
+            local tracked_files_err, tracked_files = await(git.ls_tracked())
+            await(scheduler())
             if not tracked_files_err then
                 state:set('tracked_files', tracked_files)
                 state:set('are_files_tracked', true)
@@ -477,8 +479,8 @@ M.hunks_quickfix_list = throttle_leading(a.async_void(function()
         local filenames = state:get('tracked_files')
         for _, filename in ipairs(filenames) do
             local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks) or git.index_hunks
-            local hunks_err, hunks = a.await(calculate_hunks(filename))
-            autil.scheduler()
+            local hunks_err, hunks = await(calculate_hunks(filename))
+            await(scheduler())
             if not hunks_err then
                 for _, hunk in ipairs(hunks) do
                     table.insert(qf_entries, {
@@ -495,12 +497,12 @@ M.hunks_quickfix_list = throttle_leading(a.async_void(function()
         vim.fn.setqflist(qf_entries, 'r')
         vim.cmd('copen')
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('action_throttle_ms'))
 
 M.diff = M.hunks_quickfix_list
 
-M.toggle_buffer_hunks = throttle_leading(a.async_void(function()
+M.toggle_buffer_hunks = throttle_leading(async_void(function()
     if not state:get('disabled') then
         if state:get('hunks_enabled') then
             state:set('hunks_enabled', false)
@@ -508,7 +510,7 @@ M.toggle_buffer_hunks = throttle_leading(a.async_void(function()
                 if buffer.is_valid(buf) then
                     buf_state:set('hunks', {})
                     ui.hide_hunk_signs(buf)
-                    autil.scheduler()
+                    await(scheduler())
                 end
             end)
             return state:get('hunks_enabled')
@@ -518,26 +520,26 @@ M.toggle_buffer_hunks = throttle_leading(a.async_void(function()
         bstate:for_each(function(buf, buf_state)
             if buffer.is_valid(buf) then
                 local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks) or git.index_hunks
-                local hunks_err, hunks = a.await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
-                autil.scheduler()
+                local hunks_err, hunks = await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
+                await(scheduler())
                 if not hunks_err then
                     state:set('hunks_enabled', true)
                     buf_state:set('hunks', hunks)
                     ui.hide_hunk_signs(buf)
-                    autil.scheduler()
+                    await(scheduler())
                     ui.show_hunk_signs(buf, hunks)
-                    autil.scheduler()
+                    await(scheduler())
                 else
                     logger.debug(hunks_err, 'init.lua/toggle_buffer_hunks')
                 end
             end
         end)
     end
-    autil.scheduler()
+    await(scheduler())
     return state:get('hunks_enabled')
 end), state:get('action_throttle_ms'))
 
-M.toggle_buffer_blames = throttle_leading(a.async_void(function()
+M.toggle_buffer_blames = throttle_leading(async_void(function()
     if not state:get('disabled') then
         vim.cmd('aug tanvirtin/vgit/blame | autocmd! | aug END')
         if state:get('blames_enabled') then
@@ -561,10 +563,10 @@ M.toggle_buffer_blames = throttle_leading(a.async_void(function()
         end)
         return state:get('blames_enabled')
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('action_throttle_ms'))
 
-M.buffer_history = throttle_leading(a.async_void(function(buf)
+M.buffer_history = throttle_leading(async_void(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local diff_preference = state:get('diff_preference')
@@ -573,22 +575,22 @@ M.buffer_history = throttle_leading(a.async_void(function(buf)
         local diff = (diff_preference == 'horizontal' and git.horizontal_diff)
             or git.vertical_diff
         show_history(
-            a.async(function()
+            async(function()
                 local project_relative_filename = bstate:get(buf, 'project_relative_filename')
-                local logs_err, logs = a.await(git.logs(project_relative_filename))
-                autil.scheduler()
+                local logs_err, logs = await(git.logs(project_relative_filename))
+                await(scheduler())
                 if not logs_err then
                     bstate:set(buf, 'logs', logs)
-                    local hunks_err, hunks = a.await(git.remote_hunks(project_relative_filename, 'HEAD'))
-                    autil.scheduler()
+                    local hunks_err, hunks = await(git.remote_hunks(project_relative_filename, 'HEAD'))
+                    await(scheduler())
                     if hunks_err then
                         logger.debug(hunks_err, 'init.lua/buffer_history')
                         return hunks_err, nil
                     end
                     local read_file_err, lines = fs.read_file(project_relative_filename);
                     if not read_file_err then
-                        local diff_err, data = a.await(diff(lines, hunks))
-                        autil.scheduler()
+                        local diff_err, data = await(diff(lines, hunks))
+                        await(scheduler())
                         if not diff_err then
                             data.logs = logs
                             return diff_err, data
@@ -608,10 +610,10 @@ M.buffer_history = throttle_leading(a.async_void(function(buf)
             bstate:get(buf, 'filetype')
         )
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('action_throttle_ms'))
 
-M.buffer_preview = throttle_leading(a.async_void(function(buf)
+M.buffer_preview = throttle_leading(async_void(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local diff_preference = state:get('diff_preference')
@@ -620,7 +622,7 @@ M.buffer_preview = throttle_leading(a.async_void(function(buf)
         local diff = (diff_preference == 'horizontal' and git.horizontal_diff)
             or git.vertical_diff
         show_preview(
-            a.async(function()
+            async(function()
                 local project_relative_filename = bstate:get(buf, 'project_relative_filename')
                 local hunks
                 if state:get('hunks_enabled') then
@@ -628,8 +630,8 @@ M.buffer_preview = throttle_leading(a.async_void(function(buf)
                 else
                     local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks)
                         or git.index_hunks
-                    local hunks_err, computed_hunks = a.await(calculate_hunks(project_relative_filename))
-                    autil.scheduler()
+                    local hunks_err, computed_hunks = await(calculate_hunks(project_relative_filename))
+                    await(scheduler())
                     if hunks_err then
                         logger.debug(hunks_err, 'init.lua/buffer_preview')
                         return hunks_err, nil
@@ -645,25 +647,25 @@ M.buffer_preview = throttle_leading(a.async_void(function(buf)
                     logger.debug(read_file_err, 'init.lua/buffer_preview')
                     return read_file_err, nil
                 end
-                local diff_err, data = a.await(diff(lines, hunks))
-                autil.scheduler()
+                local diff_err, data = await(diff(lines, hunks))
+                await(scheduler())
                 return diff_err, data
             end),
             bstate:get(buf, 'filetype')
         )
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('action_throttle_ms'))
 
-M.buffer_reset = throttle_leading(a.async_void(function(buf)
+M.buffer_reset = throttle_leading(async_void(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
         local hunks = bstate:get(buf, 'hunks')
         if #hunks ~= 0 then
             local project_relative_filename = bstate:get(buf, 'project_relative_filename')
             if state:get('diff_strategy') == 'remote' then
-                local err, lines = a.await(git.show(project_relative_filename, 'HEAD'))
-                autil.scheduler()
+                local err, lines = await(git.show(project_relative_filename, 'HEAD'))
+                await(scheduler())
                 if not err then
                     buffer.set_lines(buf, lines)
                     vim.cmd('update')
@@ -671,8 +673,8 @@ M.buffer_reset = throttle_leading(a.async_void(function(buf)
                     logger.debug(err, 'init.lua/buffer_reset')
                 end
             else
-                local err, lines = a.await(git.show(project_relative_filename, ''))
-                autil.scheduler()
+                local err, lines = await(git.show(project_relative_filename, ''))
+                await(scheduler())
                 if not err then
                     buffer.set_lines(buf, lines)
                     vim.cmd('update')
@@ -682,27 +684,27 @@ M.buffer_reset = throttle_leading(a.async_void(function(buf)
             end
         end
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('action_throttle_ms'))
 
-M.show_blame = throttle_leading(a.async_void(function(buf)
+M.show_blame = throttle_leading(async_void(function(buf)
     buf = buf or buffer.current()
     if not state:get('disabled')
         and buffer.is_valid(buf)
         and bstate:contains(buf) then
-        local has_commits = a.await(git.has_commits())
-        autil.scheduler()
+        local has_commits = await(git.has_commits())
+        await(scheduler())
         if has_commits then
             local win = vim.api.nvim_get_current_win()
             local lnum = vim.api.nvim_win_get_cursor(win)[1]
-            ui.show_blame(a.async(function()
-                local err, blame = a.await(git.blame_line(bstate:get(buf, 'project_relative_filename'), lnum))
-                autil.scheduler()
+            ui.show_blame(async(function()
+                local err, blame = await(git.blame_line(bstate:get(buf, 'project_relative_filename'), lnum))
+                await(scheduler())
                 return err, blame
             end))
         end
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('action_throttle_ms'))
 
 M.enabled = function()
@@ -721,7 +723,7 @@ M.get_diff_base = function()
     return git.get_diff_base()
 end
 
-M.set_diff_base = throttle_leading(a.async_void(function(diff_base)
+M.set_diff_base = throttle_leading(async_void(function(diff_base)
     if not diff_base or type(diff_base) ~= 'string' then
         logger.error(t('errors/set_diff_base', diff_base))
         return
@@ -729,8 +731,8 @@ M.set_diff_base = throttle_leading(a.async_void(function(diff_base)
     if git.state:get('diff_base') == diff_base then
         return
     end
-    local is_commit_valid = a.await(git.is_commit_valid(diff_base))
-    autil.scheduler()
+    local is_commit_valid = await(git.is_commit_valid(diff_base))
+    await(scheduler())
     if not is_commit_valid then
         logger.error(t('errors/set_diff_base', diff_base))
     else
@@ -739,24 +741,24 @@ M.set_diff_base = throttle_leading(a.async_void(function(diff_base)
             local buf_states = bstate:get_buf_states()
             for key, buf_state in pairs(buf_states) do
                 local buf = tonumber(key)
-                local hunks_err, hunks = a.await(git.remote_hunks(buf_state:get('project_relative_filename')))
-                autil.scheduler()
+                local hunks_err, hunks = await(git.remote_hunks(buf_state:get('project_relative_filename')))
+                await(scheduler())
                 if not hunks_err then
                     buf_state:set('hunks', hunks)
                     ui.hide_hunk_signs(buf)
-                    autil.scheduler()
+                    await(scheduler())
                     ui.show_hunk_signs(buf, hunks)
-                    autil.scheduler()
+                    await(scheduler())
                 else
                     logger.debug(hunks_err, 'init.lua/set_diff_base')
                 end
             end
         end
     end
-    autil.scheduler()
+    await(scheduler())
 end), state:get('action_throttle_ms'))
 
-M.set_diff_preference = throttle_leading(a.async_void(function(preference)
+M.set_diff_preference = throttle_leading(async_void(function(preference)
     if preference ~= 'horizontal' and preference ~= 'vertical' then
         return logger.error(t('errors/set_diff_preference', preference))
     end
@@ -783,7 +785,7 @@ M.set_diff_preference = throttle_leading(a.async_void(function(preference)
     end
 end), state:get('action_throttle_ms'))
 
-M.set_diff_strategy = throttle_leading(a.async_void(function(preference)
+M.set_diff_strategy = throttle_leading(async_void(function(preference)
     if preference ~= 'remote' and preference ~= 'index' then
         return logger.error(t('errors/set_diff_strategy', preference))
     end
@@ -796,14 +798,14 @@ M.set_diff_strategy = throttle_leading(a.async_void(function(preference)
         if buffer.is_valid(buf) then
             local calculate_hunks = (preference == 'remote' and git.remote_hunks) or git.index_hunks
             ui.hide_hunk_signs(buf)
-            autil.scheduler()
-            local hunks_err, hunks = a.await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
-            autil.scheduler()
+            await(scheduler())
+            local hunks_err, hunks = await(calculate_hunks(bstate:get(buf, 'project_relative_filename')))
+            await(scheduler())
             if not hunks_err then
                 state:set('hunks_enabled', true)
                 buf_state:set('hunks', hunks)
                 ui.show_hunk_signs(buf, hunks)
-                autil.scheduler()
+                await(scheduler())
             else
                 logger.debug(hunks_err, 'init.lua/set_diff_strategy')
             end
@@ -828,7 +830,7 @@ M.show_debug_logs = function()
     end
 end
 
-M.setup = a.async_void(function(config)
+M.setup = async_void(function(config)
     if state:get('instantiated') then
         logger.debug('plugin has already been instantiated', 'init.lua/setup')
         return
@@ -838,7 +840,8 @@ M.setup = a.async_void(function(config)
     state:assign(config)
     highlighter.setup(config)
     logger.setup(config)
-    git.setup(config)
+    await(git.setup(config))
+    await(scheduler())
     ui.setup(config)
     vim.cmd('aug tanvirtin/vgit | autocmd! | aug END')
     vim.cmd('au tanvirtin/vgit BufWinEnter * lua require("vgit")._buf_attach()')
@@ -848,6 +851,7 @@ M.setup = a.async_void(function(config)
         '-complete=customlist,v:lua.package.loaded.vgit._command_autocompletes',
         'VGit lua require("vgit")._run_command(<f-args>)'
     ))
+    await(scheduler())
 end)
 
 return M
