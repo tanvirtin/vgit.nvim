@@ -29,22 +29,10 @@ describe('State:', function()
             })
         end)
 
-        it('should bind an empty object when invalid data type is provided', function()
-            local state = State.new(42)
-            eq(state, {
-                current = {},
-                initial = {},
-            })
-            state = State.new(true)
-            eq(state, {
-                current = {},
-                initial = {},
-            })
-            state = State.new('hello')
-            eq(state, {
-                current = {},
-                initial = {},
-            })
+        it('should throw error if invalid data type is provided', function()
+            assert.has_error(function()
+                State.new(42)
+            end)
         end)
 
     end)
