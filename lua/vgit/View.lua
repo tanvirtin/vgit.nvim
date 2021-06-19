@@ -115,7 +115,7 @@ local function global_height()
 end
 
 local function new(options)
-    assert(options == nil or type(options) == 'table', 'Invalid options provided for View')
+    assert(options == nil or type(options) == 'table', 'type error :: expected table or nil')
     options = options or {}
     local height = 10
     local width = 70
@@ -216,7 +216,7 @@ function View:get_lines()
 end
 
 function View:set_loading(value)
-    assert(type(value) == 'boolean', 'Invalid type')
+    assert(type(value) == 'boolean', 'type error :: expected boolean')
     if value == self.state.loading then
         return self
     end
@@ -243,7 +243,7 @@ function View:set_loading(value)
 end
 
 function View:set_error(value)
-    assert(type(value) == 'boolean', 'Invalid type')
+    assert(type(value) == 'boolean', 'type error :: expected boolean')
     if value == self.state.error then
         return self
     end
@@ -270,7 +270,7 @@ function View:set_error(value)
 end
 
 function View:set_centered_text(text)
-    assert(type(text) == 'string', 'Invalid type')
+    assert(type(text) == 'string', 'type error :: expected string')
     local lines = {}
     local height = vim.api.nvim_win_get_height(self.state.win_id)
     local width = vim.api.nvim_win_get_width(self.state.win_id)
@@ -314,13 +314,13 @@ function View:focus()
 end
 
 function View:set_height(value)
-    assert(type(value) == 'number', 'Invalid type')
+    assert(type(value) == 'number', 'type error :: expected number')
     vim.api.nvim_win_set_height(self:get_win_id(), value)
     return self
 end
 
 function View:set_width(value)
-    assert(type(value) == 'number', 'Invalid type')
+    assert(type(value) == 'number', 'type error :: expected number')
     vim.api.nvim_win_set_width(self:get_win_id(), value)
     return self
 end

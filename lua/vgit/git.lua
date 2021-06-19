@@ -1,10 +1,7 @@
 local Job = require('plenary.job')
 local State = require('vgit.State')
 local a = require('plenary.async_lib.async')
-local wrap = a.wrap
-local await = a.await
-local async = a.async
-local scheduler = a.scheduler
+local autils = require('plenary.async.util')
 
 local vim = vim
 local unpack = unpack
@@ -59,7 +56,7 @@ M.set_diff_base = function(diff_base)
     M.state:set('diff_base', diff_base)
 end
 
-M.is_commit_valid = wrap(function(commit, callback)
+M.is_commit_valid = a.wrap(function(commit, callback)
     local result = {}
     local err = {}
     local job = Job:new({
@@ -178,16 +175,16 @@ M.create_blame = function(info)
     }
 end
 
-M.setup = async(function(config)
+M.setup = a.async(function(config)
     M.state:assign(config)
-    local err, git_config = await(M.config())
-    await(scheduler())
+    local err, git_config = a.await(M.config())
+    autils.scheduler()
     if not err then
         M.state:set('config', git_config)
     end
 end)
 
-M.config = wrap(function(callback)
+M.config = a.wrap(function(callback)
     local err = {}
     local result = {}
     local job = Job:new({
@@ -213,7 +210,7 @@ M.config = wrap(function(callback)
     job:start()
 end, 1)
 
-M.has_commits = wrap(function(callback)
+M.has_commits = a.wrap(function(callback)
     local result = true
     local job = Job:new({
         command = 'git',
@@ -230,7 +227,7 @@ M.has_commits = wrap(function(callback)
     job:start()
 end, 1)
 
-M.is_inside_work_tree = wrap(function(callback)
+M.is_inside_work_tree = a.wrap(function(callback)
     local err = {}
     local job = Job:new({
         command = 'git',
@@ -251,7 +248,7 @@ M.is_inside_work_tree = wrap(function(callback)
     job:start()
 end, 1)
 
-M.blame_line = wrap(function(filename, lnum, callback)
+M.blame_line = a.wrap(function(filename, lnum, callback)
     local err = {}
     local result = {}
     local job = Job:new({
@@ -280,7 +277,7 @@ M.blame_line = wrap(function(filename, lnum, callback)
     job:start()
 end, 3)
 
-M.logs = wrap(function(filename, callback)
+M.logs = a.wrap(function(filename, callback)
     local timeout = 30000
     local logs = {{
         author_name = M.state:get('config')['user.name'],
@@ -313,7 +310,7 @@ M.logs = wrap(function(filename, callback)
     return callback(nil, logs)
 end, 2)
 
-M.file_hunks = wrap(function(filename_a, filename_b, callback)
+M.file_hunks = a.wrap(function(filename_a, filename_b, callback)
     local result = {}
     local err = {}
     local args = {
@@ -359,7 +356,7 @@ M.file_hunks = wrap(function(filename_a, filename_b, callback)
     job:start()
 end, 3)
 
-M.index_hunks = wrap(function(filename, callback)
+M.index_hunks = a.wrap(function(filename, callback)
     local result = {}
     local err = {}
     local args = {
@@ -404,7 +401,7 @@ M.index_hunks = wrap(function(filename, callback)
     job:start()
 end, 2)
 
-M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
+M.remote_hunks = a.wrap(function(filename, parent_hash, commit_hash, callback)
     local result = {}
     local err = {}
     local args = {
@@ -481,7 +478,7 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
     job:start()
 end, 4)
 
-M.show = wrap(function(filename, commit_hash, callback)
+M.show = a.wrap(function(filename, commit_hash, callback)
     local err = {}
     local result = {}
     commit_hash = commit_hash or ''
@@ -507,7 +504,7 @@ M.show = wrap(function(filename, commit_hash, callback)
     job:start()
 end, 3)
 
-M.reset = wrap(function(filename, callback)
+M.reset = a.wrap(function(filename, callback)
     local err = {}
     local job = Job:new({
         command = 'git',
@@ -530,7 +527,7 @@ M.reset = wrap(function(filename, callback)
     job:start()
 end, 2)
 
-M.current_branch = wrap(function(callback)
+M.current_branch = a.wrap(function(callback)
     local err = {}
     local result = {}
     local job = Job:new({
@@ -555,7 +552,7 @@ M.current_branch = wrap(function(callback)
     job:start()
 end, 1)
 
-M.ls_tracked = wrap(function(callback)
+M.ls_tracked = a.wrap(function(callback)
     local err = {}
     local result = {}
     local job = Job:new({
@@ -580,7 +577,7 @@ M.ls_tracked = wrap(function(callback)
     job:start()
 end, 1)
 
-M.horizontal_diff = wrap(function(lines, hunks, callback)
+M.horizontal_diff = a.wrap(function(lines, hunks, callback)
     if #hunks == 0 then
         return callback(nil, {
             lines = lines,
@@ -643,7 +640,7 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
     })
 end, 3)
 
-M.vertical_diff = wrap(function(lines, hunks, callback)
+M.vertical_diff = a.wrap(function(lines, hunks, callback)
     if #hunks == 0 then
         return callback(nil, {
             current_lines = lines,
