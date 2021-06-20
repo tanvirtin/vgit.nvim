@@ -1,4 +1,4 @@
-# VGit
+# VGit :zap:
 <table>
     <tr>
         <td>
@@ -37,12 +37,12 @@
     <img src="https://user-images.githubusercontent.com/25164326/119602585-75547200-bdb9-11eb-868c-0e43c41c378f.gif" alt="hunk_navigation" />
 </details>
 <details>
-    <summary>Diff a buffer with HEAD</summary>
+    <summary>Diff a buffer</summary>
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/119602595-77b6cc00-bdb9-11eb-94c8-f62478ff8a16.gif" alt="diff_preview" />
 </details>
 <details>
-    <summary>Reset a buffer to HEAD</summary>
+    <summary>Reset a buffer</summary>
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/119602597-79808f80-bdb9-11eb-94ed-8bd557164f84.gif" alt="buffer_reset" />
 </details>
@@ -57,7 +57,7 @@
     <img width="1792" alt="show_blame" src="https://user-images.githubusercontent.com/25164326/122292020-83cb1080-cec3-11eb-9a46-b07dddb4bd65.png">
 </details>
 <details>
-    <summary>Quickfix your hunks (a.k.a git diff)</summary>
+    <summary>Quickfix your hunks</summary>
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/119602589-75ed0880-bdb9-11eb-98fa-9e5a615dae31.gif" alt="hunks_quickfix_list" />
 </details>
@@ -67,7 +67,7 @@
     <img src="https://user-images.githubusercontent.com/25164326/119602600-7a192600-bdb9-11eb-9ef9-709ea154aeaa.gif" alt="history" />
 </details>
 <details>
-    <summary>Switch between different way you want to see diffs</summary>
+    <summary>Switch between different ways to see your diffs</summary>
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/121595739-95687000-ca0c-11eb-8f1d-9b5b398e3b0d.gif" alt="diff_preference" />
 </details>
