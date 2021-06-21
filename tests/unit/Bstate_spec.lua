@@ -15,6 +15,7 @@ describe('Bstate:', function()
         project_relative_filename = '',
         hunks = {},
         logs = {},
+        temp_lines = {},
         last_lnum_blamed = 1,
     }
 
