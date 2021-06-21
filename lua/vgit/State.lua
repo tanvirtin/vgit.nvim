@@ -19,13 +19,13 @@ end
 
 function State:get(key)
     assert(type(key) == 'string', 'type error :: expected string')
-    assert(self.current[key] ~= nil, string.format('Key "%s" does not exist', key))
+    assert(self.current[key] ~= nil, string.format('key "%s" does not exist', key))
     return self.current[key]
 end
 
 function State:set(key, value)
     assert(self.current[key] ~= nil, string.format('key "%s" does not exist', key))
-    assert(self.current[key] ~= type(value), string.format('type error :: expected %s', key))
+    assert(type(self.current[key]) == type(value), string.format('type error :: expected %s', key))
     self.current[key] = value
 end
 

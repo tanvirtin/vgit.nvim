@@ -1,10 +1,9 @@
 local Job = require('plenary.job')
 local State = require('vgit.State')
-local a = require('plenary.async_lib.async')
+local a = require('plenary.async')
+local void = a.void
 local wrap = a.wrap
-local await = a.await
-local async = a.async
-local scheduler = a.scheduler
+local scheduler = a.util.scheduler
 
 local vim = vim
 local unpack = unpack
@@ -42,7 +41,7 @@ end
 local M = {}
 
 M.constants = {
-    diff_algorithm = 'histogram',
+    diff_algorithm = 'myers',
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 }
 
@@ -94,6 +93,11 @@ end, 2)
 
 M.create_log = function(line)
     local log = vim.split(line, '-')
+    -- Sometimes you can have multiple parents, in that instance we pick the first!
+    local parents = vim.split(log[2], ' ')
+    if #parents > 1 then
+        log[2] = parents[1]
+    end
     return {
         commit_hash = log[1]:sub(2, #log[1]),
         parent_hash = log[2],
@@ -107,7 +111,6 @@ end
 M.create_hunk = function(header)
     local previous, current = parse_hunk_header(header)
     local hunk = {
-        header = header,
         start = current[1],
         finish = current[1] + current[2] - 1,
         type = nil,
@@ -178,10 +181,10 @@ M.create_blame = function(info)
     }
 end
 
-M.setup = async(function(config)
+M.setup = void(function(config)
     M.state:assign(config)
-    local err, git_config = await(M.config())
-    await(scheduler())
+    local err, git_config = M.config()
+    scheduler()
     if not err then
         M.state:set('config', git_config)
     end
@@ -304,7 +307,10 @@ M.logs = wrap(function(filename, callback)
     job:sync(timeout)
     local result = job:result()
     for _, line in ipairs(result) do
-        table.insert(logs, M.create_log(line))
+        local log = M.create_log(line)
+        if log then
+            table.insert(logs, log)
+        end
     end
     local err = job:stderr_result()
     if #err ~= 0 then
