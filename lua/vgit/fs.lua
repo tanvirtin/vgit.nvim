@@ -5,6 +5,7 @@ local vim = vim
 local M = {}
 
 M.relative_path = function(filepath)
+    assert(type(filepath) == 'string', 'type error :: expected string')
     local cwd = vim.loop.cwd()
     if not cwd or not filepath then return filepath end
     if filepath:sub(1, #cwd) == cwd  then
@@ -18,6 +19,9 @@ M.relative_path = function(filepath)
 end
 
 M.project_relative_filename = function(filepath, project_files)
+    assert(type(filepath) == 'string', 'type error :: expected string')
+    assert(vim.tbl_islist(project_files), 'type error :: expected table of type list')
+    table.sort(project_files)
     if filepath == '' then
         return filepath
     end
@@ -37,12 +41,14 @@ M.project_relative_filename = function(filepath, project_files)
 end
 
 M.filetype = function(buf)
+    assert(type(buf) == 'number', 'type error :: expected number')
     return vim.api.nvim_buf_get_option(buf, 'filetype')
 end
 
 M.detect_filetype = pfiletype.detect
 
 M.filename = function(buf)
+    assert(type(buf) == 'number', 'type error :: expected number')
     local filepath = vim.api.nvim_buf_get_name(buf)
     return M.relative_path(filepath)
 end
@@ -57,6 +63,7 @@ M.tmpname = function()
 end
 
 M.read_file = function(filepath)
+    assert(type(filepath) == 'string', 'type error :: expected string')
     local fd = vim.loop.fs_open(filepath, 'r', 438)
     if fd == nil then
         return { 'ENOENT: File not found' }, nil
@@ -73,6 +80,8 @@ M.read_file = function(filepath)
 end
 
 M.write_file = function(filepath, lines)
+    assert(type(filepath) == 'string', 'type error :: expected string')
+    assert(vim.tbl_islist(lines), 'type error :: expected list table')
     local f = io.open(filepath, 'wb')
     for _, l in ipairs(lines) do
         f:write(l)
@@ -81,6 +90,9 @@ M.write_file = function(filepath, lines)
     f:close()
 end
 
-M.remove_file = os.remove
+M.remove_file = function(filepath)
+    assert(type(filepath) == 'string', 'type error :: expected string')
+    return os.remove(filepath)
+end
 
 return M
