@@ -28,6 +28,7 @@ function Bstate:add(buf)
         blames = {},
         disabled = false,
         last_lnum_blamed = 1,
+        temp_lines = {},
     })
 end
 

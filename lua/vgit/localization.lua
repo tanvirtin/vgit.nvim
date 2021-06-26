@@ -32,6 +32,7 @@ M.setup = function(config)
 end
 
 M.translate = function(key, ...)
+    assert(type(key) == 'string', 'type error :: expected string')
     local sep = '/'
     local key_fragments = vim.split(key, sep)
     local translation = nil
@@ -40,7 +41,7 @@ M.translate = function(key, ...)
            translation = M.state:get(frag)
         else
             translation = translation[frag]
-            assert(type(translation) == 'string', 'Invalid translation string')
+            assert(type(translation) == 'string', 'type error :: expected string')
         end
     end
     return string.format(translation, ...)

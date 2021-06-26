@@ -14,9 +14,9 @@ M.setup = function(config)
 end
 
 M.error = function(msg)
-    vim.cmd('echohl ErrorMsg')
-    vim.cmd(string.format('echom "VGit[%s]: %s"', os.date('%H:%M:%S'), vim.fn.escape(msg, '"')))
-    vim.cmd('echohl NONE')
+    vim.api.nvim_command('echohl ErrorMsg')
+    vim.api.nvim_command(string.format('echom "VGit[%s]: %s"', os.date('%H:%M:%S'), vim.fn.escape(msg, '"')))
+    vim.api.nvim_command('echohl NONE')
 end
 
 M.debug = function(msg, fn)
@@ -24,8 +24,12 @@ M.debug = function(msg, fn)
    if M.state:get('debug') then
       local new_msg = ''
       if vim.tbl_islist(msg) then
-         for _, m in ipairs(msg) do
-            new_msg = new_msg .. m
+         for i, m in ipairs(msg) do
+            if i == 1 then
+               new_msg = new_msg .. m
+            else
+               new_msg = new_msg .. ', ' .. m
+            end
          end
       else
          new_msg = msg
