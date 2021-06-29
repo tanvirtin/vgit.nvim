@@ -1,3 +1,4 @@
+local algorithms = require('vgit.algorithms')
 local git = require('vgit.git')
 local ui = require('vgit.ui')
 local fs = require('vgit.fs')
@@ -29,9 +30,9 @@ local state = State.new({
     diff_strategy = 'remote',
     diff_preference = 'horizontal',
     predict_hunk_signs = true,
-    action_throttle_ms = 150,
-    blame_line_throttle_ms = 150,
+    action_throttle_ms = 300,
     predict_hunk_throttle_ms = 30,
+    blame_line_throttle_ms = 150,
 })
 
 local function attach_blames_autocmd(buf)
@@ -56,32 +57,14 @@ local predict_hunk_signs = void(function(buf)
     scheduler()
     if not show_err then
         local current_lines = buffer.get_lines(buf)
-        local temp_filename_b = fs.tmpname()
-        local temp_filename_a = fs.tmpname()
-        fs.write_file(temp_filename_a, original_lines)
-        scheduler()
-        fs.write_file(temp_filename_b, current_lines)
-        scheduler()
-        local hunks_err, hunks = git.file_hunks(temp_filename_a, temp_filename_b)
-        scheduler()
-        if not hunks_err then
-            bstate:set(buf, 'hunks', hunks)
-            pcall(ui.hide_hunk_signs, buf)
-            pcall(ui.show_hunk_signs, buf, hunks)
-            scheduler()
-        else
-            logger.debug(hunks_err, 'init.lua/_buf_attach')
-        end
-        scheduler()
-        fs.remove_file(temp_filename_a)
-        scheduler()
-        fs.remove_file(temp_filename_b)
         bstate:set(buf, 'temp_lines', current_lines)
-        scheduler()
+        local hunks = algorithms.hunks(original_lines, current_lines)
+        bstate:set(buf, 'hunks', hunks)
+        ui.hide_hunk_signs(buf)
+        ui.show_hunk_signs(buf, hunks)
     else
-        logger.debug(show_err, 'init.lua/_buf_attach')
+        logger.debug(show_err, 'init.lua/predic_hunk_signs')
     end
-    scheduler()
 end)
 
 M._buf_attach = throttle_leading(void(function(buf)
@@ -487,7 +470,7 @@ M.hunks_quickfix_list = throttle_leading(void(function()
             if not hunks_err then
                 for _, hunk in ipairs(hunks) do
                     table.insert(qf_entries, {
-                        text = hunk.header,
+                        text = string.format('[%s..%s]', hunk.start, hunk.finish),
                         filename = filename,
                         lnum = hunk.start,
                         col = 0,
