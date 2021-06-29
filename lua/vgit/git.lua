@@ -41,7 +41,7 @@ end
 local M = {}
 
 M.constants = {
-    diff_algorithm = 'histogram',
+    diff_algorithm = 'myers',
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 }
 
@@ -111,7 +111,6 @@ end
 M.create_hunk = function(header)
     local previous, current = parse_hunk_header(header)
     local hunk = {
-        header = header,
         start = current[1],
         finish = current[1] + current[2] - 1,
         type = nil,
