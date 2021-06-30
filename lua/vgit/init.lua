@@ -110,15 +110,12 @@ M._buf_attach = throttle_leading(void(function(buf)
                         end
                         vim.api.nvim_buf_attach(buf, false, {
                             on_lines = throttle_leading(void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
-                                scheduler()
                                 if state:get('predict_hunk_signs') then
                                     if p_lnum == n_lnum and byte_count == 0 then
-                                        scheduler()
                                         return
                                     end
                                     predict_hunk_signs(cbuf)
                                 end
-                                scheduler()
                             end), state:get('predict_hunk_throttle_ms')),
                             on_detach = function(_, cbuf)
                                 if bstate:contains(cbuf) then
@@ -127,7 +124,6 @@ M._buf_attach = throttle_leading(void(function(buf)
                                 end
                             end,
                         })
-                        scheduler()
                     end
                 end
                 if (buf_is_cached or buf_just_cached) and state:get('hunks_enabled') then
@@ -138,7 +134,6 @@ M._buf_attach = throttle_leading(void(function(buf)
                     if not err then
                         bstate:set(buf, 'hunks', hunks)
                         ui.show_hunk_signs(buf, hunks)
-                        scheduler()
                     else
                         logger.debug(err, 'init.lua/_buf_attach')
                     end
@@ -146,7 +141,6 @@ M._buf_attach = throttle_leading(void(function(buf)
             end
         end
     end
-    scheduler()
 end), state:get('action_throttle_ms'))
 
 M._buf_update = void(function(buf)
@@ -161,14 +155,11 @@ M._buf_update = void(function(buf)
         if not err then
             bstate:set(buf, 'hunks', hunks)
             ui.hide_hunk_signs(buf)
-            scheduler()
             ui.show_hunk_signs(buf, hunks)
-            scheduler()
         else
             logger.debug(err, 'init.lua/_buf_update')
         end
     end
-    scheduler()
 end)
 
 M._blame_line = throttle_leading(void(function(buf)
@@ -483,7 +474,6 @@ M.hunks_quickfix_list = throttle_leading(void(function()
         vim.fn.setqflist(qf_entries, 'r')
         vim.cmd('copen')
     end
-    scheduler()
 end), state:get('action_throttle_ms'))
 
 M.diff = M.hunks_quickfix_list
@@ -496,7 +486,6 @@ M.toggle_buffer_hunks = throttle_leading(void(function()
                 if buffer.is_valid(buf) then
                     buf_state:set('hunks', {})
                     ui.hide_hunk_signs(buf)
-                    scheduler()
                 end
             end)
             return state:get('hunks_enabled')
@@ -512,16 +501,13 @@ M.toggle_buffer_hunks = throttle_leading(void(function()
                     state:set('hunks_enabled', true)
                     buf_state:set('hunks', hunks)
                     ui.hide_hunk_signs(buf)
-                    scheduler()
                     ui.show_hunk_signs(buf, hunks)
-                    scheduler()
                 else
                     logger.debug(hunks_err, 'init.lua/toggle_buffer_hunks')
                 end
             end
         end)
     end
-    scheduler()
     return state:get('hunks_enabled')
 end), state:get('action_throttle_ms'))
 
@@ -549,7 +535,6 @@ M.toggle_buffer_blames = throttle_leading(void(function()
         end)
         return state:get('blames_enabled')
     end
-    scheduler()
 end), state:get('action_throttle_ms'))
 
 M.buffer_history = throttle_leading(void(function(buf)
@@ -611,7 +596,6 @@ M.buffer_history = throttle_leading(void(function(buf)
             bstate:get(buf, 'filetype')
         )
     end
-    scheduler()
 end), state:get('action_throttle_ms'))
 
 M.buffer_preview = throttle_leading(void(function(buf)
@@ -661,7 +645,6 @@ M.buffer_preview = throttle_leading(void(function(buf)
             bstate:get(buf, 'filetype')
         )
     end
-    scheduler()
 end), state:get('action_throttle_ms'))
 
 M.buffer_reset = throttle_leading(void(function(buf)
@@ -691,7 +674,6 @@ M.buffer_reset = throttle_leading(void(function(buf)
             end
         end
     end
-    scheduler()
 end), state:get('action_throttle_ms'))
 
 M.show_blame = throttle_leading(void(function(buf)
@@ -711,7 +693,6 @@ M.show_blame = throttle_leading(void(function(buf)
             end, 1))
         end
     end
-    scheduler()
 end), state:get('action_throttle_ms'))
 
 M.enabled = function()
@@ -753,16 +734,13 @@ M.set_diff_base = throttle_leading(void(function(diff_base)
                 if not hunks_err then
                     buf_state:set('hunks', hunks)
                     ui.hide_hunk_signs(buf)
-                    scheduler()
                     ui.show_hunk_signs(buf, hunks)
-                    scheduler()
                 else
                     logger.debug(hunks_err, 'init.lua/set_diff_base')
                 end
             end
         end
     end
-    scheduler()
 end), state:get('action_throttle_ms'))
 
 M.set_diff_preference = throttle_leading(void(function(preference)
@@ -804,15 +782,13 @@ M.set_diff_strategy = throttle_leading(void(function(preference)
     bstate:for_each(function(buf, buf_state)
         if buffer.is_valid(buf) then
             local calculate_hunks = (preference == 'remote' and git.remote_hunks) or git.index_hunks
-            ui.hide_hunk_signs(buf)
-            scheduler()
             local hunks_err, hunks = calculate_hunks(bstate:get(buf, 'project_relative_filename'))
             scheduler()
             if not hunks_err then
                 state:set('hunks_enabled', true)
                 buf_state:set('hunks', hunks)
+                ui.hide_hunk_signs(buf)
                 ui.show_hunk_signs(buf, hunks)
-                scheduler()
             else
                 logger.debug(hunks_err, 'init.lua/set_diff_strategy')
             end
@@ -858,7 +834,6 @@ M.setup = void(function(config)
         '-complete=customlist,v:lua.package.loaded.vgit._command_autocompletes',
         'VGit lua require("vgit")._run_command(<f-args>)'
     ))
-    scheduler()
 end)
 
 return M
