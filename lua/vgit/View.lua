@@ -124,6 +124,7 @@ local function new(options)
         title = '',
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'FloatBorder',
+        border_focus_hl = 'FloatBorder',
         buf_options = {
             ['modifiable'] = false,
             ['buflisted'] = false,
@@ -333,6 +334,7 @@ function View:render()
     local title = self.config:get('title')
     local border = self.config:get('border')
     local border_hl = self.config:get('border_hl')
+    local border_focus_hl = self.config:get('border_focus_hl')
     local window_props = self.config:get('window_props')
     local win_options = self.config:get('win_options')
     local filetype = self.config:get('filetype')
@@ -361,9 +363,25 @@ function View:render()
     self.state.buf = buf
     self.state.win_id = win_id
     if border and title ~= '' then
-        local border_buf, border_win_id = create_border(buf, title, window_props, border, border_hl)
+        local border_buf, border_win_id = create_border(buf, title, window_props, border, border_focus_hl)
         self.state.border.buf = border_buf
         self.state.border.win_id = border_win_id
+        vim.cmd(
+            string.format(
+                'au BufEnter <buffer=%s> :lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
+                buf,
+                border_win_id,
+                border_focus_hl
+            )
+        )
+        vim.cmd(
+            string.format(
+                'au BufLeave <buffer=%s> :lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
+                buf,
+                border_win_id,
+                border_hl
+            )
+        )
     end
     self:add_autocmd('BufWinLeave', string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id))
     attach_treesitter(buf, filetype)

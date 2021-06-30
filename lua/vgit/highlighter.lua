@@ -70,6 +70,10 @@ M.state = State.new({
             fg = '#a1b5b1',
             bg = nil,
         },
+        VGitBorderFocus = {
+            fg = '#a6e22e',
+            bg = nil,
+        },
     },
 })
 
