@@ -168,39 +168,7 @@ require('vgit').setup({
             fg = '#a6e22e',
             bg = nil,
         },
-        VGitDiffHorizontalBorder = {
-            fg = '#a1b5b1',
-            bg = nil,
-        },
-        VGitDiffCurrentBorder = {
-            fg = '#a1b5b1',
-            bg = nil,
-        },
-        VGitDiffPreviousBorder = {
-            fg = '#a1b5b1',
-            bg = nil,
-        },
-        VGitHistoryHorizontalBorder = {
-            fg = '#a1b5b1',
-            bg = nil,
-        },
-        VGitHistoryCurrentBorder = {
-            fg = '#a1b5b1',
-            bg = nil,
-        },
-        VGitHistoryPreviousBorder = {
-            fg = '#a1b5b1',
-            bg = nil,
-        },
-        VGitHistoryBorder = {
-            fg = '#a1b5b1',
-            bg = nil,
-        },
-        VGitHunkBorder = {
-            fg = '#a1b5b1',
-            bg = nil,
-        },
-        VGitBlameBorder = {
+        VGitBorder = {
             fg = '#a1b5b1',
             bg = nil,
         },
@@ -209,12 +177,9 @@ require('vgit').setup({
         hl = 'VGitBlame',
         window = {
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBlameBorder',
+            border_hl = 'VGitBorder',
         },
         format = function(blame, git_config)
-            local round = function(x)
-                return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
-            end
             local config_author = git_config['user.name']
             local author = blame.author
             if config_author == author then
@@ -227,7 +192,7 @@ require('vgit').setup({
             while time < 1 and division_counter ~= #time_divisions do
                 local division = time_divisions[division_counter]
                 time = time * division[1]
-               time_format = string.format('%s %s ago', round(time), division[2])
+                time_format = string.format('%s %s ago', round(time), division[2])
                 division_counter = division_counter + 1
             end
             local commit_message = blame.commit_message
@@ -247,15 +212,20 @@ require('vgit').setup({
     },
     preview = {
         priority = 10,
-        current_window = {
-            title = 'Current',
+        horizontal_window = {
+            title = t('preview/horizontal'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitDiffCurrentBorder',
+            border_hl = 'VGitBorder',
+        },
+        current_window = {
+            title = t('preview/current'),
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitBorder',
         },
         previous_window = {
-            title = 'Previous',
+            title = t('preview/previous'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitDiffPreviousBorder',
+            border_hl = 'VGitBorder',
         },
         signs = {
             add = {
@@ -272,41 +242,37 @@ require('vgit').setup({
             },
         },
     },
+
     history = {
         indicator = {
             hl = 'VGitHistoryIndicator'
         },
-        window = {
-            title = 'Git History',
+        horizontal_window = {
+            title = t('history/horizontal'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHistoryBorder',
+            border_hl = 'VGitBorder',
         },
-        history: {
-            indicator = {
-                hl = 'VGitHistoryIndicator'
-            },
-            current_window = {
-                title = 'Current',
-                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitHistoryCurrentBorder',
-            },
-            previous_window = {
-                title = 'Previous',
-                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitHistoryPreviousBorder',
-            },
-            history_window = {
-                title = 'Git History',
-                border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-                border_hl = 'VGitHistoryBorder',
-            },
-        }
+        current_window = {
+            title = t('history/current'),
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitBorder',
+        },
+        previous_window = {
+            title = t('history/previous'),
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitBorder',
+        },
+        history_window = {
+            title = t('history/history'),
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitBorder',
+        },
     },
     hunk = {
         priority = 10,
         window = {
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHunkBorder',
+            border_hl = 'VGitBorder',
         },
         signs = {
             add = {
@@ -342,7 +308,8 @@ require('vgit').setup({
                 text = '│'
             },
         },
-    }
+    },
+    current_widget = {}
 })
 ```
 

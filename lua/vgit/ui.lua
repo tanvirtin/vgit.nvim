@@ -29,7 +29,7 @@ M.state = State.new({
         hl = 'VGitBlame',
         window = {
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBlameBorder',
+            border_hl = 'VGitBorder',
         },
         format = function(blame, git_config)
             local config_author = git_config['user.name']
@@ -67,17 +67,17 @@ M.state = State.new({
         horizontal_window = {
             title = t('preview/horizontal'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitDiffHorizontalBorder',
+            border_hl = 'VGitBorder',
         },
         current_window = {
             title = t('preview/current'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitDiffCurrentBorder',
+            border_hl = 'VGitBorder',
         },
         previous_window = {
             title = t('preview/previous'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitDiffPreviousBorder',
+            border_hl = 'VGitBorder',
         },
         signs = {
             add = {
@@ -101,29 +101,29 @@ M.state = State.new({
         horizontal_window = {
             title = t('history/horizontal'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHistoryHorizontalBorder',
+            border_hl = 'VGitBorder',
         },
         current_window = {
             title = t('history/current'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHistoryCurrentBorder',
+            border_hl = 'VGitBorder',
         },
         previous_window = {
             title = t('history/previous'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHistoryPreviousBorder',
+            border_hl = 'VGitBorder',
         },
         history_window = {
             title = t('history/history'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHistoryBorder',
+            border_hl = 'VGitBorder',
         },
     },
     hunk = {
         priority = 10,
         window = {
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHunkBorder',
+            border_hl = 'VGitBorder',
         },
         signs = {
             add = {
