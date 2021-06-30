@@ -29,7 +29,7 @@ M.state = State.new({
         hl = 'VGitBlame',
         window = {
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBlameBorder',
+            border_hl = 'VGitBorder',
         },
         format = function(blame, git_config)
             local config_author = git_config['user.name']
@@ -67,17 +67,20 @@ M.state = State.new({
         horizontal_window = {
             title = t('preview/horizontal'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitDiffHorizontalBorder',
+            border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         current_window = {
             title = t('preview/current'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitDiffCurrentBorder',
+            border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         previous_window = {
             title = t('preview/previous'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitDiffPreviousBorder',
+            border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         signs = {
             add = {
@@ -101,29 +104,33 @@ M.state = State.new({
         horizontal_window = {
             title = t('history/horizontal'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHistoryHorizontalBorder',
+            border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         current_window = {
             title = t('history/current'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHistoryCurrentBorder',
+            border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         previous_window = {
             title = t('history/previous'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHistoryPreviousBorder',
+            border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         history_window = {
             title = t('history/history'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHistoryBorder',
+            border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
     },
     hunk = {
         priority = 10,
         window = {
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitHunkBorder',
+            border_hl = 'VGitBorder',
         },
         signs = {
             add = {
@@ -218,11 +225,18 @@ M.apply_highlights = function()
     highlighter.define(M.state:get('preview').horizontal_window.border_hl)
     highlighter.define(M.state:get('preview').current_window.border_hl)
     highlighter.define(M.state:get('preview').previous_window.border_hl)
+    highlighter.define(M.state:get('preview').horizontal_window.border_focus_hl)
+    highlighter.define(M.state:get('preview').current_window.border_focus_hl)
+    highlighter.define(M.state:get('preview').previous_window.border_focus_hl)
     highlighter.define(M.state:get('history').indicator.hl)
     highlighter.define(M.state:get('history').horizontal_window.border_hl)
     highlighter.define(M.state:get('history').previous_window.border_hl)
     highlighter.define(M.state:get('history').current_window.border_hl)
     highlighter.define(M.state:get('history').history_window.border_hl)
+    highlighter.define(M.state:get('history').horizontal_window.border_focus_hl)
+    highlighter.define(M.state:get('history').previous_window.border_focus_hl)
+    highlighter.define(M.state:get('history').current_window.border_focus_hl)
+    highlighter.define(M.state:get('history').history_window.border_focus_hl)
     highlighter.define(M.state:get('hunk').window.border_hl)
 end
 
@@ -419,7 +433,7 @@ end
 M.show_horizontal_preview = void(function(fetch, filetype)
     local signs_group = string.format('%s/preview', M.constants.hunk_signs_group)
     local height = math.ceil(View.global_height() - 4)
-    local width = math.ceil(View.global_width() * 0.7)
+    local width = math.ceil(View.global_width() * 0.8)
     local col = math.ceil((View.global_width() - width) / 2) - 1
     local views = {
         preview = View.new({
@@ -427,6 +441,7 @@ M.show_horizontal_preview = void(function(fetch, filetype)
             title = M.state:get('preview').horizontal_window.title,
             border = M.state:get('preview').horizontal_window.border,
             border_hl = M.state:get('preview').horizontal_window.border_hl,
+            border_focus_hl = M.state:get('preview').horizontal_window.border_focus_hl,
             win_options = {
                 ['cursorline'] = true,
             },
@@ -480,6 +495,7 @@ M.show_vertical_preview = void(function(fetch, filetype)
             title = M.state:get('preview').previous_window.title,
             border = M.state:get('preview').previous_window.border,
             border_hl = M.state:get('preview').previous_window.border_hl,
+            border_focus_hl = M.state:get('preview').previous_window.border_focus_hl,
             win_options = {
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
@@ -499,6 +515,7 @@ M.show_vertical_preview = void(function(fetch, filetype)
             title = M.state:get('preview').current_window.title,
             border = M.state:get('preview').current_window.border,
             border_hl = M.state:get('preview').current_window.border_hl,
+            border_focus_hl = M.state:get('preview').current_window.border_focus_hl,
             win_options = {
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
@@ -654,13 +671,14 @@ M.show_horizontal_history = void(function(fetch, filetype)
     local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
     local parent_buf = vim.api.nvim_get_current_buf()
     local height = math.ceil(View.global_height() - 13)
-    local width = math.ceil(View.global_width() * 0.75)
+    local width = math.ceil(View.global_width() * 0.8)
     local col = math.ceil((View.global_width() - width) / 2) - 1
     local views = {
         preview = View.new({
             filetype = filetype,
             border = M.state:get('history').horizontal_window.border,
             border_hl = M.state:get('history').horizontal_window.border_hl,
+            border_focus_hl = M.state:get('history').horizontal_window.border_focus_hl,
             title = M.state:get('history').horizontal_window.title,
             buf_options = {
                 ['modifiable'] = false,
@@ -686,6 +704,7 @@ M.show_horizontal_history = void(function(fetch, filetype)
             title = M.state:get('history').history_window.title,
             border = M.state:get('history').history_window.border,
             border_hl = M.state:get('history').history_window.border_hl,
+            border_focus_hl = M.state:get('history').history_window.border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -794,6 +813,7 @@ M.show_vertical_history = void(function(fetch, filetype)
             filetype = filetype,
             border = M.state:get('history').previous_window.border,
             border_hl = M.state:get('history').previous_window.border_hl,
+            border_focus_hl = M.state:get('history').previous_window.border_focus_hl,
             title = M.state:get('history').previous_window.title,
             buf_options = {
                 ['modifiable'] = false,
@@ -822,6 +842,7 @@ M.show_vertical_history = void(function(fetch, filetype)
             title = M.state:get('history').current_window.title,
             border = M.state:get('history').current_window.border,
             border_hl = M.state:get('history').current_window.border_hl,
+            border_focus_hl = M.state:get('history').current_window.border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -848,6 +869,7 @@ M.show_vertical_history = void(function(fetch, filetype)
             title = M.state:get('history').history_window.title,
             border = M.state:get('history').history_window.border,
             border_hl = M.state:get('history').history_window.border_hl,
+            border_focus_hl = M.state:get('history').history_window.border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
