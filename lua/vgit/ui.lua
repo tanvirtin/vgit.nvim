@@ -275,7 +275,7 @@ M.show_blame = void(function(fetch)
         },
     })
     local widget = Widget.new({ view }, 'blame')
-        :render()
+        :render(true)
         :set_loading(true)
     M.state:set('current_widget', widget)
     scheduler()
