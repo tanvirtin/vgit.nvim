@@ -388,7 +388,7 @@ M.show_hunk = function(hunk, filetype)
         },
     })
     local widget = Widget.new({ view }, 'hunk')
-    widget:render()
+    widget:render(true)
     view:set_lines(trimmed_lines)
     for _, lnum in ipairs(added_lines) do
         vim.fn.sign_place(

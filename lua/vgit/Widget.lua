@@ -15,10 +15,11 @@ end
 
 local function new(views, name)
     assert(type(views) == 'table', 'type error :: expected table')
+    assert(type(name) == 'string', 'type error :: expected string')
     return setmetatable({
         name = name,
         views = views,
-        state = { rendered = false }
+        state = { rendered = false },
     }, Widget)
 end
 
@@ -70,7 +71,8 @@ function Widget:get_bufs()
     return bufs
 end
 
-function Widget:render()
+function Widget:render(as_popup)
+    assert(type(as_popup) == 'boolean' or type(as_popup) == 'nil', 'type error :: expected nil or boolean')
     if self.state.rendered then
         return self
     end
@@ -93,9 +95,10 @@ function Widget:render()
         local buf_name = vim.api.nvim_buf_get_name(buf)
         local buf_has_name = buf_name and buf_name ~= ''
         if is_buf_listed and buf_has_name and buffer.is_valid(buf) then
+            local event = as_popup and 'BufEnter' or 'BufWinEnter'
             buffer.add_autocmd(
                 buf,
-                'BufEnter',
+                event,
                 string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(win_ids))
             )
         end
