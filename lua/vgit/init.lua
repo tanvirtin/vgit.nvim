@@ -67,7 +67,7 @@ local predict_hunk_signs = void(function(buf)
     end
 end)
 
-M._buf_attach = throttle_leading(void(function(buf)
+M._buf_attach = void(function(buf)
     buf = buf or buffer.current()
     if buffer.is_valid(buf) then
         local filename = fs.filename(buf)
@@ -90,43 +90,35 @@ M._buf_attach = throttle_leading(void(function(buf)
                         logger.debug(tracked_files_err, 'init.lua/_buf_attach')
                     end
                 end
-                local tracked_files = state:get('tracked_files')
-                local buf_just_cached = false
-                local buf_is_cached = bstate:contains(buf)
-                if not buf_is_cached then
-                    local project_relative_filename = fs.project_relative_filename(filename, tracked_files)
-                    if project_relative_filename and project_relative_filename ~= '' then
-                        bstate:add(buf)
-                        local filetype = fs.filetype(buf)
-                        if not filetype or filetype == '' then
-                            filetype = fs.detect_filetype(filename)
-                        end
-                        bstate:set(buf, 'filetype', filetype)
-                        buf_just_cached = true
-                        bstate:set(buf, 'filename', filename)
-                        bstate:set(buf, 'project_relative_filename', project_relative_filename)
-                        if state:get('blames_enabled') then
-                            attach_blames_autocmd(buf)
-                        end
-                        vim.api.nvim_buf_attach(buf, false, {
-                            on_lines = throttle_leading(void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
-                                if state:get('predict_hunk_signs') then
-                                    if p_lnum == n_lnum and byte_count == 0 then
-                                        return
-                                    end
-                                    predict_hunk_signs(cbuf)
-                                end
-                            end), state:get('predict_hunk_throttle_ms')),
-                            on_detach = function(_, cbuf)
-                                if bstate:contains(cbuf) then
-                                    bstate:remove(cbuf)
-                                    detach_blames_autocmd(cbuf)
-                                end
-                            end,
-                        })
+                local project_relative_filename = fs.project_relative_filename(filename, state:get('tracked_files'))
+                if project_relative_filename and project_relative_filename ~= '' then
+                    bstate:add(buf)
+                    local filetype = fs.filetype(buf)
+                    if not filetype or filetype == '' then
+                        filetype = fs.detect_filetype(filename)
                     end
+                    bstate:set(buf, 'filetype', filetype)
+                    bstate:set(buf, 'filename', filename)
+                    bstate:set(buf, 'project_relative_filename', project_relative_filename)
+                    if state:get('blames_enabled') then
+                        attach_blames_autocmd(buf)
+                    end
+                    vim.api.nvim_buf_attach(buf, false, {
+                        on_lines = throttle_leading(void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
+                            if state:get('predict_hunk_signs') then
+                                if p_lnum == n_lnum and byte_count == 0 then
+                                    return
+                                end
+                                predict_hunk_signs(cbuf)
+                            end
+                        end), state:get('predict_hunk_throttle_ms')),
+                        on_detach = function(_, cbuf)
+                            bstate:remove(cbuf)
+                            detach_blames_autocmd(cbuf)
+                        end,
+                    })
                 end
-                if (buf_is_cached or buf_just_cached) and state:get('hunks_enabled') then
+                if state:get('hunks_enabled') then
                     local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks)
                         or git.index_hunks
                     local err, hunks = calculate_hunks(bstate:get(buf, 'project_relative_filename'))
@@ -141,7 +133,7 @@ M._buf_attach = throttle_leading(void(function(buf)
             end
         end
     end
-end), state:get('action_throttle_ms'))
+end)
 
 M._buf_update = void(function(buf)
     buf = buf or buffer.current()
