@@ -172,6 +172,10 @@ require('vgit').setup({
             fg = '#a1b5b1',
             bg = nil,
         },
+        VGitBorderFocus = {
+            fg = '#a6e22e',
+            bg = nil,
+        },
     },
     blame = {
         hl = 'VGitBlame',
@@ -216,16 +220,19 @@ require('vgit').setup({
             title = t('preview/horizontal'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         current_window = {
             title = t('preview/current'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         previous_window = {
             title = t('preview/previous'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         signs = {
             add = {
@@ -242,7 +249,6 @@ require('vgit').setup({
             },
         },
     },
-
     history = {
         indicator = {
             hl = 'VGitHistoryIndicator'
@@ -251,21 +257,25 @@ require('vgit').setup({
             title = t('history/horizontal'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         current_window = {
             title = t('history/current'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         previous_window = {
             title = t('history/previous'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
         history_window = {
             title = t('history/history'),
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus'
         },
     },
     hunk = {
