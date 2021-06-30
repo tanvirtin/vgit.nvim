@@ -471,8 +471,10 @@ M.hunks_quickfix_list = throttle_leading(void(function()
                 logger.debug(hunks_err, 'init.lua/hunks_quickfix_list')
             end
         end
-        vim.fn.setqflist(qf_entries, 'r')
-        vim.cmd('copen')
+        if #qf_entries ~= 0 then
+            vim.fn.setqflist(qf_entries, 'r')
+            vim.cmd('copen')
+        end
     end
 end), state:get('action_throttle_ms'))
 
@@ -690,7 +692,7 @@ M.show_blame = throttle_leading(void(function(buf)
                 local err, blame = git.blame_line(bstate:get(buf, 'project_relative_filename'), lnum)
                 scheduler()
                 return err, blame
-            end, 1))
+            end, 0))
         end
     end
 end), state:get('action_throttle_ms'))
