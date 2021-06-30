@@ -117,17 +117,17 @@ M._buf_attach = void(function(buf)
                             detach_blames_autocmd(cbuf)
                         end,
                     })
-                end
-                if state:get('hunks_enabled') then
-                    local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks)
-                        or git.index_hunks
-                    local err, hunks = calculate_hunks(bstate:get(buf, 'project_relative_filename'))
-                    scheduler()
-                    if not err then
-                        bstate:set(buf, 'hunks', hunks)
-                        ui.show_hunk_signs(buf, hunks)
-                    else
-                        logger.debug(err, 'init.lua/_buf_attach')
+                    if state:get('hunks_enabled') then
+                        local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks)
+                            or git.index_hunks
+                        local err, hunks = calculate_hunks(bstate:get(buf, 'project_relative_filename'))
+                        scheduler()
+                        if not err then
+                            bstate:set(buf, 'hunks', hunks)
+                            ui.show_hunk_signs(buf, hunks)
+                        else
+                            logger.debug(err, 'init.lua/_buf_attach')
+                        end
                     end
                 end
             end
