@@ -8,8 +8,8 @@ local Bstate = require('vgit.Bstate')
 local buffer = require('vgit.buffer')
 local throttle_leading = require('vgit.defer').throttle_leading
 local logger = require('vgit.logger')
-local a = require('plenary.async')
 local t = require('vgit.localization').translate
+local a = require('plenary.async')
 local wrap = a.wrap
 local void = a.void
 local scheduler = a.util.scheduler
@@ -32,6 +32,7 @@ local state = State.new({
     predict_hunk_signs = true,
     action_throttle_ms = 300,
     predict_hunk_throttle_ms = 30,
+    hunk_prediction_strategy = 'git',
     blame_line_throttle_ms = 150,
 })
 
@@ -58,12 +59,37 @@ local predict_hunk_signs = void(function(buf)
     if not show_err then
         local current_lines = buffer.get_lines(buf)
         bstate:set(buf, 'temp_lines', current_lines)
-        local hunks = algorithms.hunks(original_lines, current_lines)
-        bstate:set(buf, 'hunks', hunks)
-        ui.hide_hunk_signs(buf)
-        ui.show_hunk_signs(buf, hunks)
+        if state:get('hunk_prediction_strategy') == 'native' then
+            local hunks = algorithms.hunks(original_lines, current_lines)
+            scheduler()
+            bstate:set(buf, 'hunks', hunks)
+            ui.hide_hunk_signs(buf)
+            ui.show_hunk_signs(buf, hunks)
+            scheduler()
+        else
+            local temp_filename_b = fs.tmpname()
+            local temp_filename_a = fs.tmpname()
+            fs.write_file(temp_filename_a, original_lines)
+            scheduler()
+            fs.write_file(temp_filename_b, current_lines)
+            scheduler()
+            local hunks_err, hunks = git.file_hunks(temp_filename_a, temp_filename_b)
+            scheduler()
+            if not hunks_err then
+                bstate:set(buf, 'hunks', hunks)
+                ui.hide_hunk_signs(buf)
+                ui.show_hunk_signs(buf, hunks)
+                scheduler()
+            else
+                logger.debug(hunks_err, 'init.lua/predict_hunk_signs')
+            end
+            fs.remove_file(temp_filename_a)
+            scheduler()
+            fs.remove_file(temp_filename_b)
+            scheduler()
+        end
     else
-        logger.debug(show_err, 'init.lua/predic_hunk_signs')
+        logger.debug(show_err, 'init.lua/predict_hunk_signs')
     end
 end)
 
@@ -113,14 +139,16 @@ M._buf_attach = void(function(buf)
                             end
                         end), state:get('predict_hunk_throttle_ms')),
                         on_detach = function(_, cbuf)
-                            bstate:remove(cbuf)
-                            detach_blames_autocmd(cbuf)
+                            if buffer.is_valid(cbuf) and bstate:contains(cbuf) then
+                                bstate:remove(cbuf)
+                                detach_blames_autocmd(cbuf)
+                            end
                         end,
                     })
                     if state:get('hunks_enabled') then
                         local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks)
                             or git.index_hunks
-                        local err, hunks = calculate_hunks(bstate:get(buf, 'project_relative_filename'))
+                        local err, hunks = calculate_hunks(project_relative_filename)
                         scheduler()
                         if not err then
                             bstate:set(buf, 'hunks', hunks)
@@ -705,6 +733,17 @@ M.get_diff_base = function()
     return git.get_diff_base()
 end
 
+M.set_hunk_prediction_strategy = function(strategy)
+    if strategy ~= 'git' and strategy ~= 'native' then
+        return logger.error(t('errors/set_hunk_prediction_strategy', strategy))
+    end
+    local current_strategy = state:get('hunk_prediction_strategy')
+    if current_strategy== strategy then
+        return
+    end
+    state:set('hunk_prediction_strategy', strategy)
+end
+
 M.set_diff_base = throttle_leading(void(function(diff_base)
     if not diff_base or type(diff_base) ~= 'string' then
         logger.error(t('errors/set_diff_base', diff_base))
@@ -796,6 +835,10 @@ end
 
 M.get_diff_preference = function()
     return state:get('diff_preference')
+end
+
+M.get_hunk_prediction_strategy = function()
+    return state:get('hunk_prediction_strategy')
 end
 
 M.show_debug_logs = function()
