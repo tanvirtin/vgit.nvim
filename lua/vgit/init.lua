@@ -32,7 +32,6 @@ local state = State.new({
     predict_hunk_signs = true,
     action_throttle_ms = 300,
     predict_hunk_throttle_ms = 30,
-    hunk_prediction_strategy = 'git',
     blame_line_throttle_ms = 150,
 })
 
@@ -48,6 +47,7 @@ local function detach_blames_autocmd(buf)
 end
 
 local predict_hunk_signs = void(function(buf)
+    local max_lines_limit = 500
     local project_relative_filename = bstate:get(buf, 'project_relative_filename')
     local show_err, original_lines
     if state:get('diff_strategy') == 'remote' then
@@ -59,7 +59,8 @@ local predict_hunk_signs = void(function(buf)
     if not show_err then
         local current_lines = buffer.get_lines(buf)
         bstate:set(buf, 'temp_lines', current_lines)
-        if state:get('hunk_prediction_strategy') == 'native' then
+        if #original_lines < max_lines_limit and #current_lines < max_lines_limit then
+            scheduler()
             local hunks = algorithms.hunks(original_lines, current_lines)
             scheduler()
             bstate:set(buf, 'hunks', hunks)
@@ -318,7 +319,7 @@ M._command_autocompletes = function(arglead, line)
     if parsed_line == 2 then
         for func, _ in pairs(M) do
             if not vim.startswith(func, '_') and vim.startswith(func, arglead) then
-                table.insert(matches, func)
+                matches[#matches + 1] = func
             end
         end
     end
@@ -332,7 +333,8 @@ M.hunk_preview = throttle_leading(function(buf, win)
         local lnum = vim.api.nvim_win_get_cursor(win)[1]
         local selected_hunk = nil
         local hunks = bstate:get(buf, 'hunks')
-        for _, hunk in ipairs(hunks) do
+        for i = 1, #hunks do
+            local hunk = hunks[i]
             if lnum == 1 and hunk.start == 0 and hunk.finish == 0 then
                 selected_hunk = hunk
                 break
@@ -356,7 +358,8 @@ M.hunk_down = function(buf, win)
         if #hunks ~= 0 then
             local new_lnum = nil
             local lnum = vim.api.nvim_win_get_cursor(win)[1]
-            for _, hunk in ipairs(hunks) do
+            for i = 1, #hunks do
+                local hunk = hunks[i]
                 if hunk.start > lnum then
                     new_lnum = hunk.start
                     break
@@ -425,32 +428,59 @@ M.hunk_reset = throttle_leading(function(buf, win)
         win = win or vim.api.nvim_get_current_win()
         local hunks = bstate:get(buf, 'hunks')
         local lnum = vim.api.nvim_win_get_cursor(win)[1]
+        if lnum == 1 then
+            local current_lines = buffer.get_lines(buf)
+            if #hunks > 0 and #current_lines == 1 and current_lines[1] == '' then
+                local all_removes = true
+                for i = 1, #hunks do
+                    local hunk = hunks[i]
+                    if hunk.type ~= 'remove' then
+                        all_removes = false
+                        break
+                    end
+                end
+                if all_removes then
+                    return M.buffer_reset(buf)
+                end
+            end
+        end
         local selected_hunk = nil
         local selected_hunk_index = nil
-        for index, hunk in ipairs(hunks) do
-            if lnum >= hunk.start and lnum <= hunk.finish then
+        for i = 1, #hunks do
+            local hunk = hunks[i]
+            if (lnum >= hunk.start and lnum <= hunk.finish)
+                or (hunk.start == 0 and hunk.finish == 0 and lnum - 1 == hunk.start and lnum - 1 == hunk.finish) then
                 selected_hunk = hunk
-                selected_hunk_index = index
+                selected_hunk_index = i
                 break
             end
         end
         if selected_hunk then
             local replaced_lines = {}
-            for _, line in ipairs(selected_hunk.diff) do
+            for i = 1, #selected_hunk.diff do
+                local line = selected_hunk.diff[i]
                 local is_line_removed = vim.startswith(line, '-')
                 if is_line_removed then
-                    table.insert(replaced_lines, string.sub(line, 2, -1))
+                    replaced_lines[#replaced_lines + 1] = string.sub(line, 2, -1)
                 end
             end
             local start = selected_hunk.start
             local finish = selected_hunk.finish
             if start and finish then
                 if selected_hunk.type == 'remove' then
-                    vim.api.nvim_buf_set_lines(0, start, finish, false, replaced_lines)
+                    if start == 1 then
+                        vim.api.nvim_buf_set_lines(buf, start - 1, finish - 1, false, replaced_lines)
+                    else
+                        vim.api.nvim_buf_set_lines(buf, start, finish, false, replaced_lines)
+                    end
                 else
-                    vim.api.nvim_buf_set_lines(0, start - 1, finish, false, replaced_lines)
+                    vim.api.nvim_buf_set_lines(buf, start - 1, finish, false, replaced_lines)
                 end
-                vim.api.nvim_win_set_cursor(win, { start, 0 })
+                local new_lnum = start
+                if new_lnum < 1 then
+                    new_lnum = 1
+                end
+                vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
                 vim.cmd('update')
                 table.remove(hunks, selected_hunk_index)
                 ui.hide_hunk_signs(buf)
@@ -474,18 +504,20 @@ M.hunks_quickfix_list = throttle_leading(void(function()
         end
         local qf_entries = {}
         local filenames = state:get('tracked_files')
-        for _, filename in ipairs(filenames) do
+        for i = 1, #filenames do
+            local filename = filenames[i]
             local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks) or git.index_hunks
             local hunks_err, hunks = calculate_hunks(filename)
             scheduler()
             if not hunks_err then
-                for _, hunk in ipairs(hunks) do
-                    table.insert(qf_entries, {
+                for j = 1, #hunks do
+                    local hunk = hunks[j]
+                    qf_entries[#qf_entries + 1] = {
                         text = string.format('[%s..%s]', hunk.start, hunk.finish),
                         filename = filename,
                         lnum = hunk.start,
                         col = 0,
-                    })
+                    }
                 end
             else
                 logger.debug(hunks_err, 'init.lua/hunks_quickfix_list')
@@ -541,9 +573,8 @@ M.toggle_buffer_blames = throttle_leading(void(function()
             bstate:for_each(function(buf, buf_state)
                 if buffer.is_valid(buf) then
                     detach_blames_autocmd(buf)
-                    local bufnr = tonumber(buf)
                     buf_state:set('blames', {})
-                    M._unblame_line(bufnr, true)
+                    M._unblame_line(buf, true)
                 end
             end)
             return state:get('blames_enabled')
@@ -733,17 +764,6 @@ M.get_diff_base = function()
     return git.get_diff_base()
 end
 
-M.set_hunk_prediction_strategy = function(strategy)
-    if strategy ~= 'git' and strategy ~= 'native' then
-        return logger.error(t('errors/set_hunk_prediction_strategy', strategy))
-    end
-    local current_strategy = state:get('hunk_prediction_strategy')
-    if current_strategy== strategy then
-        return
-    end
-    state:set('hunk_prediction_strategy', strategy)
-end
-
 M.set_diff_base = throttle_leading(void(function(diff_base)
     if not diff_base or type(diff_base) ~= 'string' then
         logger.error(t('errors/set_diff_base', diff_base))
@@ -760,8 +780,7 @@ M.set_diff_base = throttle_leading(void(function(diff_base)
         git.set_diff_base(diff_base)
         if state:get('diff_strategy') == 'remote' then
             local buf_states = bstate:get_buf_states()
-            for key, buf_state in pairs(buf_states) do
-                local buf = tonumber(key)
+            for buf, buf_state in pairs(buf_states) do
                 local hunks_err, hunks = git.remote_hunks(buf_state:get('project_relative_filename'))
                 scheduler()
                 if not hunks_err then
@@ -837,14 +856,11 @@ M.get_diff_preference = function()
     return state:get('diff_preference')
 end
 
-M.get_hunk_prediction_strategy = function()
-    return state:get('hunk_prediction_strategy')
-end
-
 M.show_debug_logs = function()
     if logger.state:get('debug') then
         local debug_logs = logger.state:get('debug_logs')
-        for _, log in ipairs(debug_logs) do
+        for i = 1, #debug_logs do
+            local log = debug_logs[i]
             logger.error(log)
         end
     end

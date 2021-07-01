@@ -58,7 +58,7 @@ end
 function Widget:get_win_ids()
     local win_ids = {}
     for _, v in pairs(self.views) do
-        table.insert(win_ids, v:get_win_id())
+        win_ids[#win_ids + 1] = v:get_win_id()
     end
     return win_ids
 end
@@ -66,7 +66,7 @@ end
 function Widget:get_bufs()
     local bufs = {}
     for _, v in pairs(self.views) do
-        table.insert(bufs, v:get_buf())
+        bufs[#bufs + 1] = v:get_buf()
     end
     return bufs
 end
@@ -81,8 +81,8 @@ function Widget:render(as_popup)
     end
     local win_ids = {}
     for _, v in pairs(self.views) do
-        table.insert(win_ids, v:get_win_id())
-        table.insert(win_ids, v:get_border_win_id())
+        win_ids[#win_ids + 1] = v:get_win_id()
+        win_ids[#win_ids + 1] = v:get_border_win_id()
     end
     for _, v in pairs(self.views) do
         v:add_autocmd(
@@ -90,11 +90,10 @@ function Widget:render(as_popup)
         )
     end
     local bufs = vim.api.nvim_list_bufs()
-    for _, buf in ipairs(bufs) do
+    for i = 1, #bufs do
+        local buf = bufs[i]
         local is_buf_listed = vim.api.nvim_buf_get_option(buf, 'buflisted') == true
-        local buf_name = vim.api.nvim_buf_get_name(buf)
-        local buf_has_name = buf_name and buf_name ~= ''
-        if is_buf_listed and buf_has_name and buffer.is_valid(buf) then
+        if is_buf_listed and buffer.is_valid(buf) then
             local event = as_popup and 'BufEnter' or 'BufWinEnter'
             buffer.add_autocmd(
                 buf,
