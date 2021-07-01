@@ -33,6 +33,8 @@ describe('init:', function()
                 toggle_buffer_hunks = true,
                 hunks_quickfix_list = true,
                 toggle_buffer_blames = true,
+                get_hunk_prediction_strategy = true,
+                set_hunk_prediction_strategy = true,
                 _buf_attach = true,
                 _buf_update = true,
                 _blame_line = true,
