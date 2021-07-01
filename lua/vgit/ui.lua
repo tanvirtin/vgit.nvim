@@ -173,7 +173,8 @@ M.state = State.new({
 M.close_windows = function(wins)
     M.state:set('current_widget', {})
     local existing_wins = vim.api.nvim_list_wins()
-    for _, win in ipairs(wins) do
+    for i = 1, #wins do
+        local win = wins[i]
         if vim.api.nvim_win_is_valid(win) and vim.tbl_contains(existing_wins, win) then
             local buf = vim.api.nvim_win_get_buf(win)
             pcall(vim.api.nvim_win_close, win, true)
@@ -352,9 +353,10 @@ end
 M.show_hunk_signs = function(buf, hunks)
     if buffer.is_valid(buf) then
         local hunk_signs_group = string.format('%s/%s', M.constants.hunk_signs_group, buf)
-        for _, hunk in ipairs(hunks) do
-            for i = hunk.start, hunk.finish do
-                local lnum = (hunk.type == 'remove' and i == 0) and 1 or i
+        for i = 1, #hunks do
+            local hunk = hunks[i]
+            for j = hunk.start, hunk.finish do
+                local lnum = (hunk.type == 'remove' and j == 0) and 1 or j
                 vim.fn.sign_place(lnum, hunk_signs_group, M.state:get('hunk_sign').signs[hunk.type].hl, buf, {
                     id = lnum,
                     lnum = lnum,
@@ -380,11 +382,11 @@ M.show_hunk = function(hunk, filetype)
     for index, line in pairs(lines) do
         local first_letter = line:sub(1, 1)
         if first_letter == '+' then
-            table.insert(added_lines, index)
+            added_lines[#added_lines + 1] = index
         elseif first_letter == '-' then
-            table.insert(removed_lines, index)
+            removed_lines[#removed_lines + 1] = index
         end
-        table.insert(trimmed_lines, line:sub(2, #line))
+        trimmed_lines[#trimmed_lines + 1] = line:sub(2, #line)
     end
     local view = View.new({
         filetype = filetype,
@@ -404,7 +406,8 @@ M.show_hunk = function(hunk, filetype)
     local widget = Widget.new({ view }, 'hunk')
     widget:render(true)
     view:set_lines(trimmed_lines)
-    for _, lnum in ipairs(added_lines) do
+    for i = 1, #added_lines do
+        local lnum = added_lines[i]
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
@@ -416,7 +419,8 @@ M.show_hunk = function(hunk, filetype)
             }
         )
     end
-    for _, lnum in ipairs(removed_lines) do
+    for i = 1, #removed_lines do
+        local lnum = removed_lines[i]
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
@@ -466,7 +470,8 @@ M.show_horizontal_preview = void(function(fetch, filetype)
     scheduler()
     if not err then
         views.preview:set_lines(data.lines)
-        for _, datum in ipairs(data.lnum_changes) do
+        for i = 1, #data.lnum_changes do
+            local datum = data.lnum_changes[i]
             vim.fn.sign_place(
             datum.lnum,
             signs_group,
@@ -544,7 +549,8 @@ M.show_vertical_preview = void(function(fetch, filetype)
     if not err then
         views.previous:set_lines(data.previous_lines)
         views.current:set_lines(data.current_lines)
-        for _, datum in ipairs(data.lnum_changes) do
+        for i = 1, #data.lnum_changes do
+            local datum = data.lnum_changes[i]
             vim.fn.sign_place(
                 datum.lnum,
                 signs_group,
@@ -579,7 +585,8 @@ M.change_horizontal_history = void(function(fetch, selected_log)
     end
     vim.api.nvim_win_set_cursor(views.preview:get_win_id(), { 1, 0 })
     vim.fn.sign_unplace(M.constants.hunk_signs_group)
-    for _, datum in ipairs(data.lnum_changes) do
+    for i = 1, #data.lnum_changes do
+        local datum = data.lnum_changes[i]
         local view = views.preview
         vim.fn.sign_place(
             datum.lnum,
@@ -593,11 +600,12 @@ M.change_horizontal_history = void(function(fetch, selected_log)
         )
     end
     local history_lines = views.history:get_lines()
-    for index, line in ipairs(history_lines) do
-        if index == selected_log then
-            history_lines[index] = string.format('>%s', line:sub(2, #line))
+    for i = 1, #history_lines do
+        local line = history_lines[i]
+        if i == selected_log then
+            history_lines[i] = string.format('>%s', line:sub(2, #line))
         else
-            history_lines[index] = string.format(' %s', line:sub(2, #line))
+            history_lines[i] = string.format(' %s', line:sub(2, #line))
         end
     end
     views.history:set_lines(history_lines)
@@ -633,7 +641,8 @@ M.change_vertical_history = void(function(fetch, selected_log)
     vim.api.nvim_win_set_cursor(views.previous:get_win_id(), { 1, 0 })
     vim.api.nvim_win_set_cursor(views.current:get_win_id(), { 1, 0 })
     vim.fn.sign_unplace(M.constants.hunk_signs_group)
-    for _, datum in ipairs(data.lnum_changes) do
+    for i = 1, #data.lnum_changes do
+        local datum = data.lnum_changes[i]
         local view = views[datum.buftype]
         vim.fn.sign_place(
             datum.lnum,
@@ -647,11 +656,12 @@ M.change_vertical_history = void(function(fetch, selected_log)
         )
     end
     local history_lines = views.history:get_lines()
-    for index, line in ipairs(history_lines) do
-        if index == selected_log then
-            history_lines[index] = string.format('>%s', line:sub(2, #line))
+    for i = 1, #history_lines do
+        local line = history_lines[i]
+        if i == selected_log then
+            history_lines[i] = string.format('>%s', line:sub(2, #line))
         else
-            history_lines[index] = string.format(' %s', line:sub(2, #line))
+            history_lines[i] = string.format(' %s', line:sub(2, #line))
         end
     end
     views.history:set_lines(history_lines)
@@ -753,35 +763,40 @@ M.show_horizontal_history = void(function(fetch, filetype)
     local padding_right = 2
     local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
     local rows = {}
-    for index, log in ipairs(data.logs) do
+    for i = 1, #data.logs do
+        local log = data.logs[i]
         local row = {
-            index - 1 == 0 and string.format('>  HEAD~%s', index - 1) or string.format('   HEAD~%s', index - 1),
+            i - 1 == 0 and string.format('>  HEAD~%s', i - 1) or string.format('   HEAD~%s', i - 1),
             log.author_name or '',
             log.commit_hash or '',
             log.summary or '', (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or ''
         }
-        for i, item in ipairs(row) do
-            if #item + 1 > table_title_space[i] then
-                table_title_space[i] = #item + padding_right
+        for j = 1, #row do
+            local item = row[j]
+            if #item + 1 > table_title_space[j] then
+                table_title_space[j] = #item + padding_right
             end
         end
-        table.insert(rows, row)
+        rows[#rows + 1] = row
     end
     local history_lines = {}
-    for _, row in ipairs(rows) do
+    for i = 1, #rows do
+        local row = rows[i]
         local line = ''
-        for index, item in ipairs(row) do
-            line = line .. item .. string.rep(' ',  table_title_space[index] - #item)
-            if index ~= #table_title_space then
+        for j = 1, #row do
+            local item = row[j]
+            line = line .. item .. string.rep(' ',  table_title_space[j] - #item)
+            if j ~= #table_title_space then
                 line = line
             end
         end
-        table.insert(history_lines, line)
+        history_lines[#history_lines + 1] = line
     end
     views.preview:set_lines(data.lines)
     views.history:set_lines(history_lines)
     views.history:add_keymap('<enter>', string.format('_change_history(%s)', parent_buf))
-    for _, datum in ipairs(data.lnum_changes) do
+    for i = 1, #data.lnum_changes do
+        local datum = data.lnum_changes[i]
         local view = views.preview
         vim.fn.sign_place(
             datum.lnum,
@@ -918,36 +933,41 @@ M.show_vertical_history = void(function(fetch, filetype)
     local padding_right = 2
     local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
     local rows = {}
-    for index, log in ipairs(data.logs) do
+    for i = 1, #data.logs do
+        local log = data.logs[i]
         local row = {
-            index - 1 == 0 and string.format('>  HEAD~%s', index - 1) or string.format('   HEAD~%s', index - 1),
+            i - 1 == 0 and string.format('>  HEAD~%s', i - 1) or string.format('   HEAD~%s', i - 1),
             log.author_name or '',
             log.commit_hash or '',
             log.summary or '', (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or ''
         }
-        for i, item in ipairs(row) do
-            if #item + 1 > table_title_space[i] then
-                table_title_space[i] = #item + padding_right
+        for j = 1, #row do
+            local item = row[j]
+            if #item + 1 > table_title_space[j] then
+                table_title_space[j] = #item + padding_right
             end
         end
-        table.insert(rows, row)
+        rows[#rows + 1] = row
     end
     local history_lines = {}
-    for _, row in ipairs(rows) do
+    for i = 1, #rows do
+        local row = rows[i]
         local line = ''
-        for index, item in ipairs(row) do
-            line = line .. item .. string.rep(' ',  table_title_space[index] - #item)
-            if index ~= #table_title_space then
+        for j = 1, #row do
+            local item = row[j]
+            line = line .. item .. string.rep(' ',  table_title_space[j] - #item)
+            if j ~= #table_title_space then
                 line = line
             end
         end
-        table.insert(history_lines, line)
+        history_lines[#history_lines + 1] = line
     end
     views.previous:set_lines(data.previous_lines)
     views.current:set_lines(data.current_lines)
     views.history:set_lines(history_lines)
     views.history:add_keymap('<enter>', string.format('_change_history(%s)', parent_buf))
-    for _, datum in ipairs(data.lnum_changes) do
+    for i = 1, #data.lnum_changes do
+        local datum = data.lnum_changes[i]
         local view = views[datum.buftype]
         vim.fn.sign_place(
             datum.lnum,

@@ -60,11 +60,11 @@ describe('Bstate:', function()
                 initial = atomic_buf_state,
             }
             eq(bstate.buf_states, {
-                ['1'] = buf_state,
-                ['2'] = buf_state,
-                ['3'] = buf_state,
-                ['4'] = buf_state,
-                ['5'] = buf_state,
+                [1] = buf_state,
+                [2] = buf_state,
+                [3] = buf_state,
+                [4] = buf_state,
+                [5] = buf_state,
             })
         end)
 
