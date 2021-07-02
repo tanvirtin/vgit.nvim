@@ -20,22 +20,24 @@ M.error = function(msg)
 end
 
 M.debug = function(msg, fn)
-   fn = fn or 'unknown'
-   if M.state:get('debug') then
-      local new_msg = ''
-      if vim.tbl_islist(msg) then
-         for i, m in ipairs(msg) do
-            if i == 1 then
-               new_msg = new_msg .. m
-            else
-               new_msg = new_msg .. ', ' .. m
+    fn = fn or 'unknown'
+    if M.state:get('debug') then
+        local new_msg = ''
+        if vim.tbl_islist(msg) then
+            for i = 1, #msg do
+                local m = msg[i]
+                if i == 1 then
+                    new_msg = new_msg .. m
+                else
+                    new_msg = new_msg .. ', ' .. m
+                end
             end
-         end
-      else
-         new_msg = msg
-      end
-      table.insert(M.state:get('debug_logs'), string.format('VGit[%s][%s]: %s', os.date('%H:%M:%S'), fn, new_msg))
-   end
+        else
+            new_msg = msg
+        end
+        local debug_logs = M.state:get('debug_logs')
+        debug_logs[#debug_logs + 1] = string.format('VGit[%s][%s]: %s', os.date('%H:%M:%S'), fn, new_msg)
+    end
 end
 
 return M

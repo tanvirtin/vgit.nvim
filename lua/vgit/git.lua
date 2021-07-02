@@ -11,13 +11,14 @@ local unpack = unpack
 local function parse_hunk_diff(diff)
     local removed_lines = {}
     local added_lines = {}
-    for _, line in ipairs(diff) do
+    for i = 1, #diff do
+        local line = diff[i]
         local type = line:sub(1, 1)
         local cleaned_diff_line = line:sub(2, #line)
         if type == '+' then
-            table.insert(added_lines, cleaned_diff_line)
+            added_lines[#added_lines + 1] = cleaned_diff_line
         elseif type == '-' then
-            table.insert(removed_lines, cleaned_diff_line)
+            removed_lines[#removed_lines + 1] = cleaned_diff_line
         end
     end
     return removed_lines, added_lines
@@ -73,10 +74,10 @@ M.is_commit_valid = wrap(function(commit, callback)
             commit,
         },
         on_stdout = function(_, data, _)
-            table.insert(result, data)
+            result[#result + 1] = data
         end,
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
@@ -204,7 +205,7 @@ M.config = wrap(function(callback)
             result[line_chunks[1]] = line_chunks[2]
         end,
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
@@ -242,7 +243,7 @@ M.is_inside_work_tree = wrap(function(callback)
             '--is-inside-work-tree',
         },
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
@@ -268,10 +269,10 @@ M.blame_line = wrap(function(filename, lnum, callback)
             filename,
         },
         on_stdout = function(_, data, _)
-            table.insert(result, data)
+            result[#result + 1] = data
         end,
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
@@ -306,10 +307,11 @@ M.logs = wrap(function(filename, callback)
     -- BUG: Plenary Job bug, prevents last line to be read.
     job:sync(timeout)
     local result = job:result()
-    for _, line in ipairs(result) do
+    for i = 1, #result do
+        local line = result[i]
         local log = M.create_log(line)
         if log then
-            table.insert(logs, log)
+            logs[#logs + 1] = log
         end
     end
     local err = job:stderr_result()
@@ -339,23 +341,24 @@ M.file_hunks = wrap(function(filename_a, filename_b, callback)
         command = 'git',
         args = args,
         on_stdout = function(_, data, _)
-            table.insert(result, data)
+            result[#result + 1] = data
         end,
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
                 return callback(err, nil)
             end
             local hunks = {}
-            for _, line in ipairs(result) do
+            for i = 1, #result do
+                local line = result[i]
                 if vim.startswith(line, '@@') then
-                    table.insert(hunks, M.create_hunk(line))
+                    hunks[#hunks + 1] = M.create_hunk(line)
                 else
                     if #hunks > 0 then
                         local hunk = hunks[#hunks]
-                        table.insert(hunk.diff, line)
+                        hunk.diff[#hunk.diff + 1] = line
                     end
                 end
             end
@@ -384,23 +387,24 @@ M.index_hunks = wrap(function(filename, callback)
         command = 'git',
         args = args,
         on_stdout = function(_, data, _)
-            table.insert(result, data)
+            result[#result + 1] = data
         end,
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
                 return callback(err, nil)
             end
             local hunks = {}
-            for _, line in ipairs(result) do
+            for i = 1, #result do
+                local line = result[i]
                 if vim.startswith(line, '@@') then
-                    table.insert(hunks, M.create_hunk(line))
+                    hunks[#hunks + 1] = M.create_hunk(line)
                 else
                     if #hunks > 0 then
                         local hunk = hunks[#hunks]
-                        table.insert(hunk.diff, line)
+                        hunk.diff[#hunk.diff + 1] = line
                     end
                 end
             end
@@ -461,23 +465,24 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
         command = 'git',
         args = args,
         on_stdout = function(_, data, _)
-            table.insert(result, data)
+            result[#result + 1] = data
         end,
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
                 return callback(err, nil)
             end
             local hunks = {}
-            for _, line in ipairs(result) do
+            for i = 1, #result do
+                local line = result[i]
                 if vim.startswith(line, '@@') then
-                    table.insert(hunks, M.create_hunk(line))
+                    hunks[#hunks + 1] = M.create_hunk(line)
                 else
                     if #hunks > 0 then
                         local hunk = hunks[#hunks]
-                        table.insert(hunk.diff, line)
+                        hunk.diff[#hunk.diff + 1] = line
                     end
                 end
             end
@@ -498,10 +503,10 @@ M.show = wrap(function(filename, commit_hash, callback)
             string.format('%s:%s', commit_hash, filename),
         },
         on_stdout = function(_, data, _)
-            table.insert(result, data)
+            result[#result + 1] = data
         end,
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
@@ -524,7 +529,7 @@ M.reset = wrap(function(filename, callback)
             filename,
         },
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
@@ -546,10 +551,10 @@ M.current_branch = wrap(function(callback)
             '--show-current',
         },
         on_stdout = function(_, data, _)
-            table.insert(result, data)
+            result[#result + 1] = data
         end,
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
@@ -571,10 +576,10 @@ M.ls_tracked = wrap(function(callback)
             '--full-name',
         },
         on_stdout = function(_, data, _)
-            table.insert(result, data)
+            result[#result + 1] = data
         end,
         on_stderr = function(_, data, _)
-            table.insert(err, data)
+            err[#err + 1] = data
         end,
         on_exit = function()
             if #err ~= 0 then
@@ -599,45 +604,48 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
         new_lines[key] = value
     end
     local new_lines_added = 0
-    for _, hunk in ipairs(hunks) do
+    for i = 1, #hunks do
+        local hunk = hunks[i]
         local type = hunk.type
         local diff = hunk.diff
         local start = hunk.start + new_lines_added
         local finish = hunk.finish + new_lines_added
         if type == 'add' then
-            for i = start, finish do
-                table.insert(lnum_changes, {
-                    lnum = i,
+            for j = start, finish do
+                lnum_changes[#lnum_changes + 1] = {
+                    lnum = j,
                     type = 'add'
-                })
+                }
             end
         elseif type == 'remove' then
             local s = start
-            for _, line in ipairs(diff) do
+            for j = 1, #diff do
+                local line = diff[j]
                 s = s + 1
                 new_lines_added = new_lines_added + 1
                 table.insert(new_lines, s, line:sub(2, #line))
-                table.insert(lnum_changes, {
+                lnum_changes[#lnum_changes + 1] = {
                     lnum = s,
                     type = 'remove'
-                })
+                }
             end
         elseif type == 'change' then
             local s = start
-            for _, line in ipairs(diff) do
+            for j = 1, #diff do
+                local line = diff[j]
                 local line_type = line:sub(1, 1)
                 if line_type == '-' then
                     new_lines_added = new_lines_added + 1
                     table.insert(new_lines, s, line:sub(2, #line))
-                    table.insert(lnum_changes, {
+                    lnum_changes[#lnum_changes + 1] = {
                         lnum = s,
                         type = 'remove'
-                    })
+                    }
                 elseif line_type == '+' then
-                    table.insert(lnum_changes, {
+                    lnum_changes[#lnum_changes + 1] = {
                         lnum = s,
                         type = 'add'
-                    })
+                    }
                 end
                 s = s + 1
             end
@@ -668,32 +676,34 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
     -- Operations below will potentially add more lines to both current and
     -- previous data, which means, the offset needs to be added to our hunks.
     local new_lines_added = 0
-    for _, hunk in ipairs(hunks) do
+    for i = 1, #hunks do
+        local hunk = hunks[i]
         local type = hunk.type
         local start = hunk.start + new_lines_added
         local finish = hunk.finish + new_lines_added
         local diff = hunk.diff
         if type == 'add' then
             -- Remove the line indicating that these lines were inserted in current_lines.
-            for i = start, finish do
-                previous_lines[i] = ''
-                table.insert(lnum_changes, {
-                    lnum = i,
+            for j = start, finish do
+                previous_lines[j] = ''
+                lnum_changes[#lnum_changes + 1] = {
+                    lnum = j,
                     buftype = 'current',
                     type = 'add'
-                })
+                }
             end
         elseif type == 'remove' then
-            for _, line in ipairs(diff) do
+            for j = 1, #diff do
+                local line = diff[j]
                 start = start + 1
                 new_lines_added = new_lines_added + 1
                 table.insert(current_lines, start, '')
                 table.insert(previous_lines, start, line:sub(2, #line))
-                table.insert(lnum_changes, {
+                lnum_changes[#lnum_changes + 1] = {
                     lnum = start,
                     buftype = 'previous',
                     type = 'remove'
-                })
+                }
             end
         elseif type == 'change' then
             -- Retrieve lines that have been removed and added without "-" and "+".
@@ -707,33 +717,33 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
             end
             -- Hunk finish index does not indicate the total number of lines that may have a diff.
             -- Which is why I am inserting empty lines into both the current and previous data arrays.
-            for i = finish + 1, (start + max_lines) - 1 do
+            for j = finish + 1, (start + max_lines) - 1 do
                 new_lines_added = new_lines_added + 1
-                table.insert(current_lines, i, '')
-                table.insert(previous_lines, i, '')
+                table.insert(current_lines, j, '')
+                table.insert(previous_lines, j, '')
             end
             -- With the new calculated range I simply loop over and add the removed
             -- and added lines to their corresponding arrays that contain a buffer lines.
-            for i = start, start + max_lines - 1 do
-                local recalculated_index = (i - start) + 1
+            for j = start, start + max_lines - 1 do
+                local recalculated_index = (j - start) + 1
                 local added_line = added_lines[recalculated_index]
                 local removed_line = removed_lines[recalculated_index]
                 if removed_line then
-                    table.insert(lnum_changes, {
-                        lnum = i,
+                    lnum_changes[#lnum_changes + 1] = {
+                        lnum = j,
                         buftype = 'previous',
                         type = 'remove'
-                    })
+                    }
                 end
                 if added_line then
-                    table.insert(lnum_changes, {
-                        lnum = i,
+                    lnum_changes[#lnum_changes + 1] = {
+                        lnum = j,
                         buftype = 'current',
                         type = 'add'
-                    })
+                    }
                 end
-                previous_lines[i] = removed_line or ''
-                current_lines[i] = added_line or ''
+                previous_lines[j] = removed_line or ''
+                current_lines[j] = added_line or ''
             end
         end
     end

@@ -28,11 +28,12 @@ M.project_relative_filename = function(filepath, project_files)
     for i = #filepath, 1, -1 do
         local letter = filepath:sub(i, i)
         local new_project_files = {}
-        for _, candidate in ipairs(project_files) do
+        for j = 1, #project_files do
+            local candidate = project_files[j]
             local corrected_index = #candidate - (#filepath - i)
             local candidate_letter = candidate:sub(corrected_index, corrected_index)
             if letter == candidate_letter then
-                table.insert(new_project_files, candidate)
+                new_project_files[#new_project_files + 1] = candidate
             end
         end
         project_files = new_project_files
@@ -83,7 +84,8 @@ M.write_file = function(filepath, lines)
     assert(type(filepath) == 'string', 'type error :: expected string')
     assert(vim.tbl_islist(lines), 'type error :: expected list table')
     local f = io.open(filepath, 'wb')
-    for _, l in ipairs(lines) do
+    for i = 1, #lines do
+        local l = lines[i]
         f:write(l)
         f:write('\n')
     end
