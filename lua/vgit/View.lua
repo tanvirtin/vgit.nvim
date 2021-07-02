@@ -49,7 +49,7 @@ local function create_border_lines(title, content_win_options, border)
         )
     end
     if topline then
-        table.insert(border_lines, topline)
+        border_lines[#border_lines + 1] = topline
     end
     local middle_line = string.format(
         "%s%s%s",
@@ -58,14 +58,14 @@ local function create_border_lines(title, content_win_options, border)
         border[8] or ''
     )
     for _ = 1, content_win_options.height do
-        table.insert(border_lines, middle_line)
+        border_lines[#border_lines + 1] = middle_line
     end
-    table.insert(border_lines, string.format(
+    border_lines[#border_lines + 1] = string.format(
         "%s%s%s",
         border[7] or '',
         string.rep(border[6], content_win_options.width),
         border[5] or ''
-    ))
+    )
     return border_lines
 end
 
@@ -227,7 +227,7 @@ function View:set_loading(value)
         local height = vim.api.nvim_win_get_height(self.state.win_id)
         local width = vim.api.nvim_win_get_width(self.state.win_id)
         for _ = 1, height do
-            table.insert(loading_lines, '')
+            loading_lines[#loading_lines + 1] = ''
         end
         local loading_text = t('loading')
         loading_lines[math.ceil(height / 2)] = string.rep(' ', calculate_center(loading_text, width)) .. loading_text
@@ -254,7 +254,7 @@ function View:set_error(value)
         local height = vim.api.nvim_win_get_height(self.state.win_id)
         local width = vim.api.nvim_win_get_width(self.state.win_id)
         for _ = 1, height do
-            table.insert(loading_lines, '')
+            loading_lines[#loading_lines + 1] = ''
         end
         local error_text = t('error')
         loading_lines[math.ceil(height / 2)] = string.rep(' ', calculate_center(error_text, width)) .. error_text
@@ -276,7 +276,7 @@ function View:set_centered_text(text)
     local height = vim.api.nvim_win_get_height(self.state.win_id)
     local width = vim.api.nvim_win_get_width(self.state.win_id)
     for _ = 1, height do
-        table.insert(lines, '')
+        lines[#lines + 1] = ''
     end
     lines[math.ceil(height / 2)] = string.rep(' ', calculate_center(text, width)) .. text
     self:set_win_option('cursorline', false)
@@ -346,9 +346,9 @@ function View:render()
             for _, value in pairs(border) do
                 if type(value) == 'table' then
                     value[2] = border_hl
-                    table.insert(new_border, value)
+                    new_border[#new_border + 1] = value
                 else
-                    table.insert(new_border, { value, border_hl })
+                    new_border[#new_border + 1] = { value, border_hl }
                 end
             end
             window_props.border = new_border

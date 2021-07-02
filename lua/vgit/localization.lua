@@ -37,8 +37,9 @@ M.translate = function(key, ...)
     local sep = '/'
     local key_fragments = vim.split(key, sep)
     local translation = nil
-    for index, frag in ipairs(key_fragments) do
-        if index == 1 then
+    for i = 1, #key_fragments do
+        local frag = key_fragments[i]
+        if i == 1 then
            translation = M.state:get(frag)
         else
             translation = translation[frag]
