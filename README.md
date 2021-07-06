@@ -107,6 +107,38 @@ require('vgit').setup({
     diff_preference = 'horizontal',
     diff_strategy = 'remote',
     predict_hunk_signs = true,
+    signs = {
+        VGitViewSignAdd = {
+            name = 'VGitViewSignAdd',
+            line_hl = 'VGitViewSignAdd',
+            text_hl = 'VGitViewTextAdd',
+            text = '+'
+        },
+        VGitViewSignRemove = {
+            name = 'VGitViewSignRemove',
+            line_hl = 'VGitViewSignRemove',
+            text_hl = 'VGitViewTextRemove',
+            text = '-'
+        },
+        VGitSignAdd = {
+            name = 'VGitSignAdd',
+            text_hl = 'VGitSignAdd',
+            line_hl = nil,
+            text = '│'
+        },
+        VGitSignRemove = {
+            name = 'VGitSignRemove',
+            text_hl = 'VGitSignRemove',
+            line_hl = nil,
+            text = '│'
+        },
+        VGitSignChange = {
+            name = 'VGitSignChange',
+            text_hl = 'VGitSignChange',
+            line_hl = nil,
+            text = '│'
+        },
+    },
     hls = {
         VGitBlame = {
             bg = nil,
@@ -164,7 +196,7 @@ require('vgit').setup({
             fg = '#e95678',
             bg = nil,
         },
-        VGitHistoryIndicator = {
+        VGitIndicator = {
             fg = '#a6e22e',
             bg = nil,
         },
@@ -235,23 +267,13 @@ require('vgit').setup({
             border_focus_hl = 'VGitBorderFocus'
         },
         signs = {
-            add = {
-                name = 'VGitDiffAddSign',
-                sign_hl = 'VGitDiffAddSign',
-                text_hl = 'VGitDiffAddText',
-                text = '+'
-            },
-            remove = {
-                name = 'VGitDiffRemoveSign',
-                sign_hl = 'VGitDiffRemoveSign',
-                text_hl = 'VGitDiffRemoveText',
-                text = '-'
-            },
+            add = 'VGitViewSignAdd',
+            remove = 'VGitViewSignRemove',
         },
     },
     history = {
         indicator = {
-            hl = 'VGitHistoryIndicator'
+            hl = 'VGitIndicator'
         },
         horizontal_window = {
             title = t('history/horizontal'),
@@ -285,41 +307,18 @@ require('vgit').setup({
             border_hl = 'VGitBorder',
         },
         signs = {
-            add = {
-                name = 'VGitHunkAddSign',
-                sign_hl = 'VGitHunkAddSign',
-                text_hl = 'VGitHunkAddText',
-                text = '+'
-            },
-            remove = {
-                name = 'VGitHunkRemoveSign',
-                sign_hl = 'VGitHunkRemoveSign',
-                text_hl = 'VGitHunkRemoveText',
-                text = '-'
-            },
+            add = 'VGitViewSignAdd',
+            remove = 'VGitViewSignRemove',
         },
     },
     hunk_sign = {
         priority = 10,
         signs = {
-            add = {
-                name = 'VGitSignAdd',
-                hl = 'VGitSignAdd',
-                text = '│'
-            },
-            remove = {
-                name = 'VGitSignRemove',
-                hl = 'VGitSignRemove',
-                text = '│'
-            },
-            change = {
-                name = 'VGitSignChange',
-                hl = 'VGitSignChange',
-                text = '│'
-            },
+            add = 'VGitSignAdd',
+            remove = 'VGitSignRemove',
+            change = 'VGitSignChange',
         },
     },
-    current_widget = {}
 })
 ```
 

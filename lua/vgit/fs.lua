@@ -1,3 +1,4 @@
+local assert = require('vgit.assertion').assert
 local pfiletype = require('plenary.filetype')
 
 local vim = vim
