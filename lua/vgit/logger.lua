@@ -19,6 +19,10 @@ M.error = function(msg)
     vim.api.nvim_command('echohl NONE')
 end
 
+M.info = function(msg)
+    vim.api.nvim_command(string.format('echom "%s"', vim.fn.escape(msg, '"')))
+end
+
 M.debug = function(msg, fn)
     fn = fn or 'unknown'
     if M.state:get('debug') then

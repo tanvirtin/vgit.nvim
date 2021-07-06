@@ -1,8 +1,8 @@
-local algorithms = require('vgit.algorithms')
 local git = require('vgit.git')
 local ui = require('vgit.ui')
 local fs = require('vgit.fs')
 local highlighter = require('vgit.highlighter')
+local sign = require('vgit.sign')
 local State = require('vgit.State')
 local Bstate = require('vgit.Bstate')
 local buffer = require('vgit.buffer')
@@ -22,6 +22,7 @@ local bstate = Bstate.new()
 local state = State.new({
     config = {},
     tracked_files = {},
+    changed_files = {},
     disabled = false,
     instantiated = false,
     hunks_enabled = true,
@@ -46,8 +47,19 @@ local function detach_blames_autocmd(buf)
     vim.cmd(string.format('aug tanvirtin/vgit/%s | au! | aug END', buf))
 end
 
-local predict_hunk_signs = void(function(buf)
-    local max_lines_limit = 500
+local generate_hunk_signs = void(function(buf)
+    if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
+        return
+    end
+    if not state:get('hunks_enabled') then
+        scheduler()
+        return
+    end
+    local max_lines_limit = 10000
+    if vim.api.nvim_buf_line_count(buf) > max_lines_limit then
+        scheduler()
+        return
+    end
     local project_relative_filename = bstate:get(buf, 'project_relative_filename')
     local show_err, original_lines
     if state:get('diff_strategy') == 'remote' then
@@ -56,41 +68,38 @@ local predict_hunk_signs = void(function(buf)
         show_err, original_lines = git.show(project_relative_filename, '')
     end
     scheduler()
+    if show_err then
+        local err = show_err[1]
+        if vim.startswith(err, string.format("fatal: path '%s' exists on disk", project_relative_filename)) then
+            original_lines = {}
+            show_err = nil
+        end
+    end
     if not show_err then
         local current_lines = buffer.get_lines(buf)
         bstate:set(buf, 'temp_lines', current_lines)
-        if #original_lines < max_lines_limit and #current_lines < max_lines_limit then
-            scheduler()
-            local hunks = algorithms.hunks(original_lines, current_lines)
-            scheduler()
+        local temp_filename_b = fs.tmpname()
+        local temp_filename_a = fs.tmpname()
+        fs.write_file(temp_filename_a, original_lines)
+        scheduler()
+        fs.write_file(temp_filename_b, current_lines)
+        scheduler()
+        local hunks_err, hunks = git.file_hunks(temp_filename_a, temp_filename_b)
+        scheduler()
+        if not hunks_err then
             bstate:set(buf, 'hunks', hunks)
             ui.hide_hunk_signs(buf)
             ui.show_hunk_signs(buf, hunks)
             scheduler()
         else
-            local temp_filename_b = fs.tmpname()
-            local temp_filename_a = fs.tmpname()
-            fs.write_file(temp_filename_a, original_lines)
-            scheduler()
-            fs.write_file(temp_filename_b, current_lines)
-            scheduler()
-            local hunks_err, hunks = git.file_hunks(temp_filename_a, temp_filename_b)
-            scheduler()
-            if not hunks_err then
-                bstate:set(buf, 'hunks', hunks)
-                ui.hide_hunk_signs(buf)
-                ui.show_hunk_signs(buf, hunks)
-                scheduler()
-            else
-                logger.debug(hunks_err, 'init.lua/predict_hunk_signs')
-            end
-            fs.remove_file(temp_filename_a)
-            scheduler()
-            fs.remove_file(temp_filename_b)
-            scheduler()
+            logger.debug(hunks_err, 'init.lua/generate_hunk_signs')
         end
+        fs.remove_file(temp_filename_a)
+        scheduler()
+        fs.remove_file(temp_filename_b)
+        scheduler()
     else
-        logger.debug(show_err, 'init.lua/predict_hunk_signs')
+        logger.debug(show_err, 'init.lua/generate_hunk_signs')
     end
 end)
 
@@ -136,7 +145,7 @@ M._buf_attach = void(function(buf)
                                 if p_lnum == n_lnum and byte_count == 0 then
                                     return
                                 end
-                                predict_hunk_signs(cbuf)
+                                generate_hunk_signs(cbuf)
                             end
                         end), state:get('predict_hunk_throttle_ms')),
                         on_detach = function(_, cbuf)
@@ -468,11 +477,7 @@ M.hunk_reset = throttle_leading(function(buf, win)
             local finish = selected_hunk.finish
             if start and finish then
                 if selected_hunk.type == 'remove' then
-                    if start == 1 then
-                        vim.api.nvim_buf_set_lines(buf, start - 1, finish - 1, false, replaced_lines)
-                    else
-                        vim.api.nvim_buf_set_lines(buf, start, finish, false, replaced_lines)
-                    end
+                    vim.api.nvim_buf_set_lines(buf, start, finish, false, replaced_lines)
                 else
                     vim.api.nvim_buf_set_lines(buf, start - 1, finish, false, replaced_lines)
                 end
@@ -492,20 +497,14 @@ end, state:get('action_throttle_ms'))
 
 M.hunks_quickfix_list = throttle_leading(void(function()
     if not state:get('disabled') then
-        if not state:get('are_files_tracked') then
-            local tracked_files_err, tracked_files = git.ls_tracked()
-            scheduler()
-            if not tracked_files_err then
-                state:set('tracked_files', tracked_files)
-                state:set('are_files_tracked', true)
-            else
-                logger.debug(tracked_files_err, 'init.lua/hunks_quickfix_list')
-            end
-        end
         local qf_entries = {}
-        local filenames = state:get('tracked_files')
+        local changed_files_err, filenames = git.ls_changed()
+        if changed_files_err then
+            return logger.debug(changed_files_err, 'init.lua/hunks_quickfix_list')
+        end
+        state:set('changed_files', filenames)
         for i = 1, #filenames do
-            local filename = filenames[i]
+            local filename = filenames[i].filename
             local calculate_hunks = (state:get('diff_strategy') == 'remote' and git.remote_hunks) or git.index_hunks
             local hunks_err, hunks = calculate_hunks(filename)
             scheduler()
@@ -811,6 +810,8 @@ M.set_diff_preference = throttle_leading(void(function(preference)
             vertical_preview = M.buffer_preview,
             horizontal_history = M.buffer_history,
             vertical_history = M.buffer_history,
+            vertical_diff = M.diff,
+            horizontal_diff = M.diff,
         }
         local widget_name = widget:get_name()
         local fn = view_fn_map[widget_name]
@@ -875,6 +876,7 @@ M.setup = function(config)
     end
     state:assign(config)
     highlighter.setup(config)
+    sign.setup(config)
     logger.setup(config)
     git.setup(config)
     ui.setup(config)
