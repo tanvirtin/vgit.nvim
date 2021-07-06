@@ -77,7 +77,7 @@ M.read_file = function(filepath)
     if not vim.loop.fs_close(fd) then
         return { 'Failed to close file' }, nil
     end
-    return nil, vim.split(data, '\n')
+    return nil, vim.split(data, '[\r]?\n')
 end
 
 M.write_file = function(filepath, lines)
