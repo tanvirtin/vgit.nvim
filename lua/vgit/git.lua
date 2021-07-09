@@ -3,7 +3,6 @@ local State = require('vgit.State')
 local a = require('plenary.async')
 local void = a.void
 local wrap = a.wrap
-local scheduler = a.util.scheduler
 
 local vim = vim
 local unpack = unpack
@@ -185,7 +184,6 @@ end
 M.setup = void(function(config)
     M.state:assign(config)
     local err, git_config = M.config()
-    scheduler()
     if not err then
         M.state:set('config', git_config)
     end
