@@ -866,7 +866,7 @@ M.show_debug_logs = function()
     end
 end
 
-M.setup = void(function(config)
+M.setup = function(config)
     if state:get('instantiated') then
         logger.debug('plugin has already been instantiated', 'init.lua/setup')
         return
@@ -877,7 +877,6 @@ M.setup = void(function(config)
     highlighter.setup(config)
     logger.setup(config)
     git.setup(config)
-    scheduler()
     ui.setup(config)
     vim.cmd('aug tanvirtin/vgit | autocmd! | aug END')
     vim.cmd('au tanvirtin/vgit BufWinEnter * lua require("vgit")._buf_attach()')
@@ -887,6 +886,6 @@ M.setup = void(function(config)
         '-complete=customlist,v:lua.package.loaded.vgit._command_autocompletes',
         'VGit lua require("vgit")._run_command(<f-args>)'
     ))
-end)
+end
 
 return M
