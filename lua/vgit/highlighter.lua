@@ -10,45 +10,21 @@ M.state = State.new({
             bg = nil,
             fg = '#b1b1b1',
         },
-        VGitDiffAddSign = {
+        VGitViewSignAdd = {
             bg = '#3d5213',
             fg = nil,
         },
-        VGitDiffRemoveSign = {
+        VGitViewSignRemove = {
             bg = '#4a0f23',
             fg = nil,
         },
-        VGitDiffAddText = {
+        VGitViewTextAdd = {
             fg = '#6a8f1f',
             bg = '#3d5213',
         },
-        VGitDiffRemoveText = {
+        VGitViewTextRemove = {
             fg = '#a3214c',
             bg = '#4a0f23',
-        },
-        VGitHunkAddSign = {
-            bg = '#3d5213',
-            fg = nil,
-        },
-        VGitHunkRemoveSign = {
-            bg = '#4a0f23',
-            fg = nil,
-        },
-        VGitHunkAddText = {
-            fg = '#6a8f1f',
-            bg = '#3d5213',
-        },
-        VGitHunkRemoveText = {
-            fg = '#a3214c',
-            bg = '#4a0f23',
-        },
-        VGitHunkSignAdd = {
-            fg = '#d7ffaf',
-            bg = '#4a6317',
-        },
-        VGitHunkSignRemove = {
-            fg = '#e95678',
-            bg = '#63132f',
         },
         VGitSignAdd = {
             fg = '#d7ffaf',
@@ -62,7 +38,7 @@ M.state = State.new({
             fg = '#e95678',
             bg = nil,
         },
-        VGitHistoryIndicator = {
+        VGitIndicator = {
             fg = '#a6e22e',
             bg = nil,
         },
@@ -79,6 +55,9 @@ M.state = State.new({
 
 M.setup = function(config)
     M.state:assign(config)
+    for hl, color in pairs(M.state.current.hls) do
+        M.create(hl, color)
+    end
 end
 
 M.create = function(group, color)
@@ -87,15 +66,6 @@ M.create = function(group, color)
     local bg = color.bg and 'guibg = ' .. color.bg or 'guibg = NONE'
     local sp = color.sp and 'guisp = ' .. color.sp or ''
     vim.cmd('highlight ' .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp)
-end
-
-M.define = function(hl)
-    local color = M.state:get('hls')[hl]
-    if color then
-        M.create(hl, color)
-        return true
-    end
-    return false
 end
 
 return M

@@ -49,6 +49,10 @@ M.set_lines = function(buf, lines, start, finish)
     end
 end
 
+M.set_option = function(buf, key, value)
+    vim.api.nvim_buf_set_option(buf, key, value)
+end
+
 M.assign_options = function(buf, options)
     for key, value in pairs(options) do
         vim.api.nvim_buf_set_option(buf, key, value)

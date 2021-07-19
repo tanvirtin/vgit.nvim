@@ -1,3 +1,4 @@
+local assert = require('vgit.assertion').assert
 local State = {}
 State.__index = State
 
