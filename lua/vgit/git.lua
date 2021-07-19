@@ -589,6 +589,37 @@ M.ls_tracked = wrap(function(callback)
     job:start()
 end, 1)
 
+M.ls_changed = wrap(function(callback)
+    local err = {}
+    local result = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'status',
+            '-u',
+            '-s',
+            '--',
+            '.',
+        },
+        on_stdout = function(_, data, _)
+            result[#result + 1] = {
+                filename = data:sub(4, #data),
+                status = data:sub(1, 2)
+            }
+        end,
+        on_stderr = function(_, data, _)
+            err[#err + 1] = data
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, result)
+            end
+            callback(nil, result)
+        end,
+    })
+    job:start()
+end, 1)
+
 M.horizontal_diff = wrap(function(lines, hunks, callback)
     if #hunks == 0 then
         return callback(nil, {

@@ -38,25 +38,4 @@ describe('highlighter:', function()
         end)
     end)
 
-
-    describe('define', function()
-
-        it('should not define a highlight if it does not exist in state hls', function()
-            local hl = 'VGitTestHighlight2'
-            local result = highlighter.define(hl)
-            assert.has_error(function()
-                vim.cmd(string.format('hi %s', hl))
-            end)
-            eq(result, false)
-        end)
-
-         it('should successfully define a highlight group since it exists in the state hls', function()
-            local hl = 'VGitBlame'
-            local result = highlighter.define(hl)
-            eq(result, true)
-            vim.cmd(string.format('hi %s', hl))
-        end)
-
-    end)
-
 end)

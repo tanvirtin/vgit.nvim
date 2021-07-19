@@ -1,6 +1,5 @@
 local State = require('vgit.State')
 local buffer = require('vgit.buffer')
-local highlighter = require('vgit.highlighter')
 local localization = require('vgit.localization')
 local View = require('vgit.View')
 local Widget = require('vgit.Widget')
@@ -20,6 +19,7 @@ local M = {}
 M.constants = {
     hunk_signs_group = 'tanvirtin/vgit.nvim/hunk/signs',
     history_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/history'),
+    diff_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/diff'),
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
     blame_line_id = 1,
 }
@@ -83,23 +83,13 @@ M.state = State.new({
             border_focus_hl = 'VGitBorderFocus'
         },
         signs = {
-            add = {
-                name = 'VGitDiffAddSign',
-                sign_hl = 'VGitDiffAddSign',
-                text_hl = 'VGitDiffAddText',
-                text = '+'
-            },
-            remove = {
-                name = 'VGitDiffRemoveSign',
-                sign_hl = 'VGitDiffRemoveSign',
-                text_hl = 'VGitDiffRemoveText',
-                text = '-'
-            },
+            add = 'VGitViewSignAdd',
+            remove = 'VGitViewSignRemove',
         },
     },
     history = {
         indicator = {
-            hl = 'VGitHistoryIndicator'
+            hl = 'VGitIndicator'
         },
         horizontal_window = {
             title = t('history/horizontal'),
@@ -133,38 +123,16 @@ M.state = State.new({
             border_hl = 'VGitBorder',
         },
         signs = {
-            add = {
-                name = 'VGitHunkAddSign',
-                sign_hl = 'VGitHunkAddSign',
-                text_hl = 'VGitHunkAddText',
-                text = '+'
-            },
-            remove = {
-                name = 'VGitHunkRemoveSign',
-                sign_hl = 'VGitHunkRemoveSign',
-                text_hl = 'VGitHunkRemoveText',
-                text = '-'
-            },
+            add = 'VGitViewSignAdd',
+            remove = 'VGitViewSignRemove',
         },
     },
     hunk_sign = {
         priority = 10,
         signs = {
-            add = {
-                name = 'VGitSignAdd',
-                hl = 'VGitSignAdd',
-                text = '│'
-            },
-            remove = {
-                name = 'VGitSignRemove',
-                hl = 'VGitSignRemove',
-                text = '│'
-            },
-            change = {
-                name = 'VGitSignChange',
-                hl = 'VGitSignChange',
-                text = '│'
-            },
+            add = 'VGitSignAdd',
+            remove = 'VGitSignRemove',
+            change = 'VGitSignChange',
         },
     },
     current_widget = {}
@@ -176,11 +144,7 @@ M.close_windows = function(wins)
     for i = 1, #wins do
         local win = wins[i]
         if vim.api.nvim_win_is_valid(win) and vim.tbl_contains(existing_wins, win) then
-            local buf = vim.api.nvim_win_get_buf(win)
             pcall(vim.api.nvim_win_close, win, true)
-            if buffer.is_valid(buf) then
-                pcall(vim.api.nvim_buf_delete, buf)
-            end
         end
     end
 end
@@ -189,61 +153,8 @@ M.get_current_widget = function()
     return M.state:get('current_widget')
 end
 
-M.apply_highlights = function()
-    for _, type in pairs(M.state:get('hunk_sign').signs) do
-        highlighter.define(type.hl)
-        vim.fn.sign_define(type.name, {
-            text = type.text,
-            texthl = type.hl
-        })
-    end
-    for _, action in pairs(M.state:get('hunk').signs) do
-        local sign_hl = action.sign_hl
-        local text_hl = action.text_hl
-        highlighter.define(sign_hl)
-        highlighter.define(text_hl)
-        vim.fn.sign_define(action.name, {
-            text = action.text,
-            texthl = text_hl,
-            linehl = sign_hl,
-        })
-    end
-    for _, action in pairs(M.state:get('preview').signs) do
-        local name = action.name
-        local text = action.text
-        local sign_hl = action.sign_hl
-        local text_hl = action.text_hl
-        highlighter.define(sign_hl)
-        highlighter.define(text_hl)
-        vim.fn.sign_define(name, {
-            text = text,
-            texthl = text_hl,
-            linehl = sign_hl,
-        })
-    end
-    highlighter.define(M.state:get('blame').hl)
-    highlighter.define(M.state:get('blame').window.border_hl)
-    highlighter.define(M.state:get('preview').horizontal_window.border_hl)
-    highlighter.define(M.state:get('preview').current_window.border_hl)
-    highlighter.define(M.state:get('preview').previous_window.border_hl)
-    highlighter.define(M.state:get('preview').horizontal_window.border_focus_hl)
-    highlighter.define(M.state:get('preview').current_window.border_focus_hl)
-    highlighter.define(M.state:get('preview').previous_window.border_focus_hl)
-    highlighter.define(M.state:get('history').indicator.hl)
-    highlighter.define(M.state:get('history').horizontal_window.border_hl)
-    highlighter.define(M.state:get('history').previous_window.border_hl)
-    highlighter.define(M.state:get('history').current_window.border_hl)
-    highlighter.define(M.state:get('history').history_window.border_hl)
-    highlighter.define(M.state:get('history').horizontal_window.border_focus_hl)
-    highlighter.define(M.state:get('history').previous_window.border_focus_hl)
-    highlighter.define(M.state:get('history').current_window.border_focus_hl)
-    highlighter.define(M.state:get('history').history_window.border_focus_hl)
-    highlighter.define(M.state:get('hunk').window.border_hl)
-end
-
 M.setup = function(config)
     M.state:assign(config)
-    M.apply_highlights()
 end
 
 M.show_blame_line = function(buf, blame, lnum, git_config)
@@ -302,13 +213,9 @@ M.show_blame = void(function(fetch)
         if not blame.committed then
             commit_message = 'Uncommitted changes'
             local new_lines = {
-                '',
                 string.format('%sLine #%s', '  ', blame.lnum),
-                '',
                 string.format('%s%s', '  ', commit_message),
-                '',
                 string.format('%s%s -> %s', '  ', blame.parent_hash, blame.commit_hash),
-                '',
             }
             view:set_lines(new_lines)
             view:set_height(#new_lines)
@@ -318,26 +225,11 @@ M.show_blame = void(function(fetch)
             commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
         end
         local new_lines = {
-            '',
             string.format('%sLine #%s', '  ', blame.lnum),
-            '',
-            string.format(
-                '%s%s',
-                '  ',
-                string.format('%s (%s)', blame.author, blame.author_mail)
-            ),
-            '',
-            string.format(
-                '%s%s (%s)',
-                '  ',
-                time_format,
-                os.date('%c', blame.author_time)
-            ),
-            '',
+            string.format('  %s (%s)', blame.author, blame.author_mail),
+            string.format('  %s (%s)', time_format, os.date('%c', blame.author_time)),
             string.format('%s%s', '  ', commit_message),
-            '',
             string.format('%s%s -> %s', '  ', blame.parent_hash, blame.commit_hash),
-            '',
         }
         view:set_lines(new_lines)
         view:set_height(#new_lines)
@@ -350,29 +242,38 @@ M.hide_blame = function(buf)
     end
 end
 
-M.show_hunk_signs = function(buf, hunks)
+M.show_hunk_signs = void(function(buf, hunks)
     if buffer.is_valid(buf) then
         local hunk_signs_group = string.format('%s/%s', M.constants.hunk_signs_group, buf)
         for i = 1, #hunks do
             local hunk = hunks[i]
             for j = hunk.start, hunk.finish do
                 local lnum = (hunk.type == 'remove' and j == 0) and 1 or j
-                vim.fn.sign_place(lnum, hunk_signs_group, M.state:get('hunk_sign').signs[hunk.type].hl, buf, {
-                    id = lnum,
-                    lnum = lnum,
-                    priority = M.state:get('hunk_sign').priority,
-                })
+                vim.fn.sign_place(
+                    lnum,
+                    hunk_signs_group,
+                    M.state:get('hunk_sign').signs[hunk.type],
+                    buf,
+                    {
+                        id = lnum,
+                        lnum = lnum,
+                        priority = M.state:get('hunk_sign').priority,
+                    }
+                )
+                scheduler()
             end
+            scheduler()
         end
     end
-end
+end)
 
-M.hide_hunk_signs = function(buf)
+M.hide_hunk_signs = void(function(buf)
     if buffer.is_valid(buf) then
         local hunk_signs_group = string.format('%s/%s', M.constants.hunk_signs_group, buf)
         vim.fn.sign_unplace(hunk_signs_group)
+        scheduler()
     end
-end
+end)
 
 M.show_hunk = function(hunk, filetype)
     local lines = hunk.diff
@@ -411,7 +312,7 @@ M.show_hunk = function(hunk, filetype)
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
-            M.state:get('hunk').signs['add'].sign_hl,
+            M.state:get('hunk').signs['add'],
             view:get_buf(),
             {
                 lnum = lnum,
@@ -424,7 +325,7 @@ M.show_hunk = function(hunk, filetype)
         vim.fn.sign_place(
             lnum,
             M.constants.hunk_signs_group,
-            M.state:get('hunk').signs['remove'].sign_hl,
+            M.state:get('hunk').signs['remove'],
             view:get_buf(),
             {
                 lnum = lnum,
@@ -473,14 +374,14 @@ M.show_horizontal_preview = void(function(fetch, filetype)
         for i = 1, #data.lnum_changes do
             local datum = data.lnum_changes[i]
             vim.fn.sign_place(
-            datum.lnum,
-            signs_group,
-            M.state:get('preview').signs[datum.type].sign_hl,
-            views.preview:get_buf(),
-            {
-                lnum = datum.lnum,
-                priority = M.state:get('preview').priority,
-            }
+                datum.lnum,
+                signs_group,
+                M.state:get('preview').signs[datum.type],
+                views.preview:get_buf(),
+                {
+                    lnum = datum.lnum,
+                    priority = M.state:get('preview').priority,
+                }
             )
         end
     else
@@ -554,7 +455,7 @@ M.show_vertical_preview = void(function(fetch, filetype)
             vim.fn.sign_place(
                 datum.lnum,
                 signs_group,
-                M.state:get('preview').signs[datum.type].sign_hl,
+                M.state:get('preview').signs[datum.type],
                 (views[datum.buftype]):get_buf(),
                 {
                     lnum = datum.lnum,
@@ -566,115 +467,6 @@ M.show_vertical_preview = void(function(fetch, filetype)
         widget:set_error(true)
         scheduler()
     end
-end)
-
-M.change_horizontal_history = void(function(fetch, selected_log)
-    local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
-    local widget = M.state:get('current_widget')
-    local views = widget:get_views()
-    vim.fn.sign_unplace(signs_group)
-    views.preview:set_loading(true)
-    local err, data = fetch()
-    scheduler()
-    views.preview:set_loading(false)
-    scheduler()
-    if err then
-        views.preview:set_error(true)
-        scheduler()
-        return
-    end
-    vim.api.nvim_win_set_cursor(views.preview:get_win_id(), { 1, 0 })
-    vim.fn.sign_unplace(M.constants.hunk_signs_group)
-    for i = 1, #data.lnum_changes do
-        local datum = data.lnum_changes[i]
-        local view = views.preview
-        vim.fn.sign_place(
-            datum.lnum,
-            signs_group,
-            M.state:get('preview').signs[datum.type].sign_hl,
-            view:get_buf(),
-            {
-                lnum = datum.lnum,
-                priority = M.state:get('preview').priority,
-            }
-        )
-    end
-    local history_lines = views.history:get_lines()
-    for i = 1, #history_lines do
-        local line = history_lines[i]
-        if i == selected_log then
-            history_lines[i] = string.format('>%s', line:sub(2, #line))
-        else
-            history_lines[i] = string.format(' %s', line:sub(2, #line))
-        end
-    end
-    views.history:set_lines(history_lines)
-    views.preview:set_lines(data.lines)
-    local lnum = selected_log - 1
-    vim.highlight.range(
-        views.history:get_buf(),
-        M.constants.history_namespace,
-        M.state:get('history').indicator.hl,
-        { lnum, 0 },
-        { lnum, 1 }
-    )
-end)
-
-M.change_vertical_history = void(function(fetch, selected_log)
-    local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
-    local widget = M.state:get('current_widget')
-    local views = widget:get_views()
-    vim.fn.sign_unplace(signs_group)
-    views.previous:set_loading(true)
-    views.current:set_loading(true)
-    local err, data = fetch()
-    scheduler()
-    views.previous:set_loading(false)
-    views.current:set_loading(false)
-    scheduler()
-    if err then
-        views.previous:set_error(true)
-        views.current:set_error(true)
-        scheduler()
-        return
-    end
-    vim.api.nvim_win_set_cursor(views.previous:get_win_id(), { 1, 0 })
-    vim.api.nvim_win_set_cursor(views.current:get_win_id(), { 1, 0 })
-    vim.fn.sign_unplace(M.constants.hunk_signs_group)
-    for i = 1, #data.lnum_changes do
-        local datum = data.lnum_changes[i]
-        local view = views[datum.buftype]
-        vim.fn.sign_place(
-            datum.lnum,
-            signs_group,
-            M.state:get('preview').signs[datum.type].sign_hl,
-            view:get_buf(),
-            {
-                lnum = datum.lnum,
-                priority = M.state:get('preview').priority,
-            }
-        )
-    end
-    local history_lines = views.history:get_lines()
-    for i = 1, #history_lines do
-        local line = history_lines[i]
-        if i == selected_log then
-            history_lines[i] = string.format('>%s', line:sub(2, #line))
-        else
-            history_lines[i] = string.format(' %s', line:sub(2, #line))
-        end
-    end
-    views.history:set_lines(history_lines)
-    views.current:set_lines(data.current_lines)
-    views.previous:set_lines(data.previous_lines)
-    local lnum = selected_log - 1
-    vim.highlight.range(
-        views.history:get_buf(),
-        M.constants.history_namespace,
-        M.state:get('history').indicator.hl,
-        { lnum, 0 },
-        { lnum, 1 }
-    )
 end)
 
 M.show_horizontal_history = void(function(fetch, filetype)
@@ -801,7 +593,7 @@ M.show_horizontal_history = void(function(fetch, filetype)
         vim.fn.sign_place(
             datum.lnum,
             signs_group,
-            M.state:get('preview').signs[datum.type].sign_hl,
+            M.state:get('preview').signs[datum.type],
             view:get_buf(),
             {
                 lnum = datum.lnum,
@@ -813,7 +605,8 @@ M.show_horizontal_history = void(function(fetch, filetype)
         views.history:get_buf(),
         M.constants.history_namespace,
         M.state:get('history').indicator.hl,
-        { 0, 0 }, { 0, 1 }
+        { 0, 0 },
+        { 0, 1 }
     )
 end)
 
@@ -972,7 +765,7 @@ M.show_vertical_history = void(function(fetch, filetype)
         vim.fn.sign_place(
             datum.lnum,
             signs_group,
-            M.state:get('preview').signs[datum.type].sign_hl,
+            M.state:get('preview').signs[datum.type],
             view:get_buf(),
             {
                 lnum = datum.lnum,
@@ -984,7 +777,119 @@ M.show_vertical_history = void(function(fetch, filetype)
         views.history:get_buf(),
         M.constants.history_namespace,
         M.state:get('history').indicator.hl,
-        { 0, 0 }, { 0, 1 }
+        { 0, 0 },
+        { 0, 1 }
+    )
+end)
+
+M.change_horizontal_history = void(function(fetch, selected_log)
+    local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
+    local widget = M.state:get('current_widget')
+    local views = widget:get_views()
+    vim.fn.sign_unplace(signs_group)
+    views.preview:set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    views.preview:set_loading(false)
+    scheduler()
+    if err then
+        views.preview:set_error(true)
+        scheduler()
+        return
+    end
+    vim.api.nvim_win_set_cursor(views.preview:get_win_id(), { 1, 0 })
+    vim.fn.sign_unplace(M.constants.hunk_signs_group)
+    for i = 1, #data.lnum_changes do
+        local datum = data.lnum_changes[i]
+        local view = views.preview
+        vim.fn.sign_place(
+            datum.lnum,
+            signs_group,
+            M.state:get('preview').signs[datum.type],
+            view:get_buf(),
+            {
+                lnum = datum.lnum,
+                priority = M.state:get('preview').priority,
+            }
+        )
+    end
+    local history_lines = views.history:get_lines()
+    for i = 1, #history_lines do
+        local line = history_lines[i]
+        if i == selected_log then
+            history_lines[i] = string.format('>%s', line:sub(2, #line))
+        else
+            history_lines[i] = string.format(' %s', line:sub(2, #line))
+        end
+    end
+    views.history:set_lines(history_lines)
+    views.preview:set_lines(data.lines)
+    local lnum = selected_log - 1
+    vim.highlight.range(
+        views.history:get_buf(),
+        M.constants.history_namespace,
+        M.state:get('history').indicator.hl,
+        { lnum, 0 },
+        { lnum, 1 }
+    )
+end)
+
+M.change_vertical_history = void(function(fetch, selected_log)
+    local signs_group = string.format('%s/history', M.constants.hunk_signs_group)
+    local widget = M.state:get('current_widget')
+    local views = widget:get_views()
+    vim.fn.sign_unplace(signs_group)
+    views.previous:set_loading(true)
+    views.current:set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    views.previous:set_loading(false)
+    views.current:set_loading(false)
+    scheduler()
+    if err then
+        views.previous:set_error(true)
+        views.current:set_error(true)
+        scheduler()
+        return
+    end
+    vim.api.nvim_win_set_cursor(views.previous:get_win_id(), { 1, 0 })
+    vim.api.nvim_win_set_cursor(views.current:get_win_id(), { 1, 0 })
+    vim.fn.sign_unplace(M.constants.hunk_signs_group)
+    for i = 1, #data.lnum_changes do
+        local datum = data.lnum_changes[i]
+        local view = views[datum.buftype]
+        vim.fn.sign_place(
+            datum.lnum,
+            signs_group,
+            M.state:get('preview').signs[datum.type],
+            view:get_buf(),
+            {
+                lnum = datum.lnum,
+                priority = M.state:get('preview').priority,
+            }
+        )
+    end
+    local history_lines = views.history:get_lines()
+    for i = 1, #history_lines do
+        local line = history_lines[i]
+        if i == selected_log then
+            history_lines[i] = string.format('>%s', line:sub(2, #line))
+        else
+            history_lines[i] = string.format(' %s', line:sub(2, #line))
+        end
+    end
+    views.history:set_lines(history_lines)
+    views.current:set_lines(data.current_lines)
+    views.previous:set_lines(data.previous_lines)
+    local lnum = selected_log - 1
+    vim.highlight.range(
+        views.history:get_buf(),
+        M.constants.history_namespace,
+        M.state:get('history').indicator.hl,
+        { lnum, 0 },
+        { lnum, 1 }
     )
 end)
 

@@ -1,3 +1,4 @@
+local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 
 local vim = vim
