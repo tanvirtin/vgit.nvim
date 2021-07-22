@@ -2,6 +2,10 @@ local State = require('vgit.State')
 
 local M = {}
 
+M.constants = {
+    ns = 'tanvirtin/vgit.nvim/hunk/signs',
+}
+
 M.state = State.new({
     signs = {
         VGitViewSignAdd = {
@@ -50,6 +54,37 @@ M.define = function(config)
         texthl = config.text_hl,
         linehl = config.line_hl,
     })
+end
+
+M.place = function(buf, lnum, type, priority)
+    vim.fn.sign_place(
+        lnum,
+        string.format('%s/%s', M.constants.ns, buf),
+        type,
+        buf,
+        {
+            id = lnum,
+            lnum = lnum,
+            priority = priority,
+        }
+    )
+end
+
+M.unplace = function(buf)
+    vim.fn.sign_unplace(string.format('%s/%s', M.constants.ns, buf))
+end
+
+M.get = function(buf, lnum)
+    local signs = vim.fn.sign_getplaced(buf, {
+        group = string.format('%s/%s', M.constants.ns, buf),
+        id = lnum
+    })[1].signs
+    local result = {}
+    for i = 1, #signs do
+        local sign = signs[i]
+        result[i] = sign.name
+    end
+    return result
 end
 
 return M
