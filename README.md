@@ -99,6 +99,8 @@ require('vgit').setup()
 
 ## Configure your own settings
 By default these are the default settings provided by the app, you can change them to your liking.
+NOTE: You cannot change the key of any of the configurations listed below, only the values.
+
 ```lua
 require('vgit').setup({
     debug = false,
