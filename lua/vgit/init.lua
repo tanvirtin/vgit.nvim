@@ -47,8 +47,31 @@ local function detach_blames_autocmd(buf)
     vim.cmd(string.format('aug tanvirtin/vgit/%s | au! | aug END', buf))
 end
 
+local ext_hunk_generation = void(function(buf, original_lines, current_lines)
+        local temp_filename_b = fs.tmpname()
+        local temp_filename_a = fs.tmpname()
+        fs.write_file(temp_filename_a, original_lines)
+        scheduler()
+        fs.write_file(temp_filename_b, current_lines)
+        scheduler()
+        local hunks_err, hunks = git.file_hunks(temp_filename_a, temp_filename_b)
+        scheduler()
+        if not hunks_err then
+            bstate:set(buf, 'hunks', hunks)
+            ui.hide_hunk_signs(buf)
+            ui.show_hunk_signs(buf, hunks)
+        else
+            logger.debug(hunks_err, 'init.lua/generate_hunk_signs')
+        end
+        fs.remove_file(temp_filename_a)
+        scheduler()
+        fs.remove_file(temp_filename_b)
+        scheduler()
+end)
+
 local generate_hunk_signs = void(function(buf)
     if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
+        scheduler()
         return
     end
     if not state:get('hunks_enabled') then
@@ -78,26 +101,7 @@ local generate_hunk_signs = void(function(buf)
     if not show_err then
         local current_lines = buffer.get_lines(buf)
         bstate:set(buf, 'temp_lines', current_lines)
-        local temp_filename_b = fs.tmpname()
-        local temp_filename_a = fs.tmpname()
-        fs.write_file(temp_filename_a, original_lines)
-        scheduler()
-        fs.write_file(temp_filename_b, current_lines)
-        scheduler()
-        local hunks_err, hunks = git.file_hunks(temp_filename_a, temp_filename_b)
-        scheduler()
-        if not hunks_err then
-            bstate:set(buf, 'hunks', hunks)
-            ui.hide_hunk_signs(buf)
-            ui.show_hunk_signs(buf, hunks)
-            scheduler()
-        else
-            logger.debug(hunks_err, 'init.lua/generate_hunk_signs')
-        end
-        fs.remove_file(temp_filename_a)
-        scheduler()
-        fs.remove_file(temp_filename_b)
-        scheduler()
+        ext_hunk_generation(buf, original_lines, current_lines)
     else
         logger.debug(show_err, 'init.lua/generate_hunk_signs')
     end
@@ -141,12 +145,10 @@ M._buf_attach = void(function(buf)
                     end
                     vim.api.nvim_buf_attach(buf, false, {
                         on_lines = throttle_leading(void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
-                            if state:get('predict_hunk_signs') then
-                                if p_lnum == n_lnum and byte_count == 0 then
-                                    return
-                                end
-                                generate_hunk_signs(cbuf)
+                            if not state:get('predict_hunk_signs') or (p_lnum == n_lnum and byte_count == 0) then
+                                return
                             end
+                            generate_hunk_signs(cbuf)
                         end), state:get('predict_hunk_throttle_ms')),
                         on_detach = function(_, cbuf)
                             if buffer.is_valid(cbuf) and bstate:contains(cbuf) then
