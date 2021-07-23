@@ -254,19 +254,19 @@ require('vgit').setup({
     preview = {
         priority = 10,
         horizontal_window = {
-            title = t('preview/horizontal'),
+            title = 'Preview',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
             border_focus_hl = 'VGitBorderFocus'
         },
         current_window = {
-            title = t('preview/current'),
+            title = 'Current',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
             border_focus_hl = 'VGitBorderFocus'
         },
         previous_window = {
-            title = t('preview/previous'),
+            title = 'Previous',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
             border_focus_hl = 'VGitBorderFocus'
@@ -281,25 +281,25 @@ require('vgit').setup({
             hl = 'VGitIndicator'
         },
         horizontal_window = {
-            title = t('history/horizontal'),
+            title = 'Preview',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
             border_focus_hl = 'VGitBorderFocus'
         },
         current_window = {
-            title = t('history/current'),
+            title = 'Current',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
             border_focus_hl = 'VGitBorderFocus'
         },
         previous_window = {
-            title = t('history/previous'),
+            title = 'Previous',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
             border_focus_hl = 'VGitBorderFocus'
         },
         history_window = {
-            title = t('history/history'),
+            title = 'Git History',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
             border_focus_hl = 'VGitBorderFocus'
