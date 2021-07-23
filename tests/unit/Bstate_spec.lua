@@ -17,6 +17,7 @@ describe('Bstate:', function()
         logs = {},
         temp_lines = {},
         last_lnum_blamed = 1,
+        last_byte_count = 0,
     }
 
     describe('new', function()
