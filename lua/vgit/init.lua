@@ -7,6 +7,7 @@ local State = require('vgit.State')
 local Bstate = require('vgit.Bstate')
 local buffer = require('vgit.buffer')
 local throttle_leading = require('vgit.defer').throttle_leading
+local debounce_trailing = require('vgit.defer').debounce_trailing
 local logger = require('vgit.logger')
 local t = require('vgit.localization').translate
 local a = require('plenary.async')
@@ -31,8 +32,9 @@ local state = State.new({
     diff_strategy = 'remote',
     diff_preference = 'horizontal',
     predict_hunk_signs = true,
-    action_throttle_ms = 300,
-    predict_hunk_throttle_ms = 30,
+    action_delay_ms = 300,
+    predict_hunk_throttle_ms = 300,
+    predict_hunk_max_lines = 50000,
     blame_line_throttle_ms = 150,
 })
 
@@ -47,29 +49,29 @@ local function detach_blames_autocmd(buf)
     vim.cmd(string.format('aug tanvirtin/vgit/%s | au! | aug END', buf))
 end
 
-local ext_hunk_generation = void(function(buf, original_lines, current_lines)
-        local temp_filename_b = fs.tmpname()
-        local temp_filename_a = fs.tmpname()
-        fs.write_file(temp_filename_a, original_lines)
-        scheduler()
-        fs.write_file(temp_filename_b, current_lines)
-        scheduler()
-        local hunks_err, hunks = git.file_hunks(temp_filename_a, temp_filename_b)
-        scheduler()
-        if not hunks_err then
-            bstate:set(buf, 'hunks', hunks)
-            ui.hide_hunk_signs(buf)
-            ui.show_hunk_signs(buf, hunks)
-        else
-            logger.debug(hunks_err, 'init.lua/generate_hunk_signs')
-        end
-        fs.remove_file(temp_filename_a)
-        scheduler()
-        fs.remove_file(temp_filename_b)
-        scheduler()
-end)
+local ext_hunk_generation = function(buf, original_lines, current_lines)
+    local temp_filename_b = fs.tmpname()
+    local temp_filename_a = fs.tmpname()
+    fs.write_file(temp_filename_a, original_lines)
+    scheduler()
+    fs.write_file(temp_filename_b, current_lines)
+    scheduler()
+    local hunks_err, hunks = git.file_hunks(temp_filename_a, temp_filename_b)
+    scheduler()
+    if not hunks_err then
+        bstate:set(buf, 'hunks', hunks)
+        ui.hide_hunk_signs(buf)
+        ui.show_hunk_signs(buf, hunks)
+    else
+        logger.debug(hunks_err, 'init.lua/generate_hunk_signs')
+    end
+    fs.remove_file(temp_filename_a)
+    scheduler()
+    fs.remove_file(temp_filename_b)
+    scheduler()
+end
 
-local generate_hunk_signs = void(function(buf)
+local generate_hunk_signs = debounce_trailing(vim.schedule_wrap(void(function(buf)
     if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
         scheduler()
         return
@@ -78,7 +80,7 @@ local generate_hunk_signs = void(function(buf)
         scheduler()
         return
     end
-    local max_lines_limit = 10000
+    local max_lines_limit = state:get('predict_hunk_max_lines')
     if vim.api.nvim_buf_line_count(buf) > max_lines_limit then
         scheduler()
         return
@@ -99,13 +101,16 @@ local generate_hunk_signs = void(function(buf)
         end
     end
     if not show_err then
+        if not bstate:contains(buf) then
+            return
+        end
         local current_lines = buffer.get_lines(buf)
         bstate:set(buf, 'temp_lines', current_lines)
         ext_hunk_generation(buf, original_lines, current_lines)
     else
         logger.debug(show_err, 'init.lua/generate_hunk_signs')
     end
-end)
+end)), state:get('predict_hunk_throttle_ms'))
 
 M._buf_attach = void(function(buf)
     buf = buf or buffer.current()
@@ -144,12 +149,29 @@ M._buf_attach = void(function(buf)
                         attach_blames_autocmd(buf)
                     end
                     vim.api.nvim_buf_attach(buf, false, {
-                        on_lines = throttle_leading(void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
-                            if not state:get('predict_hunk_signs') or (p_lnum == n_lnum and byte_count == 0) then
+                        on_lines = function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
+                            local last_byte_count = bstate:get(cbuf, 'last_byte_count')
+                            bstate:set(cbuf, 'last_byte_count', byte_count)
+                            if not state:get('predict_hunk_signs')
+                                or (p_lnum == n_lnum and byte_count == 0) then
+                                return
+                            end
+                            local are_lines_added = byte_count > last_byte_count
+                            local current_signs = sign.get(cbuf, n_lnum)
+                            local signs = ui.state:get('hunk_sign').signs
+                            if are_lines_added
+                                and p_lnum == n_lnum
+                                and (vim.tbl_contains(current_signs, signs.add)
+                                    or vim.tbl_contains(current_signs, signs.change)) then
+                                return
+                            end
+                            if not are_lines_added
+                                and p_lnum == n_lnum
+                                and vim.tbl_contains(current_signs, signs.change) then
                                 return
                             end
                             generate_hunk_signs(cbuf)
-                        end), state:get('predict_hunk_throttle_ms')),
+                        end,
                         on_detach = function(_, cbuf)
                             if buffer.is_valid(cbuf) and bstate:contains(cbuf) then
                                 bstate:remove(cbuf)
@@ -194,7 +216,7 @@ M._buf_update = void(function(buf)
     end
 end)
 
-M._blame_line = throttle_leading(void(function(buf)
+M._blame_line = debounce_trailing(void(function(buf)
     scheduler()
     if not state:get('disabled')
         and buffer.is_valid(buf)
@@ -322,7 +344,7 @@ M._change_history = throttle_leading(void(function(buf)
         end, 0), selected_log)
     end
     scheduler()
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M._command_autocompletes = function(arglead, line)
     local parsed_line = #vim.split(line, '%s+')
@@ -359,7 +381,7 @@ M.hunk_preview = throttle_leading(function(buf, win)
             ui.show_hunk(selected_hunk, bstate:get(buf, 'filetype'))
         end
     end
-end, state:get('action_throttle_ms'))
+end, state:get('action_delay_ms'))
 
 M.hunk_down = function(buf, win)
     buf = buf or buffer.current()
@@ -495,7 +517,7 @@ M.hunk_reset = throttle_leading(function(buf, win)
             end
         end
     end
-end, state:get('action_throttle_ms'))
+end, state:get('action_delay_ms'))
 
 M.hunks_quickfix_list = throttle_leading(void(function()
     if not state:get('disabled') then
@@ -529,7 +551,7 @@ M.hunks_quickfix_list = throttle_leading(void(function()
             vim.cmd('copen')
         end
     end
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.diff = M.hunks_quickfix_list
 
@@ -564,7 +586,7 @@ M.toggle_buffer_hunks = throttle_leading(void(function()
         end)
     end
     return state:get('hunks_enabled')
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.toggle_buffer_blames = throttle_leading(void(function()
     if not state:get('disabled') then
@@ -589,7 +611,7 @@ M.toggle_buffer_blames = throttle_leading(void(function()
         end)
         return state:get('blames_enabled')
     end
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.buffer_history = throttle_leading(void(function(buf)
     buf = buf or buffer.current()
@@ -650,7 +672,7 @@ M.buffer_history = throttle_leading(void(function(buf)
             bstate:get(buf, 'filetype')
         )
     end
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.buffer_preview = throttle_leading(void(function(buf)
     buf = buf or buffer.current()
@@ -699,7 +721,7 @@ M.buffer_preview = throttle_leading(void(function(buf)
             bstate:get(buf, 'filetype')
         )
     end
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.buffer_reset = throttle_leading(void(function(buf)
     buf = buf or buffer.current()
@@ -728,7 +750,7 @@ M.buffer_reset = throttle_leading(void(function(buf)
             end
         end
     end
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.show_blame = throttle_leading(void(function(buf)
     buf = buf or buffer.current()
@@ -747,7 +769,7 @@ M.show_blame = throttle_leading(void(function(buf)
             end, 0))
         end
     end
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.enabled = function()
     return not state:get('disabled')
@@ -794,7 +816,7 @@ M.set_diff_base = throttle_leading(void(function(diff_base)
             end
         end
     end
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.set_diff_preference = throttle_leading(void(function(preference)
     if preference ~= 'horizontal' and preference ~= 'vertical' then
@@ -823,7 +845,7 @@ M.set_diff_preference = throttle_leading(void(function(preference)
             fn(buffer.current())
         end
     end
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.set_diff_strategy = throttle_leading(void(function(preference)
     if preference ~= 'remote' and preference ~= 'index' then
@@ -849,7 +871,7 @@ M.set_diff_strategy = throttle_leading(void(function(preference)
             end
         end
     end)
-end), state:get('action_throttle_ms'))
+end), state:get('action_delay_ms'))
 
 M.get_diff_strategy = function()
     return state:get('diff_strategy')
