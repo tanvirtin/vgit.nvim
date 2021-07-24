@@ -29,7 +29,7 @@ local state = State.new({
     hunks_enabled = true,
     blames_enabled = true,
     are_files_tracked = false,
-    diff_strategy = 'remote',
+    diff_strategy = 'index',
     diff_preference = 'horizontal',
     predict_hunk_signs = true,
     action_delay_ms = 300,
@@ -149,7 +149,7 @@ M._buf_attach = void(function(buf)
                         attach_blames_autocmd(buf)
                     end
                     vim.api.nvim_buf_attach(buf, false, {
-                        on_lines = function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
+                        on_lines = void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
                             local last_byte_count = bstate:get(cbuf, 'last_byte_count')
                             bstate:set(cbuf, 'last_byte_count', byte_count)
                             if not state:get('predict_hunk_signs')
@@ -171,7 +171,7 @@ M._buf_attach = void(function(buf)
                                 return
                             end
                             generate_hunk_signs(cbuf)
-                        end,
+                        end),
                         on_detach = function(_, cbuf)
                             if buffer.is_valid(cbuf) and bstate:contains(cbuf) then
                                 bstate:remove(cbuf)
