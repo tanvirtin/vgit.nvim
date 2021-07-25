@@ -25,7 +25,6 @@ function Bstate:add(buf)
         disabled = false,
         last_lnum_blamed = 1,
         temp_lines = {},
-        last_byte_count = 0,
     })
 end
 
