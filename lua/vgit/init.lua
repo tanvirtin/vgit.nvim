@@ -113,6 +113,9 @@ local generate_hunk_signs = debounce_trailing(vim.schedule_wrap(void(function(bu
 end)), state:get('predict_hunk_throttle_ms'))
 
 M._buf_attach = void(function(buf)
+    if state:get('disabled') then
+        return
+    end
     buf = buf or buffer.current()
     if buffer.is_valid(buf) then
         local filename = fs.filename(buf)
@@ -150,24 +153,8 @@ M._buf_attach = void(function(buf)
                     end
                     vim.api.nvim_buf_attach(buf, false, {
                         on_lines = void(function(_, cbuf, _, _, p_lnum, n_lnum, byte_count)
-                            local last_byte_count = bstate:get(cbuf, 'last_byte_count')
-                            bstate:set(cbuf, 'last_byte_count', byte_count)
                             if not state:get('predict_hunk_signs')
                                 or (p_lnum == n_lnum and byte_count == 0) then
-                                return
-                            end
-                            local are_lines_added = byte_count > last_byte_count
-                            local current_signs = sign.get(cbuf, n_lnum)
-                            local signs = ui.state:get('hunk_sign').signs
-                            if are_lines_added
-                                and p_lnum == n_lnum
-                                and (vim.tbl_contains(current_signs, signs.add)
-                                    or vim.tbl_contains(current_signs, signs.change)) then
-                                return
-                            end
-                            if not are_lines_added
-                                and p_lnum == n_lnum
-                                and vim.tbl_contains(current_signs, signs.change) then
                                 return
                             end
                             generate_hunk_signs(cbuf)
