@@ -16,7 +16,7 @@ M.throttle_leading = function(fn, ms)
     end
 end
 
-function M.debounce_trailing(fn, ms)
+M.debounce_trailing = function(fn, ms)
     local timer = vim.loop.new_timer()
     return function(...)
         local argv = {...}
