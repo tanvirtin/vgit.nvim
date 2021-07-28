@@ -208,8 +208,7 @@ M._blame_line = debounce_trailing(void(function(buf)
     if not state:get('disabled')
         and buffer.is_valid(buf)
         and bstate:contains(buf) then
-        local is_buf_modified = vim.api.nvim_buf_get_option(buf, 'modified')
-        if not is_buf_modified then
+        if not vim.api.nvim_buf_get_option(buf, 'modified') then
             local win = vim.api.nvim_get_current_win()
             local last_lnum_blamed = bstate:get(buf, 'last_lnum_blamed')
             local lnum = vim.api.nvim_win_get_cursor(win)[1]
@@ -754,6 +753,45 @@ M.show_blame = throttle_leading(void(function(buf)
                 scheduler()
                 return err, blame
             end, 0))
+        end
+    end
+end), state:get('action_delay_ms'))
+
+M.hunk_stage = throttle_leading(void(function(buf, win)
+    buf = buf or buffer.current()
+    if not state:get('disabled')
+        and buffer.is_valid(buf)
+        and bstate:contains(buf)
+        and not vim.api.nvim_buf_get_option(buf, 'modified') then
+        win = win or vim.api.nvim_get_current_win()
+        local lnum = vim.api.nvim_win_get_cursor(win)[1]
+        local selected_hunk = nil
+        local hunks = bstate:get(buf, 'hunks')
+        for i = 1, #hunks do
+            local hunk = hunks[i]
+            if lnum == 1 and hunk.start == 0 and hunk.finish == 0 then
+                selected_hunk = hunk
+                break
+            end
+            if lnum >= hunk.start and lnum <= hunk.finish then
+                selected_hunk = hunk
+                break
+            end
+        end
+        if selected_hunk then
+            local patch = git.create_patch(bstate:get(buf, 'project_relative_filename'), selected_hunk)
+            local patch_filename = fs.tmpname()
+            fs.write_file(patch_filename, patch)
+            scheduler()
+            local err = git.stage_hunk(patch_filename)
+            scheduler()
+            fs.remove_file(patch_filename)
+            scheduler()
+            if not err then
+                M._buf_update(buf)
+            else
+                logger.debug(err, 'init.lua/hunk_stage')
+            end
         end
     end
 end), state:get('action_delay_ms'))
