@@ -111,6 +111,7 @@ end
 M.create_hunk = function(header)
     local previous, current = parse_hunk_header(header)
     local hunk = {
+        header = header,
         start = current[1],
         finish = current[1] + current[2] - 1,
         type = nil,
@@ -126,6 +127,20 @@ M.create_hunk = function(header)
         hunk.type = 'change'
     end
     return hunk
+end
+
+M.create_patch = function(filename, hunk)
+    local patch = {
+        string.format('diff --git a/%s b/%s', filename, filename),
+        'index 000000..000000',
+        string.format('--- a/%s', filename),
+        string.format('+++ a/%s', filename),
+        hunk.header,
+    }
+    for i = 1, #hunk.diff do
+        patch[#patch + 1] = hunk.diff[i]
+    end
+    return patch
 end
 
 M.create_blame = function(info)
@@ -516,13 +531,36 @@ M.show = wrap(function(filename, commit_hash, callback)
     job:start()
 end, 3)
 
+M.stage_hunk = wrap(function(patch_filename, callback)
+    local err = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'apply',
+            '--cached',
+            '--unidiff-zero',
+            patch_filename,
+        },
+        on_stderr = function(_, data, _)
+            err[#err + 1] = data
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err)
+            end
+            callback(nil)
+        end,
+    })
+    job:start()
+end, 2)
+
 M.reset = wrap(function(filename, callback)
     local err = {}
     local job = Job:new({
         command = 'git',
         args = {
             'checkout',
-            'HEAD',
+            M.get_diff_base(),
             '--',
             filename,
         },
