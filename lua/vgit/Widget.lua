@@ -6,14 +6,6 @@ local vim = vim
 local Widget = {}
 Widget.__index = Widget
 
-local function global_width()
-    return vim.o.columns
-end
-
-local function global_height()
-    return vim.o.lines
-end
-
 local function new(views, name)
     assert(type(views) == 'table', 'type error :: expected table')
     assert(type(name) == 'string', 'type error :: expected string')
@@ -109,7 +101,5 @@ end
 
 return {
     new = new,
-    global_height = global_height,
-    global_width = global_width,
     __object = Widget,
 }

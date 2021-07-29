@@ -23,20 +23,23 @@ M.state = State.new({
         VGitSignAdd = {
             name = 'VGitSignAdd',
             text_hl = 'VGitSignAdd',
+            num_hl = nil,
             line_hl = nil,
-            text = '│'
+            text = '┃'
         },
         VGitSignRemove = {
             name = 'VGitSignRemove',
             text_hl = 'VGitSignRemove',
+            num_hl = nil,
             line_hl = nil,
-            text = '│'
+            text = '┃'
         },
         VGitSignChange = {
             name = 'VGitSignChange',
             text_hl = 'VGitSignChange',
+            num_hl = nil,
             line_hl = nil,
-            text = '│'
+            text = '┃'
         },
     }
 })
@@ -52,6 +55,7 @@ M.define = function(config)
     vim.fn.sign_define(config.name, {
         text = config.text,
         texthl = config.text_hl,
+        numhl = config.num_hl,
         linehl = config.line_hl,
     })
 end

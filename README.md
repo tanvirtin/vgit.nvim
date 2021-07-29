@@ -137,20 +137,23 @@ require('vgit').setup({
         VGitSignAdd = {
             name = 'VGitSignAdd',
             text_hl = 'VGitSignAdd',
+            num_hl = nil,
             line_hl = nil,
-            text = '│'
+            text = '┃'
         },
         VGitSignRemove = {
             name = 'VGitSignRemove',
             text_hl = 'VGitSignRemove',
+            num_hl = nil,
             line_hl = nil,
-            text = '│'
+            text = '┃'
         },
         VGitSignChange = {
             name = 'VGitSignChange',
             text_hl = 'VGitSignChange',
+            num_hl = nil,
             line_hl = nil,
-            text = '│'
+            text = '┃'
         },
     },
     hls = {

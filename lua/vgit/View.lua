@@ -8,7 +8,7 @@ local vim = vim
 local View = {}
 View.__index = View
 
-local function attach_treesitter(buf, filetype)
+local function colorize(buf, filetype)
     if not filetype or filetype == '' then
         return
     end
@@ -26,11 +26,13 @@ local function attach_treesitter(buf, filetype)
         local lang = ts_parsers.ft_to_lang(filetype);
         if ts_parsers.has_parser(lang) then
             pcall(ts_highlight.attach, buf, lang)
+        else
+            buffer.set_option(buf, 'syntax', filetype)
         end
     end
 end
 
-local function detach_treesitter(buf)
+local function uncolorize(buf)
     local has_ts = false
     if not has_ts then
         has_ts, _ = pcall(require, 'nvim-treesitter')
@@ -39,6 +41,8 @@ local function detach_treesitter(buf)
         local active_buf = vim.treesitter.highlighter.active[buf]
         if active_buf then
             active_buf:destroy()
+        else
+            buffer.set_option(buf, 'syntax', '')
         end
     end
 end
@@ -236,7 +240,7 @@ function View:set_loading(value)
         return self
     end
     if value then
-        detach_treesitter(self.state.buf)
+        uncolorize(self.state.buf)
         self.state.loading = value
         local loading_lines = {}
         local height = vim.api.nvim_win_get_height(self.state.win_id)
@@ -250,7 +254,7 @@ function View:set_loading(value)
         self.state.lines = buffer.get_lines(self:get_buf())
         buffer.set_lines(self.state.buf, loading_lines)
     else
-        attach_treesitter(self.state.buf, self.config:get('filetype'))
+        colorize(self.state.buf, self.config:get('filetype'))
         self.state.loading = value
         buffer.set_lines(self.state.buf, self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
@@ -265,7 +269,7 @@ function View:set_error(value)
         return self
     end
     if value then
-        detach_treesitter(self.state.buf)
+        uncolorize(self.state.buf)
         self.state.loading = value
         local loading_lines = {}
         local height = vim.api.nvim_win_get_height(self.state.win_id)
@@ -279,7 +283,7 @@ function View:set_error(value)
         buffer.set_lines(self.state.buf, loading_lines)
         self.state.lines = buffer.get_lines(self:get_buf())
     else
-        attach_treesitter(self.state.buf, self.config:get('filetype'))
+        colorize(self.state.buf, self.config:get('filetype'))
         self.state.loading = value
         buffer.set_lines(self.state.buf, self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
@@ -350,8 +354,8 @@ function View:set_filetype(filetype)
     end
     self.config:set('filetype', filetype)
     local buf = self:get_buf()
-    detach_treesitter(buf)
-    attach_treesitter(buf, filetype)
+    uncolorize(buf)
+    colorize(buf, filetype)
     buffer.set_option(buf, 'syntax', filetype)
 end
 
@@ -413,16 +417,12 @@ function View:render()
         )
     end
     self:add_autocmd('BufWinLeave', string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id))
-    attach_treesitter(buf, filetype)
+    colorize(buf, filetype)
     self.state.rendered = true
     return self
 end
 
 return {
     new = new,
-    attach_treesitter = attach_treesitter,
-    detach_treesitter = detach_treesitter,
-    global_height = global_height,
-    global_width = global_width,
     __object = View,
 }

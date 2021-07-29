@@ -32,31 +32,31 @@ M.short_filename = function(filepath)
     return filename
 end
 
-M.project_relative_filename = function(filepath, project_files)
+M.tracked_filename = function(filepath, tracked_files)
     assert(type(filepath) == 'string', 'type error :: expected string')
-    assert(vim.tbl_islist(project_files), 'type error :: expected table of type list')
+    assert(vim.tbl_islist(tracked_files), 'type error :: expected table of type list')
     if filepath == '' then
         return nil
     end
-    table.sort(project_files)
+    table.sort(tracked_files)
     for i = #filepath, 1, -1 do
         local letter = filepath:sub(i, i)
-        local new_project_files = {}
-        for j = 1, #project_files do
-            local candidate = project_files[j]
+        local new_tracked_files = {}
+        for j = 1, #tracked_files do
+            local candidate = tracked_files[j]
             local corrected_index = #candidate - (#filepath - i)
             local candidate_letter = candidate:sub(corrected_index, corrected_index)
             if letter == candidate_letter then
-                new_project_files[#new_project_files + 1] = candidate
+                new_tracked_files[#new_tracked_files + 1] = candidate
             end
         end
-        project_files = new_project_files
+        tracked_files = new_tracked_files
     end
-    local project_filename = project_files[1]
-    if project_filename then
+    local tracked_filename = tracked_files[1]
+    if tracked_filename then
         local short_filename = M.short_filename(filepath)
-        local project_short_filename = M.short_filename(project_filename)
-        return (short_filename == project_short_filename and project_filename) or nil
+        local tracked_short_filename = M.short_filename(tracked_filename)
+        return (short_filename == tracked_short_filename and tracked_filename) or nil
     end
     return nil
 end
@@ -115,6 +115,11 @@ end
 M.remove_file = function(filepath)
     assert(type(filepath) == 'string', 'type error :: expected string')
     return os.remove(filepath)
+end
+
+M.exists = function(filepath)
+    assert(type(filepath) == 'string', 'type error :: expected string')
+    return (vim.loop.fs_stat(filepath) and true) or false
 end
 
 return M

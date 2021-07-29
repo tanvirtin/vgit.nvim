@@ -18,13 +18,14 @@ function Bstate:add(buf)
     self.buf_states[buf] = State.new({
         filename = '',
         filetype = '',
-        project_relative_filename = '',
+        tracked_filename = '',
         logs = {},
         hunks = {},
         blames = {},
         disabled = false,
         last_lnum_blamed = 1,
         temp_lines = {},
+        untracked = false,
     })
 end
 

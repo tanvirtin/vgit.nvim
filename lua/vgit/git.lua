@@ -5,7 +5,6 @@ local void = a.void
 local wrap = a.wrap
 
 local vim = vim
-local unpack = unpack
 
 local function parse_hunk_diff(diff)
     local removed_lines = {}
@@ -25,12 +24,12 @@ end
 
 local function parse_hunk_header(line)
     local diffkey = vim.trim(vim.split(line, '@@', true)[2])
-    local previous, current = unpack(
-        vim.tbl_map(function(s)
-            return vim.split(string.sub(s, 2), ',')
-        end,
-        vim.split(diffkey, ' '))
-    )
+    local parsed_diffkey = vim.split(diffkey, ' ')
+    local parsed_header = {}
+    for i = 1, #parsed_diffkey do
+        parsed_header[#parsed_header + 1] = vim.split(string.sub(parsed_diffkey[i], 2), ',')
+    end
+    local previous, current = parsed_header[1], parsed_header[2]
     previous[1] = tonumber(previous[1])
     previous[2] = tonumber(previous[2]) or 1
     current[1] = tonumber(current[1])
@@ -130,12 +129,17 @@ M.create_hunk = function(header)
 end
 
 M.create_patch = function(filename, hunk)
+    local header = hunk.header
+    if hunk.type == 'add' then
+        local previous, current = parse_hunk_header(header)
+        header = string.format('@@ -%s,%s +%s,%s @@', previous[1], 0, previous[1] + 1, current[2])
+    end
     local patch = {
         string.format('diff --git a/%s b/%s', filename, filename),
         'index 000000..000000',
         string.format('--- a/%s', filename),
         string.format('+++ a/%s', filename),
-        hunk.header,
+        header,
     }
     for i = 1, #hunk.diff do
         patch[#patch + 1] = hunk.diff[i]
@@ -505,6 +509,20 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
     job:start()
 end, 4)
 
+M.untracked_hunks = function(lines)
+    local diff = {}
+    for i = 1, #lines do
+        diff[#diff + 1] = string.format('+%s', lines[i])
+    end
+    return {{
+        header = nil,
+        start = 1,
+        finish = #lines,
+        type = 'add',
+        diff = diff,
+    }}
+end
+
 M.show = wrap(function(filename, commit_hash, callback)
     local err = {}
     local result = {}
@@ -531,13 +549,59 @@ M.show = wrap(function(filename, commit_hash, callback)
     job:start()
 end, 3)
 
-M.stage_hunk = wrap(function(patch_filename, callback)
+M.stage_file = wrap(function(filename, callback)
+    local err = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'add',
+            filename,
+        },
+        on_stderr = function(_, data, _)
+            err[#err + 1] = data
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err)
+            end
+            callback(nil)
+        end,
+    })
+    job:start()
+end, 2)
+
+M.unstage_file = wrap(function(filename, callback)
+    local err = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'reset',
+            '-q',
+            'HEAD',
+            '--',
+            filename,
+        },
+        on_stderr = function(_, data, _)
+            err[#err + 1] = data
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err)
+            end
+            callback(nil)
+        end,
+    })
+    job:start()
+end, 2)
+
+M.stage_hunk_from_patch = wrap(function(patch_filename, callback)
     local err = {}
     local job = Job:new({
         command = 'git',
         args = {
             'apply',
             '--cached',
+            '--whitespace=nowarn',
             '--unidiff-zero',
             patch_filename,
         },
@@ -554,13 +618,37 @@ M.stage_hunk = wrap(function(patch_filename, callback)
     job:start()
 end, 2)
 
+M.check_ignored = wrap(function(filename, callback)
+    local err = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'check-ignore',
+            filename,
+        },
+        on_stdout = function(_, data, _)
+            err[#err + 1] = data
+        end,
+        on_stderr = function(_, data, _)
+            err[#err + 1] = data
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(true)
+            end
+            callback(false)
+        end,
+    })
+    job:start()
+end, 2)
+
 M.reset = wrap(function(filename, callback)
     local err = {}
     local job = Job:new({
         command = 'git',
         args = {
             'checkout',
-            M.get_diff_base(),
+            '-q',
             '--',
             filename,
         },
@@ -610,6 +698,7 @@ M.ls_tracked = wrap(function(callback)
         args = {
             'ls-files',
             '--full-name',
+            '--cached',
         },
         on_stdout = function(_, data, _)
             result[#result + 1] = data
