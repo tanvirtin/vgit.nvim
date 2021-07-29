@@ -32,6 +32,11 @@
     <img src="https://user-images.githubusercontent.com/25164326/119602598-79808f80-bdb9-11eb-974c-aaa2a4445313.gif" alt="reset_hunk" />
 </details>
 <details>
+    <summary>Stage a hunk</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/127396247-a3e16213-5865-455e-9f72-72da1315abd6.gif" alt="hunk_stage" />
+</details>
+<details>
     <summary>Navigate through hunks</summary>
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/119602585-75547200-bdb9-11eb-868c-0e43c41c378f.gif" alt="hunk_navigation" />
@@ -71,6 +76,13 @@
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/121595739-95687000-ca0c-11eb-8f1d-9b5b398e3b0d.gif" alt="diff_preference" />
 </details>
+
+## Supported Neovim versions:
+- Neovim > 0.5
+
+## Supported Opperating System:
+- linux-gnu*
+- Darwin
 
 ## Prerequisites
 - [Git](https://git-scm.com/)
@@ -374,8 +386,9 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | setup | Sets up the plugin for success |
 | toggle_buffer_hunks | Shows hunk signs on buffers/Hides hunk signs on buffers |
 | toggle_buffer_blames | Enables blames feature on buffers /Disables blames feature on buffers |
-| hunk_preview | Opens a VGit view of a hunk, if cursor is on a line with a git change |
-| hunk_reset | Removes the hunk from the buffer |
+| hunk_preview | Opens a VGit view of a hunk, if cursor is on a hunk |
+| hunk_reset | Removes the hunk from the buffer, if cursor is on a hunk |
+| hunk_stage | Stages a hunk, if cursor is on a hunk |
 | hunk_down | Navigate downward through a hunk |
 | hunk_up | Navigate upwards through a hunk |
 | buffer_preview | Shows the current differences in lines in the current buffer |
@@ -397,5 +410,4 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 ## Similar Git Plugins
 - [vim-fugitive](https://github.com/tpope/vim-fugitive)
 - [vim-gitgutter](https://github.com/airblade/vim-gitgutter)
-- [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
-- [neogit](https://github.com/TimUntersberger/neogit)
+- [vim-signify](https://github.com/mhinz/vim-signify)

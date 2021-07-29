@@ -5,7 +5,7 @@ local vim = vim
 
 local M = {}
 
-M.relative_path = function(filepath)
+M.relative_filename = function(filepath)
     assert(type(filepath) == 'string', 'type error :: expected string')
     local cwd = vim.loop.cwd()
     if not cwd or not filepath then return filepath end
@@ -19,13 +19,26 @@ M.relative_path = function(filepath)
     return filepath
 end
 
+M.short_filename = function(filepath)
+    assert(type(filepath) == 'string', 'type error :: expected string')
+    local filename = ''
+    for i = #filepath, 1, -1 do
+        local letter = filepath:sub(i, i)
+        if letter == '/' then
+            break
+        end
+        filename = letter .. filename
+    end
+    return filename
+end
+
 M.project_relative_filename = function(filepath, project_files)
     assert(type(filepath) == 'string', 'type error :: expected string')
     assert(vim.tbl_islist(project_files), 'type error :: expected table of type list')
-    table.sort(project_files)
     if filepath == '' then
-        return filepath
+        return nil
     end
+    table.sort(project_files)
     for i = #filepath, 1, -1 do
         local letter = filepath:sub(i, i)
         local new_project_files = {}
@@ -39,7 +52,19 @@ M.project_relative_filename = function(filepath, project_files)
         end
         project_files = new_project_files
     end
-    return project_files[1]
+    local project_filename = project_files[1]
+    if project_filename then
+        local short_filename = M.short_filename(filepath)
+        local project_short_filename = M.short_filename(project_filename)
+        return (short_filename == project_short_filename and project_filename) or nil
+    end
+    return nil
+end
+
+M.filename = function(buf)
+    assert(type(buf) == 'number', 'type error :: expected number')
+    local filepath = vim.api.nvim_buf_get_name(buf)
+    return M.relative_filename(filepath)
 end
 
 M.filetype = function(buf)
@@ -48,12 +73,6 @@ M.filetype = function(buf)
 end
 
 M.detect_filetype = pfiletype.detect
-
-M.filename = function(buf)
-    assert(type(buf) == 'number', 'type error :: expected number')
-    local filepath = vim.api.nvim_buf_get_name(buf)
-    return M.relative_path(filepath)
-end
 
 M.tmpname = function()
     local length = 6
