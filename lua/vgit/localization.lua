@@ -6,8 +6,6 @@ local vim = vim
 local M = {}
 
 M.state = State.new({
-    loading = 'Loading...',
-    error = 'An error has occured',
     preview = {
         horizontal = 'Preview',
         current = 'Current',

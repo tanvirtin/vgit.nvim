@@ -329,7 +329,7 @@ M.show_hunk = function(hunk, filetype)
     end
 end
 
-M.show_horizontal_preview = void(function(fetch, filetype)
+M.show_horizontal_preview = void(function(widget_name, fetch, filetype)
     local height = math.ceil(global_height() - 4)
     local width = math.ceil(global_width() * 0.8)
     local col = math.ceil((global_width() - width) / 2) - 1
@@ -353,7 +353,7 @@ M.show_horizontal_preview = void(function(fetch, filetype)
             },
         }),
     }
-    local widget = Widget.new(views, 'horizontal_preview')
+    local widget = Widget.new(views, widget_name)
         :render()
         :set_loading(true)
     M.state:set('current_widget', widget)
@@ -379,7 +379,7 @@ M.show_horizontal_preview = void(function(fetch, filetype)
     end
 end)
 
-M.show_vertical_preview = void(function(fetch, filetype)
+M.show_vertical_preview = void(function(widget_name, fetch, filetype)
     local height = math.ceil(global_height() - 4)
     local width = math.ceil(global_width() * 0.485)
     local col = math.ceil((global_width() - (width * 2)) / 2) - 1
@@ -425,7 +425,7 @@ M.show_vertical_preview = void(function(fetch, filetype)
             },
         })
     }
-    local widget = Widget.new(views, 'vertical_preview')
+    local widget = Widget.new(views, widget_name)
         :render()
         :set_loading(true)
     views.current:focus()
