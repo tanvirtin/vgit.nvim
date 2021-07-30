@@ -1,7 +1,6 @@
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 local State = require('vgit.State')
-local t = require('vgit.localization').translate
 
 local vim = vim
 
@@ -47,22 +46,25 @@ local function uncolorize(buf)
     end
 end
 
+local function calculate_text_center(text, width)
+    local rep = math.floor((width / 2) - math.floor(#text / 2))
+    return (rep < 0 and 0) or rep
+end
+
 local function create_border_lines(title, content_win_options, border)
     local border_lines = {}
     local topline = nil
     if content_win_options.row > 0 then
         if title ~= '' then
-            title = string.format(" %s ", title)
+            title = string.format(' %s ', title)
         end
-        local title_len = string.len(title)
-        local midpoint = math.floor(content_win_options.width / 2)
-        local left_start = midpoint - math.floor(title_len / 2)
+        local left_start = calculate_text_center(title, content_win_options.width)
         topline = string.format(
-            "%s%s%s%s%s",
+            '%s%s%s%s%s',
             border[1],
             string.rep(border[2], left_start),
             title,
-            string.rep(border[2], content_win_options.width - title_len - left_start),
+            string.rep(border[2], content_win_options.width - #title - left_start),
             border[3]
         )
     end
@@ -70,7 +72,7 @@ local function create_border_lines(title, content_win_options, border)
         border_lines[#border_lines + 1] = topline
     end
     local middle_line = string.format(
-        "%s%s%s",
+        '%s%s%s',
         border[4] or '',
         string.rep(' ', content_win_options.width),
         border[8] or ''
@@ -79,7 +81,7 @@ local function create_border_lines(title, content_win_options, border)
         border_lines[#border_lines + 1] = middle_line
     end
     border_lines[#border_lines + 1] = string.format(
-        "%s%s%s",
+        '%s%s%s',
         border[7] or '',
         string.rep(border[6], content_win_options.width),
         border[5] or ''
@@ -114,14 +116,6 @@ local function create_border(content_buf, title, window_props, border, border_hl
         string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id)
     )
     return buf, win_id
-end
-
-local function calculate_center(text, width)
-    local rep = math.ceil((width / 2) - math.ceil(#text / 2))
-    if rep < 0 then
-        rep = 0
-    end
-    return rep
 end
 
 local function global_width()
@@ -240,19 +234,8 @@ function View:set_loading(value)
         return self
     end
     if value then
-        uncolorize(self.state.buf)
         self.state.loading = value
-        local loading_lines = {}
-        local height = vim.api.nvim_win_get_height(self.state.win_id)
-        local width = vim.api.nvim_win_get_width(self.state.win_id)
-        for _ = 1, height do
-            loading_lines[#loading_lines + 1] = ''
-        end
-        local loading_text = t('loading')
-        loading_lines[math.ceil(height / 2)] = string.rep(' ', calculate_center(loading_text, width)) .. loading_text
-        self:set_win_option('cursorline', false)
-        self.state.lines = buffer.get_lines(self:get_buf())
-        buffer.set_lines(self.state.buf, loading_lines)
+        self:set_centered_text('•••')
     else
         colorize(self.state.buf, self.config:get('filetype'))
         self.state.loading = value
@@ -269,22 +252,11 @@ function View:set_error(value)
         return self
     end
     if value then
-        uncolorize(self.state.buf)
-        self.state.loading = value
-        local loading_lines = {}
-        local height = vim.api.nvim_win_get_height(self.state.win_id)
-        local width = vim.api.nvim_win_get_width(self.state.win_id)
-        for _ = 1, height do
-            loading_lines[#loading_lines + 1] = ''
-        end
-        local error_text = t('error')
-        loading_lines[math.ceil(height / 2)] = string.rep(' ', calculate_center(error_text, width)) .. error_text
-        self:set_win_option('cursorline', false)
-        buffer.set_lines(self.state.buf, loading_lines)
-        self.state.lines = buffer.get_lines(self:get_buf())
+        self.state.error = value
+        self:set_centered_text('✖✖✖')
     else
         colorize(self.state.buf, self.config:get('filetype'))
-        self.state.loading = value
+        self.state.error = value
         buffer.set_lines(self.state.buf, self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
         self.state.lines = {}
@@ -294,13 +266,14 @@ end
 
 function View:set_centered_text(text)
     assert(type(text) == 'string', 'type error :: expected string')
+    uncolorize(self.state.buf)
     local lines = {}
     local height = vim.api.nvim_win_get_height(self.state.win_id)
     local width = vim.api.nvim_win_get_width(self.state.win_id)
     for _ = 1, height do
         lines[#lines + 1] = ''
     end
-    lines[math.ceil(height / 2)] = string.rep(' ', calculate_center(text, width)) .. text
+    lines[math.floor(height / 2)] = string.rep(' ', calculate_text_center(text, width)) .. text
     self:set_win_option('cursorline', false)
     self.state.lines = buffer.get_lines(self:get_buf())
     buffer.set_lines(self.state.buf, lines)

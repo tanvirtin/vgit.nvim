@@ -10,14 +10,12 @@ describe('localization:', function()
 
         it('should override state highlights with highlights specified through the config', function()
             localization.setup({
-                error = 'foo',
                 preview = {
                     horizontal = 'foo',
                     current = 'bar',
                     previous = 'baz',
                 },
             })
-            eq(localization.state:get('error'), 'foo')
             eq(localization.state:get('preview'), {
                 horizontal = 'foo',
                 current = 'bar',
@@ -30,9 +28,7 @@ describe('localization:', function()
     describe('translate', function()
 
         it('should throw error on invalid argument types', function()
-            localization.setup({
-                error = 'foo'
-            })
+            localization.setup({})
             assert.has_error(function()
                 localization.translate(true)
             end)
@@ -48,13 +44,6 @@ describe('localization:', function()
             assert.has_error(function()
                 localization.translate(function() end)
             end)
-        end)
-
-        it('should retrieve the translation for a given key', function()
-            localization.setup({
-                error = 'foo',
-            })
-            eq(localization.translate('error'), 'foo');
         end)
 
         it('should retrieve nested translation', function()

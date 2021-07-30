@@ -509,6 +509,53 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
     job:start()
 end, 4)
 
+M.staged_hunks = wrap(function(filename, callback)
+    local result = {}
+    local err = {}
+    local args = {
+        '--no-pager',
+        '-c',
+        'core.safecrlf=false',
+        'diff',
+        '--color=never',
+        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+        '--patch-with-raw',
+        '--unified=0',
+        '--cached',
+        '--',
+        filename,
+    }
+    local job = Job:new({
+        command = 'git',
+        args = args,
+        on_stdout = function(_, data, _)
+            result[#result + 1] = data
+        end,
+        on_stderr = function(_, data, _)
+            err[#err + 1] = data
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, nil)
+            end
+            local hunks = {}
+            for i = 1, #result do
+                local line = result[i]
+                if vim.startswith(line, '@@') then
+                    hunks[#hunks + 1] = M.create_hunk(line)
+                else
+                    if #hunks > 0 then
+                        local hunk = hunks[#hunks]
+                        hunk.diff[#hunk.diff + 1] = line
+                    end
+                end
+            end
+            return callback(nil, hunks)
+        end,
+    })
+    job:start()
+end, 2)
+
 M.untracked_hunks = function(lines)
     local diff = {}
     for i = 1, #lines do
