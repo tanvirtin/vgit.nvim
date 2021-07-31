@@ -87,7 +87,7 @@ local ext_hunk_generation = void(function(buf, original_lines, current_lines)
         ui.hide_hunk_signs(buf)
         ui.show_hunk_signs(buf, hunks)
     else
-        logger.debug(hunks_err, 'init.lua/generate_hunk_signs')
+        logger.debug(hunks_err, 'init.lua/ext_hunk_generation')
     end
     fs.remove_file(temp_filename_a)
     scheduler()
@@ -95,7 +95,7 @@ local ext_hunk_generation = void(function(buf, original_lines, current_lines)
     scheduler()
 end)
 
-local generate_hunk_signs = debounce_trailing(void(function(buf)
+local generate_tracked_hunk_signs = debounce_trailing(void(function(buf)
     scheduler()
     if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
         return
@@ -127,8 +127,19 @@ local generate_hunk_signs = debounce_trailing(void(function(buf)
         bstate:set(buf, 'temp_lines', current_lines)
         ext_hunk_generation(buf, original_lines, current_lines)
     else
-        logger.debug(show_err, 'init.lua/generate_hunk_signs')
+        logger.debug(show_err, 'init.lua/generate_tracked_hunk_signs')
     end
+end), state:get('predict_hunk_throttle_ms'))
+
+local generate_untracked_hunk_signs = debounce_trailing(void(function(buf)
+    scheduler()
+    if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
+        return
+    end
+    local hunks = git.untracked_hunks(buffer.get_lines(buf))
+    bstate:set(buf, 'hunks', hunks)
+    ui.hide_hunk_signs(buf)
+    ui.show_hunk_signs(buf, hunks)
 end), state:get('predict_hunk_throttle_ms'))
 
 local but_attach_tracked = void(function(buf)
@@ -147,7 +158,7 @@ local but_attach_tracked = void(function(buf)
                 or not state:get('hunks_enabled') then
                 return
             end
-            generate_hunk_signs(cbuf)
+            generate_tracked_hunk_signs(cbuf)
         end),
         on_detach = function(_, cbuf)
             if buffer.is_valid(cbuf) and bstate:contains(cbuf) then
@@ -182,12 +193,9 @@ local function but_attach_untracked(buf)
                 return
             end
             if not bstate:get(cbuf, 'untracked') then
-                return generate_hunk_signs(cbuf)
+                return generate_tracked_hunk_signs(cbuf)
             end
-            local hunks = git.untracked_hunks(buffer.get_lines(cbuf))
-            bstate:set(buf, 'hunks', hunks)
-            ui.hide_hunk_signs(cbuf)
-            ui.show_hunk_signs(cbuf, hunks)
+            generate_untracked_hunk_signs(cbuf)
         end),
         on_detach = function(_, cbuf)
             if buffer.is_valid(cbuf) and bstate:contains(cbuf) then
@@ -290,7 +298,7 @@ M._blame_line = debounce_trailing(void(function(buf)
                 local err, blame = git.blame_line(bstate:get(buf, 'tracked_filename'), lnum)
                 scheduler()
                 if not err then
-                    ui.hide_blame(buf)
+                    ui.hide_blame_line(buf)
                     scheduler()
                     if vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())[1] == lnum then
                         ui.show_blame_line(buf, blame, lnum, git.state:get('config'))
@@ -309,13 +317,13 @@ end), state:get('blame_line_throttle_ms'))
 M._unblame_line = function(buf, override)
     if bstate:contains(buf) and buffer.is_valid(buf) and not bstate:get(buf, 'untracked') then
         if override then
-            return ui.hide_blame(buf)
+            return ui.hide_blame_line(buf)
         end
         local win = vim.api.nvim_get_current_win()
         local lnum = vim.api.nvim_win_get_cursor(win)[1]
         local last_lnum_blamed = bstate:get(buf, 'last_lnum_blamed')
         if lnum ~= last_lnum_blamed then
-            ui.hide_blame(buf)
+            ui.hide_blame_line(buf)
         end
     end
 end
@@ -1109,7 +1117,7 @@ M.set_diff_preference = throttle_leading(void(function(preference)
         return
     end
     state:set('diff_preference', preference)
-    local widget = ui.get_current_widget()
+    local widget = ui.get_mounted_widget()
     if not vim.tbl_isempty(widget) then
         local view_fn_map = {
             horizontal_preview = M.buffer_preview,

@@ -1,23 +1,15 @@
 local State = require('vgit.State')
+local preview_widget = require('vgit.widgets.preview')
+local history_widget = require('vgit.widgets.history')
+local hunk_widget = require('vgit.widgets.hunk')
+local blame_widget = require('vgit.widgets.blame')
 local buffer = require('vgit.buffer')
-local localization = require('vgit.localization')
-local View = require('vgit.View')
-local Widget = require('vgit.Widget')
 local sign = require('vgit.sign')
 local a = require('plenary.async')
-local t = localization.translate
 local void = a.void
 local scheduler = a.util.scheduler
 
 local vim = vim
-
-local function global_width()
-    return vim.o.columns
-end
-
-local function global_height()
-    return vim.o.lines
-end
 
 local function round(x)
     return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
@@ -26,18 +18,14 @@ end
 local M = {}
 
 M.constants = {
-    history_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/history'),
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
     blame_line_id = 1,
 }
 
 M.state = State.new({
-    blame = {
+    mounted_widget = {},
+    blame_line = {
         hl = 'VGitBlame',
-        window = {
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-        },
         format = function(blame, git_config)
             local config_author = git_config['user.name']
             local author = blame.author
@@ -69,71 +57,6 @@ M.state = State.new({
             return string.format(' %s', info)
         end
     },
-    preview = {
-        priority = 10,
-        horizontal_window = {
-            title = t('preview/horizontal'),
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
-        },
-        current_window = {
-            title = t('preview/current'),
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
-        },
-        previous_window = {
-            title = t('preview/previous'),
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
-        },
-        signs = {
-            add = 'VGitViewSignAdd',
-            remove = 'VGitViewSignRemove',
-        },
-    },
-    history = {
-        indicator = {
-            hl = 'VGitIndicator'
-        },
-        horizontal_window = {
-            title = t('history/horizontal'),
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
-        },
-        current_window = {
-            title = t('history/current'),
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
-        },
-        previous_window = {
-            title = t('history/previous'),
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
-        },
-        history_window = {
-            title = t('history/history'),
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
-        },
-    },
-    hunk = {
-        priority = 10,
-        window = {
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-        },
-        signs = {
-            add = 'VGitViewSignAdd',
-            remove = 'VGitViewSignRemove',
-        },
-    },
     hunk_sign = {
         priority = 10,
         signs = {
@@ -142,11 +65,18 @@ M.state = State.new({
             change = 'VGitSignChange',
         },
     },
-    current_widget = {}
 })
 
+M.setup = function(config)
+    M.state:assign(config)
+    preview_widget.setup(config.preview)
+    history_widget.setup(config.history)
+    hunk_widget.setup(config.hunk)
+    blame_widget.setup(config.blame)
+end
+
 M.close_windows = function(wins)
-    M.state:set('current_widget', {})
+    M.state:set('mounted_widget', {})
     local existing_wins = vim.api.nvim_list_wins()
     for i = 1, #wins do
         local win = wins[i]
@@ -156,95 +86,24 @@ M.close_windows = function(wins)
     end
 end
 
-M.get_current_widget = function()
-    return M.state:get('current_widget')
-end
-
-M.setup = function(config)
-    M.state:assign(config)
+M.get_mounted_widget = function()
+    return M.state:get('mounted_widget')
 end
 
 M.show_blame_line = function(buf, blame, lnum, git_config)
     if buffer.is_valid(buf) then
-        local virt_text = M.state:get('blame').format(blame, git_config)
+        local virt_text = M.state:get('blame_line').format(blame, git_config)
         if type(virt_text) == 'string' then
             pcall(vim.api.nvim_buf_set_extmark, buf, M.constants.blame_namespace, lnum - 1, 0, {
                 id = M.constants.blame_line_id,
-                virt_text = { { virt_text, M.state:get('blame').hl } },
+                virt_text = { { virt_text, M.state:get('blame_line').hl } },
                 virt_text_pos = 'eol',
             })
         end
     end
 end
 
-M.show_blame = void(function(fetch)
-    scheduler()
-    local max_commit_message_length = 88
-    local view = View.new({
-        lines = {},
-        border = M.state:get('blame').window.border,
-        border_hl = M.state:get('blame').window.border_hl,
-        win_options = { ['cursorline'] = true},
-        window_props = {
-            style = 'minimal',
-            relative = 'cursor',
-            height = 5,
-            width = max_commit_message_length,
-            row = 0,
-            col = 0,
-        },
-    })
-    local widget = Widget.new({ view }, 'blame')
-        :render(true)
-        :set_loading(true)
-    M.state:set('current_widget', widget)
-    scheduler()
-    local err, blame = fetch()
-    scheduler()
-    widget:set_loading(false)
-    scheduler()
-    if err then
-        widget:set_error(true)
-        return
-    else
-        local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
-        local time_format = string.format('%s days ago', round(time))
-        local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
-        local division_counter = 1
-        while time < 1 and division_counter ~= #time_divisions do
-            local division = time_divisions[division_counter]
-            time = time * division[1]
-            time_format = string.format('%s %s ago', round(time), division[2])
-            division_counter = division_counter + 1
-        end
-        local commit_message = blame.commit_message
-        if not blame.committed then
-            commit_message = 'Uncommitted changes'
-            local new_lines = {
-                string.format('%sLine #%s', '  ', blame.lnum),
-                string.format('%s%s', '  ', commit_message),
-                string.format('%s%s -> %s', '  ', blame.parent_hash, blame.commit_hash),
-            }
-            view:set_lines(new_lines)
-            view:set_height(#new_lines)
-            return
-        end
-        if #commit_message > max_commit_message_length then
-            commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
-        end
-        local new_lines = {
-            string.format('%sLine #%s', '  ', blame.lnum),
-            string.format('  %s (%s)', blame.author, blame.author_mail),
-            string.format('  %s (%s)', time_format, os.date('%c', blame.author_time)),
-            string.format('%s%s', '  ', commit_message),
-            string.format('%s%s -> %s', '  ', blame.parent_hash, blame.commit_hash),
-        }
-        view:set_lines(new_lines)
-        view:set_height(#new_lines)
-    end
-end)
-
-M.hide_blame = function(buf)
+M.hide_blame_line = function(buf)
     if buffer.is_valid(buf) then
         pcall(vim.api.nvim_buf_del_extmark, buf, M.constants.blame_namespace, M.constants.blame_line_id)
     end
@@ -277,583 +136,44 @@ M.hide_hunk_signs = void(function(buf)
     end
 end)
 
-M.show_hunk = function(hunk, filetype)
-    local lines = hunk.diff
-    local trimmed_lines = {}
-    local added_lines = {}
-    local removed_lines = {}
-    for index, line in pairs(lines) do
-        local first_letter = line:sub(1, 1)
-        if first_letter == '+' then
-            added_lines[#added_lines + 1] = index
-        elseif first_letter == '-' then
-            removed_lines[#removed_lines + 1] = index
-        end
-        trimmed_lines[#trimmed_lines + 1] = line:sub(2, #line)
-    end
-    local view = View.new({
-        filetype = filetype,
-        lines = trimmed_lines,
-        border = M.state:get('hunk').window.border,
-        border_hl = M.state:get('hunk').window.border_hl,
-        win_options = { ['cursorline'] = true},
-        window_props = {
-            style = 'minimal',
-            relative = 'cursor',
-            height = #lines,
-            width = vim.api.nvim_get_option('columns'),
-            row = 0,
-            col = 0,
-        },
-    })
-    local widget = Widget.new({ view }, 'hunk')
-    widget:render(true)
-    view:set_lines(trimmed_lines)
-    for i = 1, #added_lines do
-        local lnum = added_lines[i]
-        sign.place(
-            view:get_buf(),
-            lnum,
-            M.state:get('hunk').signs['add'],
-            M.state:get('hunk_sign').priority
-        )
-    end
-    for i = 1, #removed_lines do
-        local lnum = removed_lines[i]
-        sign.place(
-            view:get_buf(),
-            lnum,
-            M.state:get('hunk').signs['remove'],
-            M.state:get('hunk_sign').priority
-        )
-    end
+M.show_blame = void(function(fetch)
+    local widget = blame_widget.render(fetch)
+    M.state:set('mounted_widget', widget)
+end)
+
+M.show_hunk = function(hunk_info, filetype)
+    local widget = hunk_widget.render(hunk_info, filetype)
+    M.state:set('mounted_widget', widget)
 end
 
 M.show_horizontal_preview = void(function(widget_name, fetch, filetype)
-    local height = math.ceil(global_height() - 4)
-    local width = math.ceil(global_width() * 0.8)
-    local col = math.ceil((global_width() - width) / 2) - 1
-    local views = {
-        preview = View.new({
-            filetype = filetype,
-            title = M.state:get('preview').horizontal_window.title,
-            border = M.state:get('preview').horizontal_window.border,
-            border_hl = M.state:get('preview').horizontal_window.border_hl,
-            border_focus_hl = M.state:get('preview').horizontal_window.border_focus_hl,
-            win_options = {
-                ['cursorline'] = true,
-            },
-            window_props = {
-                style = 'minimal',
-                relative = 'editor',
-                width = width,
-                height = height,
-                row = 1,
-                col = col,
-            },
-        }),
-    }
-    local widget = Widget.new(views, widget_name)
-        :render()
-        :set_loading(true)
-    M.state:set('current_widget', widget)
-    scheduler()
-    local err, data = fetch()
-    scheduler()
-    widget:set_loading(false)
-    scheduler()
-    if not err then
-        views.preview:set_lines(data.lines)
-        for i = 1, #data.lnum_changes do
-            local datum = data.lnum_changes[i]
-           sign.place(
-                views.preview:get_buf(),
-                datum.lnum,
-                M.state:get('preview').signs[datum.type],
-                M.state:get('preview').priority
-            )
-        end
-    else
-        widget:set_error(true)
-        scheduler()
-    end
+    local widget = preview_widget.render_horizontal(widget_name, fetch, filetype)
+    M.state:set('mounted_widget', widget)
 end)
 
 M.show_vertical_preview = void(function(widget_name, fetch, filetype)
-    local height = math.ceil(global_height() - 4)
-    local width = math.ceil(global_width() * 0.485)
-    local col = math.ceil((global_width() - (width * 2)) / 2) - 1
-    local views = {
-        previous = View.new({
-            filetype = filetype,
-            title = M.state:get('preview').previous_window.title,
-            border = M.state:get('preview').previous_window.border,
-            border_hl = M.state:get('preview').previous_window.border_hl,
-            border_focus_hl = M.state:get('preview').previous_window.border_focus_hl,
-            win_options = {
-                ['cursorbind'] = true,
-                ['scrollbind'] = true,
-                ['cursorline'] = true,
-            },
-            window_props = {
-                style = 'minimal',
-                relative = 'editor',
-                width = width,
-                height = height,
-                row = 1,
-                col = col,
-            },
-        }),
-        current = View.new({
-            filetype = filetype,
-            title = M.state:get('preview').current_window.title,
-            border = M.state:get('preview').current_window.border,
-            border_hl = M.state:get('preview').current_window.border_hl,
-            border_focus_hl = M.state:get('preview').current_window.border_focus_hl,
-            win_options = {
-                ['cursorbind'] = true,
-                ['scrollbind'] = true,
-                ['cursorline'] = true,
-            },
-            window_props = {
-                style = 'minimal',
-                relative = 'editor',
-                width = width,
-                height = height,
-                row = 1,
-                col = col + width + 2,
-            },
-        })
-    }
-    local widget = Widget.new(views, widget_name)
-        :render()
-        :set_loading(true)
-    views.current:focus()
-    M.state:set('current_widget', widget)
-    scheduler()
-    local err, data = fetch()
-    scheduler()
-    widget:set_loading(false)
-    scheduler()
-    if not err then
-        views.previous:set_lines(data.previous_lines)
-        views.current:set_lines(data.current_lines)
-        for i = 1, #data.lnum_changes do
-            local datum = data.lnum_changes[i]
-            sign.place(
-                views[datum.buftype]:get_buf(),
-                datum.lnum,
-                M.state:get('preview').signs[datum.type],
-                M.state:get('preview').priority
-            )
-        end
-    else
-        widget:set_error(true)
-        scheduler()
-    end
+    local widget = preview_widget.render_vertical(widget_name, fetch, filetype)
+    M.state:set('mounted_widget', widget)
 end)
 
 M.show_horizontal_history = void(function(fetch, filetype)
-    local parent_buf = vim.api.nvim_get_current_buf()
-    local height = math.ceil(global_height() - 13)
-    local width = math.ceil(global_width() * 0.8)
-    local col = math.ceil((global_width() - width) / 2) - 1
-    local views = {
-        preview = View.new({
-            filetype = filetype,
-            border = M.state:get('history').horizontal_window.border,
-            border_hl = M.state:get('history').horizontal_window.border_hl,
-            border_focus_hl = M.state:get('history').horizontal_window.border_focus_hl,
-            title = M.state:get('history').horizontal_window.title,
-            buf_options = {
-                ['modifiable'] = false,
-                ['buflisted'] = false,
-                ['bufhidden'] = 'wipe',
-            },
-            win_options = {
-                ['winhl'] = 'Normal:',
-                ['cursorline'] = true,
-                ['wrap'] = false,
-                ['signcolumn'] = 'yes',
-            },
-            window_props = {
-                style = 'minimal',
-                relative = 'editor',
-                width = width,
-                height = height,
-                row = 1,
-                col = col,
-            },
-        }),
-        history = View.new({
-            title = M.state:get('history').history_window.title,
-            border = M.state:get('history').history_window.border,
-            border_hl = M.state:get('history').history_window.border_hl,
-            border_focus_hl = M.state:get('history').history_window.border_focus_hl,
-            buf_options = {
-                ['modifiable'] = false,
-                ['buflisted'] = false,
-                ['bufhidden'] = 'wipe',
-            },
-            win_options = {
-                ['winhl'] = 'Normal:',
-                ['cursorline'] = true,
-                ['cursorbind'] = false,
-                ['scrollbind'] = false,
-                ['wrap'] = false,
-            },
-            window_props = {
-                style = 'minimal',
-                relative = 'editor',
-                width = width,
-                height = 7,
-                row = height + 3,
-                col = col,
-            },
-        }),
-    }
-    local widget = Widget.new(views, 'horizontal_history')
-        :render()
-        :set_loading(true)
-    views.history:focus()
-    M.state:set('current_widget', widget)
-    scheduler()
-    local err, data = fetch()
-    scheduler()
-    widget:set_loading(false)
-    scheduler()
-    if err then
-        local no_commits_str = 'does not have any commits yet'
-        if type(err) == 'table'
-            and #err > 0
-            and type(err[1]) == 'string'
-            and err[1]:sub(#err[1] - #no_commits_str + 1, #err[1]) == no_commits_str then
-            widget:set_centered_text(t('history/no_commits'))
-            return
-        end
-        widget:set_error(true)
-        scheduler()
-        return
-    end
-    local padding_right = 2
-    local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
-    local rows = {}
-    for i = 1, #data.logs do
-        local log = data.logs[i]
-        local row = {
-            i - 1 == 0 and string.format('>  HEAD~%s', i - 1) or string.format('   HEAD~%s', i - 1),
-            log.author_name or '',
-            log.commit_hash or '',
-            log.summary or '', (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or ''
-        }
-        for j = 1, #row do
-            local item = row[j]
-            if #item + 1 > table_title_space[j] then
-                table_title_space[j] = #item + padding_right
-            end
-        end
-        rows[#rows + 1] = row
-    end
-    local history_lines = {}
-    for i = 1, #rows do
-        local row = rows[i]
-        local line = ''
-        for j = 1, #row do
-            local item = row[j]
-            line = line .. item .. string.rep(' ',  table_title_space[j] - #item)
-            if j ~= #table_title_space then
-                line = line
-            end
-        end
-        history_lines[#history_lines + 1] = line
-    end
-    views.preview:set_lines(data.lines)
-    views.history:set_lines(history_lines)
-    views.history:add_keymap('<enter>', string.format('_change_history(%s)', parent_buf))
-    for i = 1, #data.lnum_changes do
-        local datum = data.lnum_changes[i]
-        local view = views.preview
-        sign.place(
-            view:get_buf(),
-            datum.lnum,
-            M.state:get('preview').signs[datum.type],
-            M.state:get('preview').priority
-        )
-    end
-    vim.highlight.range(
-        views.history:get_buf(),
-        M.constants.history_namespace,
-        M.state:get('history').indicator.hl,
-        { 0, 0 },
-        { 0, 1 }
-    )
+    local widget = history_widget.render_horizontal(fetch, filetype)
+    M.state:set('mounted_widget', widget)
 end)
 
 M.show_vertical_history = void(function(fetch, filetype)
-    local parent_buf = vim.api.nvim_get_current_buf()
-    local height = math.ceil(global_height() - 13)
-    local width = math.ceil(global_width() * 0.485)
-    local col = math.ceil((global_width() - (width * 2)) / 2) - 1
-    local views = {
-        previous = View.new({
-            filetype = filetype,
-            border = M.state:get('history').previous_window.border,
-            border_hl = M.state:get('history').previous_window.border_hl,
-            border_focus_hl = M.state:get('history').previous_window.border_focus_hl,
-            title = M.state:get('history').previous_window.title,
-            buf_options = {
-                ['modifiable'] = false,
-                ['buflisted'] = false,
-                ['bufhidden'] = 'wipe',
-            },
-            win_options = {
-                ['winhl'] = 'Normal:',
-                ['cursorline'] = true,
-                ['wrap'] = false,
-                ['cursorbind'] = true,
-                ['scrollbind'] = true,
-                ['signcolumn'] = 'yes',
-            },
-            window_props = {
-                style = 'minimal',
-                relative = 'editor',
-                width = width,
-                height = height,
-                row = 1,
-                col = col,
-            },
-        }),
-        current = View.new({
-            filetype = filetype,
-            title = M.state:get('history').current_window.title,
-            border = M.state:get('history').current_window.border,
-            border_hl = M.state:get('history').current_window.border_hl,
-            border_focus_hl = M.state:get('history').current_window.border_focus_hl,
-            buf_options = {
-                ['modifiable'] = false,
-                ['buflisted'] = false,
-                ['bufhidden'] = 'wipe',
-            },
-            win_options = {
-                ['winhl'] = 'Normal:',
-                ['cursorline'] = true,
-                ['wrap'] = false,
-                ['cursorbind'] = true,
-                ['scrollbind'] = true,
-                ['signcolumn'] = 'yes',
-            },
-            window_props = {
-                style = 'minimal',
-                relative = 'editor',
-                width = width,
-                height = height,
-                row = 1,
-                col = col + width + 2,
-            },
-        }),
-        history = View.new({
-            title = M.state:get('history').history_window.title,
-            border = M.state:get('history').history_window.border,
-            border_hl = M.state:get('history').history_window.border_hl,
-            border_focus_hl = M.state:get('history').history_window.border_focus_hl,
-            buf_options = {
-                ['modifiable'] = false,
-                ['buflisted'] = false,
-                ['bufhidden'] = 'wipe',
-            },
-            win_options = {
-                ['winhl'] = 'Normal:',
-                ['cursorline'] = true,
-                ['cursorbind'] = false,
-                ['scrollbind'] = false,
-                ['wrap'] = false,
-            },
-            window_props = {
-                style = 'minimal',
-                relative = 'editor',
-                width = width * 2 + 2,
-                height = 7,
-                row = height + 3,
-                col = col,
-            },
-        }),
-    }
-    local widget = Widget.new(views, 'vertical_history')
-        :render()
-        :set_loading(true)
-    views.history:focus()
-    M.state:set('current_widget', widget)
-    scheduler()
-    local err, data = fetch()
-    scheduler()
-    widget:set_loading(false)
-    scheduler()
-    if err then
-        local no_commits_str = 'does not have any commits yet'
-        if type(err) == 'table'
-            and #err > 0
-            and type(err[1]) == 'string'
-            and err[1]:sub(#err[1] - #no_commits_str + 1, #err[1]) == no_commits_str then
-            widget:set_centered_text(t('history/no_commits'))
-            return
-        end
-        widget:set_error(true)
-        scheduler()
-        return
-    end
-    local padding_right = 2
-    local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
-    local rows = {}
-    for i = 1, #data.logs do
-        local log = data.logs[i]
-        local row = {
-            i - 1 == 0 and string.format('>  HEAD~%s', i - 1) or string.format('   HEAD~%s', i - 1),
-            log.author_name or '',
-            log.commit_hash or '',
-            log.summary or '', (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or ''
-        }
-        for j = 1, #row do
-            local item = row[j]
-            if #item + 1 > table_title_space[j] then
-                table_title_space[j] = #item + padding_right
-            end
-        end
-        rows[#rows + 1] = row
-    end
-    local history_lines = {}
-    for i = 1, #rows do
-        local row = rows[i]
-        local line = ''
-        for j = 1, #row do
-            local item = row[j]
-            line = line .. item .. string.rep(' ',  table_title_space[j] - #item)
-            if j ~= #table_title_space then
-                line = line
-            end
-        end
-        history_lines[#history_lines + 1] = line
-    end
-    views.previous:set_lines(data.previous_lines)
-    views.current:set_lines(data.current_lines)
-    views.history:set_lines(history_lines)
-    views.history:add_keymap('<enter>', string.format('_change_history(%s)', parent_buf))
-    for i = 1, #data.lnum_changes do
-        local datum = data.lnum_changes[i]
-        local view = views[datum.buftype]
-        sign.place(
-            view:get_buf(),
-            datum.lnum,
-            M.state:get('preview').signs[datum.type],
-            M.state:get('preview').priority
-        )
-    end
-    vim.highlight.range(
-        views.history:get_buf(),
-        M.constants.history_namespace,
-        M.state:get('history').indicator.hl,
-        { 0, 0 },
-        { 0, 1 }
-    )
+    local widget = history_widget.render_vertical(fetch, filetype)
+    M.state:set('mounted_widget', widget)
 end)
 
 M.change_horizontal_history = void(function(fetch, selected_log)
-    local widget = M.state:get('current_widget')
-    local views = widget:get_views()
-    sign.unplace(views.preview:get_buf())
-    views.preview:set_loading(true)
-    scheduler()
-    local err, data = fetch()
-    scheduler()
-    views.preview:set_loading(false)
-    scheduler()
-    if err then
-        views.preview:set_error(true)
-        scheduler()
-        return
-    end
-    vim.api.nvim_win_set_cursor(views.preview:get_win_id(), { 1, 0 })
-    for i = 1, #data.lnum_changes do
-        local datum = data.lnum_changes[i]
-        local view = views.preview
-        sign.place(
-            view:get_buf(),
-            datum.lnum,
-            M.state:get('preview').signs[datum.type],
-            M.state:get('preview').priority
-        )
-    end
-    local history_lines = views.history:get_lines()
-    for i = 1, #history_lines do
-        local line = history_lines[i]
-        if i == selected_log then
-            history_lines[i] = string.format('>%s', line:sub(2, #line))
-        else
-            history_lines[i] = string.format(' %s', line:sub(2, #line))
-        end
-    end
-    views.history:set_lines(history_lines)
-    views.preview:set_lines(data.lines)
-    local lnum = selected_log - 1
-    vim.highlight.range(
-        views.history:get_buf(),
-        M.constants.history_namespace,
-        M.state:get('history').indicator.hl,
-        { lnum, 0 },
-        { lnum, 1 }
-    )
+    local widget = M.state:get('mounted_widget')
+    history_widget.change_horizontal(widget, fetch, selected_log)
 end)
 
 M.change_vertical_history = void(function(fetch, selected_log)
-    local widget = M.state:get('current_widget')
-    local views = widget:get_views()
-    sign.unplace(views.previous:get_buf())
-    sign.unplace(views.current:get_buf())
-    views.previous:set_loading(true)
-    views.current:set_loading(true)
-    scheduler()
-    local err, data = fetch()
-    scheduler()
-    views.previous:set_loading(false)
-    views.current:set_loading(false)
-    scheduler()
-    if err then
-        views.previous:set_error(true)
-        views.current:set_error(true)
-        scheduler()
-        return
-    end
-    vim.api.nvim_win_set_cursor(views.previous:get_win_id(), { 1, 0 })
-    vim.api.nvim_win_set_cursor(views.current:get_win_id(), { 1, 0 })
-    for i = 1, #data.lnum_changes do
-        local datum = data.lnum_changes[i]
-        local view = views[datum.buftype]
-        sign.place(
-            view:get_buf(),
-            datum.lnum,
-            M.state:get('preview').signs[datum.type],
-            M.state:get('preview').priority
-        )
-    end
-    local history_lines = views.history:get_lines()
-    for i = 1, #history_lines do
-        local line = history_lines[i]
-        if i == selected_log then
-            history_lines[i] = string.format('>%s', line:sub(2, #line))
-        else
-            history_lines[i] = string.format(' %s', line:sub(2, #line))
-        end
-    end
-    views.history:set_lines(history_lines)
-    views.current:set_lines(data.current_lines)
-    views.previous:set_lines(data.previous_lines)
-    local lnum = selected_log - 1
-    vim.highlight.range(
-        views.history:get_buf(),
-        M.constants.history_namespace,
-        M.state:get('history').indicator.hl,
-        { lnum, 0 },
-        { lnum, 1 }
-    )
+    local widget = M.state:get('mounted_widget')
+    history_widget.change_vertical(widget, fetch, selected_log)
 end)
 
 return M
