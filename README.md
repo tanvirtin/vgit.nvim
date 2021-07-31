@@ -120,12 +120,18 @@ NOTE: You cannot change the key of any of the configurations listed below, only 
 
 ```lua
 require('vgit').setup({
+    disabled = false,
     debug = false,
     hunks_enabled = true,
     blames_enabled = true,
+    diff_strategy = 'index',
     diff_preference = 'horizontal',
-    diff_strategy = 'remote',
     predict_hunk_signs = true,
+    action_delay_ms = 300,
+    predict_hunk_throttle_ms = 300,
+    predict_hunk_max_lines = 50000,
+    blame_line_throttle_ms = 150,
+    show_untracked_file_signs = true,
     signs = {
         VGitViewSignAdd = {
             name = 'VGitViewSignAdd',
@@ -231,12 +237,8 @@ require('vgit').setup({
             bg = nil,
         },
     },
-    blame = {
+    blame_line = {
         hl = 'VGitBlame',
-        window = {
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-        },
         format = function(blame, git_config)
             local function round(x)
                 return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
@@ -270,6 +272,12 @@ require('vgit').setup({
             local info = string.format('%s, %s • %s', author, time_format, commit_message)
             return string.format(' %s', info)
         end
+    },
+    blame = {
+        window = {
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitBorder',
+        }, 
     },
     preview = {
         priority = 10,
