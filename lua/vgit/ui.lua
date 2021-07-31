@@ -11,6 +11,14 @@ local scheduler = a.util.scheduler
 
 local vim = vim
 
+local function global_width()
+    return vim.o.columns
+end
+
+local function global_height()
+    return vim.o.lines
+end
+
 local function round(x)
     return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
 end
@@ -19,7 +27,6 @@ local M = {}
 
 M.constants = {
     history_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/history'),
-    diff_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/diff'),
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
     blame_line_id = 1,
 }
@@ -171,6 +178,7 @@ M.show_blame_line = function(buf, blame, lnum, git_config)
 end
 
 M.show_blame = void(function(fetch)
+    scheduler()
     local max_commit_message_length = 88
     local view = View.new({
         lines = {},
@@ -243,6 +251,7 @@ M.hide_blame = function(buf)
 end
 
 M.show_hunk_signs = void(function(buf, hunks)
+    scheduler()
     if buffer.is_valid(buf) then
         for i = 1, #hunks do
             local hunk = hunks[i]
@@ -261,6 +270,7 @@ M.show_hunk_signs = void(function(buf, hunks)
 end)
 
 M.hide_hunk_signs = void(function(buf)
+    scheduler()
     if buffer.is_valid(buf) then
         sign.unplace(buf)
         scheduler()
@@ -319,10 +329,10 @@ M.show_hunk = function(hunk, filetype)
     end
 end
 
-M.show_horizontal_preview = void(function(fetch, filetype)
-    local height = math.ceil(View.global_height() - 4)
-    local width = math.ceil(View.global_width() * 0.8)
-    local col = math.ceil((View.global_width() - width) / 2) - 1
+M.show_horizontal_preview = void(function(widget_name, fetch, filetype)
+    local height = math.ceil(global_height() - 4)
+    local width = math.ceil(global_width() * 0.8)
+    local col = math.ceil((global_width() - width) / 2) - 1
     local views = {
         preview = View.new({
             filetype = filetype,
@@ -343,7 +353,7 @@ M.show_horizontal_preview = void(function(fetch, filetype)
             },
         }),
     }
-    local widget = Widget.new(views, 'horizontal_preview')
+    local widget = Widget.new(views, widget_name)
         :render()
         :set_loading(true)
     M.state:set('current_widget', widget)
@@ -369,10 +379,10 @@ M.show_horizontal_preview = void(function(fetch, filetype)
     end
 end)
 
-M.show_vertical_preview = void(function(fetch, filetype)
-    local height = math.ceil(View.global_height() - 4)
-    local width = math.ceil(View.global_width() * 0.485)
-    local col = math.ceil((View.global_width() - (width * 2)) / 2) - 1
+M.show_vertical_preview = void(function(widget_name, fetch, filetype)
+    local height = math.ceil(global_height() - 4)
+    local width = math.ceil(global_width() * 0.485)
+    local col = math.ceil((global_width() - (width * 2)) / 2) - 1
     local views = {
         previous = View.new({
             filetype = filetype,
@@ -415,7 +425,7 @@ M.show_vertical_preview = void(function(fetch, filetype)
             },
         })
     }
-    local widget = Widget.new(views, 'vertical_preview')
+    local widget = Widget.new(views, widget_name)
         :render()
         :set_loading(true)
     views.current:focus()
@@ -445,9 +455,9 @@ end)
 
 M.show_horizontal_history = void(function(fetch, filetype)
     local parent_buf = vim.api.nvim_get_current_buf()
-    local height = math.ceil(View.global_height() - 13)
-    local width = math.ceil(View.global_width() * 0.8)
-    local col = math.ceil((View.global_width() - width) / 2) - 1
+    local height = math.ceil(global_height() - 13)
+    local width = math.ceil(global_width() * 0.8)
+    local col = math.ceil((global_width() - width) / 2) - 1
     local views = {
         preview = View.new({
             filetype = filetype,
@@ -581,9 +591,9 @@ end)
 
 M.show_vertical_history = void(function(fetch, filetype)
     local parent_buf = vim.api.nvim_get_current_buf()
-    local height = math.ceil(View.global_height() - 13)
-    local width = math.ceil(View.global_width() * 0.485)
-    local col = math.ceil((View.global_width() - (width * 2)) / 2) - 1
+    local height = math.ceil(global_height() - 13)
+    local width = math.ceil(global_width() * 0.485)
+    local col = math.ceil((global_width() - (width * 2)) / 2) - 1
     local views = {
         previous = View.new({
             filetype = filetype,
