@@ -12,11 +12,12 @@ describe('Bstate:', function()
         disabled = false,
         filename = '',
         filetype = '',
-        project_relative_filename = '',
+        tracked_filename = '',
         hunks = {},
         logs = {},
         temp_lines = {},
         last_lnum_blamed = 1,
+        untracked = false,
     }
 
     describe('new', function()
@@ -177,7 +178,7 @@ describe('Bstate:', function()
                 eq(bstate:get(i, 'disabled'), false)
                 eq(bstate:get(i, 'filename'), '')
                 eq(bstate:get(i, 'filetype'), '')
-                eq(bstate:get(i, 'project_relative_filename'), '')
+                eq(bstate:get(i, 'tracked_filename'), '')
                 eq(bstate:get(i, 'hunks'), {})
                 eq(bstate:get(i, 'logs'), {})
                 eq(bstate:get(i, 'last_lnum_blamed'), 1)
@@ -237,7 +238,7 @@ describe('Bstate:', function()
                 bstate:set(i, 'disabled', true)
                 bstate:set(i, 'filename', 'foo')
                 bstate:set(i, 'filetype', 'bar')
-                bstate:set(i, 'project_relative_filename', 'baz')
+                bstate:set(i, 'tracked_filename', 'baz')
                 bstate:set(i, 'hunks', { 'foo' })
                 bstate:set(i, 'logs', { 'bar' })
                 bstate:set(i, 'last_lnum_blamed', 10)
@@ -247,7 +248,7 @@ describe('Bstate:', function()
                 eq(bstate:get(i, 'disabled'), true)
                 eq(bstate:get(i, 'filename'), 'foo')
                 eq(bstate:get(i, 'filetype'), 'bar')
-                eq(bstate:get(i, 'project_relative_filename'), 'baz')
+                eq(bstate:get(i, 'tracked_filename'), 'baz')
                 eq(bstate:get(i, 'hunks'), { 'foo' })
                 eq(bstate:get(i, 'logs'), { 'bar' })
                 eq(bstate:get(i, 'last_lnum_blamed'), 10)
@@ -288,7 +289,7 @@ describe('Bstate:', function()
                 eq(bstate:get(i, 'disabled'), buf_state:get('disabled'))
                 eq(bstate:get(i, 'filename'), buf_state:get('filename'))
                 eq(bstate:get(i, 'filetype'), buf_state:get('filetype'))
-                eq(bstate:get(i, 'project_relative_filename'), buf_state:get('project_relative_filename'))
+                eq(bstate:get(i, 'tracked_filename'), buf_state:get('tracked_filename'))
                 eq(bstate:get(i, 'hunks'), buf_state:get('hunks'))
                 eq(bstate:get(i, 'logs'), buf_state:get('logs'))
                 eq(bstate:get(i, 'last_lnum_blamed'), buf_state:get('last_lnum_blamed'))

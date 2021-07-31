@@ -47,6 +47,11 @@
     <img src="https://user-images.githubusercontent.com/25164326/119602595-77b6cc00-bdb9-11eb-94c8-f62478ff8a16.gif" alt="diff_preview" />
 </details>
 <details>
+    <summary>See what changes you staged</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/127720416-e4130098-f8fc-4d8f-ab88-8adf701f384d.gif" alt="staged_preview" />
+</details>
+<details>
     <summary>Reset a buffer</summary>
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/119602597-79808f80-bdb9-11eb-94ed-8bd557164f84.gif" alt="buffer_reset" />
@@ -137,20 +142,23 @@ require('vgit').setup({
         VGitSignAdd = {
             name = 'VGitSignAdd',
             text_hl = 'VGitSignAdd',
+            num_hl = nil,
             line_hl = nil,
-            text = '│'
+            text = '┃'
         },
         VGitSignRemove = {
             name = 'VGitSignRemove',
             text_hl = 'VGitSignRemove',
+            num_hl = nil,
             line_hl = nil,
-            text = '│'
+            text = '┃'
         },
         VGitSignChange = {
             name = 'VGitSignChange',
             text_hl = 'VGitSignChange',
+            num_hl = nil,
             line_hl = nil,
-            text = '│'
+            text = '┃'
         },
     },
     hls = {
@@ -391,6 +399,9 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | hunk_stage | Stages a hunk, if cursor is on a hunk |
 | hunk_down | Navigate downward through a hunk |
 | hunk_up | Navigate upwards through a hunk |
+| stage_buffer | Stages a buffer you are currently on |
+| unstage_buffer | Unstages a buffer you are currently on |
+| staged_buffer_preview | Shows staged changes in a preview window |
 | buffer_preview | Shows the current differences in lines in the current buffer |
 | buffer_history | Opens a buffer preview along with a table of logs, enabling users to see different iterations of the buffer in the git history |
 | buffer_reset | Resets the current buffer to HEAD |
