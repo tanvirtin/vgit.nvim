@@ -24,7 +24,7 @@ M.state = State.new({
         set_diff_preference = 'Failed to set diff preferece, "%s" is invalid',
         set_diff_strategy = 'Failed to set diff strategy, "%s" is invalid',
         set_hunk_prediction_strategy = 'Failed to set hunk prediction type, "%s" is invalid',
-    }
+    },
 })
 
 M.setup = function(config)
@@ -39,7 +39,7 @@ M.translate = function(key, ...)
     for i = 1, #key_fragments do
         local frag = key_fragments[i]
         if i == 1 then
-           translation = M.state:get(frag)
+            translation = M.state:get(frag)
         else
             translation = translation[frag]
             assert(type(translation) == 'string', 'type error :: expected string')

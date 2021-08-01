@@ -55,7 +55,7 @@ M.state = State.new({
             end
             local info = string.format('%s, %s • %s', author, time_format, commit_message)
             return string.format(' %s', info)
-        end
+        end,
     },
     hunk_sign = {
         priority = 10,

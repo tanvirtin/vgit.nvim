@@ -42,7 +42,7 @@ M.render = function(hunk, filetype)
         lines = trimmed_lines,
         border = M.state:get('window').border,
         border_hl = M.state:get('window').border_hl,
-        win_options = { ['cursorline'] = true},
+        win_options = { ['cursorline'] = true },
         window_props = {
             style = 'minimal',
             relative = 'cursor',
@@ -57,21 +57,11 @@ M.render = function(hunk, filetype)
     view:set_lines(trimmed_lines)
     for i = 1, #added_lines do
         local lnum = added_lines[i]
-        sign.place(
-            view:get_buf(),
-            lnum,
-            M.state:get('signs')['add'],
-            M.state:get('priority')
-        )
+        sign.place(view:get_buf(), lnum, M.state:get('signs')['add'], M.state:get('priority'))
     end
     for i = 1, #removed_lines do
         local lnum = removed_lines[i]
-        sign.place(
-            view:get_buf(),
-            lnum,
-            M.state:get('signs')['remove'],
-            M.state:get('priority')
-        )
+        sign.place(view:get_buf(), lnum, M.state:get('signs')['remove'], M.state:get('priority'))
     end
     return widget
 end
