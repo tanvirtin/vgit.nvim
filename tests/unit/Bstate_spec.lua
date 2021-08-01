@@ -12,6 +12,7 @@ describe('Bstate:', function()
         filename = '',
         filetype = '',
         tracked_filename = '',
+        tracked_remote_filename = '',
         hunks = {},
         logs = {},
         temp_lines = {},
