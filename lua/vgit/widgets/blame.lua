@@ -29,7 +29,7 @@ M.render = wrap(function(fetch)
         lines = {},
         border = M.state:get('window').border,
         border_hl = M.state:get('window').border_hl,
-        win_options = { ['cursorline'] = true},
+        win_options = { ['cursorline'] = true },
         window_props = {
             style = 'minimal',
             relative = 'cursor',
@@ -39,9 +39,7 @@ M.render = wrap(function(fetch)
             col = 0,
         },
     })
-    local widget = Widget.new({ view }, 'blame')
-        :render(true)
-        :set_loading(true)
+    local widget = Widget.new({ view }, 'blame'):render(true):set_loading(true)
     scheduler()
     local err, blame = fetch()
     scheduler()

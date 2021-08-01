@@ -15,17 +15,16 @@ describe('State:', function()
             baz = {
                 foo = 'bar',
                 bar = 'foo',
-            }
+            },
         }
     end)
 
     describe('new', function()
-
         it('should bind the object provided into into the state object', function()
             local state = State.new(initial_state)
             eq(state, {
                 current = initial_state,
-                initial = initial_state
+                initial = initial_state,
             })
         end)
 
@@ -34,14 +33,12 @@ describe('State:', function()
                 State.new(42)
             end)
         end)
-
     end)
 
     describe('get', function()
-
         it('should throw error on invalid argument types', function()
             local state = State.new({
-                foo = 'bar'
+                foo = 'bar',
             })
             assert.has_error(function()
                 state:get(true)
@@ -66,7 +63,7 @@ describe('State:', function()
             eq(state:get('bar'), 'foo')
             eq(state:get('baz'), {
                 foo = 'bar',
-                bar = 'foo'
+                bar = 'foo',
             })
         end)
 
@@ -76,14 +73,12 @@ describe('State:', function()
                 eq(state:get('test'), nil)
             end)
         end)
-
     end)
 
     describe('set', function()
-
         it('should throw error on invalid argument types', function()
             local state = State.new({
-                foo = 'bar'
+                foo = 'bar',
             })
             assert.has_error(function()
                 state:set('foo', true)
@@ -130,52 +125,49 @@ describe('State:', function()
                 initial = initial_state,
             })
         end)
-
     end)
 
     describe('assign', function()
-
         it('should not assign attributes into into state which are not in it', function()
             local initial = { foo = true }
             local state = State.new(initial)
             state:assign({
                 foo = false,
                 bar = true,
-            });
+            })
             eq(state, {
                 initial = initial,
                 current = { foo = false },
-            });
+            })
         end)
 
         it('should return unmodified state when nil value is passed', function()
             local initial = { foo = true }
             local state = State.new(initial)
-            state:assign(nil);
+            state:assign(nil)
             eq(state, {
                 initial = initial,
                 current = initial,
-            });
+            })
         end)
-
 
         it('should assign tables which are lists', function()
             local initial = {
                 is_list = { 1, 2, 3, 4, 5 },
-                isnt_list = { a = 1, b = 2 }
+                isnt_list = { a = 1, b = 2 },
             }
             local state = State.new(initial)
             state:assign({
                 is_list = { 'a', 'b' },
-                isnt_list = { a = 1, b = 2 }
-            });
+                isnt_list = { a = 1, b = 2 },
+            })
             eq(state, {
                 initial = initial,
                 current = {
                     is_list = { 'a', 'b' },
-                    isnt_list = { a = 1, b = 2 }
+                    isnt_list = { a = 1, b = 2 },
                 },
-            });
+            })
         end)
 
         it('should throw error when there is a type mismatch', function()
@@ -184,18 +176,18 @@ describe('State:', function()
                 bar = {
                     baz = {
                         a = {
-                            b = {}
+                            b = {},
                         },
                         foo = {
                             bar = {
-                                baz = true
+                                baz = true,
                             },
                             a = {
-                                c = 4
-                            }
-                        }
-                    }
-                }
+                                c = 4,
+                            },
+                        },
+                    },
+                },
             })
             assert.has_error(function()
                 state:assign({
@@ -204,11 +196,11 @@ describe('State:', function()
                         baz = {
                             foo = {
                                 bar = {
-                                    baz = false
+                                    baz = false,
                                 },
-                            }
-                        }
-                    }
+                            },
+                        },
+                    },
                 })
             end)
         end)
@@ -219,18 +211,18 @@ describe('State:', function()
                 bar = {
                     baz = {
                         a = {
-                            b = {}
+                            b = {},
                         },
                         foo = {
                             bar = {
-                                baz = true
+                                baz = true,
                             },
                             a = {
-                                c = 4
-                            }
-                        }
-                    }
-                }
+                                c = 4,
+                            },
+                        },
+                    },
+                },
             }
             local state = State.new(initial)
             state:assign({
@@ -239,36 +231,34 @@ describe('State:', function()
                     baz = {
                         foo = {
                             bar = {
-                                baz = false
+                                baz = false,
                             },
-                        }
-                    }
-                }
-            });
+                        },
+                    },
+                },
+            })
             local current = {
                 foo = false,
                 bar = {
                     baz = {
                         a = {
-                            b = {}
+                            b = {},
                         },
                         foo = {
                             bar = {
-                                baz = false
+                                baz = false,
                             },
                             a = {
-                                c = 4
-                            }
-                        }
-                    }
-                }
+                                c = 4,
+                            },
+                        },
+                    },
+                },
             }
             eq(state, {
                 initial = initial,
-                current = current
-            });
+                current = current,
+            })
         end)
-
     end)
-
 end)

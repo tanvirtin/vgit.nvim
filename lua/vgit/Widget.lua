@@ -79,7 +79,8 @@ function Widget:render(as_popup)
     end
     for _, v in pairs(self.views) do
         v:add_autocmd(
-            'BufWinLeave', string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(win_ids))
+            'BufWinLeave',
+            string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(win_ids))
         )
     end
     local bufs = vim.api.nvim_list_bufs()

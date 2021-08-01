@@ -5,9 +5,7 @@ local describe = describe
 local eq = assert.are.same
 
 describe('localization:', function()
-
     describe('setup', function()
-
         it('should override state highlights with highlights specified through the config', function()
             localization.setup({
                 preview = {
@@ -22,11 +20,9 @@ describe('localization:', function()
                 previous = 'baz',
             })
         end)
-
     end)
 
     describe('translate', function()
-
         it('should throw error on invalid argument types', function()
             localization.setup({})
             assert.has_error(function()
@@ -74,7 +70,5 @@ describe('localization:', function()
             })
             eq(localization.translate('preview/horizontal', 'bar'), 'foo bar')
         end)
-
     end)
-
 end)

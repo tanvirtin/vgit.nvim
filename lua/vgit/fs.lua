@@ -8,9 +8,11 @@ local M = {}
 M.relative_filename = function(filepath)
     assert(type(filepath) == 'string', 'type error :: expected string')
     local cwd = vim.loop.cwd()
-    if not cwd or not filepath then return filepath end
-    if filepath:sub(1, #cwd) == cwd  then
-        local offset =  0
+    if not cwd or not filepath then
+        return filepath
+    end
+    if filepath:sub(1, #cwd) == cwd then
+        local offset = 0
         if cwd:sub(#cwd, #cwd) ~= '/' then
             offset = 1
         end
