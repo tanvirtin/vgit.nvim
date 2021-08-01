@@ -26,7 +26,7 @@ end
 M.add_keymap = function(buf, key, action)
     vim.api.nvim_buf_set_keymap(buf, 'n', key, string.format(':lua require("vgit").%s<CR>', action), {
         silent = true,
-        noremap = true
+        noremap = true,
     })
 end
 

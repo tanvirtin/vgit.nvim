@@ -6,7 +6,6 @@ local describe = describe
 local eq = assert.are.same
 
 describe('Bstate:', function()
-
     local atomic_buf_state = {
         blames = {},
         disabled = false,
@@ -21,16 +20,13 @@ describe('Bstate:', function()
     }
 
     describe('new', function()
-
         it('should create a Bstate object', function()
             local bstate = Bstate.new()
             eq(bstate, { buf_states = {} })
         end)
-
     end)
 
     describe('add', function()
-
         it('should throw error on invalid argument types', function()
             local bstate = Bstate.new()
             assert.has_error(function()
@@ -77,11 +73,9 @@ describe('Bstate:', function()
             end
             eq(#vim.tbl_keys(bstate.buf_states), num_cache)
         end)
-
     end)
 
     describe('contains', function()
-
         it('should return true for a given buf number if it exists in the object', function()
             local bstate = Bstate.new()
             local num_bufs = 100
@@ -103,11 +97,9 @@ describe('Bstate:', function()
                 eq(bstate:contains(i), false)
             end
         end)
-
     end)
 
     describe('remove', function()
-
         it('should throw error on invalid argument types', function()
             local bstate = Bstate.new()
             assert.has_error(function()
@@ -143,11 +135,9 @@ describe('Bstate:', function()
                 eq(bstate:contains(i), false)
             end
         end)
-
     end)
 
     describe('get', function()
-
         it('should throw error on invalid argument types', function()
             local bstate = Bstate.new()
             assert.has_error(function()
@@ -184,11 +174,9 @@ describe('Bstate:', function()
                 eq(bstate:get(i, 'last_lnum_blamed'), 1)
             end
         end)
-
     end)
 
     describe('set', function()
-
         it('should throw error on invalid argument types', function()
             local bstate = Bstate.new()
             local num_bufs = 100
@@ -254,11 +242,9 @@ describe('Bstate:', function()
                 eq(bstate:get(i, 'last_lnum_blamed'), 10)
             end
         end)
-
     end)
 
     describe('for_each', function()
-
         it('should throw error on invalid argument types', function()
             local bstate = Bstate.new()
             assert.has_error(function()
@@ -295,11 +281,9 @@ describe('Bstate:', function()
                 eq(bstate:get(i, 'last_lnum_blamed'), buf_state:get('last_lnum_blamed'))
             end)
         end)
-
     end)
 
     describe('get_bufs', function()
-
         it('should return all the buf states that exists in the bstate', function()
             local bstate = Bstate.new()
             local num_bufs = 100
@@ -317,7 +301,5 @@ describe('Bstate:', function()
             local bstate = Bstate.new()
             assert(bstate:get_buf_states(), {})
         end)
-
     end)
-
 end)

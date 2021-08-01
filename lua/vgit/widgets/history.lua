@@ -32,31 +32,31 @@ M.state = State.new({
         remove = 'VGitViewSignRemove',
     },
     indicator = {
-        hl = 'VGitIndicator'
+        hl = 'VGitIndicator',
     },
     horizontal_window = {
         title = t('history/horizontal'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus'
+        border_focus_hl = 'VGitBorderFocus',
     },
     current_window = {
         title = t('history/current'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus'
+        border_focus_hl = 'VGitBorderFocus',
     },
     previous_window = {
         title = t('history/previous'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus'
+        border_focus_hl = 'VGitBorderFocus',
     },
     history_window = {
         title = t('history/history'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus'
+        border_focus_hl = 'VGitBorderFocus',
     },
 })
 
@@ -123,9 +123,7 @@ M.render_horizontal = wrap(function(fetch, filetype)
             },
         }),
     }
-    local widget = Widget.new(views, 'horizontal_history')
-        :render()
-        :set_loading(true)
+    local widget = Widget.new(views, 'horizontal_history'):render():set_loading(true)
     views.history:focus()
     scheduler()
     local err, data = fetch()
@@ -134,10 +132,12 @@ M.render_horizontal = wrap(function(fetch, filetype)
     scheduler()
     if err then
         local no_commits_str = 'does not have any commits yet'
-        if type(err) == 'table'
+        if
+            type(err) == 'table'
             and #err > 0
             and type(err[1]) == 'string'
-            and err[1]:sub(#err[1] - #no_commits_str + 1, #err[1]) == no_commits_str then
+            and err[1]:sub(#err[1] - #no_commits_str + 1, #err[1]) == no_commits_str
+        then
             widget:set_centered_text(t('history/no_commits'))
             return widget
         end
@@ -154,7 +154,8 @@ M.render_horizontal = wrap(function(fetch, filetype)
             i - 1 == 0 and string.format('>  HEAD~%s', i - 1) or string.format('   HEAD~%s', i - 1),
             log.author_name or '',
             log.commit_hash or '',
-            log.summary or '', (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or ''
+            log.summary or '',
+            (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or '',
         }
         for j = 1, #row do
             local item = row[j]
@@ -170,7 +171,7 @@ M.render_horizontal = wrap(function(fetch, filetype)
         local line = ''
         for j = 1, #row do
             local item = row[j]
-            line = line .. item .. string.rep(' ',  table_title_space[j] - #item)
+            line = line .. item .. string.rep(' ', table_title_space[j] - #item)
             if j ~= #table_title_space then
                 line = line
             end
@@ -183,12 +184,7 @@ M.render_horizontal = wrap(function(fetch, filetype)
     for i = 1, #data.lnum_changes do
         local datum = data.lnum_changes[i]
         local view = views.preview
-        sign.place(
-            view:get_buf(),
-            datum.lnum,
-            M.state:get('signs')[datum.type],
-            M.state:get('priority')
-        )
+        sign.place(view:get_buf(), datum.lnum, M.state:get('signs')[datum.type], M.state:get('priority'))
     end
     vim.highlight.range(
         views.history:get_buf(),
@@ -289,9 +285,7 @@ M.render_vertical = wrap(function(fetch, filetype)
             },
         }),
     }
-    local widget = Widget.new(views, 'vertical_history')
-        :render()
-        :set_loading(true)
+    local widget = Widget.new(views, 'vertical_history'):render():set_loading(true)
     views.history:focus()
     scheduler()
     local err, data = fetch()
@@ -300,10 +294,12 @@ M.render_vertical = wrap(function(fetch, filetype)
     scheduler()
     if err then
         local no_commits_str = 'does not have any commits yet'
-        if type(err) == 'table'
+        if
+            type(err) == 'table'
             and #err > 0
             and type(err[1]) == 'string'
-            and err[1]:sub(#err[1] - #no_commits_str + 1, #err[1]) == no_commits_str then
+            and err[1]:sub(#err[1] - #no_commits_str + 1, #err[1]) == no_commits_str
+        then
             widget:set_centered_text(t('history/no_commits'))
             return widget
         end
@@ -320,7 +316,8 @@ M.render_vertical = wrap(function(fetch, filetype)
             i - 1 == 0 and string.format('>  HEAD~%s', i - 1) or string.format('   HEAD~%s', i - 1),
             log.author_name or '',
             log.commit_hash or '',
-            log.summary or '', (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or ''
+            log.summary or '',
+            (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or '',
         }
         for j = 1, #row do
             local item = row[j]
@@ -336,7 +333,7 @@ M.render_vertical = wrap(function(fetch, filetype)
         local line = ''
         for j = 1, #row do
             local item = row[j]
-            line = line .. item .. string.rep(' ',  table_title_space[j] - #item)
+            line = line .. item .. string.rep(' ', table_title_space[j] - #item)
             if j ~= #table_title_space then
                 line = line
             end
@@ -350,12 +347,7 @@ M.render_vertical = wrap(function(fetch, filetype)
     for i = 1, #data.lnum_changes do
         local datum = data.lnum_changes[i]
         local view = views[datum.buftype]
-        sign.place(
-            view:get_buf(),
-            datum.lnum,
-            M.state:get('signs')[datum.type],
-            M.state:get('priority')
-        )
+        sign.place(view:get_buf(), datum.lnum, M.state:get('signs')[datum.type], M.state:get('priority'))
     end
     vim.highlight.range(
         views.history:get_buf(),
@@ -385,12 +377,7 @@ M.change_horizontal = void(function(widget, fetch, selected_log)
     for i = 1, #data.lnum_changes do
         local datum = data.lnum_changes[i]
         local view = views.preview
-        sign.place(
-            view:get_buf(),
-            datum.lnum,
-            M.state:get('signs')[datum.type],
-            M.state:get('priority')
-        )
+        sign.place(view:get_buf(), datum.lnum, M.state:get('signs')[datum.type], M.state:get('priority'))
     end
     local history_lines = views.history:get_lines()
     for i = 1, #history_lines do
@@ -436,12 +423,7 @@ M.change_vertical = void(function(widget, fetch, selected_log)
     for i = 1, #data.lnum_changes do
         local datum = data.lnum_changes[i]
         local view = views[datum.buftype]
-        sign.place(
-            view:get_buf(),
-            datum.lnum,
-            M.state:get('signs')[datum.type],
-            M.state:get('priority')
-        )
+        sign.place(view:get_buf(), datum.lnum, M.state:get('signs')[datum.type], M.state:get('priority'))
     end
     local history_lines = views.history:get_lines()
     for i = 1, #history_lines do

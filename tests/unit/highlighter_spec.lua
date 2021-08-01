@@ -6,9 +6,7 @@ local describe = describe
 local eq = assert.are.same
 
 describe('highlighter:', function()
-
     describe('setup', function()
-
         it('should override state highlights with highlights specified through the config', function()
             highlighter.setup({
                 hls = {
@@ -21,13 +19,11 @@ describe('highlighter:', function()
             eq(highlighter.state.current.hls.VGitSignAdd, {
                 fg = 'red',
                 bg = nil,
-            });
+            })
         end)
-
     end)
 
     describe('create', function()
-
         it('should successfully create a highlight', function()
             local hl = 'VGitTestHighlight'
             highlighter.create(hl, {
@@ -37,5 +33,4 @@ describe('highlighter:', function()
             vim.cmd(string.format('hi %s', hl))
         end)
     end)
-
 end)
