@@ -273,7 +273,7 @@ function View:set_centered_text(text)
     for _ = 1, height do
         lines[#lines + 1] = ''
     end
-    lines[math.floor(height / 2)] = string.rep(' ', calculate_text_center(text, width)) .. text
+    lines[math.ceil(height / 2)] = string.rep(' ', calculate_text_center(text, width)) .. text
     self:set_win_option('cursorline', false)
     self.state.lines = buffer.get_lines(self:get_buf())
     buffer.set_lines(self.state.buf, lines)
