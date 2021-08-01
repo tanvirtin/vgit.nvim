@@ -26,19 +26,19 @@ M.state = State.new({
         title = t('preview/horizontal'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus'
+        border_focus_hl = 'VGitBorderFocus',
     },
     current_window = {
         title = t('preview/current'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus'
+        border_focus_hl = 'VGitBorderFocus',
     },
     previous_window = {
         title = t('preview/previous'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus'
+        border_focus_hl = 'VGitBorderFocus',
     },
     signs = {
         add = 'VGitViewSignAdd',
@@ -74,9 +74,7 @@ M.render_horizontal = wrap(function(widget_name, fetch, filetype)
             },
         }),
     }
-    local widget = Widget.new(views, widget_name)
-        :render()
-        :set_loading(true)
+    local widget = Widget.new(views, widget_name):render():set_loading(true)
     scheduler()
     local err, data = fetch()
     scheduler()
@@ -86,12 +84,7 @@ M.render_horizontal = wrap(function(widget_name, fetch, filetype)
         views.preview:set_lines(data.lines)
         for i = 1, #data.lnum_changes do
             local datum = data.lnum_changes[i]
-           sign.place(
-                views.preview:get_buf(),
-                datum.lnum,
-                M.state:get('signs')[datum.type],
-                M.state:get('priority')
-            )
+            sign.place(views.preview:get_buf(), datum.lnum, M.state:get('signs')[datum.type], M.state:get('priority'))
         end
     else
         widget:set_error(true)
@@ -144,11 +137,9 @@ M.render_vertical = wrap(function(widget_name, fetch, filetype)
                 row = 1,
                 col = col + width + 2,
             },
-        })
+        }),
     }
-    local widget = Widget.new(views, widget_name)
-        :render()
-        :set_loading(true)
+    local widget = Widget.new(views, widget_name):render():set_loading(true)
     views.current:focus()
     scheduler()
     local err, data = fetch()

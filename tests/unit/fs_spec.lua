@@ -14,7 +14,6 @@ describe('fs:', function()
     end)
 
     describe('filename', function()
-
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.filename(true)
@@ -46,11 +45,9 @@ describe('fs:', function()
             local buf = vim.api.nvim_create_buf(true, true)
             eq(fs.filename(buf), '')
         end)
-
     end)
 
     describe('relative_filename', function()
-
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.relative_filename(true)
@@ -81,11 +78,9 @@ describe('fs:', function()
             local filepath = fs.relative_filename(path)
             eq(filepath, 'lua/vgit/init.lua')
         end)
-
     end)
 
     describe('short_filename', function()
-
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.short_filename(true)
@@ -112,11 +107,9 @@ describe('fs:', function()
             eq(fs.short_filename(''), '')
             eq(fs.short_filename('init/.lua'), '.lua')
         end)
-
     end)
 
     describe('filetype', function()
-
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.filetype(true)
@@ -145,11 +138,9 @@ describe('fs:', function()
             local buf = vim.api.nvim_create_buf(true, true)
             eq(fs.filetype(buf), '')
         end)
-
     end)
 
     describe('read_file', function()
-
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.read_file(true)
@@ -173,11 +164,9 @@ describe('fs:', function()
             assert.are_not.same(err, nil)
             eq(data, nil)
         end)
-
     end)
 
     describe('tmpname', function()
-
         it('should generate a string', function()
             eq(type(fs.tmpname()), 'string')
         end)
@@ -194,11 +183,9 @@ describe('fs:', function()
             local name = fs.tmpname()
             eq(name:sub(#name - 4, #name), '_vgit')
         end)
-
     end)
 
     describe('tracked_filename', function()
-
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.tracked_filename(true, {})
@@ -253,11 +240,9 @@ describe('fs:', function()
             local result = fs.tracked_filename('foo', { 'bar/bar', 'bar/baz' })
             eq(result, nil)
         end)
+    end)
 
-     end)
-
-     describe('detect', function()
-
+    describe('detect', function()
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.detect_filetype(true)
@@ -275,7 +260,6 @@ describe('fs:', function()
                 fs.detect_filetype(function() end)
             end)
         end)
-
 
         it('should work for md', function()
             eq('markdown', fs.detect_filetype('Readme.md'))
@@ -343,11 +327,9 @@ describe('fs:', function()
         it('should work for custom filenames, like Cakefile', function()
             eq('coffee', fs.detect_filetype('Cakefile'))
         end)
+    end)
 
-     end)
-
-     describe('write_file', function()
-
+    describe('write_file', function()
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.write_file(true, {})
@@ -402,11 +384,9 @@ describe('fs:', function()
             eq(err, nil)
             eq(data, { 'foo', 'baz', '' })
         end)
+    end)
 
-     end)
-
-     describe('remove_file', function()
-
+    describe('remove_file', function()
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.remove_file(true)
@@ -429,7 +409,12 @@ describe('fs:', function()
             local num_files = 5
             local file_exists = function(name)
                 local f = io.open(name, 'r')
-                if f ~= nil then io.close(f) return true else return false end
+                if f ~= nil then
+                    io.close(f)
+                    return true
+                else
+                    return false
+                end
             end
             local create_file = function(name)
                 local file = io.open(name, 'w')
@@ -450,11 +435,9 @@ describe('fs:', function()
                 eq(file_exists(string.format('%s_%s', filename, i)), false)
             end
         end)
+    end)
 
-     end)
-
-     describe('exists', function()
-
+    describe('exists', function()
         it('should throw error on invalid argument types', function()
             assert.has_error(function()
                 fs.exists(true)
@@ -487,7 +470,5 @@ describe('fs:', function()
             eq(fs.exists('lua/vgit'), true)
             eq(fs.exists('lua'), true)
         end)
-
-     end)
-
+    end)
 end)

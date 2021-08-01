@@ -41,7 +41,7 @@ local M = {}
 
 M.constants = {
     diff_algorithm = 'myers',
-    empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+    empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
 }
 
 M.state = State.new({
@@ -165,10 +165,12 @@ M.create_blame = function(info)
     local committer_mail = committer_mail_info[2]
     local lnum = tonumber(commit_hash_info[3])
     local committed = true
-    if author == 'Not Committed Yet'
+    if
+        author == 'Not Committed Yet'
         and committer == 'Not Committed Yet'
         and author_mail == '<not.committed.yet>'
-        and committer_mail == '<not.committed.yet>' then
+        and committer_mail == '<not.committed.yet>'
+    then
         committed = false
     end
     return {
@@ -303,14 +305,16 @@ end, 3)
 
 M.logs = wrap(function(filename, callback)
     local timeout = 30000
-    local logs = {{
-        author_name = M.state:get('config')['user.name'],
-        author_email = M.state:get('config')['user.email'],
-        commit_hash = nil,
-        parent_hash = nil,
-        summary = nil,
-        timestamp = nil
-    }}
+    local logs = {
+        {
+            author_name = M.state:get('config')['user.name'],
+            author_email = M.state:get('config')['user.email'],
+            commit_hash = nil,
+            parent_hash = nil,
+            summary = nil,
+            timestamp = nil,
+        },
+    }
     local job = Job:new({
         command = 'git',
         args = {
@@ -561,13 +565,15 @@ M.untracked_hunks = function(lines)
     for i = 1, #lines do
         diff[#diff + 1] = string.format('+%s', lines[i])
     end
-    return {{
-        header = nil,
-        start = 1,
-        finish = #lines,
-        type = 'add',
-        diff = diff,
-    }}
+    return {
+        {
+            header = nil,
+            start = 1,
+            finish = #lines,
+            type = 'add',
+            diff = diff,
+        },
+    }
 end
 
 M.show = wrap(function(filename, commit_hash, callback)
@@ -778,7 +784,7 @@ M.ls_changed = wrap(function(callback)
         on_stdout = function(_, data, _)
             result[#result + 1] = {
                 filename = data:sub(4, #data),
-                status = data:sub(1, 2)
+                status = data:sub(1, 2),
             }
         end,
         on_stderr = function(_, data, _)
@@ -817,7 +823,7 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
             for j = start, finish do
                 lnum_changes[#lnum_changes + 1] = {
                     lnum = j,
-                    type = 'add'
+                    type = 'add',
                 }
             end
         elseif type == 'remove' then
@@ -829,7 +835,7 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
                 table.insert(new_lines, s, line:sub(2, #line))
                 lnum_changes[#lnum_changes + 1] = {
                     lnum = s,
-                    type = 'remove'
+                    type = 'remove',
                 }
             end
         elseif type == 'change' then
@@ -842,12 +848,12 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
                     table.insert(new_lines, s, line:sub(2, #line))
                     lnum_changes[#lnum_changes + 1] = {
                         lnum = s,
-                        type = 'remove'
+                        type = 'remove',
                     }
                 elseif line_type == '+' then
                     lnum_changes[#lnum_changes + 1] = {
                         lnum = s,
-                        type = 'add'
+                        type = 'add',
                     }
                 end
                 s = s + 1
@@ -892,7 +898,7 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
                 lnum_changes[#lnum_changes + 1] = {
                     lnum = j,
                     buftype = 'current',
-                    type = 'add'
+                    type = 'add',
                 }
             end
         elseif type == 'remove' then
@@ -905,7 +911,7 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
                 lnum_changes[#lnum_changes + 1] = {
                     lnum = start,
                     buftype = 'previous',
-                    type = 'remove'
+                    type = 'remove',
                 }
             end
         elseif type == 'change' then
@@ -935,14 +941,14 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
                     lnum_changes[#lnum_changes + 1] = {
                         lnum = j,
                         buftype = 'previous',
-                        type = 'remove'
+                        type = 'remove',
                     }
                 end
                 if added_line then
                     lnum_changes[#lnum_changes + 1] = {
                         lnum = j,
                         buftype = 'current',
-                        type = 'add'
+                        type = 'add',
                     }
                 end
                 previous_lines[j] = removed_line or ''

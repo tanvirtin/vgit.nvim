@@ -10,7 +10,6 @@ local eq = assert.are.same
 local api = nil
 
 describe('current', function()
-
     before_each(function()
         api = mock(vim.api, true)
         api.nvim_get_current_buf.returns(5)
@@ -24,11 +23,9 @@ describe('current', function()
         eq(buffer.current(), 5)
         assert.stub(api.nvim_get_current_buf).was_called_with()
     end)
-
 end)
 
 describe('is_valid', function()
-
     before_each(function()
         api = mock(vim.api, true)
         api.nvim_buf_is_valid.returns(true)
@@ -44,11 +41,9 @@ describe('is_valid', function()
         assert.stub(api.nvim_buf_is_valid).was_called_with(1)
         assert.stub(api.nvim_buf_is_loaded).was_called_with(1)
     end)
-
 end)
 
 describe('get_lines', function()
-
     before_each(function()
         api = mock(vim.api, true)
         api.nvim_buf_get_lines.returns({ 'foo', 'bar' })
@@ -67,11 +62,9 @@ describe('get_lines', function()
         eq(buffer.get_lines(1, 22, 33), { 'foo', 'bar' })
         assert.stub(api.nvim_buf_get_lines).was_called_with(1, 22, 33, false)
     end)
-
 end)
 
 describe('set_lines', function()
-
     before_each(function()
         api = mock(vim.api, true)
         api.nvim_buf_set_lines.returns()
@@ -96,11 +89,9 @@ describe('set_lines', function()
         assert.stub(api.nvim_buf_get_option).was_called_with(29, 'modifiable')
         assert.stub(api.nvim_buf_set_option).was_called_with(29, 'modifiable', false)
     end)
-
 end)
 
 describe('assign_options', function()
-
     before_each(function()
         api = mock(vim.api, true)
         api.nvim_buf_set_option.returns()
@@ -115,17 +106,15 @@ describe('assign_options', function()
         buffer.assign_options(buf, {
             foo = 'bar',
             bar = 'foo',
-            baz = 'jaz'
+            baz = 'jaz',
         })
         assert.stub(api.nvim_buf_set_option).was_called_with(buf, 'foo', 'bar')
         assert.stub(api.nvim_buf_set_option).was_called_with(buf, 'bar', 'foo')
         assert.stub(api.nvim_buf_set_option).was_called_with(buf, 'baz', 'jaz')
     end)
-
 end)
 
 describe('add_keymap', function()
-
     before_each(function()
         api = mock(vim.api, true)
         api.nvim_buf_set_keymap.returns()
@@ -138,18 +127,20 @@ describe('add_keymap', function()
     it('should call nvim_buf_set_keymap with correct arguments', function()
         local buf = 15
         buffer.add_keymap(buf, '<enter>', '_change_history()')
-        assert
-            .stub(api.nvim_buf_set_keymap)
-            .was_called_with(buf, 'n', '<enter>', ':lua require("vgit")._change_history()<CR>', {
+        assert.stub(api.nvim_buf_set_keymap).was_called_with(
+            buf,
+            'n',
+            '<enter>',
+            ':lua require("vgit")._change_history()<CR>',
+            {
                 silent = true,
-                noremap = true
-            })
+                noremap = true,
+            }
+        )
     end)
-
 end)
 
 describe('add_autocmd', function()
-
     before_each(function()
         api = mock(vim.api, true)
         api.nvim_command.returns()
@@ -161,31 +152,19 @@ describe('add_autocmd', function()
 
     it('should call nvim_buf_set_keymap with correct arguments', function()
         local buf = 15
-        buffer.add_autocmd(
-            buf,
-            'BufEnter',
-            'hello'
+        buffer.add_autocmd(buf, 'BufEnter', 'hello')
+        assert.stub(api.nvim_command).was_called_with(
+            'au BufEnter <buffer=15> ++nested ++once :lua require("vgit").hello'
         )
-        assert
-            .stub(api.nvim_command)
-            .was_called_with('au BufEnter <buffer=15> ++nested ++once :lua require("vgit").hello')
     end)
 
     it('should call nvim_buf_set_keymap with correct arguments when providing other optional options', function()
         local buf = 15
-        buffer.add_autocmd(
-            buf,
-            'BufEnter',
-            'hello',
-            {
-                persist = true,
-                override = true,
-                nested = true,
-            }
-        )
-        assert
-            .stub(api.nvim_command)
-            .was_called_with('au! BufEnter <buffer=15> ++nested  :lua require("vgit").hello')
+        buffer.add_autocmd(buf, 'BufEnter', 'hello', {
+            persist = true,
+            override = true,
+            nested = true,
+        })
+        assert.stub(api.nvim_command).was_called_with('au! BufEnter <buffer=15> ++nested  :lua require("vgit").hello')
     end)
-
 end)

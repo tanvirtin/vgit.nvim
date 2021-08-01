@@ -5,7 +5,6 @@ local describe = describe
 local eq = assert.are.same
 
 describe('defer:', function()
-
     describe('throttle_leading', function()
         local closure_creator = function(initial_value)
             local counter = initial_value
@@ -37,7 +36,6 @@ describe('defer:', function()
                 end
             end)
         end)
-
     end)
 
     describe('debounce_leading', function()
@@ -60,7 +58,5 @@ describe('defer:', function()
                 debounced_fn()
             end
         end)
-
     end)
-
 end)
