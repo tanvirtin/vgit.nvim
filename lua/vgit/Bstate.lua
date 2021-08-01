@@ -19,6 +19,7 @@ function Bstate:add(buf)
         filename = '',
         filetype = '',
         tracked_filename = '',
+        tracked_remote_filename = '',
         logs = {},
         hunks = {},
         blames = {},
