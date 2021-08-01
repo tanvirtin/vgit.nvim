@@ -115,7 +115,7 @@ local generate_tracked_hunk_signs = debounce_trailing(
         scheduler()
         if show_err then
             local err = show_err[1]
-            if vim.startswith(err, string.format("fatal: path '%s' exists on disk", tracked_filename)) then
+            if vim.startswith(err, string.format('fatal: path \'%s\' exists on disk', tracked_filename)) then
                 original_lines = {}
                 show_err = nil
             end

@@ -466,7 +466,7 @@ describe('fs:', function()
             eq(fs.exists('lua/vgit/doesnotexist2.lua'), false)
         end)
 
-        it("should return true when it's a director", function()
+        it('should return true when it\'s a director', function()
             eq(fs.exists('lua/vgit'), true)
             eq(fs.exists('lua'), true)
         end)
