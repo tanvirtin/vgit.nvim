@@ -22,7 +22,7 @@ local function colorize(buf, filetype)
         end
     end
     if has_ts and filetype and filetype ~= '' then
-        local lang = ts_parsers.ft_to_lang(filetype);
+        local lang = ts_parsers.ft_to_lang(filetype)
         if ts_parsers.has_parser(lang) then
             pcall(ts_highlight.attach, buf, lang)
         else
@@ -173,7 +173,7 @@ local function new(options)
             rendered = false,
             lines = {},
         },
-        config = config
+        config = config,
     }, View)
 end
 

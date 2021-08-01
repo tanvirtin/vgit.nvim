@@ -12,36 +12,36 @@ M.state = State.new({
             name = 'VGitViewSignAdd',
             line_hl = 'VGitViewSignAdd',
             text_hl = 'VGitViewTextAdd',
-            text = '+'
+            text = '+',
         },
         VGitViewSignRemove = {
             name = 'VGitViewSignRemove',
             line_hl = 'VGitViewSignRemove',
             text_hl = 'VGitViewTextRemove',
-            text = '-'
+            text = '-',
         },
         VGitSignAdd = {
             name = 'VGitSignAdd',
             text_hl = 'VGitSignAdd',
             num_hl = nil,
             line_hl = nil,
-            text = '┃'
+            text = '┃',
         },
         VGitSignRemove = {
             name = 'VGitSignRemove',
             text_hl = 'VGitSignRemove',
             num_hl = nil,
             line_hl = nil,
-            text = '┃'
+            text = '┃',
         },
         VGitSignChange = {
             name = 'VGitSignChange',
             text_hl = 'VGitSignChange',
             num_hl = nil,
             line_hl = nil,
-            text = '┃'
+            text = '┃',
         },
-    }
+    },
 })
 
 M.setup = function(config)
@@ -61,17 +61,11 @@ M.define = function(config)
 end
 
 M.place = function(buf, lnum, type, priority)
-    vim.fn.sign_place(
-        lnum,
-        string.format('%s/%s', M.constants.ns, buf),
-        type,
-        buf,
-        {
-            id = lnum,
-            lnum = lnum,
-            priority = priority,
-        }
-    )
+    vim.fn.sign_place(lnum, string.format('%s/%s', M.constants.ns, buf), type, buf, {
+        id = lnum,
+        lnum = lnum,
+        priority = priority,
+    })
 end
 
 M.unplace = function(buf)
@@ -81,7 +75,7 @@ end
 M.get = function(buf, lnum)
     local signs = vim.fn.sign_getplaced(buf, {
         group = string.format('%s/%s', M.constants.ns, buf),
-        id = lnum
+        id = lnum,
     })[1].signs
     local result = {}
     for i = 1, #signs do
