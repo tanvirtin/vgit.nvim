@@ -42,6 +42,7 @@ local M = {}
 M.constants = {
     diff_algorithm = 'myers',
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
+    job_timeout = 30000,
 }
 
 M.state = State.new({
@@ -304,7 +305,6 @@ M.blame_line = wrap(function(filename, lnum, callback)
 end, 3)
 
 M.logs = wrap(function(filename, callback)
-    local timeout = 30000
     local logs = {
         {
             author_name = M.state:get('config')['user.name'],
@@ -325,8 +325,7 @@ M.logs = wrap(function(filename, callback)
             filename,
         },
     })
-    -- BUG: Plenary Job bug, prevents last line to be read.
-    job:sync(timeout)
+    job:sync(M.constants.job_timeout)
     local result = job:result()
     for i = 1, #result do
         local line = result[i]
@@ -743,30 +742,33 @@ M.current_branch = wrap(function(callback)
     job:start()
 end, 1)
 
-M.ls_tracked = wrap(function(callback)
-    local err = {}
-    local result = {}
+M.tracked_filename = wrap(function(filename)
     local job = Job:new({
         command = 'git',
         args = {
             'ls-files',
-            '--full-name',
-            '--cached',
+            '--exclude-standard',
+            filename,
         },
-        on_stdout = function(_, data, _)
-            result[#result + 1] = data
-        end,
-        on_stderr = function(_, data, _)
-            err[#err + 1] = data
-        end,
-        on_exit = function()
-            if #err ~= 0 then
-                return callback(err, result)
-            end
-            callback(nil, result)
-        end,
     })
-    job:start()
+    job:sync(M.constants.job_timeout)
+    local result = job:result()
+    return result[1] or ''
+end, 1)
+
+M.tracked_remote_filename = wrap(function(filename)
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'ls-files',
+            '--exclude-standard',
+            '--full-name',
+            filename,
+        },
+    })
+    job:sync(M.constants.job_timeout)
+    local result = job:result()
+    return result[1] or ''
 end, 1)
 
 M.ls_changed = wrap(function(callback)
