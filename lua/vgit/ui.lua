@@ -69,10 +69,10 @@ M.state = State.new({
 
 M.setup = function(config)
     M.state:assign(config)
-    preview_widget.setup(config.preview)
-    history_widget.setup(config.history)
-    hunk_widget.setup(config.hunk)
-    blame_widget.setup(config.blame)
+    preview_widget.setup((config and config.preview) or {})
+    history_widget.setup((config and config.history) or {})
+    hunk_widget.setup((config and config.hunk) or {})
+    blame_widget.setup((config and config.blame) or {})
 end
 
 M.close_windows = function(wins)
