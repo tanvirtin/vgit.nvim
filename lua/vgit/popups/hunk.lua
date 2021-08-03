@@ -23,46 +23,56 @@ M.setup = function(config)
     M.state:assign(config)
 end
 
-M.render = function(hunk, filetype)
-    local lines = hunk.diff
-    local trimmed_lines = {}
+local function parse_hunk_diff(diff)
+    local lines = {}
     local added_lines = {}
     local removed_lines = {}
-    for index, line in pairs(lines) do
+    for index, line in pairs(diff) do
         local first_letter = line:sub(1, 1)
         if first_letter == '+' then
             added_lines[#added_lines + 1] = index
         elseif first_letter == '-' then
             removed_lines[#removed_lines + 1] = index
         end
-        trimmed_lines[#trimmed_lines + 1] = line:sub(2, #line)
+        lines[#lines + 1] = line:sub(2, #line)
     end
+    return lines, added_lines, removed_lines
+end
+
+local function create_widget(opts)
     local view = View.new({
-        filetype = filetype,
-        lines = trimmed_lines,
+        filetype = opts.filetype,
+        lines = opts.lines,
         border = M.state:get('window').border,
         border_hl = M.state:get('window').border_hl,
         win_options = { ['cursorline'] = true },
         window_props = {
             style = 'minimal',
             relative = 'cursor',
-            height = #lines,
+            height = #opts.lines,
             width = vim.api.nvim_get_option('columns'),
             row = 0,
             col = 0,
         },
     })
-    local widget = Widget.new({ view }, 'hunk')
-    widget:render(true)
-    view:set_lines(trimmed_lines)
+    return Widget.new({ view }, 'hunk')
+end
+
+M.show = function(hunk, filetype)
+    local lines, added_lines, removed_lines = parse_hunk_diff(hunk.diff)
+    local widget = create_widget({
+        lines = lines,
+        filetype = filetype,
+    })
+    local view = widget:get_views()[1]
+    view:set_lines(lines)
     for i = 1, #added_lines do
-        local lnum = added_lines[i]
-        sign.place(view:get_buf(), lnum, M.state:get('signs')['add'], M.state:get('priority'))
+        sign.place(view:get_buf(), added_lines[i], M.state:get('signs')['add'], M.state:get('priority'))
     end
     for i = 1, #removed_lines do
-        local lnum = removed_lines[i]
-        sign.place(view:get_buf(), lnum, M.state:get('signs')['remove'], M.state:get('priority'))
+        sign.place(view:get_buf(), removed_lines[i], M.state:get('signs')['remove'], M.state:get('priority'))
     end
+    widget:render(true)
     return widget
 end
 

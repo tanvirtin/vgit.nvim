@@ -1,8 +1,8 @@
 local State = require('vgit.State')
-local preview_widget = require('vgit.widgets.preview')
-local history_widget = require('vgit.widgets.history')
-local hunk_widget = require('vgit.widgets.hunk')
-local blame_widget = require('vgit.widgets.blame')
+local preview_popup = require('vgit.popups.preview')
+local history_popup = require('vgit.popups.history')
+local hunk_popup = require('vgit.popups.hunk')
+local blame_popup = require('vgit.popups.blame')
 local buffer = require('vgit.buffer')
 local sign = require('vgit.sign')
 local a = require('plenary.async')
@@ -23,7 +23,7 @@ M.constants = {
 }
 
 M.state = State.new({
-    mounted_widget = {},
+    mounted_popup = {},
     blame_line = {
         hl = 'VGitBlame',
         format = function(blame, git_config)
@@ -69,14 +69,14 @@ M.state = State.new({
 
 M.setup = function(config)
     M.state:assign(config)
-    preview_widget.setup((config and config.preview) or {})
-    history_widget.setup((config and config.history) or {})
-    hunk_widget.setup((config and config.hunk) or {})
-    blame_widget.setup((config and config.blame) or {})
+    preview_popup.setup((config and config.preview) or {})
+    history_popup.setup((config and config.history) or {})
+    hunk_popup.setup((config and config.hunk) or {})
+    blame_popup.setup((config and config.blame) or {})
 end
 
 M.close_windows = function(wins)
-    M.state:set('mounted_widget', {})
+    M.state:set('mounted_popup', {})
     local existing_wins = vim.api.nvim_list_wins()
     for i = 1, #wins do
         local win = wins[i]
@@ -86,8 +86,8 @@ M.close_windows = function(wins)
     end
 end
 
-M.get_mounted_widget = function()
-    return M.state:get('mounted_widget')
+M.get_mounted_popup = function()
+    return M.state:get('mounted_popup')
 end
 
 M.show_blame_line = function(buf, blame, lnum, git_config)
@@ -137,43 +137,43 @@ M.hide_hunk_signs = void(function(buf)
 end)
 
 M.show_blame = void(function(fetch)
-    local widget = blame_widget.render(fetch)
-    M.state:set('mounted_widget', widget)
+    local widget = blame_popup.show(fetch)
+    M.state:set('mounted_popup', widget)
 end)
 
 M.show_hunk = function(hunk_info, filetype)
-    local widget = hunk_widget.render(hunk_info, filetype)
-    M.state:set('mounted_widget', widget)
+    local widget = hunk_popup.show(hunk_info, filetype)
+    M.state:set('mounted_popup', widget)
 end
 
 M.show_horizontal_preview = void(function(widget_name, fetch, filetype)
-    local widget = preview_widget.render_horizontal(widget_name, fetch, filetype)
-    M.state:set('mounted_widget', widget)
+    local widget = preview_popup.show_horizontal(widget_name, fetch, filetype)
+    M.state:set('mounted_popup', widget)
 end)
 
 M.show_vertical_preview = void(function(widget_name, fetch, filetype)
-    local widget = preview_widget.render_vertical(widget_name, fetch, filetype)
-    M.state:set('mounted_widget', widget)
+    local widget = preview_popup.show_vertical(widget_name, fetch, filetype)
+    M.state:set('mounted_popup', widget)
 end)
 
 M.show_horizontal_history = void(function(fetch, filetype)
-    local widget = history_widget.render_horizontal(fetch, filetype)
-    M.state:set('mounted_widget', widget)
+    local widget = history_popup.show_horizontal(fetch, filetype)
+    M.state:set('mounted_popup', widget)
 end)
 
 M.show_vertical_history = void(function(fetch, filetype)
-    local widget = history_widget.render_vertical(fetch, filetype)
-    M.state:set('mounted_widget', widget)
+    local widget = history_popup.show_vertical(fetch, filetype)
+    M.state:set('mounted_popup', widget)
 end)
 
 M.change_horizontal_history = void(function(fetch, selected_log)
-    local widget = M.state:get('mounted_widget')
-    history_widget.change_horizontal(widget, fetch, selected_log)
+    local widget = M.state:get('mounted_popup')
+    history_popup.change_horizontal(widget, fetch, selected_log)
 end)
 
 M.change_vertical_history = void(function(fetch, selected_log)
-    local widget = M.state:get('mounted_widget')
-    history_widget.change_vertical(widget, fetch, selected_log)
+    local widget = M.state:get('mounted_popup')
+    history_popup.change_vertical(widget, fetch, selected_log)
 end)
 
 return M
