@@ -1180,7 +1180,7 @@ M.set_diff_preference = throttle_leading(
             return
         end
         state:set('diff_preference', preference)
-        local widget = ui.get_mounted_widget()
+        local widget = ui.get_mounted_popup()
         if not vim.tbl_isempty(widget) then
             local view_fn_map = {
                 horizontal_preview = M.buffer_preview,

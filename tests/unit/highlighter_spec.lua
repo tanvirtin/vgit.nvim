@@ -9,14 +9,12 @@ describe('highlighter:', function()
     describe('setup', function()
         it('should override state highlights with highlights specified through the config', function()
             highlighter.setup({
-                hls = {
-                    VGitSignAdd = {
-                        fg = 'red',
-                        bg = nil,
-                    },
+                VGitSignAdd = {
+                    fg = 'red',
+                    bg = nil,
                 },
             })
-            eq(highlighter.state.current.hls.VGitSignAdd, {
+            eq(highlighter.state.current.VGitSignAdd, {
                 fg = 'red',
                 bg = nil,
             })

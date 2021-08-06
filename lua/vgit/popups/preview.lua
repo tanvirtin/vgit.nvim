@@ -50,13 +50,20 @@ M.setup = function(config)
     M.state:assign(config)
 end
 
-M.render_horizontal = wrap(function(widget_name, fetch, filetype)
+local function colorize_buf(lnum_changes, callback)
+    for i = 1, #lnum_changes do
+        local datum = lnum_changes[i]
+        sign.place(callback(datum), datum.lnum, M.state:get('signs')[datum.type], M.state:get('priority'))
+    end
+end
+
+local function create_horizontal_widget(opts)
     local height = math.ceil(global_height() - 4)
     local width = math.ceil(global_width() * 0.8)
     local col = math.ceil((global_width() - width) / 2) - 1
     local views = {
         preview = View.new({
-            filetype = filetype,
+            filetype = opts.filetype,
             title = M.state:get('horizontal_window').title,
             border = M.state:get('horizontal_window').border,
             border_hl = M.state:get('horizontal_window').border_hl,
@@ -74,32 +81,16 @@ M.render_horizontal = wrap(function(widget_name, fetch, filetype)
             },
         }),
     }
-    local widget = Widget.new(views, widget_name):render():set_loading(true)
-    scheduler()
-    local err, data = fetch()
-    scheduler()
-    widget:set_loading(false)
-    scheduler()
-    if not err then
-        views.preview:set_lines(data.lines)
-        for i = 1, #data.lnum_changes do
-            local datum = data.lnum_changes[i]
-            sign.place(views.preview:get_buf(), datum.lnum, M.state:get('signs')[datum.type], M.state:get('priority'))
-        end
-    else
-        widget:set_error(true)
-        scheduler()
-    end
-    return widget
-end, 3)
+    return Widget.new(views, opts.name)
+end
 
-M.render_vertical = wrap(function(widget_name, fetch, filetype)
+local function create_vertical_widget(opts)
     local height = math.ceil(global_height() - 4)
     local width = math.ceil(global_width() * 0.485)
     local col = math.ceil((global_width() - (width * 2)) / 2) - 1
     local views = {
         previous = View.new({
-            filetype = filetype,
+            filetype = opts.filetype,
             title = M.state:get('previous_window').title,
             border = M.state:get('previous_window').border,
             border_hl = M.state:get('previous_window').border_hl,
@@ -119,7 +110,7 @@ M.render_vertical = wrap(function(widget_name, fetch, filetype)
             },
         }),
         current = View.new({
-            filetype = filetype,
+            filetype = opts.filetype,
             title = M.state:get('current_window').title,
             border = M.state:get('current_window').border,
             border_hl = M.state:get('current_window').border_hl,
@@ -139,7 +130,40 @@ M.render_vertical = wrap(function(widget_name, fetch, filetype)
             },
         }),
     }
-    local widget = Widget.new(views, widget_name):render():set_loading(true)
+    return Widget.new(views, opts.name)
+end
+
+M.show_horizontal = wrap(function(name, fetch, filetype)
+    local widget = create_horizontal_widget({
+        name = name,
+        filetype = filetype,
+    })
+    widget:render():set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    widget:set_loading(false)
+    scheduler()
+    if not err then
+        local views = widget:get_views()
+        views.preview:set_lines(data.lines)
+        colorize_buf(data.lnum_changes, function()
+            return views.preview:get_buf()
+        end)
+    else
+        widget:set_error(true)
+        scheduler()
+    end
+    return widget
+end, 3)
+
+M.show_vertical = wrap(function(name, fetch, filetype)
+    local widget = create_vertical_widget({
+        name = name,
+        filetype = filetype,
+    })
+    widget:render():set_loading(true)
+    local views = widget:get_views()
     views.current:focus()
     scheduler()
     local err, data = fetch()
@@ -149,15 +173,9 @@ M.render_vertical = wrap(function(widget_name, fetch, filetype)
     if not err then
         views.previous:set_lines(data.previous_lines)
         views.current:set_lines(data.current_lines)
-        for i = 1, #data.lnum_changes do
-            local datum = data.lnum_changes[i]
-            sign.place(
-                views[datum.buftype]:get_buf(),
-                datum.lnum,
-                M.state:get('signs')[datum.type],
-                M.state:get('priority')
-            )
-        end
+        colorize_buf(data.lnum_changes, function(datum)
+            return views[datum.buftype]:get_buf()
+        end)
     else
         widget:set_error(true)
         scheduler()
