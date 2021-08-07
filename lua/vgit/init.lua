@@ -1,9 +1,10 @@
+local events = require('vgit.events')
 local git = require('vgit.git')
 local ui = require('vgit.ui')
 local fs = require('vgit.fs')
 local highlighter = require('vgit.highlighter')
 local sign = require('vgit.sign')
-local State = require('vgit.State')
+local Interface = require('vgit.Interface')
 local Bstate = require('vgit.Bstate')
 local buffer = require('vgit.buffer')
 local throttle_leading = require('vgit.defer').throttle_leading
@@ -20,7 +21,7 @@ local vim = vim
 local M = {}
 
 local bstate = Bstate.new()
-local state = State.new({
+local state = Interface.new({
     config = {},
     disabled = false,
     instantiated = false,
@@ -53,14 +54,23 @@ local function cache_buf(buf, filename, tracked_filename, tracked_remote_filenam
 end
 
 local function attach_blames_autocmd(buf)
-    local f = string.format
-    vim.cmd(f('aug tanvirtin/vgit/%s | autocmd! | aug END', buf))
-    vim.cmd(f('au tanvirtin/vgit/%s CursorHold <buffer=%s> :lua require("vgit")._blame_line(%s)', buf, buf, buf))
-    vim.cmd(f('au tanvirtin/vgit/%s CursorMoved <buffer=%s> :lua require("vgit")._unblame_line(%s)', buf, buf, buf))
+    events.buf.on(
+        buf,
+        'CursorHold',
+        string.format(':lua require("vgit")._blame_line(%s)', buf),
+        { key = string.format('%s/CursorHold', buf) }
+    )
+    events.buf.on(
+        buf,
+        'CursorMoved',
+        string.format(':lua require("vgit")._unblame_line(%s)', buf),
+        { key = string.format('%s/CursorMoved', buf) }
+    )
 end
 
 local function detach_blames_autocmd(buf)
-    vim.cmd(string.format('aug tanvirtin/vgit/%s | au! | aug END', buf))
+    events.off(string.format('%s/CursorHold', buf))
+    events.off(string.format('%s/CursorMoved', buf))
 end
 
 local function get_hunk_calculator()
@@ -172,7 +182,7 @@ local but_attach_tracked = void(function(buf)
             generate_tracked_hunk_signs(cbuf)
         end),
         on_detach = function(_, cbuf)
-            if buffer.is_valid(cbuf) and bstate:contains(cbuf) then
+            if bstate:contains(cbuf) then
                 bstate:remove(cbuf)
                 detach_blames_autocmd(cbuf)
             end
@@ -210,7 +220,7 @@ local function but_attach_untracked(buf)
             generate_untracked_hunk_signs(cbuf)
         end),
         on_detach = function(_, cbuf)
-            if buffer.is_valid(cbuf) and bstate:contains(cbuf) then
+            if bstate:contains(cbuf) then
                 bstate:remove(cbuf)
             end
         end,
@@ -349,23 +359,6 @@ M._run_command = function(command, ...)
     end
 end
 
-M._run_submodule_command = function(name, command, ...)
-    if not state:get('disabled') then
-        local submodules = { ui = ui }
-        local submodule = submodules[name]
-        local starts_with = command:sub(1, 1)
-        if
-            not submodule and starts_with == '_'
-            or not submodule[command]
-            or not type(submodule[command]) == 'function'
-        then
-            logger.debug('invalid submodule command', 'init.lua/_run_submodule_command')
-            return
-        end
-        return submodule[command](...)
-    end
-end
-
 M._command_autocompletes = function(arglead, line)
     local parsed_line = #vim.split(line, '%s+')
     local matches = {}
@@ -390,19 +383,13 @@ M._change_history = throttle_leading(
         then
             local selected_log = vim.api.nvim_win_get_cursor(0)[1]
             local diff_preference = state:get('diff_preference')
-            local change_history = (diff_preference == 'horizontal' and ui.change_horizontal_history)
-                or ui.change_vertical_history
             local diff = (diff_preference == 'horizontal' and git.horizontal_diff) or git.vertical_diff
-            change_history(
+            ui.change_history(
                 wrap(function()
                     local tracked_filename = bstate:get(buf, 'tracked_filename')
                     local logs = bstate:get(buf, 'logs')
                     local log = logs[selected_log]
-                    local err
-                    local hunks
-                    local lines
-                    local commit_hash
-                    local computed_hunks
+                    local err, hunks, lines, commit_hash, computed_hunks
                     if log then
                         if selected_log == 1 then
                             local temp_lines = bstate:get(buf, 'temp_lines')
@@ -437,6 +424,7 @@ M._change_history = throttle_leading(
                     local diff_err, data = diff(lines, hunks)
                     scheduler()
                     if not diff_err then
+                        data.logs = logs
                         return nil, data
                     else
                         logger.debug(diff_err, 'init.lua/_change_history')
@@ -701,7 +689,6 @@ M.toggle_buffer_blames = throttle_leading(
     void(function()
         scheduler()
         if not state:get('disabled') then
-            vim.cmd('aug tanvirtin/vgit/blame | autocmd! | aug END')
             if state:get('blames_enabled') then
                 state:set('blames_enabled', false)
                 bstate:for_each(function(buf, buf_state)
@@ -736,10 +723,8 @@ M.buffer_history = throttle_leading(
             and not bstate:get(buf, 'untracked')
         then
             local diff_preference = state:get('diff_preference')
-            local show_history = (diff_preference == 'horizontal' and ui.show_horizontal_history)
-                or ui.show_vertical_history
             local diff = (diff_preference == 'horizontal' and git.horizontal_diff) or git.vertical_diff
-            show_history(
+            ui.show_history(
                 wrap(function()
                     local tracked_filename = bstate:get(buf, 'tracked_filename')
                     local logs_err, logs = git.logs(tracked_filename)
@@ -788,7 +773,8 @@ M.buffer_history = throttle_leading(
                         return logs_err, nil
                     end
                 end, 0),
-                bstate:get(buf, 'filetype')
+                bstate:get(buf, 'filetype'),
+                diff_preference
             )
         end
     end),
@@ -1126,10 +1112,6 @@ M.instantiated = function()
     return state:get('instantiated')
 end
 
-M.apply_highlights = function()
-    ui.apply_highlights()
-end
-
 M.get_diff_base = function()
     return git.get_diff_base()
 end
@@ -1195,8 +1177,7 @@ M.set_diff_preference = throttle_leading(
             local widget_name = widget:get_name()
             local fn = view_fn_map[widget_name]
             if fn then
-                local win_ids = widget:get_win_ids()
-                ui.close_windows(win_ids)
+                widget:unmount()
                 fn(buffer.current())
             end
         end
@@ -1251,6 +1232,10 @@ M.show_debug_logs = function()
     end
 end
 
+M.events = events
+
+M.ui = ui
+
 M.setup = function(config)
     if state:get('instantiated') then
         logger.debug('plugin has already been instantiated', 'init.lua/setup')
@@ -1258,15 +1243,15 @@ M.setup = function(config)
     else
         state:set('instantiated', true)
     end
+    events.setup()
     state:assign(config)
     highlighter.setup(config)
     sign.setup(config)
     logger.setup(config)
     git.setup(config)
     ui.setup(config)
-    vim.cmd('aug tanvirtin/vgit | autocmd! | aug END')
-    vim.cmd('au tanvirtin/vgit BufWinEnter * lua require("vgit")._buf_attach()')
-    vim.cmd('au tanvirtin/vgit BufWrite * lua require("vgit")._buf_update()')
+    events.on('BufWinEnter', ':lua require("vgit")._buf_attach()')
+    events.on('BufWrite', ':lua require("vgit")._buf_update()')
     vim.cmd(
         string.format(
             'com! -nargs=+ %s %s',

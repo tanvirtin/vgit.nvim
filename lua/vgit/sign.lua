@@ -1,4 +1,4 @@
-local State = require('vgit.State')
+local Interface = require('vgit.Interface')
 
 local M = {}
 
@@ -6,7 +6,7 @@ M.constants = {
     ns = 'tanvirtin/vgit.nvim/hunk/signs',
 }
 
-M.state = State.new({
+M.state = Interface.new({
     VGitViewSignAdd = {
         name = 'VGitViewSignAdd',
         line_hl = 'VGitViewSignAdd',
@@ -51,7 +51,7 @@ M.state = State.new({
 
 M.setup = function(config)
     M.state:assign((config and config.signs) or config)
-    for _, action in pairs(M.state.current) do
+    for _, action in pairs(M.state.data) do
         M.define(action)
     end
 end

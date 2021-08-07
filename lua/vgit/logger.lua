@@ -1,10 +1,10 @@
-local State = require('vgit.State')
+local Interface = require('vgit.Interface')
 
 local vim = vim
 
 local M = {}
 
-M.state = State.new({
+M.state = Interface.new({
     debug = false,
     debug_logs = {},
 })

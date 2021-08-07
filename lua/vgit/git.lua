@@ -1,5 +1,5 @@
 local Job = require('plenary.job')
-local State = require('vgit.State')
+local Interface = require('vgit.Interface')
 local a = require('plenary.async')
 local void = a.void
 local wrap = a.wrap
@@ -45,7 +45,7 @@ M.constants = {
     job_timeout = 30000,
 }
 
-M.state = State.new({
+M.state = Interface.new({
     diff_base = 'HEAD',
     config = {},
 })

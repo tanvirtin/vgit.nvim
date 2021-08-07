@@ -1,36 +1,30 @@
 local assert = require('vgit.assertion').assert
-local State = {}
-State.__index = State
+local Interface = {}
+Interface.__index = Interface
 
 local vim = vim
 
 local function new(state)
     assert(type(state) == 'nil' or type(state) == 'table', 'type error :: expected table or nil')
     if type(state) ~= 'table' then
-        return setmetatable({
-            initial = {},
-            current = {},
-        }, State)
+        return setmetatable({ data = {} }, Interface)
     end
-    return setmetatable({
-        initial = state,
-        current = state,
-    }, State)
+    return setmetatable({ data = state }, Interface)
 end
 
-function State:get(key)
+function Interface:get(key)
     assert(type(key) == 'string', 'type error :: expected string')
-    assert(self.current[key] ~= nil, string.format('key "%s" does not exist', key))
-    return self.current[key]
+    assert(self.data[key] ~= nil, string.format('key "%s" does not exist', key))
+    return self.data[key]
 end
 
-function State:set(key, value)
-    assert(self.current[key] ~= nil, string.format('key "%s" does not exist', key))
-    assert(type(self.current[key]) == type(value), string.format('type error :: expected %s', key))
-    self.current[key] = value
+function Interface:set(key, value)
+    assert(self.data[key] ~= nil, string.format('key "%s" does not exist', key))
+    assert(type(self.data[key]) == type(value), string.format('type error :: expected %s', key))
+    self.data[key] = value
 end
 
-function State:assign(config)
+function Interface:assign(config)
     if not config then
         return
     end
@@ -54,11 +48,8 @@ function State:assign(config)
             end
         end
     end
-    assign(self.current, config)
+    assign(self.data, config)
     return
 end
 
-return {
-    new = new,
-    __object = State,
-}
+return { new = new }
