@@ -1,11 +1,11 @@
-local State = require('vgit.State')
+local Interface = require('vgit.Interface')
 
 local it = it
 local describe = describe
 local before_each = before_each
 local eq = assert.are.same
 
-describe('State:', function()
+describe('Interface:', function()
     local initial_state = {}
 
     before_each(function()
@@ -21,23 +21,22 @@ describe('State:', function()
 
     describe('new', function()
         it('should bind the object provided into into the state object', function()
-            local state = State.new(initial_state)
+            local state = Interface.new(initial_state)
             eq(state, {
-                current = initial_state,
-                initial = initial_state,
+                data = initial_state,
             })
         end)
 
         it('should throw error if invalid data type is provided', function()
             assert.has_error(function()
-                State.new(42)
+                Interface.new(42)
             end)
         end)
     end)
 
     describe('get', function()
         it('should throw error on invalid argument types', function()
-            local state = State.new({
+            local state = Interface.new({
                 foo = 'bar',
             })
             assert.has_error(function()
@@ -58,7 +57,7 @@ describe('State:', function()
         end)
 
         it('should succesfully retrieve a value given a key from the state object', function()
-            local state = State.new(initial_state)
+            local state = Interface.new(initial_state)
             eq(state:get('foo'), 'bar')
             eq(state:get('bar'), 'foo')
             eq(state:get('baz'), {
@@ -68,7 +67,7 @@ describe('State:', function()
         end)
 
         it('should throw an error if a state object does not have the given key', function()
-            local state = State.new(initial_state)
+            local state = Interface.new(initial_state)
             assert.has_error(function()
                 eq(state:get('test'), nil)
             end)
@@ -77,7 +76,7 @@ describe('State:', function()
 
     describe('set', function()
         it('should throw error on invalid argument types', function()
-            local state = State.new({
+            local state = Interface.new({
                 foo = 'bar',
             })
             assert.has_error(function()
@@ -98,7 +97,7 @@ describe('State:', function()
         end)
 
         it('should alter an existing state attribute', function()
-            local state = State.new(initial_state)
+            local state = Interface.new(initial_state)
             state:set('foo', 'a')
             state:set('bar', 'b')
             state:set('baz', {
@@ -114,15 +113,14 @@ describe('State:', function()
         end)
 
         it('should not change the state attribute if no values are present', function()
-            local state = State.new(initial_state)
+            local state = Interface.new(initial_state)
             for i = 10, 1, -1 do
                 assert.has_error(function()
                     state:set(i, i)
                 end)
             end
             eq(state, {
-                current = initial_state,
-                initial = initial_state,
+                data = initial_state,
             })
         end)
     end)
@@ -130,24 +128,22 @@ describe('State:', function()
     describe('assign', function()
         it('should not assign attributes into into state which are not in it', function()
             local initial = { foo = true }
-            local state = State.new(initial)
+            local state = Interface.new(initial)
             state:assign({
                 foo = false,
                 bar = true,
             })
             eq(state, {
-                initial = initial,
-                current = { foo = false },
+                data = { foo = false },
             })
         end)
 
         it('should return unmodified state when nil value is passed', function()
             local initial = { foo = true }
-            local state = State.new(initial)
+            local state = Interface.new(initial)
             state:assign(nil)
             eq(state, {
-                initial = initial,
-                current = initial,
+                data = initial,
             })
         end)
 
@@ -156,14 +152,13 @@ describe('State:', function()
                 is_list = { 1, 2, 3, 4, 5 },
                 isnt_list = { a = 1, b = 2 },
             }
-            local state = State.new(initial)
+            local state = Interface.new(initial)
             state:assign({
                 is_list = { 'a', 'b' },
                 isnt_list = { a = 1, b = 2 },
             })
             eq(state, {
-                initial = initial,
-                current = {
+                data = {
                     is_list = { 'a', 'b' },
                     isnt_list = { a = 1, b = 2 },
                 },
@@ -171,7 +166,7 @@ describe('State:', function()
         end)
 
         it('should throw error when there is a type mismatch', function()
-            local state = State.new({
+            local state = Interface.new({
                 foo = true,
                 bar = {
                     baz = {
@@ -224,7 +219,7 @@ describe('State:', function()
                     },
                 },
             }
-            local state = State.new(initial)
+            local state = Interface.new(initial)
             state:assign({
                 foo = false,
                 bar = {
@@ -237,7 +232,7 @@ describe('State:', function()
                     },
                 },
             })
-            local current = {
+            local data = {
                 foo = false,
                 bar = {
                     baz = {
@@ -256,8 +251,7 @@ describe('State:', function()
                 },
             }
             eq(state, {
-                initial = initial,
-                current = current,
+                data = data,
             })
         end)
     end)

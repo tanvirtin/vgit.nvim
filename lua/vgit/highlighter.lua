@@ -1,10 +1,10 @@
-local State = require('vgit.State')
+local Interface = require('vgit.Interface')
 
 local vim = vim
 
 local M = {}
 
-M.state = State.new({
+M.state = Interface.new({
     VGitBlame = {
         bg = nil,
         fg = '#b1b1b1',
@@ -53,7 +53,7 @@ M.state = State.new({
 
 M.setup = function(config)
     M.state:assign((config and config.hls) or config)
-    for hl, color in pairs(M.state.current) do
+    for hl, color in pairs(M.state.data) do
         M.create(hl, color)
     end
 end

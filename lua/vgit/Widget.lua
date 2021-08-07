@@ -1,3 +1,4 @@
+local events = require('vgit.events')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 
@@ -6,13 +7,15 @@ local vim = vim
 local Widget = {}
 Widget.__index = Widget
 
-local function new(views, name)
+local function new(views, opts)
     assert(type(views) == 'table', 'type error :: expected table')
-    assert(type(name) == 'string', 'type error :: expected string')
+    assert(type(opts) == 'table' or type(opts) == 'nil', 'type error :: expected string or nil')
     return setmetatable({
-        name = name,
         views = views,
-        state = { rendered = false },
+        state = { mounted = false },
+        popup = opts.popup,
+        name = opts.name,
+        parent_buf = vim.api.nvim_get_current_buf(),
     }, Widget)
 end
 
@@ -48,6 +51,10 @@ function Widget:get_views()
     return self.views
 end
 
+function Widget:get_parent_buf()
+    return self.parent_buf
+end
+
 function Widget:get_win_ids()
     local win_ids = {}
     for _, v in pairs(self.views) do
@@ -64,13 +71,16 @@ function Widget:get_bufs()
     return bufs
 end
 
-function Widget:render(as_popup)
-    assert(type(as_popup) == 'boolean' or type(as_popup) == 'nil', 'type error :: expected nil or boolean')
-    if self.state.rendered then
+function Widget:is_mounted()
+    return self.state.mounted
+end
+
+function Widget:mount()
+    if self.state.mounted then
         return self
     end
     for _, v in pairs(self.views) do
-        v:render()
+        v:mount()
     end
     local win_ids = {}
     for _, v in pairs(self.views) do
@@ -78,29 +88,27 @@ function Widget:render(as_popup)
         win_ids[#win_ids + 1] = v:get_border_win_id()
     end
     for _, v in pairs(self.views) do
-        v:add_autocmd(
-            'BufWinLeave',
-            string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(win_ids))
-        )
+        v:on('BufWinLeave', string.format(':lua require("vgit").ui.close_windows(%s)', vim.inspect(win_ids)))
     end
     local bufs = vim.api.nvim_list_bufs()
     for i = 1, #bufs do
         local buf = bufs[i]
         local is_buf_listed = vim.api.nvim_buf_get_option(buf, 'buflisted') == true
         if is_buf_listed and buffer.is_valid(buf) then
-            local event = as_popup and 'BufEnter' or 'BufWinEnter'
-            buffer.add_autocmd(
-                buf,
-                event,
-                string.format('_run_submodule_command("ui", "close_windows", %s)', vim.inspect(win_ids))
-            )
+            local event = self.popup and 'BufEnter' or 'BufWinEnter'
+            events.buf.on(buf, event, string.format(':lua require("vgit").ui.close_windows(%s)', vim.inspect(win_ids)))
         end
     end
-    self.state.rendered = true
+    self.state.mounted = true
     return self
 end
 
-return {
-    new = new,
-    __object = Widget,
-}
+function Widget:unmount()
+    local views = self:get_views()
+    for _, view in pairs(views) do
+        view:unmount()
+    end
+    self.mounted = false
+end
+
+return { new = new }

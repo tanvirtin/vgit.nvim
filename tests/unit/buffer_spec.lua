@@ -139,32 +139,3 @@ describe('add_keymap', function()
         )
     end)
 end)
-
-describe('add_autocmd', function()
-    before_each(function()
-        api = mock(vim.api, true)
-        api.nvim_command.returns()
-    end)
-
-    after_each(function()
-        mock.revert(api)
-    end)
-
-    it('should call nvim_buf_set_keymap with correct arguments', function()
-        local buf = 15
-        buffer.add_autocmd(buf, 'BufEnter', 'hello')
-        assert.stub(api.nvim_command).was_called_with(
-            'au BufEnter <buffer=15> ++nested ++once :lua require("vgit").hello'
-        )
-    end)
-
-    it('should call nvim_buf_set_keymap with correct arguments when providing other optional options', function()
-        local buf = 15
-        buffer.add_autocmd(buf, 'BufEnter', 'hello', {
-            persist = true,
-            override = true,
-            nested = true,
-        })
-        assert.stub(api.nvim_command).was_called_with('au! BufEnter <buffer=15> ++nested  :lua require("vgit").hello')
-    end)
-end)

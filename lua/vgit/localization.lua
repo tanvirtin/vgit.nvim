@@ -1,11 +1,11 @@
 local assert = require('vgit.assertion').assert
-local State = require('vgit.State')
+local Interface = require('vgit.Interface')
 
 local vim = vim
 
 local M = {}
 
-M.state = State.new({
+M.state = Interface.new({
     preview = {
         horizontal = 'Preview',
         current = 'Current',

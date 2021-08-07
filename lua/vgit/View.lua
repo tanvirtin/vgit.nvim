@@ -1,6 +1,7 @@
+local events = require('vgit.events')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
-local State = require('vgit.State')
+local Interface = require('vgit.Interface')
 
 local vim = vim
 
@@ -110,11 +111,7 @@ local function create_border(content_buf, title, window_props, border, border_hl
     vim.api.nvim_win_set_option(win_id, 'cursorbind', false)
     vim.api.nvim_win_set_option(win_id, 'scrollbind', false)
     vim.api.nvim_win_set_option(win_id, 'winhl', string.format('Normal:%s', border_hl))
-    buffer.add_autocmd(
-        content_buf,
-        'WinClosed',
-        string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id)
-    )
+    events.buf.on(content_buf, 'WinClosed', string.format(':lua require("vgit").ui.close_windows({ %s })', win_id))
     return buf, win_id
 end
 
@@ -131,7 +128,7 @@ local function new(options)
     options = options or {}
     local height = 10
     local width = 70
-    local config = State.new({
+    local config = Interface.new({
         filetype = '',
         title = '',
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
@@ -170,8 +167,9 @@ local function new(options)
             },
             loading = false,
             error = false,
-            rendered = false,
+            mounted = false,
             lines = {},
+            cursor_pos = nil,
         },
         config = config,
     }, View)
@@ -234,6 +232,7 @@ function View:set_loading(value)
         return self
     end
     if value then
+        self.state.cursor_pos = vim.api.nvim_win_get_cursor(self:get_win_id())
         self.state.loading = value
         self:set_centered_text('•••')
     else
@@ -241,7 +240,9 @@ function View:set_loading(value)
         self.state.loading = value
         buffer.set_lines(self.state.buf, self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
+        vim.api.nvim_win_set_cursor(self:get_win_id(), self.state.cursor_pos)
         self.state.lines = {}
+        self.state.cursor = nil
     end
     return self
 end
@@ -280,22 +281,8 @@ function View:set_centered_text(text)
     return self
 end
 
-function View:add_autocmd(cmd, action, options)
-    local buf = self:get_buf()
-    local persist = (options and options.persist) or false
-    local override = (options and options.override) or false
-    local nested = (options and options.nested) or false
-    vim.cmd(
-        string.format(
-            'au%s %s <buffer=%s> %s %s :lua require("vgit").%s',
-            override and '!' or '',
-            cmd,
-            buf,
-            nested and '++nested' or '',
-            persist and '' or '++once',
-            action
-        )
-    )
+function View:on(cmd, handler, options)
+    events.buf.on(self:get_buf(), cmd, handler, options)
     return self
 end
 
@@ -332,8 +319,17 @@ function View:set_filetype(filetype)
     buffer.set_option(buf, 'syntax', filetype)
 end
 
-function View:render()
-    if self.state.rendered then
+function View:set_cursor(row, col)
+    vim.api.nvim_win_set_cursor(self:get_win_id(), { row, col })
+    return self
+end
+
+function View:is_mounted()
+    return self.state.mounted
+end
+
+function View:mount()
+    if self.state.mounted then
         return self
     end
     local buf_options = self.config:get('buf_options')
@@ -389,13 +385,19 @@ function View:render()
             )
         )
     end
-    self:add_autocmd('BufWinLeave', string.format('_run_submodule_command("ui", "close_windows", { %s })', win_id))
+    self:on('BufWinLeave', string.format(':lua require("vgit").ui.close_windows({ %s })', win_id))
     colorize(buf, filetype)
-    self.state.rendered = true
+    self.state.mounted = true
     return self
 end
 
-return {
-    new = new,
-    __object = View,
-}
+function View:unmount()
+    local existing_wins = vim.api.nvim_list_wins()
+    local win_id = self:get_win_id()
+    if vim.api.nvim_win_is_valid(win_id) and vim.tbl_contains(existing_wins, win_id) then
+        pcall(vim.api.nvim_win_close, win_id, true)
+    end
+    self.mounted = false
+end
+
+return { new = new }

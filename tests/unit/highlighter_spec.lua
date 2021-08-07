@@ -14,7 +14,7 @@ describe('highlighter:', function()
                     bg = nil,
                 },
             })
-            eq(highlighter.state.current.VGitSignAdd, {
+            eq(highlighter.state.data.VGitSignAdd, {
                 fg = 'red',
                 bg = nil,
             })

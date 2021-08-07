@@ -1,8 +1,8 @@
-local State = require('vgit.State')
-local preview_popup = require('vgit.popups.preview')
-local history_popup = require('vgit.popups.history')
-local hunk_popup = require('vgit.popups.hunk')
-local blame_popup = require('vgit.popups.blame')
+local Interface = require('vgit.Interface')
+local HistoryPopup = require('vgit.HistoryPopup')
+local HunkPopup = require('vgit.HunkPopup')
+local BlamePopup = require('vgit.BlamePopup')
+local PreviewPopup = require('vgit.PreviewPopup')
 local buffer = require('vgit.buffer')
 local sign = require('vgit.sign')
 local a = require('plenary.async')
@@ -22,7 +22,7 @@ M.constants = {
     blame_line_id = 1,
 }
 
-M.state = State.new({
+M.state = Interface.new({
     mounted_popup = {},
     blame_line = {
         hl = 'VGitBlame',
@@ -69,10 +69,10 @@ M.state = State.new({
 
 M.setup = function(config)
     M.state:assign(config)
-    preview_popup.setup((config and config.preview) or {})
-    history_popup.setup((config and config.history) or {})
-    hunk_popup.setup((config and config.hunk) or {})
-    blame_popup.setup((config and config.blame) or {})
+    HistoryPopup.setup((config and config.history) or {})
+    HunkPopup.setup((config and config.hunk) or {})
+    BlamePopup.setup((config and config.blame) or {})
+    PreviewPopup.setup((config and config.preview) or {})
 end
 
 M.close_windows = function(wins)
@@ -137,43 +137,99 @@ M.hide_hunk_signs = void(function(buf)
 end)
 
 M.show_blame = void(function(fetch)
-    local widget = blame_popup.show(fetch)
-    M.state:set('mounted_popup', widget)
+    local blame_popup = BlamePopup.new()
+    M.state:set('mounted_popup', blame_popup)
+    blame_popup:mount()
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    blame_popup.error = err
+    blame_popup.data = data
+    blame_popup:render()
+    scheduler()
 end)
 
-M.show_hunk = function(hunk_info, filetype)
-    local widget = hunk_popup.show(hunk_info, filetype)
-    M.state:set('mounted_popup', widget)
+M.show_hunk = function(hunk, filetype)
+    local hunk_popup = HunkPopup.new({ filetype = filetype })
+    M.state:set('mounted_popup', hunk_popup)
+    hunk_popup:mount()
+    hunk_popup.data = hunk
+    hunk_popup:render()
 end
 
 M.show_horizontal_preview = void(function(widget_name, fetch, filetype)
-    local widget = preview_popup.show_horizontal(widget_name, fetch, filetype)
-    M.state:set('mounted_popup', widget)
+    local preview_popup = PreviewPopup.new({
+        name = widget_name,
+        filetype = filetype,
+        layout_type = 'horizontal',
+    })
+    M.state:set('mounted_popup', preview_popup)
+    preview_popup:mount()
+    preview_popup:set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    preview_popup:set_loading(false)
+    scheduler()
+    preview_popup.error = err
+    preview_popup.data = data
+    preview_popup:render()
+    scheduler()
 end)
 
 M.show_vertical_preview = void(function(widget_name, fetch, filetype)
-    local widget = preview_popup.show_vertical(widget_name, fetch, filetype)
-    M.state:set('mounted_popup', widget)
+    local preview_popup = PreviewPopup.new({
+        name = widget_name,
+        filetype = filetype,
+        layout_type = 'vertical',
+    })
+    M.state:set('mounted_popup', preview_popup)
+    preview_popup:mount()
+    preview_popup:set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    preview_popup:set_loading(false)
+    scheduler()
+    preview_popup.error = err
+    preview_popup.data = data
+    preview_popup:render()
+    scheduler()
 end)
 
-M.show_horizontal_history = void(function(fetch, filetype)
-    local widget = history_popup.show_horizontal(fetch, filetype)
-    M.state:set('mounted_popup', widget)
+M.show_history = void(function(fetch, filetype, layout_type)
+    local history_popup = HistoryPopup.new({
+        filetype = filetype,
+        layout_type = layout_type,
+    })
+    M.state:set('mounted_popup', history_popup)
+    history_popup:mount()
+    history_popup:set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    history_popup:set_loading(false)
+    scheduler()
+    history_popup.error = err
+    history_popup.data = data
+    history_popup:render()
+    scheduler()
 end)
 
-M.show_vertical_history = void(function(fetch, filetype)
-    local widget = history_popup.show_vertical(fetch, filetype)
-    M.state:set('mounted_popup', widget)
-end)
-
-M.change_horizontal_history = void(function(fetch, selected_log)
-    local widget = M.state:get('mounted_popup')
-    history_popup.change_horizontal(widget, fetch, selected_log)
-end)
-
-M.change_vertical_history = void(function(fetch, selected_log)
-    local widget = M.state:get('mounted_popup')
-    history_popup.change_vertical(widget, fetch, selected_log)
+M.change_history = void(function(fetch, selected)
+    local history_popup = M.state:get('mounted_popup')
+    scheduler()
+    history_popup:set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    history_popup:set_loading(false)
+    scheduler()
+    history_popup.error = err
+    history_popup.data = data
+    history_popup.selected = selected
+    history_popup:render()
+    scheduler()
 end)
 
 return M
