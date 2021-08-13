@@ -66,7 +66,7 @@ local function colorize_buf(lnum_changes, callback)
 end
 
 local function colorize_indicator(buf, lnum, namespace)
-    highlighter.highlight(buf, namespace, state:get('indicator').hl, { lnum, 0 }, { lnum, 1 })
+    highlighter.highlight(buf, namespace, state:get('indicator').hl, lnum, 0, 1)
 end
 
 local function create_history_lines(logs, selected)
@@ -265,7 +265,25 @@ local function new(opts)
         layout_type = opts.layout_type,
         history_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/history'),
         selected = 1,
+        data = nil,
+        err = nil,
     }, HistoryPopup)
+end
+
+function HistoryPopup:get_data()
+    return self.data
+end
+
+function HistoryPopup:get_preview_win_ids()
+    local widget = self.horizontal_widget
+    if self.layout_type == 'vertical' then
+        widget = self.vertical_widget
+        return {
+            widget:get_views().previous:get_win_id(),
+            widget:get_views().current:get_win_id(),
+        }
+    end
+    return { widget:get_views().preview:get_win_id() }
 end
 
 function HistoryPopup:get_name()
@@ -300,6 +318,18 @@ function HistoryPopup:set_error(value)
     end
     widget:set_error(value)
     return self
+end
+
+function HistoryPopup:is_preview_focused()
+    local preview_win_ids = self:get_preview_win_ids()
+    local current_win_id = vim.api.nvim_get_current_win()
+    for i = 1, #preview_win_ids do
+        local win_id = preview_win_ids[i]
+        if win_id == current_win_id then
+            return true
+        end
+    end
+    return false
 end
 
 function HistoryPopup:mount()
@@ -352,6 +382,7 @@ function HistoryPopup:render()
         if self.layout_type == 'horizontal' then
             views.preview:set_cursor(1, 0)
             views.preview:set_lines(data.lines)
+            sign.unplace(views.preview:get_buf())
             colorize_buf(data.lnum_changes, function()
                 return views.preview:get_buf()
             end)
@@ -360,6 +391,8 @@ function HistoryPopup:render()
             views.current:set_cursor(1, 0)
             views.previous:set_lines(data.previous_lines)
             views.current:set_lines(data.current_lines)
+            sign.unplace(views.previous:get_buf())
+            sign.unplace(views.current:get_buf())
             colorize_buf(data.lnum_changes, function(datum)
                 return views[datum.buftype]:get_buf()
             end)

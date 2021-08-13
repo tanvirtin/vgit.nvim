@@ -138,6 +138,8 @@ local function new(opts)
         vertical_widget = create_vertical_widget(opts),
         horizontal_widget = create_horizontal_widget(opts),
         layout_type = opts.layout_type,
+        data = nil,
+        err = nil,
     }, PreviewPopup)
 end
 
@@ -147,6 +149,22 @@ function PreviewPopup:get_name()
         widget = self.vertical_widget
     end
     return widget:get_name()
+end
+
+function PreviewPopup:get_data()
+    return self.data
+end
+
+function PreviewPopup:get_preview_win_ids()
+    local widget = self.horizontal_widget
+    if self.layout_type == 'vertical' then
+        widget = self.vertical_widget
+        return {
+            widget:get_views().previous:get_win_id(),
+            widget:get_views().current:get_win_id(),
+        }
+    end
+    return { widget:get_views().preview:get_win_id() }
 end
 
 function PreviewPopup:get_win_ids()
@@ -173,6 +191,64 @@ function PreviewPopup:set_error(value)
     end
     widget:set_error(value)
     return self
+end
+
+function PreviewPopup:is_preview_focused()
+    local preview_win_ids = self:get_preview_win_ids()
+    local current_win_id = vim.api.nvim_get_current_win()
+    for i = 1, #preview_win_ids do
+        local win_id = preview_win_ids[i]
+        if win_id == current_win_id then
+            return true
+        end
+    end
+    return false
+end
+
+function PreviewPopup:set_cursor(row, col)
+    if self.layout_type == 'vertical' then
+        self.vertical_widget:get_views().previous:set_cursor(row, col)
+        self.vertical_widget:get_views().current:set_cursor(row, col)
+    else
+        self.horizontal_widget:get_views().preview:set_cursor(row, col)
+    end
+    return self
+end
+
+function PreviewPopup:reposition_cursor(lnum)
+    local new_lines_added = 0
+    for i = 1, #self.data.hunks do
+        local hunk = self.data.hunks[i]
+        local type = hunk.type
+        local diff = hunk.diff
+        local current_new_lines_added = 0
+        if type == 'remove' then
+            for _ = 1, #diff do
+                current_new_lines_added = current_new_lines_added + 1
+            end
+        elseif type == 'change' then
+            for j = 1, #diff do
+                local line = diff[j]
+                local line_type = line:sub(1, 1)
+                if line_type == '-' then
+                    current_new_lines_added = current_new_lines_added + 1
+                end
+            end
+        end
+        new_lines_added = new_lines_added + current_new_lines_added
+        local start = hunk.start + new_lines_added
+        local finish = hunk.finish + new_lines_added
+        local padded_lnum = lnum + new_lines_added
+        if padded_lnum >= start and padded_lnum <= finish then
+            if type == 'remove' then
+                self:set_cursor(start - current_new_lines_added + 1, 0)
+            else
+                self:set_cursor(start - current_new_lines_added, 0)
+            end
+            vim.cmd('norm! zz')
+            break
+        end
+    end
 end
 
 function PreviewPopup:mount()

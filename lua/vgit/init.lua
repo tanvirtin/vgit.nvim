@@ -1,8 +1,8 @@
-local events = require('vgit.events')
 local git = require('vgit.git')
 local ui = require('vgit.ui')
 local fs = require('vgit.fs')
 local highlighter = require('vgit.highlighter')
+local events = require('vgit.events')
 local sign = require('vgit.sign')
 local Interface = require('vgit.Interface')
 local Bstate = require('vgit.Bstate')
@@ -10,6 +10,7 @@ local buffer = require('vgit.buffer')
 local throttle_leading = require('vgit.defer').throttle_leading
 local debounce_trailing = require('vgit.defer').debounce_trailing
 local logger = require('vgit.logger')
+local navigation = require('vgit.navigation')
 local t = require('vgit.localization').translate
 local a = require('plenary.async')
 local wrap = a.wrap
@@ -21,6 +22,7 @@ local vim = vim
 local M = {}
 
 local bstate = Bstate.new()
+
 local state = Interface.new({
     config = {},
     disabled = false,
@@ -79,6 +81,18 @@ end
 
 local function calculate_hunks(buf)
     return get_hunk_calculator()(bstate:get(buf, 'tracked_filename'))
+end
+
+local function get_current_hunk(hunks, lnum)
+    for i = 1, #hunks do
+        local hunk = hunks[i]
+        if lnum == 1 and hunk.start == 0 and hunk.finish == 0 then
+            return hunk
+        end
+        if lnum >= hunk.start and lnum <= hunk.finish then
+            return hunk
+        end
+    end
 end
 
 local ext_hunk_generation = void(function(buf, original_lines, current_lines)
@@ -161,7 +175,7 @@ local generate_untracked_hunk_signs = debounce_trailing(
     state:get('predict_hunk_throttle_ms')
 )
 
-local but_attach_tracked = void(function(buf)
+local buf_attach_tracked = void(function(buf)
     scheduler()
     if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
         return
@@ -200,7 +214,7 @@ local but_attach_tracked = void(function(buf)
     end
 end)
 
-local function but_attach_untracked(buf)
+local function buf_attach_untracked(buf)
     if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
         return
     end
@@ -257,14 +271,14 @@ M._buf_attach = void(function(buf)
     scheduler()
     if tracked_filename and tracked_filename ~= '' then
         cache_buf(buf, filename, tracked_filename, tracked_remote_filename)
-        return but_attach_tracked(buf)
+        return buf_attach_tracked(buf)
     end
     if state:get('diff_strategy') == 'index' and state:get('show_untracked_file_signs') then
         local is_ignored = git.check_ignored(filename)
         scheduler()
         if not is_ignored then
             cache_buf(buf, filename, tracked_filename, tracked_remote_filename)
-            but_attach_untracked(buf)
+            buf_attach_untracked(buf)
         end
     end
 end)
@@ -465,37 +479,57 @@ end, state:get(
     'action_delay_ms'
 ))
 
-M.hunk_down = function(buf, win)
+M.buffer_hunk_lens = throttle_leading(function(buf, win)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
-        win = win or vim.api.nvim_get_current_win()
+        local lnum = vim.api.nvim_win_get_cursor(win)[1]
         local hunks = bstate:get(buf, 'hunks')
-        if #hunks ~= 0 then
-            local new_lnum = nil
-            local lnum = vim.api.nvim_win_get_cursor(win)[1]
-            for i = 1, #hunks do
-                local hunk = hunks[i]
-                if hunk.start > lnum then
-                    new_lnum = hunk.start
-                    break
-                elseif lnum < hunk.finish then
-                    new_lnum = hunk.finish
-                    break
+        ui.show_hunk_lens(
+            wrap(function()
+                local read_file_err, lines = fs.read_file(bstate:get(buf, 'tracked_filename'))
+                scheduler()
+                if read_file_err then
+                    logger.debug(read_file_err, 'init.lua/hunk_preview')
+                    return read_file_err, nil
+                end
+                local diff_err, data = git.horizontal_diff(lines, hunks)
+                scheduler()
+                data.hunk = get_current_hunk(hunks, lnum) or { diff = {} }
+                return diff_err, data
+            end, 0),
+            bstate:get(buf, 'filetype')
+        )
+    end
+end, state:get(
+    'action_delay_ms'
+))
+
+M.hunk_down = function(buf, win)
+    buf = buf or buffer.current()
+    if not state:get('disabled') then
+        local popup = ui.get_mounted_popup()
+        if not vim.tbl_isempty(popup) then
+            local allowed_popups = {
+                hunk_lens = true,
+                horizontal_preview = true,
+                vertical_preview = true,
+                staged_horizontal_preview = true,
+                staged_vertical_preview = true,
+                horizontal_history = true,
+                vertical_history = true,
+            }
+            if allowed_popups[popup:get_name()] then
+                local marks = popup:get_data().marks
+                if popup:is_preview_focused() and #marks ~= 0 then
+                    return navigation.mark_down(popup:get_preview_win_ids(), marks)
                 end
             end
-            if new_lnum and new_lnum < 1 then
-                new_lnum = 1
-            end
-            if new_lnum then
-                vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
-                vim.cmd('norm! zz')
-            else
-                local first_hunk_start_lnum = hunks[1].start
-                if first_hunk_start_lnum < 1 then
-                    first_hunk_start_lnum = 1
-                end
-                vim.api.nvim_win_set_cursor(win, { first_hunk_start_lnum, 0 })
-                vim.cmd('norm! zz')
+        end
+        if buffer.is_valid(buf) and bstate:contains(buf) then
+            win = win or vim.api.nvim_get_current_win()
+            local hunks = bstate:get(buf, 'hunks')
+            if #hunks ~= 0 then
+                navigation.hunk_down(win, hunks)
             end
         end
     end
@@ -503,35 +537,30 @@ end
 
 M.hunk_up = function(buf, win)
     buf = buf or buffer.current()
-    if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
-        win = win or vim.api.nvim_get_current_win()
-        local hunks = bstate:get(buf, 'hunks')
-        if #hunks ~= 0 then
-            local new_lnum = nil
-            local lnum = vim.api.nvim_win_get_cursor(win)[1]
-            for i = #hunks, 1, -1 do
-                local hunk = hunks[i]
-                if hunk.finish < lnum then
-                    new_lnum = hunk.finish
-                    break
-                elseif lnum > hunk.start then
-                    new_lnum = hunk.start
-                    break
+    if not state:get('disabled') then
+        local popup = ui.get_mounted_popup()
+        if not vim.tbl_isempty(popup) then
+            local allowed_popups = {
+                hunk_lens = true,
+                horizontal_preview = true,
+                vertical_preview = true,
+                staged_horizontal_preview = true,
+                staged_vertical_preview = true,
+                horizontal_history = true,
+                vertical_history = true,
+            }
+            if allowed_popups[popup:get_name()] then
+                local marks = popup:get_data().marks
+                if popup:is_preview_focused() and #marks ~= 0 then
+                    return navigation.mark_up(popup:get_preview_win_ids(), marks)
                 end
             end
-            if new_lnum and new_lnum < 1 then
-                new_lnum = 1
-            end
-            if new_lnum and lnum ~= new_lnum then
-                vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
-                vim.cmd('norm! zz')
-            else
-                local finish_hunks_lnum = hunks[#hunks].finish
-                if finish_hunks_lnum < 1 then
-                    finish_hunks_lnum = 1
-                end
-                vim.api.nvim_win_set_cursor(win, { finish_hunks_lnum, 0 })
-                vim.cmd('norm! zz')
+        end
+        if buffer.is_valid(buf) and bstate:contains(buf) then
+            win = win or vim.api.nvim_get_current_win()
+            local hunks = bstate:get(buf, 'hunks')
+            if #hunks ~= 0 then
+                navigation.hunk_up(win, hunks)
             end
         end
     end
@@ -791,10 +820,8 @@ M.buffer_preview = throttle_leading(
             and not bstate:get(buf, 'untracked')
         then
             local diff_preference = state:get('diff_preference')
-            local show_preview = (diff_preference == 'horizontal' and ui.show_horizontal_preview)
-                or ui.show_vertical_preview
             local diff = (diff_preference == 'horizontal' and git.horizontal_diff) or git.vertical_diff
-            show_preview(
+            ui.show_preview(
                 (diff_preference == 'horizontal' and 'horizontal_preview') or 'vertical_preview',
                 wrap(function()
                     local tracked_filename = bstate:get(buf, 'tracked_filename')
@@ -830,7 +857,8 @@ M.buffer_preview = throttle_leading(
                     scheduler()
                     return diff_err, data
                 end, 0),
-                bstate:get(buf, 'filetype')
+                bstate:get(buf, 'filetype'),
+                diff_preference
             )
         end
     end),
@@ -848,10 +876,8 @@ M.staged_buffer_preview = throttle_leading(
             and state:get('diff_strategy') == 'index'
         then
             local diff_preference = state:get('diff_preference')
-            local show_preview = (diff_preference == 'horizontal' and ui.show_horizontal_preview)
-                or ui.show_vertical_preview
             local diff = (diff_preference == 'horizontal' and git.horizontal_diff) or git.vertical_diff
-            show_preview(
+            ui.show_preview(
                 (diff_preference == 'horizontal' and 'staged_horizontal_preview') or 'staged_vertical_preview',
                 wrap(function()
                     local tracked_filename = bstate:get(buf, 'tracked_filename')
@@ -871,7 +897,8 @@ M.staged_buffer_preview = throttle_leading(
                     scheduler()
                     return diff_err, data
                 end, 0),
-                bstate:get(buf, 'filetype')
+                bstate:get(buf, 'filetype'),
+                diff_preference
             )
         end
     end),
@@ -976,19 +1003,8 @@ M.hunk_stage = throttle_leading(
             end
             win = win or vim.api.nvim_get_current_win()
             local lnum = vim.api.nvim_win_get_cursor(win)[1]
-            local selected_hunk = nil
             local hunks = bstate:get(buf, 'hunks')
-            for i = 1, #hunks do
-                local hunk = hunks[i]
-                if lnum == 1 and hunk.start == 0 and hunk.finish == 0 then
-                    selected_hunk = hunk
-                    break
-                end
-                if lnum >= hunk.start and lnum <= hunk.finish then
-                    selected_hunk = hunk
-                    break
-                end
-            end
+            local selected_hunk = get_current_hunk(hunks, lnum)
             if selected_hunk then
                 local tracked_filename = bstate:get(buf, 'tracked_filename')
                 local tracked_remote_filename = bstate:get(buf, 'tracked_remote_filename')
@@ -1162,8 +1178,8 @@ M.set_diff_preference = throttle_leading(
             return
         end
         state:set('diff_preference', preference)
-        local widget = ui.get_mounted_popup()
-        if not vim.tbl_isempty(widget) then
+        local popup = ui.get_mounted_popup()
+        if not vim.tbl_isempty(popup) then
             local view_fn_map = {
                 horizontal_preview = M.buffer_preview,
                 vertical_preview = M.buffer_preview,
@@ -1174,10 +1190,9 @@ M.set_diff_preference = throttle_leading(
                 vertical_diff = M.diff,
                 horizontal_diff = M.diff,
             }
-            local widget_name = widget:get_name()
-            local fn = view_fn_map[widget_name]
+            local fn = view_fn_map[popup:get_name()]
             if fn then
-                widget:unmount()
+                popup:unmount()
                 fn(buffer.current())
             end
         end
