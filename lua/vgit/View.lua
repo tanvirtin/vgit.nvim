@@ -123,11 +123,19 @@ local function global_height()
     return vim.o.lines
 end
 
+local function min_width()
+    return 70
+end
+
+local function min_height()
+    return 20
+end
+
 local function new(options)
     assert(options == nil or type(options) == 'table', 'type error :: expected table or nil')
     options = options or {}
-    local height = 10
-    local width = 70
+    local height = min_height()
+    local width = min_width()
     local config = Interface.new({
         filetype = '',
         title = '',
@@ -159,7 +167,7 @@ local function new(options)
     config:assign(options)
     return setmetatable({
         state = {
-            buf = vim.api.nvim_create_buf(true, true),
+            buf = nil,
             win_id = nil,
             border = {
                 buf = nil,
@@ -296,6 +304,22 @@ function View:focus()
     return self
 end
 
+function View:get_height()
+    return vim.api.nvim_win_get_height()
+end
+
+function View:get_width()
+    return vim.api.nvim_win_get_width()
+end
+
+function View:get_min_height()
+    return min_height()
+end
+
+function View:get_min_width()
+    return min_width()
+end
+
 function View:set_height(value)
     assert(type(value) == 'number', 'type error :: expected number')
     vim.api.nvim_win_set_height(self:get_win_id(), value)
@@ -340,7 +364,8 @@ function View:mount()
     local window_props = self.config:get('window_props')
     local win_options = self.config:get('win_options')
     local filetype = self.config:get('filetype')
-    local buf = self:get_buf()
+    self.state.buf = vim.api.nvim_create_buf(true, true)
+    local buf = self.state.buf
     buffer.assign_options(buf, buf_options)
     if title == '' then
         if border_hl then
@@ -362,7 +387,6 @@ function View:mount()
     for key, value in pairs(win_options) do
         vim.api.nvim_win_set_option(win_id, key, value)
     end
-    self.state.buf = buf
     self.state.win_id = win_id
     if border and title ~= '' then
         local border_buf, border_win_id = create_border(buf, title, window_props, border, border_focus_hl)

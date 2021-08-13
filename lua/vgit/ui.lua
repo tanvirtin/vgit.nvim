@@ -1,6 +1,9 @@
+local PopupManager = require('vgit.PopupManager')
 local Interface = require('vgit.Interface')
+local ImmutableInterface = require('vgit.ImmutableInterface')
 local HistoryPopup = require('vgit.HistoryPopup')
 local HunkPopup = require('vgit.HunkPopup')
+local HunkLensPopup = require('vgit.HunkLensPopup')
 local BlamePopup = require('vgit.BlamePopup')
 local PreviewPopup = require('vgit.PreviewPopup')
 local buffer = require('vgit.buffer')
@@ -17,13 +20,14 @@ end
 
 local M = {}
 
-M.constants = {
+local popup_manager = PopupManager.new()
+
+M.constants = ImmutableInterface.new({
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
     blame_line_id = 1,
-}
+})
 
 M.state = Interface.new({
-    mounted_popup = {},
     blame_line = {
         hl = 'VGitBlame',
         format = function(blame, git_config)
@@ -70,13 +74,18 @@ M.state = Interface.new({
 M.setup = function(config)
     M.state:assign(config)
     HistoryPopup.setup((config and config.history) or {})
+    HunkLensPopup.setup((config and config.hunk_lens) or {})
     HunkPopup.setup((config and config.hunk) or {})
     BlamePopup.setup((config and config.blame) or {})
     PreviewPopup.setup((config and config.preview) or {})
 end
 
+M.get_mounted_popup = function()
+    return popup_manager:get()
+end
+
 M.close_windows = function(wins)
-    M.state:set('mounted_popup', {})
+    popup_manager:set({})
     local existing_wins = vim.api.nvim_list_wins()
     for i = 1, #wins do
         local win = wins[i]
@@ -86,16 +95,12 @@ M.close_windows = function(wins)
     end
 end
 
-M.get_mounted_popup = function()
-    return M.state:get('mounted_popup')
-end
-
 M.show_blame_line = function(buf, blame, lnum, git_config)
     if buffer.is_valid(buf) then
         local virt_text = M.state:get('blame_line').format(blame, git_config)
         if type(virt_text) == 'string' then
-            pcall(vim.api.nvim_buf_set_extmark, buf, M.constants.blame_namespace, lnum - 1, 0, {
-                id = M.constants.blame_line_id,
+            pcall(vim.api.nvim_buf_set_extmark, buf, M.constants:get('blame_namespace'), lnum - 1, 0, {
+                id = M.constants:get('blame_line_id'),
                 virt_text = { { virt_text, M.state:get('blame_line').hl } },
                 virt_text_pos = 'eol',
             })
@@ -105,7 +110,7 @@ end
 
 M.hide_blame_line = function(buf)
     if buffer.is_valid(buf) then
-        pcall(vim.api.nvim_buf_del_extmark, buf, M.constants.blame_namespace, M.constants.blame_line_id)
+        pcall(vim.api.nvim_buf_del_extmark, buf, M.constants:get('blame_namespace'), M.constants:get('blame_line_id'))
     end
 end
 
@@ -137,8 +142,9 @@ M.hide_hunk_signs = void(function(buf)
 end)
 
 M.show_blame = void(function(fetch)
+    popup_manager:clear()
     local blame_popup = BlamePopup.new()
-    M.state:set('mounted_popup', blame_popup)
+    popup_manager:set(blame_popup)
     blame_popup:mount()
     scheduler()
     local err, data = fetch()
@@ -150,40 +156,42 @@ M.show_blame = void(function(fetch)
 end)
 
 M.show_hunk = function(hunk, filetype)
+    popup_manager:clear()
     local hunk_popup = HunkPopup.new({ filetype = filetype })
-    M.state:set('mounted_popup', hunk_popup)
+    popup_manager:set(hunk_popup)
     hunk_popup:mount()
     hunk_popup.data = hunk
     hunk_popup:render()
 end
 
-M.show_horizontal_preview = void(function(widget_name, fetch, filetype)
-    local preview_popup = PreviewPopup.new({
-        name = widget_name,
-        filetype = filetype,
-        layout_type = 'horizontal',
-    })
-    M.state:set('mounted_popup', preview_popup)
-    preview_popup:mount()
-    preview_popup:set_loading(true)
+M.show_hunk_lens = void(function(fetch, filetype)
+    popup_manager:clear()
+    local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local hunk_lens_popup = HunkLensPopup.new({ filetype = filetype })
+    popup_manager:set(hunk_lens_popup)
+    hunk_lens_popup:mount()
+    hunk_lens_popup:set_loading(true)
     scheduler()
     local err, data = fetch()
     scheduler()
-    preview_popup:set_loading(false)
+    hunk_lens_popup:set_loading(false)
     scheduler()
-    preview_popup.error = err
-    preview_popup.data = data
-    preview_popup:render()
+    hunk_lens_popup.error = err
+    hunk_lens_popup.data = data
+    hunk_lens_popup:render()
     scheduler()
+    hunk_lens_popup:reposition_cursor(current_lnum)
 end)
 
-M.show_vertical_preview = void(function(widget_name, fetch, filetype)
+M.show_preview = void(function(name, fetch, filetype, layout_type)
+    popup_manager:clear()
+    local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
     local preview_popup = PreviewPopup.new({
-        name = widget_name,
+        name = name,
         filetype = filetype,
-        layout_type = 'vertical',
+        layout_type = layout_type,
     })
-    M.state:set('mounted_popup', preview_popup)
+    popup_manager:set(preview_popup)
     preview_popup:mount()
     preview_popup:set_loading(true)
     scheduler()
@@ -194,15 +202,17 @@ M.show_vertical_preview = void(function(widget_name, fetch, filetype)
     preview_popup.error = err
     preview_popup.data = data
     preview_popup:render()
+    preview_popup:reposition_cursor(current_lnum)
     scheduler()
 end)
 
 M.show_history = void(function(fetch, filetype, layout_type)
+    popup_manager:clear()
     local history_popup = HistoryPopup.new({
         filetype = filetype,
         layout_type = layout_type,
     })
-    M.state:set('mounted_popup', history_popup)
+    popup_manager:set(history_popup)
     history_popup:mount()
     history_popup:set_loading(true)
     scheduler()
@@ -217,7 +227,7 @@ M.show_history = void(function(fetch, filetype, layout_type)
 end)
 
 M.change_history = void(function(fetch, selected)
-    local history_popup = M.state:get('mounted_popup')
+    local history_popup = popup_manager:get()
     scheduler()
     history_popup:set_loading(true)
     scheduler()

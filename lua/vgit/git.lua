@@ -1,5 +1,6 @@
 local Job = require('plenary.job')
 local Interface = require('vgit.Interface')
+local ImmutableInterface = require('vgit.ImmutableInterface')
 local a = require('plenary.async')
 local void = a.void
 local wrap = a.wrap
@@ -39,11 +40,11 @@ end
 
 local M = {}
 
-M.constants = {
+M.constants = ImmutableInterface.new({
     diff_algorithm = 'myers',
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
     job_timeout = 30000,
-}
+})
 
 M.state = Interface.new({
     diff_base = 'HEAD',
@@ -325,7 +326,7 @@ M.logs = wrap(function(filename, callback)
             filename,
         },
     })
-    job:sync(M.constants.job_timeout)
+    job:sync(M.constants:get('job_timeout'))
     local result = job:result()
     for i = 1, #result do
         local line = result[i]
@@ -350,7 +351,7 @@ M.file_hunks = wrap(function(filename_a, filename_b, callback)
         'core.safecrlf=false',
         'diff',
         '--color=never',
-        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+        string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
         '--patch-with-raw',
         '--unified=0',
         '--no-index',
@@ -397,7 +398,7 @@ M.index_hunks = wrap(function(filename, callback)
         'core.safecrlf=false',
         'diff',
         '--color=never',
-        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+        string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
         '--patch-with-raw',
         '--unified=0',
         '--',
@@ -443,7 +444,7 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
         'core.safecrlf=false',
         'diff',
         '--color=never',
-        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+        string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
         '--patch-with-raw',
         '--unified=0',
         M.state:get('diff_base'),
@@ -457,7 +458,7 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
             'core.safecrlf=false',
             'diff',
             '--color=never',
-            string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+            string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
             '--patch-with-raw',
             '--unified=0',
             parent_hash,
@@ -472,10 +473,10 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
             'core.safecrlf=false',
             'diff',
             '--color=never',
-            string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+            string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
             '--patch-with-raw',
             '--unified=0',
-            #parent_hash > 0 and parent_hash or M.constants.empty_tree_hash,
+            #parent_hash > 0 and parent_hash or M.constants:get('empty_tree_hash'),
             commit_hash,
             '--',
             filename,
@@ -521,7 +522,7 @@ M.staged_hunks = wrap(function(filename, callback)
         'core.safecrlf=false',
         'diff',
         '--color=never',
-        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
+        string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
         '--patch-with-raw',
         '--unified=0',
         '--cached',
@@ -751,7 +752,7 @@ M.tracked_filename = wrap(function(filename)
             filename,
         },
     })
-    job:sync(M.constants.job_timeout)
+    job:sync(M.constants:get('job_timeout'))
     local result = job:result()
     return result[1] or ''
 end, 1)
@@ -766,7 +767,7 @@ M.tracked_remote_filename = wrap(function(filename)
             filename,
         },
     })
-    job:sync(M.constants.job_timeout)
+    job:sync(M.constants:get('job_timeout'))
     local result = job:result()
     return result[1] or ''
 end, 1)
@@ -804,13 +805,18 @@ end, 1)
 
 M.horizontal_diff = wrap(function(lines, hunks, callback)
     if #hunks == 0 then
+        -- TODO: NEED TO BE A defined DTO
         return callback(nil, {
             lines = lines,
+            hunk = { diff = {} },
+            hunks = hunks,
             lnum_changes = {},
+            marks = {},
         })
     end
     local new_lines = {}
     local lnum_changes = {}
+    local marks = {}
     for key, value in pairs(lines) do
         new_lines[key] = value
     end
@@ -822,6 +828,11 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
         local start = hunk.start + new_lines_added
         local finish = hunk.finish + new_lines_added
         if type == 'add' then
+            marks[#marks + 1] = {
+                type = type,
+                start = start,
+                finish = finish,
+            }
             for j = start, finish do
                 lnum_changes[#lnum_changes + 1] = {
                     lnum = j,
@@ -829,6 +840,11 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
                 }
             end
         elseif type == 'remove' then
+            marks[#marks + 1] = {
+                type = type,
+                start = start + 1,
+                finish = nil,
+            }
             local s = start
             for j = 1, #diff do
                 local line = diff[j]
@@ -840,7 +856,13 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
                     type = 'remove',
                 }
             end
+            marks[#marks].finish = start + #diff
         elseif type == 'change' then
+            marks[#marks + 1] = {
+                type = type,
+                start = start,
+                finish = nil,
+            }
             local s = start
             for j = 1, #diff do
                 local line = diff[j]
@@ -860,25 +882,35 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
                 end
                 s = s + 1
             end
+            marks[#marks].finish = start + #diff - 1
         end
     end
+    -- TODO: NEED TO BE A defined DTO
     return callback(nil, {
         lines = new_lines,
+        hunk = { diff = {} },
+        hunks = hunks,
         lnum_changes = lnum_changes,
+        marks = marks,
     })
 end, 3)
 
 M.vertical_diff = wrap(function(lines, hunks, callback)
     if #hunks == 0 then
+        -- TODO: NEED TO BE A defined DTO
         return callback(nil, {
             current_lines = lines,
             previous_lines = lines,
+            hunk = { diff = {} },
+            hunks = hunks,
             lnum_changes = {},
+            marks = {},
         })
     end
     local current_lines = {}
     local previous_lines = {}
     local lnum_changes = {}
+    local marks = {}
     -- shallow copy
     for key, value in pairs(lines) do
         current_lines[key] = value
@@ -894,6 +926,11 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
         local finish = hunk.finish + new_lines_added
         local diff = hunk.diff
         if type == 'add' then
+            marks[#marks + 1] = {
+                type = type,
+                start = start,
+                finish = finish,
+            }
             -- Remove the line indicating that these lines were inserted in current_lines.
             for j = start, finish do
                 previous_lines[j] = ''
@@ -904,6 +941,11 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
                 }
             end
         elseif type == 'remove' then
+            marks[#marks + 1] = {
+                type = type,
+                start = start + 1,
+                finish = nil,
+            }
             for j = 1, #diff do
                 local line = diff[j]
                 start = start + 1
@@ -916,7 +958,13 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
                     type = 'remove',
                 }
             end
+            marks[#marks].finish = finish
         elseif type == 'change' then
+            marks[#marks + 1] = {
+                type = type,
+                start = start,
+                finish = nil,
+            }
             -- Retrieve lines that have been removed and added without "-" and "+".
             local removed_lines, added_lines = parse_hunk_diff(diff)
             -- Max lines are the maximum number of lines found between added and removed lines.
@@ -956,12 +1004,17 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
                 previous_lines[j] = removed_line or ''
                 current_lines[j] = added_line or ''
             end
+            marks[#marks].finish = finish
         end
     end
     return callback(nil, {
+        -- TODO: NEED TO BE A defined DTO
         current_lines = current_lines,
         previous_lines = previous_lines,
+        hunk = { diff = {} },
+        hunks = hunks,
         lnum_changes = lnum_changes,
+        marks = marks,
     })
 end, 3)
 

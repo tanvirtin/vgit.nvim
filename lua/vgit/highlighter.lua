@@ -66,6 +66,6 @@ M.create = function(group, color)
     vim.cmd('highlight ' .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp)
 end
 
-M.highlight = vim.highlight.range
+M.highlight = vim.api.nvim_buf_add_highlight
 
 return M

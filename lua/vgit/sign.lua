@@ -1,10 +1,11 @@
+local ImmutableInterface = require('vgit.ImmutableInterface')
 local Interface = require('vgit.Interface')
 
 local M = {}
 
-M.constants = {
+M.constants = ImmutableInterface.new({
     ns = 'tanvirtin/vgit.nvim/hunk/signs',
-}
+})
 
 M.state = Interface.new({
     VGitViewSignAdd = {
@@ -67,7 +68,7 @@ M.define = function(config)
 end
 
 M.place = function(buf, lnum, type, priority)
-    vim.fn.sign_place(lnum, string.format('%s/%s', M.constants.ns, buf), type, buf, {
+    vim.fn.sign_place(lnum, string.format('%s/%s', M.constants:get('ns'), buf), type, buf, {
         id = lnum,
         lnum = lnum,
         priority = priority,
@@ -75,12 +76,12 @@ M.place = function(buf, lnum, type, priority)
 end
 
 M.unplace = function(buf)
-    vim.fn.sign_unplace(string.format('%s/%s', M.constants.ns, buf))
+    vim.fn.sign_unplace(string.format('%s/%s', M.constants:get('ns'), buf))
 end
 
 M.get = function(buf, lnum)
     local signs = vim.fn.sign_getplaced(buf, {
-        group = string.format('%s/%s', M.constants.ns, buf),
+        group = string.format('%s/%s', M.constants:get('ns'), buf),
         id = lnum,
     })[1].signs
     local result = {}
