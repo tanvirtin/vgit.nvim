@@ -1,5 +1,5 @@
 local assert = require('vgit.assertion').assert
-local State = require('vgit.State')
+local Interface = require('vgit.Interface')
 
 local Bstate = {}
 Bstate.__index = Bstate
@@ -15,7 +15,7 @@ end
 
 function Bstate:add(buf)
     assert(type(buf) == 'number', 'type error :: expected number')
-    self.buf_states[buf] = State.new({
+    self.buf_states[buf] = Interface.new({
         filename = '',
         filetype = '',
         tracked_filename = '',
@@ -64,7 +64,8 @@ function Bstate:get_buf_states()
     return self.buf_states
 end
 
-return {
-    new = new,
-    __object = Bstate,
-}
+function Bstate:size()
+    return #self.buf_states
+end
+
+return { new = new }
