@@ -6,23 +6,6 @@ M.current = function()
     return vim.api.nvim_get_current_buf()
 end
 
-M.add_autocmd = function(buf, cmd, action, options)
-    local persist = (options and options.persist) or false
-    local override = (options and options.override) or false
-    local nested = (options and options.nested) or true
-    vim.api.nvim_command(
-        string.format(
-            'au%s %s <buffer=%s> %s %s :lua require("vgit").%s',
-            override and '!' or '',
-            cmd,
-            buf,
-            nested and '++nested' or '',
-            persist and '' or '++once',
-            action
-        )
-    )
-end
-
 M.add_keymap = function(buf, key, action)
     vim.api.nvim_buf_set_keymap(buf, 'n', key, string.format(':lua require("vgit").%s<CR>', action), {
         silent = true,
@@ -51,6 +34,10 @@ end
 
 M.set_option = function(buf, key, value)
     vim.api.nvim_buf_set_option(buf, key, value)
+end
+
+M.get_option = function(buf, key)
+    vim.api.nvim_buf_get_option(buf, key)
 end
 
 M.assign_options = function(buf, options)

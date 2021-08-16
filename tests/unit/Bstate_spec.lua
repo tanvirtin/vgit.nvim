@@ -53,10 +53,7 @@ describe('Bstate:', function()
             for i = 1, num_cache, 1 do
                 bstate:add(i)
             end
-            local buf_state = {
-                current = atomic_buf_state,
-                initial = atomic_buf_state,
-            }
+            local buf_state = { data = atomic_buf_state }
             eq(bstate.buf_states, {
                 [1] = buf_state,
                 [2] = buf_state,

@@ -344,6 +344,17 @@ require('vgit').setup({
             remove = 'VGitViewSignRemove',
         },
     },
+    hunk_lens = {
+        priority = 10,
+        window = {
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitBorder',
+        },
+        signs = {
+            add = 'VGitViewSignAdd',
+            remove = 'VGitViewSignRemove',
+        },
+    },
     hunk_sign = {
         priority = 10,
         signs = {
@@ -411,6 +422,7 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | unstage_buffer | Unstages a buffer you are currently on |
 | staged_buffer_preview | Shows staged changes in a preview window |
 | buffer_preview | Shows the current differences in lines in the current buffer |
+| buffer_hunk_lens | Gives you a lens view through which you can navigate and see the current hunk or other hunks, this is similar to buffer preview, also an alternate for hunk_preview |
 | buffer_history | Opens a buffer preview along with a table of logs, enabling users to see different iterations of the buffer in the git history |
 | buffer_reset | Resets the current buffer to HEAD |
 | hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
