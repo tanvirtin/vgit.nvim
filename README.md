@@ -81,6 +81,11 @@
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/121595739-95687000-ca0c-11eb-8f1d-9b5b398e3b0d.gif" alt="diff_preference" />
 </details>
+<details>
+    <summary>Get a deeper dive into all the blames for a buffer</summary>
+    <br />
+    <img src="https://user-images.githubusercontent.com/25164326/129825907-3bd8479b-fc68-4b8c-9cfd-8a89755c5540.PNG" />
+</details>
 
 ## Supported Neovim versions:
 - Neovim > 0.5
@@ -355,6 +360,16 @@ require('vgit').setup({
             remove = 'VGitViewSignRemove',
         },
     },
+    blame_preview_popup = {
+        blame_window = {
+            border = { '╭', '─', '─', '│', '─', '─', '╰', '│' },
+            border_hl = 'VGitBorder',
+        },
+        preview_window = {
+            border = { '─', '─', '╮', '│', '╯', '─', '─', ' ' },
+            border_hl = 'VGitBorder',
+        },
+    }
     hunk_sign = {
         priority = 10,
         signs = {
