@@ -75,9 +75,9 @@ M.mark_down = function(wins, marks)
     end
 end
 
-M.hunk_up = function(win, hunks)
+M.hunk_up = function(wins, hunks)
     local new_lnum = nil
-    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
     for i = #hunks, 1, -1 do
         local hunk = hunks[i]
         if hunk.finish < lnum then
@@ -92,21 +92,25 @@ M.hunk_up = function(win, hunks)
         new_lnum = 1
     end
     if new_lnum and lnum ~= new_lnum then
-        vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
+        for i = 1, #wins do
+            vim.api.nvim_win_set_cursor(wins[i], { new_lnum, 0 })
+        end
         vim.cmd('norm! zz')
     else
         local finish_hunks_lnum = hunks[#hunks].finish
         if finish_hunks_lnum < 1 then
             finish_hunks_lnum = 1
         end
-        vim.api.nvim_win_set_cursor(win, { finish_hunks_lnum, 0 })
+        for i = 1, #wins do
+            vim.api.nvim_win_set_cursor(wins[i], { finish_hunks_lnum, 0 })
+        end
         vim.cmd('norm! zz')
     end
 end
 
-M.hunk_down = function(win, hunks)
+M.hunk_down = function(wins, hunks)
     local new_lnum = nil
-    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
     for i = 1, #hunks do
         local hunk = hunks[i]
         if hunk.start > lnum then
@@ -121,14 +125,18 @@ M.hunk_down = function(win, hunks)
         new_lnum = 1
     end
     if new_lnum then
-        vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
+        for i = 1, #wins do
+            vim.api.nvim_win_set_cursor(wins[i], { new_lnum, 0 })
+        end
         vim.cmd('norm! zz')
     else
         local first_hunk_start_lnum = hunks[1].start
         if first_hunk_start_lnum < 1 then
             first_hunk_start_lnum = 1
         end
-        vim.api.nvim_win_set_cursor(win, { first_hunk_start_lnum, 0 })
+        for i = 1, #wins do
+            vim.api.nvim_win_set_cursor(wins[i], { first_hunk_start_lnum, 0 })
+        end
         vim.cmd('norm! zz')
     end
 end
