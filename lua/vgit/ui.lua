@@ -1,4 +1,5 @@
 local PopupManager = require('vgit.PopupManager')
+local BlamePreviewPopup = require('vgit.BlamePreviewPopup')
 local Interface = require('vgit.Interface')
 local ImmutableInterface = require('vgit.ImmutableInterface')
 local HistoryPopup = require('vgit.HistoryPopup')
@@ -78,6 +79,7 @@ M.setup = function(config)
     HunkPopup.setup((config and config.hunk) or {})
     BlamePopup.setup((config and config.blame) or {})
     PreviewPopup.setup((config and config.preview) or {})
+    BlamePreviewPopup.setup((config and config.blame_preview_popup) or {})
 end
 
 M.get_mounted_popup = function()
@@ -149,7 +151,7 @@ M.show_blame = void(function(fetch)
     scheduler()
     local err, data = fetch()
     scheduler()
-    blame_popup.error = err
+    blame_popup.err = err
     blame_popup.data = data
     blame_popup:render()
     scheduler()
@@ -164,6 +166,26 @@ M.show_hunk = function(hunk, filetype)
     hunk_popup:render()
 end
 
+M.show_blame_preview = void(function(fetch, filetype)
+    popup_manager:clear()
+    local blame_preview_popup = BlamePreviewPopup.new({ filetype = filetype })
+    popup_manager:set(blame_preview_popup)
+    blame_preview_popup:mount()
+    blame_preview_popup:set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    blame_preview_popup:set_loading(false)
+    scheduler()
+    blame_preview_popup.err = err
+    blame_preview_popup.data = data
+    blame_preview_popup:render()
+    if data then
+        M.show_hunk_signs(blame_preview_popup:get_preview_buf()[1], data.hunks)
+    end
+    scheduler()
+end)
+
 M.show_hunk_lens = void(function(fetch, filetype)
     popup_manager:clear()
     local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
@@ -176,7 +198,7 @@ M.show_hunk_lens = void(function(fetch, filetype)
     scheduler()
     hunk_lens_popup:set_loading(false)
     scheduler()
-    hunk_lens_popup.error = err
+    hunk_lens_popup.err = err
     hunk_lens_popup.data = data
     hunk_lens_popup:render()
     scheduler()
@@ -199,7 +221,7 @@ M.show_preview = void(function(name, fetch, filetype, layout_type)
     scheduler()
     preview_popup:set_loading(false)
     scheduler()
-    preview_popup.error = err
+    preview_popup.err = err
     preview_popup.data = data
     preview_popup:render()
     preview_popup:reposition_cursor(current_lnum)
@@ -220,7 +242,7 @@ M.show_history = void(function(fetch, filetype, layout_type)
     scheduler()
     history_popup:set_loading(false)
     scheduler()
-    history_popup.error = err
+    history_popup.err = err
     history_popup.data = data
     history_popup:render()
     scheduler()
@@ -235,7 +257,7 @@ M.change_history = void(function(fetch, selected)
     scheduler()
     history_popup:set_loading(false)
     scheduler()
-    history_popup.error = err
+    history_popup.err = err
     history_popup.data = data
     history_popup.selected = selected
     history_popup:render()
