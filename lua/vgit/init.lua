@@ -504,12 +504,56 @@ end, state:get(
     'action_delay_ms'
 ))
 
+M.buffer_blame_preview = throttle_leading(function(buf)
+    buf = buf or buffer.current()
+    if
+        not state:get('disabled')
+        and buffer.is_valid(buf)
+        and bstate:contains(buf)
+        and not bstate:get(buf, 'untracked')
+    then
+        ui.show_blame_preview(
+            wrap(function()
+                local filename = bstate:get(buf, 'tracked_filename')
+                local read_file_err, lines = fs.read_file(filename)
+                scheduler()
+                if read_file_err then
+                    logger.debug(read_file_err, 'init.lua/buffer_blame_preview')
+                    return read_file_err, nil
+                end
+                local blames_err, blames = git.blames(filename)
+                scheduler()
+                if blames_err then
+                    logger.debug(blames_err, 'init.lua/buffer_blame_preview')
+                    return blames_err, nil
+                end
+                local hunk_calculator = get_hunk_calculator()
+                local hunks_err, hunks = hunk_calculator(filename)
+                scheduler()
+                if hunks_err then
+                    logger.debug(hunks_err, 'init.lua/buffer_blame_preview')
+                    return hunks_err, nil
+                end
+                return nil,
+                    {
+                        blames = blames,
+                        lines = lines,
+                        hunks = hunks,
+                    }
+            end, 0),
+            bstate:get(buf, 'filetype')
+        )
+    end
+end, state:get(
+    'action_delay_ms'
+))
+
 M.hunk_down = function(buf, win)
     buf = buf or buffer.current()
     if not state:get('disabled') then
         local popup = ui.get_mounted_popup()
         if not vim.tbl_isempty(popup) then
-            local allowed_popups = {
+            local marked_popups = {
                 hunk_lens = true,
                 horizontal_preview = true,
                 vertical_preview = true,
@@ -518,10 +562,19 @@ M.hunk_down = function(buf, win)
                 horizontal_history = true,
                 vertical_history = true,
             }
-            if allowed_popups[popup:get_name()] then
+            local hunked_popup = {
+                blame_preview_popup = true,
+            }
+            if marked_popups[popup:get_name()] then
                 local marks = popup:get_data().marks
                 if popup:is_preview_focused() and #marks ~= 0 then
                     return navigation.mark_down(popup:get_preview_win_ids(), marks)
+                end
+            end
+            if hunked_popup[popup:get_name()] then
+                local hunks = popup:get_data().hunks
+                if popup:is_preview_focused() and #hunks ~= 0 then
+                    return navigation.hunk_down(popup:get_preview_win_ids(), hunks)
                 end
             end
         end
@@ -529,7 +582,7 @@ M.hunk_down = function(buf, win)
             win = win or vim.api.nvim_get_current_win()
             local hunks = bstate:get(buf, 'hunks')
             if #hunks ~= 0 then
-                navigation.hunk_down(win, hunks)
+                navigation.hunk_down({ win }, hunks)
             end
         end
     end
@@ -540,7 +593,7 @@ M.hunk_up = function(buf, win)
     if not state:get('disabled') then
         local popup = ui.get_mounted_popup()
         if not vim.tbl_isempty(popup) then
-            local allowed_popups = {
+            local marked_popups = {
                 hunk_lens = true,
                 horizontal_preview = true,
                 vertical_preview = true,
@@ -549,10 +602,19 @@ M.hunk_up = function(buf, win)
                 horizontal_history = true,
                 vertical_history = true,
             }
-            if allowed_popups[popup:get_name()] then
+            local hunked_popup = {
+                blame_preview_popup = true,
+            }
+            if marked_popups[popup:get_name()] then
                 local marks = popup:get_data().marks
                 if popup:is_preview_focused() and #marks ~= 0 then
                     return navigation.mark_up(popup:get_preview_win_ids(), marks)
+                end
+            end
+            if hunked_popup[popup:get_name()] then
+                local hunks = popup:get_data().hunks
+                if popup:is_preview_focused() and #hunks ~= 0 then
+                    return navigation.hunk_up(popup:get_preview_win_ids(), hunks)
                 end
             end
         end
@@ -560,7 +622,7 @@ M.hunk_up = function(buf, win)
             win = win or vim.api.nvim_get_current_win()
             local hunks = bstate:get(buf, 'hunks')
             if #hunks ~= 0 then
-                navigation.hunk_up(win, hunks)
+                navigation.hunk_up({ win }, hunks)
             end
         end
     end
@@ -1247,9 +1309,9 @@ M.show_debug_logs = function()
     end
 end
 
-M.events = events
-
 M.ui = ui
+
+M.events = events
 
 M.setup = function(config)
     if state:get('instantiated') then

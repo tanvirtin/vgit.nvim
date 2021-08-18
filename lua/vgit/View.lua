@@ -1,3 +1,4 @@
+local dimensions = require('vgit.dimensions')
 local events = require('vgit.events')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
@@ -115,14 +116,6 @@ local function create_border(content_buf, title, window_props, border, border_hl
     return buf, win_id
 end
 
-local function global_width()
-    return vim.o.columns
-end
-
-local function global_height()
-    return vim.o.lines
-end
-
 local function min_width()
     return 70
 end
@@ -149,6 +142,7 @@ local function new(options)
         },
         win_options = {
             ['wrap'] = false,
+            ['number'] = false,
             ['winhl'] = 'Normal:',
             ['cursorline'] = false,
             ['cursorbind'] = false,
@@ -160,8 +154,9 @@ local function new(options)
             relative = 'editor',
             height = height,
             width = width,
-            row = math.ceil((global_height() - height) / 2 - 1),
-            col = math.ceil((global_width() - width) / 2),
+            row = math.ceil((dimensions.global_height() - height) / 2 - 1),
+            col = math.ceil((dimensions.global_width() - width) / 2),
+            focusable = true,
         },
     })
     config:assign(options)

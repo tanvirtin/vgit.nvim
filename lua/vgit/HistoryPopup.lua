@@ -1,3 +1,4 @@
+local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
 local highlighter = require('vgit.highlighter')
 local localization = require('vgit.localization')
@@ -50,14 +51,6 @@ local function setup(config)
     state:assign(config)
 end
 
-local function global_width()
-    return vim.o.columns
-end
-
-local function global_height()
-    return vim.o.lines
-end
-
 local function colorize_buf(lnum_changes, callback)
     for i = 1, #lnum_changes do
         local datum = lnum_changes[i]
@@ -107,9 +100,9 @@ local function create_history_lines(logs, selected)
 end
 
 local function create_horizontal_widget(opts)
-    local height = math.ceil(global_height() - 13)
-    local width = math.ceil(global_width() * 0.8)
-    local col = math.ceil((global_width() - width) / 2) - 1
+    local height = math.ceil(dimensions.global_height() - 13)
+    local width = math.ceil(dimensions.global_width() * 0.8)
+    local col = math.ceil((dimensions.global_width() - width) / 2) - 1
     local views = {
         preview = View.new({
             filetype = opts.filetype,
@@ -168,9 +161,9 @@ local function create_horizontal_widget(opts)
 end
 
 local function create_vertical_widget(opts)
-    local height = math.ceil(global_height() - 13)
-    local width = math.ceil(global_width() * 0.485)
-    local col = math.ceil((global_width() - (width * 2)) / 2) - 1
+    local height = math.ceil(dimensions.global_height() - 13)
+    local width = math.ceil(dimensions.global_width() * 0.485)
+    local col = math.ceil((dimensions.global_width() - (width * 2)) / 2) - 1
     local views = {
         previous = View.new({
             filetype = opts.filetype,

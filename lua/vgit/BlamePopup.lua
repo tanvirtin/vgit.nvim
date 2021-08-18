@@ -37,7 +37,7 @@ local function new()
             popup = true,
         }),
         data = nil,
-        error = nil,
+        err = nil,
     }, BlamePopup)
 end
 

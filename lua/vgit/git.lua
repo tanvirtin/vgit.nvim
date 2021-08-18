@@ -276,6 +276,42 @@ M.is_inside_work_tree = wrap(function(callback)
     job:start()
 end, 1)
 
+M.blames = wrap(function(filename, callback)
+    local err = {}
+    local result = {}
+    local blame_info = {}
+    local job = Job:new({
+        command = 'git',
+        args = {
+            'blame',
+            '--line-porcelain',
+            '--',
+            filename,
+        },
+        on_stdout = function(_, data, _)
+            if string.byte(data:sub(1, 3)) ~= 9 then
+                table.insert(blame_info, data)
+            else
+                local blame = M.create_blame(blame_info)
+                if blame then
+                    result[#result + 1] = blame
+                end
+                blame_info = {}
+            end
+        end,
+        on_stderr = function(_, data, _)
+            err[#err + 1] = data
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, nil)
+            end
+            callback(nil, result)
+        end,
+    })
+    job:start()
+end, 2)
+
 M.blame_line = wrap(function(filename, lnum, callback)
     local err = {}
     local result = {}
