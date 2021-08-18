@@ -453,32 +453,6 @@ M._change_history = throttle_leading(
     state:get('action_delay_ms')
 )
 
-M.hunk_preview = throttle_leading(function(buf, win)
-    buf = buf or buffer.current()
-    if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
-        win = win or vim.api.nvim_get_current_win()
-        local lnum = vim.api.nvim_win_get_cursor(win)[1]
-        local selected_hunk = nil
-        local hunks = bstate:get(buf, 'hunks')
-        for i = 1, #hunks do
-            local hunk = hunks[i]
-            if lnum == 1 and hunk.start == 0 and hunk.finish == 0 then
-                selected_hunk = hunk
-                break
-            end
-            if lnum >= hunk.start and lnum <= hunk.finish then
-                selected_hunk = hunk
-                break
-            end
-        end
-        if selected_hunk then
-            ui.show_hunk(selected_hunk, bstate:get(buf, 'filetype'))
-        end
-    end
-end, state:get(
-    'action_delay_ms'
-))
-
 M.buffer_hunk_lens = throttle_leading(function(buf, win)
     buf = buf or buffer.current()
     if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
@@ -503,6 +477,8 @@ M.buffer_hunk_lens = throttle_leading(function(buf, win)
 end, state:get(
     'action_delay_ms'
 ))
+
+M.hunk_preview = M.buffer_hunk_lens
 
 M.buffer_blame_preview = throttle_leading(function(buf)
     buf = buf or buffer.current()
@@ -1309,6 +1285,10 @@ M.show_debug_logs = function()
     end
 end
 
+M.apply_highlights = function()
+    highlighter.setup(state:get('config'))
+end
+
 M.ui = ui
 
 M.events = events
@@ -1320,6 +1300,7 @@ M.setup = function(config)
     else
         state:set('instantiated', true)
     end
+    state:set('config', config)
     events.setup()
     state:assign(config)
     highlighter.setup(config)

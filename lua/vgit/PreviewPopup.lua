@@ -1,3 +1,4 @@
+local highlighter = require('vgit.highlighter')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
 local localization = require('vgit.localization')
@@ -41,10 +42,62 @@ local function setup(config)
     state:assign(config)
 end
 
+local function parse_hunk_diff(diff)
+    local removed_lines = {}
+    local added_lines = {}
+    for i = 1, #diff do
+        local line = diff[i]
+        local type = line:sub(1, 1)
+        local cleaned_diff_line = line:sub(2, #line)
+        if type == '+' then
+            added_lines[#added_lines + 1] = cleaned_diff_line
+        elseif type == '-' then
+            removed_lines[#removed_lines + 1] = cleaned_diff_line
+        end
+    end
+    return removed_lines, added_lines
+end
+
 local function colorize_buf(lnum_changes, callback)
+    local ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/colorize')
     for i = 1, #lnum_changes do
         local datum = lnum_changes[i]
-        sign.place(callback(datum), datum.lnum, state:get('signs')[datum.type], state:get('priority'))
+        local buf = callback(datum)
+        local defined_sign = state:get('signs')[datum.type]
+        local priority = state:get('priority')
+        if defined_sign then
+            sign.place(buf, datum.lnum, defined_sign, priority)
+        end
+        if datum.type == 'void' then
+            vim.api.nvim_buf_set_extmark(buf, ns_id, datum.lnum - 1, 0, {
+                id = datum.lnum,
+                virt_text = { { string.rep('⣿', vim.api.nvim_win_get_width(0)), 'VGitMuted' } },
+                virt_text_pos = 'overlay',
+            })
+        end
+        local texts = {}
+        if datum.word_diff then
+            local offset = 0
+            for j = 1, #datum.word_diff do
+                local segment = datum.word_diff[j]
+                local operation, fragment = unpack(segment)
+                if operation == -1 then
+                    texts[#texts + 1] = {
+                        fragment,
+                        string.format('VGitViewWord%s', datum.type == 'remove' and 'Remove' or 'Add'),
+                    }
+                elseif operation == 0 then
+                    texts[#texts + 1] = {
+                        fragment,
+                        nil,
+                    }
+                end
+                if operation == 0 or operation == -1 then
+                    offset = offset + #fragment
+                end
+            end
+            highlighter.create_virtual_line(buf, texts, ns_id, datum.lnum - 1)
+        end
     end
 end
 
@@ -59,9 +112,7 @@ local function create_horizontal_widget(opts)
             border = state:get('horizontal_window').border,
             border_hl = state:get('horizontal_window').border_hl,
             border_focus_hl = state:get('horizontal_window').border_focus_hl,
-            win_options = {
-                ['cursorline'] = true,
-            },
+            win_options = { ['cursorline'] = true },
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
@@ -220,12 +271,13 @@ function PreviewPopup:reposition_cursor(lnum)
                 current_new_lines_added = current_new_lines_added + 1
             end
         elseif type == 'change' then
-            for j = 1, #diff do
-                local line = diff[j]
-                local line_type = line:sub(1, 1)
-                if line_type == '-' then
-                    current_new_lines_added = current_new_lines_added + 1
+            local removed_lines, added_lines = parse_hunk_diff(diff)
+            if self.layout_type == 'vertical' then
+                if #removed_lines ~= #added_lines and #removed_lines > #added_lines then
+                    current_new_lines_added = current_new_lines_added + (#removed_lines - #added_lines)
                 end
+            else
+                current_new_lines_added = current_new_lines_added + #removed_lines
             end
         end
         new_lines_added = new_lines_added + current_new_lines_added

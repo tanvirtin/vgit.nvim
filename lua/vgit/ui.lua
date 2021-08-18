@@ -1,9 +1,8 @@
-local PopupManager = require('vgit.PopupManager')
+local PopupState = require('vgit.PopupState')
 local BlamePreviewPopup = require('vgit.BlamePreviewPopup')
 local Interface = require('vgit.Interface')
 local ImmutableInterface = require('vgit.ImmutableInterface')
 local HistoryPopup = require('vgit.HistoryPopup')
-local HunkPopup = require('vgit.HunkPopup')
 local HunkLensPopup = require('vgit.HunkLensPopup')
 local BlamePopup = require('vgit.BlamePopup')
 local PreviewPopup = require('vgit.PreviewPopup')
@@ -21,7 +20,7 @@ end
 
 local M = {}
 
-local popup_manager = PopupManager.new()
+local popup_state = PopupState.new()
 
 M.constants = ImmutableInterface.new({
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
@@ -30,7 +29,7 @@ M.constants = ImmutableInterface.new({
 
 M.state = Interface.new({
     blame_line = {
-        hl = 'VGitBlame',
+        hl = 'VGitLineBlame',
         format = function(blame, git_config)
             local config_author = git_config['user.name']
             local author = blame.author
@@ -76,18 +75,17 @@ M.setup = function(config)
     M.state:assign(config)
     HistoryPopup.setup((config and config.history) or {})
     HunkLensPopup.setup((config and config.hunk_lens) or {})
-    HunkPopup.setup((config and config.hunk) or {})
     BlamePopup.setup((config and config.blame) or {})
     PreviewPopup.setup((config and config.preview) or {})
     BlamePreviewPopup.setup((config and config.blame_preview_popup) or {})
 end
 
 M.get_mounted_popup = function()
-    return popup_manager:get()
+    return popup_state:get()
 end
 
 M.close_windows = function(wins)
-    popup_manager:set({})
+    popup_state:set({})
     local existing_wins = vim.api.nvim_list_wins()
     for i = 1, #wins do
         local win = wins[i]
@@ -144,9 +142,9 @@ M.hide_hunk_signs = void(function(buf)
 end)
 
 M.show_blame = void(function(fetch)
-    popup_manager:clear()
+    popup_state:clear()
     local blame_popup = BlamePopup.new()
-    popup_manager:set(blame_popup)
+    popup_state:set(blame_popup)
     blame_popup:mount()
     scheduler()
     local err, data = fetch()
@@ -157,19 +155,10 @@ M.show_blame = void(function(fetch)
     scheduler()
 end)
 
-M.show_hunk = function(hunk, filetype)
-    popup_manager:clear()
-    local hunk_popup = HunkPopup.new({ filetype = filetype })
-    popup_manager:set(hunk_popup)
-    hunk_popup:mount()
-    hunk_popup.data = hunk
-    hunk_popup:render()
-end
-
 M.show_blame_preview = void(function(fetch, filetype)
-    popup_manager:clear()
+    popup_state:clear()
     local blame_preview_popup = BlamePreviewPopup.new({ filetype = filetype })
-    popup_manager:set(blame_preview_popup)
+    popup_state:set(blame_preview_popup)
     blame_preview_popup:mount()
     blame_preview_popup:set_loading(true)
     scheduler()
@@ -187,10 +176,10 @@ M.show_blame_preview = void(function(fetch, filetype)
 end)
 
 M.show_hunk_lens = void(function(fetch, filetype)
-    popup_manager:clear()
+    popup_state:clear()
     local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
     local hunk_lens_popup = HunkLensPopup.new({ filetype = filetype })
-    popup_manager:set(hunk_lens_popup)
+    popup_state:set(hunk_lens_popup)
     hunk_lens_popup:mount()
     hunk_lens_popup:set_loading(true)
     scheduler()
@@ -206,14 +195,14 @@ M.show_hunk_lens = void(function(fetch, filetype)
 end)
 
 M.show_preview = void(function(name, fetch, filetype, layout_type)
-    popup_manager:clear()
+    popup_state:clear()
     local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
     local preview_popup = PreviewPopup.new({
         name = name,
         filetype = filetype,
         layout_type = layout_type,
     })
-    popup_manager:set(preview_popup)
+    popup_state:set(preview_popup)
     preview_popup:mount()
     preview_popup:set_loading(true)
     scheduler()
@@ -229,12 +218,12 @@ M.show_preview = void(function(name, fetch, filetype, layout_type)
 end)
 
 M.show_history = void(function(fetch, filetype, layout_type)
-    popup_manager:clear()
+    popup_state:clear()
     local history_popup = HistoryPopup.new({
         filetype = filetype,
         layout_type = layout_type,
     })
-    popup_manager:set(history_popup)
+    popup_state:set(history_popup)
     history_popup:mount()
     history_popup:set_loading(true)
     scheduler()
@@ -249,7 +238,7 @@ M.show_history = void(function(fetch, filetype, layout_type)
 end)
 
 M.change_history = void(function(fetch, selected)
-    local history_popup = popup_manager:get()
+    local history_popup = popup_state:get()
     scheduler()
     history_popup:set_loading(true)
     scheduler()

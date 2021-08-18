@@ -17,3 +17,7 @@ globals = {
 read_globals = {
     "vim",
 }
+
+exclude_files = {
+    "lua/vgit/lib/*",
+}

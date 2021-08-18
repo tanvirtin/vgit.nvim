@@ -5,9 +5,13 @@ local vim = vim
 local M = {}
 
 M.state = Interface.new({
-    VGitBlame = {
-        bg = nil,
-        fg = '#b1b1b1',
+    VGitViewWordAdd = {
+        bg = '#5d7a22',
+        fg = nil,
+    },
+    VGitViewWordRemove = {
+        bg = '#960f3d',
+        fg = nil,
     },
     VGitViewSignAdd = {
         bg = '#3d5213',
@@ -16,14 +20,6 @@ M.state = Interface.new({
     VGitViewSignRemove = {
         bg = '#4a0f23',
         fg = nil,
-    },
-    VGitViewTextAdd = {
-        fg = '#6a8f1f',
-        bg = '#3d5213',
-    },
-    VGitViewTextRemove = {
-        fg = '#a3214c',
-        bg = '#4a0f23',
     },
     VGitSignAdd = {
         fg = '#d7ffaf',
@@ -49,6 +45,14 @@ M.state = Interface.new({
         fg = '#7AA6DA',
         bg = nil,
     },
+    VGitLineBlame = {
+        bg = nil,
+        fg = '#b1b1b1',
+    },
+    VGitMuted = {
+        bg = nil,
+        fg = '#303b54',
+    },
 })
 
 M.setup = function(config)
@@ -66,6 +70,22 @@ M.create = function(group, color)
     vim.cmd('highlight ' .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp)
 end
 
-M.highlight = vim.api.nvim_buf_add_highlight
+M.mark = function(buf, text, ns_id, hl_group, lnum, col_start)
+    vim.api.nvim_buf_set_extmark(buf, ns_id, lnum, col_start, {
+        id = lnum + 1,
+        virt_text = { { text, hl_group } },
+        virt_text_pos = 'overlay',
+        hl_mode = 'combine',
+    })
+end
+
+M.create_virtual_line = function(buf, texts, ns_id, lnum)
+    vim.api.nvim_buf_set_extmark(buf, ns_id, lnum, 0, {
+        id = lnum + 1,
+        virt_text = texts,
+        virt_text_pos = 'overlay',
+        hl_mode = 'combine',
+    })
+end
 
 return M
