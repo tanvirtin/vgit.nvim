@@ -49,8 +49,9 @@ function Bstate:set(buf, key, value)
     assert(type(buf) == 'number', 'type error :: expected number')
     assert(type(key) == 'string', 'type error :: expected string')
     local buf_state = self.buf_states[buf]
-    assert(buf_state ~= nil, 'untracked buffer')
-    buf_state:set(key, value)
+    if buf_state then
+        buf_state:set(key, value)
+    end
 end
 
 function Bstate:for_each(fn)

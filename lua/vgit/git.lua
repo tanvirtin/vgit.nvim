@@ -1,3 +1,4 @@
+local dmp = require('vgit.lib.dmp')
 local Job = require('plenary.job')
 local Interface = require('vgit.Interface')
 local ImmutableInterface = require('vgit.ImmutableInterface')
@@ -894,6 +895,7 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
             end
             marks[#marks].finish = start + #diff
         elseif type == 'change' then
+            local removed_lines, added_lines = parse_hunk_diff(diff)
             marks[#marks + 1] = {
                 type = type,
                 start = start,
@@ -902,18 +904,39 @@ M.horizontal_diff = wrap(function(lines, hunks, callback)
             local s = start
             for j = 1, #diff do
                 local line = diff[j]
+                local cleaned_line = line:sub(2, #line)
                 local line_type = line:sub(1, 1)
                 if line_type == '-' then
                     new_lines_added = new_lines_added + 1
-                    table.insert(new_lines, s, line:sub(2, #line))
+                    table.insert(new_lines, s, cleaned_line)
+                    local word_diff = nil
+                    if #removed_lines == #added_lines and #added_lines < 4 then
+                        local d = dmp.diff_main(
+                            cleaned_line,
+                            diff[#removed_lines + j]:sub(2, #diff[#removed_lines + j])
+                        )
+                        dmp.diff_cleanupSemantic(d)
+                        word_diff = d
+                    end
                     lnum_changes[#lnum_changes + 1] = {
                         lnum = s,
                         type = 'remove',
+                        word_diff = word_diff,
                     }
                 elseif line_type == '+' then
+                    local word_diff = nil
+                    if #removed_lines == #added_lines and #added_lines < 4 then
+                        local d = dmp.diff_main(
+                            cleaned_line,
+                            diff[j - #removed_lines]:sub(2, #diff[j - #removed_lines])
+                        )
+                        dmp.diff_cleanupSemantic(d)
+                        word_diff = d
+                    end
                     lnum_changes[#lnum_changes + 1] = {
                         lnum = s,
                         type = 'add',
+                        word_diff = word_diff,
                     }
                 end
                 s = s + 1
@@ -946,6 +969,7 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
     local current_lines = {}
     local previous_lines = {}
     local lnum_changes = {}
+    local void_line = ''
     local marks = {}
     -- shallow copy
     for key, value in pairs(lines) do
@@ -969,7 +993,12 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
             }
             -- Remove the line indicating that these lines were inserted in current_lines.
             for j = start, finish do
-                previous_lines[j] = ''
+                previous_lines[j] = void_line
+                lnum_changes[#lnum_changes + 1] = {
+                    lnum = j,
+                    buftype = 'previous',
+                    type = 'void',
+                }
                 lnum_changes[#lnum_changes + 1] = {
                     lnum = j,
                     buftype = 'current',
@@ -986,8 +1015,13 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
                 local line = diff[j]
                 start = start + 1
                 new_lines_added = new_lines_added + 1
-                table.insert(current_lines, start, '')
+                table.insert(current_lines, start, void_line)
                 table.insert(previous_lines, start, line:sub(2, #line))
+                lnum_changes[#lnum_changes + 1] = {
+                    lnum = start,
+                    buftype = 'current',
+                    type = 'void',
+                }
                 lnum_changes[#lnum_changes + 1] = {
                     lnum = start,
                     buftype = 'previous',
@@ -1014,8 +1048,8 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
             -- Which is why I am inserting empty lines into both the current and previous data arrays.
             for j = finish + 1, (start + max_lines) - 1 do
                 new_lines_added = new_lines_added + 1
-                table.insert(current_lines, j, '')
-                table.insert(previous_lines, j, '')
+                table.insert(current_lines, j, void_line)
+                table.insert(previous_lines, j, void_line)
             end
             -- With the new calculated range I simply loop over and add the removed
             -- and added lines to their corresponding arrays that contain a buffer lines.
@@ -1024,21 +1058,49 @@ M.vertical_diff = wrap(function(lines, hunks, callback)
                 local added_line = added_lines[recalculated_index]
                 local removed_line = removed_lines[recalculated_index]
                 if removed_line then
+                    local word_diff = nil
+                    if #removed_lines == #added_lines and #added_lines < 4 then
+                        local d = dmp.diff_main(removed_line, added_lines[recalculated_index])
+                        dmp.diff_cleanupSemantic(d)
+                        word_diff = d
+                    end
                     lnum_changes[#lnum_changes + 1] = {
                         lnum = j,
                         buftype = 'previous',
                         type = 'remove',
+                        word_diff = word_diff,
                     }
                 end
                 if added_line then
+                    local word_diff = nil
+                    if #removed_lines == #added_lines and #added_lines < 4 then
+                        local d = dmp.diff_main(added_line, removed_lines[recalculated_index])
+                        dmp.diff_cleanupSemantic(d)
+                        word_diff = d
+                    end
                     lnum_changes[#lnum_changes + 1] = {
                         lnum = j,
                         buftype = 'current',
                         type = 'add',
+                        word_diff = word_diff,
                     }
                 end
-                previous_lines[j] = removed_line or ''
-                current_lines[j] = added_line or ''
+                if added_line and not removed_line then
+                    lnum_changes[#lnum_changes + 1] = {
+                        lnum = j,
+                        buftype = 'previous',
+                        type = 'void',
+                    }
+                end
+                if removed_line and not added_line then
+                    lnum_changes[#lnum_changes + 1] = {
+                        lnum = j,
+                        buftype = 'current',
+                        type = 'void',
+                    }
+                end
+                previous_lines[j] = removed_line or void_line
+                current_lines[j] = added_line or void_line
             end
             marks[#marks].finish = finish
         end

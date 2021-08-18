@@ -14,13 +14,11 @@ M.setup = function(config)
 end
 
 M.error = function(msg)
-    vim.api.nvim_command('echohl ErrorMsg')
-    vim.api.nvim_command(string.format('echom "VGit[%s]: %s"', os.date('%H:%M:%S'), vim.fn.escape(msg, '"')))
-    vim.api.nvim_command('echohl NONE')
+    vim.notify(msg, 'error')
 end
 
 M.info = function(msg)
-    vim.api.nvim_command(string.format('echom "%s"', vim.fn.escape(msg, '"')))
+    vim.notify(msg, 'info')
 end
 
 M.debug = function(msg, fn)

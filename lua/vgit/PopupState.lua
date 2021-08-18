@@ -1,25 +1,25 @@
-local PopupManager = {}
-PopupManager.__index = PopupManager
+local PopupState = {}
+PopupState.__index = PopupState
 
 local function new()
-    return setmetatable({ current = {} }, PopupManager)
+    return setmetatable({ current = {} }, PopupState)
 end
 
-function PopupManager:get()
+function PopupState:get()
     return self.current
 end
 
-function PopupManager:set(popup)
+function PopupState:set(popup)
     assert(type(popup) == 'table', 'type error :: expected table')
     self.current = popup
     return self
 end
 
-function PopupManager:exists()
+function PopupState:exists()
     return not vim.tbl_isempty(self:get())
 end
 
-function PopupManager:clear()
+function PopupState:clear()
     if self:exists() then
         self:get():unmount()
         self.current = {}

@@ -22,11 +22,6 @@
     <img src="https://user-images.githubusercontent.com/25164326/119602593-771e3580-bdb9-11eb-95f6-3758394bc297.gif" alt="hunk_signs" />
 </details>
 <details>
-    <summary>Preview a hunk</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/119602591-771e3580-bdb9-11eb-9a48-18f473bd99a3.gif" alt="hunk_preview" />
-</details>
-<details>
     <summary>Reset a hunk</summary>
     <br />
     <img src="https://user-images.githubusercontent.com/25164326/119602598-79808f80-bdb9-11eb-974c-aaa2a4445313.gif" alt="reset_hunk" />
@@ -96,7 +91,6 @@
 
 ## Prerequisites
 - [Git](https://git-scm.com/)
-- [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 
 ## Recommended Settings
@@ -119,7 +113,16 @@ You must instantiate the plugin in order for the features to work.
 require('vgit').setup()
 ```
 
-## Configure your own settings
+To embed the above code snippet in a .vim file wrap it in lua << EOF code-snippet EOF:
+```lua
+lua << EOF
+require('vgit').setup({
+  -- ...
+})
+EOF
+```
+
+## Customization
 By default these are the default settings provided by the app, you can change them to your liking.
 NOTE: You cannot change the key of any of the configurations listed below, only the values.
 
@@ -141,81 +144,60 @@ require('vgit').setup({
         VGitViewSignAdd = {
             name = 'VGitViewSignAdd',
             line_hl = 'VGitViewSignAdd',
-            text_hl = 'VGitViewTextAdd',
-            text = '+'
+            text_hl = nil,
+            num_hl = nil,
+            icon = nil,
+            text = '',
         },
         VGitViewSignRemove = {
             name = 'VGitViewSignRemove',
             line_hl = 'VGitViewSignRemove',
-            text_hl = 'VGitViewTextRemove',
-            text = '-'
+            text_hl = nil,
+            num_hl = nil,
+            icon = nil,
+            text = '',
         },
         VGitSignAdd = {
             name = 'VGitSignAdd',
             text_hl = 'VGitSignAdd',
             num_hl = nil,
+            icon = nil,
             line_hl = nil,
-            text = '┃'
+            text = '┃',
         },
         VGitSignRemove = {
             name = 'VGitSignRemove',
             text_hl = 'VGitSignRemove',
             num_hl = nil,
+            icon = nil,
             line_hl = nil,
-            text = '┃'
+            text = '┃',
         },
         VGitSignChange = {
             name = 'VGitSignChange',
             text_hl = 'VGitSignChange',
             num_hl = nil,
+            icon = nil,
             line_hl = nil,
-            text = '┃'
+            text = '┃',
         },
     },
     hls = {
-        VGitBlame = {
-            bg = nil,
-            fg = '#b1b1b1',
+        VGitViewWordAdd = {
+            bg = '#5d7a22',
+            fg = nil,
         },
-        VGitDiffAddSign = {
+        VGitViewWordRemove = {
+            bg = '#960f3d',
+            fg = nil,
+        },
+        VGitViewSignAdd = {
             bg = '#3d5213',
             fg = nil,
         },
-        VGitDiffRemoveSign = {
+        VGitViewSignRemove = {
             bg = '#4a0f23',
             fg = nil,
-        },
-        VGitDiffAddText = {
-            fg = '#6a8f1f',
-            bg = '#3d5213',
-        },
-        VGitDiffRemoveText = {
-            fg = '#a3214c',
-            bg = '#4a0f23',
-        },
-        VGitHunkAddSign = {
-            bg = '#3d5213',
-            fg = nil,
-        },
-        VGitHunkRemoveSign = {
-            bg = '#4a0f23',
-            fg = nil,
-        },
-        VGitHunkAddText = {
-            fg = '#6a8f1f',
-            bg = '#3d5213',
-        },
-        VGitHunkRemoveText = {
-            fg = '#a3214c',
-            bg = '#4a0f23',
-        },
-        VGitHunkSignAdd = {
-            fg = '#d7ffaf',
-            bg = '#4a6317',
-        },
-        VGitHunkSignRemove = {
-            fg = '#e95678',
-            bg = '#63132f',
         },
         VGitSignAdd = {
             fg = '#d7ffaf',
@@ -240,6 +222,14 @@ require('vgit').setup({
         VGitBorderFocus = {
             fg = '#7AA6DA',
             bg = nil,
+        },
+        VGitLineBlame = {
+            bg = nil,
+            fg = '#b1b1b1',
+        },
+        VGitMuted = {
+            bg = nil,
+            fg = '#303b54',
         },
     },
     blame_line = {
@@ -290,19 +280,19 @@ require('vgit').setup({
             title = 'Preview',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
+            border_focus_hl = 'VGitBorderFocus',
         },
         current_window = {
             title = 'Current',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
+            border_focus_hl = 'VGitBorderFocus',
         },
         previous_window = {
             title = 'Previous',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
+            border_focus_hl = 'VGitBorderFocus',
         },
         signs = {
             add = 'VGitViewSignAdd',
@@ -310,43 +300,37 @@ require('vgit').setup({
         },
     },
     history = {
+        priority = 10,
+        signs = {
+            add = 'VGitViewSignAdd',
+            remove = 'VGitViewSignRemove',
+        },
         indicator = {
-            hl = 'VGitIndicator'
+            hl = 'VGitIndicator',
         },
         horizontal_window = {
             title = 'Preview',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
+            border_focus_hl = 'VGitBorderFocus',
         },
         current_window = {
             title = 'Current',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
+            border_focus_hl = 'VGitBorderFocus',
         },
         previous_window = {
             title = 'Previous',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
+            border_focus_hl = 'VGitBorderFocus',
         },
         history_window = {
             title = 'Git History',
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus'
-        },
-    },
-    hunk = {
-        priority = 10,
-        window = {
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-        },
-        signs = {
-            add = 'VGitViewSignAdd',
-            remove = 'VGitViewSignRemove',
+            border_focus_hl = 'VGitBorderFocus',
         },
     },
     hunk_lens = {
@@ -428,11 +412,6 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | setup | Sets up the plugin for success |
 | toggle_buffer_hunks | Shows hunk signs on buffers/Hides hunk signs on buffers |
 | toggle_buffer_blames | Enables blames feature on buffers /Disables blames feature on buffers |
-| hunk_preview | Opens a VGit view of a hunk, if cursor is on a hunk |
-| hunk_reset | Removes the hunk from the buffer, if cursor is on a hunk |
-| hunk_stage | Stages a hunk, if cursor is on a hunk |
-| hunk_down | Navigate downward through a hunk |
-| hunk_up | Navigate upwards through a hunk |
 | stage_buffer | Stages a buffer you are currently on |
 | unstage_buffer | Unstages a buffer you are currently on |
 | staged_buffer_preview | Shows staged changes in a preview window |
@@ -440,8 +419,14 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | buffer_hunk_lens | Gives you a lens view through which you can navigate and see the current hunk or other hunks, this is similar to buffer preview, also an alternate for hunk_preview |
 | buffer_history | Opens a buffer preview along with a table of logs, enabling users to see different iterations of the buffer in the git history |
 | buffer_reset | Resets the current buffer to HEAD |
+| hunk_preview | Please see "buffer_hunk_lens" |
+| hunk_reset | Removes the hunk from the buffer, if cursor is on a hunk |
+| hunk_stage | Stages a hunk, if cursor is on a hunk |
+| hunk_down | Navigate downward through a hunk, this works on any view with diff highlights |
+| hunk_up | Navigate upwards through a hunk, this works on any view with diff highlights |
 | hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
-| diff | Opens a populated quickfix window showing all the files that have a change in it |
+| show_blame | Opens a view detailing the blame of the line that the user is currently on |
+| diff | Please see "hunks_quickfix_list" |
 | instantiated | Returns true if setup has been called, false otherwise |
 | enabled | Returns true, if plugin is enabled, false otherwise |
 | get_diff_base | Returns the current diff base that all diff and hunks are being compared for all buffers |
@@ -451,9 +436,3 @@ vim.api.nvim_set_keymap('n', '<leader>gq', ':VGit hunks_quickfix_list<CR>', {
 | get_diff_strategy | Returns the current diff strategy used to compute hunk signs and buffer preview, the value will either be "remote" or "index" |
 | set_diff_strategy | Sets the diff strategy that will be used to show hunk signs and buffer preview, the value can only be "remote" or "index" |
 | show_debug_logs | Shows all errors that has occured during program execution |
-| show_blame | Opens a VGit view detailing the blame of the line that the user is currently on |
-
-## Similar Git Plugins
-- [vim-fugitive](https://github.com/tpope/vim-fugitive)
-- [vim-gitgutter](https://github.com/airblade/vim-gitgutter)
-- [vim-signify](https://github.com/mhinz/vim-signify)
