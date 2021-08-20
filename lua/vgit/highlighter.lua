@@ -70,22 +70,4 @@ M.create = function(group, color)
     vim.cmd('highlight ' .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp)
 end
 
-M.mark = function(buf, text, ns_id, hl_group, lnum, col_start)
-    vim.api.nvim_buf_set_extmark(buf, ns_id, lnum, col_start, {
-        id = lnum + 1,
-        virt_text = { { text, hl_group } },
-        virt_text_pos = 'overlay',
-        hl_mode = 'combine',
-    })
-end
-
-M.create_virtual_line = function(buf, texts, ns_id, lnum)
-    vim.api.nvim_buf_set_extmark(buf, ns_id, lnum, 0, {
-        id = lnum + 1,
-        virt_text = texts,
-        virt_text_pos = 'overlay',
-        hl_mode = 'combine',
-    })
-end
-
 return M

@@ -1,4 +1,4 @@
-local highlighter = require('vgit.highlighter')
+local virtual_text = require('vgit.highlighter')
 local Interface = require('vgit.Interface')
 local View = require('vgit.View')
 local Widget = require('vgit.Widget')
@@ -56,7 +56,7 @@ local function colorize_buf(lnum_changes, callback)
                     offset = offset + #fragment
                 end
             end
-            highlighter.create_virtual_line(buf, texts, ns_id, datum.lnum - 1)
+            virtual_text.transpose_line(buf, texts, ns_id, datum.lnum - 1)
         end
     end
 end
