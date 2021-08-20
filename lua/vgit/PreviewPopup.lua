@@ -1,4 +1,4 @@
-local highlighter = require('vgit.highlighter')
+local virtual_text = require('vgit.virtual_text')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
 local localization = require('vgit.localization')
@@ -69,7 +69,7 @@ local function colorize_buf(lnum_changes, callback)
             sign.place(buf, datum.lnum, defined_sign, priority)
         end
         if datum.type == 'void' then
-            vim.api.nvim_buf_set_extmark(buf, ns_id, datum.lnum - 1, 0, {
+            virtual_text.add(buf, ns_id, datum.lnum - 1, 0, {
                 id = datum.lnum,
                 virt_text = { { string.rep('⣿', vim.api.nvim_win_get_width(0)), 'VGitMuted' } },
                 virt_text_pos = 'overlay',
@@ -96,7 +96,7 @@ local function colorize_buf(lnum_changes, callback)
                     offset = offset + #fragment
                 end
             end
-            highlighter.create_virtual_line(buf, texts, ns_id, datum.lnum - 1)
+            virtual_text.transpose_line(buf, texts, ns_id, datum.lnum - 1)
         end
     end
 end

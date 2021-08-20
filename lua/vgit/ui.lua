@@ -1,3 +1,4 @@
+local virtual_text = require('vgit.virtual_text')
 local PopupState = require('vgit.PopupState')
 local BlamePreviewPopup = require('vgit.BlamePreviewPopup')
 local Interface = require('vgit.Interface')
@@ -99,10 +100,11 @@ M.show_blame_line = function(buf, blame, lnum, git_config)
     if buffer.is_valid(buf) then
         local virt_text = M.state:get('blame_line').format(blame, git_config)
         if type(virt_text) == 'string' then
-            pcall(vim.api.nvim_buf_set_extmark, buf, M.constants:get('blame_namespace'), lnum - 1, 0, {
+            pcall(virtual_text.add, buf, M.constants:get('blame_namespace'), lnum - 1, 0, {
                 id = M.constants:get('blame_line_id'),
                 virt_text = { { virt_text, M.state:get('blame_line').hl } },
                 virt_text_pos = 'eol',
+                hl_mode = 'combine',
             })
         end
     end
@@ -110,7 +112,7 @@ end
 
 M.hide_blame_line = function(buf)
     if buffer.is_valid(buf) then
-        pcall(vim.api.nvim_buf_del_extmark, buf, M.constants:get('blame_namespace'), M.constants:get('blame_line_id'))
+        pcall(virtual_text.delete, buf, M.constants:get('blame_namespace'), M.constants:get('blame_line_id'))
     end
 end
 
