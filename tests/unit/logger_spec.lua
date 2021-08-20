@@ -1,13 +1,9 @@
-local mock = require('luassert.mock')
 local logger = require('vgit.logger')
 
 local vim = vim
 local it = it
 local describe = describe
-local after_each = after_each
-local before_each = before_each
 local eq = assert.are.same
-local api = nil
 
 describe('setup', function()
     it('should override state highlights with highlights specified through the config', function()
@@ -15,26 +11,6 @@ describe('setup', function()
             debug = true,
         })
         eq(logger.state:get('debug'), true)
-    end)
-end)
-
-describe('error', function()
-    before_each(function()
-        api = mock(vim.api, true)
-        api.nvim_command.returns()
-    end)
-
-    after_each(function()
-        mock.revert(api)
-    end)
-
-    it('should call nvim_command with the correct arguments', function()
-        logger.error('hello world')
-        assert.stub(api.nvim_command).was_called_with('echohl ErrorMsg')
-        assert.stub(api.nvim_command).was_called_with(
-            string.format('echom "VGit[%s]: %s"', os.date('%H:%M:%S'), vim.fn.escape('hello world', '"'))
-        )
-        assert.stub(api.nvim_command).was_called_with('echohl NONE')
     end)
 end)
 

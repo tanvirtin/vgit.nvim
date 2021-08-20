@@ -52,24 +52,60 @@ local function setup(config)
 end
 
 local function colorize_buf(lnum_changes, callback)
+    local ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/colorize')
     for i = 1, #lnum_changes do
         local datum = lnum_changes[i]
-        sign.place(callback(datum), datum.lnum, state:get('signs')[datum.type], state:get('priority'))
+        local buf = callback(datum)
+        local defined_sign = state:get('signs')[datum.type]
+        local priority = state:get('priority')
+        if defined_sign then
+            sign.place(buf, datum.lnum, defined_sign, priority)
+        end
+        if datum.type == 'void' then
+            vim.api.nvim_buf_set_extmark(buf, ns_id, datum.lnum - 1, 0, {
+                id = datum.lnum,
+                virt_text = { { string.rep('⣿', vim.api.nvim_win_get_width(0)), 'VGitMuted' } },
+                virt_text_pos = 'overlay',
+            })
+        end
+        local texts = {}
+        if datum.word_diff then
+            local offset = 0
+            for j = 1, #datum.word_diff do
+                local segment = datum.word_diff[j]
+                local operation, fragment = unpack(segment)
+                if operation == -1 then
+                    texts[#texts + 1] = {
+                        fragment,
+                        string.format('VGitViewWord%s', datum.type == 'remove' and 'Remove' or 'Add'),
+                    }
+                elseif operation == 0 then
+                    texts[#texts + 1] = {
+                        fragment,
+                        nil,
+                    }
+                end
+                if operation == 0 or operation == -1 then
+                    offset = offset + #fragment
+                end
+            end
+            highlighter.create_virtual_line(buf, texts, ns_id, datum.lnum - 1)
+        end
     end
 end
 
 local function colorize_indicator(buf, lnum, namespace)
-    highlighter.highlight(buf, namespace, state:get('indicator').hl, lnum, 0, 1)
+    highlighter.mark(buf, '>', namespace, state:get('indicator').hl, lnum, 0)
 end
 
-local function create_history_lines(logs, selected)
+local function create_history_lines(logs)
     local padding_right = 2
     local table_title_space = { padding_right, padding_right, padding_right, padding_right, 0 }
     local rows = {}
     for i = 1, #logs do
         local log = logs[i]
         local row = {
-            i - 1 == selected - 1 and string.format('>  HEAD~%s', i - 1) or string.format('   HEAD~%s', i - 1),
+            string.format('   HEAD~%s', i - 1),
             log.author_name or '',
             log.commit_hash or '',
             log.summary or '',
@@ -119,7 +155,6 @@ local function create_horizontal_widget(opts)
                 ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
                 ['wrap'] = false,
-                ['signcolumn'] = 'yes',
             },
             window_props = {
                 style = 'minimal',
@@ -182,7 +217,6 @@ local function create_vertical_widget(opts)
                 ['wrap'] = false,
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
-                ['signcolumn'] = 'yes',
             },
             window_props = {
                 style = 'minimal',
@@ -210,7 +244,6 @@ local function create_vertical_widget(opts)
                 ['wrap'] = false,
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
-                ['signcolumn'] = 'yes',
             },
             window_props = {
                 style = 'minimal',
@@ -299,8 +332,11 @@ function HistoryPopup:set_loading(value)
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
+        widget:get_views().previous:set_loading(value)
+        widget:get_views().current:set_loading(value)
+    else
+        widget:get_views().preview:set_loading(value)
     end
-    widget:set_loading(value)
     return self
 end
 
@@ -390,7 +426,7 @@ function HistoryPopup:render()
                 return views[datum.buftype]:get_buf()
             end)
         end
-        views.history:set_lines(create_history_lines(data.logs, self.selected))
+        views.history:set_lines(create_history_lines(data.logs))
         colorize_indicator(views.history:get_buf(), self.selected - 1, self.history_namespace)
     end
     return self
