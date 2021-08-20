@@ -1,3 +1,4 @@
+local paint = require('vgit.paint')
 local dimensions = require('vgit.dimensions')
 local events = require('vgit.events')
 local assert = require('vgit.assertion').assert
@@ -8,45 +9,6 @@ local vim = vim
 
 local View = {}
 View.__index = View
-
-local function colorize(buf, filetype)
-    if not filetype or filetype == '' then
-        return
-    end
-    local has_ts = false
-    local ts_highlight = nil
-    local ts_parsers = nil
-    if not has_ts then
-        has_ts, _ = pcall(require, 'nvim-treesitter')
-        if has_ts then
-            _, ts_highlight = pcall(require, 'nvim-treesitter.highlight')
-            _, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
-        end
-    end
-    if has_ts and filetype and filetype ~= '' then
-        local lang = ts_parsers.ft_to_lang(filetype)
-        if ts_parsers.has_parser(lang) then
-            pcall(ts_highlight.attach, buf, lang)
-        else
-            buffer.set_option(buf, 'syntax', filetype)
-        end
-    end
-end
-
-local function uncolorize(buf)
-    local has_ts = false
-    if not has_ts then
-        has_ts, _ = pcall(require, 'nvim-treesitter')
-    end
-    if has_ts then
-        local active_buf = vim.treesitter.highlighter.active[buf]
-        if active_buf then
-            active_buf:destroy()
-        else
-            buffer.set_option(buf, 'syntax', '')
-        end
-    end
-end
 
 local function calculate_text_center(text, width)
     local rep = math.floor((width / 2) - math.floor(#text / 2))
@@ -239,7 +201,7 @@ function View:set_loading(value)
         self.state.loading = value
         self:set_centered_text('•••')
     else
-        colorize(self.state.buf, self.config:get('filetype'))
+        paint.syntax(self.state.buf, self.config:get('filetype'))
         self.state.loading = value
         buffer.set_lines(self.state.buf, self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
@@ -259,7 +221,7 @@ function View:set_error(value)
         self.state.error = value
         self:set_centered_text('✖✖✖')
     else
-        colorize(self.state.buf, self.config:get('filetype'))
+        paint.syntax(self.state.buf, self.config:get('filetype'))
         self.state.error = value
         buffer.set_lines(self.state.buf, self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
@@ -270,7 +232,7 @@ end
 
 function View:set_centered_text(text)
     assert(type(text) == 'string', 'type error :: expected string')
-    uncolorize(self.state.buf)
+    paint.wash_syntax(self.state.buf)
     local lines = {}
     local height = vim.api.nvim_win_get_height(self.state.win_id)
     local width = vim.api.nvim_win_get_width(self.state.win_id)
@@ -333,8 +295,8 @@ function View:set_filetype(filetype)
     end
     self.config:set('filetype', filetype)
     local buf = self:get_buf()
-    uncolorize(buf)
-    colorize(buf, filetype)
+    paint.wash_syntax(buf)
+    paint.syntax(buf, filetype)
     buffer.set_option(buf, 'syntax', filetype)
 end
 
@@ -405,7 +367,7 @@ function View:mount()
         )
     end
     self:on('BufWinLeave', string.format(':lua require("vgit").ui.close_windows({ %s })', win_id))
-    colorize(buf, filetype)
+    paint.syntax(buf, filetype)
     self.state.mounted = true
     return self
 end
