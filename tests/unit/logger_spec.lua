@@ -1,6 +1,5 @@
 local logger = require('vgit.logger')
 
-local vim = vim
 local it = it
 local describe = describe
 local eq = assert.are.same

@@ -1,34 +1,27 @@
+local utils = require('vgit.utils')
+local BlamePreviewPopup = require('vgit.popups.BlamePreviewPopup')
+local HistoryPopup = require('vgit.popups.HistoryPopup')
+local HunkLensPopup = require('vgit.popups.HunkLensPopup')
+local BlamePopup = require('vgit.popups.BlamePopup')
+local PreviewPopup = require('vgit.popups.PreviewPopup')
 local virtual_text = require('vgit.virtual_text')
 local PopupState = require('vgit.PopupState')
-local BlamePreviewPopup = require('vgit.BlamePreviewPopup')
 local Interface = require('vgit.Interface')
-local ImmutableInterface = require('vgit.ImmutableInterface')
-local HistoryPopup = require('vgit.HistoryPopup')
-local HunkLensPopup = require('vgit.HunkLensPopup')
-local BlamePopup = require('vgit.BlamePopup')
-local PreviewPopup = require('vgit.PreviewPopup')
 local buffer = require('vgit.buffer')
 local sign = require('vgit.sign')
-local a = require('plenary.async')
-local void = a.void
-local scheduler = a.util.scheduler
-
-local vim = vim
-
-local function round(x)
-    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
-end
+local void = require('plenary.async.async').void
+local scheduler = require('plenary.async.util').scheduler
 
 local M = {}
 
-local popup_state = PopupState.new()
+local popup_state = PopupState:new()
 
-M.constants = ImmutableInterface.new({
+M.constants = utils.readonly({
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
     blame_line_id = 1,
 })
 
-M.state = Interface.new({
+M.state = Interface:new({
     blame_line = {
         hl = 'VGitLineBlame',
         format = function(blame, git_config)
@@ -38,13 +31,13 @@ M.state = Interface.new({
                 author = 'You'
             end
             local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
-            local time_format = string.format('%s days ago', round(time))
+            local time_format = string.format('%s days ago', utils.round(time))
             local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
             local division_counter = 1
             while time < 1 and division_counter ~= #time_divisions do
                 local division = time_divisions[division_counter]
                 time = time * division[1]
-                time_format = string.format('%s %s ago', round(time), division[2])
+                time_format = string.format('%s %s ago', utils.round(time), division[2])
                 division_counter = division_counter + 1
             end
             local commit_message = blame.commit_message
@@ -74,11 +67,26 @@ M.state = Interface.new({
 
 M.setup = function(config)
     M.state:assign(config)
-    HistoryPopup.setup((config and config.history) or {})
-    HunkLensPopup.setup((config and config.hunk_lens) or {})
-    BlamePopup.setup((config and config.blame) or {})
-    PreviewPopup.setup((config and config.preview) or {})
-    BlamePreviewPopup.setup((config and config.blame_preview_popup) or {})
+    PreviewPopup:setup((config and config.preview) or {})
+    HistoryPopup:setup((config and config.history) or {})
+    HunkLensPopup:setup((config and config.hunk_lens) or {})
+    BlamePopup:setup((config and config.blame) or {})
+    BlamePreviewPopup:setup((config and config.blame_preview_popup) or {})
+end
+
+M.is_popup_navigatable = function(popup)
+    local allowed = {
+        PreviewPopup,
+        HistoryPopup,
+        HunkLensPopup,
+    }
+    for i = 1, #allowed do
+        local T = allowed[i]
+        if popup:is(T) then
+            return true
+        end
+    end
+    return false
 end
 
 M.get_mounted_popup = function()
@@ -100,8 +108,8 @@ M.show_blame_line = function(buf, blame, lnum, git_config)
     if buffer.is_valid(buf) then
         local virt_text = M.state:get('blame_line').format(blame, git_config)
         if type(virt_text) == 'string' then
-            pcall(virtual_text.add, buf, M.constants:get('blame_namespace'), lnum - 1, 0, {
-                id = M.constants:get('blame_line_id'),
+            pcall(virtual_text.add, buf, M.constants.blame_namespace, lnum - 1, 0, {
+                id = M.constants.blame_line_id,
                 virt_text = { { virt_text, M.state:get('blame_line').hl } },
                 virt_text_pos = 'eol',
                 hl_mode = 'combine',
@@ -112,7 +120,7 @@ end
 
 M.hide_blame_line = function(buf)
     if buffer.is_valid(buf) then
-        pcall(virtual_text.delete, buf, M.constants:get('blame_namespace'), M.constants:get('blame_line_id'))
+        pcall(virtual_text.delete, buf, M.constants.blame_namespace, M.constants.blame_line_id)
     end
 end
 
@@ -145,7 +153,7 @@ end)
 
 M.show_blame = void(function(fetch)
     popup_state:clear()
-    local blame_popup = BlamePopup.new()
+    local blame_popup = BlamePopup:new()
     popup_state:set(blame_popup)
     blame_popup:mount()
     scheduler()
@@ -159,7 +167,7 @@ end)
 
 M.show_blame_preview = void(function(fetch, filetype)
     popup_state:clear()
-    local blame_preview_popup = BlamePreviewPopup.new({ filetype = filetype })
+    local blame_preview_popup = BlamePreviewPopup:new({ filetype = filetype })
     popup_state:set(blame_preview_popup)
     blame_preview_popup:mount()
     blame_preview_popup:set_loading(true)
@@ -171,16 +179,13 @@ M.show_blame_preview = void(function(fetch, filetype)
     blame_preview_popup.err = err
     blame_preview_popup.data = data
     blame_preview_popup:render()
-    if data then
-        M.show_hunk_signs(blame_preview_popup:get_preview_buf()[1], data.hunks)
-    end
     scheduler()
 end)
 
 M.show_hunk_lens = void(function(fetch, filetype)
     popup_state:clear()
     local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
-    local hunk_lens_popup = HunkLensPopup.new({ filetype = filetype })
+    local hunk_lens_popup = HunkLensPopup:new({ filetype = filetype })
     popup_state:set(hunk_lens_popup)
     hunk_lens_popup:mount()
     hunk_lens_popup:set_loading(true)
@@ -196,11 +201,10 @@ M.show_hunk_lens = void(function(fetch, filetype)
     hunk_lens_popup:reposition_cursor(current_lnum)
 end)
 
-M.show_preview = void(function(name, fetch, filetype, layout_type)
+M.show_preview = void(function(fetch, filetype, layout_type)
     popup_state:clear()
     local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
-    local preview_popup = PreviewPopup.new({
-        name = name,
+    local preview_popup = PreviewPopup:new({
         filetype = filetype,
         layout_type = layout_type,
     })
@@ -221,7 +225,7 @@ end)
 
 M.show_history = void(function(fetch, filetype, layout_type)
     popup_state:clear()
-    local history_popup = HistoryPopup.new({
+    local history_popup = HistoryPopup:new({
         filetype = filetype,
         layout_type = layout_type,
     })

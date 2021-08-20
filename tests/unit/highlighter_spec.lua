@@ -1,6 +1,5 @@
 local highlighter = require('vgit.highlighter')
 
-local vim = vim
 local it = it
 local describe = describe
 local eq = assert.are.same

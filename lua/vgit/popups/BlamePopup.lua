@@ -1,49 +1,15 @@
+local utils = require('vgit.utils')
+local Object = require('plenary.class')
 local Interface = require('vgit.Interface')
 local View = require('vgit.View')
 local Widget = require('vgit.Widget')
 
-local BlamePopup = {}
-BlamePopup.__index = BlamePopup
-
-local state = Interface.new({
+local state = Interface:new({
     window = {
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
     },
 })
-
-local function setup(config)
-    state:assign(config)
-end
-
-local function new()
-    return setmetatable({
-        widget = Widget.new({
-            View.new({
-                border = state:get('window').border,
-                border_hl = state:get('window').border_hl,
-                win_options = { ['cursorline'] = true },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'cursor',
-                    height = 5,
-                    width = 88,
-                    row = 0,
-                    col = 0,
-                },
-            }),
-        }, {
-            name = 'blame',
-            popup = true,
-        }),
-        data = nil,
-        err = nil,
-    }, BlamePopup)
-end
-
-local function round(x)
-    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
-end
 
 local function create_uncommitted_lines(blame)
     return {
@@ -56,13 +22,13 @@ end
 local function create_committed_lines(blame)
     local max_line_length = 88
     local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
-    local time_format = string.format('%s days ago', round(time))
+    local time_format = string.format('%s days ago', utils.round(time))
     local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
     local division_counter = 1
     while time < 1 and division_counter ~= #time_divisions do
         local division = time_divisions[division_counter]
         time = time * division[1]
-        time_format = string.format('%s %s ago', round(time), division[2])
+        time_format = string.format('%s %s ago', utils.round(time), division[2])
         division_counter = division_counter + 1
     end
     local commit_message = blame.commit_message
@@ -78,12 +44,38 @@ local function create_committed_lines(blame)
     }
 end
 
-function BlamePopup:get_win_ids()
-    return self.widget:get_win_ids()
+local BlamePopup = Object:extend()
+
+function BlamePopup:setup(config)
+    state:assign(config)
 end
 
-function BlamePopup:get_name()
-    return self.widget:get_name()
+function BlamePopup:new()
+    return setmetatable({
+        widget = Widget:new({
+            View:new({
+                border = state:get('window').border,
+                border_hl = state:get('window').border_hl,
+                win_options = { ['cursorline'] = true },
+                window_props = {
+                    style = 'minimal',
+                    relative = 'cursor',
+                    height = 5,
+                    width = 88,
+                    row = 0,
+                    col = 0,
+                },
+            }),
+        }, {
+            popup = true,
+        }),
+        data = nil,
+        err = nil,
+    }, BlamePopup)
+end
+
+function BlamePopup:get_win_ids()
+    return self.widget:get_win_ids()
 end
 
 function BlamePopup:set_loading(value)
@@ -127,7 +119,4 @@ function BlamePopup:render()
     return self
 end
 
-return {
-    new = new,
-    setup = setup,
-}
+return BlamePopup

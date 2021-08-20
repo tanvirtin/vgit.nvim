@@ -21,7 +21,7 @@ describe('Interface:', function()
 
     describe('new', function()
         it('should bind the object provided into into the state object', function()
-            local state = Interface.new(initial_state)
+            local state = Interface:new(initial_state)
             eq(state, {
                 data = initial_state,
             })
@@ -29,14 +29,14 @@ describe('Interface:', function()
 
         it('should throw error if invalid data type is provided', function()
             assert.has_error(function()
-                Interface.new(42)
+                Interface:new(42)
             end)
         end)
     end)
 
     describe('get', function()
         it('should throw error on invalid argument types', function()
-            local state = Interface.new({
+            local state = Interface:new({
                 foo = 'bar',
             })
             assert.has_error(function()
@@ -57,7 +57,7 @@ describe('Interface:', function()
         end)
 
         it('should succesfully retrieve a value given a key from the state object', function()
-            local state = Interface.new(initial_state)
+            local state = Interface:new(initial_state)
             eq(state:get('foo'), 'bar')
             eq(state:get('bar'), 'foo')
             eq(state:get('baz'), {
@@ -67,7 +67,7 @@ describe('Interface:', function()
         end)
 
         it('should throw an error if a state object does not have the given key', function()
-            local state = Interface.new(initial_state)
+            local state = Interface:new(initial_state)
             assert.has_error(function()
                 eq(state:get('test'), nil)
             end)
@@ -76,7 +76,7 @@ describe('Interface:', function()
 
     describe('set', function()
         it('should throw error on invalid argument types', function()
-            local state = Interface.new({
+            local state = Interface:new({
                 foo = 'bar',
             })
             assert.has_error(function()
@@ -97,7 +97,7 @@ describe('Interface:', function()
         end)
 
         it('should alter an existing state attribute', function()
-            local state = Interface.new(initial_state)
+            local state = Interface:new(initial_state)
             state:set('foo', 'a')
             state:set('bar', 'b')
             state:set('baz', {
@@ -113,7 +113,7 @@ describe('Interface:', function()
         end)
 
         it('should not change the state attribute if no values are present', function()
-            local state = Interface.new(initial_state)
+            local state = Interface:new(initial_state)
             for i = 10, 1, -1 do
                 assert.has_error(function()
                     state:set(i, i)
@@ -128,7 +128,7 @@ describe('Interface:', function()
     describe('assign', function()
         it('should not assign attributes into into state which are not in it', function()
             local initial = { foo = true }
-            local state = Interface.new(initial)
+            local state = Interface:new(initial)
             state:assign({
                 foo = false,
                 bar = true,
@@ -140,7 +140,7 @@ describe('Interface:', function()
 
         it('should return unmodified state when nil value is passed', function()
             local initial = { foo = true }
-            local state = Interface.new(initial)
+            local state = Interface:new(initial)
             state:assign(nil)
             eq(state, {
                 data = initial,
@@ -152,7 +152,7 @@ describe('Interface:', function()
                 is_list = { 1, 2, 3, 4, 5 },
                 isnt_list = { a = 1, b = 2 },
             }
-            local state = Interface.new(initial)
+            local state = Interface:new(initial)
             state:assign({
                 is_list = { 'a', 'b' },
                 isnt_list = { a = 1, b = 2 },
@@ -166,7 +166,7 @@ describe('Interface:', function()
         end)
 
         it('should throw error when there is a type mismatch', function()
-            local state = Interface.new({
+            local state = Interface:new({
                 foo = true,
                 bar = {
                     baz = {
@@ -219,7 +219,7 @@ describe('Interface:', function()
                     },
                 },
             }
-            local state = Interface.new(initial)
+            local state = Interface:new(initial)
             state:assign({
                 foo = false,
                 bar = {

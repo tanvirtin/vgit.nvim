@@ -4,7 +4,7 @@ local virtual_text = require('vgit.virtual_text')
 
 local M = {}
 
-M.syntax = function(buf, filetype)
+M.draw_syntax = function(buf, filetype)
     if not filetype or filetype == '' then
         return
     end
@@ -28,7 +28,7 @@ M.syntax = function(buf, filetype)
     end
 end
 
-M.wash_syntax = function(buf)
+M.clear_syntax = function(buf)
     local has_ts = false
     if not has_ts then
         has_ts, _ = pcall(require, 'nvim-treesitter')
@@ -43,7 +43,7 @@ M.wash_syntax = function(buf)
     end
 end
 
-M.changes = function(get_buf, lnum_changes, signs, priority)
+M.draw_changes = function(get_buf, lnum_changes, signs, priority)
     local ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/paint')
     for i = 1, #lnum_changes do
         local datum = lnum_changes[i]
