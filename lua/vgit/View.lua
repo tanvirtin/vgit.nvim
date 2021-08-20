@@ -1,14 +1,12 @@
-local paint = require('vgit.paint')
+local Object = require('plenary.class')
+local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
 local events = require('vgit.events')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 local Interface = require('vgit.Interface')
 
-local vim = vim
-
-local View = {}
-View.__index = View
+local View = Object:extend()
 
 local function calculate_text_center(text, width)
     local rep = math.floor((width / 2) - math.floor(#text / 2))
@@ -86,12 +84,12 @@ local function min_height()
     return 20
 end
 
-local function new(options)
+function View:new(options)
     assert(options == nil or type(options) == 'table', 'type error :: expected table or nil')
     options = options or {}
     local height = min_height()
     local width = min_width()
-    local config = Interface.new({
+    local config = Interface:new({
         filetype = '',
         title = '',
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
@@ -201,7 +199,7 @@ function View:set_loading(value)
         self.state.loading = value
         self:set_centered_text('•••')
     else
-        paint.syntax(self.state.buf, self.config:get('filetype'))
+        painter.draw_syntax(self.state.buf, self.config:get('filetype'))
         self.state.loading = value
         buffer.set_lines(self.state.buf, self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
@@ -221,7 +219,7 @@ function View:set_error(value)
         self.state.error = value
         self:set_centered_text('✖✖✖')
     else
-        paint.syntax(self.state.buf, self.config:get('filetype'))
+        painter.draw_syntax(self.state.buf, self.config:get('filetype'))
         self.state.error = value
         buffer.set_lines(self.state.buf, self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
@@ -232,7 +230,7 @@ end
 
 function View:set_centered_text(text)
     assert(type(text) == 'string', 'type error :: expected string')
-    paint.wash_syntax(self.state.buf)
+    painter.clear_syntax(self.state.buf)
     local lines = {}
     local height = vim.api.nvim_win_get_height(self.state.win_id)
     local width = vim.api.nvim_win_get_width(self.state.win_id)
@@ -295,8 +293,8 @@ function View:set_filetype(filetype)
     end
     self.config:set('filetype', filetype)
     local buf = self:get_buf()
-    paint.wash_syntax(buf)
-    paint.syntax(buf, filetype)
+    painter.clear_syntax(buf)
+    painter.draw_syntax(buf, filetype)
     buffer.set_option(buf, 'syntax', filetype)
 end
 
@@ -367,7 +365,7 @@ function View:mount()
         )
     end
     self:on('BufWinLeave', string.format(':lua require("vgit").ui.close_windows({ %s })', win_id))
-    paint.syntax(buf, filetype)
+    painter.draw_syntax(buf, filetype)
     self.state.mounted = true
     return self
 end
@@ -381,4 +379,4 @@ function View:unmount()
     self.mounted = false
 end
 
-return { new = new }
+return View

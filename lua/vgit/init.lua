@@ -1,3 +1,6 @@
+local utils = require('vgit.utils')
+local diff = require('vgit.diff')
+local Hunk = require('vgit.Hunk')
 local git = require('vgit.git')
 local ui = require('vgit.ui')
 local fs = require('vgit.fs')
@@ -5,25 +8,23 @@ local highlighter = require('vgit.highlighter')
 local events = require('vgit.events')
 local sign = require('vgit.sign')
 local Interface = require('vgit.Interface')
-local Bstate = require('vgit.Bstate')
+local BufferCache = require('vgit.BufferCache')
 local buffer = require('vgit.buffer')
 local throttle_leading = require('vgit.defer').throttle_leading
 local debounce_trailing = require('vgit.defer').debounce_trailing
 local logger = require('vgit.logger')
 local navigation = require('vgit.navigation')
+local Patch = require('vgit.Patch')
 local t = require('vgit.localization').translate
-local a = require('plenary.async')
-local wrap = a.wrap
-local void = a.void
-local scheduler = a.util.scheduler
-
-local vim = vim
+local wrap = require('plenary.async.async').wrap
+local void = require('plenary.async.async').void
+local scheduler = require('plenary.async.util').scheduler
 
 local M = {}
 
-local bstate = Bstate.new()
+local buffer_cache = BufferCache:new()
 
-local state = Interface.new({
+local state = Interface:new({
     config = {},
     disabled = false,
     instantiated = false,
@@ -40,18 +41,18 @@ local state = Interface.new({
 })
 
 local function cache_buf(buf, filename, tracked_filename, tracked_remote_filename)
-    bstate:add(buf)
+    buffer_cache:add(buf)
     local filetype = fs.filetype(buf)
     if not filetype or filetype == '' then
         filetype = fs.detect_filetype(filename)
     end
-    bstate:set(buf, 'filetype', filetype)
-    bstate:set(buf, 'filename', filename)
+    buffer_cache:set(buf, 'filetype', filetype)
+    buffer_cache:set(buf, 'filename', filename)
     if tracked_filename and tracked_filename ~= '' then
-        bstate:set(buf, 'tracked_filename', tracked_filename)
-        bstate:set(buf, 'tracked_remote_filename', tracked_remote_filename)
+        buffer_cache:set(buf, 'tracked_filename', tracked_filename)
+        buffer_cache:set(buf, 'tracked_remote_filename', tracked_remote_filename)
     else
-        bstate:set(buf, 'untracked', true)
+        buffer_cache:set(buf, 'untracked', true)
     end
 end
 
@@ -80,7 +81,7 @@ local function get_hunk_calculator()
 end
 
 local function calculate_hunks(buf)
-    return get_hunk_calculator()(bstate:get(buf, 'tracked_filename'))
+    return get_hunk_calculator()(buffer_cache:get(buf, 'tracked_filename'))
 end
 
 local function get_current_hunk(hunks, lnum)
@@ -97,7 +98,7 @@ end
 
 local ext_hunk_generation = void(function(buf, original_lines, current_lines)
     scheduler()
-    if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
+    if state:get('disabled') or not buffer.is_valid(buf) or not buffer_cache:contains(buf) then
         return
     end
     local temp_filename_b = fs.tmpname()
@@ -109,7 +110,14 @@ local ext_hunk_generation = void(function(buf, original_lines, current_lines)
     local hunks_err, hunks = git.file_hunks(temp_filename_a, temp_filename_b)
     scheduler()
     if not hunks_err then
-        bstate:set(buf, 'hunks', hunks)
+        if not buffer_cache:contains(buf) then
+            fs.remove_file(temp_filename_a)
+            scheduler()
+            fs.remove_file(temp_filename_b)
+            scheduler()
+            return
+        end
+        buffer_cache:set(buf, 'hunks', hunks)
         ui.hide_hunk_signs(buf)
         ui.show_hunk_signs(buf, hunks)
     else
@@ -124,15 +132,15 @@ end)
 local generate_tracked_hunk_signs = debounce_trailing(
     void(function(buf)
         scheduler()
-        if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
+        if state:get('disabled') or not buffer.is_valid(buf) or not buffer_cache:contains(buf) then
             return
         end
         local max_lines_limit = state:get('predict_hunk_max_lines')
         if vim.api.nvim_buf_line_count(buf) > max_lines_limit then
             return
         end
-        local tracked_filename = bstate:get(buf, 'tracked_filename')
-        local tracked_remote_filename = bstate:get(buf, 'tracked_remote_filename')
+        local tracked_filename = buffer_cache:get(buf, 'tracked_filename')
+        local tracked_remote_filename = buffer_cache:get(buf, 'tracked_remote_filename')
         local show_err, original_lines
         if state:get('diff_strategy') == 'remote' then
             show_err, original_lines = git.show(tracked_remote_filename, M.get_diff_base())
@@ -148,11 +156,14 @@ local generate_tracked_hunk_signs = debounce_trailing(
             end
         end
         if not show_err then
-            if not bstate:contains(buf) then
+            if not buffer_cache:contains(buf) then
                 return
             end
             local current_lines = buffer.get_lines(buf)
-            bstate:set(buf, 'temp_lines', current_lines)
+            if not buffer_cache:contains(buf) then
+                return
+            end
+            buffer_cache:set(buf, 'temp_lines', current_lines)
             ext_hunk_generation(buf, original_lines, current_lines)
         else
             logger.debug(show_err, 'init.lua/generate_tracked_hunk_signs')
@@ -164,11 +175,15 @@ local generate_tracked_hunk_signs = debounce_trailing(
 local generate_untracked_hunk_signs = debounce_trailing(
     void(function(buf)
         scheduler()
-        if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
+        if state:get('disabled') or not buffer.is_valid(buf) or not buffer_cache:contains(buf) then
             return
         end
         local hunks = git.untracked_hunks(buffer.get_lines(buf))
-        bstate:set(buf, 'hunks', hunks)
+        scheduler()
+        if not buffer_cache:contains(buf) then
+            return
+        end
+        buffer_cache:set(buf, 'hunks', hunks)
         ui.hide_hunk_signs(buf)
         ui.show_hunk_signs(buf, hunks)
     end),
@@ -177,7 +192,7 @@ local generate_untracked_hunk_signs = debounce_trailing(
 
 local buf_attach_tracked = void(function(buf)
     scheduler()
-    if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
+    if state:get('disabled') or not buffer.is_valid(buf) or not buffer_cache:contains(buf) then
         return
     end
     if state:get('blames_enabled') then
@@ -190,14 +205,15 @@ local buf_attach_tracked = void(function(buf)
                 not state:get('predict_hunk_signs')
                 or (p_lnum == n_lnum and byte_count == 0)
                 or not state:get('hunks_enabled')
+                or not buffer_cache:contains(buf)
             then
                 return
             end
             generate_tracked_hunk_signs(cbuf)
         end),
         on_detach = function(_, cbuf)
-            if bstate:contains(cbuf) then
-                bstate:remove(cbuf)
+            if buffer_cache:contains(cbuf) then
+                buffer_cache:remove(cbuf)
                 detach_blames_autocmd(cbuf)
             end
         end,
@@ -206,7 +222,10 @@ local buf_attach_tracked = void(function(buf)
         local err, hunks = calculate_hunks(buf)
         scheduler()
         if not err then
-            bstate:set(buf, 'hunks', hunks)
+            if not buffer_cache:contains(buf) then
+                return
+            end
+            buffer_cache:set(buf, 'hunks', hunks)
             ui.show_hunk_signs(buf, hunks)
         else
             logger.debug(err, 'init.lua/buf_attach_tracked')
@@ -215,7 +234,7 @@ local buf_attach_tracked = void(function(buf)
 end)
 
 local function buf_attach_untracked(buf)
-    if state:get('disabled') or not buffer.is_valid(buf) or not bstate:contains(buf) then
+    if state:get('disabled') or not buffer.is_valid(buf) or not buffer_cache:contains(buf) then
         return
     end
     vim.api.nvim_buf_attach(buf, false, {
@@ -225,23 +244,28 @@ local function buf_attach_untracked(buf)
                 not state:get('predict_hunk_signs')
                 or (p_lnum == n_lnum and byte_count == 0)
                 or not state:get('hunks_enabled')
+                or not buffer_cache:contains(cbuf)
             then
                 return
             end
-            if not bstate:get(cbuf, 'untracked') then
+            if not buffer_cache:get(cbuf, 'untracked') then
                 return generate_tracked_hunk_signs(cbuf)
             end
             generate_untracked_hunk_signs(cbuf)
         end),
         on_detach = function(_, cbuf)
-            if bstate:contains(cbuf) then
-                bstate:remove(cbuf)
+            if buffer_cache:contains(cbuf) then
+                buffer_cache:remove(cbuf)
             end
         end,
     })
     if state:get('hunks_enabled') then
         local hunks = git.untracked_hunks(buffer.get_lines(buf))
-        bstate:set(buf, 'hunks', hunks)
+        scheduler()
+        if not buffer_cache:contains(buf) then
+            return
+        end
+        buffer_cache:set(buf, 'hunks', hunks)
         ui.show_hunk_signs(buf, hunks)
     end
 end
@@ -286,16 +310,17 @@ end)
 M._buf_update = void(function(buf)
     scheduler()
     buf = buf or buffer.current()
-    if buffer.is_valid(buf) and bstate:contains(buf) then
-        bstate:set(buf, 'temp_lines', {})
+    if buffer.is_valid(buf) and buffer_cache:contains(buf) then
+        buffer_cache:set(buf, 'temp_lines', {})
         if state:get('hunks_enabled') then
             if
-                bstate:get(buf, 'untracked')
+                buffer_cache:get(buf, 'untracked')
                 and state:get('diff_strategy') == 'index'
                 and state:get('show_untracked_file_signs')
             then
                 local hunks = git.untracked_hunks(buffer.get_lines(buf))
-                bstate:set(buf, 'hunks', hunks)
+                scheduler()
+                buffer_cache:set(buf, 'hunks', hunks)
                 ui.hide_hunk_signs(buf)
                 ui.show_hunk_signs(buf, hunks)
                 return
@@ -303,7 +328,7 @@ M._buf_update = void(function(buf)
             local err, hunks = calculate_hunks(buf)
             scheduler()
             if not err then
-                bstate:set(buf, 'hunks', hunks)
+                buffer_cache:set(buf, 'hunks', hunks)
                 ui.hide_hunk_signs(buf)
                 ui.show_hunk_signs(buf, hunks)
             else
@@ -319,15 +344,15 @@ M._blame_line = debounce_trailing(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
-            and not bstate:get(buf, 'untracked')
+            and buffer_cache:contains(buf)
+            and not buffer_cache:get(buf, 'untracked')
         then
             if not vim.api.nvim_buf_get_option(buf, 'modified') then
                 local win = vim.api.nvim_get_current_win()
-                local last_lnum_blamed = bstate:get(buf, 'last_lnum_blamed')
+                local last_lnum_blamed = buffer_cache:get(buf, 'last_lnum_blamed')
                 local lnum = vim.api.nvim_win_get_cursor(win)[1]
                 if last_lnum_blamed ~= lnum then
-                    local err, blame = git.blame_line(bstate:get(buf, 'tracked_filename'), lnum)
+                    local err, blame = git.blame_line(buffer_cache:get(buf, 'tracked_filename'), lnum)
                     scheduler()
                     if not err then
                         ui.hide_blame_line(buf)
@@ -335,7 +360,7 @@ M._blame_line = debounce_trailing(
                         if vim.api.nvim_win_get_cursor(vim.api.nvim_get_current_win())[1] == lnum then
                             ui.show_blame_line(buf, blame, lnum, git.state:get('config'))
                             scheduler()
-                            bstate:set(buf, 'last_lnum_blamed', lnum)
+                            buffer_cache:set(buf, 'last_lnum_blamed', lnum)
                         end
                     else
                         logger.debug(err, 'init.lua/_blame_line')
@@ -349,13 +374,13 @@ M._blame_line = debounce_trailing(
 )
 
 M._unblame_line = function(buf, override)
-    if bstate:contains(buf) and buffer.is_valid(buf) and not bstate:get(buf, 'untracked') then
+    if buffer_cache:contains(buf) and buffer.is_valid(buf) and not buffer_cache:get(buf, 'untracked') then
         if override then
             return ui.hide_blame_line(buf)
         end
         local win = vim.api.nvim_get_current_win()
         local lnum = vim.api.nvim_win_get_cursor(win)[1]
-        local last_lnum_blamed = bstate:get(buf, 'last_lnum_blamed')
+        local last_lnum_blamed = buffer_cache:get(buf, 'last_lnum_blamed')
         if lnum ~= last_lnum_blamed then
             ui.hide_blame_line(buf)
         end
@@ -392,24 +417,24 @@ M._change_history = throttle_leading(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
-            and not bstate:get(buf, 'untracked')
+            and buffer_cache:contains(buf)
+            and not buffer_cache:get(buf, 'untracked')
         then
             local selected_log = vim.api.nvim_win_get_cursor(0)[1]
             local diff_preference = state:get('diff_preference')
-            local diff = (diff_preference == 'horizontal' and git.horizontal_diff) or git.vertical_diff
+            local calculate_diff = (diff_preference == 'horizontal' and diff.horizontal) or diff.vertical
             ui.change_history(
                 wrap(function()
-                    local tracked_filename = bstate:get(buf, 'tracked_filename')
-                    local logs = bstate:get(buf, 'logs')
+                    local tracked_filename = buffer_cache:get(buf, 'tracked_filename')
+                    local logs = buffer_cache:get(buf, 'logs')
                     local log = logs[selected_log]
                     local err, hunks, lines, commit_hash, computed_hunks
                     if log then
                         if selected_log == 1 then
-                            local temp_lines = bstate:get(buf, 'temp_lines')
+                            local temp_lines = buffer_cache:get(buf, 'temp_lines')
                             if #temp_lines ~= 0 then
                                 lines = temp_lines
-                                computed_hunks = bstate:get(buf, 'hunks')
+                                computed_hunks = buffer_cache:get(buf, 'hunks')
                             else
                                 err, computed_hunks = git.remote_hunks(tracked_filename, 'HEAD')
                             end
@@ -425,7 +450,7 @@ M._change_history = throttle_leading(
                         commit_hash = log.commit_hash
                     end
                     if commit_hash and not lines then
-                        err, lines = git.show(bstate:get(buf, 'tracked_remote_filename'), commit_hash)
+                        err, lines = git.show(buffer_cache:get(buf, 'tracked_remote_filename'), commit_hash)
                         scheduler()
                     elseif not lines then
                         err, lines = fs.read_file(tracked_filename)
@@ -435,11 +460,14 @@ M._change_history = throttle_leading(
                         logger.debug(err, 'init.lua/_change_history')
                         return err, nil
                     end
-                    local diff_err, data = diff(lines, hunks)
+                    local diff_err, data = calculate_diff(lines, hunks)
                     scheduler()
                     if not diff_err then
-                        data.logs = logs
-                        return nil, data
+                        return nil,
+                            utils.readonly({
+                                logs = logs,
+                                diff_change = data,
+                            })
                     else
                         logger.debug(diff_err, 'init.lua/_change_history')
                         return diff_err, nil
@@ -455,23 +483,31 @@ M._change_history = throttle_leading(
 
 M.buffer_hunk_lens = throttle_leading(function(buf, win)
     buf = buf or buffer.current()
-    if not state:get('disabled') and buffer.is_valid(buf) and bstate:contains(buf) then
+    if
+        not state:get('disabled')
+        and buffer.is_valid(buf)
+        and buffer_cache:contains(buf)
+        and not buffer_cache:get(buf, 'untracked')
+    then
         local lnum = vim.api.nvim_win_get_cursor(win)[1]
-        local hunks = bstate:get(buf, 'hunks')
+        local hunks = buffer_cache:get(buf, 'hunks')
         ui.show_hunk_lens(
             wrap(function()
-                local read_file_err, lines = fs.read_file(bstate:get(buf, 'tracked_filename'))
+                local read_file_err, lines = fs.read_file(buffer_cache:get(buf, 'tracked_filename'))
                 scheduler()
                 if read_file_err then
                     logger.debug(read_file_err, 'init.lua/hunk_preview')
                     return read_file_err, nil
                 end
-                local diff_err, data = git.horizontal_diff(lines, hunks)
+                local diff_err, data = diff.horizontal(lines, hunks)
                 scheduler()
-                data.hunk = get_current_hunk(hunks, lnum) or { diff = {} }
-                return diff_err, data
+                return diff_err,
+                    {
+                        diff_change = data,
+                        selected_hunk = get_current_hunk(hunks, lnum) or Hunk:new(),
+                    }
             end, 0),
-            bstate:get(buf, 'filetype')
+            buffer_cache:get(buf, 'filetype')
         )
     end
 end, state:get(
@@ -485,12 +521,12 @@ M.buffer_blame_preview = throttle_leading(function(buf)
     if
         not state:get('disabled')
         and buffer.is_valid(buf)
-        and bstate:contains(buf)
-        and not bstate:get(buf, 'untracked')
+        and buffer_cache:contains(buf)
+        and not buffer_cache:get(buf, 'untracked')
     then
         ui.show_blame_preview(
             wrap(function()
-                local filename = bstate:get(buf, 'tracked_filename')
+                local filename = buffer_cache:get(buf, 'tracked_filename')
                 local read_file_err, lines = fs.read_file(filename)
                 scheduler()
                 if read_file_err then
@@ -517,7 +553,7 @@ M.buffer_blame_preview = throttle_leading(function(buf)
                         hunks = hunks,
                     }
             end, 0),
-            bstate:get(buf, 'filetype')
+            buffer_cache:get(buf, 'filetype')
         )
     end
 end, state:get(
@@ -529,34 +565,16 @@ M.hunk_down = function(buf, win)
     if not state:get('disabled') then
         local popup = ui.get_mounted_popup()
         if not vim.tbl_isempty(popup) then
-            local marked_popups = {
-                hunk_lens = true,
-                horizontal_preview = true,
-                vertical_preview = true,
-                staged_horizontal_preview = true,
-                staged_vertical_preview = true,
-                horizontal_history = true,
-                vertical_history = true,
-            }
-            local hunked_popup = {
-                blame_preview_popup = true,
-            }
-            if marked_popups[popup:get_name()] then
-                local marks = popup:get_data().marks
+            if ui.is_popup_navigatable(popup) then
+                local marks = popup:get_marks()
                 if popup:is_preview_focused() and #marks ~= 0 then
                     return navigation.mark_down(popup:get_preview_win_ids(), marks)
                 end
             end
-            if hunked_popup[popup:get_name()] then
-                local hunks = popup:get_data().hunks
-                if popup:is_preview_focused() and #hunks ~= 0 then
-                    return navigation.hunk_down(popup:get_preview_win_ids(), hunks)
-                end
-            end
         end
-        if buffer.is_valid(buf) and bstate:contains(buf) then
+        if buffer.is_valid(buf) and buffer_cache:contains(buf) then
             win = win or vim.api.nvim_get_current_win()
-            local hunks = bstate:get(buf, 'hunks')
+            local hunks = buffer_cache:get(buf, 'hunks')
             if #hunks ~= 0 then
                 navigation.hunk_down({ win }, hunks)
             end
@@ -569,34 +587,16 @@ M.hunk_up = function(buf, win)
     if not state:get('disabled') then
         local popup = ui.get_mounted_popup()
         if not vim.tbl_isempty(popup) then
-            local marked_popups = {
-                hunk_lens = true,
-                horizontal_preview = true,
-                vertical_preview = true,
-                staged_horizontal_preview = true,
-                staged_vertical_preview = true,
-                horizontal_history = true,
-                vertical_history = true,
-            }
-            local hunked_popup = {
-                blame_preview_popup = true,
-            }
-            if marked_popups[popup:get_name()] then
-                local marks = popup:get_data().marks
+            if ui.is_popup_navigatable(popup) then
+                local marks = popup:get_marks()
                 if popup:is_preview_focused() and #marks ~= 0 then
                     return navigation.mark_up(popup:get_preview_win_ids(), marks)
                 end
             end
-            if hunked_popup[popup:get_name()] then
-                local hunks = popup:get_data().hunks
-                if popup:is_preview_focused() and #hunks ~= 0 then
-                    return navigation.hunk_up(popup:get_preview_win_ids(), hunks)
-                end
-            end
         end
-        if buffer.is_valid(buf) and bstate:contains(buf) then
+        if buffer.is_valid(buf) and buffer_cache:contains(buf) then
             win = win or vim.api.nvim_get_current_win()
-            local hunks = bstate:get(buf, 'hunks')
+            local hunks = buffer_cache:get(buf, 'hunks')
             if #hunks ~= 0 then
                 navigation.hunk_up({ win }, hunks)
             end
@@ -609,11 +609,11 @@ M.hunk_reset = throttle_leading(function(buf, win)
     if
         not state:get('disabled')
         and buffer.is_valid(buf)
-        and bstate:contains(buf)
-        and not bstate:get(buf, 'untracked')
+        and buffer_cache:contains(buf)
+        and not buffer_cache:get(buf, 'untracked')
     then
         win = win or vim.api.nvim_get_current_win()
-        local hunks = bstate:get(buf, 'hunks')
+        local hunks = buffer_cache:get(buf, 'hunks')
         local lnum = vim.api.nvim_win_get_cursor(win)[1]
         if lnum == 1 then
             local current_lines = buffer.get_lines(buf)
@@ -683,6 +683,7 @@ M.hunks_quickfix_list = throttle_leading(
         if not state:get('disabled') then
             local qf_entries = {}
             local err, filenames = git.ls_changed()
+            scheduler()
             if err then
                 return logger.debug(err, 'init.lua/hunks_quickfix_list')
             end
@@ -722,7 +723,7 @@ M.toggle_buffer_hunks = throttle_leading(
         if not state:get('disabled') then
             if state:get('hunks_enabled') then
                 state:set('hunks_enabled', false)
-                bstate:for_each(function(buf, buf_state)
+                buffer_cache:for_each(function(buf, buf_state)
                     if buffer.is_valid(buf) then
                         buf_state:set('hunks', {})
                         ui.hide_hunk_signs(buf)
@@ -732,7 +733,7 @@ M.toggle_buffer_hunks = throttle_leading(
             else
                 state:set('hunks_enabled', true)
             end
-            bstate:for_each(function(buf, buf_state)
+            buffer_cache:for_each(function(buf, buf_state)
                 if buffer.is_valid(buf) then
                     local hunks_err, hunks = calculate_hunks(buf)
                     scheduler()
@@ -758,7 +759,7 @@ M.toggle_buffer_blames = throttle_leading(
         if not state:get('disabled') then
             if state:get('blames_enabled') then
                 state:set('blames_enabled', false)
-                bstate:for_each(function(buf, buf_state)
+                buffer_cache:for_each(function(buf, buf_state)
                     if buffer.is_valid(buf) then
                         detach_blames_autocmd(buf)
                         buf_state:set('blames', {})
@@ -769,7 +770,7 @@ M.toggle_buffer_blames = throttle_leading(
             else
                 state:set('blames_enabled', true)
             end
-            bstate:for_each(function(buf)
+            buffer_cache:for_each(function(buf)
                 if buffer.is_valid(buf) then
                     attach_blames_autocmd(buf)
                 end
@@ -786,27 +787,30 @@ M.buffer_history = throttle_leading(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
-            and not bstate:get(buf, 'untracked')
+            and buffer_cache:contains(buf)
+            and not buffer_cache:get(buf, 'untracked')
         then
             local diff_preference = state:get('diff_preference')
-            local diff = (diff_preference == 'horizontal' and git.horizontal_diff) or git.vertical_diff
+            local calculate_diff = (diff_preference == 'horizontal' and diff.horizontal) or diff.vertical
             ui.show_history(
                 wrap(function()
-                    local tracked_filename = bstate:get(buf, 'tracked_filename')
+                    local tracked_filename = buffer_cache:get(buf, 'tracked_filename')
                     local logs_err, logs = git.logs(tracked_filename)
                     scheduler()
                     if not logs_err then
-                        bstate:set(buf, 'logs', logs)
-                        local temp_lines = bstate:get(buf, 'temp_lines')
+                        buffer_cache:set(buf, 'logs', logs)
+                        local temp_lines = buffer_cache:get(buf, 'temp_lines')
                         if #temp_lines ~= 0 then
                             local lines = temp_lines
-                            local hunks = bstate:get(buf, 'hunks')
-                            local diff_err, data = diff(lines, hunks)
+                            local hunks = buffer_cache:get(buf, 'hunks')
+                            local diff_err, data = calculate_diff(lines, hunks)
                             scheduler()
                             if not diff_err then
-                                data.logs = logs
-                                return diff_err, data
+                                return diff_err,
+                                    utils.readonly({
+                                        logs = logs,
+                                        diff_change = data,
+                                    })
                             else
                                 logger.debug(diff_err, 'init.lua/buffer_history')
                                 return diff_err, nil
@@ -821,11 +825,14 @@ M.buffer_history = throttle_leading(
                                     logger.debug(hunks_err, 'init.lua/buffer_history')
                                     return hunks_err, nil
                                 end
-                                local diff_err, data = diff(lines, hunks)
+                                local diff_err, data = calculate_diff(lines, hunks)
                                 scheduler()
                                 if not diff_err then
-                                    data.logs = logs
-                                    return diff_err, data
+                                    return diff_err,
+                                        utils.readonly({
+                                            logs = logs,
+                                            diff_change = data,
+                                        })
                                 else
                                     logger.debug(diff_err, 'init.lua/buffer_history')
                                     return diff_err, nil
@@ -840,7 +847,7 @@ M.buffer_history = throttle_leading(
                         return logs_err, nil
                     end
                 end, 0),
-                bstate:get(buf, 'filetype'),
+                buffer_cache:get(buf, 'filetype'),
                 diff_preference
             )
         end
@@ -854,18 +861,17 @@ M.buffer_preview = throttle_leading(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
-            and not bstate:get(buf, 'untracked')
+            and buffer_cache:contains(buf)
+            and not buffer_cache:get(buf, 'untracked')
         then
             local diff_preference = state:get('diff_preference')
-            local diff = (diff_preference == 'horizontal' and git.horizontal_diff) or git.vertical_diff
+            local calculate_diff = (diff_preference == 'horizontal' and diff.horizontal) or diff.vertical
             ui.show_preview(
-                (diff_preference == 'horizontal' and 'horizontal_preview') or 'vertical_preview',
                 wrap(function()
-                    local tracked_filename = bstate:get(buf, 'tracked_filename')
+                    local tracked_filename = buffer_cache:get(buf, 'tracked_filename')
                     local hunks
                     if state:get('hunks_enabled') then
-                        hunks = bstate:get(buf, 'hunks')
+                        hunks = buffer_cache:get(buf, 'hunks')
                     else
                         local hunks_err, computed_hunks = calculate_hunks(buf)
                         scheduler()
@@ -879,7 +885,7 @@ M.buffer_preview = throttle_leading(
                     if not hunks then
                         return { 'Failed to retrieve hunks for the current buffer' }, nil
                     end
-                    local temp_lines = bstate:get(buf, 'temp_lines')
+                    local temp_lines = buffer_cache:get(buf, 'temp_lines')
                     local read_file_err, lines
                     if #temp_lines ~= 0 then
                         lines = temp_lines
@@ -891,11 +897,11 @@ M.buffer_preview = throttle_leading(
                             return read_file_err, nil
                         end
                     end
-                    local diff_err, data = diff(lines, hunks)
+                    local diff_err, data = calculate_diff(lines, hunks)
                     scheduler()
                     return diff_err, data
                 end, 0),
-                bstate:get(buf, 'filetype'),
+                buffer_cache:get(buf, 'filetype'),
                 diff_preference
             )
         end
@@ -909,33 +915,33 @@ M.staged_buffer_preview = throttle_leading(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
-            and not bstate:get(buf, 'untracked')
+            and buffer_cache:contains(buf)
+            and not buffer_cache:get(buf, 'untracked')
             and state:get('diff_strategy') == 'index'
         then
             local diff_preference = state:get('diff_preference')
-            local diff = (diff_preference == 'horizontal' and git.horizontal_diff) or git.vertical_diff
+            local calculate_diff = (diff_preference == 'horizontal' and diff.horizontal) or diff.vertical
             ui.show_preview(
-                (diff_preference == 'horizontal' and 'staged_horizontal_preview') or 'staged_vertical_preview',
                 wrap(function()
-                    local tracked_filename = bstate:get(buf, 'tracked_filename')
+                    local tracked_filename = buffer_cache:get(buf, 'tracked_filename')
                     local hunks_err, hunks = git.staged_hunks(tracked_filename)
+                    scheduler()
                     if hunks_err then
                         logger.debug(hunks_err, 'init.lua/staged_buffer_preview')
                         return hunks_err, nil
                     end
                     scheduler()
-                    local show_err, lines = git.show(bstate:get(buf, 'tracked_remote_filename'))
+                    local show_err, lines = git.show(buffer_cache:get(buf, 'tracked_remote_filename'))
                     scheduler()
                     if show_err then
                         logger.debug(show_err, 'init.lua/staged_buffer_preview')
                         return show_err, nil
                     end
-                    local diff_err, data = diff(lines, hunks)
+                    local diff_err, data = calculate_diff(lines, hunks)
                     scheduler()
                     return diff_err, data
                 end, 0),
-                bstate:get(buf, 'filetype'),
+                buffer_cache:get(buf, 'filetype'),
                 diff_preference
             )
         end
@@ -950,12 +956,12 @@ M.buffer_reset = throttle_leading(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
-            and not bstate:get(buf, 'untracked')
+            and buffer_cache:contains(buf)
+            and not buffer_cache:get(buf, 'untracked')
         then
-            local hunks = bstate:get(buf, 'hunks')
+            local hunks = buffer_cache:get(buf, 'hunks')
             if #hunks ~= 0 then
-                local tracked_remote_filename = bstate:get(buf, 'tracked_remote_filename')
+                local tracked_remote_filename = buffer_cache:get(buf, 'tracked_remote_filename')
                 if state:get('diff_strategy') == 'remote' then
                     local err, lines = git.show(tracked_remote_filename, 'HEAD')
                     scheduler()
@@ -988,8 +994,8 @@ M.show_blame = throttle_leading(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
-            and not bstate:get(buf, 'untracked')
+            and buffer_cache:contains(buf)
+            and not buffer_cache:get(buf, 'untracked')
         then
             local has_commits = git.has_commits()
             scheduler()
@@ -997,7 +1003,7 @@ M.show_blame = throttle_leading(
                 local win = vim.api.nvim_get_current_win()
                 local lnum = vim.api.nvim_win_get_cursor(win)[1]
                 ui.show_blame(wrap(function()
-                    local err, blame = git.blame_line(bstate:get(buf, 'tracked_filename'), lnum)
+                    local err, blame = git.blame_line(buffer_cache:get(buf, 'tracked_filename'), lnum)
                     scheduler()
                     return err, blame
                 end, 0))
@@ -1014,13 +1020,13 @@ M.hunk_stage = throttle_leading(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
+            and buffer_cache:contains(buf)
             and not vim.api.nvim_buf_get_option(buf, 'modified')
             and state:get('diff_strategy') == 'index'
         then
             -- If buffer is untracked then, the whole file is the hunk.
-            if bstate:get(buf, 'untracked') then
-                local filename = bstate:get(buf, 'filename')
+            if buffer_cache:get(buf, 'untracked') then
+                local filename = buffer_cache:get(buf, 'filename')
                 local err = git.stage_file(filename)
                 scheduler()
                 if not err then
@@ -1028,10 +1034,10 @@ M.hunk_stage = throttle_leading(
                     scheduler()
                     local tracked_remote_filename = git.tracked_remote_filename(filename)
                     scheduler()
-                    bstate:set(buf, 'tracked_filename', tracked_filename)
-                    bstate:set(buf, 'tracked_remote_filename', tracked_remote_filename)
-                    bstate:set(buf, 'hunks', {})
-                    bstate:set(buf, 'untracked', false)
+                    buffer_cache:set(buf, 'tracked_filename', tracked_filename)
+                    buffer_cache:set(buf, 'tracked_remote_filename', tracked_remote_filename)
+                    buffer_cache:set(buf, 'hunks', {})
+                    buffer_cache:set(buf, 'untracked', false)
                     ui.hide_hunk_signs(buf)
                     ui.show_hunk_signs(buf, {})
                 else
@@ -1041,12 +1047,12 @@ M.hunk_stage = throttle_leading(
             end
             win = win or vim.api.nvim_get_current_win()
             local lnum = vim.api.nvim_win_get_cursor(win)[1]
-            local hunks = bstate:get(buf, 'hunks')
+            local hunks = buffer_cache:get(buf, 'hunks')
             local selected_hunk = get_current_hunk(hunks, lnum)
             if selected_hunk then
-                local tracked_filename = bstate:get(buf, 'tracked_filename')
-                local tracked_remote_filename = bstate:get(buf, 'tracked_remote_filename')
-                local patch = git.create_patch(tracked_remote_filename, selected_hunk)
+                local tracked_filename = buffer_cache:get(buf, 'tracked_filename')
+                local tracked_remote_filename = buffer_cache:get(buf, 'tracked_remote_filename')
+                local patch = Patch:new(tracked_remote_filename, selected_hunk)
                 local patch_filename = fs.tmpname()
                 fs.write_file(patch_filename, patch)
                 scheduler()
@@ -1058,7 +1064,7 @@ M.hunk_stage = throttle_leading(
                     local hunks_err, calculated_hunks = git.index_hunks(tracked_filename)
                     scheduler()
                     if not hunks_err then
-                        bstate:set(buf, 'hunks', calculated_hunks)
+                        buffer_cache:set(buf, 'hunks', calculated_hunks)
                         ui.hide_hunk_signs(buf)
                         ui.show_hunk_signs(buf, calculated_hunks)
                     else
@@ -1080,25 +1086,25 @@ M.stage_buffer = throttle_leading(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
+            and buffer_cache:contains(buf)
             and not vim.api.nvim_buf_get_option(buf, 'modified')
             and state:get('diff_strategy') == 'index'
         then
-            local filename = bstate:get(buf, 'filename')
-            local tracked_filename = bstate:get(buf, 'tracked_filename')
+            local filename = buffer_cache:get(buf, 'filename')
+            local tracked_filename = buffer_cache:get(buf, 'tracked_filename')
             local err = git.stage_file((tracked_filename and tracked_filename ~= '' and tracked_filename) or filename)
             scheduler()
             if not err then
-                if bstate:get(buf, 'untracked') then
+                if buffer_cache:get(buf, 'untracked') then
                     tracked_filename = git.tracked_filename(filename)
                     scheduler()
                     local tracked_remote_filename = git.tracked_remote_filename(filename)
                     scheduler()
-                    bstate:set(buf, 'tracked_filename', tracked_filename)
-                    bstate:set(buf, 'tracked_remote_filename', tracked_remote_filename)
-                    bstate:set(buf, 'untracked', false)
+                    buffer_cache:set(buf, 'tracked_filename', tracked_filename)
+                    buffer_cache:set(buf, 'tracked_remote_filename', tracked_remote_filename)
+                    buffer_cache:set(buf, 'untracked', false)
                 end
-                bstate:set(buf, 'hunks', {})
+                buffer_cache:set(buf, 'hunks', {})
                 ui.hide_hunk_signs(buf)
                 ui.show_hunk_signs(buf, {})
             else
@@ -1116,13 +1122,13 @@ M.unstage_buffer = throttle_leading(
         if
             not state:get('disabled')
             and buffer.is_valid(buf)
-            and bstate:contains(buf)
+            and buffer_cache:contains(buf)
             and not vim.api.nvim_buf_get_option(buf, 'modified')
             and state:get('diff_strategy') == 'index'
-            and not bstate:get(buf, 'untracked')
+            and not buffer_cache:get(buf, 'untracked')
         then
-            local filename = bstate:get(buf, 'filename')
-            local tracked_filename = bstate:get(buf, 'tracked_filename')
+            local filename = buffer_cache:get(buf, 'filename')
+            local tracked_filename = buffer_cache:get(buf, 'tracked_filename')
             local err = git.unstage_file(tracked_filename)
             scheduler()
             if not err then
@@ -1130,23 +1136,24 @@ M.unstage_buffer = throttle_leading(
                 scheduler()
                 local tracked_remote_filename = git.tracked_remote_filename(filename)
                 scheduler()
-                bstate:set(buf, 'tracked_filename', tracked_filename)
-                bstate:set(buf, 'tracked_remote_filename', tracked_remote_filename)
+                buffer_cache:set(buf, 'tracked_filename', tracked_filename)
+                buffer_cache:set(buf, 'tracked_remote_filename', tracked_remote_filename)
                 if tracked_filename and tracked_filename ~= '' then
-                    bstate:set(buf, 'untracked', false)
+                    buffer_cache:set(buf, 'untracked', false)
                     local hunks_err, calculated_hunks = git.index_hunks(tracked_filename)
                     scheduler()
                     if not hunks_err then
-                        bstate:set(buf, 'hunks', calculated_hunks)
+                        buffer_cache:set(buf, 'hunks', calculated_hunks)
                         ui.hide_hunk_signs(buf)
                         ui.show_hunk_signs(buf, calculated_hunks)
                     else
                         logger.debug(err, 'init.lua/unstage_buffer')
                     end
                 else
-                    bstate:set(buf, 'untracked', true)
+                    buffer_cache:set(buf, 'untracked', true)
                     local hunks = git.untracked_hunks(buffer.get_lines(buf))
-                    bstate:set(buf, 'hunks', hunks)
+                    scheduler()
+                    buffer_cache:set(buf, 'hunks', hunks)
                     ui.hide_hunk_signs(buf)
                     ui.show_hunk_signs(buf, hunks)
                 end
@@ -1187,7 +1194,7 @@ M.set_diff_base = throttle_leading(
         else
             git.set_diff_base(diff_base)
             if state:get('diff_strategy') == 'remote' then
-                local buf_states = bstate:get_buf_states()
+                local buf_states = buffer_cache:get_buf_states()
                 for buf, buf_state in pairs(buf_states) do
                     local hunks_err, hunks = git.remote_hunks(buf_state:get('tracked_filename'))
                     scheduler()
@@ -1216,24 +1223,6 @@ M.set_diff_preference = throttle_leading(
             return
         end
         state:set('diff_preference', preference)
-        local popup = ui.get_mounted_popup()
-        if not vim.tbl_isempty(popup) then
-            local view_fn_map = {
-                horizontal_preview = M.buffer_preview,
-                vertical_preview = M.buffer_preview,
-                staged_horizontal_preview = M.staged_buffer_preview,
-                staged_vertical_preview = M.staged_buffer_preview,
-                horizontal_history = M.buffer_history,
-                vertical_history = M.buffer_history,
-                vertical_diff = M.diff,
-                horizontal_diff = M.diff,
-            }
-            local fn = view_fn_map[popup:get_name()]
-            if fn then
-                popup:unmount()
-                fn(buffer.current())
-            end
-        end
     end),
     state:get('action_delay_ms')
 )
@@ -1249,7 +1238,7 @@ M.set_diff_strategy = throttle_leading(
             return
         end
         state:set('diff_strategy', preference)
-        bstate:for_each(function(buf, buf_state)
+        buffer_cache:for_each(function(buf, buf_state)
             if buffer.is_valid(buf) then
                 local hunks_err, hunks = calculate_hunks(buf)
                 scheduler()

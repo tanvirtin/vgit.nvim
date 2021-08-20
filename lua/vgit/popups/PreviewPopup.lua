@@ -1,4 +1,5 @@
-local paint = require('vgit.paint')
+local Object = require('plenary.class')
+local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
 local localization = require('vgit.localization')
@@ -6,12 +7,7 @@ local View = require('vgit.View')
 local Widget = require('vgit.Widget')
 local t = localization.translate
 
-local vim = vim
-
-local PreviewPopup = {}
-PreviewPopup.__index = PreviewPopup
-
-local state = Interface.new({
+local state = Interface:new({
     priority = 10,
     horizontal_window = {
         title = t('preview/horizontal'),
@@ -37,32 +33,14 @@ local state = Interface.new({
     },
 })
 
-local function setup(config)
-    state:assign(config)
-end
-
-local function parse_hunk_diff(diff)
-    local removed_lines = {}
-    local added_lines = {}
-    for i = 1, #diff do
-        local line = diff[i]
-        local type = line:sub(1, 1)
-        local cleaned_diff_line = line:sub(2, #line)
-        if type == '+' then
-            added_lines[#added_lines + 1] = cleaned_diff_line
-        elseif type == '-' then
-            removed_lines[#removed_lines + 1] = cleaned_diff_line
-        end
-    end
-    return removed_lines, added_lines
-end
+local PreviewPopup = Object:extend()
 
 local function create_horizontal_widget(opts)
     local height = math.ceil(dimensions.global_height() - 4)
     local width = math.ceil(dimensions.global_width() * 0.8)
     local col = math.ceil((dimensions.global_width() - width) / 2) - 1
-    return Widget.new({
-        preview = View.new({
+    return Widget:new({
+        preview = View:new({
             filetype = opts.filetype,
             title = state:get('horizontal_window').title,
             border = state:get('horizontal_window').border,
@@ -78,8 +56,6 @@ local function create_horizontal_widget(opts)
                 col = col,
             },
         }),
-    }, {
-        name = opts.name,
     })
 end
 
@@ -87,8 +63,8 @@ local function create_vertical_widget(opts)
     local height = math.ceil(dimensions.global_height() - 4)
     local width = math.ceil(dimensions.global_width() * 0.485)
     local col = math.ceil((dimensions.global_width() - (width * 2)) / 2) - 1
-    return Widget.new({
-        previous = View.new({
+    return Widget:new({
+        previous = View:new({
             filetype = opts.filetype,
             title = state:get('previous_window').title,
             border = state:get('previous_window').border,
@@ -108,7 +84,7 @@ local function create_vertical_widget(opts)
                 col = col,
             },
         }),
-        current = View.new({
+        current = View:new({
             filetype = opts.filetype,
             title = state:get('current_window').title,
             border = state:get('current_window').border,
@@ -128,12 +104,14 @@ local function create_vertical_widget(opts)
                 col = col + width + 2,
             },
         }),
-    }, {
-        name = opts.name,
     })
 end
 
-local function new(opts)
+function PreviewPopup:setup(config)
+    state:assign(config)
+end
+
+function PreviewPopup:new(opts)
     return setmetatable({
         vertical_widget = create_vertical_widget(opts),
         horizontal_widget = create_horizontal_widget(opts),
@@ -141,14 +119,6 @@ local function new(opts)
         data = nil,
         err = nil,
     }, PreviewPopup)
-end
-
-function PreviewPopup:get_name()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    return widget:get_name()
 end
 
 function PreviewPopup:get_data()
@@ -173,6 +143,10 @@ function PreviewPopup:get_win_ids()
         widget = self.vertical_widget
     end
     return widget:get_win_ids()
+end
+
+function PreviewPopup:get_marks()
+    return self.data and self.data.marks or {}
 end
 
 function PreviewPopup:set_loading(value)
@@ -227,7 +201,7 @@ function PreviewPopup:reposition_cursor(lnum)
                 current_new_lines_added = current_new_lines_added + 1
             end
         elseif type == 'change' then
-            local removed_lines, added_lines = parse_hunk_diff(diff)
+            local removed_lines, added_lines = hunk:parse_diff()
             if self.layout_type == 'vertical' then
                 if #removed_lines ~= #added_lines and #removed_lines > #added_lines then
                     current_new_lines_added = current_new_lines_added + (#removed_lines - #added_lines)
@@ -284,7 +258,7 @@ function PreviewPopup:render()
         if self.layout_type == 'horizontal' then
             local views = widget:get_views()
             views.preview:set_lines(data.lines)
-            paint.changes(function()
+            painter.draw_changes(function()
                 return views.preview:get_buf()
             end, data.lnum_changes, state:get(
                 'signs'
@@ -295,7 +269,7 @@ function PreviewPopup:render()
             local views = widget:get_views()
             views.previous:set_lines(data.previous_lines)
             views.current:set_lines(data.current_lines)
-            paint.changes(function(datum)
+            painter.draw_changes(function(datum)
                 return views[datum.buftype]:get_buf()
             end, data.lnum_changes, state:get(
                 'signs'
@@ -307,7 +281,4 @@ function PreviewPopup:render()
     return self
 end
 
-return {
-    new = new,
-    setup = setup,
-}
+return PreviewPopup
