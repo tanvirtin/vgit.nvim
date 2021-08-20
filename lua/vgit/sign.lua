@@ -11,18 +11,18 @@ M.state = Interface.new({
     VGitViewSignAdd = {
         name = 'VGitViewSignAdd',
         line_hl = 'VGitViewSignAdd',
-        text_hl = 'VGitViewTextAdd',
+        text_hl = nil,
         num_hl = nil,
         icon = nil,
-        text = '+',
+        text = '',
     },
     VGitViewSignRemove = {
         name = 'VGitViewSignRemove',
         line_hl = 'VGitViewSignRemove',
-        text_hl = 'VGitViewTextRemove',
+        text_hl = nil,
         num_hl = nil,
         icon = nil,
-        text = '-',
+        text = '',
     },
     VGitSignAdd = {
         name = 'VGitSignAdd',
