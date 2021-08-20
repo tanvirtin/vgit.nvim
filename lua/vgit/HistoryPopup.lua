@@ -1,3 +1,4 @@
+local paint = require('vgit.paint')
 local virtual_text = require('vgit.virtual_text')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
@@ -49,49 +50,6 @@ local state = Interface.new({
 
 local function setup(config)
     state:assign(config)
-end
-
-local function colorize_buf(lnum_changes, callback)
-    local ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/colorize')
-    for i = 1, #lnum_changes do
-        local datum = lnum_changes[i]
-        local buf = callback(datum)
-        local defined_sign = state:get('signs')[datum.type]
-        local priority = state:get('priority')
-        if defined_sign then
-            sign.place(buf, datum.lnum, defined_sign, priority)
-        end
-        if datum.type == 'void' then
-            virtual_text.add(buf, ns_id, datum.lnum - 1, 0, {
-                id = datum.lnum,
-                virt_text = { { string.rep('⣿', vim.api.nvim_win_get_width(0)), 'VGitMuted' } },
-                virt_text_pos = 'overlay',
-            })
-        end
-        local texts = {}
-        if datum.word_diff then
-            local offset = 0
-            for j = 1, #datum.word_diff do
-                local segment = datum.word_diff[j]
-                local operation, fragment = unpack(segment)
-                if operation == -1 then
-                    texts[#texts + 1] = {
-                        fragment,
-                        string.format('VGitViewWord%s', datum.type == 'remove' and 'Remove' or 'Add'),
-                    }
-                elseif operation == 0 then
-                    texts[#texts + 1] = {
-                        fragment,
-                        nil,
-                    }
-                end
-                if operation == 0 or operation == -1 then
-                    offset = offset + #fragment
-                end
-            end
-            virtual_text.transpose_line(buf, texts, ns_id, datum.lnum - 1)
-        end
-    end
 end
 
 local function colorize_indicator(buf, lnum, namespace)
@@ -412,9 +370,13 @@ function HistoryPopup:render()
             views.preview:set_cursor(1, 0)
             views.preview:set_lines(data.lines)
             sign.unplace(views.preview:get_buf())
-            colorize_buf(data.lnum_changes, function()
+            paint.changes(function()
                 return views.preview:get_buf()
-            end)
+            end, data.lnum_changes, state:get(
+                'signs'
+            ), state:get(
+                'priority'
+            ))
         else
             views.previous:set_cursor(1, 0)
             views.current:set_cursor(1, 0)
@@ -422,9 +384,13 @@ function HistoryPopup:render()
             views.current:set_lines(data.current_lines)
             sign.unplace(views.previous:get_buf())
             sign.unplace(views.current:get_buf())
-            colorize_buf(data.lnum_changes, function(datum)
+            paint.changes(function(datum)
                 return views[datum.buftype]:get_buf()
-            end)
+            end, data.lnum_changes, state:get(
+                'signs'
+            ), state:get(
+                'priority'
+            ))
         end
         views.history:set_lines(create_history_lines(data.logs))
         colorize_indicator(views.history:get_buf(), self.selected - 1, self.history_namespace)
