@@ -1300,7 +1300,7 @@ M.setup = function(config)
     else
         state:set('instantiated', true)
     end
-    state:set('config', config)
+    state:set('config', config or {})
     events.setup()
     state:assign(config)
     highlighter.setup(config)

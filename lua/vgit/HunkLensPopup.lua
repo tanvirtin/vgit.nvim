@@ -1,8 +1,7 @@
-local virtual_text = require('vgit.highlighter')
+local paint = require('vgit.paint')
 local Interface = require('vgit.Interface')
 local View = require('vgit.View')
 local Widget = require('vgit.Widget')
-local sign = require('vgit.sign')
 
 local vim = vim
 
@@ -23,42 +22,6 @@ local state = Interface.new({
 
 local function setup(config)
     state:assign(config)
-end
-
-local function colorize_buf(lnum_changes, callback)
-    local ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/colorize')
-    for i = 1, #lnum_changes do
-        local datum = lnum_changes[i]
-        local buf = callback(datum)
-        local defined_sign = state:get('signs')[datum.type]
-        local priority = state:get('priority')
-        if defined_sign then
-            sign.place(buf, datum.lnum, defined_sign, priority)
-        end
-        local texts = {}
-        if datum.word_diff then
-            local offset = 0
-            for j = 1, #datum.word_diff do
-                local segment = datum.word_diff[j]
-                local operation, fragment = unpack(segment)
-                if operation == -1 then
-                    texts[#texts + 1] = {
-                        fragment,
-                        string.format('VGitViewWord%s', datum.type == 'remove' and 'Remove' or 'Add'),
-                    }
-                elseif operation == 0 then
-                    texts[#texts + 1] = {
-                        fragment,
-                        nil,
-                    }
-                end
-                if operation == 0 or operation == -1 then
-                    offset = offset + #fragment
-                end
-            end
-            virtual_text.transpose_line(buf, texts, ns_id, datum.lnum - 1)
-        end
-    end
 end
 
 local function new(opts)
@@ -202,9 +165,11 @@ function HunkLensPopup:render()
                 v:set_height(v:get_min_height())
             end
         end
-        colorize_buf(data.lnum_changes, function()
+        paint.changes(function()
             return v:get_buf()
-        end)
+        end, data.lnum_changes, state:get('signs'), state:get(
+            'priority'
+        ))
     end
     return self
 end
