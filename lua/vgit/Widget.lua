@@ -1,20 +1,17 @@
+local Object = require('plenary.class')
 local events = require('vgit.events')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 
-local vim = vim
+local Widget = Object:extend()
 
-local Widget = {}
-Widget.__index = Widget
-
-local function new(views, opts)
+function Widget:new(views, opts)
     assert(type(views) == 'table', 'type error :: expected table')
     assert(type(opts) == 'table' or type(opts) == 'nil', 'type error :: expected string or nil')
     return setmetatable({
         views = views,
         state = { mounted = false },
-        popup = opts.popup,
-        name = opts.name,
+        popup = opts and opts.popup or false,
         parent_buf = vim.api.nvim_get_current_buf(),
     }, Widget)
 end
@@ -41,10 +38,6 @@ function Widget:set_error(value)
         v:set_error(value)
     end
     return self
-end
-
-function Widget:get_name()
-    return self.name
 end
 
 function Widget:get_views()
@@ -111,4 +104,4 @@ function Widget:unmount()
     self.mounted = false
 end
 
-return { new = new }
+return Widget

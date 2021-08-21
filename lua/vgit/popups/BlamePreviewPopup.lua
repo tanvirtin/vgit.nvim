@@ -1,14 +1,11 @@
+local utils = require('vgit.utils')
+local Object = require('plenary.class')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
 local View = require('vgit.View')
 local Widget = require('vgit.Widget')
 
-local vim = vim
-
-local BlamePreviewPopup = {}
-BlamePreviewPopup.__index = BlamePreviewPopup
-
-local state = Interface.new({
+local state = Interface:new({
     blame_window = {
         border = { '╭', '─', '─', '│', '─', '─', '╰', '│' },
         border_hl = 'VGitBorder',
@@ -19,21 +16,19 @@ local state = Interface.new({
     },
 })
 
-local function round(x)
-    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
-end
+local BlamePreviewPopup = Object:extend()
 
-local function setup(config)
+function BlamePreviewPopup:setup(config)
     state:assign(config)
 end
 
-local function new(opts)
+function BlamePreviewPopup:new(opts)
     local height = dimensions.global_height()
     local blame_width = math.ceil(dimensions.global_width() * 0.40)
     local preview_width = math.ceil(dimensions.global_width() * 0.60)
     return setmetatable({
-        widget = Widget.new({
-            blame = View.new({
+        widget = Widget:new({
+            blame = View:new({
                 border = state:get('blame_window').border,
                 border_hl = state:get('blame_window').border_hl,
                 win_options = {
@@ -51,7 +46,7 @@ local function new(opts)
                     col = 0,
                 },
             }),
-            preview = View.new({
+            preview = View:new({
                 border = state:get('preview_window').border,
                 border_hl = state:get('preview_window').border_hl,
                 win_options = {
@@ -71,7 +66,6 @@ local function new(opts)
                 filetype = opts.filetype,
             }),
         }, {
-            name = 'blame_preview_popup',
             popup = true,
         }),
         data = {
@@ -79,10 +73,6 @@ local function new(opts)
         },
         err = nil,
     }, BlamePreviewPopup)
-end
-
-function BlamePreviewPopup:get_name()
-    return self.widget:get_name()
 end
 
 function BlamePreviewPopup:get_data()
@@ -140,13 +130,13 @@ end
 
 local function get_blame_line(blame)
     local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
-    local time_format = string.format('%s days ago', round(time))
+    local time_format = string.format('%s days ago', utils.round(time))
     local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
     local division_counter = 1
     while time < 1 and division_counter ~= #time_divisions do
         local division = time_divisions[division_counter]
         time = time * division[1]
-        time_format = string.format('%s %s ago', round(time), division[2])
+        time_format = string.format('%s %s ago', utils.round(time), division[2])
         division_counter = division_counter + 1
     end
     if blame.committed then
@@ -196,7 +186,4 @@ function BlamePreviewPopup:render()
     return self
 end
 
-return {
-    new = new,
-    setup = setup,
-}
+return BlamePreviewPopup

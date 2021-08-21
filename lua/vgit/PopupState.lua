@@ -1,7 +1,8 @@
-local PopupState = {}
-PopupState.__index = PopupState
+local Object = require('plenary.class')
 
-local function new()
+local PopupState = Object:extend()
+
+function PopupState:new()
     return setmetatable({ current = {} }, PopupState)
 end
 
@@ -27,4 +28,4 @@ function PopupState:clear()
     return self
 end
 
-return { new = new }
+return PopupState

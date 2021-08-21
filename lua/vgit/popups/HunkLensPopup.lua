@@ -1,14 +1,11 @@
-local paint = require('vgit.paint')
+local Object = require('plenary.class')
+local painter = require('vgit.painter')
+local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
 local View = require('vgit.View')
 local Widget = require('vgit.Widget')
 
-local vim = vim
-
-local HunkLensPopup = {}
-HunkLensPopup.__index = HunkLensPopup
-
-local state = Interface.new({
+local state = Interface:new({
     priority = 10,
     window = {
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
@@ -20,46 +17,34 @@ local state = Interface.new({
     },
 })
 
-local function setup(config)
+local HunkLensPopup = Object:extend()
+
+function HunkLensPopup:setup(config)
     state:assign(config)
 end
 
-local function new(opts)
+function HunkLensPopup:new(opts)
     return setmetatable({
-        widget = Widget.new({
-            View.new({
+        widget = Widget:new({
+            View:new({
                 border = state:get('window').border,
                 border_hl = state:get('window').border_hl,
                 win_options = { ['cursorline'] = true },
                 window_props = {
                     style = 'minimal',
                     relative = 'cursor',
-                    width = vim.api.nvim_get_option('columns'),
+                    width = dimensions.global_width(),
                     row = 0,
                     col = 0,
                 },
                 filetype = opts.filetype,
             }),
         }, {
-            name = 'hunk_lens',
             popup = true,
         }),
-        data = {
-            -- TODO: NEED TO BE A defined DTO
-            lines = {},
-            current_lines = {},
-            previous_lines = {},
-            hunk = { diff = {} },
-            hunks = {},
-            lnum_changes = {},
-            marks = {},
-        },
+        data = nil,
         err = nil,
     }, HunkLensPopup)
-end
-
-function HunkLensPopup:get_name()
-    return self.widget:get_name()
 end
 
 function HunkLensPopup:get_data()
@@ -72,6 +57,10 @@ end
 
 function HunkLensPopup:get_win_ids()
     return self.widget:get_win_ids()
+end
+
+function HunkLensPopup:get_marks()
+    return self.data and self.data.diff_change and self.data.diff_change.marks or {}
 end
 
 function HunkLensPopup:set_loading(value)
@@ -103,8 +92,9 @@ end
 
 function HunkLensPopup:reposition_cursor(lnum)
     local new_lines_added = 0
-    for i = 1, #self.data.hunks do
-        local hunk = self.data.hunks[i]
+    local hunks = self.data.diff_change.hunks
+    for i = 1, #hunks do
+        local hunk = hunks[i]
         local type = hunk.type
         local diff = hunk.diff
         local current_new_lines_added = 0
@@ -156,8 +146,8 @@ function HunkLensPopup:render()
     if data then
         local views = self.widget:get_views()
         local v = views[1]
-        v:set_lines(data.lines)
-        local new_width = #data.hunk.diff
+        v:set_lines(data.diff_change.lines)
+        local new_width = #data.selected_hunk.diff
         if new_width ~= 0 then
             if new_width > v:get_min_height() then
                 v:set_height(new_width)
@@ -165,16 +155,15 @@ function HunkLensPopup:render()
                 v:set_height(v:get_min_height())
             end
         end
-        paint.changes(function()
+        painter.draw_changes(function()
             return v:get_buf()
-        end, data.lnum_changes, state:get('signs'), state:get(
+        end, data.diff_change.lnum_changes, state:get(
+            'signs'
+        ), state:get(
             'priority'
         ))
     end
     return self
 end
 
-return {
-    new = new,
-    setup = setup,
-}
+return HunkLensPopup

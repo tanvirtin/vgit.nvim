@@ -1,6 +1,5 @@
 local fs = require('vgit.fs')
 
-local vim = vim
 local it = it
 local describe = describe
 local after_each = after_each
