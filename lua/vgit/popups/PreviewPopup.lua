@@ -37,7 +37,7 @@ local PreviewPopup = Object:extend()
 
 local function create_horizontal_widget(opts)
     local height = math.ceil(dimensions.global_height() - 4)
-    local width = math.ceil(dimensions.global_width() * 0.8)
+    local width = math.ceil(dimensions.global_width() * 0.85)
     local col = math.ceil((dimensions.global_width() - width) / 2) - 1
     return Widget:new({
         preview = View:new({
@@ -250,6 +250,7 @@ function PreviewPopup:render()
         widget = self.vertical_widget
     end
     local err, data = self.err, self.data
+    widget:clear()
     if err then
         widget:set_error(true)
         return self

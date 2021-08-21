@@ -99,13 +99,15 @@ function BlamePopup:unmount()
 end
 
 function BlamePopup:render()
+    local widget = self.widget
     local err, blame = self.err, self.data
+    widget:clear()
     if err then
-        self.widget:set_error(true)
+        widget:set_error(true)
         return self
     end
     if blame then
-        local view = self.widget:get_views()[1]
+        local view = widget:get_views()[1]
         if not blame.committed then
             local uncommitted_lines = create_uncommitted_lines(blame)
             view:set_lines(uncommitted_lines)
