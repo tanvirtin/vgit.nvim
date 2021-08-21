@@ -1,10 +1,8 @@
 local Interface = require('vgit.Interface')
 
-local vim = vim
-
 local M = {}
 
-M.state = Interface.new({
+M.state = Interface:new({
     debug = false,
     debug_logs = {},
 })

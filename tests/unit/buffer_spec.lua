@@ -1,7 +1,6 @@
 local mock = require('luassert.mock')
 local buffer = require('vgit.buffer')
 
-local vim = vim
 local it = it
 local describe = describe
 local after_each = after_each

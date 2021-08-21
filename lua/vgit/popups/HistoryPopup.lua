@@ -1,4 +1,5 @@
-local paint = require('vgit.paint')
+local Object = require('plenary.class')
+local painter = require('vgit.painter')
 local virtual_text = require('vgit.virtual_text')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
@@ -8,12 +9,7 @@ local Widget = require('vgit.Widget')
 local sign = require('vgit.sign')
 local t = localization.translate
 
-local vim = vim
-
-local HistoryPopup = {}
-HistoryPopup.__index = HistoryPopup
-
-local state = Interface.new({
+local state = Interface:new({
     priority = 10,
     signs = {
         add = 'VGitViewSignAdd',
@@ -47,10 +43,6 @@ local state = Interface.new({
         border_focus_hl = 'VGitBorderFocus',
     },
 })
-
-local function setup(config)
-    state:assign(config)
-end
 
 local function colorize_indicator(buf, lnum, namespace)
     virtual_text.transpose_text(buf, '>', namespace, state:get('indicator').hl, lnum, 0)
@@ -98,7 +90,7 @@ local function create_horizontal_widget(opts)
     local width = math.ceil(dimensions.global_width() * 0.8)
     local col = math.ceil((dimensions.global_width() - width) / 2) - 1
     local views = {
-        preview = View.new({
+        preview = View:new({
             filetype = opts.filetype,
             border = state:get('horizontal_window').border,
             border_hl = state:get('horizontal_window').border_hl,
@@ -123,7 +115,7 @@ local function create_horizontal_widget(opts)
                 col = col,
             },
         }),
-        history = View.new({
+        history = View:new({
             title = state:get('history_window').title,
             border = state:get('history_window').border,
             border_hl = state:get('history_window').border_hl,
@@ -150,7 +142,7 @@ local function create_horizontal_widget(opts)
             },
         }),
     }
-    return Widget.new(views, { name = 'horizontal_history' })
+    return Widget:new(views)
 end
 
 local function create_vertical_widget(opts)
@@ -158,7 +150,7 @@ local function create_vertical_widget(opts)
     local width = math.ceil(dimensions.global_width() * 0.485)
     local col = math.ceil((dimensions.global_width() - (width * 2)) / 2) - 1
     local views = {
-        previous = View.new({
+        previous = View:new({
             filetype = opts.filetype,
             border = state:get('previous_window').border,
             border_hl = state:get('previous_window').border_hl,
@@ -185,7 +177,7 @@ local function create_vertical_widget(opts)
                 col = col,
             },
         }),
-        current = View.new({
+        current = View:new({
             filetype = opts.filetype,
             title = state:get('current_window').title,
             border = state:get('current_window').border,
@@ -212,7 +204,7 @@ local function create_vertical_widget(opts)
                 col = col + width + 2,
             },
         }),
-        history = View.new({
+        history = View:new({
             title = state:get('history_window').title,
             border = state:get('history_window').border,
             border_hl = state:get('history_window').border_hl,
@@ -239,10 +231,16 @@ local function create_vertical_widget(opts)
             },
         }),
     }
-    return Widget.new(views, { name = 'vertical_history' })
+    return Widget:new(views)
 end
 
-local function new(opts)
+local HistoryPopup = Object:extend()
+
+function HistoryPopup:setup(config)
+    state:assign(config)
+end
+
+function HistoryPopup:new(opts)
     return setmetatable({
         vertical_widget = create_vertical_widget(opts),
         horizontal_widget = create_horizontal_widget(opts),
@@ -270,20 +268,16 @@ function HistoryPopup:get_preview_win_ids()
     return { widget:get_views().preview:get_win_id() }
 end
 
-function HistoryPopup:get_name()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    return widget:get_name()
-end
-
 function HistoryPopup:get_win_ids()
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
     end
     return widget:get_win_ids()
+end
+
+function HistoryPopup:get_marks()
+    return self.data and self.data.diff_change and self.data.diff_change.marks or {}
 end
 
 function HistoryPopup:set_loading(value)
@@ -351,6 +345,8 @@ function HistoryPopup:render()
         return self
     end
     if data then
+        local logs = data.logs
+        local diff_change = data.diff_change
         local views = widget:get_views()
         if err then
             local no_commits_str = 'does not have any commits yet'
@@ -368,11 +364,11 @@ function HistoryPopup:render()
         end
         if self.layout_type == 'horizontal' then
             views.preview:set_cursor(1, 0)
-            views.preview:set_lines(data.lines)
+            views.preview:set_lines(diff_change.lines)
             sign.unplace(views.preview:get_buf())
-            paint.changes(function()
+            painter.draw_changes(function()
                 return views.preview:get_buf()
-            end, data.lnum_changes, state:get(
+            end, diff_change.lnum_changes, state:get(
                 'signs'
             ), state:get(
                 'priority'
@@ -380,25 +376,22 @@ function HistoryPopup:render()
         else
             views.previous:set_cursor(1, 0)
             views.current:set_cursor(1, 0)
-            views.previous:set_lines(data.previous_lines)
-            views.current:set_lines(data.current_lines)
+            views.previous:set_lines(diff_change.previous_lines)
+            views.current:set_lines(diff_change.current_lines)
             sign.unplace(views.previous:get_buf())
             sign.unplace(views.current:get_buf())
-            paint.changes(function(datum)
+            painter.draw_changes(function(datum)
                 return views[datum.buftype]:get_buf()
-            end, data.lnum_changes, state:get(
+            end, diff_change.lnum_changes, state:get(
                 'signs'
             ), state:get(
                 'priority'
             ))
         end
-        views.history:set_lines(create_history_lines(data.logs))
+        views.history:set_lines(create_history_lines(logs))
         colorize_indicator(views.history:get_buf(), self.selected - 1, self.history_namespace)
     end
     return self
 end
 
-return {
-    new = new,
-    setup = setup,
-}
+return HistoryPopup

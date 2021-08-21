@@ -1,15 +1,11 @@
+local Object = require('plenary.class')
 local assert = require('vgit.assertion').assert
-local Interface = {}
-Interface.__index = Interface
 
-local vim = vim
+local Interface = Object:extend()
 
-local function new(state)
+function Interface:new(state)
     assert(type(state) == 'nil' or type(state) == 'table', 'type error :: expected table or nil')
-    if type(state) ~= 'table' then
-        return setmetatable({ data = {} }, Interface)
-    end
-    return setmetatable({ data = state }, Interface)
+    return setmetatable({ data = type(state) == 'table' and state or {} }, Interface)
 end
 
 function Interface:get(key)
@@ -52,4 +48,4 @@ function Interface:assign(config)
     return
 end
 
-return { new = new }
+return Interface

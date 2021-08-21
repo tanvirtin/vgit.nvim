@@ -1,53 +1,19 @@
-local dmp = require('vgit.lib.dmp')
+local utils = require('vgit.utils')
 local Job = require('plenary.job')
+local Hunk = require('vgit.Hunk')
 local Interface = require('vgit.Interface')
-local ImmutableInterface = require('vgit.ImmutableInterface')
-local a = require('plenary.async')
-local void = a.void
-local wrap = a.wrap
-
-local vim = vim
-
-local function parse_hunk_diff(diff)
-    local removed_lines = {}
-    local added_lines = {}
-    for i = 1, #diff do
-        local line = diff[i]
-        local type = line:sub(1, 1)
-        local cleaned_diff_line = line:sub(2, #line)
-        if type == '+' then
-            added_lines[#added_lines + 1] = cleaned_diff_line
-        elseif type == '-' then
-            removed_lines[#removed_lines + 1] = cleaned_diff_line
-        end
-    end
-    return removed_lines, added_lines
-end
-
-local function parse_hunk_header(line)
-    local diffkey = vim.trim(vim.split(line, '@@', true)[2])
-    local parsed_diffkey = vim.split(diffkey, ' ')
-    local parsed_header = {}
-    for i = 1, #parsed_diffkey do
-        parsed_header[#parsed_header + 1] = vim.split(string.sub(parsed_diffkey[i], 2), ',')
-    end
-    local previous, current = parsed_header[1], parsed_header[2]
-    previous[1] = tonumber(previous[1])
-    previous[2] = tonumber(previous[2]) or 1
-    current[1] = tonumber(current[1])
-    current[2] = tonumber(current[2]) or 1
-    return previous, current
-end
+local wrap = require('plenary.async.async').wrap
+local void = require('plenary.async.async').void
 
 local M = {}
 
-M.constants = ImmutableInterface.new({
+M.constants = utils.readonly({
     diff_algorithm = 'myers',
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
     job_timeout = 30000,
 })
 
-M.state = Interface.new({
+M.state = Interface:new({
     diff_base = 'HEAD',
     config = {},
 })
@@ -108,46 +74,6 @@ M.create_log = function(line)
         author_email = log[5],
         summary = log[6]:sub(1, #log[6] - 1),
     }
-end
-
-M.create_hunk = function(header)
-    local previous, current = parse_hunk_header(header)
-    local hunk = {
-        header = header,
-        start = current[1],
-        finish = current[1] + current[2] - 1,
-        type = nil,
-        diff = {},
-    }
-    if current[2] == 0 then
-        -- If it's a straight remove with no change, then highlight only one sign column.
-        hunk.finish = hunk.start
-        hunk.type = 'remove'
-    elseif previous[2] == 0 then
-        hunk.type = 'add'
-    else
-        hunk.type = 'change'
-    end
-    return hunk
-end
-
-M.create_patch = function(filename, hunk)
-    local header = hunk.header
-    if hunk.type == 'add' then
-        local previous, current = parse_hunk_header(header)
-        header = string.format('@@ -%s,%s +%s,%s @@', previous[1], 0, previous[1] + 1, current[2])
-    end
-    local patch = {
-        string.format('diff --git a/%s b/%s', filename, filename),
-        'index 000000..000000',
-        string.format('--- a/%s', filename),
-        string.format('+++ a/%s', filename),
-        header,
-    }
-    for i = 1, #hunk.diff do
-        patch[#patch + 1] = hunk.diff[i]
-    end
-    return patch
 end
 
 M.create_blame = function(info)
@@ -363,7 +289,7 @@ M.logs = wrap(function(filename, callback)
             filename,
         },
     })
-    job:sync(M.constants:get('job_timeout'))
+    job:sync(M.constants.job_timeout)
     local result = job:result()
     for i = 1, #result do
         local line = result[i]
@@ -388,7 +314,7 @@ M.file_hunks = wrap(function(filename_a, filename_b, callback)
         'core.safecrlf=false',
         'diff',
         '--color=never',
-        string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
+        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
         '--patch-with-raw',
         '--unified=0',
         '--no-index',
@@ -412,7 +338,7 @@ M.file_hunks = wrap(function(filename_a, filename_b, callback)
             for i = 1, #result do
                 local line = result[i]
                 if vim.startswith(line, '@@') then
-                    hunks[#hunks + 1] = M.create_hunk(line)
+                    hunks[#hunks + 1] = Hunk:new(line)
                 else
                     if #hunks > 0 then
                         local hunk = hunks[#hunks]
@@ -435,7 +361,7 @@ M.index_hunks = wrap(function(filename, callback)
         'core.safecrlf=false',
         'diff',
         '--color=never',
-        string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
+        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
         '--patch-with-raw',
         '--unified=0',
         '--',
@@ -458,7 +384,7 @@ M.index_hunks = wrap(function(filename, callback)
             for i = 1, #result do
                 local line = result[i]
                 if vim.startswith(line, '@@') then
-                    hunks[#hunks + 1] = M.create_hunk(line)
+                    hunks[#hunks + 1] = Hunk:new(line)
                 else
                     if #hunks > 0 then
                         local hunk = hunks[#hunks]
@@ -481,7 +407,7 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
         'core.safecrlf=false',
         'diff',
         '--color=never',
-        string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
+        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
         '--patch-with-raw',
         '--unified=0',
         M.state:get('diff_base'),
@@ -495,7 +421,7 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
             'core.safecrlf=false',
             'diff',
             '--color=never',
-            string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
+            string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
             '--patch-with-raw',
             '--unified=0',
             parent_hash,
@@ -510,10 +436,10 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
             'core.safecrlf=false',
             'diff',
             '--color=never',
-            string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
+            string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
             '--patch-with-raw',
             '--unified=0',
-            #parent_hash > 0 and parent_hash or M.constants:get('empty_tree_hash'),
+            #parent_hash > 0 and parent_hash or M.constants.empty_tree_hash,
             commit_hash,
             '--',
             filename,
@@ -536,7 +462,7 @@ M.remote_hunks = wrap(function(filename, parent_hash, commit_hash, callback)
             for i = 1, #result do
                 local line = result[i]
                 if vim.startswith(line, '@@') then
-                    hunks[#hunks + 1] = M.create_hunk(line)
+                    hunks[#hunks + 1] = Hunk:new(line)
                 else
                     if #hunks > 0 then
                         local hunk = hunks[#hunks]
@@ -559,7 +485,7 @@ M.staged_hunks = wrap(function(filename, callback)
         'core.safecrlf=false',
         'diff',
         '--color=never',
-        string.format('--diff-algorithm=%s', M.constants:get('diff_algorithm')),
+        string.format('--diff-algorithm=%s', M.constants.diff_algorithm),
         '--patch-with-raw',
         '--unified=0',
         '--cached',
@@ -583,7 +509,7 @@ M.staged_hunks = wrap(function(filename, callback)
             for i = 1, #result do
                 local line = result[i]
                 if vim.startswith(line, '@@') then
-                    hunks[#hunks + 1] = M.create_hunk(line)
+                    hunks[#hunks + 1] = Hunk:new(line)
                 else
                     if #hunks > 0 then
                         local hunk = hunks[#hunks]
@@ -789,7 +715,7 @@ M.tracked_filename = wrap(function(filename)
             filename,
         },
     })
-    job:sync(M.constants:get('job_timeout'))
+    job:sync(M.constants.job_timeout)
     local result = job:result()
     return result[1] or ''
 end, 1)
@@ -804,7 +730,7 @@ M.tracked_remote_filename = wrap(function(filename)
             filename,
         },
     })
-    job:sync(M.constants:get('job_timeout'))
+    job:sync(M.constants.job_timeout)
     local result = job:result()
     return result[1] or ''
 end, 1)
@@ -839,281 +765,5 @@ M.ls_changed = wrap(function(callback)
     })
     job:start()
 end, 1)
-
-M.horizontal_diff = wrap(function(lines, hunks, callback)
-    if #hunks == 0 then
-        -- TODO: NEED TO BE A defined DTO
-        return callback(nil, {
-            lines = lines,
-            hunk = { diff = {} },
-            hunks = hunks,
-            lnum_changes = {},
-            marks = {},
-        })
-    end
-    local new_lines = {}
-    local lnum_changes = {}
-    local marks = {}
-    for key, value in pairs(lines) do
-        new_lines[key] = value
-    end
-    local new_lines_added = 0
-    for i = 1, #hunks do
-        local hunk = hunks[i]
-        local type = hunk.type
-        local diff = hunk.diff
-        local start = hunk.start + new_lines_added
-        local finish = hunk.finish + new_lines_added
-        if type == 'add' then
-            marks[#marks + 1] = {
-                type = type,
-                start = start,
-                finish = finish,
-            }
-            for j = start, finish do
-                lnum_changes[#lnum_changes + 1] = {
-                    lnum = j,
-                    type = 'add',
-                }
-            end
-        elseif type == 'remove' then
-            marks[#marks + 1] = {
-                type = type,
-                start = start + 1,
-                finish = nil,
-            }
-            local s = start
-            for j = 1, #diff do
-                local line = diff[j]
-                s = s + 1
-                new_lines_added = new_lines_added + 1
-                table.insert(new_lines, s, line:sub(2, #line))
-                lnum_changes[#lnum_changes + 1] = {
-                    lnum = s,
-                    type = 'remove',
-                }
-            end
-            marks[#marks].finish = start + #diff
-        elseif type == 'change' then
-            local removed_lines, added_lines = parse_hunk_diff(diff)
-            marks[#marks + 1] = {
-                type = type,
-                start = start,
-                finish = nil,
-            }
-            local s = start
-            for j = 1, #diff do
-                local line = diff[j]
-                local cleaned_line = line:sub(2, #line)
-                local line_type = line:sub(1, 1)
-                if line_type == '-' then
-                    new_lines_added = new_lines_added + 1
-                    table.insert(new_lines, s, cleaned_line)
-                    local word_diff = nil
-                    if #removed_lines == #added_lines and #added_lines < 4 then
-                        local d = dmp.diff_main(
-                            cleaned_line,
-                            diff[#removed_lines + j]:sub(2, #diff[#removed_lines + j])
-                        )
-                        dmp.diff_cleanupSemantic(d)
-                        word_diff = d
-                    end
-                    lnum_changes[#lnum_changes + 1] = {
-                        lnum = s,
-                        type = 'remove',
-                        word_diff = word_diff,
-                    }
-                elseif line_type == '+' then
-                    local word_diff = nil
-                    if #removed_lines == #added_lines and #added_lines < 4 then
-                        local d = dmp.diff_main(
-                            cleaned_line,
-                            diff[j - #removed_lines]:sub(2, #diff[j - #removed_lines])
-                        )
-                        dmp.diff_cleanupSemantic(d)
-                        word_diff = d
-                    end
-                    lnum_changes[#lnum_changes + 1] = {
-                        lnum = s,
-                        type = 'add',
-                        word_diff = word_diff,
-                    }
-                end
-                s = s + 1
-            end
-            marks[#marks].finish = start + #diff - 1
-        end
-    end
-    -- TODO: NEED TO BE A defined DTO
-    return callback(nil, {
-        lines = new_lines,
-        hunk = { diff = {} },
-        hunks = hunks,
-        lnum_changes = lnum_changes,
-        marks = marks,
-    })
-end, 3)
-
-M.vertical_diff = wrap(function(lines, hunks, callback)
-    if #hunks == 0 then
-        -- TODO: NEED TO BE A defined DTO
-        return callback(nil, {
-            current_lines = lines,
-            previous_lines = lines,
-            hunk = { diff = {} },
-            hunks = hunks,
-            lnum_changes = {},
-            marks = {},
-        })
-    end
-    local current_lines = {}
-    local previous_lines = {}
-    local lnum_changes = {}
-    local void_line = ''
-    local marks = {}
-    -- shallow copy
-    for key, value in pairs(lines) do
-        current_lines[key] = value
-        previous_lines[key] = value
-    end
-    -- Operations below will potentially add more lines to both current and
-    -- previous data, which means, the offset needs to be added to our hunks.
-    local new_lines_added = 0
-    for i = 1, #hunks do
-        local hunk = hunks[i]
-        local type = hunk.type
-        local start = hunk.start + new_lines_added
-        local finish = hunk.finish + new_lines_added
-        local diff = hunk.diff
-        if type == 'add' then
-            marks[#marks + 1] = {
-                type = type,
-                start = start,
-                finish = finish,
-            }
-            -- Remove the line indicating that these lines were inserted in current_lines.
-            for j = start, finish do
-                previous_lines[j] = void_line
-                lnum_changes[#lnum_changes + 1] = {
-                    lnum = j,
-                    buftype = 'previous',
-                    type = 'void',
-                }
-                lnum_changes[#lnum_changes + 1] = {
-                    lnum = j,
-                    buftype = 'current',
-                    type = 'add',
-                }
-            end
-        elseif type == 'remove' then
-            marks[#marks + 1] = {
-                type = type,
-                start = start + 1,
-                finish = nil,
-            }
-            for j = 1, #diff do
-                local line = diff[j]
-                start = start + 1
-                new_lines_added = new_lines_added + 1
-                table.insert(current_lines, start, void_line)
-                table.insert(previous_lines, start, line:sub(2, #line))
-                lnum_changes[#lnum_changes + 1] = {
-                    lnum = start,
-                    buftype = 'current',
-                    type = 'void',
-                }
-                lnum_changes[#lnum_changes + 1] = {
-                    lnum = start,
-                    buftype = 'previous',
-                    type = 'remove',
-                }
-            end
-            marks[#marks].finish = finish
-        elseif type == 'change' then
-            marks[#marks + 1] = {
-                type = type,
-                start = start,
-                finish = nil,
-            }
-            -- Retrieve lines that have been removed and added without "-" and "+".
-            local removed_lines, added_lines = parse_hunk_diff(diff)
-            -- Max lines are the maximum number of lines found between added and removed lines.
-            local max_lines
-            if #removed_lines > #added_lines then
-                max_lines = #removed_lines
-            else
-                max_lines = #added_lines
-            end
-            -- Hunk finish index does not indicate the total number of lines that may have a diff.
-            -- Which is why I am inserting empty lines into both the current and previous data arrays.
-            for j = finish + 1, (start + max_lines) - 1 do
-                new_lines_added = new_lines_added + 1
-                table.insert(current_lines, j, void_line)
-                table.insert(previous_lines, j, void_line)
-            end
-            -- With the new calculated range I simply loop over and add the removed
-            -- and added lines to their corresponding arrays that contain a buffer lines.
-            for j = start, start + max_lines - 1 do
-                local recalculated_index = (j - start) + 1
-                local added_line = added_lines[recalculated_index]
-                local removed_line = removed_lines[recalculated_index]
-                if removed_line then
-                    local word_diff = nil
-                    if #removed_lines == #added_lines and #added_lines < 4 then
-                        local d = dmp.diff_main(removed_line, added_lines[recalculated_index])
-                        dmp.diff_cleanupSemantic(d)
-                        word_diff = d
-                    end
-                    lnum_changes[#lnum_changes + 1] = {
-                        lnum = j,
-                        buftype = 'previous',
-                        type = 'remove',
-                        word_diff = word_diff,
-                    }
-                end
-                if added_line then
-                    local word_diff = nil
-                    if #removed_lines == #added_lines and #added_lines < 4 then
-                        local d = dmp.diff_main(added_line, removed_lines[recalculated_index])
-                        dmp.diff_cleanupSemantic(d)
-                        word_diff = d
-                    end
-                    lnum_changes[#lnum_changes + 1] = {
-                        lnum = j,
-                        buftype = 'current',
-                        type = 'add',
-                        word_diff = word_diff,
-                    }
-                end
-                if added_line and not removed_line then
-                    lnum_changes[#lnum_changes + 1] = {
-                        lnum = j,
-                        buftype = 'previous',
-                        type = 'void',
-                    }
-                end
-                if removed_line and not added_line then
-                    lnum_changes[#lnum_changes + 1] = {
-                        lnum = j,
-                        buftype = 'current',
-                        type = 'void',
-                    }
-                end
-                previous_lines[j] = removed_line or void_line
-                current_lines[j] = added_line or void_line
-            end
-            marks[#marks].finish = finish
-        end
-    end
-    return callback(nil, {
-        -- TODO: NEED TO BE A defined DTO
-        current_lines = current_lines,
-        previous_lines = previous_lines,
-        hunk = { diff = {} },
-        hunks = hunks,
-        lnum_changes = lnum_changes,
-        marks = marks,
-    })
-end, 3)
 
 return M

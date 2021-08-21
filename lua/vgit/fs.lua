@@ -1,8 +1,6 @@
 local assert = require('vgit.assertion').assert
 local pfiletype = require('plenary.filetype')
 
-local vim = vim
-
 local M = {}
 
 M.relative_filename = function(filepath)
