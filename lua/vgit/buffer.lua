@@ -11,6 +11,10 @@ M.add_keymap = function(buf, key, action)
     })
 end
 
+M.remove_keymap = function(buf, key)
+    vim.api.nvim_buf_del_keymap(buf, 'n', key)
+end
+
 M.get_lines = function(buf, start, finish)
     start = start or 0
     finish = finish or -1

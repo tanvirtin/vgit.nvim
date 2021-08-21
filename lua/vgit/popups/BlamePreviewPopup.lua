@@ -170,13 +170,15 @@ local function get_blame_lines(blames)
 end
 
 function BlamePreviewPopup:render()
+    local widget = self.widget
     local err, data = self.err, self.data
+    widget:clear()
     local views = self.widget:get_views()
     local v = views.preview
     local vb = views.blame
     v:focus()
     if err then
-        self.widget:set_error(true)
+        widget:set_error(true)
         return self
     end
     if data then

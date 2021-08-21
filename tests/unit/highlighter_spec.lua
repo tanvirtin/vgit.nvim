@@ -1,19 +1,19 @@
-local highlighter = require('vgit.highlighter')
+local highlight = require('vgit.highlight')
 
 local it = it
 local describe = describe
 local eq = assert.are.same
 
-describe('highlighter:', function()
+describe('highlight:', function()
     describe('setup', function()
         it('should override state highlights with highlights specified through the config', function()
-            highlighter.setup({
+            highlight.setup({
                 VGitSignAdd = {
                     fg = 'red',
                     bg = nil,
                 },
             })
-            eq(highlighter.state.data.VGitSignAdd, {
+            eq(highlight.state.data.VGitSignAdd, {
                 fg = 'red',
                 bg = nil,
             })
@@ -23,7 +23,7 @@ describe('highlighter:', function()
     describe('create', function()
         it('should successfully create a highlight', function()
             local hl = 'VGitTestHighlight'
-            highlighter.create(hl, {
+            highlight.create(hl, {
                 bg = nil,
                 fg = '#464b59',
             })
