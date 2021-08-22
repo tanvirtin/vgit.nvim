@@ -138,7 +138,9 @@ function HunkLensPopup:unmount()
 end
 
 function HunkLensPopup:render()
+    local widget = self.widget
     local err, data = self.err, self.data
+    widget:clear()
     if err then
         self.widget:set_error(true)
         return self

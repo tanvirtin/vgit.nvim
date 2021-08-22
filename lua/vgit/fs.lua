@@ -58,7 +58,7 @@ M.read_file = function(filepath)
     assert(type(filepath) == 'string', 'type error :: expected string')
     local fd = vim.loop.fs_open(filepath, 'r', 438)
     if fd == nil then
-        return { 'ENOENT: File not found' }, nil
+        return { 'File not found' }, nil
     end
     local stat = vim.loop.fs_fstat(fd)
     if stat.type ~= 'file' then

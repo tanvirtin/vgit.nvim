@@ -1,4 +1,6 @@
 local Object = require('plenary.class')
+local virtual_text = require('vgit.virtual_text')
+local sign = require('vgit.sign')
 local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
 local events = require('vgit.events')
@@ -254,6 +256,11 @@ function View:add_keymap(key, action)
     return self
 end
 
+function View:remove_keymap(key)
+    buffer.remove_keymap(self:get_buf(), key)
+    return self
+end
+
 function View:focus()
     vim.api.nvim_set_current_win(self.state.win_id)
     return self
@@ -296,15 +303,61 @@ function View:set_filetype(filetype)
     painter.clear_syntax(buf)
     painter.draw_syntax(buf, filetype)
     buffer.set_option(buf, 'syntax', filetype)
+    return self
 end
 
 function View:set_cursor(row, col)
-    vim.api.nvim_win_set_cursor(self:get_win_id(), { row, col })
+    pcall(vim.api.nvim_win_set_cursor, self:get_win_id(), { row, col })
     return self
 end
 
 function View:is_mounted()
     return self.state.mounted
+end
+
+function View:create_table(labels, rows)
+    local spacing = 3
+    local lines = {}
+    local padding = {}
+    for i = 1, #rows do
+        local items = rows[i]
+        for j = 1, #items do
+            local value = items[j]
+            if padding[j] then
+                padding[j] = math.max(padding[j], #value + spacing)
+            else
+                padding[j] = spacing + #value + spacing
+            end
+        end
+    end
+    local row = string.format('%s', string.rep(' ', spacing))
+    for i = 1, #labels do
+        local label = labels[i]
+        row = string.format('%s%s%s', row, label, string.rep(' ', padding[i] - #label))
+    end
+    lines[1] = row
+    for i = 1, #rows do
+        row = string.format('%s', string.rep(' ', spacing))
+        local items = rows[i]
+        for j = 1, #items do
+            local value = items[j]
+            row = string.format('%s%s%s', row, value, string.rep(' ', padding[j] - #value))
+        end
+        lines[#lines + 1] = row
+    end
+    self:set_lines(lines)
+    return self
+end
+
+function View:add_indicator(lnum, namespace, hl)
+    virtual_text.transpose_text(self:get_buf(), '>', namespace, hl, lnum, 0)
+end
+
+function View:clear()
+    sign.unplace(self:get_buf())
+    self:set_loading(false)
+    self:set_error(false)
+    self:set_lines({})
 end
 
 function View:mount()

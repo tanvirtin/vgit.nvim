@@ -13,6 +13,7 @@ function Widget:new(views, opts)
         state = { mounted = false },
         popup = opts and opts.popup or false,
         parent_buf = vim.api.nvim_get_current_buf(),
+        parent_win = vim.api.nvim_get_current_win(),
     }, Widget)
 end
 
@@ -48,6 +49,10 @@ function Widget:get_parent_buf()
     return self.parent_buf
 end
 
+function Widget:get_parent_win()
+    return self.parent_win
+end
+
 function Widget:get_win_ids()
     local win_ids = {}
     for _, v in pairs(self.views) do
@@ -62,6 +67,12 @@ function Widget:get_bufs()
         bufs[#bufs + 1] = v:get_buf()
     end
     return bufs
+end
+
+function Widget:clear()
+    for _, v in pairs(self.views) do
+        v:clear()
+    end
 end
 
 function Widget:is_mounted()

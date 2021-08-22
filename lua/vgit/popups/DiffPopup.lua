@@ -17,38 +17,37 @@ local state = Interface:new({
         hl = 'VGitIndicator',
     },
     horizontal_window = {
-        title = t('history/horizontal'),
+        title = t('diff/horizontal'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
         border_focus_hl = 'VGitBorderFocus',
     },
     current_window = {
-        title = t('history/current'),
+        title = t('diff/current'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
         border_focus_hl = 'VGitBorderFocus',
     },
     previous_window = {
-        title = t('history/previous'),
+        title = t('diff/previous'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
         border_focus_hl = 'VGitBorderFocus',
     },
     table_window = {
-        title = t('history/table'),
+        title = t('diff/table'),
         border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
         border_hl = 'VGitBorder',
         border_focus_hl = 'VGitBorderFocus',
     },
 })
 
-local function create_horizontal_widget(opts)
+local function create_horizontal_widget()
     local height = math.ceil(dimensions.global_height() - 13)
-    local width = math.ceil(dimensions.global_width() * 0.85)
+    local width = math.ceil(dimensions.global_width() * 0.90)
     local col = math.ceil((dimensions.global_width() - width) / 2) - 1
     local views = {
         preview = View:new({
-            filetype = opts.filetype,
             border = state:get('horizontal_window').border,
             border_hl = state:get('horizontal_window').border_hl,
             border_focus_hl = state:get('horizontal_window').border_focus_hl,
@@ -102,13 +101,12 @@ local function create_horizontal_widget(opts)
     return Widget:new(views)
 end
 
-local function create_vertical_widget(opts)
+local function create_vertical_widget()
     local height = math.ceil(dimensions.global_height() - 13)
     local width = math.ceil(dimensions.global_width() * 0.485)
     local col = math.ceil((dimensions.global_width() - (width * 2)) / 2) - 1
     local views = {
         previous = View:new({
-            filetype = opts.filetype,
             border = state:get('previous_window').border,
             border_hl = state:get('previous_window').border_hl,
             border_focus_hl = state:get('previous_window').border_focus_hl,
@@ -135,7 +133,6 @@ local function create_vertical_widget(opts)
             },
         }),
         current = View:new({
-            filetype = opts.filetype,
             title = state:get('current_window').title,
             border = state:get('current_window').border,
             border_hl = state:get('current_window').border_hl,
@@ -191,29 +188,29 @@ local function create_vertical_widget(opts)
     return Widget:new(views)
 end
 
-local HistoryPopup = Object:extend()
+local DiffPopup = Object:extend()
 
-function HistoryPopup:setup(config)
+function DiffPopup:setup(config)
     state:assign(config)
 end
 
-function HistoryPopup:new(opts)
+function DiffPopup:new(opts)
     return setmetatable({
-        vertical_widget = create_vertical_widget(opts),
-        horizontal_widget = create_horizontal_widget(opts),
+        vertical_widget = create_vertical_widget(),
+        horizontal_widget = create_horizontal_widget(),
         layout_type = opts.layout_type,
-        history_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/history'),
+        diff_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/diff'),
         selected = 1,
         data = nil,
         err = nil,
-    }, HistoryPopup)
+    }, DiffPopup)
 end
 
-function HistoryPopup:get_data()
+function DiffPopup:get_data()
     return self.data
 end
 
-function HistoryPopup:get_preview_win_ids()
+function DiffPopup:get_preview_win_ids()
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
@@ -225,7 +222,7 @@ function HistoryPopup:get_preview_win_ids()
     return { widget:get_views().preview:get_win_id() }
 end
 
-function HistoryPopup:get_win_ids()
+function DiffPopup:get_win_ids()
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
@@ -233,11 +230,11 @@ function HistoryPopup:get_win_ids()
     return widget:get_win_ids()
 end
 
-function HistoryPopup:get_marks()
+function DiffPopup:get_marks()
     return self.data and self.data.diff_change and self.data.diff_change.marks or {}
 end
 
-function HistoryPopup:set_loading(value)
+function DiffPopup:set_loading(value)
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
@@ -249,7 +246,7 @@ function HistoryPopup:set_loading(value)
     return self
 end
 
-function HistoryPopup:set_error(value)
+function DiffPopup:set_error(value)
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
@@ -258,7 +255,7 @@ function HistoryPopup:set_error(value)
     return self
 end
 
-function HistoryPopup:is_preview_focused()
+function DiffPopup:is_preview_focused()
     local preview_win_ids = self:get_preview_win_ids()
     local current_win_id = vim.api.nvim_get_current_win()
     for i = 1, #preview_win_ids do
@@ -270,7 +267,7 @@ function HistoryPopup:is_preview_focused()
     return false
 end
 
-function HistoryPopup:reposition_cursor(selected)
+function DiffPopup:reposition_cursor(selected)
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
@@ -279,7 +276,7 @@ function HistoryPopup:reposition_cursor(selected)
     return self
 end
 
-function HistoryPopup:mount()
+function DiffPopup:mount()
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
@@ -287,11 +284,11 @@ function HistoryPopup:mount()
     widget:mount(true)
     widget:set_loading(true)
     widget:get_views().table:focus()
-    widget:get_views().table:add_keymap('<enter>', string.format('_change_history(%s)', widget:get_parent_buf()))
+    widget:get_views().table:add_keymap('<enter>', string.format('_change_diff(%s)', widget:get_parent_buf()))
     return self
 end
 
-function HistoryPopup:unmount()
+function DiffPopup:unmount()
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
@@ -300,7 +297,7 @@ function HistoryPopup:unmount()
     return self
 end
 
-function HistoryPopup:render()
+function DiffPopup:render()
     local widget = self.horizontal_widget
     if self.layout_type == 'vertical' then
         widget = self.vertical_widget
@@ -310,14 +307,36 @@ function HistoryPopup:render()
     local err, data = self.err, self.data
     widget:clear()
     if err then
+        if err[1] == 'File not found' then
+            local changed_files = data.changed_files
+            local warning_text = t('diff/file_not_found')
+            if self.layout_type == 'horizontal' then
+                views.preview:set_cursor(1, 0):set_centered_text(warning_text)
+            else
+                views.previous:set_cursor(1, 0):set_centered_text(warning_text)
+                views.current:set_cursor(1, 0):set_centered_text(warning_text)
+            end
+            local rows = {}
+            for i = 1, #changed_files do
+                local file = changed_files[i]
+                rows[#rows + 1] = {
+                    file.filename or '',
+                    file.status or '',
+                }
+            end
+            table:create_table({ 'Filename', 'Status' }, rows)
+            table:add_indicator(self.selected, self.diff_namespace, state:get('indicator').hl)
+            return
+        end
         widget:get_views().table:remove_keymap('<enter>')
         widget:set_error(true)
         return self
     elseif data then
-        local logs = data.logs
+        local changed_files = data.changed_files
         local diff_change = data.diff_change
+        local filetype = data.filetype
         if self.layout_type == 'horizontal' then
-            views.preview:set_cursor(1, 0):set_lines(diff_change.lines)
+            views.preview:set_cursor(1, 0):set_lines(diff_change.lines):set_filetype(filetype)
             painter.draw_changes(function()
                 return views.preview:get_buf()
             end, diff_change.lnum_changes, state:get(
@@ -326,8 +345,8 @@ function HistoryPopup:render()
                 'priority'
             ))
         else
-            views.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines)
-            views.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
+            views.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines):set_filetype(filetype)
+            views.current:set_cursor(1, 0):set_lines(diff_change.current_lines):set_filetype(filetype)
             painter.draw_changes(function(datum)
                 return views[datum.buftype]:get_buf()
             end, diff_change.lnum_changes, state:get(
@@ -337,23 +356,20 @@ function HistoryPopup:render()
             ))
         end
         local rows = {}
-        for i = 1, #logs do
-            local log = logs[i]
+        for i = 1, #changed_files do
+            local file = changed_files[i]
             rows[#rows + 1] = {
-                string.format('HEAD~%s', i - 1),
-                log.author_name or '',
-                log.commit_hash or '',
-                log.summary or '',
-                (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or '',
+                file.filename or '',
+                file.status or '',
             }
         end
-        table:create_table({ 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' }, rows)
-        table:add_indicator(self.selected, self.history_namespace, state:get('indicator').hl)
+        table:create_table({ 'Filename', 'Status' }, rows)
+        table:add_indicator(self.selected, self.diff_namespace, state:get('indicator').hl)
     else
-        table:set_centered_text(t('history/no_commits'))
+        table:set_centered_text(t('diff/no_changes'))
         table:remove_keymap('<enter>')
     end
     return self
 end
 
-return HistoryPopup
+return DiffPopup

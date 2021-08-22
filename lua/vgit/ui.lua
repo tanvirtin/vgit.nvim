@@ -1,4 +1,5 @@
 local utils = require('vgit.utils')
+local DiffPopup = require('vgit.popups.DiffPopup')
 local BlamePreviewPopup = require('vgit.popups.BlamePreviewPopup')
 local HistoryPopup = require('vgit.popups.HistoryPopup')
 local HunkLensPopup = require('vgit.popups.HunkLensPopup')
@@ -69,6 +70,7 @@ M.setup = function(config)
     M.state:assign(config)
     PreviewPopup:setup((config and config.preview) or {})
     HistoryPopup:setup((config and config.history) or {})
+    DiffPopup:setup((config and config.diff) or {})
     HunkLensPopup:setup((config and config.hunk_lens) or {})
     BlamePopup:setup((config and config.blame) or {})
     BlamePreviewPopup:setup((config and config.blame_preview_popup) or {})
@@ -79,6 +81,7 @@ M.is_popup_navigatable = function(popup)
         PreviewPopup,
         HistoryPopup,
         HunkLensPopup,
+        DiffPopup,
     }
     for i = 1, #allowed do
         local T = allowed[i]
@@ -240,12 +243,16 @@ M.show_history = void(function(fetch, filetype, layout_type)
     history_popup.err = err
     history_popup.data = data
     history_popup:render()
+    history_popup:reposition_cursor(1)
     scheduler()
 end)
 
 M.change_history = void(function(fetch, selected)
     local history_popup = popup_state:get()
     scheduler()
+    if history_popup.selected == selected then
+        return
+    end
     history_popup:set_loading(true)
     scheduler()
     local err, data = fetch()
@@ -256,6 +263,70 @@ M.change_history = void(function(fetch, selected)
     history_popup.data = data
     history_popup.selected = selected
     history_popup:render()
+    history_popup:reposition_cursor(selected)
+    scheduler()
+end)
+
+M.show_diff = void(function(fetch, layout_type)
+    popup_state:clear()
+    local diff_popup = DiffPopup:new({
+        layout_type = layout_type,
+    })
+    popup_state:set(diff_popup)
+    diff_popup:mount()
+    diff_popup:set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    diff_popup:set_loading(false)
+    scheduler()
+    diff_popup.err = err
+    diff_popup.data = data
+    diff_popup:render()
+    diff_popup:reposition_cursor(1)
+    scheduler()
+end)
+
+M.change_diff = void(function(fetch, selected)
+    local diff_popup = popup_state:get()
+    scheduler()
+    if diff_popup.selected == selected then
+        local data = diff_popup.data
+        if not data then
+            return
+        end
+        local changed_files = data.changed_files
+        if not changed_files then
+            return
+        end
+        local changed_file = changed_files[selected]
+        if not changed_file then
+            return
+        end
+        local invalid_status = {
+            ['AD'] = true,
+            [' D'] = true,
+        }
+        if invalid_status[changed_file.status] then
+            return
+        end
+        diff_popup:unmount()
+        popup_state:clear()
+        scheduler()
+        vim.cmd(string.format('e %s', changed_file.filename))
+        return
+    end
+    diff_popup:set_loading(true)
+    scheduler()
+    local err, data = fetch()
+    scheduler()
+    diff_popup:set_loading(false)
+    scheduler()
+    diff_popup.err = err
+    diff_popup.data = data
+    diff_popup.selected = selected
+    diff_popup:render()
+    diff_popup:reposition_cursor(selected)
     scheduler()
 end)
 
