@@ -9,12 +9,20 @@ M.state = Interface:new({
         current = 'Current',
         previous = 'Previous',
     },
-    history = {
+    diff = {
         horizontal = 'Preview',
-        history = 'Git History',
+        table = 'File Changes',
         current = 'Current',
         previous = 'Previous',
-        no_commits = 'No commits to show',
+        no_changes = 'There are no changes',
+        file_not_found = 'File has been deleted',
+    },
+    history = {
+        horizontal = 'Preview',
+        table = 'Git History',
+        current = 'Current',
+        previous = 'Previous',
+        no_commits = 'There are no commits',
     },
     errors = {
         invalid_command = 'Invalid command "%s"',

@@ -4,7 +4,7 @@ local Hunk = require('vgit.Hunk')
 local git = require('vgit.git')
 local ui = require('vgit.ui')
 local fs = require('vgit.fs')
-local highlighter = require('vgit.highlighter')
+local highlight = require('vgit.highlight')
 local events = require('vgit.events')
 local sign = require('vgit.sign')
 local Interface = require('vgit.Interface')
@@ -421,6 +421,11 @@ M._change_history = throttle_leading(
             and not buffer_cache:get(buf, 'untracked')
         then
             local selected_log = vim.api.nvim_win_get_cursor(0)[1]
+            if selected_log == 1 then
+                return
+            else
+                selected_log = selected_log - 1
+            end
             local diff_preference = state:get('diff_preference')
             local calculate_diff = (diff_preference == 'horizontal' and diff.horizontal) or diff.vertical
             ui.change_history(
@@ -448,6 +453,8 @@ M._change_history = throttle_leading(
                         end
                         hunks = computed_hunks
                         commit_hash = log.commit_hash
+                    else
+                        return { 'Failed to access logs' }, nil
                     end
                     if commit_hash and not lines then
                         err, lines = git.show(buffer_cache:get(buf, 'tracked_remote_filename'), commit_hash)
@@ -481,6 +488,71 @@ M._change_history = throttle_leading(
     state:get('action_delay_ms')
 )
 
+M._change_diff = throttle_leading(
+    void(function()
+        local selected_file = vim.api.nvim_win_get_cursor(0)[1]
+        if selected_file == 1 then
+            return
+        else
+            selected_file = selected_file - 1
+        end
+        if not state:get('disabled') then
+            local diff_preference = state:get('diff_preference')
+            local calculate_diff = (diff_preference == 'horizontal' and diff.horizontal) or diff.vertical
+            ui.change_diff(
+                wrap(function()
+                    local changed_files_err, changed_files = git.ls_changed()
+                    scheduler()
+                    if not changed_files_err then
+                        local file = changed_files[selected_file]
+                        if not file then
+                            return { 'File not found' },
+                                utils.readonly({
+                                    changed_files = changed_files,
+                                })
+                        end
+                        local filename = file.filename
+                        local hunk_calculator = get_hunk_calculator()
+                        local hunks_err, hunks = hunk_calculator(filename)
+                        if not hunks_err then
+                            local files_err, lines = fs.read_file(filename)
+                            if not files_err then
+                                local diff_err, data = calculate_diff(lines, hunks)
+                                scheduler()
+                                if not diff_err then
+                                    return diff_err,
+                                        utils.readonly({
+                                            changed_files = changed_files,
+                                            diff_change = data,
+                                            filetype = fs.detect_filetype(filename),
+                                        })
+                                else
+                                    logger.debug(diff_err, 'init.lua/buffer_history')
+                                    return diff_err, nil
+                                end
+                            else
+                                logger.debug(files_err, 'init.lua/diff')
+                                return files_err,
+                                    utils.readonly({
+                                        changed_files = changed_files,
+                                    })
+                            end
+                        else
+                            logger.debug(hunks_err, 'init.lua/diff')
+                            return hunks_err, nil
+                        end
+                    else
+                        logger.debug(changed_files_err, 'init.lua/diff')
+                        return changed_files_err, nil
+                    end
+                end, 0),
+                selected_file
+            )
+        end
+    end),
+    state:get('action_delay_ms')
+)
+
 M.buffer_hunk_lens = throttle_leading(function(buf, win)
     buf = buf or buffer.current()
     if
@@ -496,7 +568,7 @@ M.buffer_hunk_lens = throttle_leading(function(buf, win)
                 local read_file_err, lines = fs.read_file(buffer_cache:get(buf, 'tracked_filename'))
                 scheduler()
                 if read_file_err then
-                    logger.debug(read_file_err, 'init.lua/hunk_preview')
+                    logger.debug(read_file_err, 'init.lua/buffer_hunk_lens')
                     return read_file_err, nil
                 end
                 local diff_err, data = diff.horizontal(lines, hunks)
@@ -715,7 +787,66 @@ M.hunks_quickfix_list = throttle_leading(
     state:get('action_delay_ms')
 )
 
-M.diff = M.hunks_quickfix_list
+M.diff = throttle_leading(
+    void(function()
+        if not state:get('disabled') then
+            local diff_preference = state:get('diff_preference')
+            local calculate_diff = (diff_preference == 'horizontal' and diff.horizontal) or diff.vertical
+            local changed_files_err, changed_files = git.ls_changed()
+            scheduler()
+            if changed_files_err then
+                return logger.debug(changed_files_err, 'init.lua/diff')
+            end
+            if #changed_files == 0 then
+                return
+            end
+            ui.show_diff(
+                wrap(function()
+                    local selected_file = 1
+                    local file = changed_files[selected_file]
+                    if not file then
+                        return { 'File not found' },
+                            utils.readonly({
+                                changed_files = changed_files,
+                            })
+                    end
+                    local filename = file.filename
+                    local hunk_calculator = get_hunk_calculator()
+                    local hunks_err, hunks = hunk_calculator(filename)
+                    if not hunks_err then
+                        local files_err, lines = fs.read_file(filename)
+                        if not files_err then
+                            local diff_err, data = calculate_diff(lines, hunks)
+                            scheduler()
+                            if not diff_err then
+                                return diff_err,
+                                    utils.readonly({
+                                        changed_files = changed_files,
+                                        diff_change = data,
+                                        filetype = fs.detect_filetype(filename),
+                                    })
+                            else
+                                logger.debug(diff_err, 'init.lua/buffer_history')
+                                return diff_err, nil
+                            end
+                        else
+                            logger.debug(files_err, 'init.lua/diff')
+                            return files_err,
+                                utils.readonly({
+                                    changed_files = changed_files,
+                                })
+                        end
+                    else
+                        logger.debug(hunks_err, 'init.lua/diff')
+                        return hunks_err, nil
+                    end
+                end, 0),
+                diff_preference
+            )
+        end
+    end),
+    state:get('action_delay_ms')
+)
 
 M.toggle_buffer_hunks = throttle_leading(
     void(function()
@@ -1165,6 +1296,10 @@ M.unstage_buffer = throttle_leading(
     state:get('action_delay_ms')
 )
 
+M.buffer_stage = M.stage_buffer
+
+M.buffer_unstage = M.unstage_buffer
+
 M.enabled = function()
     return not state:get('disabled')
 end
@@ -1275,7 +1410,7 @@ M.show_debug_logs = function()
 end
 
 M.apply_highlights = function()
-    highlighter.setup(state:get('config'))
+    highlight.setup(state:get('config'))
 end
 
 M.ui = ui
@@ -1292,7 +1427,7 @@ M.setup = function(config)
     state:set('config', config or {})
     events.setup()
     state:assign(config)
-    highlighter.setup(config)
+    highlight.setup(config)
     sign.setup(config)
     logger.setup(config)
     git.setup(config)
