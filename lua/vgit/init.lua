@@ -737,7 +737,7 @@ M.hunk_reset = throttle_leading(function(buf, win)
                 if new_lnum < 1 then
                     new_lnum = 1
                 end
-                vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
+                navigation.set_cursor(win, { new_lnum, 0 })
                 vim.cmd('update')
                 table.remove(hunks, selected_hunk_index)
                 ui.hide_hunk_signs(buf)
