@@ -1,4 +1,5 @@
 local Object = require('plenary.class')
+local navigation = require('vgit.navigation')
 local virtual_text = require('vgit.virtual_text')
 local sign = require('vgit.sign')
 local painter = require('vgit.painter')
@@ -14,6 +15,20 @@ local function calculate_text_center(text, width)
     local rep = math.floor((width / 2) - math.floor(#text / 2))
     return (rep < 0 and 0) or rep
 end
+
+local state = Interface:new({
+    loading = {
+        frame_rate = 60,
+        frames = {
+            '∙∙∙',
+            '●∙∙',
+            '∙●∙',
+            '∙∙●',
+            '∙∙∙',
+        },
+    },
+    error = '✖✖✖',
+})
 
 local function create_border_lines(title, content_win_options, border)
     local border_lines = {}
@@ -78,19 +93,15 @@ local function create_border(content_buf, title, window_props, border, border_hl
     return buf, win_id
 end
 
-local function min_width()
-    return 70
-end
-
-local function min_height()
-    return 20
+function View:setup(config)
+    state:assign(config)
 end
 
 function View:new(options)
     assert(options == nil or type(options) == 'table', 'type error :: expected table or nil')
     options = options or {}
-    local height = min_height()
-    local width = min_width()
+    local height = self:get_min_height()
+    local width = self:get_min_width()
     local config = Interface:new({
         filetype = '',
         title = '',
@@ -137,6 +148,7 @@ function View:new(options)
             cursor_pos = nil,
         },
         config = config,
+        anim_id = nil,
     }, View)
 end
 
@@ -164,6 +176,58 @@ function View:get_win_option(key)
     return vim.api.nvim_win_get_option(self.state.win_id, key)
 end
 
+function View:get_lines()
+    return buffer.get_lines(self:get_buf())
+end
+
+function View:get_height()
+    return vim.api.nvim_win_get_height()
+end
+
+function View:get_width()
+    return vim.api.nvim_win_get_width()
+end
+
+function View:get_min_height()
+    return 20
+end
+
+function View:get_min_width()
+    return 70
+end
+
+function View:set_height(value)
+    assert(type(value) == 'number', 'type error :: expected number')
+    vim.api.nvim_win_set_height(self:get_win_id(), value)
+    return self
+end
+
+function View:set_width(value)
+    assert(type(value) == 'number', 'type error :: expected number')
+    vim.api.nvim_win_set_width(self:get_win_id(), value)
+    return self
+end
+
+function View:set_filetype(filetype)
+    assert(type(filetype) == 'string', 'type error :: expected string')
+    if filetype == self.config:get('filetype') then
+        return
+    end
+    self.config:set('filetype', filetype)
+    local buf = self:get_buf()
+    painter.clear_syntax(buf)
+    painter.draw_syntax(buf, filetype)
+    buffer.set_option(buf, 'syntax', filetype)
+    return self
+end
+
+function View:set_cursor(row, col)
+    assert(type(row) == 'number', 'type error :: expected number')
+    assert(type(col) == 'number', 'type error :: expected number')
+    navigation.set_cursor(self:get_win_id(), { row, col })
+    return self
+end
+
 function View:set_buf_option(option, value)
     vim.api.nvim_buf_set_option(self.state.buf, option, value)
     return self
@@ -175,6 +239,7 @@ function View:set_win_option(option, value)
 end
 
 function View:set_title(title)
+    assert(type(title) == 'string', 'type error :: expected string')
     buffer.set_lines(
         self.state.border.buf,
         create_border_lines(title, self.state:config('window_props'), self.state:config('border'))
@@ -183,29 +248,44 @@ function View:set_title(title)
 end
 
 function View:set_lines(lines)
+    assert(type(lines) == 'table', 'type error :: expected table')
+    self:clear_timers()
     buffer.set_lines(self:get_buf(), lines)
     return self
 end
 
-function View:get_lines()
-    return buffer.get_lines(self:get_buf())
-end
-
 function View:set_loading(value)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
+    self:clear_timers()
     if value == self.state.loading then
         return self
     end
     if value then
         self.state.cursor_pos = vim.api.nvim_win_get_cursor(self:get_win_id())
         self.state.loading = value
-        self:set_centered_text('•••')
+        local animation_configuration = state:get('loading')
+        local frames = animation_configuration.frames
+        local frame_rate = animation_configuration.frame_rate
+        self:set_centered_text(frames[1], true)
+        local frame_count = 1
+        self.anim_id = vim.fn.timer_start(frame_rate, function()
+            if buffer.is_valid(self:get_buf()) then
+                frame_count = frame_count + 1
+                local selected_frame = frame_count % #frames
+                selected_frame = selected_frame == 0 and 1 or selected_frame
+                self:set_centered_text(string.format('%s', frames[selected_frame]), true)
+            else
+                self:clear_timers()
+            end
+        end, {
+            ['repeat'] = -1,
+        })
     else
         painter.draw_syntax(self.state.buf, self.config:get('filetype'))
         self.state.loading = value
         buffer.set_lines(self.state.buf, self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
-        vim.api.nvim_win_set_cursor(self:get_win_id(), self.state.cursor_pos)
+        navigation.set_cursor(self:get_win_id(), self.state.cursor_pos)
         self.state.lines = {}
         self.state.cursor = nil
     end
@@ -214,12 +294,13 @@ end
 
 function View:set_error(value)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
+    self:clear_timers()
     if value == self.state.error then
         return self
     end
     if value then
         self.state.error = value
-        self:set_centered_text('✖✖✖')
+        self:set_centered_text(state:get('error'))
     else
         painter.draw_syntax(self.state.buf, self.config:get('filetype'))
         self.state.error = value
@@ -230,8 +311,11 @@ function View:set_error(value)
     return self
 end
 
-function View:set_centered_text(text)
+function View:set_centered_text(text, in_animation)
     assert(type(text) == 'string', 'type error :: expected string')
+    if not in_animation then
+        self:clear_timers()
+    end
     painter.clear_syntax(self.state.buf)
     local lines = {}
     local height = vim.api.nvim_win_get_height(self.state.win_id)
@@ -266,61 +350,20 @@ function View:focus()
     return self
 end
 
-function View:get_height()
-    return vim.api.nvim_win_get_height()
-end
-
-function View:get_width()
-    return vim.api.nvim_win_get_width()
-end
-
-function View:get_min_height()
-    return min_height()
-end
-
-function View:get_min_width()
-    return min_width()
-end
-
-function View:set_height(value)
-    assert(type(value) == 'number', 'type error :: expected number')
-    vim.api.nvim_win_set_height(self:get_win_id(), value)
-    return self
-end
-
-function View:set_width(value)
-    assert(type(value) == 'number', 'type error :: expected number')
-    vim.api.nvim_win_set_width(self:get_win_id(), value)
-    return self
-end
-
-function View:set_filetype(filetype)
-    if filetype == self.config:get('filetype') then
-        return
-    end
-    self.config:set('filetype', filetype)
-    local buf = self:get_buf()
-    painter.clear_syntax(buf)
-    painter.draw_syntax(buf, filetype)
-    buffer.set_option(buf, 'syntax', filetype)
-    return self
-end
-
-function View:set_cursor(row, col)
-    pcall(vim.api.nvim_win_set_cursor, self:get_win_id(), { row, col })
-    return self
-end
-
 function View:is_mounted()
     return self.state.mounted
 end
 
 function View:create_table(labels, rows)
+    assert(type(labels) == 'table', 'type error :: expected table')
+    assert(type(rows) == 'table', 'type error :: expected table')
+    self:clear_timers()
     local spacing = 3
     local lines = {}
     local padding = {}
     for i = 1, #rows do
         local items = rows[i]
+        assert(#labels == #items, 'number of columns should be the same as number of labels')
         for j = 1, #items do
             local value = items[j]
             if padding[j] then
@@ -353,8 +396,15 @@ function View:add_indicator(lnum, namespace, hl)
     virtual_text.transpose_text(self:get_buf(), '>', namespace, hl, lnum, 0)
 end
 
+function View:clear_timers()
+    if self.anim_id then
+        vim.fn.timer_stop(self.anim_id)
+    end
+end
+
 function View:clear()
     sign.unplace(self:get_buf())
+    self:clear_timers()
     self:set_loading(false)
     self:set_error(false)
     self:set_lines({})
@@ -424,12 +474,13 @@ function View:mount()
 end
 
 function View:unmount()
+    self.mounted = false
     local existing_wins = vim.api.nvim_list_wins()
     local win_id = self:get_win_id()
     if vim.api.nvim_win_is_valid(win_id) and vim.tbl_contains(existing_wins, win_id) then
+        self:clear()
         pcall(vim.api.nvim_win_close, win_id, true)
     end
-    self.mounted = false
 end
 
 return View

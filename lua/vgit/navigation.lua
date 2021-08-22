@@ -141,4 +141,8 @@ M.hunk_down = function(wins, hunks)
     end
 end
 
+M.set_cursor = function(...)
+    return pcall(vim.api.nvim_win_set_cursor, ...)
+end
+
 return M

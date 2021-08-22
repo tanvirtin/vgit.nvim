@@ -1,4 +1,5 @@
 local utils = require('vgit.utils')
+local View = require('vgit.View')
 local DiffPopup = require('vgit.popups.DiffPopup')
 local BlamePreviewPopup = require('vgit.popups.BlamePreviewPopup')
 local HistoryPopup = require('vgit.popups.HistoryPopup')
@@ -68,6 +69,7 @@ M.state = Interface:new({
 
 M.setup = function(config)
     M.state:assign(config)
+    View:setup((config and config.view) or {})
     PreviewPopup:setup((config and config.preview) or {})
     HistoryPopup:setup((config and config.history) or {})
     DiffPopup:setup((config and config.diff) or {})
