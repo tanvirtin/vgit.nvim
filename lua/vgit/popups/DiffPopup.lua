@@ -43,9 +43,11 @@ local state = Interface:new({
 })
 
 local function create_horizontal_widget()
-    local height = math.ceil(dimensions.global_height() - 13)
-    local width = math.ceil(dimensions.global_width() * 0.90)
-    local col = math.ceil((dimensions.global_width() - width) / 2) - 1
+    local height = math.ceil(dimensions.global_height() - 3)
+    local preview_width = math.ceil(dimensions.global_width() * 0.77) - 2
+    local table_width = math.ceil(dimensions.global_width() * 0.20)
+    local col = math.ceil((dimensions.global_width() - (preview_width + table_width)) / 2)
+    local row = math.ceil((dimensions.global_height() - height) / 2) - 1
     local views = {
         preview = View:new({
             border = state:get('horizontal_window').border,
@@ -65,10 +67,10 @@ local function create_horizontal_widget()
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width,
+                width = preview_width,
                 height = height,
-                row = 1,
-                col = col,
+                row = row,
+                col = col + table_width + 2,
             },
         }),
         table = View:new({
@@ -91,9 +93,9 @@ local function create_horizontal_widget()
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width,
-                height = 7,
-                row = height + 3,
+                width = table_width,
+                height = height,
+                row = row,
                 col = col,
             },
         }),
@@ -102,8 +104,8 @@ local function create_horizontal_widget()
 end
 
 local function create_vertical_widget()
-    local height = math.ceil(dimensions.global_height() - 13)
-    local width = math.ceil(dimensions.global_width() * 0.485)
+    local height = math.ceil(dimensions.global_height() - 12)
+    local width = math.ceil(dimensions.global_width() * 0.5) - 2
     local col = math.ceil((dimensions.global_width() - (width * 2)) / 2) - 1
     local views = {
         previous = View:new({
