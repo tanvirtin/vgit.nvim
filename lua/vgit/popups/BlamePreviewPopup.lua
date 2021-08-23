@@ -24,8 +24,8 @@ end
 
 function BlamePreviewPopup:new(opts)
     local height = dimensions.global_height()
-    local blame_width = math.ceil(dimensions.global_width() * 0.40)
-    local preview_width = math.ceil(dimensions.global_width() * 0.60)
+    local blame_width = math.floor(dimensions.global_width() * 0.40)
+    local preview_width = math.floor(dimensions.global_width() * 0.60)
     return setmetatable({
         widget = Widget:new({
             blame = View:new({
@@ -174,17 +174,15 @@ function BlamePreviewPopup:render()
     local err, data = self.err, self.data
     widget:clear()
     local views = self.widget:get_views()
-    local v = views.preview
-    local vb = views.blame
-    v:focus()
     if err then
         widget:set_error(true)
         return self
     end
     if data then
-        v:set_lines(data.lines)
-        vb:set_lines(get_blame_lines(data.blames))
+        views.preview:set_lines(data.lines)
+        views.blame:set_lines(get_blame_lines(data.blames))
     end
+    views.preview:focus()
     return self
 end
 
