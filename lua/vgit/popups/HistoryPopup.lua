@@ -43,9 +43,9 @@ local state = Interface:new({
 })
 
 local function create_horizontal_widget(opts)
-    local height = math.ceil(dimensions.global_height() - 13)
-    local width = math.ceil(dimensions.global_width() * 0.85)
-    local col = math.ceil((dimensions.global_width() - width) / 2) - 1
+    local height = math.floor(dimensions.global_height() - 13)
+    local width = math.floor(dimensions.global_width() * 0.9)
+    local col = math.floor((dimensions.global_width() - width) / 2)
     local views = {
         preview = View:new({
             filetype = opts.filetype,
@@ -103,9 +103,10 @@ local function create_horizontal_widget(opts)
 end
 
 local function create_vertical_widget(opts)
-    local height = math.ceil(dimensions.global_height() - 13)
-    local width = math.ceil(dimensions.global_width() * 0.485)
-    local col = math.ceil((dimensions.global_width() - (width * 2)) / 2) - 1
+    local height = math.floor(dimensions.global_height() - 13)
+    local width = math.floor((dimensions.global_width()) / 2) - 5
+    local col = math.floor((dimensions.global_width() - (width * 2)) / 2)
+    local spacing = 2
     local views = {
         previous = View:new({
             filetype = opts.filetype,
@@ -158,7 +159,7 @@ local function create_vertical_widget(opts)
                 width = width,
                 height = height,
                 row = 1,
-                col = col + width + 2,
+                col = col + width + spacing,
             },
         }),
         table = View:new({
@@ -286,7 +287,6 @@ function HistoryPopup:mount()
     end
     widget:mount(true)
     widget:set_loading(true)
-    widget:get_views().table:focus()
     widget:get_views().table:add_keymap('<enter>', string.format('_change_history(%s)', widget:get_parent_buf()))
     return self
 end
@@ -318,6 +318,7 @@ function HistoryPopup:render()
         local diff_change = data.diff_change
         if self.layout_type == 'horizontal' then
             views.preview:set_cursor(1, 0):set_lines(diff_change.lines)
+            views.preview:focus()
             painter.draw_changes(function()
                 return views.preview:get_buf()
             end, diff_change.lnum_changes, state:get(
@@ -329,7 +330,9 @@ function HistoryPopup:render()
             views.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines)
             views.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
             painter.draw_changes(function(datum)
-                return views[datum.buftype]:get_buf()
+                local view = views[datum.buftype]
+                view:focus()
+                return view:get_buf()
             end, diff_change.lnum_changes, state:get(
                 'signs'
             ), state:get(
@@ -353,6 +356,7 @@ function HistoryPopup:render()
         table:set_centered_text(t('history/no_commits'))
         table:remove_keymap('<enter>')
     end
+    table:focus()
     return self
 end
 

@@ -36,9 +36,9 @@ local state = Interface:new({
 local PreviewPopup = Object:extend()
 
 local function create_horizontal_widget(opts)
-    local height = math.ceil(dimensions.global_height() - 4)
-    local width = math.ceil(dimensions.global_width() * 0.85)
-    local col = math.ceil((dimensions.global_width() - width) / 2) - 1
+    local height = math.floor(dimensions.global_height() - 4)
+    local width = math.floor(dimensions.global_width() * 0.85)
+    local col = math.floor((dimensions.global_width() - width) / 2) - 1
     return Widget:new({
         preview = View:new({
             filetype = opts.filetype,
@@ -60,9 +60,10 @@ local function create_horizontal_widget(opts)
 end
 
 local function create_vertical_widget(opts)
-    local height = math.ceil(dimensions.global_height() - 4)
-    local width = math.ceil(dimensions.global_width() * 0.485)
-    local col = math.ceil((dimensions.global_width() - (width * 2)) / 2) - 1
+    local height = math.floor(dimensions.global_height() - 4)
+    local width = math.floor((dimensions.global_width()) / 2) - 5
+    local col = math.floor((dimensions.global_width() - (width * 2)) / 2)
+    local spacing = 2
     return Widget:new({
         previous = View:new({
             filetype = opts.filetype,
@@ -101,7 +102,7 @@ local function create_vertical_widget(opts)
                 width = width,
                 height = height,
                 row = 1,
-                col = col + width + 2,
+                col = col + width + spacing,
             },
         }),
     })
@@ -259,6 +260,7 @@ function PreviewPopup:render()
         if self.layout_type == 'horizontal' then
             local views = widget:get_views()
             views.preview:set_lines(data.lines)
+            views.preview:focus()
             painter.draw_changes(function()
                 return views.preview:get_buf()
             end, data.lnum_changes, state:get(
@@ -271,12 +273,15 @@ function PreviewPopup:render()
             views.previous:set_lines(data.previous_lines)
             views.current:set_lines(data.current_lines)
             painter.draw_changes(function(datum)
-                return views[datum.buftype]:get_buf()
+                local view = views[datum.buftype]
+                view:focus()
+                return view:get_buf()
             end, data.lnum_changes, state:get(
                 'signs'
             ), state:get(
                 'priority'
             ))
+            views.current:focus()
         end
     end
     return self
