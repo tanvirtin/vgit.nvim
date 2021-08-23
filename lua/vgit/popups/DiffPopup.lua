@@ -43,11 +43,11 @@ local state = Interface:new({
 })
 
 local function create_horizontal_widget()
-    local height = math.ceil(dimensions.global_height() - 3)
-    local preview_width = math.ceil(dimensions.global_width() * 0.77) - 2
-    local table_width = math.ceil(dimensions.global_width() * 0.20)
-    local col = math.ceil((dimensions.global_width() - (preview_width + table_width)) / 2)
-    local row = math.ceil((dimensions.global_height() - height) / 2) - 1
+    local height = math.floor(dimensions.global_height() - 3)
+    local table_width = math.floor(dimensions.global_width() * 0.20)
+    local preview_width = math.floor(dimensions.global_width() - table_width) - 5
+    local spacing = 2
+    local row = math.floor((dimensions.global_height() - height) / 2)
     local views = {
         preview = View:new({
             border = state:get('horizontal_window').border,
@@ -70,7 +70,7 @@ local function create_horizontal_widget()
                 width = preview_width,
                 height = height,
                 row = row,
-                col = col + table_width + 2,
+                col = spacing + table_width + 2,
             },
         }),
         table = View:new({
@@ -96,7 +96,7 @@ local function create_horizontal_widget()
                 width = table_width,
                 height = height,
                 row = row,
-                col = col,
+                col = spacing,
             },
         }),
     }
@@ -104,9 +104,11 @@ local function create_horizontal_widget()
 end
 
 local function create_vertical_widget()
-    local height = math.ceil(dimensions.global_height() - 12)
-    local width = math.ceil(dimensions.global_width() * 0.5) - 2
-    local col = math.ceil((dimensions.global_width() - (width * 2)) / 2) - 1
+    local height = math.floor(dimensions.global_height() - 3)
+    local table_width = math.floor(dimensions.global_width() * 0.20)
+    local preview_width = math.floor((dimensions.global_width() - table_width) / 2) - 5
+    local spacing = 2
+    local row = math.floor((dimensions.global_height() - height) / 2)
     local views = {
         previous = View:new({
             border = state:get('previous_window').border,
@@ -128,10 +130,10 @@ local function create_vertical_widget()
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width,
+                width = preview_width,
                 height = height,
-                row = 1,
-                col = col,
+                row = row,
+                col = spacing + table_width + spacing,
             },
         }),
         current = View:new({
@@ -154,10 +156,10 @@ local function create_vertical_widget()
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width,
+                width = preview_width,
                 height = height,
-                row = 1,
-                col = col + width + 2,
+                row = row,
+                col = spacing + table_width + spacing + preview_width + spacing,
             },
         }),
         table = View:new({
@@ -180,10 +182,10 @@ local function create_vertical_widget()
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width * 2 + 2,
-                height = 7,
-                row = height + 3,
-                col = col,
+                width = table_width,
+                height = height,
+                row = row,
+                col = spacing,
             },
         }),
     }
@@ -285,7 +287,6 @@ function DiffPopup:mount()
     end
     widget:mount(true)
     widget:set_loading(true)
-    widget:get_views().table:focus()
     widget:get_views().table:add_keymap('<enter>', string.format('_change_diff(%s)', widget:get_parent_buf()))
     return self
 end
@@ -339,6 +340,7 @@ function DiffPopup:render()
         local filetype = data.filetype
         if self.layout_type == 'horizontal' then
             views.preview:set_cursor(1, 0):set_lines(diff_change.lines):set_filetype(filetype)
+            views.preview:focus()
             painter.draw_changes(function()
                 return views.preview:get_buf()
             end, diff_change.lnum_changes, state:get(
@@ -350,7 +352,9 @@ function DiffPopup:render()
             views.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines):set_filetype(filetype)
             views.current:set_cursor(1, 0):set_lines(diff_change.current_lines):set_filetype(filetype)
             painter.draw_changes(function(datum)
-                return views[datum.buftype]:get_buf()
+                local view = views[datum.buftype]
+                view:focus()
+                return view:get_buf()
             end, diff_change.lnum_changes, state:get(
                 'signs'
             ), state:get(
@@ -360,17 +364,15 @@ function DiffPopup:render()
         local rows = {}
         for i = 1, #changed_files do
             local file = changed_files[i]
-            rows[#rows + 1] = {
-                file.filename or '',
-                file.status or '',
-            }
+            rows[#rows + 1] = { string.format('%s %s', file.status, file.filename) }
         end
-        table:create_table({ 'Filename', 'Status' }, rows)
+        table:create_table({ 'Filename' }, rows)
         table:add_indicator(self.selected, self.diff_namespace, state:get('indicator').hl)
     else
         table:set_centered_text(t('diff/no_changes'))
         table:remove_keymap('<enter>')
     end
+    table:focus()
     return self
 end
 
