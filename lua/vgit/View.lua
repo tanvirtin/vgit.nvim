@@ -210,9 +210,6 @@ end
 
 function View:set_filetype(filetype)
     assert(type(filetype) == 'string', 'type error :: expected string')
-    if filetype == self.config:get('filetype') then
-        return
-    end
     self.config:set('filetype', filetype)
     local buf = self:get_buf()
     painter.clear_syntax(buf)
