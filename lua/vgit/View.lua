@@ -254,6 +254,29 @@ function View:set_lines(lines)
     return self
 end
 
+function View:set_centered_animated_text(frame_rate, frames, callback)
+    assert(type(frame_rate) == 'number', 'type error :: expected number')
+    assert(vim.tbl_islist(frames), 'type error :: expected list table')
+    self:clear_timers()
+    self:set_centered_text(frames[1], true)
+    local frame_count = 1
+    self.anim_id = vim.fn.timer_start(frame_rate, function()
+        if buffer.is_valid(self:get_buf()) then
+            frame_count = frame_count + 1
+            local selected_frame = frame_count % #frames
+            selected_frame = selected_frame == 0 and 1 or selected_frame
+            self:set_centered_text(string.format('%s', frames[selected_frame]), true)
+            if callback then
+                callback(frame_rate, frames, self.anim_id)
+            end
+        else
+            self:clear_timers()
+        end
+    end, {
+        ['repeat'] = -1,
+    })
+end
+
 function View:set_loading(value)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
     self:clear_timers()
@@ -264,22 +287,7 @@ function View:set_loading(value)
         self.state.cursor_pos = vim.api.nvim_win_get_cursor(self:get_win_id())
         self.state.loading = value
         local animation_configuration = state:get('loading')
-        local frames = animation_configuration.frames
-        local frame_rate = animation_configuration.frame_rate
-        self:set_centered_text(frames[1], true)
-        local frame_count = 1
-        self.anim_id = vim.fn.timer_start(frame_rate, function()
-            if buffer.is_valid(self:get_buf()) then
-                frame_count = frame_count + 1
-                local selected_frame = frame_count % #frames
-                selected_frame = selected_frame == 0 and 1 or selected_frame
-                self:set_centered_text(string.format('%s', frames[selected_frame]), true)
-            else
-                self:clear_timers()
-            end
-        end, {
-            ['repeat'] = -1,
-        })
+        self:set_centered_animated_text(animation_configuration.frame_rate, animation_configuration.frames)
     else
         painter.draw_syntax(self.state.buf, self.config:get('filetype'))
         self.state.loading = value
