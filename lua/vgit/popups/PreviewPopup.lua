@@ -62,7 +62,7 @@ end
 local function create_vertical_widget(opts)
     local height = math.floor(dimensions.global_height() - 4)
     local width = math.floor((dimensions.global_width()) / 2) - 5
-    local col = math.floor((dimensions.global_width() - (width * 2)) / 2)
+    local col = math.ceil((dimensions.global_width() - (width * 2)) / 2)
     local spacing = 2
     return Widget:new({
         previous = View:new({
