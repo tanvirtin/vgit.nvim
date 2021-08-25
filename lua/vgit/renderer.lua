@@ -1,13 +1,12 @@
 local utils = require('vgit.utils')
-local View = require('vgit.View')
-local DiffPopup = require('vgit.popups.DiffPopup')
-local BlamePreviewPopup = require('vgit.popups.BlamePreviewPopup')
-local HistoryPopup = require('vgit.popups.HistoryPopup')
-local HunkLensPopup = require('vgit.popups.HunkLensPopup')
-local BlamePopup = require('vgit.popups.BlamePopup')
-local PreviewPopup = require('vgit.popups.PreviewPopup')
+local DiffPreview = require('vgit.DiffPreview')
+local GutterBlamePreview = require('vgit.GutterBlamePreview')
+local HistoryPreview = require('vgit.HistoryPreview')
+local HunkPreview = require('vgit.HunkPreview')
+local BlamePreview = require('vgit.BlamePreview')
+local ProjectDiffPreview = require('vgit.ProjectDiffPreview')
 local virtual_text = require('vgit.virtual_text')
-local PopupState = require('vgit.PopupState')
+local PreviewState = require('vgit.PreviewState')
 local Interface = require('vgit.Interface')
 local buffer = require('vgit.buffer')
 local sign = require('vgit.sign')
@@ -16,7 +15,7 @@ local scheduler = require('plenary.async.util').scheduler
 
 local M = {}
 
-local popup_state = PopupState:new()
+local preview_state = PreviewState:new()
 
 M.constants = utils.readonly({
     blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
@@ -69,21 +68,14 @@ M.state = Interface:new({
 
 M.setup = function(config)
     M.state:assign(config)
-    View:setup((config and config.view) or {})
-    PreviewPopup:setup((config and config.preview) or {})
-    HistoryPopup:setup((config and config.history) or {})
-    DiffPopup:setup((config and config.diff) or {})
-    HunkLensPopup:setup((config and config.hunk_lens) or {})
-    BlamePopup:setup((config and config.blame) or {})
-    BlamePreviewPopup:setup((config and config.blame_preview_popup) or {})
 end
 
 M.is_popup_navigatable = function(popup)
     local allowed = {
-        PreviewPopup,
-        HistoryPopup,
-        HunkLensPopup,
-        DiffPopup,
+        DiffPreview,
+        ProjectDiffPreview,
+        HistoryPreview,
+        HunkPreview,
     }
     for i = 1, #allowed do
         local T = allowed[i]
@@ -94,22 +86,11 @@ M.is_popup_navigatable = function(popup)
     return false
 end
 
-M.get_mounted_popup = function()
-    return popup_state:get()
+M.get_rendered_popup = function()
+    return preview_state:get()
 end
 
-M.close_windows = function(wins)
-    popup_state:set({})
-    local existing_wins = vim.api.nvim_list_wins()
-    for i = 1, #wins do
-        local win = wins[i]
-        if vim.api.nvim_win_is_valid(win) and vim.tbl_contains(existing_wins, win) then
-            pcall(vim.api.nvim_win_close, win, true)
-        end
-    end
-end
-
-M.show_blame_line = function(buf, blame, lnum, git_config)
+M.render_blame_line = function(buf, blame, lnum, git_config)
     if buffer.is_valid(buf) then
         local virt_text = M.state:get('blame_line').format(blame, git_config)
         if type(virt_text) == 'string' then
@@ -123,13 +104,7 @@ M.show_blame_line = function(buf, blame, lnum, git_config)
     end
 end
 
-M.hide_blame_line = function(buf)
-    if buffer.is_valid(buf) then
-        pcall(virtual_text.delete, buf, M.constants.blame_namespace, M.constants.blame_line_id)
-    end
-end
-
-M.show_hunk_signs = void(function(buf, hunks)
+M.render_hunk_signs = void(function(buf, hunks)
     scheduler()
     if buffer.is_valid(buf) then
         for i = 1, #hunks do
@@ -148,152 +123,143 @@ M.show_hunk_signs = void(function(buf, hunks)
     end
 end)
 
-M.hide_hunk_signs = void(function(buf)
-    scheduler()
-    if buffer.is_valid(buf) then
-        sign.unplace(buf)
-        scheduler()
-    end
-end)
-
-M.show_blame = void(function(fetch)
-    popup_state:clear()
-    local blame_popup = BlamePopup:new()
-    popup_state:set(blame_popup)
-    blame_popup:mount()
+M.render_blame_preview = void(function(fetch)
+    preview_state:clear()
+    local blame_preview = BlamePreview:new()
+    preview_state:set(blame_preview)
+    blame_preview:mount()
     scheduler()
     local err, data = fetch()
     scheduler()
-    blame_popup.err = err
-    blame_popup.data = data
-    blame_popup:render()
+    blame_preview.err = err
+    blame_preview.data = data
+    blame_preview:render()
     scheduler()
 end)
 
-M.show_blame_preview = void(function(fetch, filetype)
-    popup_state:clear()
-    local blame_preview_popup = BlamePreviewPopup:new({ filetype = filetype })
-    popup_state:set(blame_preview_popup)
-    blame_preview_popup:mount()
-    blame_preview_popup:set_loading(true)
+M.render_gutter_blame_preview = void(function(fetch, filetype)
+    preview_state:clear()
+    local gutter_blame_preview = GutterBlamePreview:new({ filetype = filetype })
+    preview_state:set(gutter_blame_preview)
+    gutter_blame_preview:mount()
+    gutter_blame_preview:set_loading(true)
     scheduler()
     local err, data = fetch()
     scheduler()
-    blame_preview_popup:set_loading(false)
+    gutter_blame_preview:set_loading(false)
     scheduler()
-    blame_preview_popup.err = err
-    blame_preview_popup.data = data
-    blame_preview_popup:render()
+    gutter_blame_preview.err = err
+    gutter_blame_preview.data = data
+    gutter_blame_preview:render()
     scheduler()
 end)
 
-M.show_hunk_lens = void(function(fetch, filetype)
-    popup_state:clear()
+M.render_hunk_preview = void(function(fetch, filetype)
+    preview_state:clear()
     local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
-    local hunk_lens_popup = HunkLensPopup:new({ filetype = filetype })
-    popup_state:set(hunk_lens_popup)
-    hunk_lens_popup:mount()
-    hunk_lens_popup:set_loading(true)
+    local hunk_preview = HunkPreview:new({ filetype = filetype })
+    preview_state:set(hunk_preview)
+    hunk_preview:mount()
+    hunk_preview:set_loading(true)
     scheduler()
     local err, data = fetch()
     scheduler()
-    hunk_lens_popup:set_loading(false)
+    hunk_preview:set_loading(false)
     scheduler()
-    hunk_lens_popup.err = err
-    hunk_lens_popup.data = data
-    hunk_lens_popup:render()
+    hunk_preview.err = err
+    hunk_preview.data = data
+    hunk_preview.selected = current_lnum
+    hunk_preview:render()
     scheduler()
-    hunk_lens_popup:reposition_cursor(current_lnum)
 end)
 
-M.show_preview = void(function(fetch, filetype, layout_type)
-    popup_state:clear()
+M.render_diff_preview = void(function(fetch, filetype, layout_type)
+    preview_state:clear()
     local current_lnum = vim.api.nvim_win_get_cursor(0)[1]
-    local preview_popup = PreviewPopup:new({
+    local diff_preview = DiffPreview:new({
         filetype = filetype,
         layout_type = layout_type,
     })
-    popup_state:set(preview_popup)
-    preview_popup:mount()
-    preview_popup:set_loading(true)
+    preview_state:set(diff_preview)
+    diff_preview:mount()
+    diff_preview:set_loading(true)
     scheduler()
     local err, data = fetch()
     scheduler()
-    preview_popup:set_loading(false)
+    diff_preview:set_loading(false)
     scheduler()
-    preview_popup.err = err
-    preview_popup.data = data
-    preview_popup:render()
-    preview_popup:reposition_cursor(current_lnum)
+    diff_preview.err = err
+    diff_preview.data = data
+    diff_preview.selected = current_lnum
+    diff_preview:render()
     scheduler()
 end)
 
-M.show_history = void(function(fetch, filetype, layout_type)
-    popup_state:clear()
-    local history_popup = HistoryPopup:new({
+M.render_history_preview = void(function(fetch, filetype, layout_type)
+    preview_state:clear()
+    local history_preview = HistoryPreview:new({
         filetype = filetype,
         layout_type = layout_type,
     })
-    popup_state:set(history_popup)
-    history_popup:mount()
-    history_popup:set_loading(true)
+    preview_state:set(history_preview)
+    history_preview:mount()
+    history_preview:set_loading(true)
     scheduler()
     local err, data = fetch()
     scheduler()
-    history_popup:set_loading(false)
+    history_preview:set_loading(false)
     scheduler()
-    history_popup.err = err
-    history_popup.data = data
-    history_popup:render()
-    history_popup:reposition_cursor(1)
+    history_preview.err = err
+    history_preview.data = data
+    history_preview.selected = 1
+    history_preview:render()
     scheduler()
 end)
 
-M.change_history = void(function(fetch, selected)
-    local history_popup = popup_state:get()
+M.rerender_history_preview = void(function(fetch, selected)
+    local history_preview = preview_state:get()
     scheduler()
-    if history_popup.selected == selected then
+    if history_preview.selected == selected then
         return
     end
-    history_popup:set_loading(true)
+    history_preview:set_loading(true)
     scheduler()
     local err, data = fetch()
     scheduler()
-    history_popup:set_loading(false)
+    history_preview:set_loading(false)
     scheduler()
-    history_popup.err = err
-    history_popup.data = data
-    history_popup.selected = selected
-    history_popup:render()
-    history_popup:reposition_cursor(selected)
+    history_preview.err = err
+    history_preview.data = data
+    history_preview.selected = selected
+    history_preview:render()
     scheduler()
 end)
 
-M.show_diff = void(function(fetch, layout_type)
-    popup_state:clear()
-    local diff_popup = DiffPopup:new({
+M.render_project_diff_preview = void(function(fetch, layout_type)
+    preview_state:clear()
+    local project_diff_preview = ProjectDiffPreview:new({
         layout_type = layout_type,
     })
-    popup_state:set(diff_popup)
-    diff_popup:mount()
-    diff_popup:set_loading(true)
+    preview_state:set(project_diff_preview)
+    project_diff_preview:mount()
+    project_diff_preview:set_loading(true)
     scheduler()
     local err, data = fetch()
     scheduler()
-    diff_popup:set_loading(false)
+    project_diff_preview:set_loading(false)
     scheduler()
-    diff_popup.err = err
-    diff_popup.data = data
-    diff_popup:render()
-    diff_popup:reposition_cursor(1)
+    project_diff_preview.err = err
+    project_diff_preview.data = data
+    project_diff_preview.selected = 1
+    project_diff_preview:render()
     scheduler()
 end)
 
-M.change_diff = void(function(fetch, selected)
-    local diff_popup = popup_state:get()
+M.rerender_project_diff_preview = void(function(fetch, selected)
+    local project_diff_preview = preview_state:get()
     scheduler()
-    if diff_popup.selected == selected then
-        local data = diff_popup.data
+    if project_diff_preview.selected == selected then
+        local data = project_diff_preview.data
         if not data then
             return
         end
@@ -312,24 +278,57 @@ M.change_diff = void(function(fetch, selected)
         if invalid_status[changed_file.status] then
             return
         end
-        diff_popup:unmount()
-        popup_state:clear()
-        scheduler()
+        M.hide_preview()
         vim.cmd(string.format('e %s', changed_file.filename))
         return
     end
-    diff_popup:set_loading(true)
+    project_diff_preview:set_loading(true)
     scheduler()
     local err, data = fetch()
     scheduler()
-    diff_popup:set_loading(false)
+    project_diff_preview:set_loading(false)
     scheduler()
-    diff_popup.err = err
-    diff_popup.data = data
-    diff_popup.selected = selected
-    diff_popup:render()
-    diff_popup:reposition_cursor(selected)
+    project_diff_preview.err = err
+    project_diff_preview.data = data
+    project_diff_preview.selected = selected
+    project_diff_preview:render()
     scheduler()
 end)
+
+M.hide_blame_line = function(buf)
+    if buffer.is_valid(buf) then
+        pcall(virtual_text.delete, buf, M.constants.blame_namespace, M.constants.blame_line_id)
+    end
+end
+
+M.hide_hunk_signs = void(function(buf)
+    scheduler()
+    if buffer.is_valid(buf) then
+        sign.unplace(buf)
+        scheduler()
+    end
+end)
+
+M.hide_preview = function()
+    local preview = preview_state:get()
+    if not vim.tbl_isempty(preview) then
+        preview:unmount()
+        preview_state:set({})
+    end
+end
+
+M.hide_windows = function(wins)
+    local preview = preview_state:get()
+    if not vim.tbl_isempty(preview) then
+        preview_state:clear()
+    end
+    local existing_wins = vim.api.nvim_list_wins()
+    for i = 1, #wins do
+        local win = wins[i]
+        if vim.api.nvim_win_is_valid(win) and vim.tbl_contains(existing_wins, win) then
+            pcall(vim.api.nvim_win_close, win, true)
+        end
+    end
+end
 
 return M

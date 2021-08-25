@@ -1,10 +1,11 @@
-local Object = require('plenary.class')
+local buffer = require('vgit.buffer')
+local events = require('vgit.events')
 local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
 local localization = require('vgit.localization')
-local View = require('vgit.View')
-local Widget = require('vgit.Widget')
+local Popup = require('vgit.Popup')
+local Preview = require('vgit.Preview')
 local t = localization.translate
 
 local state = Interface:new({
@@ -46,8 +47,8 @@ local function create_horizontal_widget(opts)
     local height = math.floor(dimensions.global_height() - 13)
     local width = math.floor(dimensions.global_width() * 0.9)
     local col = math.ceil((dimensions.global_width() - width) / 2)
-    local views = {
-        preview = View:new({
+    return Preview:new({
+        preview = Popup:new({
             filetype = opts.filetype,
             border = state:get('horizontal_window').border,
             border_hl = state:get('horizontal_window').border_hl,
@@ -72,7 +73,7 @@ local function create_horizontal_widget(opts)
                 col = col,
             },
         }),
-        table = View:new({
+        table = Popup:new({
             title = state:get('table_window').title,
             border = state:get('table_window').border,
             border_hl = state:get('table_window').border_hl,
@@ -98,8 +99,7 @@ local function create_horizontal_widget(opts)
                 col = col,
             },
         }),
-    }
-    return Widget:new(views)
+    }, opts)
 end
 
 local function create_vertical_widget(opts)
@@ -107,8 +107,8 @@ local function create_vertical_widget(opts)
     local width = math.floor((dimensions.global_width()) / 2) - 5
     local col = math.ceil((dimensions.global_width() - (width * 2)) / 2)
     local spacing = 2
-    local views = {
-        previous = View:new({
+    return Preview:new({
+        previous = Popup:new({
             filetype = opts.filetype,
             border = state:get('previous_window').border,
             border_hl = state:get('previous_window').border_hl,
@@ -135,7 +135,7 @@ local function create_vertical_widget(opts)
                 col = col,
             },
         }),
-        current = View:new({
+        current = Popup:new({
             filetype = opts.filetype,
             title = state:get('current_window').title,
             border = state:get('current_window').border,
@@ -162,7 +162,7 @@ local function create_vertical_widget(opts)
                 col = col + width + spacing,
             },
         }),
-        table = View:new({
+        table = Popup:new({
             title = state:get('table_window').title,
             border = state:get('table_window').border,
             border_hl = state:get('table_window').border_hl,
@@ -188,78 +188,40 @@ local function create_vertical_widget(opts)
                 col = col,
             },
         }),
-    }
-    return Widget:new(views)
+    }, opts)
 end
 
-local HistoryPopup = Object:extend()
+local HistoryPreview = Preview:extend()
 
-function HistoryPopup:setup(config)
+function HistoryPreview:setup(config)
     state:assign(config)
 end
 
-function HistoryPopup:new(opts)
-    return setmetatable({
-        vertical_widget = create_vertical_widget(opts),
-        horizontal_widget = create_horizontal_widget(opts),
-        layout_type = opts.layout_type,
-        history_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/history'),
-        selected = 1,
-        data = nil,
-        err = nil,
-    }, HistoryPopup)
+function HistoryPreview:new(opts)
+    local this = create_vertical_widget(opts)
+    if opts.layout_type == 'horizontal' then
+        this = create_horizontal_widget(opts)
+    end
+    this.selected = 1
+    this.history_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/history')
+    return setmetatable(this, HistoryPreview)
 end
 
-function HistoryPopup:get_data()
-    return self.data
-end
-
-function HistoryPopup:get_preview_win_ids()
-    local widget = self.horizontal_widget
+function HistoryPreview:get_preview_win_ids()
     if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
         return {
-            widget:get_views().previous:get_win_id(),
-            widget:get_views().current:get_win_id(),
+            self:get_popups().previous:get_win_id(),
+            self:get_popups().current:get_win_id(),
         }
     end
-    return { widget:get_views().preview:get_win_id() }
+    return { self:get_popups().preview:get_win_id() }
 end
 
-function HistoryPopup:get_win_ids()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    return widget:get_win_ids()
-end
-
-function HistoryPopup:get_marks()
+function HistoryPreview:get_marks()
     return self.data and self.data.diff_change and self.data.diff_change.marks or {}
 end
 
-function HistoryPopup:set_loading(value)
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-        widget:get_views().previous:set_loading(value)
-        widget:get_views().current:set_loading(value)
-    else
-        widget:get_views().preview:set_loading(value)
-    end
-    return self
-end
-
-function HistoryPopup:set_error(value)
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    widget:set_error(value)
-    return self
-end
-
-function HistoryPopup:is_preview_focused()
+function HistoryPreview:is_preview_focused()
     local preview_win_ids = self:get_preview_win_ids()
     local current_win_id = vim.api.nvim_get_current_win()
     for i = 1, #preview_win_ids do
@@ -271,68 +233,69 @@ function HistoryPopup:is_preview_focused()
     return false
 end
 
-function HistoryPopup:reposition_cursor(selected)
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    widget:get_views().table:set_cursor(selected + 1, 0)
+function HistoryPreview:reposition_cursor(selected)
+    self:get_popups().table:set_cursor(selected + 1, 0)
     return self
 end
 
-function HistoryPopup:mount()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
+function HistoryPreview:mount()
+    if self.state.mounted then
+        return self
     end
-    widget:mount(true)
-    widget:set_loading(true)
-    widget:get_views().table:add_keymap('<enter>', string.format('_change_history(%s)', widget:get_parent_buf()))
+    for _, popup in pairs(self.popups) do
+        popup:mount()
+    end
+    local win_ids = {}
+    for _, popup in pairs(self.popups) do
+        win_ids[#win_ids + 1] = popup:get_win_id()
+        win_ids[#win_ids + 1] = popup:get_border_win_id()
+    end
+    for _, popup in pairs(self.popups) do
+        popup:on('BufWinLeave', ':lua require("vgit").renderer.hide_preview()', { once = true })
+    end
+    local bufs = vim.api.nvim_list_bufs()
+    for i = 1, #bufs do
+        local buf = bufs[i]
+        local is_buf_listed = vim.api.nvim_buf_get_option(buf, 'buflisted') == true
+        if is_buf_listed and buffer.is_valid(buf) then
+            local event = self.popup and 'BufEnter' or 'BufWinEnter'
+            events.buf.on(buf, event, ':lua require("vgit").renderer.hide_preview()', { once = true })
+        end
+    end
+    self.state.mounted = true
+    self:get_popups().table:add_keymap('<enter>', string.format('_rerender_history(%s)', self:get_parent_buf()))
     return self
 end
 
-function HistoryPopup:unmount()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    widget:unmount()
-    return self
-end
-
-function HistoryPopup:render()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    local views = widget:get_views()
-    local table = views.table
+function HistoryPreview:render()
+    local popups = self:get_popups()
+    local table = popups.table
     local err, data = self.err, self.data
-    widget:clear()
+    self:clear()
     if err then
-        widget:get_views().table:remove_keymap('<enter>')
-        widget:set_error(true)
+        self:get_popups().table:remove_keymap('<enter>')
+        self:set_error(true)
         return self
     elseif data then
         local logs = data.logs
         local diff_change = data.diff_change
         if self.layout_type == 'horizontal' then
-            views.preview:set_cursor(1, 0):set_lines(diff_change.lines)
-            views.preview:focus()
+            popups.preview:set_cursor(1, 0):set_lines(diff_change.lines)
+            popups.preview:focus()
             painter.draw_changes(function()
-                return views.preview:get_buf()
+                return popups.preview:get_buf()
             end, diff_change.lnum_changes, state:get(
                 'signs'
             ), state:get(
                 'priority'
             ))
         else
-            views.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines)
-            views.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
+            popups.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines)
+            popups.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
             painter.draw_changes(function(datum)
-                local view = views[datum.buftype]
-                view:focus()
-                return view:get_buf()
+                local popup = popups[datum.buftype]
+                popup:focus()
+                return popup:get_buf()
             end, diff_change.lnum_changes, state:get(
                 'signs'
             ), state:get(
@@ -350,8 +313,9 @@ function HistoryPopup:render()
                 (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or '',
             }
         end
-        table:create_table({ 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' }, rows)
+        table:make_table({ 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' }, rows)
         table:add_indicator(self.selected, self.history_namespace, state:get('indicator').hl)
+        self:reposition_cursor(self.selected)
     else
         table:set_centered_text(t('history/no_commits'))
         table:remove_keymap('<enter>')
@@ -360,4 +324,4 @@ function HistoryPopup:render()
     return self
 end
 
-return HistoryPopup
+return HistoryPreview

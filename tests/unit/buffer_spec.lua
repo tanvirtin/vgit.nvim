@@ -125,12 +125,12 @@ describe('add_keymap', function()
 
     it('should call nvim_buf_set_keymap with correct arguments', function()
         local buf = 15
-        buffer.add_keymap(buf, '<enter>', '_change_history()')
+        buffer.add_keymap(buf, '<enter>', '_rerender_history()')
         assert.stub(api.nvim_buf_set_keymap).was_called_with(
             buf,
             'n',
             '<enter>',
-            ':lua require("vgit")._change_history()<CR>',
+            ':lua require("vgit")._rerender_history()<CR>',
             {
                 silent = true,
                 noremap = true,

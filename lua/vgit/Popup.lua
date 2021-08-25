@@ -9,7 +9,7 @@ local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 local Interface = require('vgit.Interface')
 
-local View = Object:extend()
+local Popup = Object:extend()
 
 local function calculate_text_center(text, width)
     local rep = math.floor((width / 2) - math.floor(#text / 2))
@@ -89,15 +89,20 @@ local function create_border(content_buf, title, window_props, border, border_hl
     vim.api.nvim_win_set_option(win_id, 'cursorbind', false)
     vim.api.nvim_win_set_option(win_id, 'scrollbind', false)
     vim.api.nvim_win_set_option(win_id, 'winhl', string.format('Normal:%s', border_hl))
-    events.buf.on(content_buf, 'WinClosed', string.format(':lua require("vgit").ui.close_windows({ %s })', win_id))
+    events.buf.on(
+        content_buf,
+        'WinClosed',
+        string.format(':lua require("vgit").renderer.hide_windows({ %s })', win_id),
+        { once = true }
+    )
     return buf, win_id
 end
 
-function View:setup(config)
+function Popup:setup(config)
     state:assign(config)
 end
 
-function View:new(options)
+function Popup:new(options)
     assert(options == nil or type(options) == 'table', 'type error :: expected table or nil')
     options = options or {}
     local height = self:get_min_height()
@@ -149,66 +154,66 @@ function View:new(options)
         },
         config = config,
         anim_id = nil,
-    }, View)
+    }, Popup)
 end
 
-function View:get_win_id()
+function Popup:get_win_id()
     return self.state.win_id
 end
 
-function View:get_buf()
+function Popup:get_buf()
     return self.state.buf
 end
 
-function View:get_border_buf()
+function Popup:get_border_buf()
     return self.state.border.buf
 end
 
-function View:get_border_win_id()
+function Popup:get_border_win_id()
     return self.state.border.win_id
 end
 
-function View:get_buf_option(key)
-    return vim.api.nvim_buf_get_option(self.state.buf, key)
+function Popup:get_buf_option(key)
+    return vim.api.nvim_buf_get_option(self:get_win_id(), key)
 end
 
-function View:get_win_option(key)
-    return vim.api.nvim_win_get_option(self.state.win_id, key)
+function Popup:get_win_option(key)
+    return vim.api.nvim_win_get_option(self:get_win_id(), key)
 end
 
-function View:get_lines()
+function Popup:get_lines()
     return buffer.get_lines(self:get_buf())
 end
 
-function View:get_height()
-    return vim.api.nvim_win_get_height()
+function Popup:get_height()
+    return vim.api.nvim_win_get_height(self:get_win_id())
 end
 
-function View:get_width()
-    return vim.api.nvim_win_get_width()
+function Popup:get_width()
+    return vim.api.nvim_win_get_width(self:get_win_id())
 end
 
-function View:get_min_height()
+function Popup:get_min_height()
     return 20
 end
 
-function View:get_min_width()
+function Popup:get_min_width()
     return 70
 end
 
-function View:set_height(value)
+function Popup:set_height(value)
     assert(type(value) == 'number', 'type error :: expected number')
     vim.api.nvim_win_set_height(self:get_win_id(), value)
     return self
 end
 
-function View:set_width(value)
+function Popup:set_width(value)
     assert(type(value) == 'number', 'type error :: expected number')
     vim.api.nvim_win_set_width(self:get_win_id(), value)
     return self
 end
 
-function View:set_filetype(filetype)
+function Popup:set_filetype(filetype)
     assert(type(filetype) == 'string', 'type error :: expected string')
     self.config:set('filetype', filetype)
     local buf = self:get_buf()
@@ -218,24 +223,24 @@ function View:set_filetype(filetype)
     return self
 end
 
-function View:set_cursor(row, col)
+function Popup:set_cursor(row, col)
     assert(type(row) == 'number', 'type error :: expected number')
     assert(type(col) == 'number', 'type error :: expected number')
     navigation.set_cursor(self:get_win_id(), { row, col })
     return self
 end
 
-function View:set_buf_option(option, value)
+function Popup:set_buf_option(option, value)
     vim.api.nvim_buf_set_option(self.state.buf, option, value)
     return self
 end
 
-function View:set_win_option(option, value)
+function Popup:set_win_option(option, value)
     vim.api.nvim_win_set_option(self.state.win_id, option, value)
     return self
 end
 
-function View:set_title(title)
+function Popup:set_title(title)
     assert(type(title) == 'string', 'type error :: expected string')
     buffer.set_lines(
         self.state.border.buf,
@@ -244,14 +249,14 @@ function View:set_title(title)
     return self
 end
 
-function View:set_lines(lines)
+function Popup:set_lines(lines)
     assert(type(lines) == 'table', 'type error :: expected table')
     self:clear_timers()
     buffer.set_lines(self:get_buf(), lines)
     return self
 end
 
-function View:set_centered_animated_text(frame_rate, frames, callback)
+function Popup:set_centered_animated_text(frame_rate, frames, callback)
     assert(type(frame_rate) == 'number', 'type error :: expected number')
     assert(vim.tbl_islist(frames), 'type error :: expected list table')
     self:clear_timers()
@@ -274,7 +279,7 @@ function View:set_centered_animated_text(frame_rate, frames, callback)
     })
 end
 
-function View:set_loading(value)
+function Popup:set_loading(value)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
     self:clear_timers()
     if value == self.state.loading then
@@ -297,7 +302,7 @@ function View:set_loading(value)
     return self
 end
 
-function View:set_error(value)
+function Popup:set_error(value)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
     self:clear_timers()
     if value == self.state.error then
@@ -316,7 +321,7 @@ function View:set_error(value)
     return self
 end
 
-function View:set_centered_text(text, in_animation)
+function Popup:set_centered_text(text, in_animation)
     assert(type(text) == 'string', 'type error :: expected string')
     if not in_animation then
         self:clear_timers()
@@ -335,31 +340,31 @@ function View:set_centered_text(text, in_animation)
     return self
 end
 
-function View:on(cmd, handler, options)
+function Popup:on(cmd, handler, options)
     events.buf.on(self:get_buf(), cmd, handler, options)
     return self
 end
 
-function View:add_keymap(key, action)
+function Popup:add_keymap(key, action)
     buffer.add_keymap(self:get_buf(), key, action)
     return self
 end
 
-function View:remove_keymap(key)
+function Popup:remove_keymap(key)
     buffer.remove_keymap(self:get_buf(), key)
     return self
 end
 
-function View:focus()
+function Popup:focus()
     vim.api.nvim_set_current_win(self.state.win_id)
     return self
 end
 
-function View:is_mounted()
+function Popup:is_mounted()
     return self.state.mounted
 end
 
-function View:create_table(labels, rows)
+function Popup:make_table(labels, rows)
     assert(type(labels) == 'table', 'type error :: expected table')
     assert(type(rows) == 'table', 'type error :: expected table')
     self:clear_timers()
@@ -397,17 +402,17 @@ function View:create_table(labels, rows)
     return self
 end
 
-function View:add_indicator(lnum, namespace, hl)
+function Popup:add_indicator(lnum, namespace, hl)
     virtual_text.transpose_text(self:get_buf(), '>', namespace, hl, lnum, 0)
 end
 
-function View:clear_timers()
+function Popup:clear_timers()
     if self.anim_id then
         vim.fn.timer_stop(self.anim_id)
     end
 end
 
-function View:clear()
+function Popup:clear()
     sign.unplace(self:get_buf())
     self:clear_timers()
     self:set_loading(false)
@@ -415,7 +420,7 @@ function View:clear()
     self:set_lines({})
 end
 
-function View:mount()
+function Popup:mount()
     if self.state.mounted then
         return self
     end
@@ -472,20 +477,23 @@ function View:mount()
             )
         )
     end
-    self:on('BufWinLeave', string.format(':lua require("vgit").ui.close_windows({ %s })', win_id))
+    self:on('BufWinLeave', string.format(':lua require("vgit").renderer.hide_windows({ %s })', win_id))
     painter.draw_syntax(buf, filetype)
     self.state.mounted = true
     return self
 end
 
-function View:unmount()
-    self.mounted = false
-    local existing_wins = vim.api.nvim_list_wins()
+function Popup:unmount()
+    self.state.mounted = false
     local win_id = self:get_win_id()
-    if vim.api.nvim_win_is_valid(win_id) and vim.tbl_contains(existing_wins, win_id) then
+    local border_win_id = self:get_border_win_id()
+    if vim.api.nvim_win_is_valid(win_id) then
         self:clear()
         pcall(vim.api.nvim_win_close, win_id, true)
     end
+    if vim.api.nvim_win_is_valid(border_win_id) then
+        pcall(vim.api.nvim_win_close, border_win_id, true)
+    end
 end
 
-return View
+return Popup
