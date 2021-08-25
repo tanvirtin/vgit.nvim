@@ -1,9 +1,8 @@
-local Object = require('plenary.class')
 local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
-local View = require('vgit.View')
-local Widget = require('vgit.Widget')
+local Popup = require('vgit.Popup')
+local Preview = require('vgit.Preview')
 
 local state = Interface:new({
     priority = 10,
@@ -17,68 +16,48 @@ local state = Interface:new({
     },
 })
 
-local HunkLensPopup = Object:extend()
+local HunkPreview = Preview:extend()
 
-function HunkLensPopup:setup(config)
+function HunkPreview:setup(config)
     state:assign(config)
 end
 
-function HunkLensPopup:new(opts)
-    return setmetatable({
-        widget = Widget:new({
-            View:new({
-                border = state:get('window').border,
-                border_hl = state:get('window').border_hl,
-                win_options = { ['cursorline'] = true },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'cursor',
-                    width = dimensions.global_width(),
-                    row = 0,
-                    col = 0,
-                },
-                filetype = opts.filetype,
-            }),
-        }, {
-            popup = true,
+function HunkPreview:new(opts)
+    local this = Preview:new({
+        Popup:new({
+            border = state:get('window').border,
+            border_hl = state:get('window').border_hl,
+            win_options = { ['cursorline'] = true },
+            window_props = {
+                style = 'minimal',
+                relative = 'cursor',
+                width = dimensions.global_width(),
+                row = 0,
+                col = 0,
+            },
+            filetype = opts.filetype,
         }),
-        data = nil,
-        err = nil,
-    }, HunkLensPopup)
+    }, {
+        temporary = true,
+    })
+    this.selected = 1
+    return setmetatable(this, HunkPreview)
 end
 
-function HunkLensPopup:get_data()
-    return self.data
+function HunkPreview:get_preview_win_ids()
+    return { self:get_popups()[1]:get_win_id() }
 end
 
-function HunkLensPopup:get_preview_win_ids()
-    return { self.widget:get_views()[1]:get_win_id() }
-end
-
-function HunkLensPopup:get_win_ids()
-    return self.widget:get_win_ids()
-end
-
-function HunkLensPopup:get_marks()
+function HunkPreview:get_marks()
     return self.data and self.data.diff_change and self.data.diff_change.marks or {}
 end
 
-function HunkLensPopup:set_loading(value)
-    self.widget:set_loading(value)
+function HunkPreview:set_cursor(row, col)
+    self:get_popups()[1]:set_cursor(row, col)
     return self
 end
 
-function HunkLensPopup:set_error(value)
-    self.widget:set_error(value)
-    return self
-end
-
-function HunkLensPopup:set_cursor(row, col)
-    self.widget:get_views()[1]:set_cursor(row, col)
-    return self
-end
-
-function HunkLensPopup:is_preview_focused()
+function HunkPreview:is_preview_focused()
     local preview_win_ids = self:get_preview_win_ids()
     local current_win_id = vim.api.nvim_get_current_win()
     for i = 1, #preview_win_ids do
@@ -90,7 +69,7 @@ function HunkLensPopup:is_preview_focused()
     return false
 end
 
-function HunkLensPopup:reposition_cursor(lnum)
+function HunkPreview:reposition_cursor(lnum)
     local new_lines_added = 0
     local hunks = self.data.diff_change.hunks
     for i = 1, #hunks do
@@ -127,45 +106,35 @@ function HunkLensPopup:reposition_cursor(lnum)
     end
 end
 
-function HunkLensPopup:mount()
-    self.widget:mount(true)
-    return self
-end
-
-function HunkLensPopup:unmount()
-    self.widget:unmount()
-    return self
-end
-
-function HunkLensPopup:render()
-    local widget = self.widget
+function HunkPreview:render()
     local err, data = self.err, self.data
-    widget:clear()
+    self:clear()
     if err then
-        self.widget:set_error(true)
+        self:set_error(true)
         return self
     end
     if data then
-        local views = self.widget:get_views()
-        local v = views[1]
-        v:set_lines(data.diff_change.lines)
+        local popups = self:get_popups()
+        local popup = popups[1]
+        popup:set_lines(data.diff_change.lines)
         local new_width = #data.selected_hunk.diff
         if new_width ~= 0 then
-            if new_width > v:get_min_height() then
-                v:set_height(new_width)
+            if new_width > popup:get_min_height() then
+                popup:set_height(new_width)
             else
-                v:set_height(v:get_min_height())
+                popup:set_height(popup:get_min_height())
             end
         end
         painter.draw_changes(function()
-            return v:get_buf()
+            return popup:get_buf()
         end, data.diff_change.lnum_changes, state:get(
             'signs'
         ), state:get(
             'priority'
         ))
+        self:reposition_cursor(self.selected)
     end
     return self
 end
 
-return HunkLensPopup
+return HunkPreview

@@ -1,10 +1,9 @@
-local Object = require('plenary.class')
 local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
 local localization = require('vgit.localization')
-local View = require('vgit.View')
-local Widget = require('vgit.Widget')
+local Popup = require('vgit.Popup')
+local Preview = require('vgit.Preview')
 local t = localization.translate
 
 local state = Interface:new({
@@ -42,14 +41,14 @@ local state = Interface:new({
     },
 })
 
-local function create_horizontal_widget()
+local function create_horizontal_widget(opts)
     local height = math.floor(dimensions.global_height() - 3)
     local table_width = math.floor(dimensions.global_width() * 0.20)
     local preview_width = math.floor(dimensions.global_width() - table_width) - 5
     local spacing = 2
     local row = math.floor((dimensions.global_height() - height) / 2)
-    local views = {
-        preview = View:new({
+    return Preview:new({
+        preview = Popup:new({
             border = state:get('horizontal_window').border,
             border_hl = state:get('horizontal_window').border_hl,
             border_focus_hl = state:get('horizontal_window').border_focus_hl,
@@ -73,7 +72,7 @@ local function create_horizontal_widget()
                 col = spacing + table_width + 2,
             },
         }),
-        table = View:new({
+        table = Popup:new({
             title = state:get('table_window').title,
             border = state:get('table_window').border,
             border_hl = state:get('table_window').border_hl,
@@ -99,18 +98,17 @@ local function create_horizontal_widget()
                 col = spacing,
             },
         }),
-    }
-    return Widget:new(views)
+    }, opts)
 end
 
-local function create_vertical_widget()
+local function create_vertical_widget(opts)
     local height = math.floor(dimensions.global_height() - 3)
     local table_width = math.floor(dimensions.global_width() * 0.20)
     local preview_width = math.floor((dimensions.global_width() - table_width) / 2) - 5
     local spacing = 2
     local row = math.floor((dimensions.global_height() - height) / 2)
-    local views = {
-        previous = View:new({
+    return Preview:new({
+        previous = Popup:new({
             border = state:get('previous_window').border,
             border_hl = state:get('previous_window').border_hl,
             border_focus_hl = state:get('previous_window').border_focus_hl,
@@ -136,7 +134,7 @@ local function create_vertical_widget()
                 col = spacing + table_width + spacing,
             },
         }),
-        current = View:new({
+        current = Popup:new({
             title = state:get('current_window').title,
             border = state:get('current_window').border,
             border_hl = state:get('current_window').border_hl,
@@ -162,7 +160,7 @@ local function create_vertical_widget()
                 col = spacing + table_width + spacing + preview_width + spacing,
             },
         }),
-        table = View:new({
+        table = Popup:new({
             title = state:get('table_window').title,
             border = state:get('table_window').border,
             border_hl = state:get('table_window').border_hl,
@@ -188,78 +186,40 @@ local function create_vertical_widget()
                 col = spacing,
             },
         }),
-    }
-    return Widget:new(views)
+    }, opts)
 end
 
-local DiffPopup = Object:extend()
+local ProjectDiffPreview = Preview:extend()
 
-function DiffPopup:setup(config)
+function ProjectDiffPreview:setup(config)
     state:assign(config)
 end
 
-function DiffPopup:new(opts)
-    return setmetatable({
-        vertical_widget = create_vertical_widget(),
-        horizontal_widget = create_horizontal_widget(),
-        layout_type = opts.layout_type,
-        diff_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/diff'),
-        selected = 1,
-        data = nil,
-        err = nil,
-    }, DiffPopup)
+function ProjectDiffPreview:new(opts)
+    local this = create_vertical_widget(opts)
+    if opts.layout_type == 'horizontal' then
+        this = create_horizontal_widget(opts)
+    end
+    this.selected = 1
+    this.diff_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/diff')
+    return setmetatable(this, ProjectDiffPreview)
 end
 
-function DiffPopup:get_data()
-    return self.data
-end
-
-function DiffPopup:get_preview_win_ids()
-    local widget = self.horizontal_widget
+function ProjectDiffPreview:get_preview_win_ids()
     if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
         return {
-            widget:get_views().previous:get_win_id(),
-            widget:get_views().current:get_win_id(),
+            self:get_popups().previous:get_win_id(),
+            self:get_popups().current:get_win_id(),
         }
     end
-    return { widget:get_views().preview:get_win_id() }
+    return { self:get_popups().preview:get_win_id() }
 end
 
-function DiffPopup:get_win_ids()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    return widget:get_win_ids()
-end
-
-function DiffPopup:get_marks()
+function ProjectDiffPreview:get_marks()
     return self.data and self.data.diff_change and self.data.diff_change.marks or {}
 end
 
-function DiffPopup:set_loading(value)
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-        widget:get_views().previous:set_loading(value)
-        widget:get_views().current:set_loading(value)
-    else
-        widget:get_views().preview:set_loading(value)
-    end
-    return self
-end
-
-function DiffPopup:set_error(value)
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    widget:set_error(value)
-    return self
-end
-
-function DiffPopup:is_preview_focused()
+function ProjectDiffPreview:is_preview_focused()
     local preview_win_ids = self:get_preview_win_ids()
     local current_win_id = vim.api.nvim_get_current_win()
     for i = 1, #preview_win_ids do
@@ -271,90 +231,72 @@ function DiffPopup:is_preview_focused()
     return false
 end
 
-function DiffPopup:reposition_cursor(selected)
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    widget:get_views().table:set_cursor(selected + 1, 0)
+function ProjectDiffPreview:reposition_cursor(selected)
+    local table = self:get_popups().table
+    table:set_cursor(selected + 1, 0)
+    table:focus()
     return self
 end
 
-function DiffPopup:mount()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
+function ProjectDiffPreview:mount()
+    if self.state.mounted then
+        return self
     end
-    widget:mount(true)
-    widget:set_loading(true)
-    widget:get_views().table:add_keymap('<enter>', string.format('_change_diff(%s)', widget:get_parent_buf()))
+    Preview.mount(self)
+    self:get_popups().table:add_keymap('<enter>', string.format('_rerender_project_diff(%s)', self:get_parent_buf()))
     return self
 end
 
-function DiffPopup:unmount()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    widget:unmount()
-    return self
-end
-
-function DiffPopup:render()
-    local widget = self.horizontal_widget
-    if self.layout_type == 'vertical' then
-        widget = self.vertical_widget
-    end
-    local views = widget:get_views()
-    local table = views.table
+function ProjectDiffPreview:render()
+    local popups = self:get_popups()
+    local table = popups.table
     local err, data = self.err, self.data
-    widget:clear()
+    self:clear()
     if err then
         if err[1] == 'File not found' then
             local changed_files = data.changed_files
             local warning_text = t('diff/file_not_found')
             if self.layout_type == 'horizontal' then
-                views.preview:set_cursor(1, 0):set_centered_text(warning_text)
+                popups.preview:set_cursor(1, 0):set_centered_text(warning_text)
             else
-                views.previous:set_cursor(1, 0):set_centered_text(warning_text)
-                views.current:set_cursor(1, 0):set_centered_text(warning_text)
+                popups.previous:set_cursor(1, 0):set_centered_text(warning_text)
+                popups.current:set_cursor(1, 0):set_centered_text(warning_text)
             end
             local rows = {}
             for i = 1, #changed_files do
                 local file = changed_files[i]
-                rows[#rows + 1] = {
-                    file.filename or '',
-                    file.status or '',
-                }
+                rows[#rows + 1] = { string.format('%s %s', file.status, file.filename) }
             end
-            table:create_table({ 'Filename', 'Status' }, rows)
+            table:make_table({ 'Filename' }, rows)
             table:add_indicator(self.selected, self.diff_namespace, state:get('indicator').hl)
+            self:reposition_cursor(self.selected)
+            table:focus()
             return
         end
-        widget:get_views().table:remove_keymap('<enter>')
-        widget:set_error(true)
+        self:get_popups().table:remove_keymap('<enter>')
+        self:set_error(true)
         return self
     elseif data then
         local changed_files = data.changed_files
         local diff_change = data.diff_change
         local filetype = data.filetype
         if self.layout_type == 'horizontal' then
-            views.preview:set_cursor(1, 0):set_lines(diff_change.lines):set_filetype(filetype)
-            views.preview:focus()
+            popups.preview:set_cursor(1, 0):set_lines(diff_change.lines):set_filetype(filetype)
+            popups.preview:focus()
             painter.draw_changes(function()
-                return views.preview:get_buf()
+                return popups.preview:get_buf()
             end, diff_change.lnum_changes, state:get(
                 'signs'
             ), state:get(
                 'priority'
             ))
         else
-            views.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines):set_filetype(filetype)
-            views.current:set_cursor(1, 0):set_lines(diff_change.current_lines):set_filetype(filetype)
+            popups.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines):set_filetype(filetype)
+            popups.current:set_cursor(1, 0):set_lines(diff_change.current_lines):set_filetype(filetype)
             painter.draw_changes(function(datum)
-                local view = views[datum.buftype]
-                view:focus()
-                return view:get_buf()
+                local popup = popups[datum.buftype]
+                popup:focus()
+                return popup:get_buf()
             end, diff_change.lnum_changes, state:get(
                 'signs'
             ), state:get(
@@ -366,8 +308,9 @@ function DiffPopup:render()
             local file = changed_files[i]
             rows[#rows + 1] = { string.format('%s %s', file.status, file.filename) }
         end
-        table:create_table({ 'Filename' }, rows)
+        table:make_table({ 'Filename' }, rows)
         table:add_indicator(self.selected, self.diff_namespace, state:get('indicator').hl)
+        self:reposition_cursor(self.selected)
     else
         table:set_centered_text(t('diff/no_changes'))
         table:remove_keymap('<enter>')
@@ -376,4 +319,4 @@ function DiffPopup:render()
     return self
 end
 
-return DiffPopup
+return ProjectDiffPreview
