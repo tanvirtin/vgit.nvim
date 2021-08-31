@@ -45,7 +45,11 @@ local function create_horizontal_widget(opts)
             border = state:get('horizontal_window').border,
             border_hl = state:get('horizontal_window').border_hl,
             border_focus_hl = state:get('horizontal_window').border_focus_hl,
-            win_options = { ['cursorline'] = true },
+            win_options = {
+                ['cursorline'] = true,
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
+            },
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
@@ -53,6 +57,9 @@ local function create_horizontal_widget(opts)
                 height = height,
                 row = 1,
                 col = col,
+            },
+            virtual_line_nr = {
+                enabled = true,
             },
         }),
     }, opts)
@@ -83,6 +90,9 @@ local function create_vertical_widget(opts)
                 row = 1,
                 col = col,
             },
+            virtual_line_nr = {
+                enabled = true,
+            },
         }),
         current = Popup:new({
             filetype = opts.filetype,
@@ -102,6 +112,9 @@ local function create_vertical_widget(opts)
                 height = height,
                 row = 1,
                 col = col + width + spacing,
+            },
+            virtual_line_nr = {
+                enabled = true,
             },
         }),
     }, opts)
@@ -227,6 +240,7 @@ function DiffPreview:render()
             ))
             popups.current:focus()
         end
+        self:make_virtual_line_nr(data, self.layout_type)
         self:reposition_cursor(self.selected)
     end
     return self

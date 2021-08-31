@@ -57,18 +57,8 @@ local function cache_buf(buf, filename, tracked_filename, tracked_remote_filenam
 end
 
 local function attach_blames_autocmd(buf)
-    events.buf.on(
-        buf,
-        'CursorHold',
-        string.format(':lua require("vgit")._blame_line(%s)', buf),
-        { key = string.format('%s/CursorHold', buf) }
-    )
-    events.buf.on(
-        buf,
-        'CursorMoved',
-        string.format(':lua require("vgit")._unblame_line(%s)', buf),
-        { key = string.format('%s/CursorMoved', buf) }
-    )
+    events.buf.on(buf, 'CursorHold', string.format(':lua require("vgit")._blame_line(%s)', buf))
+    events.buf.on(buf, 'CursorMoved', string.format(':lua require("vgit")._unblame_line(%s)', buf))
 end
 
 local function detach_blames_autocmd(buf)

@@ -27,6 +27,62 @@ function Preview:regenerate_win_toggle_queue()
     self.state.win_toggle_queue = self:get_win_ids()
 end
 
+function Preview:make_virtual_line_nr(data, layout_type)
+    local popups = self:get_popups()
+    local line_nr_count = 1
+    local virtual_nr_lines = {}
+    if layout_type == 'horizontal' then
+        local lnum_change_map = {}
+        for i = 1, #data.lnum_changes do
+            local lnum_change = data.lnum_changes[i]
+            lnum_change_map[lnum_change.lnum] = lnum_change
+        end
+        for i = 1, #data.lines do
+            local lnum_change = lnum_change_map[i]
+            if lnum_change and lnum_change.type == 'remove' then
+                virtual_nr_lines[#virtual_nr_lines + 1] = ''
+            else
+                virtual_nr_lines[#virtual_nr_lines + 1] = string.format('%s', line_nr_count)
+                line_nr_count = line_nr_count + 1
+            end
+        end
+        popups.preview:set_virtual_line_nr_lines(virtual_nr_lines)
+    elseif layout_type == 'vertical' then
+        local current_lnum_change_map = {}
+        local previous_lnum_change_map = {}
+        for i = 1, #data.lnum_changes do
+            local lnum_change = data.lnum_changes[i]
+            if lnum_change.buftype == 'current' then
+                current_lnum_change_map[lnum_change.lnum] = lnum_change
+            elseif lnum_change.buftype == 'previous' then
+                previous_lnum_change_map[lnum_change.lnum] = lnum_change
+            end
+        end
+        for i = 1, #data.current_lines do
+            local lnum_change = current_lnum_change_map[i]
+            if lnum_change and (lnum_change.type == 'remove' or lnum_change.type == 'void') then
+                virtual_nr_lines[#virtual_nr_lines + 1] = ''
+            else
+                virtual_nr_lines[#virtual_nr_lines + 1] = string.format('%s', line_nr_count)
+                line_nr_count = line_nr_count + 1
+            end
+        end
+        popups.current:set_virtual_line_nr_lines(virtual_nr_lines)
+        virtual_nr_lines = {}
+        line_nr_count = 1
+        for i = 1, #data.previous_lines do
+            local lnum_change = previous_lnum_change_map[i]
+            if lnum_change and (lnum_change.type == 'add' or lnum_change.type == 'void') then
+                virtual_nr_lines[#virtual_nr_lines + 1] = ''
+            else
+                virtual_nr_lines[#virtual_nr_lines + 1] = string.format('%s', line_nr_count)
+                line_nr_count = line_nr_count + 1
+            end
+        end
+        popups.previous:set_virtual_line_nr_lines(virtual_nr_lines)
+    end
+end
+
 function Preview:get_next_win_id()
     if vim.tbl_isempty(self.state.win_toggle_queue) then
         self:regenerate_win_toggle_queue()
@@ -96,6 +152,10 @@ function Preview:is_mounted()
     return self.state.mounted
 end
 
+function Preview:is_temporary()
+    return self.temporary
+end
+
 function Preview:mount()
     if self.state.mounted then
         return self
@@ -107,6 +167,9 @@ function Preview:mount()
     for _, popup in pairs(self.popups) do
         win_ids[#win_ids + 1] = popup:get_win_id()
         win_ids[#win_ids + 1] = popup:get_border_win_id()
+        if popup:has_virtual_line_nr() then
+            win_ids[#win_ids + 1] = popup:get_virtual_line_nr_win_id()
+        end
     end
     for _, popup in pairs(self.popups) do
         popup:on(
