@@ -98,6 +98,34 @@ local function create_border(content_buf, title, window_props, border, border_hl
     return buf, win_id
 end
 
+local function create_virtual_line_nr(content_buf, window_props, width, border_hl)
+    local buf = vim.api.nvim_create_buf(true, true)
+    buffer.assign_options(buf, {
+        ['modifiable'] = false,
+        ['bufhidden'] = 'wipe',
+        ['buflisted'] = false,
+    })
+    local win_id = vim.api.nvim_open_win(buf, false, {
+        relative = 'editor',
+        style = 'minimal',
+        row = window_props.row,
+        col = window_props.col,
+        width = width,
+        height = window_props.height,
+        focusable = false,
+    })
+    vim.api.nvim_win_set_option(win_id, 'cursorbind', true)
+    vim.api.nvim_win_set_option(win_id, 'scrollbind', true)
+    vim.api.nvim_win_set_option(win_id, 'winhl', string.format('Normal:%s', border_hl))
+    events.buf.on(
+        content_buf,
+        'WinClosed',
+        string.format(':lua require("vgit").renderer.hide_windows({ %s })', win_id),
+        { once = true }
+    )
+    return buf, win_id
+end
+
 function Popup:setup(config)
     state:assign(config)
 end
@@ -136,6 +164,10 @@ function Popup:new(options)
             col = math.ceil((dimensions.global_width() - width) / 2),
             focusable = true,
         },
+        virtual_line_nr = {
+            enabled = false,
+            width = 6,
+        },
     })
     config:assign(options)
     return setmetatable({
@@ -146,6 +178,11 @@ function Popup:new(options)
                 buf = nil,
                 win_id = nil,
             },
+            virtual_line_nr = {
+                buf = nil,
+                win_id = nil,
+                ns_id = nil,
+            },
             loading = false,
             error = false,
             mounted = false,
@@ -155,6 +192,10 @@ function Popup:new(options)
         config = config,
         anim_id = nil,
     }, Popup)
+end
+
+function Popup:has_virtual_line_nr()
+    return self.config:get('virtual_line_nr').enabled
 end
 
 function Popup:get_win_id()
@@ -171,6 +212,14 @@ end
 
 function Popup:get_border_win_id()
     return self.state.border.win_id
+end
+
+function Popup:get_virtual_line_nr_buf()
+    return self.state.virtual_line_nr.buf
+end
+
+function Popup:get_virtual_line_nr_win_id()
+    return self.state.virtual_line_nr.win_id
 end
 
 function Popup:get_buf_option(key)
@@ -227,6 +276,9 @@ function Popup:set_cursor(row, col)
     assert(type(row) == 'number', 'type error :: expected number')
     assert(type(col) == 'number', 'type error :: expected number')
     navigation.set_cursor(self:get_win_id(), { row, col })
+    if self:has_virtual_line_nr() then
+        navigation.set_cursor(self:get_virtual_line_nr_win_id(), { row, col })
+    end
     return self
 end
 
@@ -253,6 +305,28 @@ function Popup:set_lines(lines)
     assert(type(lines) == 'table', 'type error :: expected table')
     self:clear_timers()
     buffer.set_lines(self:get_buf(), lines)
+    return self
+end
+
+function Popup:set_virtual_line_nr_lines(lines)
+    assert(type(lines) == 'table', 'type error :: expected table')
+    assert(self:has_virtual_line_nr(), 'cannot set virtual number lines -- virtual number is disabled')
+    vim.api.nvim_win_close(self:get_virtual_line_nr_win_id(), true)
+    local buf, win_id = create_virtual_line_nr(
+        self:get_buf(),
+        self.config:get('window_props'),
+        self.config:get('virtual_line_nr').width,
+        self.config:get('border_hl')
+    )
+    local hl = 'LineNr'
+    local ns_id = vim.api.nvim_create_namespace(string.format('tanvirtin/vgit.nvim/virtual_line_nr/%s', win_id))
+    self.state.virtual_line_nr.buf = buf
+    self.state.virtual_line_nr.win_id = win_id
+    self.state.virtual_line_nr.ns_id = ns_id
+    buffer.set_lines(buf, lines)
+    for i = 1, #lines do
+        vim.api.nvim_buf_add_highlight(buf, -1, hl, i - 1, 0, -1)
+    end
     return self
 end
 
@@ -451,11 +525,31 @@ function Popup:mount()
             window_props.border = border
         end
     end
+    local win_ids = {}
+    local virtual_line_nr_width = self.config:get('virtual_line_nr').width
+    local virtual_line_nr_enabled = self.config:get('virtual_line_nr').enabled
+    if virtual_line_nr_enabled then
+        local virtual_line_nr_buf, virtual_line_nr_win_id = create_virtual_line_nr(
+            buf,
+            window_props,
+            virtual_line_nr_width,
+            border_hl
+        )
+        self.state.virtual_line_nr.buf = virtual_line_nr_buf
+        self.state.virtual_line_nr.win_id = virtual_line_nr_win_id
+        window_props.width = window_props.width - virtual_line_nr_width
+        window_props.col = window_props.col + virtual_line_nr_width
+        win_ids[#win_ids + 1] = virtual_line_nr_win_id
+    end
     local win_id = vim.api.nvim_open_win(buf, true, window_props)
     for key, value in pairs(win_options) do
         vim.api.nvim_win_set_option(win_id, key, value)
     end
     self.state.win_id = win_id
+    if virtual_line_nr_enabled then
+        window_props.width = window_props.width + virtual_line_nr_width
+        window_props.col = window_props.col - virtual_line_nr_width
+    end
     if border and title ~= '' then
         local border_buf, border_win_id = create_border(buf, title, window_props, border, border_focus_hl)
         self.state.border.buf = border_buf
@@ -476,8 +570,10 @@ function Popup:mount()
                 border_hl
             )
         )
+        win_ids[#win_ids + 1] = border_win_id
     end
-    self:on('BufWinLeave', string.format(':lua require("vgit").renderer.hide_windows({ %s })', win_id))
+    win_ids[#win_ids + 1] = win_id
+    self:on('BufWinLeave', string.format(':lua require("vgit").renderer.hide_windows(%s)', win_ids))
     painter.draw_syntax(buf, filetype)
     self.state.mounted = true
     return self
@@ -487,12 +583,16 @@ function Popup:unmount()
     self.state.mounted = false
     local win_id = self:get_win_id()
     local border_win_id = self:get_border_win_id()
+    local virtual_win_border_id = self:get_virtual_line_nr_win_id()
     if vim.api.nvim_win_is_valid(win_id) then
         self:clear()
         pcall(vim.api.nvim_win_close, win_id, true)
     end
     if vim.api.nvim_win_is_valid(border_win_id) then
         pcall(vim.api.nvim_win_close, border_win_id, true)
+    end
+    if virtual_win_border_id and vim.api.nvim_win_is_valid(virtual_win_border_id) then
+        pcall(vim.api.nvim_win_close, virtual_win_border_id, true)
     end
 end
 

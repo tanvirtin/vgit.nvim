@@ -62,6 +62,8 @@ local function create_horizontal_widget(opts)
                 ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
                 ['wrap'] = false,
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
             },
             window_props = {
                 style = 'minimal',
@@ -70,6 +72,9 @@ local function create_horizontal_widget(opts)
                 height = height,
                 row = row,
                 col = spacing + table_width + 2,
+            },
+            virtual_line_nr = {
+                enabled = true,
             },
         }),
         table = Popup:new({
@@ -133,6 +138,9 @@ local function create_vertical_widget(opts)
                 row = row,
                 col = spacing + table_width + spacing,
             },
+            virtual_line_nr = {
+                enabled = true,
+            },
         }),
         current = Popup:new({
             title = state:get('current_window').title,
@@ -158,6 +166,9 @@ local function create_vertical_widget(opts)
                 height = height,
                 row = row,
                 col = spacing + table_width + spacing + preview_width + spacing,
+            },
+            virtual_line_nr = {
+                enabled = true,
             },
         }),
         table = Popup:new({
@@ -310,6 +321,7 @@ function ProjectDiffPreview:render()
         end
         table:make_table({ 'Filename' }, rows)
         table:add_indicator(self.selected, self.diff_namespace, state:get('indicator').hl)
+        self:make_virtual_line_nr(diff_change, self.layout_type)
         self:reposition_cursor(self.selected)
     else
         table:set_centered_text(t('diff/no_changes'))

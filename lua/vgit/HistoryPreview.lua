@@ -1,5 +1,3 @@
-local buffer = require('vgit.buffer')
-local events = require('vgit.events')
 local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
 local Interface = require('vgit.Interface')
@@ -63,6 +61,8 @@ local function create_horizontal_widget(opts)
                 ['winhl'] = 'Normal:',
                 ['cursorline'] = true,
                 ['wrap'] = false,
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
             },
             window_props = {
                 style = 'minimal',
@@ -71,6 +71,9 @@ local function create_horizontal_widget(opts)
                 height = height,
                 row = 1,
                 col = col,
+            },
+            virtual_line_nr = {
+                enabled = true,
             },
         }),
         table = Popup:new({
@@ -134,6 +137,9 @@ local function create_vertical_widget(opts)
                 row = 1,
                 col = col,
             },
+            virtual_line_nr = {
+                enabled = true,
+            },
         }),
         current = Popup:new({
             filetype = opts.filetype,
@@ -160,6 +166,9 @@ local function create_vertical_widget(opts)
                 height = height,
                 row = 1,
                 col = col + width + spacing,
+            },
+            virtual_line_nr = {
+                enabled = true,
             },
         }),
         table = Popup:new({
@@ -242,27 +251,7 @@ function HistoryPreview:mount()
     if self.state.mounted then
         return self
     end
-    for _, popup in pairs(self.popups) do
-        popup:mount()
-    end
-    local win_ids = {}
-    for _, popup in pairs(self.popups) do
-        win_ids[#win_ids + 1] = popup:get_win_id()
-        win_ids[#win_ids + 1] = popup:get_border_win_id()
-    end
-    for _, popup in pairs(self.popups) do
-        popup:on('BufWinLeave', ':lua require("vgit").renderer.hide_preview()', { once = true })
-    end
-    local bufs = vim.api.nvim_list_bufs()
-    for i = 1, #bufs do
-        local buf = bufs[i]
-        local is_buf_listed = vim.api.nvim_buf_get_option(buf, 'buflisted') == true
-        if is_buf_listed and buffer.is_valid(buf) then
-            local event = self.popup and 'BufEnter' or 'BufWinEnter'
-            events.buf.on(buf, event, ':lua require("vgit").renderer.hide_preview()', { once = true })
-        end
-    end
-    self.state.mounted = true
+    Preview.mount(self)
     self:get_popups().table:add_keymap('<enter>', string.format('_rerender_history(%s)', self:get_parent_buf()))
     return self
 end
@@ -315,6 +304,7 @@ function HistoryPreview:render()
         end
         table:make_table({ 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' }, rows)
         table:add_indicator(self.selected, self.history_namespace, state:get('indicator').hl)
+        self:make_virtual_line_nr(diff_change, self.layout_type)
         self:reposition_cursor(self.selected)
     else
         table:set_centered_text(t('history/no_commits'))
