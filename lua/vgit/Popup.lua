@@ -1,8 +1,8 @@
 local Object = require('plenary.class')
+local render_settings = require('vgit.render_settings')
 local navigation = require('vgit.navigation')
 local virtual_text = require('vgit.virtual_text')
 local sign = require('vgit.sign')
-local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
 local events = require('vgit.events')
 local assert = require('vgit.assertion').assert
@@ -166,7 +166,7 @@ function Popup:new(options)
         },
         virtual_line_nr = {
             enabled = false,
-            width = 6,
+            width = render_settings.get('preview').virtual_line_nr_width,
         },
     })
     config:assign(options)
@@ -174,6 +174,7 @@ function Popup:new(options)
         state = {
             buf = nil,
             win_id = nil,
+            ns_id = nil,
             border = {
                 buf = nil,
                 win_id = nil,
@@ -204,6 +205,10 @@ end
 
 function Popup:get_buf()
     return self.state.buf
+end
+
+function Popup:get_ns_id()
+    return self.state.ns_id
 end
 
 function Popup:get_border_buf()
@@ -262,12 +267,54 @@ function Popup:set_width(value)
     return self
 end
 
+function Popup:add_syntax_highlights()
+    local filetype = self.config:get('filetype')
+    if not filetype or filetype == '' then
+        return
+    end
+    local buf = self:get_buf()
+    local has_ts = false
+    local ts_highlight = nil
+    local ts_parsers = nil
+    if not has_ts then
+        has_ts, _ = pcall(require, 'nvim-treesitter')
+        if has_ts then
+            _, ts_highlight = pcall(require, 'nvim-treesitter.highlight')
+            _, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
+        end
+    end
+    if has_ts and filetype and filetype ~= '' then
+        local lang = ts_parsers.ft_to_lang(filetype)
+        if ts_parsers.has_parser(lang) then
+            pcall(ts_highlight.attach, buf, lang)
+        else
+            buffer.set_option(buf, 'syntax', filetype)
+        end
+    end
+end
+
+function Popup:clear_syntax_highlights()
+    local buf = self:get_buf()
+    local has_ts = false
+    if not has_ts then
+        has_ts, _ = pcall(require, 'nvim-treesitter')
+    end
+    if has_ts then
+        local active_buf = vim.treesitter.highlighter.active[buf]
+        if active_buf then
+            active_buf:destroy()
+        else
+            buffer.set_option(buf, 'syntax', '')
+        end
+    end
+end
+
 function Popup:set_filetype(filetype)
     assert(type(filetype) == 'string', 'type error :: expected string')
     self.config:set('filetype', filetype)
     local buf = self:get_buf()
-    painter.clear_syntax(buf)
-    painter.draw_syntax(buf, filetype)
+    self:clear_syntax_highlights()
+    self:add_syntax_highlights()
     buffer.set_option(buf, 'syntax', filetype)
     return self
 end
@@ -283,19 +330,19 @@ function Popup:set_cursor(row, col)
 end
 
 function Popup:set_buf_option(option, value)
-    vim.api.nvim_buf_set_option(self.state.buf, option, value)
+    vim.api.nvim_buf_set_option(self:get_buf(), option, value)
     return self
 end
 
 function Popup:set_win_option(option, value)
-    vim.api.nvim_win_set_option(self.state.win_id, option, value)
+    vim.api.nvim_win_set_option(self:get_win_id(), option, value)
     return self
 end
 
 function Popup:set_title(title)
     assert(type(title) == 'string', 'type error :: expected string')
     buffer.set_lines(
-        self.state.border.buf,
+        self:get_border_buf(),
         create_border_lines(title, self.state:config('window_props'), self.state:config('border'))
     )
     return self
@@ -308,7 +355,7 @@ function Popup:set_lines(lines)
     return self
 end
 
-function Popup:set_virtual_line_nr_lines(lines)
+function Popup:set_virtual_line_nr_lines(lines, hls)
     assert(type(lines) == 'table', 'type error :: expected table')
     assert(self:has_virtual_line_nr(), 'cannot set virtual number lines -- virtual number is disabled')
     vim.api.nvim_win_close(self:get_virtual_line_nr_win_id(), true)
@@ -318,14 +365,13 @@ function Popup:set_virtual_line_nr_lines(lines)
         self.config:get('virtual_line_nr').width,
         self.config:get('border_hl')
     )
-    local hl = 'LineNr'
     local ns_id = vim.api.nvim_create_namespace(string.format('tanvirtin/vgit.nvim/virtual_line_nr/%s', win_id))
     self.state.virtual_line_nr.buf = buf
     self.state.virtual_line_nr.win_id = win_id
     self.state.virtual_line_nr.ns_id = ns_id
     buffer.set_lines(buf, lines)
-    for i = 1, #lines do
-        vim.api.nvim_buf_add_highlight(buf, -1, hl, i - 1, 0, -1)
+    for i = 1, #hls do
+        vim.api.nvim_buf_add_highlight(buf, -1, hls[i], i - 1, 0, -1)
     end
     return self
 end
@@ -365,9 +411,9 @@ function Popup:set_loading(value)
         local animation_configuration = state:get('loading')
         self:set_centered_animated_text(animation_configuration.frame_rate, animation_configuration.frames)
     else
-        painter.draw_syntax(self.state.buf, self.config:get('filetype'))
+        self:add_syntax_highlights()
         self.state.loading = value
-        buffer.set_lines(self.state.buf, self.state.lines)
+        buffer.set_lines(self:get_buf(), self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
         navigation.set_cursor(self:get_win_id(), self.state.cursor_pos)
         self.state.lines = {}
@@ -386,9 +432,9 @@ function Popup:set_error(value)
         self.state.error = value
         self:set_centered_text(state:get('error'))
     else
-        painter.draw_syntax(self.state.buf, self.config:get('filetype'))
+        self:add_syntax_highlights()
         self.state.error = value
-        buffer.set_lines(self.state.buf, self.state.lines)
+        buffer.set_lines(self:get_buf(), self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
         self.state.lines = {}
     end
@@ -400,17 +446,21 @@ function Popup:set_centered_text(text, in_animation)
     if not in_animation then
         self:clear_timers()
     end
-    painter.clear_syntax(self.state.buf)
+    self:clear_syntax_highlights()
     local lines = {}
-    local height = vim.api.nvim_win_get_height(self.state.win_id)
-    local width = vim.api.nvim_win_get_width(self.state.win_id)
+    local win_id = self:get_win_id()
+    local height = vim.api.nvim_win_get_height(win_id)
+    local width = vim.api.nvim_win_get_width(win_id)
     for _ = 1, height do
         lines[#lines + 1] = ''
     end
     lines[math.ceil(height / 2)] = string.rep(' ', calculate_text_center(text, width)) .. text
     self:set_win_option('cursorline', false)
     self.state.lines = buffer.get_lines(self:get_buf())
-    buffer.set_lines(self.state.buf, lines)
+    buffer.set_lines(self:get_buf(), lines)
+    if self:has_virtual_line_nr() then
+        buffer.set_lines(self:get_virtual_line_nr_buf(), {})
+    end
     return self
 end
 
@@ -430,7 +480,7 @@ function Popup:remove_keymap(key)
 end
 
 function Popup:focus()
-    vim.api.nvim_set_current_win(self.state.win_id)
+    vim.api.nvim_set_current_win(self:get_win_id())
     return self
 end
 
@@ -476,8 +526,15 @@ function Popup:make_table(labels, rows)
     return self
 end
 
-function Popup:add_indicator(lnum, namespace, hl)
-    virtual_text.transpose_text(self:get_buf(), '>', namespace, hl, lnum, 0)
+function Popup:add_indicator(lnum)
+    virtual_text.transpose_text(
+        self:get_buf(),
+        '>',
+        self:get_ns_id(),
+        render_settings.get('preview').indicator_hl,
+        lnum,
+        0
+    )
 end
 
 function Popup:clear_timers()
@@ -505,7 +562,6 @@ function Popup:mount()
     local border_focus_hl = self.config:get('border_focus_hl')
     local window_props = self.config:get('window_props')
     local win_options = self.config:get('win_options')
-    local filetype = self.config:get('filetype')
     self.state.buf = vim.api.nvim_create_buf(true, true)
     local buf = self.state.buf
     buffer.assign_options(buf, buf_options)
@@ -546,6 +602,7 @@ function Popup:mount()
         vim.api.nvim_win_set_option(win_id, key, value)
     end
     self.state.win_id = win_id
+    self.state.ns_id = vim.api.nvim_create_namespace(string.format('tanvirtin/vgit.nvim/%s/%s', buf, win_id))
     if virtual_line_nr_enabled then
         window_props.width = window_props.width + virtual_line_nr_width
         window_props.col = window_props.col - virtual_line_nr_width
@@ -554,27 +611,19 @@ function Popup:mount()
         local border_buf, border_win_id = create_border(buf, title, window_props, border, border_focus_hl)
         self.state.border.buf = border_buf
         self.state.border.win_id = border_win_id
-        vim.cmd(
-            string.format(
-                'au BufEnter <buffer=%s> :lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
-                buf,
-                border_win_id,
-                border_focus_hl
-            )
+        self:on(
+            'BufEnter',
+            string.format(':lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")', border_win_id, border_focus_hl)
         )
-        vim.cmd(
-            string.format(
-                'au BufLeave <buffer=%s> :lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
-                buf,
-                border_win_id,
-                border_hl
-            )
+        self:on(
+            'WinLeave',
+            string.format(':lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")', border_win_id, border_hl)
         )
         win_ids[#win_ids + 1] = border_win_id
     end
     win_ids[#win_ids + 1] = win_id
     self:on('BufWinLeave', string.format(':lua require("vgit").renderer.hide_windows(%s)', win_ids))
-    painter.draw_syntax(buf, filetype)
+    self:add_syntax_highlights()
     self.state.mounted = true
     return self
 end

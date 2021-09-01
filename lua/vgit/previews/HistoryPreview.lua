@@ -1,45 +1,9 @@
-local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
-local Interface = require('vgit.Interface')
+local render_settings = require('vgit.render_settings')
 local localization = require('vgit.localization')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
 local t = localization.translate
-
-local state = Interface:new({
-    priority = 10,
-    signs = {
-        add = 'VGitViewSignAdd',
-        remove = 'VGitViewSignRemove',
-    },
-    indicator = {
-        hl = 'VGitIndicator',
-    },
-    horizontal_window = {
-        title = t('history/horizontal'),
-        border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-        border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus',
-    },
-    current_window = {
-        title = t('history/current'),
-        border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-        border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus',
-    },
-    previous_window = {
-        title = t('history/previous'),
-        border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-        border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus',
-    },
-    table_window = {
-        title = t('history/table'),
-        border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-        border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus',
-    },
-})
 
 local function create_horizontal_widget(opts)
     local height = math.floor(dimensions.global_height() - 13)
@@ -48,10 +12,10 @@ local function create_horizontal_widget(opts)
     return Preview:new({
         preview = Popup:new({
             filetype = opts.filetype,
-            border = state:get('horizontal_window').border,
-            border_hl = state:get('horizontal_window').border_hl,
-            border_focus_hl = state:get('horizontal_window').border_focus_hl,
-            title = state:get('horizontal_window').title,
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
+            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            title = 'Preview',
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -77,10 +41,10 @@ local function create_horizontal_widget(opts)
             },
         }),
         table = Popup:new({
-            title = state:get('table_window').title,
-            border = state:get('table_window').border,
-            border_hl = state:get('table_window').border_hl,
-            border_focus_hl = state:get('table_window').border_focus_hl,
+            title = 'History',
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
+            border_focus_hl = render_settings.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -112,11 +76,11 @@ local function create_vertical_widget(opts)
     local spacing = 2
     return Preview:new({
         previous = Popup:new({
+            title = 'Previous',
             filetype = opts.filetype,
-            border = state:get('previous_window').border,
-            border_hl = state:get('previous_window').border_hl,
-            border_focus_hl = state:get('previous_window').border_focus_hl,
-            title = state:get('previous_window').title,
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
+            border_focus_hl = render_settings.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -142,11 +106,11 @@ local function create_vertical_widget(opts)
             },
         }),
         current = Popup:new({
+            title = 'Current',
             filetype = opts.filetype,
-            title = state:get('current_window').title,
-            border = state:get('current_window').border,
-            border_hl = state:get('current_window').border_hl,
-            border_focus_hl = state:get('current_window').border_focus_hl,
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
+            border_focus_hl = render_settings.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -172,10 +136,10 @@ local function create_vertical_widget(opts)
             },
         }),
         table = Popup:new({
-            title = state:get('table_window').title,
-            border = state:get('table_window').border,
-            border_hl = state:get('table_window').border_hl,
-            border_focus_hl = state:get('table_window').border_focus_hl,
+            title = 'History',
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
+            border_focus_hl = render_settings.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -202,17 +166,11 @@ end
 
 local HistoryPreview = Preview:extend()
 
-function HistoryPreview:setup(config)
-    state:assign(config)
-end
-
 function HistoryPreview:new(opts)
     local this = create_vertical_widget(opts)
     if opts.layout_type == 'horizontal' then
         this = create_horizontal_widget(opts)
     end
-    this.selected = 1
-    this.history_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/history')
     return setmetatable(this, HistoryPreview)
 end
 
@@ -270,26 +228,9 @@ function HistoryPreview:render()
         local diff_change = data.diff_change
         if self.layout_type == 'horizontal' then
             popups.preview:set_cursor(1, 0):set_lines(diff_change.lines)
-            popups.preview:focus()
-            painter.draw_changes(function()
-                return popups.preview:get_buf()
-            end, diff_change.lnum_changes, state:get(
-                'signs'
-            ), state:get(
-                'priority'
-            ))
         else
             popups.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines)
             popups.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
-            painter.draw_changes(function(datum)
-                local popup = popups[datum.buftype]
-                popup:focus()
-                return popup:get_buf()
-            end, diff_change.lnum_changes, state:get(
-                'signs'
-            ), state:get(
-                'priority'
-            ))
         end
         local rows = {}
         for i = 1, #logs do
@@ -303,8 +244,9 @@ function HistoryPreview:render()
             }
         end
         table:make_table({ 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' }, rows)
-        table:add_indicator(self.selected, self.history_namespace, state:get('indicator').hl)
-        self:make_virtual_line_nr(diff_change, self.layout_type)
+        table:add_indicator(self.selected)
+        self:draw_changes(diff_change)
+        self:make_virtual_line_nr(diff_change)
         self:reposition_cursor(self.selected)
     else
         table:set_centered_text(t('history/no_commits'))

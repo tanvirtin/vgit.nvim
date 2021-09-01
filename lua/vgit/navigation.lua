@@ -2,6 +2,7 @@ local M = {}
 
 M.mark_up = function(wins, marks)
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line_count = vim.api.nvim_buf_line_count(0)
     local new_lnum = nil
     for i = #marks, 1, -1 do
         local mark = marks[i]
@@ -13,9 +14,7 @@ M.mark_up = function(wins, marks)
             break
         end
     end
-    if new_lnum and new_lnum < 1 then
-        new_lnum = 1
-    end
+    new_lnum = new_lnum and (new_lnum >= 1 or new_lnum <= line_count) and new_lnum or 1
     if new_lnum and lnum ~= new_lnum then
         for i = 1, #wins do
             vim.api.nvim_win_set_cursor(wins[i], { new_lnum, 0 })
@@ -23,9 +22,10 @@ M.mark_up = function(wins, marks)
         vim.cmd('norm! zz')
     else
         local finish_hunks_lnum = marks[#marks].finish
-        if finish_hunks_lnum < 1 then
-            finish_hunks_lnum = 1
-        end
+        finish_hunks_lnum = finish_hunks_lnum
+                and (finish_hunks_lnum >= 1 or new_lnum <= line_count)
+                and finish_hunks_lnum
+            or 1
         for i = 1, #wins do
             vim.api.nvim_win_set_cursor(wins[i], { finish_hunks_lnum, 0 })
         end
@@ -35,6 +35,7 @@ end
 
 M.mark_down = function(wins, marks)
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local line_count = vim.api.nvim_buf_line_count(0)
     local new_lnum = nil
     local selected_mark = nil
     for i = 1, #marks do
@@ -51,9 +52,7 @@ M.mark_down = function(wins, marks)
             break
         end
     end
-    if new_lnum and new_lnum < 1 then
-        new_lnum = 1
-    end
+    new_lnum = new_lnum and (new_lnum >= 1 or new_lnum <= line_count) and new_lnum or 1
     local compare_lnum = lnum
     if selected_mark and selected_mark.type == 'remove' then
         compare_lnum = compare_lnum + 1
@@ -65,9 +64,10 @@ M.mark_down = function(wins, marks)
         vim.cmd('norm! zz')
     else
         local first_hunk_start_lnum = marks[1].start
-        if first_hunk_start_lnum < 1 then
-            first_hunk_start_lnum = 1
-        end
+        first_hunk_start_lnum = first_hunk_start_lnum
+                and (first_hunk_start_lnum >= 1 or new_lnum <= line_count)
+                and first_hunk_start_lnum
+            or 1
         for i = 1, #wins do
             vim.api.nvim_win_set_cursor(wins[i], { first_hunk_start_lnum, 0 })
         end

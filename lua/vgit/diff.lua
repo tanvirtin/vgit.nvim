@@ -4,6 +4,10 @@ local wrap = require('plenary.async.async').wrap
 
 local M = {}
 
+M.constants = utils.readonly({
+    word_diff_max_lines = 4,
+})
+
 local function create_diff_change(opts)
     opts = opts or {}
     return {
@@ -86,7 +90,7 @@ M.horizontal = wrap(function(lines, hunks, callback)
                     new_lines_added = new_lines_added + 1
                     table.insert(new_lines, s, cleaned_line)
                     local word_diff = nil
-                    if #removed_lines == #added_lines and #added_lines < 4 then
+                    if #removed_lines == #added_lines and #added_lines < M.constants.word_diff_max_lines then
                         local d = dmp.diff_main(
                             cleaned_line,
                             diff[#removed_lines + j]:sub(2, #diff[#removed_lines + j])
@@ -101,7 +105,7 @@ M.horizontal = wrap(function(lines, hunks, callback)
                     })
                 elseif line_type == '+' then
                     local word_diff = nil
-                    if #removed_lines == #added_lines and #added_lines < 4 then
+                    if #removed_lines == #added_lines and #added_lines < M.constants.word_diff_max_lines then
                         local d = dmp.diff_main(
                             cleaned_line,
                             diff[j - #removed_lines]:sub(2, #diff[j - #removed_lines])
@@ -239,7 +243,7 @@ M.vertical = wrap(function(lines, hunks, callback)
                 local removed_line = removed_lines[recalculated_index]
                 if removed_line then
                     local word_diff = nil
-                    if #removed_lines == #added_lines and #added_lines < 4 then
+                    if #removed_lines == #added_lines and #added_lines < M.constants.word_diff_max_lines then
                         local d = dmp.diff_main(removed_line, added_lines[recalculated_index])
                         dmp.diff_cleanupSemantic(d)
                         word_diff = d
@@ -253,7 +257,7 @@ M.vertical = wrap(function(lines, hunks, callback)
                 end
                 if added_line then
                     local word_diff = nil
-                    if #removed_lines == #added_lines and #added_lines < 4 then
+                    if #removed_lines == #added_lines and #added_lines < M.constants.word_diff_max_lines then
                         local d = dmp.diff_main(added_line, removed_lines[recalculated_index])
                         dmp.diff_cleanupSemantic(d)
                         word_diff = d

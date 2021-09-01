@@ -1,32 +1,15 @@
-local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
-local Interface = require('vgit.Interface')
+local render_settings = require('vgit.render_settings')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
 
-local state = Interface:new({
-    priority = 10,
-    window = {
-        border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-        border_hl = 'VGitBorder',
-    },
-    signs = {
-        add = 'VGitViewSignAdd',
-        remove = 'VGitViewSignRemove',
-    },
-})
-
 local HunkPreview = Preview:extend()
-
-function HunkPreview:setup(config)
-    state:assign(config)
-end
 
 function HunkPreview:new(opts)
     local this = Preview:new({
-        Popup:new({
-            border = state:get('window').border,
-            border_hl = state:get('window').border_hl,
+        preview = Popup:new({
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
             win_options = { ['cursorline'] = true },
             window_props = {
                 style = 'minimal',
@@ -39,13 +22,14 @@ function HunkPreview:new(opts)
         }),
     }, {
         temporary = true,
+        layout_type = 'horizontal',
+        selected = 1,
     })
-    this.selected = 1
     return setmetatable(this, HunkPreview)
 end
 
 function HunkPreview:get_preview_win_ids()
-    return { self:get_popups()[1]:get_win_id() }
+    return { self:get_popups().preview:get_win_id() }
 end
 
 function HunkPreview:get_marks()
@@ -53,7 +37,7 @@ function HunkPreview:get_marks()
 end
 
 function HunkPreview:set_cursor(row, col)
-    self:get_popups()[1]:set_cursor(row, col)
+    self:get_popups().preview:set_cursor(row, col)
     return self
 end
 
@@ -114,9 +98,10 @@ function HunkPreview:render()
         return self
     end
     if data then
+        local diff_change = data.diff_change
         local popups = self:get_popups()
-        local popup = popups[1]
-        popup:set_lines(data.diff_change.lines)
+        local popup = popups.preview
+        popup:set_lines(diff_change.lines)
         local new_width = #data.selected_hunk.diff
         if new_width ~= 0 then
             if new_width > popup:get_min_height() then
@@ -125,13 +110,7 @@ function HunkPreview:render()
                 popup:set_height(popup:get_min_height())
             end
         end
-        painter.draw_changes(function()
-            return popup:get_buf()
-        end, data.diff_change.lnum_changes, state:get(
-            'signs'
-        ), state:get(
-            'priority'
-        ))
+        self:draw_changes(diff_change)
         self:reposition_cursor(self.selected)
     end
     return self
