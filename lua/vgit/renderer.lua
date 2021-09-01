@@ -1,13 +1,13 @@
 local utils = require('vgit.utils')
-local DiffPreview = require('vgit.DiffPreview')
-local GutterBlamePreview = require('vgit.GutterBlamePreview')
-local HistoryPreview = require('vgit.HistoryPreview')
-local HunkPreview = require('vgit.HunkPreview')
-local BlamePreview = require('vgit.BlamePreview')
-local ProjectDiffPreview = require('vgit.ProjectDiffPreview')
+local render_settings = require('vgit.render_settings')
+local DiffPreview = require('vgit.previews.DiffPreview')
+local GutterBlamePreview = require('vgit.previews.GutterBlamePreview')
+local HistoryPreview = require('vgit.previews.HistoryPreview')
+local HunkPreview = require('vgit.previews.HunkPreview')
+local BlamePreview = require('vgit.previews.BlamePreview')
+local ProjectDiffPreview = require('vgit.previews.ProjectDiffPreview')
 local virtual_text = require('vgit.virtual_text')
-local PreviewState = require('vgit.PreviewState')
-local Interface = require('vgit.Interface')
+local PreviewState = require('vgit.states.PreviewState')
 local buffer = require('vgit.buffer')
 local sign = require('vgit.sign')
 local void = require('plenary.async.async').void
@@ -18,57 +18,9 @@ local M = {}
 local preview_state = PreviewState:new()
 
 M.constants = utils.readonly({
-    blame_namespace = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
+    blame_ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
     blame_line_id = 1,
 })
-
-M.state = Interface:new({
-    blame_line = {
-        hl = 'VGitLineBlame',
-        format = function(blame, git_config)
-            local config_author = git_config['user.name']
-            local author = blame.author
-            if config_author == author then
-                author = 'You'
-            end
-            local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
-            local time_format = string.format('%s days ago', utils.round(time))
-            local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
-            local division_counter = 1
-            while time < 1 and division_counter ~= #time_divisions do
-                local division = time_divisions[division_counter]
-                time = time * division[1]
-                time_format = string.format('%s %s ago', utils.round(time), division[2])
-                division_counter = division_counter + 1
-            end
-            local commit_message = blame.commit_message
-            if not blame.committed then
-                author = 'You'
-                commit_message = 'Uncommitted changes'
-                local info = string.format('%s • %s', author, commit_message)
-                return string.format(' %s', info)
-            end
-            local max_commit_message_length = 255
-            if #commit_message > max_commit_message_length then
-                commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
-            end
-            local info = string.format('%s, %s • %s', author, time_format, commit_message)
-            return string.format(' %s', info)
-        end,
-    },
-    hunk_sign = {
-        priority = 10,
-        signs = {
-            add = 'VGitSignAdd',
-            remove = 'VGitSignRemove',
-            change = 'VGitSignChange',
-        },
-    },
-})
-
-M.setup = function(config)
-    M.state:assign(config)
-end
 
 M.is_popup_navigatable = function(popup)
     local allowed = {
@@ -92,11 +44,11 @@ end
 
 M.render_blame_line = function(buf, blame, lnum, git_config)
     if buffer.is_valid(buf) then
-        local virt_text = M.state:get('blame_line').format(blame, git_config)
+        local virt_text = render_settings.get('line_blame').format(blame, git_config)
         if type(virt_text) == 'string' then
-            pcall(virtual_text.add, buf, M.constants.blame_namespace, lnum - 1, 0, {
+            pcall(virtual_text.add, buf, M.constants.blame_ns_id, lnum - 1, 0, {
                 id = M.constants.blame_line_id,
-                virt_text = { { virt_text, M.state:get('blame_line').hl } },
+                virt_text = { { virt_text, render_settings.get('line_blame').hl } },
                 virt_text_pos = 'eol',
                 hl_mode = 'combine',
             })
@@ -113,8 +65,8 @@ M.render_hunk_signs = void(function(buf, hunks)
                 sign.place(
                     buf,
                     (hunk.type == 'remove' and j == 0) and 1 or j,
-                    M.state:get('hunk_sign').signs[hunk.type],
-                    M.state:get('hunk_sign').priority
+                    render_settings.get('sign').hls[hunk.type],
+                    render_settings.get('sign').priority
                 )
                 scheduler()
             end
@@ -200,6 +152,7 @@ M.render_history_preview = void(function(fetch, filetype, layout_type)
     local history_preview = HistoryPreview:new({
         filetype = filetype,
         layout_type = layout_type,
+        selected = 1,
     })
     preview_state:set(history_preview)
     history_preview:mount()
@@ -211,7 +164,6 @@ M.render_history_preview = void(function(fetch, filetype, layout_type)
     scheduler()
     history_preview.err = err
     history_preview.data = data
-    history_preview.selected = 1
     history_preview:render()
     scheduler()
 end)
@@ -239,6 +191,7 @@ M.render_project_diff_preview = void(function(fetch, layout_type)
     preview_state:clear()
     local project_diff_preview = ProjectDiffPreview:new({
         layout_type = layout_type,
+        selected = 1,
     })
     preview_state:set(project_diff_preview)
     project_diff_preview:mount()
@@ -250,7 +203,6 @@ M.render_project_diff_preview = void(function(fetch, layout_type)
     scheduler()
     project_diff_preview.err = err
     project_diff_preview.data = data
-    project_diff_preview.selected = 1
     project_diff_preview:render()
     scheduler()
 end)
@@ -297,7 +249,7 @@ end)
 
 M.hide_blame_line = function(buf)
     if buffer.is_valid(buf) then
-        pcall(virtual_text.delete, buf, M.constants.blame_namespace, M.constants.blame_line_id)
+        pcall(virtual_text.delete, buf, M.constants.blame_ns_id, M.constants.blame_line_id)
     end
 end
 

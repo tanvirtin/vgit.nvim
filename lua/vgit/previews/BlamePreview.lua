@@ -1,14 +1,7 @@
 local utils = require('vgit.utils')
-local Interface = require('vgit.Interface')
+local render_settings = require('vgit.render_settings')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
-
-local state = Interface:new({
-    window = {
-        border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-        border_hl = 'VGitBorder',
-    },
-})
 
 local function create_uncommitted_lines(blame)
     return {
@@ -45,15 +38,11 @@ end
 
 local BlamePreview = Preview:extend()
 
-function BlamePreview:setup(config)
-    state:assign(config)
-end
-
 function BlamePreview:new()
     local this = Preview:new({
         Popup:new({
-            border = state:get('window').border,
-            border_hl = state:get('window').border_hl,
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
             win_options = { ['cursorline'] = true },
             window_props = {
                 style = 'minimal',

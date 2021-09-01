@@ -1,19 +1,8 @@
 local utils = require('vgit.utils')
+local render_settings = require('vgit.render_settings')
 local dimensions = require('vgit.dimensions')
-local Interface = require('vgit.Interface')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
-
-local state = Interface:new({
-    blame_window = {
-        border = { '╭', '─', '─', '│', '─', '─', '╰', '│' },
-        border_hl = 'VGitBorder',
-    },
-    preview_window = {
-        border = { '─', '─', '╮', '│', '╯', '─', '─', ' ' },
-        border_hl = 'VGitBorder',
-    },
-})
 
 local function get_blame_line(blame)
     local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
@@ -58,18 +47,14 @@ end
 
 local GutterBlamePreview = Preview:extend()
 
-function GutterBlamePreview:setup(config)
-    state:assign(config)
-end
-
 function GutterBlamePreview:new(opts)
     local height = dimensions.global_height()
     local blame_width = math.floor(dimensions.global_width() * 0.40)
     local preview_width = math.floor(dimensions.global_width() * 0.60)
     local this = Preview:new({
         blame = Popup:new({
-            border = state:get('blame_window').border,
-            border_hl = state:get('blame_window').border_hl,
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
             win_options = {
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
@@ -86,8 +71,8 @@ function GutterBlamePreview:new(opts)
             },
         }),
         preview = Popup:new({
-            border = state:get('preview_window').border,
-            border_hl = state:get('preview_window').border_hl,
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
             win_options = {
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,

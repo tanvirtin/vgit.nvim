@@ -1,48 +1,49 @@
 local utils = require('vgit.utils')
+local render_settings = require('vgit.render_settings')
 local Interface = require('vgit.Interface')
 
 local M = {}
 
 M.constants = utils.readonly({
-    ns = 'tanvirtin/vgit.nvim/hunk/signs',
+    ns_id = 'tanvirtin/vgit.nvim/hunk/signs',
 })
 
 M.state = Interface:new({
     VGitViewSignAdd = {
-        name = 'VGitViewSignAdd',
-        line_hl = 'VGitViewSignAdd',
+        name = render_settings.get('preview').sign.hls.add,
+        line_hl = render_settings.get('preview').sign.hls.add,
         text_hl = nil,
         num_hl = nil,
         icon = nil,
         text = '',
     },
     VGitViewSignRemove = {
-        name = 'VGitViewSignRemove',
-        line_hl = 'VGitViewSignRemove',
+        name = render_settings.get('preview').sign.hls.remove,
+        line_hl = render_settings.get('preview').sign.hls.remove,
         text_hl = nil,
         num_hl = nil,
         icon = nil,
         text = '',
     },
     VGitSignAdd = {
-        name = 'VGitSignAdd',
-        text_hl = 'VGitSignAdd',
+        name = render_settings.get('sign').hls.add,
+        text_hl = render_settings.get('sign').hls.add,
         num_hl = nil,
         icon = nil,
         line_hl = nil,
         text = '┃',
     },
     VGitSignRemove = {
-        name = 'VGitSignRemove',
-        text_hl = 'VGitSignRemove',
+        name = render_settings.get('sign').hls.remove,
+        text_hl = render_settings.get('sign').hls.remove,
         num_hl = nil,
         icon = nil,
         line_hl = nil,
         text = '┃',
     },
     VGitSignChange = {
-        name = 'VGitSignChange',
-        text_hl = 'VGitSignChange',
+        name = render_settings.get('sign').hls.change,
+        text_hl = render_settings.get('sign').hls.change,
         num_hl = nil,
         icon = nil,
         line_hl = nil,
@@ -68,7 +69,7 @@ M.define = function(config)
 end
 
 M.place = function(buf, lnum, type, priority)
-    vim.fn.sign_place(lnum, string.format('%s/%s', M.constants.ns, buf), type, buf, {
+    vim.fn.sign_place(lnum, string.format('%s/%s', M.constants.ns_id, buf), type, buf, {
         id = lnum,
         lnum = lnum,
         priority = priority,
@@ -76,12 +77,12 @@ M.place = function(buf, lnum, type, priority)
 end
 
 M.unplace = function(buf)
-    vim.fn.sign_unplace(string.format('%s/%s', M.constants.ns, buf))
+    vim.fn.sign_unplace(string.format('%s/%s', M.constants.ns_id, buf))
 end
 
 M.get = function(buf, lnum)
     local signs = vim.fn.sign_getplaced(buf, {
-        group = string.format('%s/%s', M.constants.ns, buf),
+        group = string.format('%s/%s', M.constants.ns_id, buf),
         id = lnum,
     })[1].signs
     local result = {}
