@@ -31,7 +31,7 @@
 - See changes in your project in a VGit diff preview (`:VGit project_diff_preview`)
 - See changes in your project in a quickfix list (`:VGit project_hunks_qf`)
 
-## Supported Neovim versions:
+## Supported Neovim Versions:
 - Neovim **>=** 0.5
 
 ## Supported Opperating System:
