@@ -38,11 +38,10 @@ M.buf.on = function(buf, cmd, handler, options)
     local once = (options and options.once) or false
     local override = (options and options.override) or false
     local nested = (options and options.nested) or false
+    -- NOTE: This introduces a constraint -- a single buf can never register more than one action for a single cmd
     local key = (options and options.key and options.key ~= '' and string.format('%s/%s', M.namespace, options.key))
-        or ''
-    if key ~= '' then
-        vim.cmd(string.format('aug %s | autocmd! | aug END', key))
-    end
+        or string.format('%s/%s/%s', M.namespace, buf, cmd)
+    vim.cmd(string.format('aug %s | autocmd! | aug END', key))
     vim.api.nvim_exec(
         string.format(
             'au%s %s %s <buffer=%s> %s %s %s',

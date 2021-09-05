@@ -2,20 +2,20 @@ local Object = require('plenary.class')
 local assert = require('vgit.assertion').assert
 local Interface = require('vgit.Interface')
 
-local BufferCache = Object:extend()
+local BufferState = Object:extend()
 
-function BufferCache:new()
-    return setmetatable({ buf_states = {} }, BufferCache)
+function BufferState:new()
+    return setmetatable({ data = {} }, BufferState)
 end
 
-function BufferCache:contains(buf)
+function BufferState:contains(buf)
     assert(type(buf) == 'number', 'type error :: expected number')
-    return self.buf_states[buf] ~= nil
+    return self.data[buf] ~= nil
 end
 
-function BufferCache:add(buf)
+function BufferState:add(buf)
     assert(type(buf) == 'number', 'type error :: expected number')
-    self.buf_states[buf] = Interface:new({
+    self.data[buf] = Interface:new({
         filename = '',
         filetype = '',
         tracked_filename = '',
@@ -30,42 +30,42 @@ function BufferCache:add(buf)
     })
 end
 
-function BufferCache:remove(buf)
+function BufferState:remove(buf)
     assert(type(buf) == 'number', 'type error :: expected number')
-    local buf_state = self.buf_states[buf]
-    assert(buf_state ~= nil, 'untracked buffer')
-    self.buf_states[buf] = nil
+    local bstate = self.data[buf]
+    assert(bstate ~= nil, 'untracked buffer')
+    self.data[buf] = nil
 end
 
-function BufferCache:get(buf, key)
-    assert(type(buf) == 'number', 'type error :: expected number')
-    assert(type(key) == 'string', 'type error :: expected string')
-    local buf_state = self.buf_states[buf]
-    assert(buf_state ~= nil, 'untracked buffer')
-    return buf_state:get(key)
-end
-
-function BufferCache:set(buf, key, value)
+function BufferState:get(buf, key)
     assert(type(buf) == 'number', 'type error :: expected number')
     assert(type(key) == 'string', 'type error :: expected string')
-    local buf_state = self.buf_states[buf]
-    assert(buf_state ~= nil, 'untracked buffer')
-    buf_state:set(key, value)
+    local bstate = self.data[buf]
+    assert(bstate ~= nil, 'untracked buffer')
+    return bstate:get(key)
 end
 
-function BufferCache:for_each(fn)
+function BufferState:set(buf, key, value)
+    assert(type(buf) == 'number', 'type error :: expected number')
+    assert(type(key) == 'string', 'type error :: expected string')
+    local bstate = self.data[buf]
+    assert(bstate ~= nil, 'untracked buffer')
+    bstate:set(key, value)
+end
+
+function BufferState:for_each(fn)
     assert(type(fn) == 'function', 'type error :: expected function')
-    for key, value in pairs(self.buf_states) do
+    for key, value in pairs(self.data) do
         fn(key, value)
     end
 end
 
-function BufferCache:get_buf_states()
-    return self.buf_states
+function BufferState:get_data()
+    return self.data
 end
 
-function BufferCache:size()
-    return #self.buf_states
+function BufferState:size()
+    return #self.data
 end
 
-return BufferCache
+return BufferState
