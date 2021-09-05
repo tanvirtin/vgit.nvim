@@ -1,15 +1,15 @@
 local Object = require('plenary.class')
+local render_settings = require('vgit.render_settings')
 local navigation = require('vgit.navigation')
 local virtual_text = require('vgit.virtual_text')
 local sign = require('vgit.sign')
-local painter = require('vgit.painter')
 local dimensions = require('vgit.dimensions')
 local events = require('vgit.events')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 local Interface = require('vgit.Interface')
 
-local View = Object:extend()
+local Popup = Object:extend()
 
 local function calculate_text_center(text, width)
     local rep = math.floor((width / 2) - math.floor(#text / 2))
@@ -89,15 +89,48 @@ local function create_border(content_buf, title, window_props, border, border_hl
     vim.api.nvim_win_set_option(win_id, 'cursorbind', false)
     vim.api.nvim_win_set_option(win_id, 'scrollbind', false)
     vim.api.nvim_win_set_option(win_id, 'winhl', string.format('Normal:%s', border_hl))
-    events.buf.on(content_buf, 'WinClosed', string.format(':lua require("vgit").ui.close_windows({ %s })', win_id))
+    events.buf.on(
+        content_buf,
+        'WinClosed',
+        string.format(':lua require("vgit").renderer.hide_windows({ %s })', win_id),
+        { once = true }
+    )
     return buf, win_id
 end
 
-function View:setup(config)
+local function create_virtual_line_nr(content_buf, window_props, width, border_hl)
+    local buf = vim.api.nvim_create_buf(true, true)
+    buffer.assign_options(buf, {
+        ['modifiable'] = false,
+        ['bufhidden'] = 'wipe',
+        ['buflisted'] = false,
+    })
+    local win_id = vim.api.nvim_open_win(buf, false, {
+        relative = 'editor',
+        style = 'minimal',
+        row = window_props.row,
+        col = window_props.col,
+        width = width,
+        height = window_props.height,
+        focusable = false,
+    })
+    vim.api.nvim_win_set_option(win_id, 'cursorbind', true)
+    vim.api.nvim_win_set_option(win_id, 'scrollbind', true)
+    vim.api.nvim_win_set_option(win_id, 'winhl', string.format('Normal:%s', border_hl))
+    events.buf.on(
+        content_buf,
+        'WinClosed',
+        string.format(':lua require("vgit").renderer.hide_windows({ %s })', win_id),
+        { once = true }
+    )
+    return buf, win_id
+end
+
+function Popup:setup(config)
     state:assign(config)
 end
 
-function View:new(options)
+function Popup:new(options)
     assert(options == nil or type(options) == 'table', 'type error :: expected table or nil')
     options = options or {}
     local height = self:get_min_height()
@@ -131,15 +164,25 @@ function View:new(options)
             col = math.ceil((dimensions.global_width() - width) / 2),
             focusable = true,
         },
+        virtual_line_nr = {
+            enabled = false,
+            width = render_settings.get('preview').virtual_line_nr_width,
+        },
     })
     config:assign(options)
     return setmetatable({
         state = {
             buf = nil,
             win_id = nil,
+            ns_id = nil,
             border = {
                 buf = nil,
                 win_id = nil,
+            },
+            virtual_line_nr = {
+                buf = nil,
+                win_id = nil,
+                ns_id = nil,
             },
             loading = false,
             error = false,
@@ -149,109 +192,191 @@ function View:new(options)
         },
         config = config,
         anim_id = nil,
-    }, View)
+    }, Popup)
 end
 
-function View:get_win_id()
+function Popup:has_virtual_line_nr()
+    return self.config:get('virtual_line_nr').enabled
+end
+
+function Popup:get_win_id()
     return self.state.win_id
 end
 
-function View:get_buf()
+function Popup:get_buf()
     return self.state.buf
 end
 
-function View:get_border_buf()
+function Popup:get_ns_id()
+    return self.state.ns_id
+end
+
+function Popup:get_border_buf()
     return self.state.border.buf
 end
 
-function View:get_border_win_id()
+function Popup:get_border_win_id()
     return self.state.border.win_id
 end
 
-function View:get_buf_option(key)
-    return vim.api.nvim_buf_get_option(self.state.buf, key)
+function Popup:get_virtual_line_nr_buf()
+    return self.state.virtual_line_nr.buf
 end
 
-function View:get_win_option(key)
-    return vim.api.nvim_win_get_option(self.state.win_id, key)
+function Popup:get_virtual_line_nr_win_id()
+    return self.state.virtual_line_nr.win_id
 end
 
-function View:get_lines()
+function Popup:get_buf_option(key)
+    return vim.api.nvim_buf_get_option(self:get_win_id(), key)
+end
+
+function Popup:get_win_option(key)
+    return vim.api.nvim_win_get_option(self:get_win_id(), key)
+end
+
+function Popup:get_lines()
     return buffer.get_lines(self:get_buf())
 end
 
-function View:get_height()
-    return vim.api.nvim_win_get_height()
+function Popup:get_height()
+    return vim.api.nvim_win_get_height(self:get_win_id())
 end
 
-function View:get_width()
-    return vim.api.nvim_win_get_width()
+function Popup:get_width()
+    return vim.api.nvim_win_get_width(self:get_win_id())
 end
 
-function View:get_min_height()
+function Popup:get_min_height()
     return 20
 end
 
-function View:get_min_width()
+function Popup:get_min_width()
     return 70
 end
 
-function View:set_height(value)
+function Popup:set_height(value)
     assert(type(value) == 'number', 'type error :: expected number')
     vim.api.nvim_win_set_height(self:get_win_id(), value)
     return self
 end
 
-function View:set_width(value)
+function Popup:set_width(value)
     assert(type(value) == 'number', 'type error :: expected number')
     vim.api.nvim_win_set_width(self:get_win_id(), value)
     return self
 end
 
-function View:set_filetype(filetype)
+function Popup:add_syntax_highlights()
+    local filetype = self.config:get('filetype')
+    if not filetype or filetype == '' then
+        return
+    end
+    local buf = self:get_buf()
+    local has_ts = false
+    local ts_highlight = nil
+    local ts_parsers = nil
+    if not has_ts then
+        has_ts, _ = pcall(require, 'nvim-treesitter')
+        if has_ts then
+            _, ts_highlight = pcall(require, 'nvim-treesitter.highlight')
+            _, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
+        end
+    end
+    if has_ts and filetype and filetype ~= '' then
+        local lang = ts_parsers.ft_to_lang(filetype)
+        if ts_parsers.has_parser(lang) then
+            pcall(ts_highlight.attach, buf, lang)
+        else
+            buffer.set_option(buf, 'syntax', filetype)
+        end
+    end
+end
+
+function Popup:clear_syntax_highlights()
+    local buf = self:get_buf()
+    local has_ts = false
+    if not has_ts then
+        has_ts, _ = pcall(require, 'nvim-treesitter')
+    end
+    if has_ts then
+        local active_buf = vim.treesitter.highlighter.active[buf]
+        if active_buf then
+            active_buf:destroy()
+        else
+            buffer.set_option(buf, 'syntax', '')
+        end
+    end
+end
+
+function Popup:set_filetype(filetype)
     assert(type(filetype) == 'string', 'type error :: expected string')
     self.config:set('filetype', filetype)
     local buf = self:get_buf()
-    painter.clear_syntax(buf)
-    painter.draw_syntax(buf, filetype)
+    self:clear_syntax_highlights()
+    self:add_syntax_highlights()
     buffer.set_option(buf, 'syntax', filetype)
     return self
 end
 
-function View:set_cursor(row, col)
+function Popup:set_cursor(row, col)
     assert(type(row) == 'number', 'type error :: expected number')
     assert(type(col) == 'number', 'type error :: expected number')
     navigation.set_cursor(self:get_win_id(), { row, col })
+    if self:has_virtual_line_nr() then
+        navigation.set_cursor(self:get_virtual_line_nr_win_id(), { row, col })
+    end
     return self
 end
 
-function View:set_buf_option(option, value)
-    vim.api.nvim_buf_set_option(self.state.buf, option, value)
+function Popup:set_buf_option(option, value)
+    vim.api.nvim_buf_set_option(self:get_buf(), option, value)
     return self
 end
 
-function View:set_win_option(option, value)
-    vim.api.nvim_win_set_option(self.state.win_id, option, value)
+function Popup:set_win_option(option, value)
+    vim.api.nvim_win_set_option(self:get_win_id(), option, value)
     return self
 end
 
-function View:set_title(title)
+function Popup:set_title(title)
     assert(type(title) == 'string', 'type error :: expected string')
     buffer.set_lines(
-        self.state.border.buf,
+        self:get_border_buf(),
         create_border_lines(title, self.state:config('window_props'), self.state:config('border'))
     )
     return self
 end
 
-function View:set_lines(lines)
+function Popup:set_lines(lines)
     assert(type(lines) == 'table', 'type error :: expected table')
     self:clear_timers()
     buffer.set_lines(self:get_buf(), lines)
     return self
 end
 
-function View:set_centered_animated_text(frame_rate, frames, callback)
+function Popup:set_virtual_line_nr_lines(lines, hls)
+    assert(type(lines) == 'table', 'type error :: expected table')
+    assert(self:has_virtual_line_nr(), 'cannot set virtual number lines -- virtual number is disabled')
+    vim.api.nvim_win_close(self:get_virtual_line_nr_win_id(), true)
+    local buf, win_id = create_virtual_line_nr(
+        self:get_buf(),
+        self.config:get('window_props'),
+        self.config:get('virtual_line_nr').width,
+        self.config:get('border_hl')
+    )
+    local ns_id = vim.api.nvim_create_namespace(string.format('tanvirtin/vgit.nvim/virtual_line_nr/%s', win_id))
+    self.state.virtual_line_nr.buf = buf
+    self.state.virtual_line_nr.win_id = win_id
+    self.state.virtual_line_nr.ns_id = ns_id
+    buffer.set_lines(buf, lines)
+    for i = 1, #hls do
+        vim.api.nvim_buf_add_highlight(buf, -1, hls[i], i - 1, 0, -1)
+    end
+    return self
+end
+
+function Popup:set_centered_animated_text(frame_rate, frames, callback)
     assert(type(frame_rate) == 'number', 'type error :: expected number')
     assert(vim.tbl_islist(frames), 'type error :: expected list table')
     self:clear_timers()
@@ -274,7 +399,7 @@ function View:set_centered_animated_text(frame_rate, frames, callback)
     })
 end
 
-function View:set_loading(value)
+function Popup:set_loading(value)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
     self:clear_timers()
     if value == self.state.loading then
@@ -286,9 +411,9 @@ function View:set_loading(value)
         local animation_configuration = state:get('loading')
         self:set_centered_animated_text(animation_configuration.frame_rate, animation_configuration.frames)
     else
-        painter.draw_syntax(self.state.buf, self.config:get('filetype'))
+        self:add_syntax_highlights()
         self.state.loading = value
-        buffer.set_lines(self.state.buf, self.state.lines)
+        buffer.set_lines(self:get_buf(), self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
         navigation.set_cursor(self:get_win_id(), self.state.cursor_pos)
         self.state.lines = {}
@@ -297,7 +422,7 @@ function View:set_loading(value)
     return self
 end
 
-function View:set_error(value)
+function Popup:set_error(value)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
     self:clear_timers()
     if value == self.state.error then
@@ -307,59 +432,63 @@ function View:set_error(value)
         self.state.error = value
         self:set_centered_text(state:get('error'))
     else
-        painter.draw_syntax(self.state.buf, self.config:get('filetype'))
+        self:add_syntax_highlights()
         self.state.error = value
-        buffer.set_lines(self.state.buf, self.state.lines)
+        buffer.set_lines(self:get_buf(), self.state.lines)
         self:set_win_option('cursorline', self.config:get('win_options').cursorline)
         self.state.lines = {}
     end
     return self
 end
 
-function View:set_centered_text(text, in_animation)
+function Popup:set_centered_text(text, in_animation)
     assert(type(text) == 'string', 'type error :: expected string')
     if not in_animation then
         self:clear_timers()
     end
-    painter.clear_syntax(self.state.buf)
+    self:clear_syntax_highlights()
     local lines = {}
-    local height = vim.api.nvim_win_get_height(self.state.win_id)
-    local width = vim.api.nvim_win_get_width(self.state.win_id)
+    local win_id = self:get_win_id()
+    local height = vim.api.nvim_win_get_height(win_id)
+    local width = vim.api.nvim_win_get_width(win_id)
     for _ = 1, height do
         lines[#lines + 1] = ''
     end
     lines[math.ceil(height / 2)] = string.rep(' ', calculate_text_center(text, width)) .. text
     self:set_win_option('cursorline', false)
     self.state.lines = buffer.get_lines(self:get_buf())
-    buffer.set_lines(self.state.buf, lines)
+    buffer.set_lines(self:get_buf(), lines)
+    if self:has_virtual_line_nr() then
+        buffer.set_lines(self:get_virtual_line_nr_buf(), {})
+    end
     return self
 end
 
-function View:on(cmd, handler, options)
+function Popup:on(cmd, handler, options)
     events.buf.on(self:get_buf(), cmd, handler, options)
     return self
 end
 
-function View:add_keymap(key, action)
+function Popup:add_keymap(key, action)
     buffer.add_keymap(self:get_buf(), key, action)
     return self
 end
 
-function View:remove_keymap(key)
+function Popup:remove_keymap(key)
     buffer.remove_keymap(self:get_buf(), key)
     return self
 end
 
-function View:focus()
-    vim.api.nvim_set_current_win(self.state.win_id)
+function Popup:focus()
+    vim.api.nvim_set_current_win(self:get_win_id())
     return self
 end
 
-function View:is_mounted()
+function Popup:is_mounted()
     return self.state.mounted
 end
 
-function View:create_table(labels, rows)
+function Popup:make_table(labels, rows)
     assert(type(labels) == 'table', 'type error :: expected table')
     assert(type(rows) == 'table', 'type error :: expected table')
     self:clear_timers()
@@ -397,17 +526,24 @@ function View:create_table(labels, rows)
     return self
 end
 
-function View:add_indicator(lnum, namespace, hl)
-    virtual_text.transpose_text(self:get_buf(), '>', namespace, hl, lnum, 0)
+function Popup:add_indicator(lnum)
+    virtual_text.transpose_text(
+        self:get_buf(),
+        '>',
+        self:get_ns_id(),
+        render_settings.get('preview').indicator_hl,
+        lnum,
+        0
+    )
 end
 
-function View:clear_timers()
+function Popup:clear_timers()
     if self.anim_id then
         vim.fn.timer_stop(self.anim_id)
     end
 end
 
-function View:clear()
+function Popup:clear()
     sign.unplace(self:get_buf())
     self:clear_timers()
     self:set_loading(false)
@@ -415,7 +551,7 @@ function View:clear()
     self:set_lines({})
 end
 
-function View:mount()
+function Popup:mount()
     if self.state.mounted then
         return self
     end
@@ -426,7 +562,6 @@ function View:mount()
     local border_focus_hl = self.config:get('border_focus_hl')
     local window_props = self.config:get('window_props')
     local win_options = self.config:get('win_options')
-    local filetype = self.config:get('filetype')
     self.state.buf = vim.api.nvim_create_buf(true, true)
     local buf = self.state.buf
     buffer.assign_options(buf, buf_options)
@@ -446,46 +581,68 @@ function View:mount()
             window_props.border = border
         end
     end
+    local win_ids = {}
+    local virtual_line_nr_width = self.config:get('virtual_line_nr').width
+    local virtual_line_nr_enabled = self.config:get('virtual_line_nr').enabled
+    if virtual_line_nr_enabled then
+        local virtual_line_nr_buf, virtual_line_nr_win_id = create_virtual_line_nr(
+            buf,
+            window_props,
+            virtual_line_nr_width,
+            border_hl
+        )
+        self.state.virtual_line_nr.buf = virtual_line_nr_buf
+        self.state.virtual_line_nr.win_id = virtual_line_nr_win_id
+        window_props.width = window_props.width - virtual_line_nr_width
+        window_props.col = window_props.col + virtual_line_nr_width
+        win_ids[#win_ids + 1] = virtual_line_nr_win_id
+    end
     local win_id = vim.api.nvim_open_win(buf, true, window_props)
     for key, value in pairs(win_options) do
         vim.api.nvim_win_set_option(win_id, key, value)
     end
     self.state.win_id = win_id
+    self.state.ns_id = vim.api.nvim_create_namespace(string.format('tanvirtin/vgit.nvim/%s/%s', buf, win_id))
+    if virtual_line_nr_enabled then
+        window_props.width = window_props.width + virtual_line_nr_width
+        window_props.col = window_props.col - virtual_line_nr_width
+    end
     if border and title ~= '' then
         local border_buf, border_win_id = create_border(buf, title, window_props, border, border_focus_hl)
         self.state.border.buf = border_buf
         self.state.border.win_id = border_win_id
-        vim.cmd(
-            string.format(
-                'au BufEnter <buffer=%s> :lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
-                buf,
-                border_win_id,
-                border_focus_hl
-            )
+        self:on(
+            'BufEnter',
+            string.format(':lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")', border_win_id, border_focus_hl)
         )
-        vim.cmd(
-            string.format(
-                'au BufLeave <buffer=%s> :lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
-                buf,
-                border_win_id,
-                border_hl
-            )
+        self:on(
+            'WinLeave',
+            string.format(':lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")', border_win_id, border_hl)
         )
+        win_ids[#win_ids + 1] = border_win_id
     end
-    self:on('BufWinLeave', string.format(':lua require("vgit").ui.close_windows({ %s })', win_id))
-    painter.draw_syntax(buf, filetype)
+    win_ids[#win_ids + 1] = win_id
+    self:on('BufWinLeave', string.format(':lua require("vgit").renderer.hide_windows(%s)', win_ids))
+    self:add_syntax_highlights()
     self.state.mounted = true
     return self
 end
 
-function View:unmount()
-    self.mounted = false
-    local existing_wins = vim.api.nvim_list_wins()
+function Popup:unmount()
+    self.state.mounted = false
     local win_id = self:get_win_id()
-    if vim.api.nvim_win_is_valid(win_id) and vim.tbl_contains(existing_wins, win_id) then
+    local border_win_id = self:get_border_win_id()
+    local virtual_win_border_id = self:get_virtual_line_nr_win_id()
+    if vim.api.nvim_win_is_valid(win_id) then
         self:clear()
         pcall(vim.api.nvim_win_close, win_id, true)
     end
+    if vim.api.nvim_win_is_valid(border_win_id) then
+        pcall(vim.api.nvim_win_close, border_win_id, true)
+    end
+    if virtual_win_border_id and vim.api.nvim_win_is_valid(virtual_win_border_id) then
+        pcall(vim.api.nvim_win_close, virtual_win_border_id, true)
+    end
 end
 
-return View
+return Popup

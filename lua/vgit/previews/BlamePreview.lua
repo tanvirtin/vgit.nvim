@@ -1,15 +1,7 @@
 local utils = require('vgit.utils')
-local Object = require('plenary.class')
-local Interface = require('vgit.Interface')
-local View = require('vgit.View')
-local Widget = require('vgit.Widget')
-
-local state = Interface:new({
-    window = {
-        border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-        border_hl = 'VGitBorder',
-    },
-})
+local render_settings = require('vgit.render_settings')
+local Popup = require('vgit.Popup')
+local Preview = require('vgit.Preview')
 
 local function create_uncommitted_lines(blame)
     return {
@@ -44,81 +36,49 @@ local function create_committed_lines(blame)
     }
 end
 
-local BlamePopup = Object:extend()
+local BlamePreview = Preview:extend()
 
-function BlamePopup:setup(config)
-    state:assign(config)
-end
-
-function BlamePopup:new()
-    return setmetatable({
-        widget = Widget:new({
-            View:new({
-                border = state:get('window').border,
-                border_hl = state:get('window').border_hl,
-                win_options = { ['cursorline'] = true },
-                window_props = {
-                    style = 'minimal',
-                    relative = 'cursor',
-                    height = 5,
-                    width = 88,
-                    row = 0,
-                    col = 0,
-                },
-            }),
-        }, {
-            popup = true,
+function BlamePreview:new()
+    local this = Preview:new({
+        Popup:new({
+            border = render_settings.get('preview').border,
+            border_hl = render_settings.get('preview').border_hl,
+            win_options = { ['cursorline'] = true },
+            window_props = {
+                style = 'minimal',
+                relative = 'cursor',
+                height = 5,
+                width = 88,
+                row = 0,
+                col = 0,
+            },
         }),
-        data = nil,
-        err = nil,
-    }, BlamePopup)
+    }, {
+        temporary = true,
+    })
+    return setmetatable(this, BlamePreview)
 end
 
-function BlamePopup:get_win_ids()
-    return self.widget:get_win_ids()
-end
-
-function BlamePopup:set_loading(value)
-    self.widget:set_loading(value)
-    return self
-end
-
-function BlamePopup:set_error(value)
-    self.widget:set_error(value)
-    return self
-end
-
-function BlamePopup:mount()
-    self.widget:mount()
-    return self
-end
-
-function BlamePopup:unmount()
-    self.widget:unmount()
-    return self
-end
-
-function BlamePopup:render()
-    local widget = self.widget
+function BlamePreview:render()
     local err, blame = self.err, self.data
-    widget:clear()
+    self:clear()
     if err then
-        widget:set_error(true)
+        self:set_error(true)
         return self
     end
     if blame then
-        local view = widget:get_views()[1]
+        local popup = self:get_popups()[1]
         if not blame.committed then
             local uncommitted_lines = create_uncommitted_lines(blame)
-            view:set_lines(uncommitted_lines)
-            view:set_height(#uncommitted_lines)
+            popup:set_lines(uncommitted_lines)
+            popup:set_height(#uncommitted_lines)
             return self
         end
         local committed_lines = create_committed_lines(blame)
-        view:set_lines(committed_lines)
-        view:set_height(#committed_lines)
+        popup:set_lines(committed_lines)
+        popup:set_height(#committed_lines)
     end
     return self
 end
 
-return BlamePopup
+return BlamePreview

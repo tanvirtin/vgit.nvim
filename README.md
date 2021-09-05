@@ -6,6 +6,7 @@
         </tr>
     </td>
 </table>
+
 <br />
 
 <a href="https://github.com/tanvirtin/vgit.nvim/actions?query=workflow%3ACI">
@@ -15,75 +16,12 @@
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
 </a>
 
-## Features
-<details>
-    <summary>Hunk as signs</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/119602593-771e3580-bdb9-11eb-95f6-3758394bc297.gif" alt="hunk_signs" />
-</details>
-<details>
-    <summary>Reset a hunk</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/119602598-79808f80-bdb9-11eb-974c-aaa2a4445313.gif" alt="reset_hunk" />
-</details>
-<details>
-    <summary>Stage a hunk</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/127396247-a3e16213-5865-455e-9f72-72da1315abd6.gif" alt="hunk_stage" />
-</details>
-<details>
-    <summary>Navigate through hunks</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/119602585-75547200-bdb9-11eb-868c-0e43c41c378f.gif" alt="hunk_navigation" />
-</details>
-<details>
-    <summary>Diff a buffer</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/119602595-77b6cc00-bdb9-11eb-94c8-f62478ff8a16.gif" alt="diff_preview" />
-</details>
-<details>
-    <summary>See what changes you staged</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/127720416-e4130098-f8fc-4d8f-ab88-8adf701f384d.gif" alt="staged_preview" />
-</details>
-<details>
-    <summary>Reset a buffer</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/119602597-79808f80-bdb9-11eb-94ed-8bd557164f84.gif" alt="buffer_reset" />
-</details>
-<details>
-    <summary>Blame a line</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/119602582-74bbdb80-bdb9-11eb-8f70-1ab43e9213df.gif" alt="blame_a_line" />
-</details>
-<details>
-    <summary>Show Blame</summary>
-    <br />
-    <img width="1792" alt="show_blame" src="https://user-images.githubusercontent.com/25164326/122292020-83cb1080-cec3-11eb-9a46-b07dddb4bd65.png">
-</details>
-<details>
-    <summary>Quickfix your hunks</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/119602589-75ed0880-bdb9-11eb-98fa-9e5a615dae31.gif" alt="hunks_quickfix_list" />
-</details>
-<details>
-    <summary>Git History</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/119602600-7a192600-bdb9-11eb-9ef9-709ea154aeaa.gif" alt="history" />
-</details>
-<details>
-    <summary>Switch between different ways to see your diffs</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/121595739-95687000-ca0c-11eb-8f1d-9b5b398e3b0d.gif" alt="diff_preference" />
-</details>
-<details>
-    <summary>Get a deeper dive into all the blames for a buffer</summary>
-    <br />
-    <img src="https://user-images.githubusercontent.com/25164326/129825907-3bd8479b-fc68-4b8c-9cfd-8a89755c5540.PNG" />
-</details>
+<br />
+<br />
+<img src="https://user-images.githubusercontent.com/25164326/132134589-9b676b82-ddca-400c-975c-d1c3de11a30c.gif" alt="overview" />
 
 ## Supported Neovim versions:
-- Neovim > 0.5
+- Neovim **>=** 0.5
 
 ## Supported Opperating System:
 - linux-gnu*
@@ -98,14 +36,14 @@
 - `vim.wo.signcolumn = 'yes'` (see :help signcolumn)
 
 ## Installation
-| Plugin Manager                                       | Command                                                                        |
-|------------------------------------------------------|--------------------------------------------------------------------------------|
-| [Packer](https://github.com/wbthomason/packer.nvim)  | `use { 'tanvirtin/vgit.nvim', requires = 'nvim-lua/plenary.nvim' }`            |
-| [Vim-plug](https://github.com/junegunn/vim-plug)     | `Plug 'tanvirtin/vgit.nvim'`                                                   |
-| [NeoBundle](https://github.com/Shougo/neobundle.vim) | `NeoBundle 'tanvirtin/vgit.nvim'`                                              |
-| [Vundle](https://github.com/VundleVim/Vundle.vim)    | `Bundle 'tanvirtin/vgit.nvim'`                                                 |
-| [Pathogen](https://github.com/tpope/vim-pathogen)    | `git clone https://github.com/tanvirtin/vgit.nvim.git ~/.vim/bundle/vgit.nvim` |
-| [Dein](https://github.com/Shougo/dein.vim)           | `call dein#add('tanvirtin/vgit.nvim')`                                         |
+```lua
+use {
+  'tanvirtin/vgit.nvim',
+  requires = {
+    'nvim-lua/plenary.nvim'
+  }
+}
+```
 
 ## Setup
 You must instantiate the plugin in order for the features to work.
@@ -116,43 +54,119 @@ require('vgit').setup()
 To embed the above code snippet in a .vim file wrap it in lua << EOF code-snippet EOF:
 ```lua
 lua << EOF
-require('vgit').setup({
-  -- ...
-})
+require('vgit').setup()
 EOF
 ```
+
+## Advanced Setup
+```lua
+local vgit = require('vgit')
+
+vgit.setup({
+    hunks_enabled = true,
+    blames_enabled = true,
+    diff_strategy = 'index',
+    diff_preference = 'vertical',
+    predict_hunk_signs = true,
+    predict_hunk_throttle_ms = 300,
+    predict_hunk_max_lines = 50000,
+    blame_line_throttle_ms = 150,
+    show_untracked_file_signs = true,
+    action_delay_ms = 300,
+    hls = vgit.themes.tokyonight -- You can also pass in your own custom object,
+    render_settings = {
+        preview = {
+            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+            border_hl = 'VGitBorder',
+            border_focus_hl = 'VGitBorderFocus',
+            indicator_hl = 'VGitIndicator',
+            virtual_line_nr_width = 6,
+            sign = {
+                priority = 10,
+                hls = {
+                    add = 'VGitViewSignAdd',
+                    remove = 'VGitViewSignRemove',
+                },
+            },
+        },
+        sign = {
+            priority = 10,
+            hls = {
+                add = 'VGitSignAdd',
+                remove = 'VGitSignRemove',
+                change = 'VGitSignChange',
+            },
+        },
+        line_blame = {
+            hl = 'VGitLineBlame',
+            format = function(blame, git_config)
+                local config_author = git_config['user.name']
+                local author = blame.author
+                if config_author == author then
+                    author = 'You'
+                end
+                local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
+                local time_format = string.format('%s days ago', utils.round(time))
+                local time_divisions = { { 24, 'hours' }, { 60, 'minutes' }, { 60, 'seconds' } }
+                local division_counter = 1
+                while time < 1 and division_counter ~= #time_divisions do
+                    local division = time_divisions[division_counter]
+                    time = time * division[1]
+                    time_format = string.format('%s %s ago', utils.round(time), division[2])
+                    division_counter = division_counter + 1
+                end
+                local commit_message = blame.commit_message
+                if not blame.committed then
+                    author = 'You'
+                    commit_message = 'Uncommitted changes'
+                    local info = string.format('%s • %s', author, commit_message)
+                    return string.format(' %s', info)
+                end
+                local max_commit_message_length = 255
+                if #commit_message > max_commit_message_length then
+                    commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
+                end
+                local info = string.format('%s, %s • %s', author, time_format, commit_message)
+                return string.format(' %s', info)
+            end,
+        },
+    }
+})
+```
+
+## Themes
+Predefined supported themes:
+- [tokyonight](https://github.com/folke/tokyonight.nvim)
+- [monokai](https://github.com/tanvirtin/monokai.nvim)
+
+Colorscheme definitions can be found in `lua/vgit/themes/`, feel free to open a pull request with your own colorscheme!
 
 ## API
 | Function Name | Description |
 |---------------|-------------|
 | setup | Sets up the plugin for success |
 | toggle_buffer_hunks | Shows hunk signs on buffers/Hides hunk signs on buffers |
-| toggle_buffer_blames | Enables blames feature on buffers /Disables blames feature on buffers |
-| stage_buffer | Stages a buffer you are currently on |
-| unstage_buffer | Unstages a buffer you are currently on |
-| staged_buffer_preview | Shows staged changes in a preview window |
-| buffer_preview | Shows the current differences in lines in the current buffer |
-| buffer_hunk_lens | Gives you a lens view through which you can navigate and see the current hunk or other hunks, this is similar to buffer preview, also an alternate for hunk_preview |
-| buffer_history | Opens a buffer preview along with a table of logs, enabling users to see different iterations of the buffer in the git history |
+| toggle_buffer_blames | Enables blames feature on buffers/Disables blames feature on buffers |
+| toggle_diff_preference | Switches between "horizontal" and "vertical" layout for previews |
+| buffer_stage | Stages a buffer you are currently on |
+| buffer_unstage | Unstages a buffer you are currently on |
+| buffer_diff_preview | Opens a diff preview of the changes in the current buffer |
+| buffer_staged_diff_preview | Shows staged changes in a preview window |
+| buffer_hunk_preview | Gives you a view through which you can navigate and see the current hunk or other hunks |
+| buffer_history_preview | Opens a buffer preview along with a table of logs, enabling users to see different iterations of the buffer in the git history |
+| buffer_blame_preview | Opens a preview detailing the blame of the line that the user is currently on |
+| buffer_gutter_blame_preview | Opens a preview which shows the blames related to all the lines of a buffer |
 | buffer_reset | Resets the current buffer to HEAD |
-| hunk_preview | Please see "buffer_hunk_lens" |
-| hunk_reset | Removes the hunk from the buffer, if cursor is on a hunk |
-| hunk_stage | Stages a hunk, if cursor is on a hunk |
+| buffer_hunk_stage | Stages a hunk, if cursor is over it |
+| buffer_hunk_reset | Removes the hunk from the buffer, if cursor is over it |
+| project_hunks_qf | Opens a populated quickfix window with all the hunks of the project |
+| project_diff_view | Opens a preview listing all the files that have been changed |
 | hunk_down | Navigate downward through a hunk, this works on any view with diff highlights |
 | hunk_up | Navigate upwards through a hunk, this works on any view with diff highlights |
-| hunks_quickfix_list | Opens a populated quickfix window with all the hunks of the project |
-| show_blame | Opens a view detailing the blame of the line that the user is currently on |
-| diff | Please see "hunks_quickfix_list" |
-| instantiated | Returns true if setup has been called, false otherwise |
-| enabled | Returns true, if plugin is enabled, false otherwise |
 | get_diff_base | Returns the current diff base that all diff and hunks are being compared for all buffers |
-| set_diff_base | Sets the current diff base to a different commit, going forward all future hunks and diffs for a given buffer will be against this commit |
 | get_diff_preference | Returns the current diff preference of the diff, the value will either be "horizontal" or "vertical" |
-| set_diff_preference | Sets the diff preference to your given output, the value can only be "horizontal" or "vertical" |
 | get_diff_strategy | Returns the current diff strategy used to compute hunk signs and buffer preview, the value will either be "remote" or "index" |
+| set_diff_base | Sets the current diff base to a different commit, going forward all future hunks and diffs for a given buffer will be against this commit |
+| set_diff_preference | Sets the diff preference to your given output, the value can only be "horizontal" or "vertical" |
 | set_diff_strategy | Sets the diff strategy that will be used to show hunk signs and buffer preview, the value can only be "remote" or "index" |
 | show_debug_logs | Shows all errors that has occured during program execution |
-
-<br/>
-
-**NOTE**: *This project is still in development. API and functionality is unstable and subject to change in the future. For a more stable experiece please checkout other great community plugins such as [Gitsigns](https://github.com/lewis6991/gitsigns.nvim) and [Neogit](https://github.com/TimUntersberger/neogit)* 
