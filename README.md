@@ -20,6 +20,17 @@
 <br />
 <img src="https://user-images.githubusercontent.com/25164326/132134589-9b676b82-ddca-400c-975c-d1c3de11a30c.gif" alt="overview" />
 
+## Highlighted Features
+- Gutter changes annotation to highlight any local (unpublished) changes or lines changed by the most recent commit
+- Current line blame as virtual text
+- See the details of a blame related to the current line (`:VGit buffer_blame_preview`)
+- See the blames of a buffer in a VGit preview (`:VGit buffer_gutter_blame_preview`)
+- See all hunks in a VGit preview (`:VGit buffer_hunk_preview`)
+- See the buffer changes in a VGit preview (`:VGit buffer_diff_preview`)
+- See all the history of a buffer in a VGit preview (`:VGit buffer_history`)
+- See changes in your project in a VGit diff preview (`:VGit project_diff_preview`)
+- See changes in your project in a quickfix list (`:VGit project_hunks_qf`)
+
 ## Supported Neovim versions:
 - Neovim **>=** 0.5
 
