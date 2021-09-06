@@ -210,7 +210,9 @@ function HistoryPreview:mount()
         return self
     end
     Preview.mount(self)
-    self:get_popups().table:add_keymap('<enter>', string.format('_rerender_history(%s)', self:get_parent_buf()))
+    local table = self:get_popups().table
+    table:focus()
+    table:add_keymap('<enter>', string.format('_rerender_history(%s)', self:get_parent_buf()))
     return self
 end
 
