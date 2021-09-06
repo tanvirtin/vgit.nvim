@@ -17,6 +17,7 @@ function Preview:new(popups, opts)
         popups = popups,
         state = {
             mounted = false,
+            rendered = false,
             win_toggle_queue = {},
         },
         parent_buf = vim.api.nvim_get_current_buf(),
@@ -58,7 +59,7 @@ function Preview:draw_changes(data)
             sign.place(buf, lnum, defined_sign, render_settings.get('preview').sign.priority)
         end
         if type == 'void' then
-            local void_line = string.rep('⣿', vim.api.nvim_win_get_width(0))
+            local void_line = string.rep(render_settings.get('preview').symbols.void, vim.api.nvim_win_get_width(0))
             virtual_text.add(buf, ns_id, lnum - 1, 0, {
                 id = lnum,
                 virt_text = { { void_line, 'LineNr' } },
@@ -151,7 +152,7 @@ function Preview:make_virtual_line_nr(data)
         for i = 1, #data.current_lines do
             local lnum_change = current_lnum_change_map[i]
             if lnum_change and (lnum_change.type == 'remove' or lnum_change.type == 'void') then
-                virtual_nr_lines[#virtual_nr_lines + 1] = string.rep('⣿', 6)
+                virtual_nr_lines[#virtual_nr_lines + 1] = string.rep(render_settings.get('preview').symbols.void, 6)
                 hls[#hls + 1] = common_hl
             else
                 virtual_nr_lines[#virtual_nr_lines + 1] = string.format('%s', line_nr_count)
@@ -186,7 +187,7 @@ function Preview:make_virtual_line_nr(data)
         for i = 1, #data.previous_lines do
             local lnum_change = previous_lnum_change_map[i]
             if lnum_change and (lnum_change.type == 'add' or lnum_change.type == 'void') then
-                virtual_nr_lines[#virtual_nr_lines + 1] = string.rep('⣿', 6)
+                virtual_nr_lines[#virtual_nr_lines + 1] = string.rep(render_settings.get('preview').symbols.void, 6)
                 hls[#hls + 1] = common_hl
             else
                 virtual_nr_lines[#virtual_nr_lines + 1] = string.format('%s', line_nr_count)
@@ -225,26 +226,26 @@ function Preview:get_next_win_id()
     return table.remove(self.state.win_toggle_queue)
 end
 
-function Preview:set_loading(value)
+function Preview:set_loading(value, force)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
     for _, popup in pairs(self.popups) do
-        popup:set_loading(value)
+        popup:set_loading(value, force)
     end
     return self
 end
 
-function Preview:set_centered_text(text)
+function Preview:set_centered_text(text, force)
     assert(type(text) == 'string', 'type error :: expected string')
     for _, popup in pairs(self.popups) do
-        popup:set_centered_text(text)
+        popup:set_centered_text(text, force)
     end
     return self
 end
 
-function Preview:set_error(value)
+function Preview:set_error(value, force)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
     for _, popup in pairs(self.popups) do
-        popup:set_error(value)
+        popup:set_error(value, force)
     end
     return self
 end
@@ -277,12 +278,6 @@ function Preview:get_bufs()
     return bufs
 end
 
-function Preview:clear()
-    for _, popup in pairs(self.popups) do
-        popup:clear()
-    end
-end
-
 function Preview:is_mounted()
     return self.state.mounted
 end
@@ -291,8 +286,19 @@ function Preview:is_temporary()
     return self.temporary
 end
 
+function Preview:set_mounted(value)
+    assert(type(value) == 'boolean', 'type error :: expected boolean')
+    self.state.mounted = value
+end
+
+function Preview:clear()
+    for _, popup in pairs(self.popups) do
+        popup:clear()
+    end
+end
+
 function Preview:mount()
-    if self.state.mounted then
+    if self:is_mounted() then
         return self
     end
     for _, popup in pairs(self.popups) do
@@ -327,7 +333,7 @@ function Preview:mount()
             )
         end
     end
-    self.state.mounted = true
+    self:set_mounted(true)
     return self
 end
 
@@ -336,7 +342,7 @@ function Preview:unmount()
     for _, popup in pairs(popups) do
         popup:unmount()
     end
-    self.state.mounted = false
+    self:set_mounted(false)
 end
 
 function Preview:render()

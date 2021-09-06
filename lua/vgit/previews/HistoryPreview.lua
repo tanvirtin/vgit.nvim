@@ -1,4 +1,5 @@
 local dimensions = require('vgit.dimensions')
+local TableBuilder = require('vgit.builders.TableBuilder')
 local render_settings = require('vgit.render_settings')
 local localization = require('vgit.localization')
 local Popup = require('vgit.Popup')
@@ -41,6 +42,7 @@ local function create_horizontal_widget(opts)
             },
         }),
         table = Popup:new({
+            static = true,
             title = 'History',
             border = render_settings.get('preview').border,
             border_hl = render_settings.get('preview').border_hl,
@@ -136,6 +138,7 @@ local function create_vertical_widget(opts)
             },
         }),
         table = Popup:new({
+            static = true,
             title = 'History',
             border = render_settings.get('preview').border,
             border_hl = render_settings.get('preview').border_hl,
@@ -234,19 +237,29 @@ function HistoryPreview:render()
             popups.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines)
             popups.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
         end
-        local rows = {}
-        for i = 1, #logs do
-            local log = logs[i]
-            rows[#rows + 1] = {
-                string.format('HEAD~%s', i - 1),
-                log.author_name or '',
-                log.commit_hash or '',
-                log.summary or '',
-                (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or '',
-            }
+        if not table:has_lines() then
+            local rows = {}
+            for i = 1, #logs do
+                local log = logs[i]
+                rows[#rows + 1] = {
+                    string.format('HEAD~%s', i - 1),
+                    log.author_name or '',
+                    log.commit_hash or '',
+                    log.summary or '',
+                    (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or '',
+                }
+            end
+            local table_builder = TableBuilder:new(
+                { 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' },
+                rows
+            )
+            table_builder:make(table)
         end
-        table:make_table({ 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' }, rows)
-        table:add_indicator(self.selected)
+        table:transpose_text(
+            { render_settings.get('preview').symbols.indicator, render_settings.get('preview').indicator_hl },
+            self.selected,
+            0
+        )
         self:draw_changes(diff_change)
         self:make_virtual_line_nr(diff_change)
         self:reposition_cursor(self.selected)
