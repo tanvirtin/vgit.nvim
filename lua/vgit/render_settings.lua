@@ -17,6 +17,10 @@ M.state = Interface:new({
                 remove = 'VGitViewSignRemove',
             },
         },
+        symbols = {
+            void = '⣿',
+            indicator = '->',
+        },
     },
     sign = {
         priority = 10,
