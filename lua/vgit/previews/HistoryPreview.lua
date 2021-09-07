@@ -214,8 +214,8 @@ function HistoryPreview:mount()
     end
     Preview.mount(self)
     local table = self:get_popups().table
-    table:focus()
     table:add_keymap('<enter>', string.format('_rerender_history(%s)', self:get_parent_buf()))
+    table:focus()
     return self
 end
 
@@ -227,6 +227,7 @@ function HistoryPreview:render()
     if err then
         self:get_popups().table:remove_keymap('<enter>')
         self:set_error(true)
+        table:focus()
         return self
     elseif data then
         local logs = data.logs

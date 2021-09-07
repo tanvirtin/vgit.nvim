@@ -183,8 +183,6 @@ function DiffPreview:render()
         if self.layout_type == 'horizontal' then
             local popups = self:get_popups()
             popups.preview:set_lines(diff_change.lines)
-            popups.preview:focus()
-            popups.preview:focus()
         else
             local popups = self:get_popups()
             popups.previous:set_lines(diff_change.previous_lines)
