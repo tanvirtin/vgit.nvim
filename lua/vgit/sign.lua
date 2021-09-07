@@ -1,5 +1,5 @@
 local utils = require('vgit.utils')
-local render_settings = require('vgit.render_settings')
+local render_store = require('vgit.stores.render_store')
 local Interface = require('vgit.Interface')
 
 local M = {}
@@ -10,40 +10,40 @@ M.constants = utils.readonly({
 
 M.state = Interface:new({
     VGitViewSignAdd = {
-        name = render_settings.get('preview').sign.hls.add,
-        line_hl = render_settings.get('preview').sign.hls.add,
+        name = render_store.get('preview').sign.hls.add,
+        line_hl = render_store.get('preview').sign.hls.add,
         text_hl = nil,
         num_hl = nil,
         icon = nil,
         text = '',
     },
     VGitViewSignRemove = {
-        name = render_settings.get('preview').sign.hls.remove,
-        line_hl = render_settings.get('preview').sign.hls.remove,
+        name = render_store.get('preview').sign.hls.remove,
+        line_hl = render_store.get('preview').sign.hls.remove,
         text_hl = nil,
         num_hl = nil,
         icon = nil,
         text = '',
     },
     VGitSignAdd = {
-        name = render_settings.get('sign').hls.add,
-        text_hl = render_settings.get('sign').hls.add,
+        name = render_store.get('sign').hls.add,
+        text_hl = render_store.get('sign').hls.add,
         num_hl = nil,
         icon = nil,
         line_hl = nil,
         text = '┃',
     },
     VGitSignRemove = {
-        name = render_settings.get('sign').hls.remove,
-        text_hl = render_settings.get('sign').hls.remove,
+        name = render_store.get('sign').hls.remove,
+        text_hl = render_store.get('sign').hls.remove,
         num_hl = nil,
         icon = nil,
         line_hl = nil,
         text = '┃',
     },
     VGitSignChange = {
-        name = render_settings.get('sign').hls.change,
-        text_hl = render_settings.get('sign').hls.change,
+        name = render_store.get('sign').hls.change,
+        text_hl = render_store.get('sign').hls.change,
         num_hl = nil,
         icon = nil,
         line_hl = nil,

@@ -1,5 +1,5 @@
 local Object = require('plenary.class')
-local render_settings = require('vgit.render_settings')
+local render_store = require('vgit.stores.render_store')
 local navigation = require('vgit.navigation')
 local virtual_text = require('vgit.virtual_text')
 local sign = require('vgit.sign')
@@ -166,7 +166,7 @@ function Popup:new(options)
         },
         virtual_line_nr = {
             enabled = false,
-            width = render_settings.get('preview').virtual_line_nr_width,
+            width = render_store.get('preview').virtual_line_nr_width,
         },
         static = false,
     })

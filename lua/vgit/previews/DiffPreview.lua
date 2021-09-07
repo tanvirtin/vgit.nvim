@@ -1,7 +1,7 @@
 local dimensions = require('vgit.dimensions')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
-local render_settings = require('vgit.render_settings')
+local render_store = require('vgit.stores.render_store')
 
 local DiffPreview = Preview:extend()
 
@@ -13,9 +13,9 @@ local function create_horizontal_widget(opts)
         preview = Popup:new({
             title = 'Preview',
             filetype = opts.filetype,
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             win_options = {
                 ['cursorline'] = true,
                 ['cursorbind'] = true,
@@ -45,9 +45,9 @@ local function create_vertical_widget(opts)
         previous = Popup:new({
             title = 'Previous',
             filetype = opts.filetype,
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             win_options = {
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
@@ -68,9 +68,9 @@ local function create_vertical_widget(opts)
         current = Popup:new({
             title = 'Current',
             filetype = opts.filetype,
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             win_options = {
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
