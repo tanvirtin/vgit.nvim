@@ -1,5 +1,5 @@
 local Object = require('plenary.class')
-local render_settings = require('vgit.render_settings')
+local render_store = require('vgit.stores.render_store')
 local navigation = require('vgit.navigation')
 local virtual_text = require('vgit.virtual_text')
 local sign = require('vgit.sign')
@@ -9,26 +9,10 @@ local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 local Interface = require('vgit.Interface')
 
-local Popup = Object:extend()
-
 local function calculate_text_center(text, width)
     local rep = math.floor((width / 2) - math.floor(#text / 2))
     return (rep < 0 and 0) or rep
 end
-
-local state = Interface:new({
-    loading = {
-        frame_rate = 60,
-        frames = {
-            '∙∙∙',
-            '●∙∙',
-            '∙●∙',
-            '∙∙●',
-            '∙∙∙',
-        },
-    },
-    error = '✖✖✖',
-})
 
 local function create_border_lines(title, content_win_options, border)
     local border_lines = {}
@@ -126,8 +110,24 @@ local function create_virtual_line_nr(content_buf, window_props, width, border_h
     return buf, win_id
 end
 
+local Popup = Object:extend()
+
+Popup.state = Interface:new({
+    loading = {
+        frame_rate = 60,
+        frames = {
+            '∙∙∙',
+            '●∙∙',
+            '∙●∙',
+            '∙∙●',
+            '∙∙∙',
+        },
+    },
+    error = '✖✖✖',
+})
+
 function Popup:setup(config)
-    state:assign(config)
+    Popup.state:assign(config)
 end
 
 function Popup:new(options)
@@ -166,7 +166,7 @@ function Popup:new(options)
         },
         virtual_line_nr = {
             enabled = false,
-            width = render_settings.get('preview').virtual_line_nr_width,
+            width = render_store.get('preview').virtual_line_nr_width,
         },
         static = false,
     })
@@ -515,7 +515,7 @@ function Popup:set_loading(value, force)
     if value then
         self:set_cached_cursor(vim.api.nvim_win_get_cursor(self:get_win_id()))
         self.state.loading = value
-        local animation_configuration = state:get('loading')
+        local animation_configuration = Popup.state:get('loading')
         self:set_centered_animated_text(animation_configuration.frame_rate, animation_configuration.frames, force)
     else
         self:add_syntax_highlights()
@@ -540,7 +540,7 @@ function Popup:set_error(value, force)
     end
     if value then
         self.state.error = value
-        self:set_centered_text(state:get('error'))
+        self:set_centered_text(Popup.state:get('error'))
     else
         self:add_syntax_highlights()
         self.state.error = value
