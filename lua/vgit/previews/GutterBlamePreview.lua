@@ -1,5 +1,5 @@
 local utils = require('vgit.utils')
-local render_settings = require('vgit.render_settings')
+local render_store = require('vgit.stores.render_store')
 local dimensions = require('vgit.dimensions')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
@@ -53,8 +53,8 @@ function GutterBlamePreview:new(opts)
     local preview_width = math.floor(dimensions.global_width() * 0.60)
     local this = Preview:new({
         blame = Popup:new({
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
             win_options = {
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
@@ -71,8 +71,8 @@ function GutterBlamePreview:new(opts)
             },
         }),
         preview = Popup:new({
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
             win_options = {
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,

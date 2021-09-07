@@ -1,6 +1,6 @@
 local dimensions = require('vgit.dimensions')
 local TableBuilder = require('vgit.builders.TableBuilder')
-local render_settings = require('vgit.render_settings')
+local render_store = require('vgit.stores.render_store')
 local localization = require('vgit.localization')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
@@ -13,9 +13,9 @@ local function create_horizontal_widget(opts)
     return Preview:new({
         preview = Popup:new({
             filetype = opts.filetype,
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             title = 'Preview',
             buf_options = {
                 ['modifiable'] = false,
@@ -44,9 +44,9 @@ local function create_horizontal_widget(opts)
         table = Popup:new({
             static = true,
             title = 'History',
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -80,9 +80,9 @@ local function create_vertical_widget(opts)
         previous = Popup:new({
             title = 'Previous',
             filetype = opts.filetype,
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -110,9 +110,9 @@ local function create_vertical_widget(opts)
         current = Popup:new({
             title = 'Current',
             filetype = opts.filetype,
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -140,9 +140,9 @@ local function create_vertical_widget(opts)
         table = Popup:new({
             static = true,
             title = 'History',
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -256,7 +256,7 @@ function HistoryPreview:render()
             table_builder:make(table)
         end
         table:transpose_text(
-            { render_settings.get('preview').symbols.indicator, render_settings.get('preview').indicator_hl },
+            { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
             self.selected,
             0
         )

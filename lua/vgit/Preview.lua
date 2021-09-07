@@ -1,5 +1,5 @@
 local Object = require('plenary.class')
-local render_settings = require('vgit.render_settings')
+local render_store = require('vgit.stores.render_store')
 local events = require('vgit.events')
 local logger = require('vgit.logger')
 local sign = require('vgit.sign')
@@ -54,12 +54,12 @@ function Preview:draw_changes(data)
         end
         popup:focus()
         local type, lnum, word_diff = datum.type, datum.lnum, datum.word_diff
-        local defined_sign = render_settings.get('preview').sign.hls[type]
+        local defined_sign = render_store.get('preview').sign.hls[type]
         if defined_sign then
-            sign.place(buf, lnum, defined_sign, render_settings.get('preview').sign.priority)
+            sign.place(buf, lnum, defined_sign, render_store.get('preview').sign.priority)
         end
         if type == 'void' then
-            local void_line = string.rep(render_settings.get('preview').symbols.void, vim.api.nvim_win_get_width(0))
+            local void_line = string.rep(render_store.get('preview').symbols.void, vim.api.nvim_win_get_width(0))
             virtual_text.add(buf, ns_id, lnum - 1, 0, {
                 id = lnum,
                 virt_text = { { void_line, 'LineNr' } },
@@ -113,9 +113,9 @@ function Preview:make_virtual_line_nr(data)
                 virtual_nr_lines[#virtual_nr_lines + 1] = string.format('%s', line_nr_count)
                 hls[#hls + 1] = common_hl
                 if lnum_change and lnum_change.type == 'add' then
-                    hls[#hls] = render_settings.get('sign').hls.add
+                    hls[#hls] = render_store.get('sign').hls.add
                 elseif lnum_change and lnum_change.type == 'remove' then
-                    hls[#hls] = render_settings.get('sign').hls.remove
+                    hls[#hls] = render_store.get('sign').hls.remove
                 end
                 line_nr_count = line_nr_count + 1
             end
@@ -125,13 +125,13 @@ function Preview:make_virtual_line_nr(data)
             local lnum_change = lnum_change_map[i]
             if lnum_change then
                 local type, lnum = lnum_change.type, lnum_change.lnum
-                local defined_sign = render_settings.get('preview').sign.hls[type]
+                local defined_sign = render_store.get('preview').sign.hls[type]
                 if defined_sign then
                     sign.place(
                         popup:get_virtual_line_nr_buf(),
                         lnum,
                         defined_sign,
-                        render_settings.get('preview').sign.priority
+                        render_store.get('preview').sign.priority
                     )
                 end
             end
@@ -152,15 +152,15 @@ function Preview:make_virtual_line_nr(data)
         for i = 1, #data.current_lines do
             local lnum_change = current_lnum_change_map[i]
             if lnum_change and (lnum_change.type == 'remove' or lnum_change.type == 'void') then
-                virtual_nr_lines[#virtual_nr_lines + 1] = string.rep(render_settings.get('preview').symbols.void, 6)
+                virtual_nr_lines[#virtual_nr_lines + 1] = string.rep(render_store.get('preview').symbols.void, 6)
                 hls[#hls + 1] = common_hl
             else
                 virtual_nr_lines[#virtual_nr_lines + 1] = string.format('%s', line_nr_count)
                 hls[#hls + 1] = common_hl
                 if lnum_change and lnum_change.type == 'add' then
-                    hls[#hls] = render_settings.get('sign').hls.add
+                    hls[#hls] = render_store.get('sign').hls.add
                 elseif lnum_change and lnum_change.type == 'remove' then
-                    hls[#hls] = render_settings.get('sign').hls.remove
+                    hls[#hls] = render_store.get('sign').hls.remove
                 end
                 line_nr_count = line_nr_count + 1
             end
@@ -170,13 +170,13 @@ function Preview:make_virtual_line_nr(data)
             local lnum_change = current_lnum_change_map[i]
             if lnum_change then
                 local type, lnum = lnum_change.type, lnum_change.lnum
-                local defined_sign = render_settings.get('preview').sign.hls[type]
+                local defined_sign = render_store.get('preview').sign.hls[type]
                 if defined_sign then
                     sign.place(
                         current_popup:get_virtual_line_nr_buf(),
                         lnum,
                         defined_sign,
-                        render_settings.get('preview').sign.priority
+                        render_store.get('preview').sign.priority
                     )
                 end
             end
@@ -187,15 +187,15 @@ function Preview:make_virtual_line_nr(data)
         for i = 1, #data.previous_lines do
             local lnum_change = previous_lnum_change_map[i]
             if lnum_change and (lnum_change.type == 'add' or lnum_change.type == 'void') then
-                virtual_nr_lines[#virtual_nr_lines + 1] = string.rep(render_settings.get('preview').symbols.void, 6)
+                virtual_nr_lines[#virtual_nr_lines + 1] = string.rep(render_store.get('preview').symbols.void, 6)
                 hls[#hls + 1] = common_hl
             else
                 virtual_nr_lines[#virtual_nr_lines + 1] = string.format('%s', line_nr_count)
                 hls[#hls + 1] = common_hl
                 if lnum_change and lnum_change.type == 'add' then
-                    hls[#hls] = render_settings.get('sign').hls.add
+                    hls[#hls] = render_store.get('sign').hls.add
                 elseif lnum_change and lnum_change.type == 'remove' then
-                    hls[#hls] = render_settings.get('sign').hls.remove
+                    hls[#hls] = render_store.get('sign').hls.remove
                 end
                 line_nr_count = line_nr_count + 1
             end
@@ -205,13 +205,13 @@ function Preview:make_virtual_line_nr(data)
             local lnum_change = previous_lnum_change_map[i]
             if lnum_change then
                 local type, lnum = lnum_change.type, lnum_change.lnum
-                local defined_sign = render_settings.get('preview').sign.hls[type]
+                local defined_sign = render_store.get('preview').sign.hls[type]
                 if defined_sign then
                     sign.place(
                         previous_popup:get_virtual_line_nr_buf(),
                         lnum,
                         defined_sign,
-                        render_settings.get('preview').sign.priority
+                        render_store.get('preview').sign.priority
                     )
                 end
             end

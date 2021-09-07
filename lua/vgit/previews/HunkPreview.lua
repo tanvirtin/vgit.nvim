@@ -1,5 +1,5 @@
 local dimensions = require('vgit.dimensions')
-local render_settings = require('vgit.render_settings')
+local render_store = require('vgit.stores.render_store')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
 
@@ -8,8 +8,8 @@ local HunkPreview = Preview:extend()
 function HunkPreview:new(opts)
     local this = Preview:new({
         preview = Popup:new({
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
             win_options = { ['cursorline'] = true },
             window_props = {
                 style = 'minimal',

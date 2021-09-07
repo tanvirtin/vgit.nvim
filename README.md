@@ -85,7 +85,7 @@ vgit.setup({
     show_untracked_file_signs = true,
     action_delay_ms = 300,
     hls = vgit.themes.tokyonight -- You can also pass in your own custom object,
-    render_settings = {
+    render_store = {
         preview = {
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
