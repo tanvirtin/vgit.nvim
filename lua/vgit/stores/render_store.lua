@@ -67,11 +67,15 @@ M.state = Interface:new({
 
 M.setup = function(config)
     config = config or {}
-    M.state:assign(config.render_settings)
+    M.state:assign(config.render)
 end
 
 M.get = function(key)
     return M.state:get(key)
+end
+
+M.set = function(key, value)
+    return M.state:set(key, value)
 end
 
 return M

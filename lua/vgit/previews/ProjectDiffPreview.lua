@@ -1,6 +1,6 @@
 local dimensions = require('vgit.dimensions')
 local TableBuilder = require('vgit.builders.TableBuilder')
-local render_settings = require('vgit.render_settings')
+local render_store = require('vgit.stores.render_store')
 local localization = require('vgit.localization')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
@@ -14,9 +14,9 @@ local function create_horizontal_widget(opts)
     local row = math.floor((dimensions.global_height() - height) / 2)
     return Preview:new({
         preview = Popup:new({
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             title = 'Preview',
             buf_options = {
                 ['modifiable'] = false,
@@ -44,9 +44,9 @@ local function create_horizontal_widget(opts)
         }),
         table = Popup:new({
             title = 'Files Changed',
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -80,9 +80,9 @@ local function create_vertical_widget(opts)
     local row = math.floor((dimensions.global_height() - height) / 2)
     return Preview:new({
         previous = Popup:new({
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             title = 'Previous',
             buf_options = {
                 ['modifiable'] = false,
@@ -110,9 +110,9 @@ local function create_vertical_widget(opts)
         }),
         current = Popup:new({
             title = 'Current',
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -139,9 +139,9 @@ local function create_vertical_widget(opts)
         }),
         table = Popup:new({
             title = 'Files Changed',
-            border = render_settings.get('preview').border,
-            border_hl = render_settings.get('preview').border_hl,
-            border_focus_hl = render_settings.get('preview').border_focus_hl,
+            border = render_store.get('preview').border,
+            border_hl = render_store.get('preview').border_hl,
+            border_focus_hl = render_store.get('preview').border_focus_hl,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
@@ -242,7 +242,7 @@ function ProjectDiffPreview:render()
             local table_builder = TableBuilder:new({ 'Changes' }, rows)
             table_builder:make(table)
             table:transpose_text(
-                { render_settings.get('preview').symbols.indicator, render_settings.get('preview').indicator_hl },
+                { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
                 self.selected,
                 0
             )
@@ -273,7 +273,7 @@ function ProjectDiffPreview:render()
             table_builder:make(table)
         end
         table:transpose_text(
-            { render_settings.get('preview').symbols.indicator, render_settings.get('preview').indicator_hl },
+            { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
             self.selected,
             0
         )

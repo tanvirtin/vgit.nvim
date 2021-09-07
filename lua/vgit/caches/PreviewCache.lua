@@ -1,26 +1,26 @@
 local Object = require('plenary.class')
 
-local PreviewState = Object:extend()
+local PreviewCache = Object:extend()
 
-function PreviewState:new()
-    return setmetatable({ current = {} }, PreviewState)
+function PreviewCache:new()
+    return setmetatable({ current = {} }, PreviewCache)
 end
 
-function PreviewState:get()
+function PreviewCache:get()
     return self.current
 end
 
-function PreviewState:set(popup)
+function PreviewCache:set(popup)
     assert(type(popup) == 'table', 'type error :: expected table')
     self.current = popup
     return self
 end
 
-function PreviewState:exists()
+function PreviewCache:exists()
     return not vim.tbl_isempty(self:get())
 end
 
-function PreviewState:clear()
+function PreviewCache:clear()
     if self:exists() then
         self:get():unmount()
         self.current = {}
@@ -28,4 +28,4 @@ function PreviewState:clear()
     return self
 end
 
-return PreviewState
+return PreviewCache

@@ -1,11 +1,11 @@
-local BufferState = require('vgit.states.BufferState')
+local BufferCache = require('vgit.caches.BufferCache')
 
 local it = it
 local describe = describe
 local eq = assert.are.same
 
-describe('BufferState:', function()
-    local atomic_bstate = {
+describe('BufferCache:', function()
+    local atomic_bcache = {
         blames = {},
         disabled = false,
         filename = '',
@@ -20,15 +20,15 @@ describe('BufferState:', function()
     }
 
     describe('new', function()
-        it('should create a BufferState object', function()
-            local buffer_cache = BufferState:new()
+        it('should create a BufferCache object', function()
+            local buffer_cache = BufferCache:new()
             eq(buffer_cache, { data = {} })
         end)
     end)
 
     describe('add', function()
         it('should throw error on invalid argument types', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             assert.has_error(function()
                 buffer_cache:add(true)
             end)
@@ -47,23 +47,23 @@ describe('BufferState:', function()
         end)
 
         it('should have every buf created with the default atomic state', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             local num_cache = 5
             for i = 1, num_cache, 1 do
                 buffer_cache:add(i)
             end
-            local bstate = { data = atomic_bstate }
+            local bcache = { data = atomic_bcache }
             eq(buffer_cache.data, {
-                [1] = bstate,
-                [2] = bstate,
-                [3] = bstate,
-                [4] = bstate,
-                [5] = bstate,
+                [1] = bcache,
+                [2] = bcache,
+                [3] = bcache,
+                [4] = bcache,
+                [5] = bcache,
             })
         end)
 
-        it('should save a buf id and create necessary bstate', function()
-            local buffer_cache = BufferState:new()
+        it('should save a buf id and create necessary bcache', function()
+            local buffer_cache = BufferCache:new()
             local num_cache = 10000
             for i = 1, num_cache, 1 do
                 buffer_cache:add(i)
@@ -74,7 +74,7 @@ describe('BufferState:', function()
 
     describe('contains', function()
         it('should return true for a given buf number if it exists in the object', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             local num_bufs = 100
             for i = 1, num_bufs, 1 do
                 buffer_cache:add(i)
@@ -85,7 +85,7 @@ describe('BufferState:', function()
         end)
 
         it('should return false for a buf number that does not exist in the object', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             local num_bufs = 100
             for i = 1, num_bufs, 1 do
                 buffer_cache:add(i)
@@ -98,7 +98,7 @@ describe('BufferState:', function()
 
     describe('remove', function()
         it('should throw error on invalid argument types', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             assert.has_error(function()
                 buffer_cache:remove(true)
             end)
@@ -117,7 +117,7 @@ describe('BufferState:', function()
         end)
 
         it('should remove the buf from buffer_cache', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             local num_bufs = 100
             for i = 1, num_bufs, 1 do
                 buffer_cache:add(i)
@@ -136,7 +136,7 @@ describe('BufferState:', function()
 
     describe('get', function()
         it('should throw error on invalid argument types', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             assert.has_error(function()
                 buffer_cache:get(true)
             end)
@@ -155,7 +155,7 @@ describe('BufferState:', function()
         end)
 
         it('should retrieve a value of a buffer state given a key for a specific buffer', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             local num_bufs = 100
             for i = 1, num_bufs, 1 do
                 buffer_cache:add(i)
@@ -175,7 +175,7 @@ describe('BufferState:', function()
 
     describe('set', function()
         it('should throw error on invalid argument types', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             local num_bufs = 100
             for i = 1, num_bufs, 1 do
                 buffer_cache:add(i)
@@ -213,7 +213,7 @@ describe('BufferState:', function()
         end)
 
         it('should set a value of a buffer state given a key for a specific buffer', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             local num_bufs = 100
             for i = 1, num_bufs, 1 do
                 buffer_cache:add(i)
@@ -243,7 +243,7 @@ describe('BufferState:', function()
 
     describe('for_each', function()
         it('should throw error on invalid argument types', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             assert.has_error(function()
                 buffer_cache:for_each(true)
             end)
@@ -262,40 +262,40 @@ describe('BufferState:', function()
         end)
 
         it('should loop over each element in the buffer_cache', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             local num_bufs = 100
             for i = 1, num_bufs, 1 do
                 buffer_cache:add(i)
             end
-            buffer_cache:for_each(function(i, bstate)
-                eq(buffer_cache:get(i, 'blames'), bstate:get('blames'))
-                eq(buffer_cache:get(i, 'disabled'), bstate:get('disabled'))
-                eq(buffer_cache:get(i, 'filename'), bstate:get('filename'))
-                eq(buffer_cache:get(i, 'filetype'), bstate:get('filetype'))
-                eq(buffer_cache:get(i, 'tracked_filename'), bstate:get('tracked_filename'))
-                eq(buffer_cache:get(i, 'hunks'), bstate:get('hunks'))
-                eq(buffer_cache:get(i, 'logs'), bstate:get('logs'))
-                eq(buffer_cache:get(i, 'last_lnum_blamed'), bstate:get('last_lnum_blamed'))
+            buffer_cache:for_each(function(i, bcache)
+                eq(buffer_cache:get(i, 'blames'), bcache:get('blames'))
+                eq(buffer_cache:get(i, 'disabled'), bcache:get('disabled'))
+                eq(buffer_cache:get(i, 'filename'), bcache:get('filename'))
+                eq(buffer_cache:get(i, 'filetype'), bcache:get('filetype'))
+                eq(buffer_cache:get(i, 'tracked_filename'), bcache:get('tracked_filename'))
+                eq(buffer_cache:get(i, 'hunks'), bcache:get('hunks'))
+                eq(buffer_cache:get(i, 'logs'), bcache:get('logs'))
+                eq(buffer_cache:get(i, 'last_lnum_blamed'), bcache:get('last_lnum_blamed'))
             end)
         end)
     end)
 
     describe('get_bufs', function()
         it('should return all the buf states that exists in the buffer_cache', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             local num_bufs = 100
             for i = 1, num_bufs, 1 do
                 buffer_cache:add(i)
             end
             local data = buffer_cache:get_data()
             eq(#vim.tbl_keys(data), num_bufs)
-            for _, bstate in pairs(data) do
-                assert(bstate, nil)
+            for _, bcache in pairs(data) do
+                assert(bcache, nil)
             end
         end)
 
         it('should return empty table if there are no buf states in the buffer_cache', function()
-            local buffer_cache = BufferState:new()
+            local buffer_cache = BufferCache:new()
             assert(buffer_cache:get_data(), {})
         end)
     end)

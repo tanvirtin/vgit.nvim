@@ -74,18 +74,20 @@ EOF
 local vgit = require('vgit')
 
 vgit.setup({
-    hunks_enabled = true,
-    blames_enabled = true,
-    diff_strategy = 'index',
-    diff_preference = 'vertical',
-    predict_hunk_signs = true,
-    predict_hunk_throttle_ms = 300,
-    predict_hunk_max_lines = 50000,
-    blame_line_throttle_ms = 150,
-    show_untracked_file_signs = true,
-    action_delay_ms = 300,
     hls = vgit.themes.tokyonight -- You can also pass in your own custom object,
-    render_settings = {
+    controller = {
+        hunks_enabled = true,
+        blames_enabled = true,
+        diff_strategy = 'index',
+        diff_preference = 'vertical',
+        predict_hunk_signs = true,
+        predict_hunk_throttle_ms = 300,
+        predict_hunk_max_lines = 50000,
+        blame_line_throttle_ms = 150,
+        show_untracked_file_signs = true,
+        action_delay_ms = 300,
+    },
+    render = {
         preview = {
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             border_hl = 'VGitBorder',
