@@ -1,4 +1,5 @@
 local dimensions = require('vgit.dimensions')
+local TableBuilder = require('vgit.builders.TableBuilder')
 local render_settings = require('vgit.render_settings')
 local localization = require('vgit.localization')
 local Popup = require('vgit.Popup')
@@ -66,6 +67,7 @@ local function create_horizontal_widget(opts)
                 row = row,
                 col = spacing,
             },
+            static = true,
         }),
     }, opts)
 end
@@ -160,6 +162,7 @@ local function create_vertical_widget(opts)
                 row = row,
                 col = spacing,
             },
+            static = true,
         }),
     }, opts)
 end
@@ -236,8 +239,13 @@ function ProjectDiffPreview:render()
                 local file = changed_files[i]
                 rows[#rows + 1] = { string.format('%s %s', file.status, file.filename) }
             end
-            table:make_table({ 'Filename' }, rows)
-            table:add_indicator(self.selected)
+            local table_builder = TableBuilder:new({ 'Changes' }, rows)
+            table_builder:make(table)
+            table:transpose_text(
+                { render_settings.get('preview').symbols.indicator, render_settings.get('preview').indicator_hl },
+                self.selected,
+                0
+            )
             self:reposition_cursor(self.selected)
             table:focus()
             return
@@ -255,13 +263,20 @@ function ProjectDiffPreview:render()
             popups.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines):set_filetype(filetype)
             popups.current:set_cursor(1, 0):set_lines(diff_change.current_lines):set_filetype(filetype)
         end
-        local rows = {}
-        for i = 1, #changed_files do
-            local file = changed_files[i]
-            rows[#rows + 1] = { string.format('%s %s', file.status, file.filename) }
+        if not table:has_lines() then
+            local rows = {}
+            for i = 1, #changed_files do
+                local file = changed_files[i]
+                rows[#rows + 1] = { string.format('%s %s', file.status, file.filename) }
+            end
+            local table_builder = TableBuilder:new({ 'Changes' }, rows)
+            table_builder:make(table)
         end
-        table:make_table({ 'Filename' }, rows)
-        table:add_indicator(self.selected)
+        table:transpose_text(
+            { render_settings.get('preview').symbols.indicator, render_settings.get('preview').indicator_hl },
+            self.selected,
+            0
+        )
         self:draw_changes(diff_change)
         self:make_virtual_line_nr(diff_change)
         self:reposition_cursor(self.selected)
