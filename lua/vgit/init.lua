@@ -772,7 +772,7 @@ M.project_hunks_qf = throttle_leading(
     controller_store.get('action_delay_ms')
 )
 
-M.project_diff = throttle_leading(
+M.project_diff_preview = throttle_leading(
     void(function()
         if not controller_store.get('disabled') then
             local diff_preference = controller_store.get('diff_preference')
@@ -1398,7 +1398,7 @@ M.show_blame = M.buffer_show_blame
 M.buffer_preview = M.buffer_diff_preview
 M.staged_buffer_preview = M.buffer_staged_diff_preview
 M.buffer_history = M.buffer_history_preview
-M.diff = M.project_diff
+M.diff = M.project_diff_preview
 M.hunks_quickfix_list = M.project_hunks_qf
 M.hunk_reset = M.buffer_hunk_reset
 M.hunk_preview = M.buffer_hunk_preview

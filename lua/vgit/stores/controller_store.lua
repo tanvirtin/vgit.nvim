@@ -19,7 +19,7 @@ M.state = Interface:new({
 
 M.setup = function(config)
     config = config or {}
-    M.state:assign(config.controller_store)
+    M.state:assign(config.controller)
 end
 
 M.get = function(key)

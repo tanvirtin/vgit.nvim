@@ -67,7 +67,7 @@ M.state = Interface:new({
 
 M.setup = function(config)
     config = config or {}
-    M.state:assign(config.render_store)
+    M.state:assign(config.render)
 end
 
 M.get = function(key)
