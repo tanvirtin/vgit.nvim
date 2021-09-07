@@ -206,7 +206,6 @@ end
 function ProjectDiffPreview:reposition_cursor(selected)
     local table = self:get_popups().table
     table:set_cursor(selected + 1, 0)
-    table:focus()
     return self
 end
 
@@ -215,7 +214,9 @@ function ProjectDiffPreview:mount()
         return self
     end
     Preview.mount(self)
-    self:get_popups().table:add_keymap('<enter>', string.format('_rerender_project_diff(%s)', self:get_parent_buf()))
+    local table = self:get_popups().table
+    table:add_keymap('<enter>', string.format('_rerender_project_diff(%s)', self:get_parent_buf()))
+    table:focus()
     return self
 end
 

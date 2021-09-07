@@ -1,21 +1,20 @@
-local Object = require('plenary.class')
 local assert = require('vgit.assertion').assert
 local Interface = require('vgit.Interface')
 
-local BufferCache = Object:extend()
+local M = {}
 
-function BufferCache:new()
-    return setmetatable({ data = {} }, BufferCache)
+M.state = Interface:new({
+    data = {},
+})
+
+M.contains = function(buf)
+    assert(type(buf) == 'number', 'type error :: expected number')
+    return M.state:get('data')[buf] ~= nil
 end
 
-function BufferCache:contains(buf)
+M.add = function(buf)
     assert(type(buf) == 'number', 'type error :: expected number')
-    return self.data[buf] ~= nil
-end
-
-function BufferCache:add(buf)
-    assert(type(buf) == 'number', 'type error :: expected number')
-    self.data[buf] = Interface:new({
+    M.state:get('data')[buf] = Interface:new({
         filename = '',
         filetype = '',
         tracked_filename = '',
@@ -30,42 +29,42 @@ function BufferCache:add(buf)
     })
 end
 
-function BufferCache:remove(buf)
+M.remove = function(buf)
     assert(type(buf) == 'number', 'type error :: expected number')
-    local bcache = self.data[buf]
+    local bcache = M.state:get('data')[buf]
     assert(bcache ~= nil, 'untracked buffer')
-    self.data[buf] = nil
+    M.state:get('data')[buf] = nil
 end
 
-function BufferCache:get(buf, key)
+M.get = function(buf, key)
     assert(type(buf) == 'number', 'type error :: expected number')
     assert(type(key) == 'string', 'type error :: expected string')
-    local bcache = self.data[buf]
+    local bcache = M.state:get('data')[buf]
     assert(bcache ~= nil, 'untracked buffer')
     return bcache:get(key)
 end
 
-function BufferCache:set(buf, key, value)
+M.set = function(buf, key, value)
     assert(type(buf) == 'number', 'type error :: expected number')
     assert(type(key) == 'string', 'type error :: expected string')
-    local bcache = self.data[buf]
+    local bcache = M.state:get('data')[buf]
     assert(bcache ~= nil, 'untracked buffer')
     bcache:set(key, value)
 end
 
-function BufferCache:for_each(fn)
+M.for_each = function(fn)
     assert(type(fn) == 'function', 'type error :: expected function')
-    for key, value in pairs(self.data) do
+    for key, value in pairs(M.state:get('data')) do
         fn(key, value)
     end
 end
 
-function BufferCache:get_data()
-    return self.data
+M.get_data = function()
+    return M.state:get('data')
 end
 
-function BufferCache:size()
-    return #self.data
+M.size = function()
+    return #M.state:get('data')
 end
 
-return BufferCache
+return M

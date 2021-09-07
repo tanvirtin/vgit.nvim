@@ -1,6 +1,6 @@
 local utils = require('vgit.utils')
 local dmp = require('vgit.lib.dmp')
-local wrap = require('plenary.async.async').wrap
+local scheduler = require('plenary.async.util').scheduler
 
 local M = {}
 
@@ -20,24 +20,23 @@ local function create_diff_change(opts)
     }
 end
 
-M.horizontal = wrap(function(lines, hunks, callback)
+M.horizontal = function(lines, hunks)
     if #hunks == 0 then
-        return callback(
-            nil,
-            utils.readonly(create_diff_change({
-                lines = lines,
-                hunks = hunks,
-            }))
-        )
+        return utils.readonly(create_diff_change({
+            lines = lines,
+            hunks = hunks,
+        }))
     end
     local new_lines = {}
     local lnum_changes = {}
     local marks = {}
     for key, value in pairs(lines) do
+        scheduler()
         new_lines[key] = value
     end
     local new_lines_added = 0
     for i = 1, #hunks do
+        scheduler()
         local hunk = hunks[i]
         local type = hunk.type
         local diff = hunk.diff
@@ -50,6 +49,7 @@ M.horizontal = wrap(function(lines, hunks, callback)
                 finish = finish,
             })
             for j = start, finish do
+                scheduler()
                 lnum_changes[#lnum_changes + 1] = utils.readonly({
                     lnum = j,
                     type = 'add',
@@ -63,6 +63,7 @@ M.horizontal = wrap(function(lines, hunks, callback)
             }
             local s = start
             for j = 1, #diff do
+                scheduler()
                 local line = diff[j]
                 s = s + 1
                 new_lines_added = new_lines_added + 1
@@ -83,6 +84,7 @@ M.horizontal = wrap(function(lines, hunks, callback)
             }
             local s = start
             for j = 1, #diff do
+                scheduler()
                 local line = diff[j]
                 local cleaned_line = line:sub(2, #line)
                 local line_type = line:sub(1, 1)
@@ -125,27 +127,21 @@ M.horizontal = wrap(function(lines, hunks, callback)
             marks[#marks] = utils.readonly(marks[#marks])
         end
     end
-    return callback(
-        nil,
-        utils.readonly(create_diff_change({
-            lines = new_lines,
-            hunks = hunks,
-            lnum_changes = lnum_changes,
-            marks = marks,
-        }))
-    )
-end, 3)
+    return utils.readonly(create_diff_change({
+        lines = new_lines,
+        hunks = hunks,
+        lnum_changes = lnum_changes,
+        marks = marks,
+    }))
+end
 
-M.vertical = wrap(function(lines, hunks, callback)
+M.vertical = function(lines, hunks, callback)
     if #hunks == 0 then
-        return callback(
-            nil,
-            utils.readonly(create_diff_change({
-                current_lines = lines,
-                previous_lines = lines,
-                hunks = hunks,
-            }))
-        )
+        return utils.readonly(create_diff_change({
+            current_lines = lines,
+            previous_lines = lines,
+            hunks = hunks,
+        }))
     end
     local current_lines = {}
     local previous_lines = {}
@@ -154,6 +150,7 @@ M.vertical = wrap(function(lines, hunks, callback)
     local marks = {}
     -- shallow copy
     for key, value in pairs(lines) do
+        scheduler()
         current_lines[key] = value
         previous_lines[key] = value
     end
@@ -161,6 +158,7 @@ M.vertical = wrap(function(lines, hunks, callback)
     -- previous data, which means, the offset needs to be added to our hunks.
     local new_lines_added = 0
     for i = 1, #hunks do
+        scheduler()
         local hunk = hunks[i]
         local type = hunk.type
         local start = hunk.start + new_lines_added
@@ -174,6 +172,7 @@ M.vertical = wrap(function(lines, hunks, callback)
             })
             -- Remove the line indicating that these lines were inserted in current_lines.
             for j = start, finish do
+                scheduler()
                 previous_lines[j] = void_line
                 lnum_changes[#lnum_changes + 1] = utils.readonly({
                     lnum = j,
@@ -194,6 +193,7 @@ M.vertical = wrap(function(lines, hunks, callback)
                 finish = nil,
             }
             for j = 1, #diff do
+                scheduler()
                 local line = diff[j]
                 start = start + 1
                 current_new_lines_added = current_new_lines_added + 1
@@ -231,6 +231,7 @@ M.vertical = wrap(function(lines, hunks, callback)
             -- Hunk finish index does not indicate the total number of lines that may have a diff.
             -- Which is why I am inserting empty lines into both the current and previous data arrays.
             for j = finish + 1, (start + max_lines) - 1 do
+                scheduler()
                 new_lines_added = new_lines_added + 1
                 table.insert(current_lines, j, void_line)
                 table.insert(previous_lines, j, void_line)
@@ -238,6 +239,7 @@ M.vertical = wrap(function(lines, hunks, callback)
             -- With the new calculated range I simply loop over and add the removed
             -- and added lines to their corresponding arrays that contain a buffer lines.
             for j = start, start + max_lines - 1 do
+                scheduler()
                 local recalculated_index = (j - start) + 1
                 local added_line = added_lines[recalculated_index]
                 local removed_line = removed_lines[recalculated_index]
@@ -294,16 +296,13 @@ M.vertical = wrap(function(lines, hunks, callback)
             marks[#marks] = utils.readonly(marks[#marks])
         end
     end
-    return callback(
-        nil,
-        utils.readonly(create_diff_change({
-            current_lines = current_lines,
-            previous_lines = previous_lines,
-            hunks = hunks,
-            lnum_changes = lnum_changes,
-            marks = marks,
-        }))
-    )
-end, 3)
+    return utils.readonly(create_diff_change({
+        current_lines = current_lines,
+        previous_lines = previous_lines,
+        hunks = hunks,
+        lnum_changes = lnum_changes,
+        marks = marks,
+    }))
+end
 
 return M
