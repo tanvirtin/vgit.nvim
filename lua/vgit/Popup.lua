@@ -14,7 +14,7 @@ local function calculate_text_center(text, width)
     return (rep < 0 and 0) or rep
 end
 
-local function create_border_lines(title, content_win_options, border)
+local function create_border_lines(title, content_win_options, border, footer)
     local border_lines = {}
     local topline = nil
     if content_win_options.row > 0 then
@@ -43,18 +43,31 @@ local function create_border_lines(title, content_win_options, border)
     for _ = 1, content_win_options.height do
         border_lines[#border_lines + 1] = middle_line
     end
-    border_lines[#border_lines + 1] = string.format(
-        '%s%s%s',
-        border[7] or '',
-        string.rep(border[6], content_win_options.width),
-        border[5] or ''
-    )
+    if footer or footer ~= nil then
+        footer = string.format(' %s ', footer)
+        local left_start = calculate_text_center(footer, content_win_options.width)
+        border_lines[#border_lines + 1] = string.format(
+            '%s%s%s%s%s',
+            border[7] or '',
+            string.rep(border[6] or '', left_start),
+            footer,
+            string.rep(border[6] or '', content_win_options.width - #footer - left_start),
+            border[5] or ''
+        )
+    else
+        border_lines[#border_lines + 1] = string.format(
+            '%s%s%s',
+            border[7] or '',
+            string.rep(border[6], content_win_options.width),
+            border[5] or ''
+        )
+    end
     return border_lines
 end
 
 local function create_border(content_buf, title, window_props, border, border_hl)
     local thickness = { top = 1, right = 1, bot = 1, left = 1 }
-    local buf = vim.api.nvim_create_buf(true, true)
+    local buf = vim.api.nvim_create_buf(false, true)
     buffer.set_lines(buf, create_border_lines(title, window_props, border))
     buffer.assign_options(buf, {
         ['modifiable'] = false,
@@ -83,7 +96,7 @@ local function create_border(content_buf, title, window_props, border, border_hl
 end
 
 local function create_virtual_line_nr(content_buf, window_props, width, border_hl)
-    local buf = vim.api.nvim_create_buf(true, true)
+    local buf = vim.api.nvim_create_buf(false, true)
     buffer.assign_options(buf, {
         ['modifiable'] = false,
         ['bufhidden'] = 'wipe',
@@ -197,6 +210,10 @@ function Popup:new(options)
         config = config,
         anim_id = nil,
     }, Popup)
+end
+
+function Popup:has_custom_borders()
+    return self:get_border_win_id() ~= nil
 end
 
 function Popup:has_virtual_line_nr()
@@ -440,10 +457,26 @@ function Popup:set_win_option(option, value)
 end
 
 function Popup:set_title(title)
+    assert(self:get_border_win_id(), 'No border exists')
     assert(type(title) == 'string', 'type error :: expected string')
     buffer.set_lines(
         self:get_border_buf(),
         create_border_lines(title, self.config:get('window_props'), self.config:get('border'))
+    )
+    return self
+end
+
+function Popup:set_footer(footer)
+    assert(self:get_border_win_id(), 'No border exists')
+    assert(type(footer) == 'string' or footer == nil, 'type error :: expected string or nil')
+    buffer.set_lines(
+        self:get_border_buf(),
+        create_border_lines(
+            self.config:get('title'),
+            self.config:get('window_props'),
+            self.config:get('border'),
+            footer
+        )
     )
     return self
 end
@@ -646,7 +679,7 @@ function Popup:mount()
     local border_focus_hl = self.config:get('border_focus_hl')
     local window_props = self.config:get('window_props')
     local win_options = self.config:get('win_options')
-    self:set_buf(vim.api.nvim_create_buf(true, true))
+    self:set_buf(vim.api.nvim_create_buf(false, true))
     local buf = self:get_buf()
     buffer.assign_options(buf, buf_options)
     if title == '' then

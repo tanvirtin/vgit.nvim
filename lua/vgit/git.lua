@@ -1,5 +1,5 @@
 local utils = require('vgit.utils')
-local Job = require('plenary.job')
+local Job = require('vgit.Job')
 local Hunk = require('vgit.Hunk')
 local Interface = require('vgit.Interface')
 local wrap = require('plenary.async.async').wrap
@@ -10,7 +10,6 @@ local M = {}
 M.constants = utils.readonly({
     diff_algorithm = 'myers',
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
-    job_timeout = 30000,
 })
 
 M.state = Interface:new({
@@ -131,6 +130,7 @@ M.create_blame = function(info)
     }
 end
 
+-- TODO: This needs to be removed.
 M.setup = void(function(config)
     M.state:assign(config)
     local err, git_config = M.config()
@@ -269,6 +269,7 @@ M.blame_line = wrap(function(filename, lnum, callback)
 end, 3)
 
 M.logs = wrap(function(filename, callback)
+    local err = {}
     local logs = {
         {
             author_name = M.state:get('config')['user.name'],
@@ -288,21 +289,23 @@ M.logs = wrap(function(filename, callback)
             '--',
             filename,
         },
+        on_stdout = function(_, data, _)
+            local log = M.create_log(data)
+            if log then
+                logs[#logs + 1] = log
+            end
+        end,
+        on_stderr = function(_, data, _)
+            err[#err + 1] = data
+        end,
+        on_exit = function()
+            if #err ~= 0 then
+                return callback(err, nil)
+            end
+            return callback(nil, logs)
+        end,
     })
-    job:sync(M.constants.job_timeout)
-    local result = job:result()
-    for i = 1, #result do
-        local line = result[i]
-        local log = M.create_log(line)
-        if log then
-            logs[#logs + 1] = log
-        end
-    end
-    local err = job:stderr_result()
-    if #err ~= 0 then
-        return callback(err, nil)
-    end
-    return callback(nil, logs)
+    job:start()
 end, 2)
 
 M.file_hunks = wrap(function(filename_a, filename_b, callback)
@@ -706,7 +709,8 @@ M.current_branch = wrap(function(callback)
     job:start()
 end, 1)
 
-M.tracked_filename = wrap(function(filename)
+M.tracked_filename = wrap(function(filename, callback)
+    local result = {}
     local job = Job:new({
         command = 'git',
         args = {
@@ -714,13 +718,18 @@ M.tracked_filename = wrap(function(filename)
             '--exclude-standard',
             filename,
         },
+        on_stdout = function(_, data, _)
+            result[#result + 1] = data
+        end,
+        on_exit = function()
+            callback(result[1])
+        end,
     })
-    job:sync(M.constants.job_timeout)
-    local result = job:result()
-    return result[1] or ''
-end, 1)
+    job:start()
+end, 2)
 
-M.tracked_remote_filename = wrap(function(filename)
+M.tracked_remote_filename = wrap(function(filename, callback)
+    local result = {}
     local job = Job:new({
         command = 'git',
         args = {
@@ -729,11 +738,15 @@ M.tracked_remote_filename = wrap(function(filename)
             '--full-name',
             filename,
         },
+        on_stdout = function(_, data, _)
+            result[#result + 1] = data
+        end,
+        on_exit = function()
+            callback(result[1])
+        end,
     })
-    job:sync(M.constants.job_timeout)
-    local result = job:result()
-    return result[1] or ''
-end, 1)
+    job:start()
+end, 2)
 
 M.ls_changed = wrap(function(callback)
     local err = {}
