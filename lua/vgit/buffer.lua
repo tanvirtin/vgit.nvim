@@ -39,7 +39,7 @@ M.set_option = function(buf, key, value)
 end
 
 M.get_option = function(buf, key)
-    vim.api.nvim_buf_get_option(buf, key)
+    return vim.api.nvim_buf_get_option(buf, key)
 end
 
 M.assign_options = function(buf, options)
@@ -51,5 +51,7 @@ end
 M.is_valid = function(buf)
     return vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf)
 end
+
+M.list = vim.api.nvim_list_bufs
 
 return M

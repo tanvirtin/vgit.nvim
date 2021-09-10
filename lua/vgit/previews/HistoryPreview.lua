@@ -1,10 +1,8 @@
 local dimensions = require('vgit.dimensions')
 local TableBuilder = require('vgit.builders.TableBuilder')
 local render_store = require('vgit.stores.render_store')
-local localization = require('vgit.localization')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
-local t = localization.translate
 
 local function create_horizontal_widget(opts)
     local height = math.floor(dimensions.global_height() - 13)
@@ -265,7 +263,7 @@ function HistoryPreview:render()
         self:make_virtual_line_nr(diff_change)
         self:reposition_cursor(self.selected)
     else
-        table:set_centered_text(t('history/no_commits'))
+        table:set_centered_text('There are no commits')
         table:remove_keymap('<enter>')
     end
     table:focus()

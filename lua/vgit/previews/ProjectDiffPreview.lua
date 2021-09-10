@@ -1,10 +1,8 @@
 local dimensions = require('vgit.dimensions')
 local TableBuilder = require('vgit.builders.TableBuilder')
 local render_store = require('vgit.stores.render_store')
-local localization = require('vgit.localization')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
-local t = localization.translate
 
 local function create_horizontal_widget(opts)
     local height = math.floor(dimensions.global_height() - 3)
@@ -228,12 +226,12 @@ function ProjectDiffPreview:render()
     if err then
         if err[1] == 'File not found' then
             local changed_files = data.changed_files
-            local warning_text = t('diff/file_not_found')
+            local file_not_found_msg = 'File has been deleted'
             if self.layout_type == 'horizontal' then
-                popups.preview:set_cursor(1, 0):set_centered_text(warning_text)
+                popups.preview:set_cursor(1, 0):set_centered_text(file_not_found_msg)
             else
-                popups.previous:set_cursor(1, 0):set_centered_text(warning_text)
-                popups.current:set_cursor(1, 0):set_centered_text(warning_text)
+                popups.previous:set_cursor(1, 0):set_centered_text(file_not_found_msg)
+                popups.current:set_cursor(1, 0):set_centered_text(file_not_found_msg)
             end
             local rows = {}
             for i = 1, #changed_files do
@@ -282,7 +280,7 @@ function ProjectDiffPreview:render()
         self:make_virtual_line_nr(diff_change)
         self:reposition_cursor(self.selected)
     else
-        table:set_centered_text(t('diff/no_changes'))
+        table:set_centered_text('There are no changes')
         table:remove_keymap('<enter>')
     end
     table:focus()
