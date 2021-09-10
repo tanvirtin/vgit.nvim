@@ -6,6 +6,7 @@ local sign = require('vgit.sign')
 local virtual_text = require('vgit.virtual_text')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
+local scheduler = require('plenary.async.util').scheduler
 
 local Preview = Object:extend()
 
@@ -27,7 +28,39 @@ function Preview:new(popups, opts)
         selected = opts.selected or nil,
         data = nil,
         err = nil,
+        timer_id = nil,
     }, Preview)
+end
+
+function Preview:set_footer(text)
+    local epoch = 2000
+    if self.timer_id then
+        vim.fn.timer_stop(self.timer_id)
+        self.timer_id = nil
+    end
+    local popups = self:get_popups()
+    if self.layout_type == 'vertical' then
+        if popups.previous:has_custom_borders() then
+            popups.previous:set_footer(text)
+        end
+        if popups.current:has_custom_borders() then
+            popups.current:set_footer(text)
+        end
+    else
+        if popups.preview:has_custom_borders() then
+            popups.preview:set_footer(text)
+        end
+    end
+    self.timer_id = vim.fn.timer_start(epoch, function()
+        if self.layout_type == 'vertical' then
+            pcall(popups.previous.set_footer, popups.previous)
+            pcall(popups.current.set_footer, popups.current)
+        else
+            pcall(popups.preview.set_footer, popups.preview)
+        end
+        vim.fn.timer_stop(self.timer_id)
+        self.timer_id = nil
+    end)
 end
 
 function Preview:regenerate_win_toggle_queue()
@@ -39,7 +72,9 @@ function Preview:draw_changes(data)
     local layout_type = self.layout_type or 'horizontal'
     local popups = self:get_popups()
     local ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/paint')
+    scheduler()
     for i = 1, #lnum_changes do
+        scheduler()
         local datum, popup, buf = lnum_changes[i], nil, nil
         if layout_type == 'horizontal' then
             popup = popups.preview
@@ -52,24 +87,32 @@ function Preview:draw_changes(data)
             logger.error('There are no popup or buffer to draw the changes')
             return
         end
-        popup:focus()
         local type, lnum, word_diff = datum.type, datum.lnum, datum.word_diff
         local defined_sign = render_store.get('preview').sign.hls[type]
         if defined_sign then
+            scheduler()
             sign.place(buf, lnum, defined_sign, render_store.get('preview').sign.priority)
+            scheduler()
         end
         if type == 'void' then
-            local void_line = string.rep(render_store.get('preview').symbols.void, vim.api.nvim_win_get_width(0))
+            scheduler()
+            local void_line = string.rep(
+                render_store.get('preview').symbols.void,
+                vim.api.nvim_win_get_width(popup:get_win_id())
+            )
+            scheduler()
             virtual_text.add(buf, ns_id, lnum - 1, 0, {
                 id = lnum,
                 virt_text = { { void_line, 'LineNr' } },
                 virt_text_pos = 'overlay',
             })
+            scheduler()
         end
         local texts = {}
         if word_diff then
             local offset = 0
             for j = 1, #word_diff do
+                scheduler()
                 local segment = word_diff[j]
                 local operation, fragment = unpack(segment)
                 if operation == -1 then
@@ -85,7 +128,9 @@ function Preview:draw_changes(data)
                     offset = offset + #fragment
                 end
             end
+            scheduler()
             virtual_text.transpose_line(buf, texts, ns_id, lnum - 1)
+            scheduler()
         end
     end
 end
@@ -101,10 +146,12 @@ function Preview:make_virtual_line_nr(data)
         local popup = popups.preview
         local lnum_change_map = {}
         for i = 1, #data.lnum_changes do
+            scheduler()
             local lnum_change = data.lnum_changes[i]
             lnum_change_map[lnum_change.lnum] = lnum_change
         end
         for i = 1, #data.lines do
+            scheduler()
             local lnum_change = lnum_change_map[i]
             if lnum_change and lnum_change.type == 'remove' then
                 virtual_nr_lines[#virtual_nr_lines + 1] = ''
@@ -120,19 +167,24 @@ function Preview:make_virtual_line_nr(data)
                 line_nr_count = line_nr_count + 1
             end
         end
+        scheduler()
         popup:set_virtual_line_nr_lines(virtual_nr_lines, hls)
+        scheduler()
         for i = 1, #data.lines do
+            scheduler()
             local lnum_change = lnum_change_map[i]
             if lnum_change then
                 local type, lnum = lnum_change.type, lnum_change.lnum
                 local defined_sign = render_store.get('preview').sign.hls[type]
                 if defined_sign then
+                    scheduler()
                     sign.place(
                         popup:get_virtual_line_nr_buf(),
                         lnum,
                         defined_sign,
                         render_store.get('preview').sign.priority
                     )
+                    scheduler()
                 end
             end
         end
@@ -142,6 +194,7 @@ function Preview:make_virtual_line_nr(data)
         local current_lnum_change_map = {}
         local previous_lnum_change_map = {}
         for i = 1, #data.lnum_changes do
+            scheduler()
             local lnum_change = data.lnum_changes[i]
             if lnum_change.buftype == 'current' then
                 current_lnum_change_map[lnum_change.lnum] = lnum_change
@@ -150,6 +203,7 @@ function Preview:make_virtual_line_nr(data)
             end
         end
         for i = 1, #data.current_lines do
+            scheduler()
             local lnum_change = current_lnum_change_map[i]
             if lnum_change and (lnum_change.type == 'remove' or lnum_change.type == 'void') then
                 virtual_nr_lines[#virtual_nr_lines + 1] = string.rep(render_store.get('preview').symbols.void, 6)
@@ -165,19 +219,24 @@ function Preview:make_virtual_line_nr(data)
                 line_nr_count = line_nr_count + 1
             end
         end
+        scheduler()
         current_popup:set_virtual_line_nr_lines(virtual_nr_lines, hls)
+        scheduler()
         for i = 1, #data.current_lines do
+            scheduler()
             local lnum_change = current_lnum_change_map[i]
             if lnum_change then
                 local type, lnum = lnum_change.type, lnum_change.lnum
                 local defined_sign = render_store.get('preview').sign.hls[type]
                 if defined_sign then
+                    scheduler()
                     sign.place(
                         current_popup:get_virtual_line_nr_buf(),
                         lnum,
                         defined_sign,
                         render_store.get('preview').sign.priority
                     )
+                    scheduler()
                 end
             end
         end
@@ -185,6 +244,7 @@ function Preview:make_virtual_line_nr(data)
         virtual_nr_lines = {}
         line_nr_count = 1
         for i = 1, #data.previous_lines do
+            scheduler()
             local lnum_change = previous_lnum_change_map[i]
             if lnum_change and (lnum_change.type == 'add' or lnum_change.type == 'void') then
                 virtual_nr_lines[#virtual_nr_lines + 1] = string.rep(render_store.get('preview').symbols.void, 6)
@@ -200,19 +260,24 @@ function Preview:make_virtual_line_nr(data)
                 line_nr_count = line_nr_count + 1
             end
         end
+        scheduler()
         previous_popup:set_virtual_line_nr_lines(virtual_nr_lines, hls)
+        scheduler()
         for i = 1, #data.current_lines do
+            scheduler()
             local lnum_change = previous_lnum_change_map[i]
             if lnum_change then
                 local type, lnum = lnum_change.type, lnum_change.lnum
                 local defined_sign = render_store.get('preview').sign.hls[type]
                 if defined_sign then
+                    scheduler()
                     sign.place(
                         previous_popup:get_virtual_line_nr_buf(),
                         lnum,
                         defined_sign,
                         render_store.get('preview').sign.priority
                     )
+                    scheduler()
                 end
             end
         end
@@ -320,9 +385,11 @@ function Preview:mount()
         )
     end
     local bufs = vim.api.nvim_list_bufs()
+    scheduler()
     for i = 1, #bufs do
         local buf = bufs[i]
         local is_buf_listed = vim.api.nvim_buf_get_option(buf, 'buflisted') == true
+        scheduler()
         if is_buf_listed and buffer.is_valid(buf) then
             local event = self.temporary and 'BufEnter' or 'BufWinEnter'
             events.buf.on(
