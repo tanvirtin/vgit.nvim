@@ -265,7 +265,7 @@ function Popup:get_virtual_line_nr_ns_id()
 end
 
 function Popup:get_buf_option(key)
-    return vim.api.nvim_buf_get_option(self:get_win_id(), key)
+    return buffer.get_option(self:get_win_id(), key)
 end
 
 function Popup:get_win_option(key)

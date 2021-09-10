@@ -74,7 +74,21 @@ EOF
 local vgit = require('vgit')
 
 vgit.setup({
-    hls = vgit.themes.tokyonight -- You can also pass in your own custom object,
+    keymaps = {
+        ['n <C-k>'] = 'hunk_up',
+        ['n <C-j>'] = 'hunk_down',
+        ['n <leader>gs'] = 'buffer_hunk_stage',
+        ['n <leader>gr'] = 'buffer_hunk_reset',
+        ['n <leader>gp'] = 'buffer_hunk_preview',
+        ['n <leader>gb'] = 'buffer_blame_preview',
+        ['n <leader>gf'] = 'buffer_preview',
+        ['n <leader>gh'] = 'buffer_history',
+        ['n <leader>gu'] = 'buffer_reset',
+        ['n <leader>gg'] = 'buffer_gutter_blame_preview',
+        ['n <leader>gd'] = 'project_diff_preview',
+        ['n <leader>gq'] = 'hunks_quickfix_list',
+        ['n <leader>gx'] = 'toggle_diff_preference',
+    },
     controller = {
         hunks_enabled = true,
         blames_enabled = true,
@@ -86,6 +100,49 @@ vgit.setup({
         blame_line_throttle_ms = 150,
         show_untracked_file_signs = true,
         action_delay_ms = 300,
+    },
+    hls = vgit.themes.tokyonight -- You can also pass in your own custom object,
+    sign = {
+        VGitViewSignAdd = {
+            name = 'VGitViewSignAdd',
+            line_hl = 'VGitViewSignAdd',
+            text_hl = nil,
+            num_hl = nil,
+            icon = nil,
+            text = '',
+        },
+        VGitViewSignRemove = {
+            name = 'VGitViewSignRemove',
+            line_hl = 'VGitViewSignRemove',
+            text_hl = nil,
+            num_hl = nil,
+            icon = nil,
+            text = '',
+        },
+        VGitSignAdd = {
+            name = 'VGitSignAdd',
+            text_hl = 'VGitSignAdd',
+            num_hl = nil,
+            icon = nil,
+            line_hl = nil,
+            text = '┃',
+        },
+        VGitSignRemove = {
+            name = 'VGitSignRemove',
+            text_hl = 'VGitSignRemove',
+            num_hl = nil,
+            icon = nil,
+            line_hl = nil,
+            text = '┃',
+        },
+        VGitSignChange = {
+            name = 'VGitSignChange',
+            text_hl = 'VGitSignChange',
+            num_hl = nil,
+            icon = nil,
+            line_hl = nil,
+            text = '┃',
+        },
     },
     render = {
         preview = {

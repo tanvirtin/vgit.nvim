@@ -10,6 +10,7 @@ local highlight = require('vgit.highlight')
 local events = require('vgit.events')
 local sign = require('vgit.sign')
 local buffer = require('vgit.buffer')
+local key_mapper = require('vgit.key_mapper')
 local throttle_leading = require('vgit.defer').throttle_leading
 local controller_store = require('vgit.stores.controller_store')
 local render_store = require('vgit.stores.render_store')
@@ -17,7 +18,6 @@ local debounce_trailing = require('vgit.defer').debounce_trailing
 local logger = require('vgit.logger')
 local navigation = require('vgit.navigation')
 local Patch = require('vgit.Patch')
-local t = require('vgit.localization').translate
 local wrap = require('plenary.async.async').wrap
 local void = require('plenary.async.async').void
 local scheduler = require('plenary.async.util').scheduler
@@ -322,7 +322,7 @@ M._blame_line = debounce_trailing(
             and buffer_store.contains(buf)
             and not buffer_store.get(buf, 'untracked')
         then
-            if not vim.api.nvim_buf_get_option(buf, 'modified') then
+            if not buffer.get_option(buf, 'modified') then
                 local win = vim.api.nvim_get_current_win()
                 local last_lnum_blamed = buffer_store.get(buf, 'last_lnum_blamed')
                 local lnum = vim.api.nvim_win_get_cursor(win)[1]
@@ -366,7 +366,7 @@ M._run_command = function(command, ...)
     if not controller_store.get('disabled') then
         local starts_with = command:sub(1, 1)
         if starts_with == '_' or not M[command] or not type(M[command]) == 'function' then
-            logger.error(t('errors/invalid_command', command))
+            logger.error(string.format('Invalid command %s', command))
             return
         end
         return M[command](...)
@@ -492,18 +492,18 @@ M._rerender_project_diff = throttle_leading(
                                         filetype = fs.detect_filetype(filename),
                                     })
                             else
-                                logger.debug(files_err, 'init.lua/diff')
+                                logger.debug(files_err, 'init.lua/_rerender_project_diff')
                                 return files_err,
                                     utils.readonly({
                                         changed_files = changed_files,
                                     })
                             end
                         else
-                            logger.debug(hunks_err, 'init.lua/diff')
+                            logger.debug(hunks_err, 'init.lua/_rerender_project_diff')
                             return hunks_err, nil
                         end
                     else
-                        logger.debug(changed_files_err, 'init.lua/diff')
+                        logger.debug(changed_files_err, 'init.lua/_rerender_project_diff')
                         return changed_files_err, nil
                     end
                 end, 0),
@@ -546,7 +546,7 @@ M.buffer_hunk_preview = throttle_leading(
                     local read_file_err, lines = fs.read_file(buffer_store.get(buf, 'tracked_filename'))
                     scheduler()
                     if read_file_err then
-                        logger.debug(read_file_err, 'init.lua/buffer_hunk_lens')
+                        logger.debug(read_file_err, 'init.lua/buffer_hunk_preview')
                         return read_file_err, nil
                     end
                     local data = diff.horizontal(lines, hunks)
@@ -743,7 +743,7 @@ M.project_hunks_qf = throttle_leading(
             local err, filenames = git.ls_changed()
             scheduler()
             if err then
-                return logger.debug(err, 'init.lua/hunks_quickfix_list')
+                return logger.debug(err, 'init.lua/project_hunks_qf')
             end
             for i = 1, #filenames do
                 local filename = filenames[i].filename
@@ -761,7 +761,7 @@ M.project_hunks_qf = throttle_leading(
                         }
                     end
                 else
-                    logger.debug(hunks_err, 'init.lua/hunks_quickfix_list')
+                    logger.debug(hunks_err, 'init.lua/project_hunks_qf')
                 end
             end
             if #qf_entries ~= 0 then
@@ -781,7 +781,7 @@ M.project_diff_preview = throttle_leading(
             local changed_files_err, changed_files = git.ls_changed()
             scheduler()
             if changed_files_err then
-                return logger.debug(changed_files_err, 'init.lua/diff')
+                return logger.debug(changed_files_err, 'init.lua/project_diff_preview')
             end
             if #changed_files == 0 then
                 return
@@ -810,14 +810,14 @@ M.project_diff_preview = throttle_leading(
                                     filetype = fs.detect_filetype(filename),
                                 })
                         else
-                            logger.debug(files_err, 'init.lua/diff')
+                            logger.debug(files_err, 'init.lua/project_diff_preview')
                             return files_err,
                                 utils.readonly({
                                     changed_files = changed_files,
                                 })
                         end
                     else
-                        logger.debug(hunks_err, 'init.lua/diff')
+                        logger.debug(hunks_err, 'init.lua/project_diff_preview')
                         return hunks_err, nil
                     end
                 end, 0),
@@ -937,7 +937,7 @@ M.buffer_history_preview = throttle_leading(
                                 local hunks_err, hunks = git.remote_hunks(tracked_filename, 'HEAD')
                                 scheduler()
                                 if hunks_err then
-                                    logger.debug(hunks_err, 'init.lua/buffer_history')
+                                    logger.debug(hunks_err, 'init.lua/buffer_history_preview')
                                     return hunks_err, nil
                                 end
                                 local data = calculate_diff(lines, hunks)
@@ -947,12 +947,12 @@ M.buffer_history_preview = throttle_leading(
                                         diff_change = data,
                                     })
                             else
-                                logger.debug(read_file_err, 'init.lua/buffer_history')
+                                logger.debug(read_file_err, 'init.lua/buffer_history_preview')
                                 return read_file_err, nil
                             end
                         end
                     else
-                        logger.debug(logs_err, 'init.lua/buffer_history')
+                        logger.debug(logs_err, 'init.lua/buffer_history_preview')
                         return logs_err, nil
                     end
                 end, 0),
@@ -985,7 +985,7 @@ M.buffer_diff_preview = throttle_leading(
                         local hunks_err, computed_hunks = calculate_hunks(buf)
                         scheduler()
                         if hunks_err then
-                            logger.debug(hunks_err, 'init.lua/buffer_preview')
+                            logger.debug(hunks_err, 'init.lua/buffer_diff_preview')
                             return hunks_err, nil
                         else
                             hunks = computed_hunks
@@ -1002,7 +1002,7 @@ M.buffer_diff_preview = throttle_leading(
                         read_file_err, lines = fs.read_file(tracked_filename)
                         scheduler()
                         if read_file_err then
-                            logger.debug(read_file_err, 'init.lua/buffer_preview')
+                            logger.debug(read_file_err, 'init.lua/buffer_diff_preview')
                             return read_file_err, nil
                         end
                     end
@@ -1036,14 +1036,14 @@ M.buffer_staged_diff_preview = throttle_leading(
                     local hunks_err, hunks = git.staged_hunks(tracked_filename)
                     scheduler()
                     if hunks_err then
-                        logger.debug(hunks_err, 'init.lua/staged_buffer_preview')
+                        logger.debug(hunks_err, 'init.lua/buffer_staged_diff_preview')
                         return hunks_err, nil
                     end
                     scheduler()
                     local show_err, lines = git.show(buffer_store.get(buf, 'tracked_remote_filename'))
                     scheduler()
                     if show_err then
-                        logger.debug(show_err, 'init.lua/staged_buffer_preview')
+                        logger.debug(show_err, 'init.lua/buffer_staged_diff_preview')
                         return show_err, nil
                     end
                     local data = calculate_diff(lines, hunks)
@@ -1129,7 +1129,7 @@ M.buffer_hunk_stage = throttle_leading(
             not controller_store.get('disabled')
             and buffer.is_valid(buf)
             and buffer_store.contains(buf)
-            and not vim.api.nvim_buf_get_option(buf, 'modified')
+            and not buffer.get_option(buf, 'modified')
             and controller_store.get('diff_strategy') == 'index'
         then
             -- If buffer is untracked then, the whole file is the hunk.
@@ -1149,7 +1149,7 @@ M.buffer_hunk_stage = throttle_leading(
                     renderer.hide_hunk_signs(buf)
                     renderer.render_hunk_signs(buf, {})
                 else
-                    logger.debug(err, 'init.lua/hunk_stage')
+                    logger.debug(err, 'init.lua/buffer_hunk_stage')
                 end
                 return
             end
@@ -1176,10 +1176,10 @@ M.buffer_hunk_stage = throttle_leading(
                         renderer.hide_hunk_signs(buf)
                         renderer.render_hunk_signs(buf, calculated_hunks)
                     else
-                        logger.debug(err, 'init.lua/hunk_stage')
+                        logger.debug(err, 'init.lua/buffer_hunk_stage')
                     end
                 else
-                    logger.debug(err, 'init.lua/hunk_stage')
+                    logger.debug(err, 'init.lua/buffer_hunk_stage')
                 end
             end
         end
@@ -1195,7 +1195,7 @@ M.buffer_stage = throttle_leading(
             not controller_store.get('disabled')
             and buffer.is_valid(buf)
             and buffer_store.contains(buf)
-            and not vim.api.nvim_buf_get_option(buf, 'modified')
+            and not buffer.get_option(buf, 'modified')
             and controller_store.get('diff_strategy') == 'index'
         then
             local filename = buffer_store.get(buf, 'filename')
@@ -1216,7 +1216,7 @@ M.buffer_stage = throttle_leading(
                 renderer.hide_hunk_signs(buf)
                 renderer.render_hunk_signs(buf, {})
             else
-                logger.debug(err, 'init.lua/stage_buffer')
+                logger.debug(err, 'init.lua/buffer_stage')
             end
         end
     end),
@@ -1231,7 +1231,7 @@ M.buffer_unstage = throttle_leading(
             not controller_store.get('disabled')
             and buffer.is_valid(buf)
             and buffer_store.contains(buf)
-            and not vim.api.nvim_buf_get_option(buf, 'modified')
+            and not buffer.get_option(buf, 'modified')
             and controller_store.get('diff_strategy') == 'index'
             and not buffer_store.get(buf, 'untracked')
         then
@@ -1255,7 +1255,7 @@ M.buffer_unstage = throttle_leading(
                         renderer.hide_hunk_signs(buf)
                         renderer.render_hunk_signs(buf, calculated_hunks)
                     else
-                        logger.debug(err, 'init.lua/unstage_buffer')
+                        logger.debug(err, 'init.lua/buffer_unstage')
                     end
                 else
                     buffer_store.set(buf, 'untracked', true)
@@ -1266,7 +1266,7 @@ M.buffer_unstage = throttle_leading(
                     renderer.render_hunk_signs(buf, hunks)
                 end
             else
-                logger.debug(err, 'init.lua/unstage_buffer')
+                logger.debug(err, 'init.lua/buffer_unstage')
             end
         end
     end),
@@ -1289,7 +1289,7 @@ M.set_diff_base = throttle_leading(
     void(function(diff_base)
         scheduler()
         if not diff_base or type(diff_base) ~= 'string' then
-            logger.error(t('errors/set_diff_base', diff_base))
+            logger.error(string.format('Failed to set diff base, the commit "%s" is invalid', diff_base))
             return
         end
         if git.controller_store.get('diff_base') == diff_base then
@@ -1298,7 +1298,7 @@ M.set_diff_base = throttle_leading(
         local is_commit_valid = git.is_commit_valid(diff_base)
         scheduler()
         if not is_commit_valid then
-            logger.error(t('errors/set_diff_base', diff_base))
+            logger.error(string.format('Failed to set diff base, the commit "%s" is invalid', diff_base))
         else
             git.set_diff_base(diff_base)
             if controller_store.get('diff_strategy') == 'remote' then
@@ -1322,7 +1322,7 @@ M.set_diff_base = throttle_leading(
 
 M.set_diff_preference = throttle_leading(function(preference)
     if preference ~= 'horizontal' and preference ~= 'vertical' then
-        return logger.error(t('errors/set_diff_preference', preference))
+        return logger.error(string.format('Failed to set diff preferece, "%s" is invalid', preference))
     end
     local current_preference = controller_store.get('diff_preference')
     if current_preference == preference then
@@ -1334,16 +1334,16 @@ end, controller_store.get(
 ))
 
 M.set_diff_strategy = throttle_leading(
-    void(function(preference)
+    void(function(strategy)
         scheduler()
-        if preference ~= 'remote' and preference ~= 'index' then
-            return logger.error(t('errors/set_diff_strategy', preference))
+        if strategy ~= 'remote' and strategy ~= 'index' then
+            return logger.error(string.format('Failed to set diff strategy, "%s" is invalid', strategy))
         end
-        local current_preference = controller_store.get('diff_strategy')
-        if current_preference == preference then
+        local current_strategy = controller_store.get('diff_strategy')
+        if current_strategy == strategy then
             return
         end
-        controller_store.set('diff_strategy', preference)
+        controller_store.set('diff_strategy', strategy)
         buffer_store.for_each(function(buf, bcache)
             if buffer.is_valid(buf) then
                 local hunks_err, hunks = calculate_hunks(buf)
@@ -1404,6 +1404,7 @@ M.setup = function(config)
     sign.setup(config)
     logger.setup(config)
     git.setup(config)
+    key_mapper.setup(config)
     events.on('BufWinEnter', ':lua require("vgit")._buf_attach()')
     events.on('WinEnter', ':lua require("vgit")._keep_preview_focused()')
     events.on('BufWrite', ':lua require("vgit")._buf_update()')
