@@ -87,6 +87,48 @@ vgit.setup({
         show_untracked_file_signs = true,
         action_delay_ms = 300,
     },
+    sign = {
+        VGitViewSignAdd = {
+            name = 'VGitViewSignAdd',
+            line_hl = 'VGitViewSignAdd',
+            text_hl = nil,
+            num_hl = nil,
+            icon = nil,
+            text = '',
+        },
+        VGitViewSignRemove = {
+            name = 'VGitViewSignRemove',
+            line_hl = 'VGitViewSignRemove',
+            text_hl = nil,
+            num_hl = nil,
+            icon = nil,
+            text = '',
+        },
+        VGitSignAdd = {
+            name = 'VGitSignAdd',
+            text_hl = 'VGitSignAdd',
+            num_hl = nil,
+            icon = nil,
+            line_hl = nil,
+            text = '┃',
+        },
+        VGitSignRemove = {
+            name = 'VGitSignRemove',
+            text_hl = 'VGitSignRemove',
+            num_hl = nil,
+            icon = nil,
+            line_hl = nil,
+            text = '┃',
+        },
+        VGitSignChange = {
+            name = 'VGitSignChange',
+            text_hl = 'VGitSignChange',
+            num_hl = nil,
+            icon = nil,
+            line_hl = nil,
+            text = '┃',
+        },
+    },
     render = {
         preview = {
             border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },

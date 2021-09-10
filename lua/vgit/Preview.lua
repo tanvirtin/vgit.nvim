@@ -384,11 +384,11 @@ function Preview:mount()
             { once = true }
         )
     end
-    local bufs = vim.api.nvim_list_bufs()
+    local bufs = buffer.list()
     scheduler()
     for i = 1, #bufs do
         local buf = bufs[i]
-        local is_buf_listed = vim.api.nvim_buf_get_option(buf, 'buflisted') == true
+        local is_buf_listed = buffer.get_option(buf, 'buflisted') == true
         scheduler()
         if is_buf_listed and buffer.is_valid(buf) then
             local event = self.temporary and 'BufEnter' or 'BufWinEnter'

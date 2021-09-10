@@ -17,7 +17,6 @@ local debounce_trailing = require('vgit.defer').debounce_trailing
 local logger = require('vgit.logger')
 local navigation = require('vgit.navigation')
 local Patch = require('vgit.Patch')
-local t = require('vgit.localization').translate
 local wrap = require('plenary.async.async').wrap
 local void = require('plenary.async.async').void
 local scheduler = require('plenary.async.util').scheduler
@@ -322,7 +321,7 @@ M._blame_line = debounce_trailing(
             and buffer_store.contains(buf)
             and not buffer_store.get(buf, 'untracked')
         then
-            if not vim.api.nvim_buf_get_option(buf, 'modified') then
+            if not buffer.get_option(buf, 'modified') then
                 local win = vim.api.nvim_get_current_win()
                 local last_lnum_blamed = buffer_store.get(buf, 'last_lnum_blamed')
                 local lnum = vim.api.nvim_win_get_cursor(win)[1]
@@ -366,7 +365,7 @@ M._run_command = function(command, ...)
     if not controller_store.get('disabled') then
         local starts_with = command:sub(1, 1)
         if starts_with == '_' or not M[command] or not type(M[command]) == 'function' then
-            logger.error(t('errors/invalid_command', command))
+            logger.error(string.format('Invalid command %s', command))
             return
         end
         return M[command](...)
@@ -1129,7 +1128,7 @@ M.buffer_hunk_stage = throttle_leading(
             not controller_store.get('disabled')
             and buffer.is_valid(buf)
             and buffer_store.contains(buf)
-            and not vim.api.nvim_buf_get_option(buf, 'modified')
+            and not buffer.get_option(buf, 'modified')
             and controller_store.get('diff_strategy') == 'index'
         then
             -- If buffer is untracked then, the whole file is the hunk.
@@ -1195,7 +1194,7 @@ M.buffer_stage = throttle_leading(
             not controller_store.get('disabled')
             and buffer.is_valid(buf)
             and buffer_store.contains(buf)
-            and not vim.api.nvim_buf_get_option(buf, 'modified')
+            and not buffer.get_option(buf, 'modified')
             and controller_store.get('diff_strategy') == 'index'
         then
             local filename = buffer_store.get(buf, 'filename')
@@ -1231,7 +1230,7 @@ M.buffer_unstage = throttle_leading(
             not controller_store.get('disabled')
             and buffer.is_valid(buf)
             and buffer_store.contains(buf)
-            and not vim.api.nvim_buf_get_option(buf, 'modified')
+            and not buffer.get_option(buf, 'modified')
             and controller_store.get('diff_strategy') == 'index'
             and not buffer_store.get(buf, 'untracked')
         then
@@ -1289,7 +1288,7 @@ M.set_diff_base = throttle_leading(
     void(function(diff_base)
         scheduler()
         if not diff_base or type(diff_base) ~= 'string' then
-            logger.error(t('errors/set_diff_base', diff_base))
+            logger.error(string.format('Failed to set diff base, the commit "%s" is invalid', diff_base))
             return
         end
         if git.controller_store.get('diff_base') == diff_base then
@@ -1298,7 +1297,7 @@ M.set_diff_base = throttle_leading(
         local is_commit_valid = git.is_commit_valid(diff_base)
         scheduler()
         if not is_commit_valid then
-            logger.error(t('errors/set_diff_base', diff_base))
+            logger.error(string.format('Failed to set diff base, the commit "%s" is invalid', diff_base))
         else
             git.set_diff_base(diff_base)
             if controller_store.get('diff_strategy') == 'remote' then
@@ -1322,7 +1321,7 @@ M.set_diff_base = throttle_leading(
 
 M.set_diff_preference = throttle_leading(function(preference)
     if preference ~= 'horizontal' and preference ~= 'vertical' then
-        return logger.error(t('errors/set_diff_preference', preference))
+        return logger.error(string.format('Failed to set diff preferece, "%s" is invalid', preference))
     end
     local current_preference = controller_store.get('diff_preference')
     if current_preference == preference then
@@ -1334,16 +1333,16 @@ end, controller_store.get(
 ))
 
 M.set_diff_strategy = throttle_leading(
-    void(function(preference)
+    void(function(strategy)
         scheduler()
-        if preference ~= 'remote' and preference ~= 'index' then
-            return logger.error(t('errors/set_diff_strategy', preference))
+        if strategy ~= 'remote' and strategy ~= 'index' then
+            return logger.error(string.format('Failed to set diff strategy, "%s" is invalid', strategy))
         end
-        local current_preference = controller_store.get('diff_strategy')
-        if current_preference == preference then
+        local current_strategy = controller_store.get('diff_strategy')
+        if current_strategy == strategy then
             return
         end
-        controller_store.set('diff_strategy', preference)
+        controller_store.set('diff_strategy', strategy)
         buffer_store.for_each(function(buf, bcache)
             if buffer.is_valid(buf) then
                 local hunks_err, hunks = calculate_hunks(buf)
