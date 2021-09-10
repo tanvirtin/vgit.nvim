@@ -1,3 +1,4 @@
+local buffer = require('vgit.buffer')
 local assert = require('vgit.assertion').assert
 local pfiletype = require('plenary.filetype')
 
@@ -40,7 +41,7 @@ end
 
 M.filetype = function(buf)
     assert(type(buf) == 'number', 'type error :: expected number')
-    return vim.api.nvim_buf_get_option(buf, 'filetype')
+    return buffer.get_option(buf, 'filetype')
 end
 
 M.detect_filetype = pfiletype.detect
