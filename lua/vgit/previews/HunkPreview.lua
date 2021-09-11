@@ -1,22 +1,24 @@
 local dimensions = require('vgit.dimensions')
-local render_store = require('vgit.stores.render_store')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
+local render_store = require('vgit.stores.render_store')
+
+local config = render_store.get('layout').hunk_preview
 
 local HunkPreview = Preview:extend()
 
 function HunkPreview:new(opts)
     local this = Preview:new({
         preview = Popup:new({
-            border = render_store.get('preview').border,
-            border_hl = render_store.get('preview').border_hl,
-            win_options = { ['cursorline'] = true },
+            border = config.border,
+            win_options = {
+                ['winhl'] = string.format('Normal:%s', config.background_hl or ''),
+                ['cursorline'] = true,
+            },
             window_props = {
                 style = 'minimal',
                 relative = 'cursor',
                 width = dimensions.global_width(),
-                row = 0,
-                col = 0,
             },
             filetype = opts.filetype,
         }),
@@ -28,10 +30,6 @@ function HunkPreview:new(opts)
     return setmetatable(this, HunkPreview)
 end
 
-function HunkPreview:get_preview_win_ids()
-    return { self:get_popups().preview:get_win_id() }
-end
-
 function HunkPreview:get_marks()
     return self.data and self.data.diff_change and self.data.diff_change.marks or {}
 end
@@ -39,18 +37,6 @@ end
 function HunkPreview:set_cursor(row, col)
     self:get_popups().preview:set_cursor(row, col)
     return self
-end
-
-function HunkPreview:is_preview_focused()
-    local preview_win_ids = self:get_preview_win_ids()
-    local current_win_id = vim.api.nvim_get_current_win()
-    for i = 1, #preview_win_ids do
-        local win_id = preview_win_ids[i]
-        if win_id == current_win_id then
-            return true
-        end
-    end
-    return false
 end
 
 function HunkPreview:reposition_cursor(lnum)
@@ -91,6 +77,9 @@ function HunkPreview:reposition_cursor(lnum)
 end
 
 function HunkPreview:render()
+    if not self:is_mounted() then
+        return
+    end
     local err, data = self.err, self.data
     self:clear()
     if err then

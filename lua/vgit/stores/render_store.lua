@@ -3,13 +3,13 @@ local Interface = require('vgit.Interface')
 
 local M = {}
 
+local virtual_line_nr_width = 6
+
 M.state = Interface:new({
+    layout = require('vgit.layouts.ivy'),
     preview = {
-        border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-        border_hl = 'VGitBorder',
-        border_focus_hl = 'VGitBorderFocus',
         indicator_hl = 'VGitIndicator',
-        virtual_line_nr_width = 6,
+        virtual_line_nr_width = virtual_line_nr_width,
         sign = {
             priority = 10,
             hls = {
@@ -19,7 +19,7 @@ M.state = Interface:new({
         },
         symbols = {
             void = '⣿',
-            indicator = '->',
+            indicator = '  ❯',
         },
     },
     sign = {

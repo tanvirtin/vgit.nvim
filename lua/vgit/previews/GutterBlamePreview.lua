@@ -1,8 +1,9 @@
 local utils = require('vgit.utils')
-local render_store = require('vgit.stores.render_store')
-local dimensions = require('vgit.dimensions')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
+local render_store = require('vgit.stores.render_store')
+
+local config = render_store.get('layout').gutter_blame_preview
 
 local function get_blame_line(blame)
     local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
@@ -48,32 +49,28 @@ end
 local GutterBlamePreview = Preview:extend()
 
 function GutterBlamePreview:new(opts)
-    local height = dimensions.global_height()
-    local blame_width = math.floor(dimensions.global_width() * 0.40)
-    local preview_width = math.floor(dimensions.global_width() * 0.60)
     local this = Preview:new({
         blame = Popup:new({
-            border = render_store.get('preview').border,
-            border_hl = render_store.get('preview').border_hl,
+            border = config.blame.border,
             win_options = {
+                ['winhl'] = string.format('Normal:%s', config.blame.background_hl or ''),
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
                 ['cursorline'] = true,
             },
             window_props = {
-                style = 'minimal',
-                relative = 'cursor',
-                height = height,
-                width = blame_width,
                 focusable = false,
-                row = 0,
-                col = 0,
+                style = 'minimal',
+                height = config.blame.height,
+                width = config.blame.width,
+                row = config.blame.row,
+                col = config.blame.col,
             },
         }),
         preview = Popup:new({
-            border = render_store.get('preview').border,
-            border_hl = render_store.get('preview').border_hl,
+            border = config.blame.preview,
             win_options = {
+                ['winhl'] = string.format('Normal:%s', config.preview.background_hl or ''),
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
                 ['cursorline'] = true,
@@ -81,11 +78,10 @@ function GutterBlamePreview:new(opts)
             },
             window_props = {
                 style = 'minimal',
-                relative = 'cursor',
-                height = height,
-                width = preview_width,
-                row = 0,
-                col = blame_width,
+                height = config.preview.height,
+                width = config.preview.width,
+                row = config.preview.row,
+                col = config.preview.col,
             },
             filetype = opts.filetype,
         }),
@@ -93,10 +89,6 @@ function GutterBlamePreview:new(opts)
         temporary = true,
     })
     return setmetatable(this, GutterBlamePreview)
-end
-
-function GutterBlamePreview:get_preview_win_ids()
-    return { self:get_popups().preview:get_win_id() }
 end
 
 function GutterBlamePreview:get_preview_buf()
@@ -108,19 +100,10 @@ function GutterBlamePreview:set_cursor(row, col)
     return self
 end
 
-function GutterBlamePreview:is_preview_focused()
-    local preview_win_ids = self:get_preview_win_ids()
-    local current_win_id = vim.api.nvim_get_current_win()
-    for i = 1, #preview_win_ids do
-        local win_id = preview_win_ids[i]
-        if win_id == current_win_id then
-            return true
-        end
-    end
-    return false
-end
-
 function GutterBlamePreview:render()
+    if not self:is_mounted() then
+        return
+    end
     local err, data = self.err, self.data
     self:clear()
     local popups = self:get_popups()
