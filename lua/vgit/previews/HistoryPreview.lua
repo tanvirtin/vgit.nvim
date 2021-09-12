@@ -1,27 +1,22 @@
-local dimensions = require('vgit.dimensions')
 local TableBuilder = require('vgit.builders.TableBuilder')
 local render_store = require('vgit.stores.render_store')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
 
+local config = render_store.get('layout').history_preview
+
 local function create_horizontal_widget(opts)
-    local height = math.floor(dimensions.global_height() - 13)
-    local width = math.floor(dimensions.global_width() * 0.9)
-    local col = math.ceil((dimensions.global_width() - width) / 2)
     return Preview:new({
         preview = Popup:new({
             filetype = opts.filetype,
-            border = render_store.get('preview').border,
-            border_hl = render_store.get('preview').border_hl,
-            border_focus_hl = render_store.get('preview').border_focus_hl,
-            title = 'Preview',
+            border = config.horizontal.preview.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = 'Normal:',
+                ['winhl'] = string.format('Normal:%s', config.horizontal.preview.background_hl or ''),
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -30,10 +25,10 @@ local function create_horizontal_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width,
-                height = height,
-                row = 1,
-                col = col,
+                height = config.horizontal.preview.height,
+                width = config.horizontal.preview.width,
+                row = config.horizontal.preview.row,
+                col = config.horizontal.preview.col,
             },
             virtual_line_nr = {
                 enabled = true,
@@ -42,16 +37,14 @@ local function create_horizontal_widget(opts)
         table = Popup:new({
             static = true,
             title = 'History',
-            border = render_store.get('preview').border,
-            border_hl = render_store.get('preview').border_hl,
-            border_focus_hl = render_store.get('preview').border_focus_hl,
+            border = config.horizontal.table.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = 'Normal:',
+                ['winhl'] = string.format('Normal:%s', config.horizontal.table.background_hl or ''),
                 ['cursorline'] = true,
                 ['cursorbind'] = false,
                 ['scrollbind'] = false,
@@ -60,34 +53,27 @@ local function create_horizontal_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width,
-                height = 7,
-                row = height + 3,
-                col = col,
+                height = config.horizontal.table.height,
+                width = config.horizontal.table.width,
+                row = config.horizontal.table.row,
+                col = config.horizontal.table.col,
             },
         }),
     }, opts)
 end
 
 local function create_vertical_widget(opts)
-    local height = math.floor(dimensions.global_height() - 13)
-    local width = math.floor((dimensions.global_width()) / 2) - 5
-    local col = math.ceil((dimensions.global_width() - (width * 2)) / 2)
-    local spacing = 2
     return Preview:new({
         previous = Popup:new({
-            title = 'Previous',
             filetype = opts.filetype,
-            border = render_store.get('preview').border,
-            border_hl = render_store.get('preview').border_hl,
-            border_focus_hl = render_store.get('preview').border_focus_hl,
+            border = config.vertical.previous.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = 'Normal:',
+                ['winhl'] = string.format('Normal:%s', config.vertical.previous.background_hl or ''),
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -96,28 +82,25 @@ local function create_vertical_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width,
-                height = height,
-                row = 1,
-                col = col,
+                width = config.vertical.previous.width,
+                height = config.vertical.previous.height,
+                row = config.vertical.previous.row,
+                col = config.vertical.previous.col,
             },
             virtual_line_nr = {
                 enabled = true,
             },
         }),
         current = Popup:new({
-            title = 'Current',
             filetype = opts.filetype,
-            border = render_store.get('preview').border,
-            border_hl = render_store.get('preview').border_hl,
-            border_focus_hl = render_store.get('preview').border_focus_hl,
+            border = config.vertical.current.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = 'Normal:',
+                ['winhl'] = string.format('Normal:%s', config.vertical.current.background_hl or ''),
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -126,10 +109,10 @@ local function create_vertical_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width,
-                height = height,
-                row = 1,
-                col = col + width + spacing,
+                width = config.vertical.current.width,
+                height = config.vertical.current.height,
+                row = config.vertical.current.row,
+                col = config.vertical.current.col,
             },
             virtual_line_nr = {
                 enabled = true,
@@ -137,17 +120,14 @@ local function create_vertical_widget(opts)
         }),
         table = Popup:new({
             static = true,
-            title = 'History',
-            border = render_store.get('preview').border,
-            border_hl = render_store.get('preview').border_hl,
-            border_focus_hl = render_store.get('preview').border_focus_hl,
+            border = config.vertical.table.border,
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = 'Normal:',
+                ['winhl'] = string.format('Normal:%s', config.vertical.table.background_hl or ''),
                 ['cursorline'] = true,
                 ['cursorbind'] = false,
                 ['scrollbind'] = false,
@@ -156,10 +136,10 @@ local function create_vertical_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = width * 2 + 2,
-                height = 7,
-                row = height + 3,
-                col = col,
+                width = config.vertical.table.width,
+                height = config.vertical.table.height,
+                row = config.vertical.table.row,
+                col = config.vertical.table.col,
             },
         }),
     }, opts)
@@ -175,30 +155,8 @@ function HistoryPreview:new(opts)
     return setmetatable(this, HistoryPreview)
 end
 
-function HistoryPreview:get_preview_win_ids()
-    if self.layout_type == 'vertical' then
-        return {
-            self:get_popups().previous:get_win_id(),
-            self:get_popups().current:get_win_id(),
-        }
-    end
-    return { self:get_popups().preview:get_win_id() }
-end
-
 function HistoryPreview:get_marks()
     return self.data and self.data.diff_change and self.data.diff_change.marks or {}
-end
-
-function HistoryPreview:is_preview_focused()
-    local preview_win_ids = self:get_preview_win_ids()
-    local current_win_id = vim.api.nvim_get_current_win()
-    for i = 1, #preview_win_ids do
-        local win_id = preview_win_ids[i]
-        if win_id == current_win_id then
-            return true
-        end
-    end
-    return false
 end
 
 function HistoryPreview:reposition_cursor(selected)
@@ -218,6 +176,9 @@ function HistoryPreview:mount()
 end
 
 function HistoryPreview:render()
+    if not self:is_mounted() then
+        return
+    end
     local popups = self:get_popups()
     local table = popups.table
     local err, data = self.err, self.data

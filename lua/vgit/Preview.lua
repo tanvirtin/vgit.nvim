@@ -32,7 +32,7 @@ function Preview:new(popups, opts)
     }, Preview)
 end
 
-function Preview:set_footer(text)
+function Preview:notify(text)
     local epoch = 2000
     if self.timer_id then
         vim.fn.timer_stop(self.timer_id)
@@ -65,6 +65,30 @@ end
 
 function Preview:regenerate_win_toggle_queue()
     self.state.win_toggle_queue = self:get_win_ids()
+end
+
+function Preview:get_preview_win_ids()
+    if self.layout_type == 'vertical' then
+        return {
+            self:get_popups().previous:get_virtual_line_nr_win_id(),
+            self:get_popups().previous:get_win_id(),
+            self:get_popups().current:get_virtual_line_nr_win_id(),
+            self:get_popups().current:get_win_id(),
+        }
+    end
+    return { self:get_popups().preview:get_win_id(), self:get_popups().preview:get_virtual_line_nr_win_id() }
+end
+
+function Preview:is_preview_focused()
+    local preview_win_ids = self:get_preview_win_ids()
+    local current_win_id = vim.api.nvim_get_current_win()
+    for i = 1, #preview_win_ids do
+        local win_id = preview_win_ids[i]
+        if win_id == current_win_id then
+            return true
+        end
+    end
+    return false
 end
 
 function Preview:draw_changes(data)
@@ -293,6 +317,9 @@ end
 
 function Preview:set_loading(value, force)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
+    if not self:is_mounted() then
+        return self
+    end
     for _, popup in pairs(self.popups) do
         popup:set_loading(value, force)
     end
@@ -344,6 +371,20 @@ function Preview:get_bufs()
 end
 
 function Preview:is_mounted()
+    for _, popup in pairs(self.popups) do
+        local win_ids = popup:get_win_ids()
+        local bufs = popup:get_bufs()
+        for i = 1, #win_ids do
+            if not vim.api.nvim_win_is_valid(win_ids[i]) then
+                return false
+            end
+        end
+        for i = 1, #bufs do
+            if not buffer.is_valid(bufs[i]) then
+                return false
+            end
+        end
+    end
     return self.state.mounted
 end
 
