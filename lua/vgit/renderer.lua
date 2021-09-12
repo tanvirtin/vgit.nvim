@@ -128,6 +128,7 @@ M.render_diff_preview = function(fetch, filetype, layout_type)
     local diff_preview = DiffPreview:new({
         filetype = filetype,
         layout_type = layout_type,
+        temporary = layout_type == 'horizontal',
     })
     preview_store.set(diff_preview)
     diff_preview:mount()

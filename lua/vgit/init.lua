@@ -4,6 +4,7 @@ local Hunk = require('vgit.Hunk')
 local preview_store = require('vgit.stores.preview_store')
 local git = require('vgit.git')
 local themes = require('vgit.themes')
+local layouts = require('vgit.layouts')
 local renderer = require('vgit.renderer')
 local fs = require('vgit.fs')
 local highlight = require('vgit.highlight')
@@ -16,6 +17,7 @@ local controller_store = require('vgit.stores.controller_store')
 local render_store = require('vgit.stores.render_store')
 local debounce_trailing = require('vgit.defer').debounce_trailing
 local logger = require('vgit.logger')
+local dimensions = require('vgit.dimensions')
 local navigation = require('vgit.navigation')
 local Patch = require('vgit.Patch')
 local wrap = require('plenary.async.async').wrap
@@ -539,8 +541,15 @@ M.buffer_hunk_preview = throttle_leading(
             and buffer_store.contains(buf)
             and not buffer_store.get(buf, 'untracked')
         then
-            local lnum = vim.api.nvim_win_get_cursor(win)[1]
+            if not controller_store.get('hunks_enabled') then
+                return
+            end
             local hunks = buffer_store.get(buf, 'hunks')
+            if #hunks == 0 then
+                logger.info('No changes found')
+                return
+            end
+            local lnum = vim.api.nvim_win_get_cursor(win)[1]
             renderer.render_hunk_preview(
                 wrap(function()
                     local read_file_err, lines = fs.read_file(buffer_store.get(buf, 'tracked_filename'))
@@ -608,7 +617,8 @@ M.buffer_gutter_blame_preview = throttle_leading(
     controller_store.get('action_delay_ms')
 )
 
-M.hunk_down = function(buf, win)
+M.hunk_down = void(function(buf, win)
+    scheduler()
     buf = buf or buffer.current()
     if not controller_store.get('disabled') then
         local preview = preview_store.get()
@@ -617,10 +627,11 @@ M.hunk_down = function(buf, win)
                 local marks = preview:get_marks()
                 if preview:is_preview_focused() then
                     if #marks == 0 then
-                        preview:set_footer('There are no changes')
+                        preview:notify('There are no changes')
                     else
                         local mark_index = navigation.mark_down(preview:get_preview_win_ids(), marks)
-                        return preview:set_footer(string.format('%s/%s Changes', mark_index, #marks))
+                        scheduler()
+                        return preview:notify(string.format('%s/%s Changes', mark_index, #marks))
                     end
                 end
             end
@@ -630,12 +641,14 @@ M.hunk_down = function(buf, win)
             local hunks = buffer_store.get(buf, 'hunks')
             if #hunks ~= 0 then
                 navigation.hunk_down({ win }, hunks)
+                scheduler()
             end
         end
     end
-end
+end)
 
-M.hunk_up = function(buf, win)
+M.hunk_up = void(function(buf, win)
+    scheduler()
     buf = buf or buffer.current()
     if not controller_store.get('disabled') then
         local preview = preview_store.get()
@@ -644,10 +657,11 @@ M.hunk_up = function(buf, win)
                 local marks = preview:get_marks()
                 if preview:is_preview_focused() then
                     if #marks == 0 then
-                        preview:set_footer('There are no changes')
+                        preview:notify('There are no changes')
                     else
                         local mark_index = navigation.mark_up(preview:get_preview_win_ids(), marks)
-                        return preview:set_footer(string.format('%s/%s Changes', mark_index, #marks))
+                        scheduler()
+                        return preview:notify(string.format('%s/%s Changes', mark_index, #marks))
                     end
                 end
             end
@@ -657,10 +671,11 @@ M.hunk_up = function(buf, win)
             local hunks = buffer_store.get(buf, 'hunks')
             if #hunks ~= 0 then
                 navigation.hunk_up({ win }, hunks)
+                scheduler()
             end
         end
     end
-end
+end)
 
 M.buffer_hunk_reset = throttle_leading(
     void(function(buf, win)
@@ -784,6 +799,7 @@ M.project_diff_preview = throttle_leading(
                 return logger.debug(changed_files_err, 'init.lua/project_diff_preview')
             end
             if #changed_files == 0 then
+                logger.info('No changes found')
                 return
             end
             renderer.render_project_diff_preview(
@@ -973,24 +989,19 @@ M.buffer_diff_preview = throttle_leading(
             and buffer_store.contains(buf)
             and not buffer_store.get(buf, 'untracked')
         then
+            if not controller_store.get('hunks_enabled') then
+                return
+            end
+            local hunks = buffer_store.get(buf, 'hunks')
+            if #hunks == 0 then
+                logger.info('No changes found')
+                return
+            end
             local diff_preference = controller_store.get('diff_preference')
             local calculate_diff = (diff_preference == 'horizontal' and diff.horizontal) or diff.vertical
             renderer.render_diff_preview(
                 wrap(function()
                     local tracked_filename = buffer_store.get(buf, 'tracked_filename')
-                    local hunks
-                    if controller_store.get('hunks_enabled') then
-                        hunks = buffer_store.get(buf, 'hunks')
-                    else
-                        local hunks_err, computed_hunks = calculate_hunks(buf)
-                        scheduler()
-                        if hunks_err then
-                            logger.debug(hunks_err, 'init.lua/buffer_diff_preview')
-                            return hunks_err, nil
-                        else
-                            hunks = computed_hunks
-                        end
-                    end
                     if not hunks then
                         return { 'Failed to retrieve hunks for the current buffer' }, nil
                     end
@@ -1395,6 +1406,8 @@ M.renderer = renderer
 M.events = events
 M.highlight = highlight
 M.themes = themes
+M.layouts = layouts
+M.dimensions = dimensions
 
 M.setup = function(config)
     controller_store.setup(config)

@@ -32,7 +32,7 @@ return {
         bg = nil,
     },
     VGitBorder = {
-        fg = '#a1b5b1',
+        fg = '#7AA6DA',
         bg = nil,
     },
     VGitBorderFocus = {

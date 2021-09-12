@@ -2,6 +2,7 @@ local utils = require('vgit.utils')
 local render_store = require('vgit.stores.render_store')
 local Popup = require('vgit.Popup')
 local Preview = require('vgit.Preview')
+local config = render_store.get('layout').blame_preview
 
 local function create_uncommitted_lines(blame)
     return {
@@ -41,16 +42,16 @@ local BlamePreview = Preview:extend()
 function BlamePreview:new()
     local this = Preview:new({
         Popup:new({
-            border = render_store.get('preview').border,
-            border_hl = render_store.get('preview').border_hl,
-            win_options = { ['cursorline'] = true },
+            border = config.border,
+            win_options = {
+                ['winhl'] = string.format('Normal:%s', config.background_hl or ''),
+                ['cursorline'] = true,
+            },
             window_props = {
                 style = 'minimal',
                 relative = 'cursor',
-                height = 5,
-                width = 88,
-                row = 0,
-                col = 0,
+                height = config.height,
+                width = config.width,
             },
         }),
     }, {
@@ -60,6 +61,9 @@ function BlamePreview:new()
 end
 
 function BlamePreview:render()
+    if not self:is_mounted() then
+        return
+    end
     local err, blame = self.err, self.data
     self:clear()
     if err then

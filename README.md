@@ -18,7 +18,7 @@
 
 <br />
 <br />
-<img src="https://user-images.githubusercontent.com/25164326/132134589-9b676b82-ddca-400c-975c-d1c3de11a30c.gif" alt="overview" />
+<img src="https://user-images.githubusercontent.com/25164326/132966977-7b1d9f09-52fd-4d24-93c0-99aac1b180c5.gif" alt="overview" />
 
 ## Highlighted Features
 - Gutter changes annotation to highlight any local (unpublished) changes or lines changed by the most recent commit
@@ -27,9 +27,11 @@
 - See the blames of a buffer in a VGit preview (`:VGit buffer_gutter_blame_preview`)
 - See all hunks in a VGit preview (`:VGit buffer_hunk_preview`)
 - See the buffer changes in a VGit preview (`:VGit buffer_diff_preview`)
+- See the buffer changes that were staged in a VGit preview (`:VGit buffer_staged_diff_preview`)
 - See all the history of a buffer in a VGit preview (`:VGit buffer_history`)
 - See changes in your project in a VGit diff preview (`:VGit project_diff_preview`)
 - See changes in your project in a quickfix list (`:VGit project_hunks_qf`)
+- Enhance your workflow by using VGit's buffer navigation `:VGit hunk_up` and `:VGit hunk_down` that can be used on any VGit previews with changes.
 
 ## Supported Neovim Versions:
 - Neovim **>=** 0.5
@@ -69,9 +71,53 @@ require('vgit').setup()
 EOF
 ```
 
+## Themes
+Predefined supported themes:
+- [tokyonight](https://github.com/folke/tokyonight.nvim)
+- [monokai](https://github.com/tanvirtin/monokai.nvim)
+
+Colorscheme definitions can be found in `lua/vgit/themes/`, feel free to open a pull request with your own colorscheme!
+
+## Layouts
+Predefined supported layouts:
+- ivy (Full screen previews)
+
+Layout definitions can be found in `lua/vgit/layouts/`, feel free to open a pull request with your own layout!
+
+## API
+| Function Name | Description |
+|---------------|-------------|
+| setup | Sets up the plugin for success |
+| toggle_buffer_hunks | Shows hunk signs on buffers/Hides hunk signs on buffers |
+| toggle_buffer_blames | Enables blames feature on buffers/Disables blames feature on buffers |
+| toggle_diff_preference | Switches between "horizontal" and "vertical" layout for previews |
+| buffer_stage | Stages a buffer you are currently on |
+| buffer_unstage | Unstages a buffer you are currently on |
+| buffer_diff_preview | Opens a diff preview of the changes in the current buffer |
+| buffer_staged_diff_preview | Shows staged changes in a preview window |
+| buffer_hunk_preview | Gives you a view through which you can navigate and see the current hunk or other hunks |
+| buffer_history_preview | Opens a buffer preview along with a table of logs, enabling users to see different iterations of the buffer in the git history |
+| buffer_blame_preview | Opens a preview detailing the blame of the line that the user is currently on |
+| buffer_gutter_blame_preview | Opens a preview which shows the blames related to all the lines of a buffer |
+| buffer_reset | Resets the current buffer to HEAD |
+| buffer_hunk_stage | Stages a hunk, if cursor is over it |
+| buffer_hunk_reset | Removes the hunk from the buffer, if cursor is over it |
+| project_hunks_qf | Opens a populated quickfix window with all the hunks of the project |
+| project_diff_view | Opens a preview listing all the files that have been changed |
+| hunk_down | Navigate downward through a hunk, this works on any view with diff highlights |
+| hunk_up | Navigate upwards through a hunk, this works on any view with diff highlights |
+| get_diff_base | Returns the current diff base that all diff and hunks are being compared for all buffers |
+| get_diff_preference | Returns the current diff preference of the diff, the value will either be "horizontal" or "vertical" |
+| get_diff_strategy | Returns the current diff strategy used to compute hunk signs and buffer preview, the value will either be "remote" or "index" |
+| set_diff_base | Sets the current diff base to a different commit, going forward all future hunks and diffs for a given buffer will be against this commit |
+| set_diff_preference | Sets the diff preference to your given output, the value can only be "horizontal" or "vertical" |
+| set_diff_strategy | Sets the diff strategy that will be used to show hunk signs and buffer preview, the value can only be "remote" or "index" |
+| show_debug_logs | Shows all errors that has occured during program execution |
+
 ## Advanced Setup
 ```lua
 local vgit = require('vgit')
+local dimensions = require('vgit.dimensions')
 
 vgit.setup({
     keymaps = {
@@ -101,7 +147,7 @@ vgit.setup({
         show_untracked_file_signs = true,
         action_delay_ms = 300,
     },
-    hls = vgit.themes.tokyonight -- You can also pass in your own custom object,
+    hls = vgit.themes.tokyonight -- You can also pass in your own custom theme,
     sign = {
         VGitViewSignAdd = {
             name = 'VGitViewSignAdd',
@@ -145,20 +191,7 @@ vgit.setup({
         },
     },
     render = {
-        preview = {
-            border = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-            border_hl = 'VGitBorder',
-            border_focus_hl = 'VGitBorderFocus',
-            indicator_hl = 'VGitIndicator',
-            virtual_line_nr_width = 6,
-            sign = {
-                priority = 10,
-                hls = {
-                    add = 'VGitViewSignAdd',
-                    remove = 'VGitViewSignRemove',
-                },
-            },
-        },
+        layout = vgit.layouts.ivy -- You can also pass in your own custom layout,
         sign = {
             priority = 10,
             hls = {
@@ -204,39 +237,4 @@ vgit.setup({
 })
 ```
 
-## Themes
-Predefined supported themes:
-- [tokyonight](https://github.com/folke/tokyonight.nvim)
-- [monokai](https://github.com/tanvirtin/monokai.nvim)
 
-Colorscheme definitions can be found in `lua/vgit/themes/`, feel free to open a pull request with your own colorscheme!
-
-## API
-| Function Name | Description |
-|---------------|-------------|
-| setup | Sets up the plugin for success |
-| toggle_buffer_hunks | Shows hunk signs on buffers/Hides hunk signs on buffers |
-| toggle_buffer_blames | Enables blames feature on buffers/Disables blames feature on buffers |
-| toggle_diff_preference | Switches between "horizontal" and "vertical" layout for previews |
-| buffer_stage | Stages a buffer you are currently on |
-| buffer_unstage | Unstages a buffer you are currently on |
-| buffer_diff_preview | Opens a diff preview of the changes in the current buffer |
-| buffer_staged_diff_preview | Shows staged changes in a preview window |
-| buffer_hunk_preview | Gives you a view through which you can navigate and see the current hunk or other hunks |
-| buffer_history_preview | Opens a buffer preview along with a table of logs, enabling users to see different iterations of the buffer in the git history |
-| buffer_blame_preview | Opens a preview detailing the blame of the line that the user is currently on |
-| buffer_gutter_blame_preview | Opens a preview which shows the blames related to all the lines of a buffer |
-| buffer_reset | Resets the current buffer to HEAD |
-| buffer_hunk_stage | Stages a hunk, if cursor is over it |
-| buffer_hunk_reset | Removes the hunk from the buffer, if cursor is over it |
-| project_hunks_qf | Opens a populated quickfix window with all the hunks of the project |
-| project_diff_view | Opens a preview listing all the files that have been changed |
-| hunk_down | Navigate downward through a hunk, this works on any view with diff highlights |
-| hunk_up | Navigate upwards through a hunk, this works on any view with diff highlights |
-| get_diff_base | Returns the current diff base that all diff and hunks are being compared for all buffers |
-| get_diff_preference | Returns the current diff preference of the diff, the value will either be "horizontal" or "vertical" |
-| get_diff_strategy | Returns the current diff strategy used to compute hunk signs and buffer preview, the value will either be "remote" or "index" |
-| set_diff_base | Sets the current diff base to a different commit, going forward all future hunks and diffs for a given buffer will be against this commit |
-| set_diff_preference | Sets the diff preference to your given output, the value can only be "horizontal" or "vertical" |
-| set_diff_strategy | Sets the diff strategy that will be used to show hunk signs and buffer preview, the value can only be "remote" or "index" |
-| show_debug_logs | Shows all errors that has occured during program execution |
