@@ -1,12 +1,4 @@
 return {
-    VGitViewSignAdd = {
-        bg = '#20303B',
-        fg = nil,
-    },
-    VGitViewSignRemove = {
-        bg = '#37222C',
-        fg = nil,
-    },
     VGitViewWordAdd = {
         bg = '#344e5e',
         fg = nil,
@@ -31,16 +23,8 @@ return {
         fg = '#f92672',
         bg = nil,
     },
-    VGitBorder = {
-        fg = '#a1b5b1',
-        bg = nil,
-    },
     VGitBorderFocus = {
         fg = '#536c9e',
         bg = nil,
-    },
-    VGitLineBlame = {
-        bg = nil,
-        fg = '#b1b1b1',
     },
 }

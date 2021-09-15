@@ -1,5 +1,5 @@
 local utils = require('vgit.utils')
-local Popup = require('vgit.Popup')
+local CodeComponent = require('vgit.components.CodeComponent')
 local Preview = require('vgit.Preview')
 local render_store = require('vgit.stores.render_store')
 
@@ -50,10 +50,10 @@ local GutterBlamePreview = Preview:extend()
 
 function GutterBlamePreview:new(opts)
     local this = Preview:new({
-        blame = Popup:new({
-            border = config.blame.border,
+        blame = CodeComponent:new({
+            border = utils.retrieve(config.blame.border),
             win_options = {
-                ['winhl'] = string.format('Normal:%s', config.blame.background_hl or ''),
+                ['winhl'] = string.format('Normal:%s', utils.retrieve(config.blame.background_hl) or ''),
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
                 ['cursorline'] = true,
@@ -61,16 +61,16 @@ function GutterBlamePreview:new(opts)
             window_props = {
                 focusable = false,
                 style = 'minimal',
-                height = config.blame.height,
-                width = config.blame.width,
-                row = config.blame.row,
-                col = config.blame.col,
+                height = utils.retrieve(config.blame.height),
+                width = utils.retrieve(config.blame.width),
+                row = utils.retrieve(config.blame.row),
+                col = utils.retrieve(config.blame.col),
             },
         }),
-        preview = Popup:new({
-            border = config.blame.preview,
+        preview = CodeComponent:new({
+            border = utils.retrieve(config.blame.preview),
             win_options = {
-                ['winhl'] = string.format('Normal:%s', config.preview.background_hl or ''),
+                ['winhl'] = string.format('Normal:%s', utils.retrieve(config.preview.background_hl) or ''),
                 ['cursorbind'] = true,
                 ['scrollbind'] = true,
                 ['cursorline'] = true,
@@ -78,10 +78,10 @@ function GutterBlamePreview:new(opts)
             },
             window_props = {
                 style = 'minimal',
-                height = config.preview.height,
-                width = config.preview.width,
-                row = config.preview.row,
-                col = config.preview.col,
+                height = utils.retrieve(config.preview.height),
+                width = utils.retrieve(config.preview.width),
+                row = utils.retrieve(config.preview.row),
+                col = utils.retrieve(config.preview.col),
             },
             filetype = opts.filetype,
         }),
@@ -92,11 +92,11 @@ function GutterBlamePreview:new(opts)
 end
 
 function GutterBlamePreview:get_preview_buf()
-    return { self:get_popups().preview:get_buf() }
+    return { self:get_components().preview:get_buf() }
 end
 
 function GutterBlamePreview:set_cursor(row, col)
-    self:get_popups().preview:set_cursor(row, col)
+    self:get_components().preview:set_cursor(row, col)
     return self
 end
 
@@ -106,16 +106,16 @@ function GutterBlamePreview:render()
     end
     local err, data = self.err, self.data
     self:clear()
-    local popups = self:get_popups()
+    local components = self:get_components()
     if err then
         self:set_error(true)
         return self
     end
     if data then
-        popups.preview:set_lines(data.lines)
-        popups.blame:set_lines(get_blame_lines(data.blames))
+        components.preview:set_lines(data.lines)
+        components.blame:set_lines(get_blame_lines(data.blames))
     end
-    popups.preview:focus()
+    components.preview:focus()
     return self
 end
 

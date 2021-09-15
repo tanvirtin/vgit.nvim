@@ -1,5 +1,6 @@
 local dimensions = require('vgit.dimensions')
-local Popup = require('vgit.Popup')
+local utils = require('vgit.utils')
+local CodeComponent = require('vgit.components.CodeComponent')
 local Preview = require('vgit.Preview')
 local render_store = require('vgit.stores.render_store')
 
@@ -9,10 +10,10 @@ local HunkPreview = Preview:extend()
 
 function HunkPreview:new(opts)
     local this = Preview:new({
-        preview = Popup:new({
-            border = config.border,
+        preview = CodeComponent:new({
+            border = utils.retrieve(config.border),
             win_options = {
-                ['winhl'] = string.format('Normal:%s', config.background_hl or ''),
+                ['winhl'] = string.format('Normal:%s', utils.retrieve(config.background_hl) or ''),
                 ['cursorline'] = true,
             },
             window_props = {
@@ -30,12 +31,8 @@ function HunkPreview:new(opts)
     return setmetatable(this, HunkPreview)
 end
 
-function HunkPreview:get_marks()
-    return self.data and self.data.diff_change and self.data.diff_change.marks or {}
-end
-
 function HunkPreview:set_cursor(row, col)
-    self:get_popups().preview:set_cursor(row, col)
+    self:get_components().preview:set_cursor(row, col)
     return self
 end
 
@@ -88,15 +85,15 @@ function HunkPreview:render()
     end
     if data then
         local diff_change = data.diff_change
-        local popups = self:get_popups()
-        local popup = popups.preview
-        popup:set_lines(diff_change.lines)
+        local components = self:get_components()
+        local component = components.preview
+        component:set_lines(diff_change.lines)
         local new_width = #data.selected_hunk.diff
         if new_width ~= 0 then
-            if new_width > popup:get_min_height() then
-                popup:set_height(new_width)
+            if new_width > component:get_min_height() then
+                component:set_height(new_width)
             else
-                popup:set_height(popup:get_min_height())
+                component:set_height(component:get_min_height())
             end
         end
         self:draw_changes(diff_change)

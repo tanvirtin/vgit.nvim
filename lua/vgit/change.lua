@@ -4,11 +4,9 @@ local scheduler = require('plenary.async.util').scheduler
 
 local M = {}
 
-M.constants = utils.readonly({
-    word_diff_max_lines = 4,
-})
+M.constants = utils.readonly({ word_diff_max_lines = 4 })
 
-local function create_diff_change(opts)
+local function create_change(opts)
     opts = opts or {}
     return {
         lines = opts.lines or {},
@@ -22,7 +20,7 @@ end
 
 M.horizontal = function(lines, hunks)
     if #hunks == 0 then
-        return utils.readonly(create_diff_change({
+        return utils.readonly(create_change({
             lines = lines,
             hunks = hunks,
         }))
@@ -127,7 +125,7 @@ M.horizontal = function(lines, hunks)
             marks[#marks] = utils.readonly(marks[#marks])
         end
     end
-    return utils.readonly(create_diff_change({
+    return utils.readonly(create_change({
         lines = new_lines,
         hunks = hunks,
         lnum_changes = lnum_changes,
@@ -135,9 +133,9 @@ M.horizontal = function(lines, hunks)
     }))
 end
 
-M.vertical = function(lines, hunks, callback)
+M.vertical = function(lines, hunks)
     if #hunks == 0 then
-        return utils.readonly(create_diff_change({
+        return utils.readonly(create_change({
             current_lines = lines,
             previous_lines = lines,
             hunks = hunks,
@@ -296,7 +294,7 @@ M.vertical = function(lines, hunks, callback)
             marks[#marks] = utils.readonly(marks[#marks])
         end
     end
-    return utils.readonly(create_diff_change({
+    return utils.readonly(create_change({
         current_lines = current_lines,
         previous_lines = previous_lines,
         hunks = hunks,

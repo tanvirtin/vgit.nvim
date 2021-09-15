@@ -1,3 +1,3 @@
 return {
-    ivy = require('vgit.layouts.ivy'),
+    default = require('vgit.layouts.default'),
 }

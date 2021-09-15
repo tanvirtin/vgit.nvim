@@ -19,22 +19,6 @@ M.constants = utils.readonly({
     blame_line_id = 1,
 })
 
-M.is_preview_navigatable = function(preview)
-    local allowed = {
-        DiffPreview,
-        ProjectDiffPreview,
-        HistoryPreview,
-        HunkPreview,
-    }
-    for i = 1, #allowed do
-        local T = allowed[i]
-        if preview:is(T) then
-            return true
-        end
-    end
-    return false
-end
-
 M.render_blame_line = function(buf, blame, lnum, git_config)
     if buffer.is_valid(buf) then
         local virt_text = render_store.get('line_blame').format(blame, git_config)
@@ -150,7 +134,7 @@ M.render_history_preview = function(fetch, filetype, layout_type)
     local history_preview = HistoryPreview:new({
         filetype = filetype,
         layout_type = layout_type,
-        selected = 1,
+        selected = 0,
     })
     preview_store.set(history_preview)
     history_preview:mount()
@@ -167,6 +151,7 @@ M.render_history_preview = function(fetch, filetype, layout_type)
 end
 
 M.rerender_history_preview = function(fetch, selected)
+    selected = selected - 1
     local history_preview = preview_store.get()
     scheduler()
     if history_preview.selected == selected then
@@ -190,7 +175,7 @@ M.render_project_diff_preview = function(fetch, layout_type)
     preview_store.clear()
     local project_diff_preview = ProjectDiffPreview:new({
         layout_type = layout_type,
-        selected = 1,
+        selected = 0,
     })
     preview_store.set(project_diff_preview)
     project_diff_preview:mount()
@@ -207,6 +192,7 @@ M.render_project_diff_preview = function(fetch, layout_type)
 end
 
 M.rerender_project_diff_preview = function(fetch, selected)
+    selected = selected - 1
     local project_diff_preview = preview_store.get()
     scheduler()
     if project_diff_preview.selected == selected then
@@ -218,7 +204,7 @@ M.rerender_project_diff_preview = function(fetch, selected)
         if not changed_files then
             return
         end
-        local changed_file = changed_files[selected]
+        local changed_file = changed_files[selected + 1]
         if not changed_file then
             return
         end
