@@ -45,7 +45,12 @@ function Hunk:new(header)
             diff = {},
         }, Hunk)
     end
-    local previous, current = self:parse_header(header)
+    local previous, current
+    if type(header) == 'string' then
+        previous, current = self:parse_header(header)
+    else
+        previous, current = unpack(header)
+    end
     local hunk = {
         header = header,
         start = current[1],

@@ -1,4 +1,8 @@
+local buffer_store = require('vgit.stores.buffer_store')
+
 local M = {}
+
+M.store = buffer_store
 
 M.current = function()
     return vim.api.nvim_get_current_buf()
@@ -25,13 +29,13 @@ M.set_lines = function(buf, lines, start, finish)
     start = start or 0
     finish = finish or -1
     local modifiable = vim.api.nvim_buf_get_option(buf, 'modifiable')
-    if not modifiable then
-        vim.api.nvim_buf_set_option(buf, 'modifiable', true)
+    if modifiable then
         vim.api.nvim_buf_set_lines(buf, start, finish, false, lines)
-        vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-    else
-        vim.api.nvim_buf_set_lines(buf, start, finish, false, lines)
+        return
     end
+    vim.api.nvim_buf_set_option(buf, 'modifiable', true)
+    vim.api.nvim_buf_set_lines(buf, start, finish, false, lines)
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
 end
 
 M.set_option = function(buf, key, value)
@@ -46,6 +50,10 @@ M.assign_options = function(buf, options)
     for key, value in pairs(options) do
         vim.api.nvim_buf_set_option(buf, key, value)
     end
+end
+
+M.is_being_edited = function(buf)
+    return M.get_option(buf, 'modified')
 end
 
 M.is_valid = function(buf)

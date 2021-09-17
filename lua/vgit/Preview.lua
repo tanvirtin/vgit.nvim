@@ -7,15 +7,17 @@ local virtual_text = require('vgit.virtual_text')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 local scheduler = require('plenary.async.util').scheduler
+local navigation = require('vgit.navigation')
+local CodeComponent = require('vgit.components.CodeComponent')
 
 local Preview = Object:extend()
 
-function Preview:new(popups, opts)
-    assert(type(popups) == 'table', 'type error :: expected table')
+function Preview:new(components, opts)
+    assert(type(components) == 'table', 'type error :: expected table')
     assert(type(opts) == 'table' or type(opts) == 'nil', 'type error :: expected string or nil')
     opts = opts or {}
     return setmetatable({
-        popups = popups,
+        components = components,
         state = {
             mounted = false,
             rendered = false,
@@ -38,77 +40,103 @@ function Preview:notify(text)
         vim.fn.timer_stop(self.timer_id)
         self.timer_id = nil
     end
-    local popups = self:get_popups()
+    local components = self:get_components()
     if self.layout_type == 'vertical' then
-        if popups.previous:has_custom_borders() then
-            popups.previous:set_footer(text)
+        if components.previous:has_border() then
+            components.previous:set_footer(text)
         end
-        if popups.current:has_custom_borders() then
-            popups.current:set_footer(text)
+        if components.current:has_border() then
+            components.current:set_footer(text)
         end
     else
-        if popups.preview:has_custom_borders() then
-            popups.preview:set_footer(text)
+        if components.preview:has_border() then
+            components.preview:set_footer(text)
         end
     end
     self.timer_id = vim.fn.timer_start(epoch, function()
         if self.layout_type == 'vertical' then
-            pcall(popups.previous.set_footer, popups.previous)
-            pcall(popups.current.set_footer, popups.current)
+            pcall(components.previous.set_footer, components.previous)
+            pcall(components.current.set_footer, components.current)
         else
-            pcall(popups.preview.set_footer, popups.preview)
+            pcall(components.preview.set_footer, components.preview)
         end
         vim.fn.timer_stop(self.timer_id)
         self.timer_id = nil
     end)
 end
 
-function Preview:regenerate_win_toggle_queue()
-    self.state.win_toggle_queue = self:get_win_ids()
-end
-
-function Preview:get_preview_win_ids()
+function Preview:navigate_code(direction)
+    if not self.data then
+        return
+    end
+    if not self.data.diff_change then
+        return
+    end
+    if not self.data.diff_change.marks then
+        return
+    end
+    local components = self:get_components()
+    local code_win_ids = {}
+    local current_win_id = vim.api.nvim_get_current_win()
     if self.layout_type == 'vertical' then
-        return {
-            self:get_popups().previous:get_virtual_line_nr_win_id(),
-            self:get_popups().previous:get_win_id(),
-            self:get_popups().current:get_virtual_line_nr_win_id(),
-            self:get_popups().current:get_win_id(),
+        code_win_ids = {
+            components.previous:get_win_id(),
+            components.current:get_win_id(),
+            components.previous:get_virtual_line_nr_win_id(),
+            components.current:get_virtual_line_nr_win_id(),
+        }
+    else
+        code_win_ids = {
+            components.preview:get_win_id(),
+            components.preview:get_virtual_line_nr_win_id(),
         }
     end
-    return { self:get_popups().preview:get_win_id(), self:get_popups().preview:get_virtual_line_nr_win_id() }
+    if not vim.tbl_contains(code_win_ids, current_win_id) then
+        return
+    end
+    local marks = self.data.diff_change.marks
+    if #marks == 0 then
+        return self:notify('There are no changes')
+    end
+    local mark_index = nil
+    if direction == 'up' then
+        mark_index = navigation.mark_up(code_win_ids, marks)
+    end
+    if direction == 'down' then
+        mark_index = navigation.mark_down(code_win_ids, marks)
+    end
+    if mark_index then
+        scheduler()
+        self:notify(string.format('%s/%s Changes', mark_index, #marks))
+    end
 end
 
-function Preview:is_preview_focused()
-    local preview_win_ids = self:get_preview_win_ids()
-    local current_win_id = vim.api.nvim_get_current_win()
-    for i = 1, #preview_win_ids do
-        local win_id = preview_win_ids[i]
-        if win_id == current_win_id then
-            return true
-        end
-    end
-    return false
+function Preview:mark_up()
+    self:navigate_code('up')
+end
+
+function Preview:mark_down()
+    self:navigate_code('down')
 end
 
 function Preview:draw_changes(data)
     local lnum_changes = data.lnum_changes
     local layout_type = self.layout_type or 'horizontal'
-    local popups = self:get_popups()
+    local components = self:get_components()
     local ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/paint')
     scheduler()
     for i = 1, #lnum_changes do
         scheduler()
-        local datum, popup, buf = lnum_changes[i], nil, nil
+        local datum, component, buf = lnum_changes[i], nil, nil
         if layout_type == 'horizontal' then
-            popup = popups.preview
-            buf = popup:get_buf()
+            component = components.preview
+            buf = component:get_buf()
         elseif layout_type == 'vertical' then
-            popup = popups[datum.buftype]
-            buf = popup:get_buf()
+            component = components[datum.buftype]
+            buf = component:get_buf()
         end
-        if not buf or not popup then
-            logger.error('There are no popup or buffer to draw the changes')
+        if not buf or not component then
+            logger.error('There are no component or buffer to draw the changes')
             return
         end
         local type, lnum, word_diff = datum.type, datum.lnum, datum.word_diff
@@ -122,7 +150,7 @@ function Preview:draw_changes(data)
             scheduler()
             local void_line = string.rep(
                 render_store.get('preview').symbols.void,
-                vim.api.nvim_win_get_width(popup:get_win_id())
+                vim.api.nvim_win_get_width(component:get_win_id())
             )
             scheduler()
             virtual_text.add(buf, ns_id, lnum - 1, 0, {
@@ -160,14 +188,14 @@ function Preview:draw_changes(data)
 end
 
 function Preview:make_virtual_line_nr(data)
-    local popups = self:get_popups()
+    local components = self:get_components()
     local line_nr_count = 1
     local virtual_nr_lines = {}
     local hls = {}
     local common_hl = 'LineNr'
     local layout_type = self.layout_type or 'horizontal'
     if layout_type == 'horizontal' then
-        local popup = popups.preview
+        local component = components.preview
         local lnum_change_map = {}
         for i = 1, #data.lnum_changes do
             scheduler()
@@ -192,7 +220,7 @@ function Preview:make_virtual_line_nr(data)
             end
         end
         scheduler()
-        popup:set_virtual_line_nr_lines(virtual_nr_lines, hls)
+        component:set_virtual_line_nr_lines(virtual_nr_lines, hls)
         scheduler()
         for i = 1, #data.lines do
             scheduler()
@@ -203,7 +231,7 @@ function Preview:make_virtual_line_nr(data)
                 if defined_sign then
                     scheduler()
                     sign.place(
-                        popup:get_virtual_line_nr_buf(),
+                        component:get_virtual_line_nr_buf(),
                         lnum,
                         defined_sign,
                         render_store.get('preview').sign.priority
@@ -213,8 +241,8 @@ function Preview:make_virtual_line_nr(data)
             end
         end
     elseif layout_type == 'vertical' then
-        local previous_popup = popups.previous
-        local current_popup = popups.current
+        local previous_component = components.previous
+        local current_component = components.current
         local current_lnum_change_map = {}
         local previous_lnum_change_map = {}
         for i = 1, #data.lnum_changes do
@@ -244,7 +272,7 @@ function Preview:make_virtual_line_nr(data)
             end
         end
         scheduler()
-        current_popup:set_virtual_line_nr_lines(virtual_nr_lines, hls)
+        current_component:set_virtual_line_nr_lines(virtual_nr_lines, hls)
         scheduler()
         for i = 1, #data.current_lines do
             scheduler()
@@ -255,7 +283,7 @@ function Preview:make_virtual_line_nr(data)
                 if defined_sign then
                     scheduler()
                     sign.place(
-                        current_popup:get_virtual_line_nr_buf(),
+                        current_component:get_virtual_line_nr_buf(),
                         lnum,
                         defined_sign,
                         render_store.get('preview').sign.priority
@@ -285,7 +313,7 @@ function Preview:make_virtual_line_nr(data)
             end
         end
         scheduler()
-        previous_popup:set_virtual_line_nr_lines(virtual_nr_lines, hls)
+        previous_component:set_virtual_line_nr_lines(virtual_nr_lines, hls)
         scheduler()
         for i = 1, #data.current_lines do
             scheduler()
@@ -296,7 +324,7 @@ function Preview:make_virtual_line_nr(data)
                 if defined_sign then
                     scheduler()
                     sign.place(
-                        previous_popup:get_virtual_line_nr_buf(),
+                        previous_component:get_virtual_line_nr_buf(),
                         lnum,
                         defined_sign,
                         render_store.get('preview').sign.priority
@@ -308,11 +336,9 @@ function Preview:make_virtual_line_nr(data)
     end
 end
 
-function Preview:get_next_win_id()
-    if vim.tbl_isempty(self.state.win_toggle_queue) then
-        self:regenerate_win_toggle_queue()
-    end
-    return table.remove(self.state.win_toggle_queue)
+function Preview:set_mounted(value)
+    assert(type(value) == 'boolean', 'type error :: expected boolean')
+    self.state.mounted = value
 end
 
 function Preview:set_loading(value, force)
@@ -320,30 +346,30 @@ function Preview:set_loading(value, force)
     if not self:is_mounted() then
         return self
     end
-    for _, popup in pairs(self.popups) do
-        popup:set_loading(value, force)
+    for _, component in pairs(self.components) do
+        component:set_loading(value, force)
     end
     return self
 end
 
 function Preview:set_centered_text(text, force)
     assert(type(text) == 'string', 'type error :: expected string')
-    for _, popup in pairs(self.popups) do
-        popup:set_centered_text(text, force)
+    for _, component in pairs(self.components) do
+        component:set_centered_text(text, force)
     end
     return self
 end
 
 function Preview:set_error(value, force)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
-    for _, popup in pairs(self.popups) do
-        popup:set_error(value, force)
+    for _, component in pairs(self.components) do
+        component:set_error(value, force)
     end
     return self
 end
 
-function Preview:get_popups()
-    return self.popups
+function Preview:get_components()
+    return self.components
 end
 
 function Preview:get_parent_buf()
@@ -356,24 +382,39 @@ end
 
 function Preview:get_win_ids()
     local win_ids = {}
-    for _, popup in pairs(self.popups) do
-        win_ids[#win_ids + 1] = popup:get_win_id()
+    for _, component in pairs(self.components) do
+        win_ids[#win_ids + 1] = component:get_win_id()
     end
     return win_ids
 end
 
 function Preview:get_bufs()
     local bufs = {}
-    for _, popup in pairs(self.popups) do
-        bufs[#bufs + 1] = popup:get_buf()
+    for _, component in pairs(self.components) do
+        bufs[#bufs + 1] = component:get_buf()
     end
     return bufs
 end
 
+function Preview:keep_focused()
+    local win_ids = self:get_win_ids()
+    if #win_ids > 1 then
+        local current_win_id = vim.api.nvim_get_current_win()
+        if not vim.tbl_contains(win_ids, current_win_id) then
+            if vim.tbl_isempty(self.state.win_toggle_queue) then
+                self.state.win_toggle_queue = self:get_win_ids()
+            end
+            vim.api.nvim_set_current_win(table.remove(self.state.win_toggle_queue))
+        else
+            self.state.win_toggle_queue = self:get_win_ids()
+        end
+    end
+end
+
 function Preview:is_mounted()
-    for _, popup in pairs(self.popups) do
-        local win_ids = popup:get_win_ids()
-        local bufs = popup:get_bufs()
+    for _, component in pairs(self.components) do
+        local win_ids = component:get_win_ids()
+        local bufs = component:get_bufs()
         for i = 1, #win_ids do
             if not vim.api.nvim_win_is_valid(win_ids[i]) then
                 return false
@@ -392,14 +433,9 @@ function Preview:is_temporary()
     return self.temporary
 end
 
-function Preview:set_mounted(value)
-    assert(type(value) == 'boolean', 'type error :: expected boolean')
-    self.state.mounted = value
-end
-
 function Preview:clear()
-    for _, popup in pairs(self.popups) do
-        popup:clear()
+    for _, component in pairs(self.components) do
+        component:clear()
     end
 end
 
@@ -407,19 +443,19 @@ function Preview:mount()
     if self:is_mounted() then
         return self
     end
-    for _, popup in pairs(self.popups) do
-        popup:mount()
+    for _, component in pairs(self.components) do
+        component:mount()
     end
     local win_ids = {}
-    for _, popup in pairs(self.popups) do
-        win_ids[#win_ids + 1] = popup:get_win_id()
-        win_ids[#win_ids + 1] = popup:get_border_win_id()
-        if popup:has_virtual_line_nr() then
-            win_ids[#win_ids + 1] = popup:get_virtual_line_nr_win_id()
+    for _, component in pairs(self.components) do
+        win_ids[#win_ids + 1] = component:get_win_id()
+        win_ids[#win_ids + 1] = component:get_border_win_id()
+        if component:is(CodeComponent) then
+            win_ids[#win_ids + 1] = component:get_virtual_line_nr_win_id()
         end
     end
-    for _, popup in pairs(self.popups) do
-        popup:on(
+    for _, component in pairs(self.components) do
+        component:on(
             'BufWinLeave',
             string.format(':lua require("vgit").renderer.hide_windows(%s)', vim.inspect(win_ids)),
             { once = true }
@@ -446,9 +482,9 @@ function Preview:mount()
 end
 
 function Preview:unmount()
-    local popups = self:get_popups()
-    for _, popup in pairs(popups) do
-        popup:unmount()
+    local components = self:get_components()
+    for _, component in pairs(components) do
+        component:unmount()
     end
     self:set_mounted(false)
 end

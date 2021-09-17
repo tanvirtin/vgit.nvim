@@ -1,22 +1,23 @@
-local TableBuilder = require('vgit.builders.TableBuilder')
 local render_store = require('vgit.stores.render_store')
-local Popup = require('vgit.Popup')
+local utils = require('vgit.utils')
+local TableComponent = require('vgit.components.TableComponent')
+local CodeComponent = require('vgit.components.CodeComponent')
 local Preview = require('vgit.Preview')
 
 local config = render_store.get('layout').history_preview
 
 local function create_horizontal_widget(opts)
     return Preview:new({
-        preview = Popup:new({
+        preview = CodeComponent:new({
             filetype = opts.filetype,
-            border = config.horizontal.preview.border,
+            border = utils.retrieve(config.horizontal.preview.border),
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', config.horizontal.preview.background_hl or ''),
+                ['winhl'] = string.format('Normal:%s', utils.retrieve(config.horizontal.preview.background_hl) or ''),
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -25,26 +26,27 @@ local function create_horizontal_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                height = config.horizontal.preview.height,
-                width = config.horizontal.preview.width,
-                row = config.horizontal.preview.row,
-                col = config.horizontal.preview.col,
+                height = utils.retrieve(config.horizontal.preview.height),
+                width = utils.retrieve(config.horizontal.preview.width),
+                row = utils.retrieve(config.horizontal.preview.row),
+                col = utils.retrieve(config.horizontal.preview.col),
             },
             virtual_line_nr = {
                 enabled = true,
             },
         }),
-        table = Popup:new({
+        table = TableComponent:new({
+            header = { 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' },
             static = true,
             title = 'History',
-            border = config.horizontal.table.border,
+            border = utils.retrieve(config.horizontal.table.border),
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', config.horizontal.table.background_hl or ''),
+                ['winhl'] = string.format('Normal:%s', utils.retrieve(config.horizontal.table.background_hl) or ''),
                 ['cursorline'] = true,
                 ['cursorbind'] = false,
                 ['scrollbind'] = false,
@@ -53,10 +55,10 @@ local function create_horizontal_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                height = config.horizontal.table.height,
-                width = config.horizontal.table.width,
-                row = config.horizontal.table.row,
-                col = config.horizontal.table.col,
+                height = utils.retrieve(config.horizontal.table.height),
+                width = utils.retrieve(config.horizontal.table.width),
+                row = utils.retrieve(config.horizontal.table.row),
+                col = utils.retrieve(config.horizontal.table.col),
             },
         }),
     }, opts)
@@ -64,16 +66,16 @@ end
 
 local function create_vertical_widget(opts)
     return Preview:new({
-        previous = Popup:new({
+        previous = CodeComponent:new({
             filetype = opts.filetype,
-            border = config.vertical.previous.border,
+            border = utils.retrieve(config.vertical.previous.border),
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', config.vertical.previous.background_hl or ''),
+                ['winhl'] = string.format('Normal:%s', utils.retrieve(config.vertical.previous.background_hl) or ''),
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -82,25 +84,25 @@ local function create_vertical_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = config.vertical.previous.width,
-                height = config.vertical.previous.height,
-                row = config.vertical.previous.row,
-                col = config.vertical.previous.col,
+                width = utils.retrieve(config.vertical.previous.width),
+                height = utils.retrieve(config.vertical.previous.height),
+                row = utils.retrieve(config.vertical.previous.row),
+                col = utils.retrieve(config.vertical.previous.col),
             },
             virtual_line_nr = {
                 enabled = true,
             },
         }),
-        current = Popup:new({
+        current = CodeComponent:new({
             filetype = opts.filetype,
-            border = config.vertical.current.border,
+            border = utils.retrieve(config.vertical.current.border),
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', config.vertical.current.background_hl or ''),
+                ['winhl'] = string.format('Normal:%s', utils.retrieve(config.vertical.current.background_hl) or ''),
                 ['cursorline'] = true,
                 ['wrap'] = false,
                 ['cursorbind'] = true,
@@ -109,25 +111,26 @@ local function create_vertical_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = config.vertical.current.width,
-                height = config.vertical.current.height,
-                row = config.vertical.current.row,
-                col = config.vertical.current.col,
+                width = utils.retrieve(config.vertical.current.width),
+                height = utils.retrieve(config.vertical.current.height),
+                row = utils.retrieve(config.vertical.current.row),
+                col = utils.retrieve(config.vertical.current.col),
             },
             virtual_line_nr = {
                 enabled = true,
             },
         }),
-        table = Popup:new({
+        table = TableComponent:new({
+            header = { 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' },
             static = true,
-            border = config.vertical.table.border,
+            border = utils.retrieve(config.vertical.table.border),
             buf_options = {
                 ['modifiable'] = false,
                 ['buflisted'] = false,
                 ['bufhidden'] = 'wipe',
             },
             win_options = {
-                ['winhl'] = string.format('Normal:%s', config.vertical.table.background_hl or ''),
+                ['winhl'] = string.format('Normal:%s', utils.retrieve(config.vertical.table.background_hl) or ''),
                 ['cursorline'] = true,
                 ['cursorbind'] = false,
                 ['scrollbind'] = false,
@@ -136,10 +139,10 @@ local function create_vertical_widget(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'editor',
-                width = config.vertical.table.width,
-                height = config.vertical.table.height,
-                row = config.vertical.table.row,
-                col = config.vertical.table.col,
+                width = utils.retrieve(config.vertical.table.width),
+                height = utils.retrieve(config.vertical.table.height),
+                row = utils.retrieve(config.vertical.table.row),
+                col = utils.retrieve(config.vertical.table.col),
             },
         }),
     }, opts)
@@ -155,12 +158,8 @@ function HistoryPreview:new(opts)
     return setmetatable(this, HistoryPreview)
 end
 
-function HistoryPreview:get_marks()
-    return self.data and self.data.diff_change and self.data.diff_change.marks or {}
-end
-
 function HistoryPreview:reposition_cursor(selected)
-    self:get_popups().table:set_cursor(selected + 1, 0)
+    self:get_components().table:set_cursor(selected + 1, 0)
     return self
 end
 
@@ -169,8 +168,9 @@ function HistoryPreview:mount()
         return self
     end
     Preview.mount(self)
-    local table = self:get_popups().table
+    local table = self:get_components().table
     table:add_keymap('<enter>', string.format('_rerender_history(%s)', self:get_parent_buf()))
+    table:add_keymap('<2-LeftMouse>', string.format('_rerender_history(%s)', self:get_parent_buf()))
     table:focus()
     return self
 end
@@ -179,23 +179,28 @@ function HistoryPreview:render()
     if not self:is_mounted() then
         return
     end
-    local popups = self:get_popups()
-    local table = popups.table
+    local components = self:get_components()
+    local table = components.table
     local err, data = self.err, self.data
     self:clear()
     if err then
-        self:get_popups().table:remove_keymap('<enter>')
         self:set_error(true)
         table:focus()
+        table:transpose_text(
+            { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
+            self.selected,
+            0
+        )
+        self:reposition_cursor(self.selected)
         return self
     elseif data then
         local logs = data.logs
         local diff_change = data.diff_change
         if self.layout_type == 'horizontal' then
-            popups.preview:set_cursor(1, 0):set_lines(diff_change.lines)
+            components.preview:set_cursor(1, 0):set_lines(diff_change.lines)
         else
-            popups.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines)
-            popups.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
+            components.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines)
+            components.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
         end
         if not table:has_lines() then
             local rows = {}
@@ -209,11 +214,7 @@ function HistoryPreview:render()
                     (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or '',
                 }
             end
-            local table_builder = TableBuilder:new(
-                { 'Revision', 'Author Name', 'Commit Hash', 'Summary', 'Time' },
-                rows
-            )
-            table_builder:make(table)
+            table:set_lines(rows)
         end
         table:transpose_text(
             { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
@@ -226,6 +227,7 @@ function HistoryPreview:render()
     else
         table:set_centered_text('There are no commits')
         table:remove_keymap('<enter>')
+        table:remove_keymap('<2-LeftMouse>')
     end
     table:focus()
     return self

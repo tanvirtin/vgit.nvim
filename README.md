@@ -33,6 +33,11 @@
 - See changes in your project in a quickfix list (`:VGit project_hunks_qf`)
 - Enhance your workflow by using VGit's buffer navigation `:VGit hunk_up` and `:VGit hunk_down` that can be used on any VGit previews with changes.
 
+If you have Telescope feel free to run `:VGit actions` to quickly checkout your execution options.
+<br />
+<br />
+<img src="https://user-images.githubusercontent.com/25164326/133190787-5a63b3f4-9ba9-4bdf-9123-5929b7aab69a.PNG" alt="commands"/>
+
 ## Supported Neovim Versions:
 - Neovim **>=** 0.5
 
@@ -80,7 +85,7 @@ Colorscheme definitions can be found in `lua/vgit/themes/`, feel free to open a 
 
 ## Layouts
 Predefined supported layouts:
-- ivy (Full screen previews)
+- default (Full screen previews)
 
 Layout definitions can be found in `lua/vgit/layouts/`, feel free to open a pull request with your own layout!
 
@@ -120,19 +125,21 @@ local vgit = require('vgit')
 local dimensions = require('vgit.dimensions')
 
 vgit.setup({
+    debug = true, -- Only enable this to trace issues related to the app,
     keymaps = {
         ['n <C-k>'] = 'hunk_up',
         ['n <C-j>'] = 'hunk_down',
+        ['n <leader>g'] = 'actions',
         ['n <leader>gs'] = 'buffer_hunk_stage',
         ['n <leader>gr'] = 'buffer_hunk_reset',
         ['n <leader>gp'] = 'buffer_hunk_preview',
         ['n <leader>gb'] = 'buffer_blame_preview',
-        ['n <leader>gf'] = 'buffer_preview',
-        ['n <leader>gh'] = 'buffer_history',
+        ['n <leader>gf'] = 'buffer_diff_preview',
+        ['n <leader>gh'] = 'buffer_history_preview',
         ['n <leader>gu'] = 'buffer_reset',
         ['n <leader>gg'] = 'buffer_gutter_blame_preview',
         ['n <leader>gd'] = 'project_diff_preview',
-        ['n <leader>gq'] = 'hunks_quickfix_list',
+        ['n <leader>gq'] = 'project',
         ['n <leader>gx'] = 'toggle_diff_preference',
     },
     controller = {
@@ -150,16 +157,16 @@ vgit.setup({
     hls = vgit.themes.tokyonight -- You can also pass in your own custom theme,
     sign = {
         VGitViewSignAdd = {
-            name = 'VGitViewSignAdd',
-            line_hl = 'VGitViewSignAdd',
+            name = 'DiffAdd',
+            line_hl = 'DiffAdd',
             text_hl = nil,
             num_hl = nil,
             icon = nil,
             text = '',
         },
         VGitViewSignRemove = {
-            name = 'VGitViewSignRemove',
-            line_hl = 'VGitViewSignRemove',
+            name = 'DiffDelete',
+            line_hl = 'DiffDelete',
             text_hl = nil,
             num_hl = nil,
             icon = nil,
@@ -191,7 +198,7 @@ vgit.setup({
         },
     },
     render = {
-        layout = vgit.layouts.ivy -- You can also pass in your own custom layout,
+        layout = vgit.layouts.default -- You can also pass in your own custom layout,
         sign = {
             priority = 10,
             hls = {
@@ -201,7 +208,7 @@ vgit.setup({
             },
         },
         line_blame = {
-            hl = 'VGitLineBlame',
+            hl = 'Comment',
             format = function(blame, git_config)
                 local config_author = git_config['user.name']
                 local author = blame.author

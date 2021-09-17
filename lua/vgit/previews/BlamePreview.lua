@@ -1,6 +1,6 @@
 local utils = require('vgit.utils')
 local render_store = require('vgit.stores.render_store')
-local Popup = require('vgit.Popup')
+local CodeComponent = require('vgit.components.CodeComponent')
 local Preview = require('vgit.Preview')
 local config = render_store.get('layout').blame_preview
 
@@ -41,17 +41,17 @@ local BlamePreview = Preview:extend()
 
 function BlamePreview:new()
     local this = Preview:new({
-        Popup:new({
-            border = config.border,
+        CodeComponent:new({
+            border = utils.retrieve(config.border),
             win_options = {
-                ['winhl'] = string.format('Normal:%s', config.background_hl or ''),
+                ['winhl'] = string.format('Normal:%s', utils.retrieve(config.background_hl) or ''),
                 ['cursorline'] = true,
             },
             window_props = {
                 style = 'minimal',
                 relative = 'cursor',
-                height = config.height,
-                width = config.width,
+                height = utils.retrieve(config.height),
+                width = utils.retrieve(config.width),
             },
         }),
     }, {
@@ -71,16 +71,16 @@ function BlamePreview:render()
         return self
     end
     if blame then
-        local popup = self:get_popups()[1]
+        local component = self:get_components()[1]
         if not blame.committed then
             local uncommitted_lines = create_uncommitted_lines(blame)
-            popup:set_lines(uncommitted_lines)
-            popup:set_height(#uncommitted_lines)
+            component:set_lines(uncommitted_lines)
+            component:set_height(#uncommitted_lines)
             return self
         end
         local committed_lines = create_committed_lines(blame)
-        popup:set_lines(committed_lines)
-        popup:set_height(#committed_lines)
+        component:set_lines(committed_lines)
+        component:set_height(#committed_lines)
     end
     return self
 end

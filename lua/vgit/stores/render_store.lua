@@ -6,15 +6,15 @@ local M = {}
 local virtual_line_nr_width = 6
 
 M.state = Interface:new({
-    layout = require('vgit.layouts.ivy'),
+    layout = require('vgit.layouts.default'),
     preview = {
         indicator_hl = 'VGitIndicator',
         virtual_line_nr_width = virtual_line_nr_width,
         sign = {
             priority = 10,
             hls = {
-                add = 'VGitViewSignAdd',
-                remove = 'VGitViewSignRemove',
+                add = 'DiffAdd',
+                remove = 'DiffDelete',
             },
         },
         symbols = {
@@ -31,7 +31,7 @@ M.state = Interface:new({
         },
     },
     line_blame = {
-        hl = 'VGitLineBlame',
+        hl = 'Comment',
         format = function(blame, git_config)
             local config_author = git_config['user.name']
             local author = blame.author
