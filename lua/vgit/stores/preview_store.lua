@@ -10,9 +10,9 @@ M.get = function()
     return M.state:get('current')
 end
 
-M.set = function(popup)
-    assert(type(popup) == 'table', 'type error :: expected table')
-    M.state:set('current', popup)
+M.set = function(component)
+    assert(type(component) == 'table', 'type error :: expected table')
+    M.state:set('current', component)
 end
 
 M.exists = function()

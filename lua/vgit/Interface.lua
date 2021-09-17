@@ -22,7 +22,7 @@ end
 
 function Interface:assign(config)
     if not config then
-        return
+        return self
     end
     local function assign(state_segment, config_segment)
         local state_segment_type = type(state_segment)
@@ -45,7 +45,7 @@ function Interface:assign(config)
         end
     end
     assign(self.data, config)
-    return
+    return self
 end
 
 return Interface
