@@ -1372,18 +1372,10 @@ M.buffer_diff_preview = throttle_leading(
         if not buffer.store.contains(buf) then
             return
         end
-        if not controller_store.get('hunks_enabled') then
-            return
-        end
         if not buffer.is_valid(buf) then
             return
         end
         if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        local hunks = buffer.store.get(buf, 'hunks')
-        if #hunks == 0 then
-            logger.info('No changes found')
             return
         end
         local diff_preference = controller_store.get('diff_preference')
@@ -1391,8 +1383,11 @@ M.buffer_diff_preview = throttle_leading(
         renderer.render_diff_preview(
             wrap(function()
                 local tracked_filename = buffer.store.get(buf, 'tracked_filename')
-                if not hunks then
-                    return { 'Failed to retrieve hunks for the current buffer' }, nil
+                local hunks_err, hunks = calculate_hunks(buf)
+                scheduler()
+                if hunks_err then
+                    logger.debug(hunks_err, 'init.lua/buffer_diff_preview')
+                    return hunks_err, nil
                 end
                 local temp_lines = buffer.store.get(buf, 'temp_lines')
                 local read_file_err, lines
