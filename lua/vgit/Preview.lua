@@ -472,7 +472,7 @@ function Preview:mount()
             events.buf.on(
                 buf,
                 event,
-                string.format(':lua require("vgit").renderer.hide_windows(%s)', vim.inspect(win_ids)),
+                string.format(':lua _G.package.loaded.vgit.renderer.hide_windows(%s)', vim.inspect(win_ids)),
                 { once = true }
             )
         end

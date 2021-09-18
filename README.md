@@ -54,6 +54,7 @@ If you have Telescope feel free to run `:VGit actions` to quickly checkout your 
 - `vim.wo.signcolumn = 'yes'` (see :help signcolumn)
 
 ## Installation
+Default installation via Packer.
 ```lua
 use {
   'tanvirtin/vgit.nvim',
@@ -61,6 +62,20 @@ use {
     'nvim-lua/plenary.nvim'
   }
 }
+```
+
+Lazy loading via Packer.
+```lua
+use({
+    'tanvirtin/vgit.nvim',
+    event = 'BufWinEnter',
+    requires = {
+        'nvim-lua/plenary.nvim',
+    },
+    config = function()
+        require('vgit').setup()
+    end,
+})
 ```
 
 ## Setup
@@ -122,10 +137,10 @@ Layout definitions can be found in `lua/vgit/layouts/`, feel free to open a pull
 ## Advanced Setup
 ```lua
 local vgit = require('vgit')
-local dimensions = require('vgit.dimensions')
+local utils = require('vgit.utils')
 
 vgit.setup({
-    debug = true, -- Only enable this to trace issues related to the app,
+    debug = false, -- Only enable this to trace issues related to the app,
     keymaps = {
         ['n <C-k>'] = 'hunk_up',
         ['n <C-j>'] = 'hunk_down',
@@ -154,7 +169,7 @@ vgit.setup({
         show_untracked_file_signs = true,
         action_delay_ms = 300,
     },
-    hls = vgit.themes.tokyonight -- You can also pass in your own custom theme,
+    hls = vgit.themes.tokyonight,
     sign = {
         VGitViewSignAdd = {
             name = 'DiffAdd',
@@ -198,7 +213,7 @@ vgit.setup({
         },
     },
     render = {
-        layout = vgit.layouts.default -- You can also pass in your own custom layout,
+        layout = vgit.layouts.default,
         sign = {
             priority = 10,
             hls = {
@@ -240,7 +255,7 @@ vgit.setup({
                 return string.format(' %s', info)
             end,
         },
-    }
+    },
 })
 ```
 
