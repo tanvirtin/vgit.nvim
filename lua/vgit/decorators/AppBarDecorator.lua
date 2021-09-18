@@ -35,7 +35,7 @@ function AppBarDecorator:mount()
     events.buf.on(
         self.content_buf,
         'WinClosed',
-        string.format(':lua require("vgit").renderer.hide_windows({ %s })', self.win_id),
+        string.format(':lua _G.package.loaded.vgit.renderer.hide_windows({ %s })', self.win_id),
         { once = true }
     )
     return self

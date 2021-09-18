@@ -399,7 +399,7 @@ describe('fs:', function()
         end)
 
         it('should return true if file exists', function()
-            eq(fs.exists('lua/vgit/init.lua'), true)
+            eq(fs.exists('lua/vgit/Hunk.lua'), true)
             eq(fs.exists('lua/vgit/buffer.lua'), true)
         end)
 
