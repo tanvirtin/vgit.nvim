@@ -4,6 +4,21 @@ local pfiletype = require('plenary.filetype')
 
 local M = {}
 
+M.cwd_filename = function(filepath)
+    assert(type(filepath) == 'string', 'type error :: expected string')
+    local end_index = nil
+    for i = #filepath, 1, -1 do
+        local letter = filepath:sub(i, i)
+        if letter == '/' then
+            end_index = i
+        end
+    end
+    if not end_index then
+        return ''
+    end
+    return filepath:sub(1, end_index)
+end
+
 M.relative_filename = function(filepath)
     assert(type(filepath) == 'string', 'type error :: expected string')
     local cwd = vim.loop.cwd()

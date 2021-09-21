@@ -1,4 +1,5 @@
 local TableComponent = require('vgit.components.TableComponent')
+local fs = require('vgit.fs')
 local utils = require('vgit.utils')
 local render_store = require('vgit.stores.render_store')
 local CodeComponent = require('vgit.components.CodeComponent')
@@ -148,6 +149,14 @@ local function create_vertical_widget(opts)
     }, opts)
 end
 
+local function get_file_icon(fname, extension)
+    local ok, web_devicons = pcall(require, 'nvim-web-devicons')
+    if not ok then
+        return ' ', nil
+    end
+    return web_devicons.get_icon(fname, extension)
+end
+
 local ProjectDiffPreview = Preview:extend()
 
 function ProjectDiffPreview:new(opts)
@@ -156,12 +165,6 @@ function ProjectDiffPreview:new(opts)
         this = create_horizontal_widget(opts)
     end
     return setmetatable(this, ProjectDiffPreview)
-end
-
-function ProjectDiffPreview:reposition_cursor(selected)
-    local table = self:get_components().table
-    table:set_cursor(selected + 1, 0)
-    return self
 end
 
 function ProjectDiffPreview:mount()
@@ -176,6 +179,100 @@ function ProjectDiffPreview:mount()
     return self
 end
 
+function ProjectDiffPreview:make_table()
+    local changed_files = self.data.changed_files
+    local components = self:get_components()
+    local table = components.table
+    local rows = {}
+    local spacing = ' '
+    local defered = {}
+    for i = 1, #changed_files do
+        local file = changed_files[i]
+        local icon, icon_hl = get_file_icon(file.filename, fs.detect_filetype(file.filename))
+        local filename = fs.short_filename(file.filename)
+        local directory = fs.cwd_filename(file.filename)
+        local segments = {
+            string.format('%s', spacing),
+            string.format(' %s', icon),
+            string.format(' %s', filename),
+            string.format(' %s', directory),
+            string.format(' %s', file.status),
+        }
+        rows[#rows + 1] = { vim.fn.join(segments, '') }
+        defered[#defered + 1] = function()
+            if icon_hl then
+                vim.api.nvim_buf_add_highlight(
+                    table:get_buf(),
+                    -1,
+                    icon_hl,
+                    i - 1,
+                    #segments[1],
+                    #segments[1] + #segments[2] + 3
+                )
+            end
+        end
+        defered[#defered + 1] = function()
+            if icon_hl then
+                vim.api.nvim_buf_add_highlight(
+                    table:get_buf(),
+                    -1,
+                    'Comment',
+                    i - 1,
+                    #segments[1] + #segments[2] + 3 + #segments[3] + 1,
+                    #segments[1] + #segments[2] + 3 + #segments[3] + #segments[4]
+                )
+            end
+        end
+        defered[#defered + 1] = function()
+            if icon_hl then
+                vim.api.nvim_buf_add_highlight(
+                    table:get_buf(),
+                    -1,
+                    'VGitStatus',
+                    i - 1,
+                    #segments[1] + #segments[2] + 3 + #segments[3] + #segments[4] + 1,
+                    #segments[1] + #segments[2] + 3 + #segments[3] + #segments[4] + #segments[5]
+                )
+            end
+        end
+    end
+    table:set_lines(rows)
+    for i = 1, #defered do
+        defered[i]()
+    end
+end
+
+function ProjectDiffPreview:reposition_cursor()
+    local diff_change = self.data.diff_change
+    local hunk = diff_change.hunks[1]
+    if hunk then
+        local start = hunk.start
+        local components = self:get_components()
+        if self.layout_type == 'vertical' then
+            components.previous:set_cursor(start, 0):call(function()
+                vim.cmd('norm! zz')
+            end)
+            components.current:set_cursor(start, 0):call(function()
+                vim.cmd('norm! zz')
+            end)
+        else
+            components.preview:set_cursor(start, 0):call(function()
+                vim.cmd('norm! zz')
+            end)
+        end
+    end
+end
+
+function ProjectDiffPreview:show_indicator()
+    local components = self:get_components()
+    local table = components.table
+    table:transpose_text(
+        { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
+        self.selected,
+        0
+    )
+end
+
 function ProjectDiffPreview:render()
     if not self:is_mounted() then
         return
@@ -186,7 +283,6 @@ function ProjectDiffPreview:render()
     self:clear()
     if err then
         if err[1] == 'File not found' then
-            local changed_files = data.changed_files
             local file_not_found_msg = 'File has been deleted'
             if self.layout_type == 'horizontal' then
                 components.preview:set_cursor(1, 0):set_centered_text(file_not_found_msg)
@@ -194,31 +290,14 @@ function ProjectDiffPreview:render()
                 components.previous:set_cursor(1, 0):set_centered_text(file_not_found_msg)
                 components.current:set_cursor(1, 0):set_centered_text(file_not_found_msg)
             end
-            local rows = {}
-            for i = 1, #changed_files do
-                local file = changed_files[i]
-                rows[#rows + 1] = { string.format('%s %s', file.status, file.filename) }
-            end
-            table:set_lines(rows)
-            table:transpose_text(
-                { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
-                self.selected,
-                0
-            )
-            self:reposition_cursor(self.selected)
-            table:focus()
+            self:show_indicator()
+            self:make_table()
             return
         end
         self:set_error(true)
-        table:transpose_text(
-            { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
-            self.selected,
-            0
-        )
-        self:reposition_cursor(self.selected)
+        self:show_indicator()
         return self
     elseif data then
-        local changed_files = data.changed_files
         local diff_change = data.diff_change
         local filetype = data.filetype
         if self.layout_type == 'horizontal' then
@@ -228,21 +307,12 @@ function ProjectDiffPreview:render()
             components.current:set_cursor(1, 0):set_lines(diff_change.current_lines):set_filetype(filetype)
         end
         if not table:has_lines() then
-            local rows = {}
-            for i = 1, #changed_files do
-                local file = changed_files[i]
-                rows[#rows + 1] = { string.format('%s %s', file.status, file.filename) }
-            end
-            table:set_lines(rows)
+            self:make_table()
         end
-        table:transpose_text(
-            { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
-            self.selected,
-            0
-        )
+        self:show_indicator()
         self:draw_changes(diff_change)
         self:make_virtual_line_nr(diff_change)
-        self:reposition_cursor(self.selected)
+        self:reposition_cursor()
     else
         table:set_centered_text('There are no changes')
         table:remove_keymap('<enter>')

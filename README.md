@@ -161,7 +161,7 @@ vgit.setup({
         hunks_enabled = true,
         blames_enabled = true,
         diff_strategy = 'index',
-        diff_preference = 'vertical',
+        diff_preference = 'horizontal',
         predict_hunk_signs = true,
         predict_hunk_throttle_ms = 300,
         predict_hunk_max_lines = 50000,
