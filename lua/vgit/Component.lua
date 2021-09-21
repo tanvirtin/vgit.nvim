@@ -8,6 +8,8 @@ local events = require('vgit.events')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 local VirtualLineNrDecorator = require('vgit.decorators.VirtualLineNrDecorator')
+local void = require('plenary.async.async').void
+local scheduler = require('plenary.async.util').scheduler
 local Interface = require('vgit.Interface')
 
 local Component = Object:extend()
@@ -394,21 +396,26 @@ function Component:set_centered_animated_text(frame_rate, frames, force, callbac
     self:clear_timers()
     self:set_centered_text(frames[1], true, force)
     local frame_count = 1
-    self.anim_id = vim.fn.timer_start(frame_rate, function()
-        if buffer.is_valid(self:get_buf()) then
-            frame_count = frame_count + 1
-            local selected_frame = frame_count % #frames
-            selected_frame = selected_frame == 0 and 1 or selected_frame
-            self:set_centered_text(string.format('%s', frames[selected_frame]), true)
-            if callback then
-                callback(frame_rate, frames, self.anim_id)
+    self.anim_id = vim.fn.timer_start(
+        frame_rate,
+        void(function()
+            scheduler()
+            if buffer.is_valid(self:get_buf()) then
+                frame_count = frame_count + 1
+                local selected_frame = frame_count % #frames
+                selected_frame = selected_frame == 0 and 1 or selected_frame
+                self:set_centered_text(string.format('%s', frames[selected_frame]), true)
+                if callback then
+                    callback(frame_rate, frames, self.anim_id)
+                end
+            else
+                self:clear_timers()
             end
-        else
-            self:clear_timers()
-        end
-    end, {
-        ['repeat'] = -1,
-    })
+        end),
+        {
+            ['repeat'] = -1,
+        }
+    )
 end
 
 function Component:set_loading(value, force)
@@ -517,6 +524,12 @@ function Component:transpose_line(texts, row)
     assert(vim.tbl_islist(texts), 'type error :: expected list table')
     assert(type(row) == 'number', 'type error :: expected number')
     virtual_text.transpose_line(self:get_buf(), texts, self:get_ns_id(), row)
+end
+
+function Component:call(fn)
+    assert(type(fn) == 'function', 'type error :: expected function')
+    vim.api.nvim_buf_call(self:get_buf(), fn)
+    return self
 end
 
 function Component:focus()

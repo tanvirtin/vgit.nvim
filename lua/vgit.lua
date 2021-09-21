@@ -13,7 +13,6 @@ local dimensions = require('vgit.dimensions')
 local fs = require('vgit.fs')
 local preview_store = require('vgit.stores.preview_store')
 local buffer = require('vgit.buffer')
-local throttle_leading = require('vgit.defer').throttle_leading
 local navigation = require('vgit.navigation')
 local Patch = require('vgit.Patch')
 local void = require('plenary.async.async').void
@@ -357,128 +356,120 @@ M._buf_attach = void(function(buf)
     end
 end)
 
-M._rerender_history = throttle_leading(
-    void(function(buf)
-        if controller_store.get('disabled') then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        if buffer.is_being_edited(buf) then
-            return
-        end
-        local selected_log = vim.api.nvim_win_get_cursor(0)[1]
-        local diff_preference = controller_store.get('diff_preference')
-        local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
-        renderer.rerender_history_preview(
-            wrap(function()
-                local tracked_filename = buffer.store.get(buf, 'tracked_filename')
-                local logs = buffer.store.get(buf, 'logs')
-                local log = logs[selected_log]
-                local err, hunks, lines, commit_hash, computed_hunks
-                if not log then
-                    return { 'Failed to access logs' }, nil
-                end
-                if selected_log == 1 then
-                    local temp_lines = buffer.store.get(buf, 'temp_lines')
-                    if #temp_lines ~= 0 then
-                        lines = temp_lines
-                        computed_hunks = buffer.store.get(buf, 'hunks')
-                    else
-                        err, computed_hunks = git.remote_hunks(tracked_filename, 'HEAD')
-                    end
+M._rerender_history = void(function(buf)
+    if controller_store.get('disabled') then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    if buffer.is_being_edited(buf) then
+        return
+    end
+    local selected_log = vim.api.nvim_win_get_cursor(0)[1]
+    local diff_preference = controller_store.get('diff_preference')
+    local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
+    renderer.rerender_history_preview(
+        wrap(function()
+            local tracked_filename = buffer.store.get(buf, 'tracked_filename')
+            local logs = buffer.store.get(buf, 'logs')
+            local log = logs[selected_log]
+            local err, hunks, lines, commit_hash, computed_hunks
+            if not log then
+                return { 'Failed to access logs' }, nil
+            end
+            if selected_log == 1 then
+                local temp_lines = buffer.store.get(buf, 'temp_lines')
+                if #temp_lines ~= 0 then
+                    lines = temp_lines
+                    computed_hunks = buffer.store.get(buf, 'hunks')
                 else
-                    err, computed_hunks = git.remote_hunks(tracked_filename, log.parent_hash, log.commit_hash)
+                    err, computed_hunks = git.remote_hunks(tracked_filename, 'HEAD')
                 end
+            else
+                err, computed_hunks = git.remote_hunks(tracked_filename, log.parent_hash, log.commit_hash)
+            end
+            scheduler()
+            if err then
+                logger.debug(err, 'init.lua/_rerender_history')
+                return err, nil
+            end
+            hunks = computed_hunks
+            commit_hash = log.commit_hash
+            if commit_hash and not lines then
+                err, lines = git.show(buffer.store.get(buf, 'tracked_remote_filename'), commit_hash)
                 scheduler()
-                if err then
-                    logger.debug(err, 'init.lua/_rerender_history')
-                    return err, nil
-                end
-                hunks = computed_hunks
-                commit_hash = log.commit_hash
-                if commit_hash and not lines then
-                    err, lines = git.show(buffer.store.get(buf, 'tracked_remote_filename'), commit_hash)
-                    scheduler()
-                elseif not lines then
-                    err, lines = fs.read_file(tracked_filename)
-                    scheduler()
-                end
-                if err then
-                    logger.debug(err, 'init.lua/_rerender_history')
-                    return err, nil
-                end
-                local data = calculate_change(lines, hunks)
-                return nil,
-                    utils.readonly({
-                        logs = logs,
-                        diff_change = data,
-                    })
-            end, 0),
-            selected_log
-        )
-    end),
-    controller_store.get('action_delay_ms')
-)
+            elseif not lines then
+                err, lines = fs.read_file(tracked_filename)
+                scheduler()
+            end
+            if err then
+                logger.debug(err, 'init.lua/_rerender_history')
+                return err, nil
+            end
+            local data = calculate_change(lines, hunks)
+            return nil, utils.readonly({
+                logs = logs,
+                diff_change = data,
+            })
+        end, 0),
+        selected_log
+    )
+end)
 
-M._rerender_project_diff = throttle_leading(
-    void(function()
-        if controller_store.get('disabled') then
-            return
-        end
-        local selected_file = vim.api.nvim_win_get_cursor(0)[1]
-        local diff_preference = controller_store.get('diff_preference')
-        local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
-        renderer.rerender_project_diff_preview(
-            wrap(function()
-                local changed_files_err, changed_files = git.ls_changed()
-                scheduler()
-                if changed_files_err then
-                    logger.debug(changed_files_err, 'init.lua/_rerender_project_diff')
-                    return changed_files_err, nil
-                end
-                local file = changed_files[selected_file]
-                if not file then
-                    return { 'File not found' },
-                        utils.readonly({
-                            changed_files = changed_files,
-                        })
-                end
-                local filename = file.filename
-                local hunk_calculator = get_hunk_calculator()
-                local hunks_err, hunks = hunk_calculator(filename)
-                if hunks_err then
-                    logger.debug(hunks_err, 'init.lua/_rerender_project_diff')
-                    return hunks_err, nil
-                end
-                local files_err, lines = fs.read_file(filename)
-                if files_err then
-                    logger.debug(files_err, 'init.lua/_rerender_project_diff')
-                    return files_err,
-                        utils.readonly({
-                            changed_files = changed_files,
-                        })
-                end
-                local data = calculate_change(lines, hunks)
-                return nil,
+M._rerender_project_diff = void(function()
+    if controller_store.get('disabled') then
+        return
+    end
+    local selected_file = vim.api.nvim_win_get_cursor(0)[1]
+    local diff_preference = controller_store.get('diff_preference')
+    local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
+    renderer.rerender_project_diff_preview(
+        wrap(function()
+            local changed_files_err, changed_files = git.ls_changed()
+            scheduler()
+            if changed_files_err then
+                logger.debug(changed_files_err, 'init.lua/_rerender_project_diff')
+                return changed_files_err, nil
+            end
+            local file = changed_files[selected_file]
+            if not file then
+                return { 'File not found' },
                     utils.readonly({
                         changed_files = changed_files,
-                        diff_change = data,
-                        filetype = fs.detect_filetype(filename),
                     })
-            end, 0),
-            selected_file
-        )
-    end),
-    controller_store.get('action_delay_ms')
-)
+            end
+            local filename = file.filename
+            local hunk_calculator = get_hunk_calculator()
+            local hunks_err, hunks = hunk_calculator(filename)
+            if hunks_err then
+                logger.debug(hunks_err, 'init.lua/_rerender_project_diff')
+                return hunks_err, nil
+            end
+            local files_err, lines = fs.read_file(filename)
+            if files_err then
+                logger.debug(files_err, 'init.lua/_rerender_project_diff')
+                return files_err, utils.readonly({
+                    changed_files = changed_files,
+                })
+            end
+            local data = calculate_change(lines, hunks)
+            return nil,
+                utils.readonly({
+                    changed_files = changed_files,
+                    diff_change = data,
+                    filetype = fs.detect_filetype(filename),
+                })
+        end, 0),
+        selected_file
+    )
+end)
 
 M._buf_update = void(function(buf)
     scheduler()
@@ -640,207 +631,152 @@ M._command_autocompletes = function(arglead, line)
     return matches
 end
 
-M.buffer_reset = throttle_leading(
-    void(function(buf)
-        scheduler()
-        buf = buf or buffer.current()
-        if controller_store.get('disabled') then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        local hunks = buffer.store.get(buf, 'hunks')
-        if #hunks ~= 0 then
-            local tracked_remote_filename = buffer.store.get(buf, 'tracked_remote_filename')
-            if controller_store.get('diff_strategy') == 'remote' then
-                local err, lines = git.show(tracked_remote_filename, 'HEAD')
-                scheduler()
-                if not err then
-                    logger.debug(err, 'init.lua/buffer_reset')
-                    return
-                end
-                buffer.set_lines(buf, lines)
-                vim.cmd('update')
-                return
-            end
-            local err, lines = git.show(tracked_remote_filename, '')
+M.buffer_reset = void(function(buf)
+    scheduler()
+    buf = buf or buffer.current()
+    if controller_store.get('disabled') then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    local hunks = buffer.store.get(buf, 'hunks')
+    if #hunks ~= 0 then
+        local tracked_remote_filename = buffer.store.get(buf, 'tracked_remote_filename')
+        if controller_store.get('diff_strategy') == 'remote' then
+            local err, lines = git.show(tracked_remote_filename, 'HEAD')
             scheduler()
-            if err then
-                return logger.debug(err, 'init.lua/buffer_reset')
+            if not err then
+                logger.debug(err, 'init.lua/buffer_reset')
+                return
             end
             buffer.set_lines(buf, lines)
             vim.cmd('update')
-        end
-    end),
-    controller_store.get('action_delay_ms')
-)
-
-M.buffer_hunk_stage = throttle_leading(
-    void(function(buf, win)
-        scheduler()
-        buf = buf or buffer.current()
-        if controller_store.get('disabled') then
             return
         end
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if buffer.is_being_edited(buf) then
-            return
-        end
-        if controller_store.get('diff_strategy') ~= 'index' then
-            return
-        end
-        -- If buffer is untracked then, the whole file is the hunk.
-        if buffer.store.get(buf, 'untracked') then
-            local filename = buffer.store.get(buf, 'filename')
-            local err = git.stage_file(filename)
-            scheduler()
-            if err then
-                logger.debug(err, 'init.lua/buffer_hunk_stage')
-                return
-            end
-            local tracked_filename = git.tracked_filename(filename)
-            scheduler()
-            local tracked_remote_filename = git.tracked_remote_filename(filename)
-            scheduler()
-            if not buffer.store.contains(buf) then
-                return
-            end
-            buffer.store.set(buf, 'tracked_filename', tracked_filename)
-            buffer.store.set(buf, 'tracked_remote_filename', tracked_remote_filename)
-            buffer.store.set(buf, 'hunks', {})
-            buffer.store.set(buf, 'untracked', false)
-            renderer.hide_hunk_signs(buf)
-            renderer.render_hunk_signs(buf, {})
-            return
-        end
-        win = win or vim.api.nvim_get_current_win()
-        local lnum = vim.api.nvim_win_get_cursor(win)[1]
-        local hunks = buffer.store.get(buf, 'hunks')
-        local selected_hunk = get_current_hunk(hunks, lnum)
-        if not selected_hunk then
-            return
-        end
-        local tracked_filename = buffer.store.get(buf, 'tracked_filename')
-        local tracked_remote_filename = buffer.store.get(buf, 'tracked_remote_filename')
-        local patch = Patch:new(tracked_remote_filename, selected_hunk)
-        local patch_filename = fs.tmpname()
-        fs.write_file(patch_filename, patch)
-        scheduler()
-        local err = git.stage_hunk_from_patch(patch_filename)
-        scheduler()
-        fs.remove_file(patch_filename)
+        local err, lines = git.show(tracked_remote_filename, '')
         scheduler()
         if err then
-            logger.debug(err, 'init.lua/buffer_hunk_stage')
-            return
+            return logger.debug(err, 'init.lua/buffer_reset')
         end
-        local hunks_err, calculated_hunks = git.index_hunks(tracked_filename)
-        scheduler()
-        if hunks_err then
-            logger.debug(err, 'init.lua/buffer_hunk_stage')
-            return
-        end
-        if not buffer.store.contains(buf) then
-            return
-        end
-        buffer.store.set(buf, 'hunks', calculated_hunks)
-        renderer.hide_hunk_signs(buf)
-        renderer.render_hunk_signs(buf, calculated_hunks)
-    end),
-    controller_store.get('action_delay_ms')
-)
+        buffer.set_lines(buf, lines)
+        vim.cmd('update')
+    end
+end)
 
-M.buffer_stage = throttle_leading(
-    void(function(buf)
-        scheduler()
-        buf = buf or buffer.current()
-        if controller_store.get('disabled') then
-            return
-        end
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if buffer.is_being_edited(buf) then
-            return
-        end
-        if controller_store.get('diff_strategy') ~= 'index' then
-            return
-        end
+M.buffer_hunk_stage = void(function(buf, win)
+    scheduler()
+    buf = buf or buffer.current()
+    if controller_store.get('disabled') then
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if buffer.is_being_edited(buf) then
+        return
+    end
+    if controller_store.get('diff_strategy') ~= 'index' then
+        return
+    end
+    -- If buffer is untracked then, the whole file is the hunk.
+    if buffer.store.get(buf, 'untracked') then
         local filename = buffer.store.get(buf, 'filename')
-        local tracked_filename = buffer.store.get(buf, 'tracked_filename')
-        local err = git.stage_file((tracked_filename and tracked_filename ~= '' and tracked_filename) or filename)
+        local err = git.stage_file(filename)
         scheduler()
         if err then
-            logger.debug(err, 'init.lua/buffer_stage')
+            logger.debug(err, 'init.lua/buffer_hunk_stage')
             return
         end
+        local tracked_filename = git.tracked_filename(filename)
+        scheduler()
+        local tracked_remote_filename = git.tracked_remote_filename(filename)
+        scheduler()
         if not buffer.store.contains(buf) then
             return
         end
-        if buffer.store.get(buf, 'untracked') then
-            tracked_filename = git.tracked_filename(filename)
-            scheduler()
-            local tracked_remote_filename = git.tracked_remote_filename(filename)
-            scheduler()
-            if not buffer.store.contains(buf) then
-                return
-            end
-            buffer.store.set(buf, 'tracked_filename', tracked_filename)
-            buffer.store.set(buf, 'tracked_remote_filename', tracked_remote_filename)
-            buffer.store.set(buf, 'untracked', false)
-        end
+        buffer.store.set(buf, 'tracked_filename', tracked_filename)
+        buffer.store.set(buf, 'tracked_remote_filename', tracked_remote_filename)
         buffer.store.set(buf, 'hunks', {})
+        buffer.store.set(buf, 'untracked', false)
         renderer.hide_hunk_signs(buf)
         renderer.render_hunk_signs(buf, {})
-    end),
-    controller_store.get('action_delay_ms')
-)
+        return
+    end
+    win = win or vim.api.nvim_get_current_win()
+    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    local hunks = buffer.store.get(buf, 'hunks')
+    local selected_hunk = get_current_hunk(hunks, lnum)
+    if not selected_hunk then
+        return
+    end
+    local tracked_filename = buffer.store.get(buf, 'tracked_filename')
+    local tracked_remote_filename = buffer.store.get(buf, 'tracked_remote_filename')
+    local patch = Patch:new(tracked_remote_filename, selected_hunk)
+    local patch_filename = fs.tmpname()
+    fs.write_file(patch_filename, patch)
+    scheduler()
+    local err = git.stage_hunk_from_patch(patch_filename)
+    scheduler()
+    fs.remove_file(patch_filename)
+    scheduler()
+    if err then
+        logger.debug(err, 'init.lua/buffer_hunk_stage')
+        return
+    end
+    local hunks_err, calculated_hunks = git.index_hunks(tracked_filename)
+    scheduler()
+    if hunks_err then
+        logger.debug(err, 'init.lua/buffer_hunk_stage')
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    buffer.store.set(buf, 'hunks', calculated_hunks)
+    renderer.hide_hunk_signs(buf)
+    renderer.render_hunk_signs(buf, calculated_hunks)
+end)
 
-M.buffer_unstage = throttle_leading(
-    void(function(buf)
-        scheduler()
-        buf = buf or buffer.current()
-        if controller_store.get('disabled') then
-            return
-        end
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if buffer.is_being_edited(buf) then
-            return
-        end
-        if controller_store.get('diff_strategy') ~= 'index' then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        local filename = buffer.store.get(buf, 'filename')
-        local tracked_filename = buffer.store.get(buf, 'tracked_filename')
-        local err = git.unstage_file(tracked_filename)
-        scheduler()
-        if err then
-            logger.debug(err, 'init.lua/buffer_unstage')
-            return
-        end
+M.buffer_stage = void(function(buf)
+    scheduler()
+    buf = buf or buffer.current()
+    if controller_store.get('disabled') then
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if buffer.is_being_edited(buf) then
+        return
+    end
+    if controller_store.get('diff_strategy') ~= 'index' then
+        return
+    end
+    local filename = buffer.store.get(buf, 'filename')
+    local tracked_filename = buffer.store.get(buf, 'tracked_filename')
+    local err = git.stage_file((tracked_filename and tracked_filename ~= '' and tracked_filename) or filename)
+    scheduler()
+    if err then
+        logger.debug(err, 'init.lua/buffer_stage')
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
         tracked_filename = git.tracked_filename(filename)
         scheduler()
         local tracked_remote_filename = git.tracked_remote_filename(filename)
@@ -850,187 +786,219 @@ M.buffer_unstage = throttle_leading(
         end
         buffer.store.set(buf, 'tracked_filename', tracked_filename)
         buffer.store.set(buf, 'tracked_remote_filename', tracked_remote_filename)
-        if tracked_filename and tracked_filename ~= '' then
-            buffer.store.set(buf, 'untracked', false)
-            local hunks_err, calculated_hunks = git.index_hunks(tracked_filename)
-            scheduler()
-            if not hunks_err then
-                buffer.store.set(buf, 'hunks', calculated_hunks)
-                renderer.hide_hunk_signs(buf)
-                renderer.render_hunk_signs(buf, calculated_hunks)
-            else
-                logger.debug(err, 'init.lua/buffer_unstage')
-            end
-        else
-            buffer.store.set(buf, 'untracked', true)
-            local hunks = git.untracked_hunks(buffer.get_lines(buf))
-            scheduler()
-            if not buffer.store.contains(buf) then
-                return
-            end
-            buffer.store.set(buf, 'hunks', hunks)
-            renderer.hide_hunk_signs(buf)
-            renderer.render_hunk_signs(buf, hunks)
-        end
-    end),
-    controller_store.get('action_delay_ms')
-)
+        buffer.store.set(buf, 'untracked', false)
+    end
+    buffer.store.set(buf, 'hunks', {})
+    renderer.hide_hunk_signs(buf)
+    renderer.render_hunk_signs(buf, {})
+end)
 
-M.buffer_hunk_reset = throttle_leading(
-    void(function(buf, win)
-        buf = buf or buffer.current()
-        if controller_store.get('disabled') then
-            return
+M.buffer_unstage = void(function(buf)
+    scheduler()
+    buf = buf or buffer.current()
+    if controller_store.get('disabled') then
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if buffer.is_being_edited(buf) then
+        return
+    end
+    if controller_store.get('diff_strategy') ~= 'index' then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    local filename = buffer.store.get(buf, 'filename')
+    local tracked_filename = buffer.store.get(buf, 'tracked_filename')
+    local err = git.unstage_file(tracked_filename)
+    scheduler()
+    if err then
+        logger.debug(err, 'init.lua/buffer_unstage')
+        return
+    end
+    tracked_filename = git.tracked_filename(filename)
+    scheduler()
+    local tracked_remote_filename = git.tracked_remote_filename(filename)
+    scheduler()
+    if not buffer.store.contains(buf) then
+        return
+    end
+    buffer.store.set(buf, 'tracked_filename', tracked_filename)
+    buffer.store.set(buf, 'tracked_remote_filename', tracked_remote_filename)
+    if tracked_filename and tracked_filename ~= '' then
+        buffer.store.set(buf, 'untracked', false)
+        local hunks_err, calculated_hunks = git.index_hunks(tracked_filename)
+        scheduler()
+        if not hunks_err then
+            buffer.store.set(buf, 'hunks', calculated_hunks)
+            renderer.hide_hunk_signs(buf)
+            renderer.render_hunk_signs(buf, calculated_hunks)
+        else
+            logger.debug(err, 'init.lua/buffer_unstage')
         end
+    else
+        buffer.store.set(buf, 'untracked', true)
+        local hunks = git.untracked_hunks(buffer.get_lines(buf))
+        scheduler()
         if not buffer.store.contains(buf) then
             return
         end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if not controller_store.get('hunks_enabled') then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        win = win or vim.api.nvim_get_current_win()
-        local hunks = buffer.store.get(buf, 'hunks')
-        local lnum = vim.api.nvim_win_get_cursor(win)[1]
-        if lnum == 1 then
-            local current_lines = buffer.get_lines(buf)
-            if #hunks > 0 and #current_lines == 1 and current_lines[1] == '' then
-                local all_removes = true
-                for i = 1, #hunks do
-                    local hunk = hunks[i]
-                    if hunk.type ~= 'remove' then
-                        all_removes = false
-                        break
-                    end
-                end
-                if all_removes then
-                    return M.buffer_reset(buf)
-                end
-            end
-        end
-        local selected_hunk = nil
-        local selected_hunk_index = nil
-        for i = 1, #hunks do
-            local hunk = hunks[i]
-            if
-                (lnum >= hunk.start and lnum <= hunk.finish)
-                or (hunk.start == 0 and hunk.finish == 0 and lnum - 1 == hunk.start and lnum - 1 == hunk.finish)
-            then
-                selected_hunk = hunk
-                selected_hunk_index = i
-                break
-            end
-        end
-        if selected_hunk then
-            local replaced_lines = {}
-            for i = 1, #selected_hunk.diff do
-                local line = selected_hunk.diff[i]
-                local is_line_removed = vim.startswith(line, '-')
-                if is_line_removed then
-                    replaced_lines[#replaced_lines + 1] = string.sub(line, 2, -1)
-                end
-            end
-            local start = selected_hunk.start
-            local finish = selected_hunk.finish
-            if start and finish then
-                if selected_hunk.type == 'remove' then
-                    vim.api.nvim_buf_set_lines(buf, start, finish, false, replaced_lines)
-                else
-                    vim.api.nvim_buf_set_lines(buf, start - 1, finish, false, replaced_lines)
-                end
-                local new_lnum = start
-                if new_lnum < 1 then
-                    new_lnum = 1
-                end
-                navigation.set_cursor(win, { new_lnum, 0 })
-                vim.cmd('update')
-                table.remove(hunks, selected_hunk_index)
-                renderer.hide_hunk_signs(buf)
-                renderer.render_hunk_signs(buf, hunks)
-            end
-        end
-    end),
-    controller_store.get('action_delay_ms')
-)
+        buffer.store.set(buf, 'hunks', hunks)
+        renderer.hide_hunk_signs(buf)
+        renderer.render_hunk_signs(buf, hunks)
+    end
+end)
 
-M.toggle_buffer_hunks = throttle_leading(
-    void(function()
-        scheduler()
-        if not controller_store.get('disabled') then
-            if controller_store.get('hunks_enabled') then
-                controller_store.set('hunks_enabled', false)
-                buffer.store.for_each(function(buf, bcache)
-                    if buffer.is_valid(buf) then
-                        bcache:set('hunks', {})
-                        renderer.hide_hunk_signs(buf)
-                    end
-                end)
-                return controller_store.get('hunks_enabled')
+M.buffer_hunk_reset = void(function(buf, win)
+    buf = buf or buffer.current()
+    if controller_store.get('disabled') then
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if not controller_store.get('hunks_enabled') then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    win = win or vim.api.nvim_get_current_win()
+    local hunks = buffer.store.get(buf, 'hunks')
+    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    if lnum == 1 then
+        local current_lines = buffer.get_lines(buf)
+        if #hunks > 0 and #current_lines == 1 and current_lines[1] == '' then
+            local all_removes = true
+            for i = 1, #hunks do
+                local hunk = hunks[i]
+                if hunk.type ~= 'remove' then
+                    all_removes = false
+                    break
+                end
+            end
+            if all_removes then
+                return M.buffer_reset(buf)
+            end
+        end
+    end
+    local selected_hunk = nil
+    local selected_hunk_index = nil
+    for i = 1, #hunks do
+        local hunk = hunks[i]
+        if
+            (lnum >= hunk.start and lnum <= hunk.finish)
+            or (hunk.start == 0 and hunk.finish == 0 and lnum - 1 == hunk.start and lnum - 1 == hunk.finish)
+        then
+            selected_hunk = hunk
+            selected_hunk_index = i
+            break
+        end
+    end
+    if selected_hunk then
+        local replaced_lines = {}
+        for i = 1, #selected_hunk.diff do
+            local line = selected_hunk.diff[i]
+            local is_line_removed = vim.startswith(line, '-')
+            if is_line_removed then
+                replaced_lines[#replaced_lines + 1] = string.sub(line, 2, -1)
+            end
+        end
+        local start = selected_hunk.start
+        local finish = selected_hunk.finish
+        if start and finish then
+            if selected_hunk.type == 'remove' then
+                vim.api.nvim_buf_set_lines(buf, start, finish, false, replaced_lines)
             else
-                controller_store.set('hunks_enabled', true)
+                vim.api.nvim_buf_set_lines(buf, start - 1, finish, false, replaced_lines)
             end
-            buffer.store.for_each(function(buf, bcache)
-                if buffer.is_valid(buf) then
-                    local hunks_err, hunks = calculate_hunks(buf)
-                    scheduler()
-                    if not hunks_err then
-                        controller_store.set('hunks_enabled', true)
-                        bcache:set('hunks', hunks)
-                        renderer.hide_hunk_signs(buf)
-                        renderer.render_hunk_signs(buf, hunks)
-                    else
-                        logger.debug(hunks_err, 'init.lua/toggle_buffer_hunks')
-                    end
-                end
-            end)
+            local new_lnum = start
+            if new_lnum < 1 then
+                new_lnum = 1
+            end
+            navigation.set_cursor(win, { new_lnum, 0 })
+            vim.cmd('update')
+            table.remove(hunks, selected_hunk_index)
+            renderer.hide_hunk_signs(buf)
+            renderer.render_hunk_signs(buf, hunks)
         end
-        return controller_store.get('hunks_enabled')
-    end),
-    controller_store.get('action_delay_ms')
-)
+    end
+end)
 
-M.toggle_buffer_blames = throttle_leading(
-    void(function()
-        scheduler()
-        if controller_store.get('disabled') then
-            return
-        end
-        if controller_store.get('blames_enabled') then
-            controller_store.set('blames_enabled', false)
+M.toggle_buffer_hunks = void(function()
+    scheduler()
+    if not controller_store.get('disabled') then
+        if controller_store.get('hunks_enabled') then
+            controller_store.set('hunks_enabled', false)
             buffer.store.for_each(function(buf, bcache)
                 if buffer.is_valid(buf) then
-                    detach_blames_autocmd(buf)
-                    bcache:set('blames', {})
-                    M._unblame_line(buf, true)
+                    bcache:set('hunks', {})
+                    renderer.hide_hunk_signs(buf)
                 end
             end)
-            return controller_store.get('blames_enabled')
+            return controller_store.get('hunks_enabled')
+        else
+            controller_store.set('hunks_enabled', true)
         end
-        controller_store.set('blames_enabled', true)
-        buffer.store.for_each(function(buf)
+        buffer.store.for_each(function(buf, bcache)
             if buffer.is_valid(buf) then
-                attach_blames_autocmd(buf)
+                local hunks_err, hunks = calculate_hunks(buf)
+                scheduler()
+                if not hunks_err then
+                    controller_store.set('hunks_enabled', true)
+                    bcache:set('hunks', hunks)
+                    renderer.hide_hunk_signs(buf)
+                    renderer.render_hunk_signs(buf, hunks)
+                else
+                    logger.debug(hunks_err, 'init.lua/toggle_buffer_hunks')
+                end
+            end
+        end)
+    end
+    return controller_store.get('hunks_enabled')
+end)
+
+M.toggle_buffer_blames = void(function()
+    scheduler()
+    if controller_store.get('disabled') then
+        return
+    end
+    if controller_store.get('blames_enabled') then
+        controller_store.set('blames_enabled', false)
+        buffer.store.for_each(function(buf, bcache)
+            if buffer.is_valid(buf) then
+                detach_blames_autocmd(buf)
+                bcache:set('blames', {})
+                M._unblame_line(buf, true)
             end
         end)
         return controller_store.get('blames_enabled')
-    end),
-    controller_store.get('action_delay_ms')
-)
+    end
+    controller_store.set('blames_enabled', true)
+    buffer.store.for_each(function(buf)
+        if buffer.is_valid(buf) then
+            attach_blames_autocmd(buf)
+        end
+    end)
+    return controller_store.get('blames_enabled')
+end)
 
-M.toggle_diff_preference = throttle_leading(function()
+M.toggle_diff_preference = function()
     local allowed_preference = {
         horizontal = 'vertical',
         vertical = 'horizontal',
     }
     controller_store.set('diff_preference', allowed_preference[controller_store.get('diff_preference')])
-end, controller_store.get(
-    'action_delay_ms'
-))
+end
 
 M.hunk_down = void(function(buf, win)
     scheduler()
@@ -1104,43 +1072,40 @@ M.get_diff_preference = function()
     return controller_store.get('diff_preference')
 end
 
-M.set_diff_base = throttle_leading(
-    void(function(diff_base)
+M.set_diff_base = void(function(diff_base)
+    scheduler()
+    if not diff_base or type(diff_base) ~= 'string' then
+        logger.error(string.format('Failed to set diff base, the commit "%s" is invalid', diff_base))
+        return
+    end
+    if git.controller_store.get('diff_base') == diff_base then
+        return
+    end
+    local is_commit_valid = git.is_commit_valid(diff_base)
+    scheduler()
+    if not is_commit_valid then
+        logger.error(string.format('Failed to set diff base, the commit "%s" is invalid', diff_base))
+        return
+    end
+    git.set_diff_base(diff_base)
+    if controller_store.get('diff_strategy') ~= 'remote' then
+        return
+    end
+    local data = buffer.store.get_data()
+    for buf, bcache in pairs(data) do
+        local hunks_err, hunks = git.remote_hunks(bcache:get('tracked_filename'))
         scheduler()
-        if not diff_base or type(diff_base) ~= 'string' then
-            logger.error(string.format('Failed to set diff base, the commit "%s" is invalid', diff_base))
-            return
+        if hunks_err then
+            logger.debug(hunks_err, 'init.lua/set_diff_base')
+        else
+            bcache:set('hunks', hunks)
+            renderer.hide_hunk_signs(buf)
+            renderer.render_hunk_signs(buf, hunks)
         end
-        if git.controller_store.get('diff_base') == diff_base then
-            return
-        end
-        local is_commit_valid = git.is_commit_valid(diff_base)
-        scheduler()
-        if not is_commit_valid then
-            logger.error(string.format('Failed to set diff base, the commit "%s" is invalid', diff_base))
-            return
-        end
-        git.set_diff_base(diff_base)
-        if controller_store.get('diff_strategy') ~= 'remote' then
-            return
-        end
-        local data = buffer.store.get_data()
-        for buf, bcache in pairs(data) do
-            local hunks_err, hunks = git.remote_hunks(bcache:get('tracked_filename'))
-            scheduler()
-            if hunks_err then
-                logger.debug(hunks_err, 'init.lua/set_diff_base')
-            else
-                bcache:set('hunks', hunks)
-                renderer.hide_hunk_signs(buf)
-                renderer.render_hunk_signs(buf, hunks)
-            end
-        end
-    end),
-    controller_store.get('action_delay_ms')
-)
+    end
+end)
 
-M.set_diff_preference = throttle_leading(function(preference)
+M.set_diff_preference = function(preference)
     if preference ~= 'horizontal' and preference ~= 'vertical' then
         return logger.error(string.format('Failed to set diff preferece, "%s" is invalid', preference))
     end
@@ -1149,411 +1114,380 @@ M.set_diff_preference = throttle_leading(function(preference)
         return
     end
     controller_store.set('diff_preference', preference)
-end, controller_store.get(
-    'action_delay_ms'
-))
+end
 
-M.set_diff_strategy = throttle_leading(
-    void(function(strategy)
-        scheduler()
-        if strategy ~= 'remote' and strategy ~= 'index' then
-            return logger.error(string.format('Failed to set diff strategy, "%s" is invalid', strategy))
-        end
-        local current_strategy = controller_store.get('diff_strategy')
-        if current_strategy == strategy then
-            return
-        end
-        controller_store.set('diff_strategy', strategy)
-        buffer.store.for_each(function(buf, bcache)
-            if buffer.is_valid(buf) then
-                local hunks_err, hunks = calculate_hunks(buf)
-                scheduler()
-                if hunks_err then
-                    logger.debug(hunks_err, 'init.lua/set_diff_strategy')
-                else
-                    controller_store.set('hunks_enabled', true)
-                    bcache:set('hunks', hunks)
-                    renderer.hide_hunk_signs(buf)
-                    renderer.render_hunk_signs(buf, hunks)
-                end
-            end
-        end)
-    end),
-    controller_store.get('action_delay_ms')
-)
-
-M.buffer_gutter_blame_preview = throttle_leading(
-    void(function(buf)
-        buf = buf or buffer.current()
-        if controller_store.get('disabled') then
-            return
-        end
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        renderer.render_gutter_blame_preview(
-            wrap(function()
-                local filename = buffer.store.get(buf, 'tracked_filename')
-                local read_file_err, lines = fs.read_file(filename)
-                scheduler()
-                if read_file_err then
-                    logger.debug(read_file_err, 'init.lua/buffer_gutter_blame_preview')
-                    return read_file_err, nil
-                end
-                local blames_err, blames = git.blames(filename)
-                scheduler()
-                if blames_err then
-                    logger.debug(blames_err, 'init.lua/buffer_gutter_blame_preview')
-                    return blames_err, nil
-                end
-                local hunk_calculator = get_hunk_calculator()
-                local hunks_err, hunks = hunk_calculator(filename)
-                scheduler()
-                if hunks_err then
-                    logger.debug(hunks_err, 'init.lua/buffer_gutter_blame_preview')
-                    return hunks_err, nil
-                end
-                return nil,
-                    {
-                        blames = blames,
-                        lines = lines,
-                        hunks = hunks,
-                    }
-            end, 0),
-            buffer.store.get(buf, 'filetype')
-        )
-    end),
-    controller_store.get('action_delay_ms')
-)
-
-M.buffer_blame_preview = throttle_leading(
-    void(function(buf)
-        buf = buf or buffer.current()
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        local has_commits = git.has_commits()
-        scheduler()
-        if not has_commits then
-            return
-        end
-        local win = vim.api.nvim_get_current_win()
-        local lnum = vim.api.nvim_win_get_cursor(win)[1]
-        renderer.render_blame_preview(wrap(function()
-            local err, blame = git.blame_line(buffer.store.get(buf, 'tracked_filename'), lnum)
+M.set_diff_strategy = void(function(strategy)
+    scheduler()
+    if strategy ~= 'remote' and strategy ~= 'index' then
+        return logger.error(string.format('Failed to set diff strategy, "%s" is invalid', strategy))
+    end
+    local current_strategy = controller_store.get('diff_strategy')
+    if current_strategy == strategy then
+        return
+    end
+    controller_store.set('diff_strategy', strategy)
+    buffer.store.for_each(function(buf, bcache)
+        if buffer.is_valid(buf) then
+            local hunks_err, hunks = calculate_hunks(buf)
             scheduler()
-            return err, blame
-        end, 0))
-    end),
-    controller_store.get('action_delay_ms')
-)
+            if hunks_err then
+                logger.debug(hunks_err, 'init.lua/set_diff_strategy')
+            else
+                controller_store.set('hunks_enabled', true)
+                bcache:set('hunks', hunks)
+                renderer.hide_hunk_signs(buf)
+                renderer.render_hunk_signs(buf, hunks)
+            end
+        end
+    end)
+end)
 
-M.buffer_history_preview = throttle_leading(
-    void(function(buf)
-        buf = buf or buffer.current()
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        local diff_preference = controller_store.get('diff_preference')
-        local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
-        renderer.render_history_preview(
-            wrap(function()
-                local tracked_filename = buffer.store.get(buf, 'tracked_filename')
-                local logs_err, logs = git.logs(tracked_filename)
-                scheduler()
-                if logs_err then
-                    logger.debug(logs_err, 'init.lua/buffer_history_preview')
-                    return logs_err, nil
-                end
-                buffer.store.set(buf, 'logs', logs)
-                local temp_lines = buffer.store.get(buf, 'temp_lines')
-                if #temp_lines ~= 0 then
-                    local lines = temp_lines
-                    local hunks = buffer.store.get(buf, 'hunks')
-                    local data = calculate_change(lines, hunks)
-                    return nil,
-                        utils.readonly({
-                            logs = logs,
-                            diff_change = data,
-                        })
-                end
-                local read_file_err, lines = fs.read_file(tracked_filename)
-                scheduler()
-                if read_file_err then
-                    logger.debug(read_file_err, 'init.lua/buffer_history_preview')
-                    return read_file_err, nil
-                end
-                local hunks_err, hunks = git.remote_hunks(tracked_filename, 'HEAD')
-                scheduler()
-                if hunks_err then
-                    logger.debug(hunks_err, 'init.lua/buffer_history_preview')
-                    return hunks_err, nil
-                end
+M.buffer_gutter_blame_preview = void(function(buf)
+    buf = buf or buffer.current()
+    if controller_store.get('disabled') then
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    renderer.render_gutter_blame_preview(
+        wrap(function()
+            local filename = buffer.store.get(buf, 'tracked_filename')
+            local read_file_err, lines = fs.read_file(filename)
+            scheduler()
+            if read_file_err then
+                logger.debug(read_file_err, 'init.lua/buffer_gutter_blame_preview')
+                return read_file_err, nil
+            end
+            local blames_err, blames = git.blames(filename)
+            scheduler()
+            if blames_err then
+                logger.debug(blames_err, 'init.lua/buffer_gutter_blame_preview')
+                return blames_err, nil
+            end
+            local hunk_calculator = get_hunk_calculator()
+            local hunks_err, hunks = hunk_calculator(filename)
+            scheduler()
+            if hunks_err then
+                logger.debug(hunks_err, 'init.lua/buffer_gutter_blame_preview')
+                return hunks_err, nil
+            end
+            return nil,
+                {
+                    blames = blames,
+                    lines = lines,
+                    hunks = hunks,
+                }
+        end, 0),
+        buffer.store.get(buf, 'filetype')
+    )
+end)
+
+M.buffer_blame_preview = void(function(buf)
+    buf = buf or buffer.current()
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    local has_commits = git.has_commits()
+    scheduler()
+    if not has_commits then
+        return
+    end
+    local win = vim.api.nvim_get_current_win()
+    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    renderer.render_blame_preview(wrap(function()
+        local err, blame = git.blame_line(buffer.store.get(buf, 'tracked_filename'), lnum)
+        scheduler()
+        return err, blame
+    end, 0))
+end)
+
+M.buffer_history_preview = void(function(buf)
+    buf = buf or buffer.current()
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    local diff_preference = controller_store.get('diff_preference')
+    local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
+    renderer.render_history_preview(
+        wrap(function()
+            local tracked_filename = buffer.store.get(buf, 'tracked_filename')
+            local logs_err, logs = git.logs(tracked_filename)
+            scheduler()
+            if logs_err then
+                logger.debug(logs_err, 'init.lua/buffer_history_preview')
+                return logs_err, nil
+            end
+            buffer.store.set(buf, 'logs', logs)
+            local temp_lines = buffer.store.get(buf, 'temp_lines')
+            if #temp_lines ~= 0 then
+                local lines = temp_lines
+                local hunks = buffer.store.get(buf, 'hunks')
                 local data = calculate_change(lines, hunks)
                 return nil,
                     utils.readonly({
                         logs = logs,
                         diff_change = data,
                     })
-            end, 0),
-            buffer.store.get(buf, 'filetype'),
-            diff_preference
-        )
-    end),
-    controller_store.get('action_delay_ms')
-)
+            end
+            local read_file_err, lines = fs.read_file(tracked_filename)
+            scheduler()
+            if read_file_err then
+                logger.debug(read_file_err, 'init.lua/buffer_history_preview')
+                return read_file_err, nil
+            end
+            local hunks_err, hunks = git.remote_hunks(tracked_filename, 'HEAD')
+            scheduler()
+            if hunks_err then
+                logger.debug(hunks_err, 'init.lua/buffer_history_preview')
+                return hunks_err, nil
+            end
+            local data = calculate_change(lines, hunks)
+            return nil, utils.readonly({
+                logs = logs,
+                diff_change = data,
+            })
+        end, 0),
+        buffer.store.get(buf, 'filetype'),
+        diff_preference
+    )
+end)
 
-M.buffer_hunk_preview = throttle_leading(
-    void(function(buf, win)
-        buf = buf or buffer.current()
-        if controller_store.get('disabled') then
-            return
-        end
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if not controller_store.get('hunks_enabled') then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        local hunks = buffer.store.get(buf, 'hunks')
-        if #hunks == 0 then
-            logger.info('No changes found')
-            return
-        end
-        local lnum = vim.api.nvim_win_get_cursor(win)[1]
-        renderer.render_hunk_preview(
-            wrap(function()
-                local read_file_err, lines = fs.read_file(buffer.store.get(buf, 'tracked_filename'))
+M.buffer_hunk_preview = void(function(buf, win)
+    buf = buf or buffer.current()
+    if controller_store.get('disabled') then
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if not controller_store.get('hunks_enabled') then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    local hunks = buffer.store.get(buf, 'hunks')
+    if #hunks == 0 then
+        logger.info('No changes found')
+        return
+    end
+    local lnum = vim.api.nvim_win_get_cursor(win)[1]
+    renderer.render_hunk_preview(
+        wrap(function()
+            local read_file_err, lines = fs.read_file(buffer.store.get(buf, 'tracked_filename'))
+            scheduler()
+            if read_file_err then
+                logger.debug(read_file_err, 'init.lua/buffer_hunk_preview')
+                return read_file_err, nil
+            end
+            local data = change.horizontal(lines, hunks)
+            return nil,
+                {
+                    diff_change = data,
+                    selected_hunk = get_current_hunk(hunks, lnum) or Hunk:new(),
+                }
+        end, 0),
+        buffer.store.get(buf, 'filetype')
+    )
+end)
+
+M.buffer_diff_preview = void(function(buf)
+    buf = buf or buffer.current()
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    local diff_preference = controller_store.get('diff_preference')
+    local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
+    renderer.render_diff_preview(
+        wrap(function()
+            local tracked_filename = buffer.store.get(buf, 'tracked_filename')
+            local hunks_err, hunks = calculate_hunks(buf)
+            scheduler()
+            if hunks_err then
+                logger.debug(hunks_err, 'init.lua/buffer_diff_preview')
+                return hunks_err, nil
+            end
+            local temp_lines = buffer.store.get(buf, 'temp_lines')
+            local read_file_err, lines
+            if #temp_lines ~= 0 then
+                lines = temp_lines
+            else
+                read_file_err, lines = fs.read_file(tracked_filename)
                 scheduler()
                 if read_file_err then
-                    logger.debug(read_file_err, 'init.lua/buffer_hunk_preview')
+                    logger.debug(read_file_err, 'init.lua/buffer_diff_preview')
                     return read_file_err, nil
                 end
-                local data = change.horizontal(lines, hunks)
-                return nil,
-                    {
-                        diff_change = data,
-                        selected_hunk = get_current_hunk(hunks, lnum) or Hunk:new(),
-                    }
-            end, 0),
-            buffer.store.get(buf, 'filetype')
-        )
-    end),
-    controller_store.get('action_delay_ms')
-)
+            end
+            local data = calculate_change(lines, hunks)
+            scheduler()
+            return nil, {
+                diff_change = data,
+            }
+        end, 0),
+        buffer.store.get(buf, 'filetype'),
+        diff_preference
+    )
+end)
 
-M.buffer_diff_preview = throttle_leading(
-    void(function(buf)
-        buf = buf or buffer.current()
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        local diff_preference = controller_store.get('diff_preference')
-        local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
-        renderer.render_diff_preview(
-            wrap(function()
-                local tracked_filename = buffer.store.get(buf, 'tracked_filename')
-                local hunks_err, hunks = calculate_hunks(buf)
-                scheduler()
-                if hunks_err then
-                    logger.debug(hunks_err, 'init.lua/buffer_diff_preview')
-                    return hunks_err, nil
-                end
-                local temp_lines = buffer.store.get(buf, 'temp_lines')
-                local read_file_err, lines
-                if #temp_lines ~= 0 then
-                    lines = temp_lines
-                else
-                    read_file_err, lines = fs.read_file(tracked_filename)
-                    scheduler()
-                    if read_file_err then
-                        logger.debug(read_file_err, 'init.lua/buffer_diff_preview')
-                        return read_file_err, nil
-                    end
-                end
-                local data = calculate_change(lines, hunks)
-                scheduler()
-                return nil, {
-                    diff_change = data,
-                }
-            end, 0),
-            buffer.store.get(buf, 'filetype'),
-            diff_preference
-        )
-    end),
-    controller_store.get('action_delay_ms')
-)
+M.buffer_staged_diff_preview = void(function(buf)
+    buf = buf or buffer.current()
+    if controller_store.get('disabled') then
+        return
+    end
+    if not buffer.is_valid(buf) then
+        return
+    end
+    if not buffer.store.contains(buf) then
+        return
+    end
+    if buffer.store.get(buf, 'untracked') then
+        return
+    end
+    if controller_store.get('diff_strategy') ~= 'index' then
+        return
+    end
+    local diff_preference = controller_store.get('diff_preference')
+    local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
+    renderer.render_diff_preview(
+        wrap(function()
+            local tracked_filename = buffer.store.get(buf, 'tracked_filename')
+            local hunks_err, hunks = git.staged_hunks(tracked_filename)
+            scheduler()
+            if hunks_err then
+                logger.debug(hunks_err, 'init.lua/buffer_staged_diff_preview')
+                return hunks_err, nil
+            end
+            scheduler()
+            local show_err, lines = git.show(buffer.store.get(buf, 'tracked_remote_filename'))
+            scheduler()
+            if show_err then
+                logger.debug(show_err, 'init.lua/buffer_staged_diff_preview')
+                return show_err, nil
+            end
+            local data = calculate_change(lines, hunks)
+            scheduler()
+            return nil, {
+                diff_change = data,
+            }
+        end, 0),
+        buffer.store.get(buf, 'filetype'),
+        diff_preference
+    )
+end)
 
-M.buffer_staged_diff_preview = throttle_leading(
-    void(function(buf)
-        buf = buf or buffer.current()
-        if controller_store.get('disabled') then
-            return
-        end
-        if not buffer.is_valid(buf) then
-            return
-        end
-        if not buffer.store.contains(buf) then
-            return
-        end
-        if buffer.store.get(buf, 'untracked') then
-            return
-        end
-        if controller_store.get('diff_strategy') ~= 'index' then
-            return
-        end
-        local diff_preference = controller_store.get('diff_preference')
-        local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
-        renderer.render_diff_preview(
-            wrap(function()
-                local tracked_filename = buffer.store.get(buf, 'tracked_filename')
-                local hunks_err, hunks = git.staged_hunks(tracked_filename)
-                scheduler()
-                if hunks_err then
-                    logger.debug(hunks_err, 'init.lua/buffer_staged_diff_preview')
-                    return hunks_err, nil
-                end
-                scheduler()
-                local show_err, lines = git.show(buffer.store.get(buf, 'tracked_remote_filename'))
-                scheduler()
-                if show_err then
-                    logger.debug(show_err, 'init.lua/buffer_staged_diff_preview')
-                    return show_err, nil
-                end
-                local data = calculate_change(lines, hunks)
-                scheduler()
-                return nil, {
-                    diff_change = data,
-                }
-            end, 0),
-            buffer.store.get(buf, 'filetype'),
-            diff_preference
-        )
-    end),
-    controller_store.get('action_delay_ms')
-)
-
-M.project_diff_preview = throttle_leading(
-    void(function()
-        if controller_store.get('disabled') then
-            return
-        end
-        local diff_preference = controller_store.get('diff_preference')
-        local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
-        local changed_files_err, changed_files = git.ls_changed()
-        scheduler()
-        if changed_files_err then
-            return logger.debug(changed_files_err, 'init.lua/project_diff_preview')
-        end
-        if #changed_files == 0 then
-            logger.info('No changes found')
-            return
-        end
-        renderer.render_project_diff_preview(
-            wrap(function()
-                local selected_file = 1
-                local file = changed_files[selected_file]
-                if not file then
-                    return { 'File not found' },
-                        utils.readonly({
-                            changed_files = changed_files,
-                        })
-                end
-                local filename = file.filename
-                local hunk_calculator = get_hunk_calculator()
-                local hunks_err, hunks = hunk_calculator(filename)
-                if hunks_err then
-                    logger.debug(hunks_err, 'init.lua/project_diff_preview')
-                    return hunks_err, nil
-                end
-                local files_err, lines = fs.read_file(filename)
-                if files_err then
-                    logger.debug(files_err, 'init.lua/project_diff_preview')
-                    return files_err,
-                        utils.readonly({
-                            changed_files = changed_files,
-                        })
-                end
-                local data = calculate_change(lines, hunks)
-                return nil,
+M.project_diff_preview = void(function()
+    if controller_store.get('disabled') then
+        return
+    end
+    local diff_preference = controller_store.get('diff_preference')
+    local calculate_change = (diff_preference == 'horizontal' and change.horizontal) or change.vertical
+    local changed_files_err, changed_files = git.ls_changed()
+    scheduler()
+    if changed_files_err then
+        return logger.debug(changed_files_err, 'init.lua/project_diff_preview')
+    end
+    if #changed_files == 0 then
+        logger.info('No changes found')
+        return
+    end
+    renderer.render_project_diff_preview(
+        wrap(function()
+            local selected_file = 1
+            local file = changed_files[selected_file]
+            if not file then
+                return { 'File not found' },
                     utils.readonly({
                         changed_files = changed_files,
-                        diff_change = data,
-                        filetype = fs.detect_filetype(filename),
                     })
-            end, 0),
-            diff_preference
-        )
-    end),
-    controller_store.get('action_delay_ms')
-)
+            end
+            local filename = file.filename
+            local hunk_calculator = get_hunk_calculator()
+            local hunks_err, hunks = hunk_calculator(filename)
+            if hunks_err then
+                logger.debug(hunks_err, 'init.lua/project_diff_preview')
+                return hunks_err, nil
+            end
+            local files_err, lines = fs.read_file(filename)
+            if files_err then
+                logger.debug(files_err, 'init.lua/project_diff_preview')
+                return files_err, utils.readonly({
+                    changed_files = changed_files,
+                })
+            end
+            local data = calculate_change(lines, hunks)
+            return nil,
+                utils.readonly({
+                    changed_files = changed_files,
+                    diff_change = data,
+                    filetype = fs.detect_filetype(filename),
+                })
+        end, 0),
+        diff_preference
+    )
+end)
 
-M.project_hunks_qf = throttle_leading(
-    void(function()
-        if not controller_store.get('disabled') then
-            local qf_entries = {}
-            local err, filenames = git.ls_changed()
+M.project_hunks_qf = void(function()
+    if not controller_store.get('disabled') then
+        local qf_entries = {}
+        local err, filenames = git.ls_changed()
+        scheduler()
+        if err then
+            return logger.debug(err, 'init.lua/project_hunks_qf')
+        end
+        for i = 1, #filenames do
+            local filename = filenames[i].filename
+            local hunk_calculator = get_hunk_calculator()
+            local hunks_err, hunks = hunk_calculator(filename)
             scheduler()
-            if err then
-                return logger.debug(err, 'init.lua/project_hunks_qf')
-            end
-            for i = 1, #filenames do
-                local filename = filenames[i].filename
-                local hunk_calculator = get_hunk_calculator()
-                local hunks_err, hunks = hunk_calculator(filename)
-                scheduler()
-                if not hunks_err then
-                    for j = 1, #hunks do
-                        local hunk = hunks[j]
-                        qf_entries[#qf_entries + 1] = {
-                            text = string.format('[%s..%s]', hunk.start, hunk.finish),
-                            filename = filename,
-                            lnum = hunk.start,
-                            col = 0,
-                        }
-                    end
-                else
-                    logger.debug(hunks_err, 'init.lua/project_hunks_qf')
+            if not hunks_err then
+                for j = 1, #hunks do
+                    local hunk = hunks[j]
+                    qf_entries[#qf_entries + 1] = {
+                        text = string.format('[%s..%s]', hunk.start, hunk.finish),
+                        filename = filename,
+                        lnum = hunk.start,
+                        col = 0,
+                    }
                 end
-            end
-            if #qf_entries ~= 0 then
-                vim.fn.setqflist(qf_entries, 'r')
-                vim.cmd('copen')
+            else
+                logger.debug(hunks_err, 'init.lua/project_hunks_qf')
             end
         end
-    end),
-    controller_store.get('action_delay_ms')
-)
+        if #qf_entries ~= 0 then
+            vim.fn.setqflist(qf_entries, 'r')
+            vim.cmd('copen')
+        end
+    end
+end)
 
 M.actions = function()
     if not pcall(require, 'telescope') then

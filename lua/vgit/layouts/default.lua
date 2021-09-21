@@ -22,7 +22,7 @@ return {
                 return dimensions.global_height() - 3
             end,
             width = function()
-                return math.floor(dimensions.global_width() * 0.35)
+                return math.ceil(dimensions.global_width() * 0.35)
             end,
             row = 1,
             col = 0,
@@ -32,11 +32,11 @@ return {
                 return dimensions.global_height() - 3
             end,
             width = function()
-                return math.floor(dimensions.global_width() * 0.65)
+                return math.ceil(dimensions.global_width() * 0.65)
             end,
             row = 1,
             col = function()
-                return math.floor(dimensions.global_width() * 0.35)
+                return math.ceil(dimensions.global_width() * 0.35)
             end,
         },
     },
@@ -183,7 +183,7 @@ return {
                     return math.floor(dimensions.global_height() - 3)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() * 0.20) - 2
+                    return math.floor(dimensions.global_width() * 0.21) - 2
                 end,
                 row = 1,
                 col = 0,
@@ -199,11 +199,11 @@ return {
                     return math.floor(dimensions.global_height() - 5)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() - math.floor(dimensions.global_width() * 0.20))
+                    return math.floor(dimensions.global_width() - math.floor(dimensions.global_width() * 0.21))
                 end,
                 row = 2,
                 col = function()
-                    return math.floor(dimensions.global_width() * 0.20)
+                    return math.floor(dimensions.global_width() * 0.21)
                 end,
             },
         },
@@ -213,7 +213,7 @@ return {
                     return math.floor(dimensions.global_height() - 3)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() * 0.20) - 1
+                    return math.floor(dimensions.global_width() * 0.21) - 1
                 end,
                 row = 1,
                 col = 0,
@@ -229,11 +229,11 @@ return {
                     return math.floor(dimensions.global_height() - 5)
                 end,
                 width = function()
-                    return math.floor((dimensions.global_width() - math.floor(dimensions.global_width() * 0.20)) / 2)
+                    return math.floor((dimensions.global_width() - math.floor(dimensions.global_width() * 0.21)) / 2)
                 end,
                 row = 2,
                 col = function()
-                    return math.floor(dimensions.global_width() * 0.20)
+                    return math.floor(dimensions.global_width() * 0.21)
                 end,
             },
             current = {
@@ -247,12 +247,12 @@ return {
                     return math.floor(dimensions.global_height() - 5)
                 end,
                 width = function()
-                    return math.floor((dimensions.global_width() - math.floor(dimensions.global_width() * 0.20)) / 2)
+                    return math.floor((dimensions.global_width() - math.floor(dimensions.global_width() * 0.21)) / 2)
                 end,
                 row = 2,
                 col = function()
-                    return math.floor(dimensions.global_width() * 0.20)
-                        + math.floor((dimensions.global_width() - math.floor(dimensions.global_width() * 0.20)) / 2)
+                    return math.floor(dimensions.global_width() * 0.21)
+                        + math.floor((dimensions.global_width() - math.floor(dimensions.global_width() * 0.21)) / 2)
                 end,
             },
         },

@@ -131,8 +131,13 @@ function DiffPreview:reposition_cursor(lnum)
                 self:set_cursor(start - current_new_lines_added, 0)
             end
             vim.cmd('norm! zz')
-            break
+            return
         end
+    end
+    local hunk = diff_change.hunks[1]
+    if hunk then
+        self:set_cursor(hunk.start, 0)
+        vim.cmd('norm! zz')
     end
 end
 

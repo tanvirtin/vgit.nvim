@@ -46,48 +46,45 @@ function BorderDecorator:make_virtual()
     local border_lines = {}
     local topline = nil
     if window_props.row > 0 then
-        if config.title ~= '' then
-            config.title = string.format(' %s ', config.title)
+        local title = config.title
+        if title ~= '' then
+            title = string.format(' %s ', title)
         end
-        local left_start = dimensions.calculate_text_center(config.title, window_props.width)
+        local left_start = dimensions.calculate_text_center(title, window_props.width)
         topline = string.format(
             '%s%s%s%s%s',
             config.chars[1],
             string.rep(config.chars[2], left_start),
-            config.title,
-            string.rep(config.chars[2], window_props.width - #config.title - left_start),
+            title,
+            string.rep(config.chars[2], window_props.width - #title - left_start),
             config.chars[3]
         )
     end
     if topline then
         border_lines[#border_lines + 1] = topline
     end
-    local middle_line = string.format(
-        '%s%s%s',
-        config.chars[4] or '',
-        string.rep(' ', window_props.width),
-        config.chars[8] or ''
-    )
+    local middle_line = string.format('%s%s%s', config.chars[4], string.rep(' ', window_props.width), config.chars[8])
     for _ = 1, window_props.height do
         border_lines[#border_lines + 1] = middle_line
     end
-    if (config.footer or config.footer ~= nil) and config.footer ~= '' then
-        config.footer = string.format(' %s ', config.footer)
-        local left_start = dimensions.calculate_text_center(config.footer, window_props.width)
+    local footer = config.footer
+    if (footer or footer ~= nil) and footer ~= '' then
+        footer = string.format(' %s ', footer)
+        local left_start = dimensions.calculate_text_center(footer, window_props.width)
         border_lines[#border_lines + 1] = string.format(
             '%s%s%s%s%s',
-            config.chars[7] or '',
-            string.rep(config.chars[6] or '', left_start),
-            config.footer,
-            string.rep(config.chars[6] or '', window_props.width - #config.footer - left_start),
-            config.chars[5] or ''
+            config.chars[7],
+            string.rep(config.chars[6], left_start),
+            footer,
+            string.rep(config.chars[6], window_props.width - #footer - left_start),
+            config.chars[5]
         )
     else
         border_lines[#border_lines + 1] = string.format(
             '%s%s%s',
-            config.chars[7] or '',
+            config.chars[7],
             string.rep(config.chars[6], window_props.width),
-            config.chars[5] or ''
+            config.chars[5]
         )
     end
     return border_lines
