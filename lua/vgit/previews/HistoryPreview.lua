@@ -158,11 +158,6 @@ function HistoryPreview:new(opts)
     return setmetatable(this, HistoryPreview)
 end
 
-function HistoryPreview:reposition_cursor(selected)
-    self:get_components().table:set_cursor(selected + 1, 0)
-    return self
-end
-
 function HistoryPreview:mount()
     if self.state.mounted then
         return self
@@ -175,6 +170,16 @@ function HistoryPreview:mount()
     return self
 end
 
+function HistoryPreview:show_indicator()
+    local components = self:get_components()
+    local table = components.table
+    table:transpose_text(
+        { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
+        self.selected,
+        0
+    )
+end
+
 function HistoryPreview:render()
     if not self:is_mounted() then
         return
@@ -185,13 +190,7 @@ function HistoryPreview:render()
     self:clear()
     if err then
         self:set_error(true)
-        table:focus()
-        table:transpose_text(
-            { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
-            self.selected,
-            0
-        )
-        self:reposition_cursor(self.selected)
+        self:show_indicator()
         return self
     elseif data then
         local logs = data.logs
@@ -216,14 +215,9 @@ function HistoryPreview:render()
             end
             table:set_lines(rows)
         end
-        table:transpose_text(
-            { render_store.get('preview').symbols.indicator, render_store.get('preview').indicator_hl },
-            self.selected,
-            0
-        )
+        self:show_indicator()
         self:draw_changes(diff_change)
         self:make_virtual_line_nr(diff_change)
-        self:reposition_cursor(self.selected)
     else
         table:set_centered_text('There are no commits')
         table:remove_keymap('<enter>')
