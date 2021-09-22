@@ -178,16 +178,6 @@ return {
     },
     project_diff_preview = {
         horizontal = {
-            table = {
-                height = function()
-                    return math.floor(dimensions.global_height() - 3)
-                end,
-                width = function()
-                    return math.floor(dimensions.global_width() * 0.21) - 2
-                end,
-                row = 1,
-                col = 0,
-            },
             preview = {
                 border = {
                     ignore_title = true,
@@ -196,28 +186,31 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return math.floor(dimensions.global_height() - 5)
+                    return math.floor(dimensions.global_height() - 15)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() - math.floor(dimensions.global_width() * 0.21))
+                    return dimensions.global_width() - 1
                 end,
                 row = 2,
-                col = function()
-                    return math.floor(dimensions.global_width() * 0.21)
+                col = 0,
+            },
+            table = {
+                border = {
+                    enabled = true,
+                    hl = 'FloatBorder',
+                    focus_hl = 'VGitBorderFocus',
+                },
+                height = 9,
+                width = function()
+                    return dimensions.global_width()
                 end,
+                row = function()
+                    return math.floor(dimensions.global_height() - 12)
+                end,
+                col = 0,
             },
         },
         vertical = {
-            table = {
-                height = function()
-                    return math.floor(dimensions.global_height() - 3)
-                end,
-                width = function()
-                    return math.floor(dimensions.global_width() * 0.21) - 1
-                end,
-                row = 1,
-                col = 0,
-            },
             previous = {
                 border = {
                     ignore_title = true,
@@ -226,15 +219,13 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return math.floor(dimensions.global_height() - 5)
+                    return math.floor(dimensions.global_height() - 15)
                 end,
                 width = function()
-                    return math.floor((dimensions.global_width() - math.floor(dimensions.global_width() * 0.21)) / 2)
+                    return math.floor(dimensions.global_width() / 2)
                 end,
                 row = 2,
-                col = function()
-                    return math.floor(dimensions.global_width() * 0.21)
-                end,
+                col = 0,
             },
             current = {
                 border = {
@@ -244,16 +235,25 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return math.floor(dimensions.global_height() - 5)
+                    return math.floor(dimensions.global_height() - 15)
                 end,
                 width = function()
-                    return math.floor((dimensions.global_width() - math.floor(dimensions.global_width() * 0.21)) / 2)
+                    return math.floor(dimensions.global_width() / 2)
                 end,
                 row = 2,
                 col = function()
-                    return math.floor(dimensions.global_width() * 0.21)
-                        + math.floor((dimensions.global_width() - math.floor(dimensions.global_width() * 0.21)) / 2)
+                    return math.floor(dimensions.global_width() / 2)
                 end,
+            },
+            table = {
+                height = 10,
+                width = function()
+                    return dimensions.global_width()
+                end,
+                row = function()
+                    return math.floor(dimensions.global_height() - 12)
+                end,
+                col = 0,
             },
         },
     },
