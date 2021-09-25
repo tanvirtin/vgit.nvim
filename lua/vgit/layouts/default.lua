@@ -157,7 +157,7 @@ return {
                     return math.floor(dimensions.global_height() - 15)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() / 2)
+                    return math.floor(dimensions.global_width() / 2) - 1
                 end,
                 row = 2,
                 col = function()
@@ -238,7 +238,7 @@ return {
                     return math.floor(dimensions.global_height() - 15)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() / 2)
+                    return math.floor(dimensions.global_width() / 2) - 1
                 end,
                 row = 2,
                 col = function()
