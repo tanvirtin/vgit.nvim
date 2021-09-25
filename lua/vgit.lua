@@ -1014,10 +1014,10 @@ M.hunk_down = void(function(buf, win)
         if not buffer.store.contains(buf) then
             return
         end
-        win = win or vim.api.nvim_get_current_win()
         local hunks = buffer.store.get(buf, 'hunks')
         if #hunks ~= 0 then
-            navigation.hunk_down({ win }, hunks)
+            win = win or vim.api.nvim_get_current_win()
+            navigation.hunk_down(win, vim.api.nvim_win_get_cursor(0), hunks)
             scheduler()
         end
     end
@@ -1037,10 +1037,10 @@ M.hunk_up = void(function(buf, win)
         if not buffer.store.contains(buf) then
             return
         end
-        win = win or vim.api.nvim_get_current_win()
         local hunks = buffer.store.get(buf, 'hunks')
         if #hunks ~= 0 then
-            navigation.hunk_up({ win }, hunks)
+            win = win or vim.api.nvim_get_current_win()
+            navigation.hunk_up(win, vim.api.nvim_win_get_cursor(0), hunks)
             scheduler()
         end
     end

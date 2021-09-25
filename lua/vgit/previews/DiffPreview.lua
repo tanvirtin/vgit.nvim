@@ -136,7 +136,11 @@ function DiffPreview:reposition_cursor(lnum)
     end
     local hunk = diff_change.hunks[1]
     if hunk then
-        self:set_cursor(hunk.start, 0)
+        local start = hunk.start
+        if hunk.type == 'remove' then
+            start = start + 1
+        end
+        self:set_cursor(start, 0)
         vim.cmd('norm! zz')
     end
 end
