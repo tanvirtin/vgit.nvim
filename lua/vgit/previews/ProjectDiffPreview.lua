@@ -247,6 +247,9 @@ function ProjectDiffPreview:reposition_cursor()
     local hunk = diff_change.hunks[1]
     if hunk then
         local start = hunk.start
+        if hunk.type == 'remove' then
+            start = start + 1
+        end
         local components = self:get_components()
         if self.layout_type == 'vertical' then
             components.previous:set_cursor(start, 0):call(function()

@@ -75,23 +75,28 @@ function Preview:navigate_code(direction)
     if not self.data.diff_change.marks then
         return
     end
-    local components = self:get_components()
     local code_win_ids = {}
-    local current_win_id = vim.api.nvim_get_current_win()
+    local components = self:get_components()
     if self.layout_type == 'vertical' then
         code_win_ids = {
             components.previous:get_win_id(),
             components.current:get_win_id(),
-            components.previous:get_virtual_line_nr_win_id(),
-            components.current:get_virtual_line_nr_win_id(),
         }
     else
         code_win_ids = {
             components.preview:get_win_id(),
-            components.preview:get_virtual_line_nr_win_id(),
         }
     end
-    if not vim.tbl_contains(code_win_ids, current_win_id) then
+    local win = vim.api.nvim_get_current_win()
+    local found_win = false
+    for i = 1, #code_win_ids do
+        local code_win = code_win_ids[i]
+        if code_win == win then
+            found_win = true
+            break
+        end
+    end
+    if not found_win then
         return
     end
     local marks = self.data.diff_change.marks
@@ -100,10 +105,10 @@ function Preview:navigate_code(direction)
     end
     local mark_index = nil
     if direction == 'up' then
-        mark_index = navigation.mark_up(code_win_ids, marks)
+        mark_index = navigation.mark_up(win, vim.api.nvim_win_get_cursor(0), marks)
     end
     if direction == 'down' then
-        mark_index = navigation.mark_down(code_win_ids, marks)
+        mark_index = navigation.mark_down(win, vim.api.nvim_win_get_cursor(0), marks)
     end
     if mark_index then
         scheduler()
