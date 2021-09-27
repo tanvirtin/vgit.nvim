@@ -14,7 +14,6 @@ M.state = Interface:new({
     predict_hunk_throttle_ms = 300,
     predict_hunk_max_lines = 50000,
     blame_line_throttle_ms = 150,
-    show_untracked_file_signs = true,
 })
 
 M.setup = function(config)

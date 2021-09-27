@@ -3,7 +3,7 @@ local themes = require('vgit.themes')
 local layouts = require('vgit.layouts')
 local renderer = require('vgit.renderer')
 local highlight = require('vgit.highlight')
-local events = require('vgit.events')
+local autocmd = require('vgit.autocmd')
 local sign = require('vgit.sign')
 local key_mapper = require('vgit.key_mapper')
 local controller_store = require('vgit.stores.controller_store')
@@ -42,13 +42,13 @@ local store_buf = function(buf, filename, tracked_filename, tracked_remote_filen
 end
 
 local attach_blames_autocmd = function(buf)
-    events.buf.on(buf, 'CursorHold', string.format(':lua _G.package.loaded.vgit._blame_line(%s)', buf))
-    events.buf.on(buf, 'CursorMoved', string.format(':lua _G.package.loaded.vgit._unblame_line(%s)', buf))
+    autocmd.buf.on(buf, 'CursorHold', string.format(':lua _G.package.loaded.vgit._blame_line(%s)', buf))
+    autocmd.buf.on(buf, 'CursorMoved', string.format(':lua _G.package.loaded.vgit._unblame_line(%s)', buf))
 end
 
 local detach_blames_autocmd = function(buf)
-    events.off(string.format('%s/CursorHold', buf))
-    events.off(string.format('%s/CursorMoved', buf))
+    autocmd.off(string.format('%s/CursorHold', buf))
+    autocmd.off(string.format('%s/CursorMoved', buf))
 end
 
 local get_hunk_calculator = function()
@@ -346,7 +346,7 @@ M._buf_attach = void(function(buf)
         store_buf(buf, filename, tracked_filename, tracked_remote_filename)
         return buf_attach_tracked(buf)
     end
-    if controller_store.get('diff_strategy') == 'index' and controller_store.get('show_untracked_file_signs') then
+    if controller_store.get('diff_strategy') == 'index' then
         local is_ignored = git.check_ignored(filename)
         scheduler()
         if not is_ignored then
@@ -384,17 +384,7 @@ M._rerender_history = void(function(buf)
             if not log then
                 return { 'Failed to access logs' }, nil
             end
-            if selected_log == 1 then
-                local temp_lines = buffer.store.get(buf, 'temp_lines')
-                if #temp_lines ~= 0 then
-                    lines = temp_lines
-                    computed_hunks = buffer.store.get(buf, 'hunks')
-                else
-                    err, computed_hunks = git.remote_hunks(tracked_filename, 'HEAD')
-                end
-            else
-                err, computed_hunks = git.remote_hunks(tracked_filename, log.parent_hash, log.commit_hash)
-            end
+            err, computed_hunks = git.remote_hunks(tracked_filename, log.parent_hash, log.commit_hash)
             scheduler()
             if err then
                 logger.debug(err, 'init.lua/_rerender_history')
@@ -414,10 +404,13 @@ M._rerender_history = void(function(buf)
                 return err, nil
             end
             local data = calculate_change(lines, hunks)
-            return nil, utils.readonly({
-                logs = logs,
-                diff_change = data,
-            })
+            return nil,
+                utils.readonly({
+                    filename = tracked_filename,
+                    filetype = buffer.store.get(buf, 'filetype'),
+                    logs = logs,
+                    diff_change = data,
+                })
         end, 0),
         selected_log
     )
@@ -462,9 +455,10 @@ M._rerender_project_diff = void(function()
             local data = calculate_change(lines, hunks)
             return nil,
                 utils.readonly({
+                    filename = filename,
+                    filetype = fs.detect_filetype(filename),
                     changed_files = changed_files,
                     diff_change = data,
-                    filetype = fs.detect_filetype(filename),
                 })
         end, 0),
         selected_file
@@ -482,11 +476,7 @@ M._buf_update = void(function(buf)
     end
     buffer.store.set(buf, 'temp_lines', {})
     if controller_store.get('hunks_enabled') then
-        if
-            buffer.store.get(buf, 'untracked')
-            and controller_store.get('diff_strategy') == 'index'
-            and controller_store.get('show_untracked_file_signs')
-        then
+        if buffer.store.get(buf, 'untracked') and controller_store.get('diff_strategy') == 'index' then
             local hunks = git.untracked_hunks(buffer.get_lines(buf))
             scheduler()
             if not buffer.store.contains(buf) then
@@ -1008,7 +998,7 @@ M.hunk_down = void(function(buf, win)
     end
     if preview_store.exists() then
         local preview = preview_store.get()
-        return preview:mark_down()
+        return preview:navigate_code('down')
     end
     if buffer.is_valid(buf) then
         if not buffer.store.contains(buf) then
@@ -1031,7 +1021,7 @@ M.hunk_up = void(function(buf, win)
     end
     if preview_store.exists() then
         local preview = preview_store.get()
-        return preview:mark_up()
+        return preview:navigate_code('up')
     end
     if buffer.is_valid(buf) then
         if not buffer.store.contains(buf) then
@@ -1237,34 +1227,38 @@ M.buffer_history_preview = void(function(buf)
                 return logs_err, nil
             end
             buffer.store.set(buf, 'logs', logs)
-            local temp_lines = buffer.store.get(buf, 'temp_lines')
-            if #temp_lines ~= 0 then
-                local lines = temp_lines
-                local hunks = buffer.store.get(buf, 'hunks')
-                local data = calculate_change(lines, hunks)
-                return nil,
-                    utils.readonly({
-                        logs = logs,
-                        diff_change = data,
-                    })
+            local log = logs[1]
+            local err, hunks, lines, commit_hash, computed_hunks
+            if not log then
+                return { 'Failed to access logs' }, nil
             end
-            local read_file_err, lines = fs.read_file(tracked_filename)
+            err, computed_hunks = git.remote_hunks(tracked_filename, log.parent_hash, log.commit_hash)
             scheduler()
-            if read_file_err then
-                logger.debug(read_file_err, 'init.lua/buffer_history_preview')
-                return read_file_err, nil
+            if err then
+                logger.debug(err, 'init.lua/_rerender_history')
+                return err, nil
             end
-            local hunks_err, hunks = git.remote_hunks(tracked_filename, 'HEAD')
-            scheduler()
-            if hunks_err then
-                logger.debug(hunks_err, 'init.lua/buffer_history_preview')
-                return hunks_err, nil
+            hunks = computed_hunks
+            commit_hash = log.commit_hash
+            if commit_hash and not lines then
+                err, lines = git.show(buffer.store.get(buf, 'tracked_remote_filename'), commit_hash)
+                scheduler()
+            elseif not lines then
+                err, lines = fs.read_file(tracked_filename)
+                scheduler()
+            end
+            if err then
+                logger.debug(err, 'init.lua/_rerender_history')
+                return err, nil
             end
             local data = calculate_change(lines, hunks)
-            return nil, utils.readonly({
-                logs = logs,
-                diff_change = data,
-            })
+            return nil,
+                utils.readonly({
+                    filename = tracked_filename,
+                    filetype = buffer.store.get(buf, 'filetype'),
+                    logs = logs,
+                    diff_change = data,
+                })
         end, 0),
         buffer.store.get(buf, 'filetype'),
         diff_preference
@@ -1296,7 +1290,8 @@ M.buffer_hunk_preview = void(function(buf, win)
     local lnum = vim.api.nvim_win_get_cursor(win)[1]
     renderer.render_hunk_preview(
         wrap(function()
-            local read_file_err, lines = fs.read_file(buffer.store.get(buf, 'tracked_filename'))
+            local tracked_filename = buffer.store.get(buf, 'tracked_filename')
+            local read_file_err, lines = fs.read_file(tracked_filename)
             scheduler()
             if read_file_err then
                 logger.debug(read_file_err, 'init.lua/buffer_hunk_preview')
@@ -1305,6 +1300,8 @@ M.buffer_hunk_preview = void(function(buf, win)
             local data = change.horizontal(lines, hunks)
             return nil,
                 {
+                    filename = tracked_filename,
+                    filetype = buffer.store.get(buf, 'filetype'),
                     diff_change = data,
                     selected_hunk = get_current_hunk(hunks, lnum) or Hunk:new(),
                 }
@@ -1349,9 +1346,12 @@ M.buffer_diff_preview = void(function(buf)
             end
             local data = calculate_change(lines, hunks)
             scheduler()
-            return nil, {
-                diff_change = data,
-            }
+            return nil,
+                {
+                    filename = tracked_filename,
+                    filetype = buffer.store.get(buf, 'filetype'),
+                    diff_change = data,
+                }
         end, 0),
         buffer.store.get(buf, 'filetype'),
         diff_preference
@@ -1395,9 +1395,12 @@ M.buffer_staged_diff_preview = void(function(buf)
             end
             local data = calculate_change(lines, hunks)
             scheduler()
-            return nil, {
-                diff_change = data,
-            }
+            return nil,
+                {
+                    filename = tracked_filename,
+                    filetype = buffer.store.get(buf, 'filetype'),
+                    diff_change = data,
+                }
         end, 0),
         buffer.store.get(buf, 'filetype'),
         diff_preference
@@ -1446,9 +1449,10 @@ M.project_diff_preview = void(function()
             local data = calculate_change(lines, hunks)
             return nil,
                 utils.readonly({
+                    filename = filename,
+                    filetype = fs.detect_filetype(filename),
                     changed_files = changed_files,
                     diff_change = data,
-                    filetype = fs.detect_filetype(filename),
                 })
         end, 0),
         diff_preference
@@ -1462,6 +1466,10 @@ M.project_hunks_qf = void(function()
         scheduler()
         if err then
             return logger.debug(err, 'init.lua/project_hunks_qf')
+        end
+        if #filenames == 0 then
+            logger.info('No changes found')
+            return
         end
         for i = 1, #filenames do
             local filename = filenames[i].filename
@@ -1482,10 +1490,11 @@ M.project_hunks_qf = void(function()
                 logger.debug(hunks_err, 'init.lua/project_hunks_qf')
             end
         end
-        if #qf_entries ~= 0 then
-            vim.fn.setqflist(qf_entries, 'r')
-            vim.cmd('copen')
+        if #qf_entries == 0 then
+            return logger.info('No changes found')
         end
+        vim.fn.setqflist(qf_entries, 'r')
+        vim.cmd('copen')
     end
 end)
 
@@ -1543,7 +1552,7 @@ M.actions = function()
 end
 
 M.renderer = renderer
-M.events = events
+M.autocmd = autocmd
 M.highlight = highlight
 M.themes = themes
 M.layouts = layouts
@@ -1553,16 +1562,16 @@ M.utils = utils
 M.setup = function(config)
     controller_store.setup(config)
     render_store.setup(config)
-    events.setup()
+    autocmd.setup()
     highlight.setup(config)
     sign.setup(config)
     logger.setup(config)
     git.setup(config)
     key_mapper.setup(config)
-    events.on('BufWinEnter', ':lua _G.package.loaded.vgit._buf_attach()')
-    events.on('BufWinLeave', ':lua _G.package.loaded.vgit._buf_detach()')
-    events.on('BufWritePost', ':lua _G.package.loaded.vgit._buf_update()')
-    events.on('WinEnter', ':lua _G.package.loaded.vgit._keep_focused()')
+    autocmd.on('BufWinEnter', ':lua _G.package.loaded.vgit._buf_attach()')
+    autocmd.on('BufWinLeave', ':lua _G.package.loaded.vgit._buf_detach()')
+    autocmd.on('BufWritePost', ':lua _G.package.loaded.vgit._buf_update()')
+    autocmd.on('WinEnter', ':lua _G.package.loaded.vgit._keep_focused()')
     vim.cmd(
         string.format(
             'command! -nargs=* -range %s %s',

@@ -1,5 +1,6 @@
 local CodeComponent = require('vgit.components.CodeComponent')
 local utils = require('vgit.utils')
+local fs = require('vgit.fs')
 local Preview = require('vgit.Preview')
 local render_store = require('vgit.stores.render_store')
 
@@ -156,17 +157,19 @@ function DiffPreview:render()
         return self
     end
     local diff_change = data.diff_change
+    local filename = fs.short_filename(data.filename)
+    local filetype = data.filetype
     if diff_change then
         if self.layout_type == 'horizontal' then
             local components = self:get_components()
-            components.preview:set_lines(diff_change.lines)
+            components.preview:set_lines(diff_change.lines):set_filename_title(filename, filetype)
         else
             local components = self:get_components()
-            components.previous:set_lines(diff_change.previous_lines)
-            components.current:set_lines(diff_change.current_lines)
+            components.previous:set_lines(diff_change.previous_lines):set_filename_title(filename, filetype)
+            components.current:set_lines(diff_change.current_lines):set_filename_title(filename, filetype)
         end
-        self:draw_changes(diff_change)
         self:make_virtual_line_nr(diff_change)
+        self:highlight_diff_change(diff_change)
         self:reposition_cursor(self.selected)
     end
     return self

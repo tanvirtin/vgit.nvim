@@ -1,7 +1,6 @@
 local Component = require('vgit.Component')
 local Interface = require('vgit.Interface')
 local buffer = require('vgit.buffer')
-local BorderDecorator = require('vgit.decorators.BorderDecorator')
 local AppBarDecorator = require('vgit.decorators.AppBarDecorator')
 
 local function shorten_str(str, limit)
@@ -88,7 +87,6 @@ function TableComponent:new(options)
                     title = '',
                     footer = '',
                     hl = 'FloatBorder',
-                    focus_hl = 'FloatBorder',
                     chars = { '', '', '', '', '', '', '', '' },
                 },
                 buf_options = {
@@ -120,11 +118,11 @@ function TableComponent:new(options)
     }, TableComponent)
 end
 
-function Component:get_header_buf()
+function TableComponent:get_header_buf()
     return self:get_header() and self:get_header():get_buf() or nil
 end
 
-function Component:get_header_win_id()
+function TableComponent:get_header_win_id()
     return self:get_header() and self:get_header():get_win_id() or nil
 end
 
@@ -196,40 +194,19 @@ function TableComponent:mount()
     local buf = self:get_buf()
     buffer.assign_options(buf, buf_options)
     local win_ids = {}
-    if self:is_hover() then
-        window_props.border = BorderDecorator:make_native(border_config)
+    if border_config.enabled then
+        window_props.border = self:make_border(border_config)
     end
     self:set_header(AppBarDecorator:new(window_props, buf):mount())
-    window_props.row = window_props.row + 1
-    window_props.height = window_props.height - 1
+    -- Correct addition of header decorator parameters.
+    window_props.row = window_props.row + 3
+    window_props.height = window_props.height - 3
     local win_id = vim.api.nvim_open_win(buf, true, window_props)
     for key, value in pairs(win_options) do
         vim.api.nvim_win_set_option(win_id, key, value)
     end
     self:set_win_id(win_id)
     self:set_ns_id(vim.api.nvim_create_namespace(string.format('tanvirtin/vgit.nvim/%s/%s', buf, win_id)))
-    if border_config.enabled and not self:is_hover() then
-        self:set_border(BorderDecorator:new(border_config, window_props, buf))
-        local border = self:get_border()
-        border:mount()
-        self:on(
-            'BufEnter',
-            string.format(
-                ':lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
-                border:get_win_id(),
-                border_config.focus_hl
-            )
-        )
-        self:on(
-            'WinLeave',
-            string.format(
-                ':lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
-                border:get_win_id(),
-                border_config.hl
-            )
-        )
-        win_ids[#win_ids + 1] = border:get_win_id()
-    end
     win_ids[#win_ids + 1] = win_id
     self:on('BufWinLeave', string.format(':lua require("vgit").renderer.hide_windows(%s)', win_ids))
     self:add_syntax_highlights()
@@ -247,10 +224,6 @@ function TableComponent:unmount()
     local header_win_id = self:get_header_win_id()
     if vim.api.nvim_win_is_valid(header_win_id) then
         pcall(vim.api.nvim_win_close, header_win_id, true)
-    end
-    local border_win_id = self:get_border_win_id()
-    if vim.api.nvim_win_is_valid(border_win_id) then
-        pcall(vim.api.nvim_win_close, border_win_id, true)
     end
     return self
 end
