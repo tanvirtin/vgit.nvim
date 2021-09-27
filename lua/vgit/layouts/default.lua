@@ -19,22 +19,22 @@ return {
     gutter_blame_preview = {
         blame = {
             height = function()
-                return dimensions.global_height() - 3
+                return dimensions.global_height()
             end,
             width = function()
                 return math.ceil(dimensions.global_width() * 0.35)
             end,
-            row = 1,
+            row = 0,
             col = 0,
         },
         preview = {
             height = function()
-                return dimensions.global_height() - 3
+                return dimensions.global_height()
             end,
             width = function()
                 return math.ceil(dimensions.global_width() * 0.65)
             end,
-            row = 1,
+            row = 0,
             col = function()
                 return math.ceil(dimensions.global_width() * 0.35)
             end,
@@ -49,12 +49,12 @@ return {
                 focus_hl = 'VGitBorderFocus',
             },
             height = function()
-                return dimensions.global_height() - 5
+                return dimensions.global_height() - 2
             end,
             width = function()
                 return dimensions.global_width()
             end,
-            row = 2,
+            row = 0,
             col = 0,
         },
         vertical = {
@@ -66,12 +66,12 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return dimensions.global_height() - 5
+                    return dimensions.global_height() - 2
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2) - 1
                 end,
-                row = 2,
+                row = 0,
                 col = 0,
             },
             current = {
@@ -82,14 +82,14 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return dimensions.global_height() - 5
+                    return dimensions.global_height() - 2
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2)
                 end,
-                row = 2,
+                row = 0,
                 col = function()
-                    return math.floor(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2)
                 end,
             },
         },
@@ -104,12 +104,12 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return math.floor(dimensions.global_height() - 15)
+                    return math.ceil(dimensions.global_height() - 12)
                 end,
                 width = function()
-                    return dimensions.global_width() - 1
+                    return dimensions.global_width()
                 end,
-                row = 2,
+                row = 0,
                 col = 0,
             },
             table = {
@@ -124,7 +124,7 @@ return {
                     return dimensions.global_width()
                 end,
                 row = function()
-                    return math.floor(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 col = 0,
             },
@@ -138,12 +138,12 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return math.floor(dimensions.global_height() - 15)
+                    return math.ceil(dimensions.global_height() - 12)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2) - 1
                 end,
-                row = 2,
+                row = 0,
                 col = 0,
             },
             current = {
@@ -154,23 +154,23 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return math.floor(dimensions.global_height() - 15)
+                    return math.ceil(dimensions.global_height() - 12)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() / 2) - 1
+                    return math.ceil(dimensions.global_width() / 2)
                 end,
-                row = 2,
+                row = 0,
                 col = function()
-                    return math.floor(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2)
                 end,
             },
             table = {
-                height = 10,
+                height = 9,
                 width = function()
                     return dimensions.global_width()
                 end,
                 row = function()
-                    return math.floor(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 col = 0,
             },
@@ -186,12 +186,12 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return math.floor(dimensions.global_height() - 15)
+                    return math.ceil(dimensions.global_height() - 12)
                 end,
                 width = function()
-                    return dimensions.global_width() - 1
+                    return dimensions.global_width()
                 end,
-                row = 2,
+                row = 0,
                 col = 0,
             },
             table = {
@@ -205,7 +205,7 @@ return {
                     return dimensions.global_width()
                 end,
                 row = function()
-                    return math.floor(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 col = 0,
             },
@@ -219,12 +219,12 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return math.floor(dimensions.global_height() - 15)
+                    return math.ceil(dimensions.global_height() - 12)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2) - 1
                 end,
-                row = 2,
+                row = 0,
                 col = 0,
             },
             current = {
@@ -235,23 +235,23 @@ return {
                     focus_hl = 'VGitBorderFocus',
                 },
                 height = function()
-                    return math.floor(dimensions.global_height() - 15)
+                    return math.ceil(dimensions.global_height() - 12)
                 end,
                 width = function()
-                    return math.floor(dimensions.global_width() / 2) - 1
+                    return math.ceil(dimensions.global_width() / 2)
                 end,
-                row = 2,
+                row = 0,
                 col = function()
-                    return math.floor(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2)
                 end,
             },
             table = {
-                height = 10,
+                height = 9,
                 width = function()
                     return dimensions.global_width()
                 end,
                 row = function()
-                    return math.floor(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 col = 0,
             },
