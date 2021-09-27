@@ -126,6 +126,14 @@ function BorderDecorator:mount()
     return self
 end
 
+function BorderDecorator:get_win_id()
+    return self.win_id
+end
+
+function BorderDecorator:get_buf()
+    return self.buf
+end
+
 function BorderDecorator:set_lines(lines)
     buffer.set_lines(self.buf, lines)
 end
@@ -138,14 +146,6 @@ end
 function BorderDecorator:set_footer(footer)
     self.config.footer = footer
     self:set_lines(self:make_virtual())
-end
-
-function BorderDecorator:get_win_id()
-    return self.win_id
-end
-
-function BorderDecorator:get_buf()
-    return self.buf
 end
 
 return BorderDecorator

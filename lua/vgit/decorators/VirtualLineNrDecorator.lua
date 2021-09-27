@@ -46,6 +46,14 @@ function VirtualLineNrDecorator:mount()
     return self
 end
 
+function VirtualLineNrDecorator:get_win_id()
+    return self.win_id
+end
+
+function VirtualLineNrDecorator:get_buf()
+    return self.buf
+end
+
 function VirtualLineNrDecorator:set_lines(lines)
     buffer.set_lines(self.buf, lines)
 end
@@ -58,14 +66,6 @@ end
 
 function VirtualLineNrDecorator:unmount()
     vim.api.nvim_win_close(self:get_win_id(), true)
-end
-
-function VirtualLineNrDecorator:get_win_id()
-    return self.win_id
-end
-
-function VirtualLineNrDecorator:get_buf()
-    return self.buf
 end
 
 return VirtualLineNrDecorator

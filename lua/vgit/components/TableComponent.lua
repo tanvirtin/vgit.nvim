@@ -70,6 +70,7 @@ function TableComponent:new(options)
             loading = false,
             error = false,
             mounted = false,
+            paddings = {},
             cache = {
                 lines = {},
                 cursor = nil,
@@ -131,6 +132,34 @@ function TableComponent:get_header()
     return self.state.header
 end
 
+function TableComponent:get_paddings()
+    return self.state.paddings
+end
+
+function TableComponent:get_column_spacing()
+    return self.config:get('column_spacing')
+end
+
+function TableComponent:get_column_ranges()
+    local column_ranges = {}
+    local paddings = self:get_paddings()
+    local last_range = nil
+    for i = 1, #paddings do
+        if i == 1 then
+            column_ranges[#column_ranges + 1] = { 0, paddings[i] }
+        else
+            column_ranges[#column_ranges + 1] = { last_range[2], last_range[2] + paddings[i] }
+        end
+        last_range = column_ranges[#column_ranges]
+    end
+    return column_ranges
+end
+
+function TableComponent:set_paddings(paddings)
+    assert(type(paddings) == 'table', 'type error :: expected table')
+    self.state.paddings = paddings
+end
+
 function TableComponent:set_header(header)
     assert(type(header) == 'table', 'type error :: expected table')
     self.state.header = header
@@ -151,6 +180,7 @@ function TableComponent:set_lines(lines, force)
     local rows = make(lines, paddings, column_spacing, max_column_len)
     buffer.set_lines(self:get_buf(), rows)
     self:get_header():set_lines(column_header)
+    self:set_paddings(paddings)
     return self
 end
 

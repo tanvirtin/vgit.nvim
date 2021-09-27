@@ -41,16 +41,16 @@ function AppBarDecorator:mount()
     return self
 end
 
-function AppBarDecorator:set_lines(lines)
-    buffer.set_lines(self.buf, lines)
-end
-
 function AppBarDecorator:get_win_id()
     return self.win_id
 end
 
 function AppBarDecorator:get_buf()
     return self.buf
+end
+
+function AppBarDecorator:set_lines(lines)
+    buffer.set_lines(self.buf, lines)
 end
 
 return AppBarDecorator
