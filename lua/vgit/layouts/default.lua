@@ -69,7 +69,7 @@ return {
                     return dimensions.global_height() - 2
                 end,
                 width = function()
-                    return math.ceil(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2) - 1
                 end,
                 row = 0,
                 col = 0,
@@ -141,7 +141,7 @@ return {
                     return math.ceil(dimensions.global_height() - 12)
                 end,
                 width = function()
-                    return math.ceil(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2) - 1
                 end,
                 row = 0,
                 col = 0,
@@ -222,7 +222,7 @@ return {
                     return math.ceil(dimensions.global_height() - 12)
                 end,
                 width = function()
-                    return math.ceil(dimensions.global_width() / 2)
+                    return math.ceil(dimensions.global_width() / 2) - 1
                 end,
                 row = 0,
                 col = 0,

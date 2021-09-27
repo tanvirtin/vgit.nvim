@@ -170,6 +170,32 @@ function HistoryPreview:mount()
     return self
 end
 
+function HistoryPreview:make_table()
+    local logs = self.data.logs
+    local components = self:get_components()
+    local table = components.table
+    local rows = {}
+    for i = 1, #logs do
+        local log = logs[i]
+        rows[#rows + 1] = {
+            string.format('HEAD~%s', i - 1),
+            log.author_name or '',
+            log.commit_hash or '',
+            log.summary or '',
+            (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or '',
+        }
+    end
+    table:set_lines(rows)
+    local column_ranges = table:get_column_ranges()
+    local column_hls = { '', '', 'Keyword', '', '' }
+    for i = 1, #rows do
+        for j = 1, #column_ranges do
+            local r = column_ranges[j]
+            vim.api.nvim_buf_add_highlight(table:get_buf(), -1, column_hls[j], i - 1, r[1], r[2])
+        end
+    end
+end
+
 function HistoryPreview:show_indicator()
     local components = self:get_components()
     local table = components.table
@@ -184,16 +210,15 @@ function HistoryPreview:render()
     if not self:is_mounted() then
         return
     end
+    local err, data = self.err, self.data
     local components = self:get_components()
     local table = components.table
-    local err, data = self.err, self.data
     self:clear()
     if err then
         self:set_error(true)
         self:show_indicator()
         return self
     elseif data then
-        local logs = data.logs
         local diff_change = data.diff_change
         if self.layout_type == 'horizontal' then
             components.preview:set_cursor(1, 0):set_lines(diff_change.lines)
@@ -202,18 +227,7 @@ function HistoryPreview:render()
             components.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
         end
         if not table:has_lines() then
-            local rows = {}
-            for i = 1, #logs do
-                local log = logs[i]
-                rows[#rows + 1] = {
-                    string.format('HEAD~%s', i - 1),
-                    log.author_name or '',
-                    log.commit_hash or '',
-                    log.summary or '',
-                    (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp))) or '',
-                }
-            end
-            table:set_lines(rows)
+            self:make_table()
         end
         self:show_indicator()
         self:draw_changes(diff_change)
