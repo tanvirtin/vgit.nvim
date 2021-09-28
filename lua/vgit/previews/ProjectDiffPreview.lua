@@ -3,6 +3,7 @@ local fs = require('vgit.fs')
 local utils = require('vgit.utils')
 local render_store = require('vgit.stores.render_store')
 local CodeComponent = require('vgit.components.CodeComponent')
+local icons = require('vgit.icons')
 local Preview = require('vgit.Preview')
 
 local config = render_store.get('layout').project_diff_preview
@@ -149,14 +150,6 @@ local function create_vertical_widget(opts)
     }, opts)
 end
 
-local function get_file_icon(fname, extension)
-    local ok, web_devicons = pcall(require, 'nvim-web-devicons')
-    if not ok then
-        return ' ', nil
-    end
-    return web_devicons.get_icon(fname, extension)
-end
-
 local ProjectDiffPreview = Preview:extend()
 
 function ProjectDiffPreview:new(opts)
@@ -172,9 +165,10 @@ function ProjectDiffPreview:mount()
         return self
     end
     Preview.mount(self)
-    local table = self:get_components().table
-    table:add_keymap('<enter>', string.format('_rerender_project_diff(%s)', self:get_parent_buf()))
-    table:add_keymap('<2-LeftMouse>', string.format('_rerender_project_diff(%s)', self:get_parent_buf()))
+    local components = self:get_components()
+    local table = components.table
+    table:add_keymap('<enter>', '_rerender_project_diff()')
+    table:add_keymap('<2-LeftMouse>', '_rerender_project_diff()')
     table:focus()
     return self
 end
@@ -188,7 +182,7 @@ function ProjectDiffPreview:make_table()
     local defered = {}
     for i = 1, #changed_files do
         local file = changed_files[i]
-        local icon, icon_hl = get_file_icon(file.filename, fs.detect_filetype(file.filename))
+        local icon, icon_hl = icons.file_icon(file.filename, fs.detect_filetype(file.filename))
         local filename = fs.short_filename(file.filename)
         local directory = fs.cwd_filename(file.filename)
         local segments = {
@@ -303,18 +297,31 @@ function ProjectDiffPreview:render()
     elseif data then
         local diff_change = data.diff_change
         local filetype = data.filetype
+        local filename = fs.short_filename(data.filename)
         if self.layout_type == 'horizontal' then
-            components.preview:set_cursor(1, 0):set_lines(diff_change.lines):set_filetype(filetype)
+            components.preview
+                :set_cursor(1, 0)
+                :set_lines(diff_change.lines)
+                :set_filetype(filetype)
+                :set_filename_title(filename, filetype)
         else
-            components.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines):set_filetype(filetype)
-            components.current:set_cursor(1, 0):set_lines(diff_change.current_lines):set_filetype(filetype)
+            components.previous
+                :set_cursor(1, 0)
+                :set_lines(diff_change.previous_lines)
+                :set_filetype(filetype)
+                :set_filename_title(filename, filetype)
+            components.current
+                :set_cursor(1, 0)
+                :set_lines(diff_change.current_lines)
+                :set_filetype(filetype)
+                :set_filename_title(filename, filetype)
         end
         if not table:has_lines() then
             self:make_table()
         end
         self:show_indicator()
-        self:draw_changes(diff_change)
         self:make_virtual_line_nr(diff_change)
+        self:highlight_diff_change(diff_change)
         self:reposition_cursor()
     else
         table:set_centered_text('There are no changes')

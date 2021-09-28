@@ -1,12 +1,124 @@
 local Component = require('vgit.Component')
+local Interface = require('vgit.Interface')
+local icons = require('vgit.icons')
 local buffer = require('vgit.buffer')
-local BorderDecorator = require('vgit.decorators.BorderDecorator')
 local VirtualLineNrDecorator = require('vgit.decorators.VirtualLineNrDecorator')
+local AppBarDecorator = require('vgit.decorators.AppBarDecorator')
+local render_store = require('vgit.stores.render_store')
 
 local CodeComponent = Component:extend()
 
 function CodeComponent:new(options)
-    return setmetatable(Component:new(options), CodeComponent)
+    assert(options == nil or type(options) == 'table', 'type error :: expected table or nil')
+    options = options or {}
+    local height = self:get_min_height()
+    local width = self:get_min_width()
+    return setmetatable({
+        anim_id = nil,
+        timer_id = nil,
+        state = {
+            buf = nil,
+            win_id = nil,
+            ns_id = nil,
+            virtual_line_nr = nil,
+            loading = false,
+            error = false,
+            mounted = false,
+            cache = {
+                lines = {},
+                cursor = nil,
+            },
+            paint_count = 0,
+        },
+        config = Interface
+            :new({
+                filetype = '',
+                header = {
+                    enabled = true,
+                },
+                border = {
+                    enabled = false,
+                    hl = 'FloatBorder',
+                    chars = { '', '', '', '', '', '', '', '' },
+                },
+                buf_options = {
+                    ['modifiable'] = false,
+                    ['buflisted'] = false,
+                    ['bufhidden'] = 'wipe',
+                },
+                win_options = {
+                    ['wrap'] = false,
+                    ['number'] = false,
+                    ['winhl'] = 'Normal:',
+                    ['cursorline'] = false,
+                    ['cursorbind'] = false,
+                    ['scrollbind'] = false,
+                    ['signcolumn'] = 'auto',
+                },
+                window_props = {
+                    style = 'minimal',
+                    relative = 'editor',
+                    height = height,
+                    width = width,
+                    row = 1,
+                    col = 0,
+                    focusable = true,
+                },
+                virtual_line_nr = {
+                    enabled = false,
+                    width = render_store.get('preview').virtual_line_nr_width,
+                },
+                static = false,
+            })
+            :assign(options),
+    }, CodeComponent)
+end
+
+function CodeComponent:get_header_buf()
+    return self:get_header() and self:get_header():get_buf() or nil
+end
+
+function CodeComponent:get_header_win_id()
+    return self:get_header() and self:get_header():get_win_id() or nil
+end
+
+function CodeComponent:get_header()
+    return self.state.header
+end
+
+function CodeComponent:set_header(header)
+    assert(type(header) == 'table', 'type error :: expected table')
+    self.state.header = header
+end
+
+function CodeComponent:set_title(text)
+    self:get_header():set_lines({ text })
+end
+
+function CodeComponent:set_filename_title(filename, filetype)
+    local icon, icon_hl = icons.file_icon(filename, filetype)
+    local header = self:get_header()
+    header:set_lines({ string.format('%s %s', icon, filename) })
+    if icon_hl then
+        vim.api.nvim_buf_add_highlight(header:get_buf(), -1, icon_hl, 0, 0, #icon)
+    end
+end
+
+function CodeComponent:notify(text)
+    local epoch = 2000
+    local header = self:get_header()
+    if self.timer_id then
+        vim.fn.timer_stop(self.timer_id)
+        self.timer_id = nil
+    end
+    header:transpose_text({ text, 'Comment' }, 0, 0, 'eol')
+    self.timer_id = vim.fn.timer_start(epoch, function()
+        if buffer.is_valid(header:get_buf()) then
+            header:clear_ns_id()
+        end
+        vim.fn.timer_stop(self.timer_id)
+        self.timer_id = nil
+    end)
 end
 
 function CodeComponent:mount()
@@ -22,16 +134,29 @@ function CodeComponent:mount()
     buffer.assign_options(buf, buf_options)
     local win_ids = {}
     local virtual_line_nr_config = self.config:get('virtual_line_nr')
+    local header_config = self.config:get('header')
     if virtual_line_nr_config.enabled then
+        if header_config.enabled then
+            self:set_header(AppBarDecorator:new(window_props, buf):mount())
+        end
         self:set_virtual_line_nr(VirtualLineNrDecorator:new(virtual_line_nr_config, window_props, buf))
         local virtual_line_nr = self:get_virtual_line_nr()
         virtual_line_nr:mount()
         window_props.width = window_props.width - virtual_line_nr_config.width
         window_props.col = window_props.col + virtual_line_nr_config.width
         win_ids[#win_ids + 1] = virtual_line_nr:get_win_id()
+    else
+        if header_config.enabled then
+            self:set_header(AppBarDecorator:new(window_props, buf):mount())
+        end
     end
-    if self:is_hover() then
-        window_props.border = BorderDecorator:make_native(border_config)
+    if border_config.enabled then
+        window_props.border = self:make_border(border_config)
+    end
+    if header_config.enabled then
+        -- Correct addition of header decorator parameters.
+        window_props.row = window_props.row + 3
+        window_props.height = window_props.height - 3
     end
     local win_id = vim.api.nvim_open_win(buf, true, window_props)
     for key, value in pairs(win_options) do
@@ -42,28 +167,6 @@ function CodeComponent:mount()
     if virtual_line_nr_config then
         window_props.width = window_props.width + virtual_line_nr_config.width
         window_props.col = window_props.col - virtual_line_nr_config.width
-    end
-    if border_config.enabled and not self:is_hover() then
-        self:set_border(BorderDecorator:new(border_config, window_props, buf))
-        local border = self:get_border()
-        border:mount()
-        self:on(
-            'BufEnter',
-            string.format(
-                ':lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
-                border:get_win_id(),
-                border_config.focus_hl
-            )
-        )
-        self:on(
-            'WinLeave',
-            string.format(
-                ':lua vim.api.nvim_win_set_option(%s, "winhl", "Normal:%s")',
-                border:get_win_id(),
-                border_config.hl
-            )
-        )
-        win_ids[#win_ids + 1] = border:get_win_id()
     end
     win_ids[#win_ids + 1] = win_id
     self:on('BufWinLeave', string.format(':lua require("vgit").renderer.hide_windows(%s)', win_ids))
@@ -79,16 +182,16 @@ function CodeComponent:unmount()
         self:clear()
         pcall(vim.api.nvim_win_close, win_id, true)
     end
-    if self:has_border() then
-        local border_win_id = self:get_border_win_id()
-        if vim.api.nvim_win_is_valid(border_win_id) then
-            pcall(vim.api.nvim_win_close, border_win_id, true)
-        end
-    end
     if self:has_virtual_line_nr() then
         local virtual_line_nr_win_id = self:get_virtual_line_nr_win_id()
         if virtual_line_nr_win_id and vim.api.nvim_win_is_valid(virtual_line_nr_win_id) then
             pcall(vim.api.nvim_win_close, virtual_line_nr_win_id, true)
+        end
+    end
+    if self.config:get('header').enabled then
+        local header_win_id = self:get_header_win_id()
+        if vim.api.nvim_win_is_valid(header_win_id) then
+            pcall(vim.api.nvim_win_close, header_win_id, true)
         end
     end
     return self

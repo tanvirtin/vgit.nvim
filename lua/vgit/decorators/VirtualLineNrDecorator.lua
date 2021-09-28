@@ -1,5 +1,5 @@
 local Object = require('plenary.class')
-local events = require('vgit.events')
+local autocmd = require('vgit.autocmd')
 local buffer = require('vgit.buffer')
 
 local VirtualLineNrDecorator = Object:extend()
@@ -37,7 +37,7 @@ function VirtualLineNrDecorator:mount()
     self.ns_id = vim.api.nvim_create_namespace(
         string.format('tanvirtin/vgit.nvim/virtual_line_nr/%s/%s', self.buf, self.win_id)
     )
-    events.buf.on(
+    autocmd.buf.on(
         self.content_buf,
         'WinClosed',
         string.format(':lua _G.package.loaded.vgit.renderer.hide_windows({ %s })', self.win_id),

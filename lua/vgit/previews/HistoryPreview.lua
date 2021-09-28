@@ -1,5 +1,6 @@
 local render_store = require('vgit.stores.render_store')
 local utils = require('vgit.utils')
+local fs = require('vgit.fs')
 local TableComponent = require('vgit.components.TableComponent')
 local CodeComponent = require('vgit.components.CodeComponent')
 local Preview = require('vgit.Preview')
@@ -178,7 +179,7 @@ function HistoryPreview:make_table()
     for i = 1, #logs do
         local log = logs[i]
         rows[#rows + 1] = {
-            string.format('HEAD~%s', i - 1),
+            log.revision,
             log.author_name or '',
             log.commit_hash or '',
             log.summary or '',
@@ -220,18 +221,26 @@ function HistoryPreview:render()
         return self
     elseif data then
         local diff_change = data.diff_change
+        local filename = fs.short_filename(data.filename)
+        local filetype = data.filetype
         if self.layout_type == 'horizontal' then
-            components.preview:set_cursor(1, 0):set_lines(diff_change.lines)
+            components.preview:set_cursor(1, 0):set_lines(diff_change.lines):set_filename_title(filename, filetype)
         else
-            components.previous:set_cursor(1, 0):set_lines(diff_change.previous_lines)
-            components.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
+            components.previous
+                :set_cursor(1, 0)
+                :set_lines(diff_change.previous_lines)
+                :set_filename_title(filename, filetype)
+            components.current
+                :set_cursor(1, 0)
+                :set_lines(diff_change.current_lines)
+                :set_filename_title(filename, filetype)
         end
         if not table:has_lines() then
             self:make_table()
         end
         self:show_indicator()
-        self:draw_changes(diff_change)
         self:make_virtual_line_nr(diff_change)
+        self:highlight_diff_change(diff_change)
     else
         table:set_centered_text('There are no commits')
         table:remove_keymap('<enter>')
