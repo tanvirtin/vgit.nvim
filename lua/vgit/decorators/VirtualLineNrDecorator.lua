@@ -56,16 +56,19 @@ end
 
 function VirtualLineNrDecorator:set_lines(lines)
     buffer.set_lines(self.buf, lines)
+    return self
 end
 
 function VirtualLineNrDecorator:set_hls(hls)
     for i = 1, #hls do
         vim.api.nvim_buf_add_highlight(self.buf, -1, hls[i], i - 1, 0, -1)
     end
+    return self
 end
 
 function VirtualLineNrDecorator:unmount()
     vim.api.nvim_win_close(self:get_win_id(), true)
+    return self
 end
 
 return VirtualLineNrDecorator

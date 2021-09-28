@@ -156,11 +156,13 @@ end
 function TableComponent:set_paddings(paddings)
     assert(type(paddings) == 'table', 'type error :: expected table')
     self.state.paddings = paddings
+    return self
 end
 
 function TableComponent:set_header(header)
     assert(type(header) == 'table', 'type error :: expected table')
     self.state.header = header
+    return self
 end
 
 function TableComponent:set_lines(lines, force)
@@ -200,7 +202,9 @@ function TableComponent:mount()
     self:set_header(AppBarDecorator:new(window_props, buf):mount())
     -- Correct addition of header decorator parameters.
     window_props.row = window_props.row + 3
-    window_props.height = window_props.height - 3
+    if window_props.height - 3 > 1 then
+        window_props.height = window_props.height - 3
+    end
     local win_id = vim.api.nvim_open_win(buf, true, window_props)
     for key, value in pairs(win_options) do
         vim.api.nvim_win_set_option(win_id, key, value)

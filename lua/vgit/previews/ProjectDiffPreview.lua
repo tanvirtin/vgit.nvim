@@ -303,18 +303,14 @@ function ProjectDiffPreview:render()
                 :set_cursor(1, 0)
                 :set_lines(diff_change.lines)
                 :set_filetype(filetype)
-                :set_filename_title(filename, filetype)
+                :set_title('Project Diff:', filename, filetype)
         else
             components.previous
                 :set_cursor(1, 0)
                 :set_lines(diff_change.previous_lines)
                 :set_filetype(filetype)
-                :set_filename_title(filename, filetype)
-            components.current
-                :set_cursor(1, 0)
-                :set_lines(diff_change.current_lines)
-                :set_filetype(filetype)
-                :set_filename_title(filename, filetype)
+                :set_title('Project Diff:', filename, filetype)
+            components.current:set_cursor(1, 0):set_lines(diff_change.current_lines):set_filetype(filetype)
         end
         if not table:has_lines() then
             self:make_table()

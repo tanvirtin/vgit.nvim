@@ -162,11 +162,11 @@ function DiffPreview:render()
     if diff_change then
         if self.layout_type == 'horizontal' then
             local components = self:get_components()
-            components.preview:set_lines(diff_change.lines):set_filename_title(filename, filetype)
+            components.preview:set_lines(diff_change.lines):set_title('Diff Preview:', filename, filetype)
         else
             local components = self:get_components()
-            components.previous:set_lines(diff_change.previous_lines):set_filename_title(filename, filetype)
-            components.current:set_lines(diff_change.current_lines):set_filename_title(filename, filetype)
+            components.previous:set_lines(diff_change.previous_lines):set_title('Diff Preview:', filename, filetype)
+            components.current:set_lines(diff_change.current_lines)
         end
         self:make_virtual_line_nr(diff_change)
         self:highlight_diff_change(diff_change)

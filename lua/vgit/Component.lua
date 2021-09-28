@@ -84,6 +84,7 @@ function Component:new(options)
                     row = 1,
                     col = 0,
                     focusable = true,
+                    zindex = 50,
                 },
                 virtual_line_nr = {
                     enabled = false,
@@ -202,6 +203,7 @@ end
 function Component:set_virtual_line_nr(virtual_line_nr)
     assert(type(virtual_line_nr) == 'table', 'type error :: expected table')
     self.state.virtual_line_nr = virtual_line_nr
+    return self
 end
 
 function Component:set_ns_id(value)
@@ -249,7 +251,7 @@ end
 function Component:add_syntax_highlights()
     local filetype = self.config:get('filetype')
     if not filetype or filetype == '' then
-        return
+        return self
     end
     local buf = self:get_buf()
     local has_ts = false
@@ -270,6 +272,7 @@ function Component:add_syntax_highlights()
             buffer.set_option(buf, 'syntax', filetype)
         end
     end
+    return self
 end
 
 function Component:clear_syntax_highlights()
@@ -286,6 +289,7 @@ function Component:clear_syntax_highlights()
             buffer.set_option(buf, 'syntax', '')
         end
     end
+    return self
 end
 
 function Component:increment_paint_count()
@@ -376,6 +380,7 @@ function Component:set_centered_animated_text(frame_rate, frames, force, callbac
             ['repeat'] = -1,
         }
     )
+    return self
 end
 
 function Component:set_loading(value, force)
@@ -455,6 +460,7 @@ end
 function Component:set_mounted(value)
     assert(type(value) == 'boolean', 'type error :: expected boolean')
     self.state.mounted = value
+    return self
 end
 
 function Component:on(cmd, handler, options)

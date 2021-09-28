@@ -30,6 +30,7 @@ function AppBarDecorator:mount()
         col = self.window_props.col,
         width = self.window_props.width - 2,
         height = 1,
+        zindex = 100,
     })
     vim.api.nvim_win_set_option(self.win_id, 'cursorbind', false)
     vim.api.nvim_win_set_option(self.win_id, 'scrollbind', false)
@@ -55,9 +56,14 @@ function AppBarDecorator:get_ns_id()
     return self.ns_id
 end
 
+function AppBarDecorator:get_lines()
+    return buffer.get_lines(self:get_buf())
+end
+
 function AppBarDecorator:set_lines(lines)
     assert(vim.tbl_islist(lines), 'type error :: expected list table')
-    buffer.set_lines(self.buf, lines)
+    buffer.set_lines(self:get_buf(), lines)
+    return self
 end
 
 function AppBarDecorator:transpose_text(text, row, col, pos)
@@ -66,6 +72,7 @@ function AppBarDecorator:transpose_text(text, row, col, pos)
     assert(type(row) == 'number', 'type error :: expected number')
     assert(type(col) == 'number', 'type error :: expected number')
     virtual_text.transpose_text(self:get_buf(), text[1], self:get_ns_id(), text[2], row, col, pos)
+    return self
 end
 
 function AppBarDecorator:clear_ns_id()

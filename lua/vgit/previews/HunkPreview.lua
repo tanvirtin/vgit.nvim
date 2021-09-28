@@ -20,6 +20,7 @@ function HunkPreview:new(opts)
             window_props = {
                 style = 'minimal',
                 relative = 'cursor',
+                height = utils.retrieve(config.height),
                 width = dimensions.global_width(),
             },
             filetype = opts.filetype,
@@ -91,15 +92,7 @@ function HunkPreview:render()
         local components = self:get_components()
         local component = components.preview
         component:set_lines(diff_change.lines)
-        local new_width = #data.selected_hunk.diff
-        if new_width ~= 0 then
-            if new_width < component:get_min_height() then
-                component:set_height(new_width)
-            else
-                component:set_height(component:get_min_height())
-            end
-        end
-        component:set_filename_title(filename, filetype)
+        component:set_title('Hunk:', filename, filetype)
         self:highlight_diff_change(diff_change)
         self:reposition_cursor(self.selected)
     end
