@@ -1,4 +1,5 @@
 local dimensions = require('vgit.dimensions')
+local fs = require('vgit.fs')
 local utils = require('vgit.utils')
 local CodeComponent = require('vgit.components.CodeComponent')
 local Preview = require('vgit.Preview')
@@ -85,18 +86,21 @@ function HunkPreview:render()
     end
     if data then
         local diff_change = data.diff_change
+        local filename = fs.short_filename(data.filename)
+        local filetype = data.filetype
         local components = self:get_components()
         local component = components.preview
         component:set_lines(diff_change.lines)
         local new_width = #data.selected_hunk.diff
         if new_width ~= 0 then
-            if new_width > component:get_min_height() then
+            if new_width < component:get_min_height() then
                 component:set_height(new_width)
             else
                 component:set_height(component:get_min_height())
             end
         end
-        self:draw_changes(diff_change)
+        component:set_filename_title(filename, filetype)
+        self:highlight_diff_change(diff_change)
         self:reposition_cursor(self.selected)
     end
     return self

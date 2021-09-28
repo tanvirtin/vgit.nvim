@@ -6,13 +6,12 @@ return {
             enabled = true,
             chars = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
             hl = 'FloatBorder',
-            focus_hl = 'VGitBorderFocus',
         },
     },
     hunk_preview = {
         border = {
             enabled = true,
-            chars = { '─', '─', '─', ' ', '─', '─', '─', ' ' },
+            chars = { '', '', '', ' ', '─', '─', '─', ' ' },
             hl = 'FloatBorder',
         },
     },
@@ -42,14 +41,8 @@ return {
     },
     diff_preview = {
         horizontal = {
-            border = {
-                ignore_title = true,
-                enabled = true,
-                hl = 'FloatBorder',
-                focus_hl = 'VGitBorderFocus',
-            },
             height = function()
-                return dimensions.global_height() - 2
+                return dimensions.global_height() - 1
             end,
             width = function()
                 return dimensions.global_width()
@@ -59,30 +52,18 @@ return {
         },
         vertical = {
             previous = {
-                border = {
-                    ignore_title = true,
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = function()
-                    return dimensions.global_height() - 2
+                    return dimensions.global_height() - 1
                 end,
                 width = function()
-                    return math.ceil(dimensions.global_width() / 2) - 1
+                    return math.ceil(dimensions.global_width() / 2)
                 end,
                 row = 0,
                 col = 0,
             },
             current = {
-                border = {
-                    ignore_title = true,
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = function()
-                    return dimensions.global_height() - 2
+                    return dimensions.global_height() - 1
                 end,
                 width = function()
                     return math.ceil(dimensions.global_width() / 2)
@@ -97,14 +78,8 @@ return {
     history_preview = {
         horizontal = {
             preview = {
-                border = {
-                    ignore_title = true,
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = function()
-                    return math.ceil(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 width = function()
                     return dimensions.global_width()
@@ -113,12 +88,6 @@ return {
                 col = 0,
             },
             table = {
-                border = {
-                    title = 'History',
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = 9,
                 width = function()
                     return dimensions.global_width()
@@ -131,30 +100,18 @@ return {
         },
         vertical = {
             previous = {
-                border = {
-                    ignore_title = true,
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = function()
-                    return math.ceil(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 width = function()
-                    return math.ceil(dimensions.global_width() / 2) - 1
+                    return math.ceil(dimensions.global_width() / 2)
                 end,
                 row = 0,
                 col = 0,
             },
             current = {
-                border = {
-                    ignore_title = true,
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = function()
-                    return math.ceil(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 width = function()
                     return math.ceil(dimensions.global_width() / 2)
@@ -179,14 +136,8 @@ return {
     project_diff_preview = {
         horizontal = {
             preview = {
-                border = {
-                    ignore_title = true,
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = function()
-                    return math.ceil(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 width = function()
                     return dimensions.global_width()
@@ -195,11 +146,6 @@ return {
                 col = 0,
             },
             table = {
-                border = {
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = 9,
                 width = function()
                     return dimensions.global_width()
@@ -212,30 +158,18 @@ return {
         },
         vertical = {
             previous = {
-                border = {
-                    ignore_title = true,
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = function()
-                    return math.ceil(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 width = function()
-                    return math.ceil(dimensions.global_width() / 2) - 1
+                    return math.ceil(dimensions.global_width() / 2)
                 end,
                 row = 0,
                 col = 0,
             },
             current = {
-                border = {
-                    ignore_title = true,
-                    enabled = true,
-                    hl = 'FloatBorder',
-                    focus_hl = 'VGitBorderFocus',
-                },
                 height = function()
-                    return math.ceil(dimensions.global_height() - 12)
+                    return math.ceil(dimensions.global_height() - 10)
                 end,
                 width = function()
                     return math.ceil(dimensions.global_width() / 2)

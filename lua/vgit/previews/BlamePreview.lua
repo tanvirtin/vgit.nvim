@@ -42,6 +42,9 @@ local BlamePreview = Preview:extend()
 function BlamePreview:new()
     local this = Preview:new({
         CodeComponent:new({
+            header = {
+                enabled = false,
+            },
             border = utils.retrieve(config.border),
             win_options = {
                 ['winhl'] = string.format('Normal:%s', utils.retrieve(config.background_hl) or ''),

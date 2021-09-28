@@ -4,7 +4,7 @@ local render_store = require('vgit.stores.render_store')
 local navigation = require('vgit.navigation')
 local virtual_text = require('vgit.virtual_text')
 local sign = require('vgit.sign')
-local events = require('vgit.events')
+local autocmd = require('vgit.autocmd')
 local assert = require('vgit.assertion').assert
 local buffer = require('vgit.buffer')
 local VirtualLineNrDecorator = require('vgit.decorators.VirtualLineNrDecorator')
@@ -39,11 +39,11 @@ function Component:new(options)
     local width = self:get_min_width()
     return setmetatable({
         anim_id = nil,
+        timer_id = nil,
         state = {
             buf = nil,
             win_id = nil,
             ns_id = nil,
-            border = nil,
             virtual_line_nr = nil,
             loading = false,
             error = false,
@@ -59,10 +59,7 @@ function Component:new(options)
                 filetype = '',
                 border = {
                     enabled = false,
-                    title = '',
-                    footer = '',
                     hl = 'FloatBorder',
-                    focus_hl = 'FloatBorder',
                     chars = { '', '', '', '', '', '', '', '' },
                 },
                 buf_options = {
@@ -98,10 +95,6 @@ function Component:new(options)
     }, Component)
 end
 
-function Component:has_border()
-    return self:get_border() ~= nil
-end
-
 function Component:has_virtual_line_nr()
     return self:get_virtual_line_nr() and self.config:get('virtual_line_nr').enabled
 end
@@ -114,6 +107,10 @@ function Component:is_hover()
     return self.config:get('window_props').relative == 'cursor'
 end
 
+function Component:is_focused()
+    return vim.api.nvim_get_current_win() == self:get_win_id()
+end
+
 function Component:has_lines()
     return self:get_paint_count() > 0
 end
@@ -123,11 +120,11 @@ function Component:get_paint_count()
 end
 
 function Component:get_win_ids()
-    return { self.state.win_id, self:get_border_win_id(), self:get_virtual_line_nr_win_id() }
+    return { self:get_win_id(), self:get_virtual_line_nr_win_id() }
 end
 
 function Component:get_bufs()
-    return { self.state.buf, self:get_border_buf(), self:get_virtual_line_nr_buf() }
+    return { self:get_buf(), self:get_virtual_line_nr_buf() }
 end
 
 function Component:get_win_id()
@@ -140,14 +137,6 @@ end
 
 function Component:get_ns_id()
     return self.state.ns_id
-end
-
-function Component:get_border_buf()
-    return self:get_border() and self:get_border():get_buf() or nil
-end
-
-function Component:get_border_win_id()
-    return self:get_border() and self:get_border():get_win_id() or nil
 end
 
 function Component:get_virtual_line_nr_buf()
@@ -202,21 +191,12 @@ function Component:get_error()
     return self.state.error
 end
 
-function Component:get_border()
-    return self.state.border
-end
-
 function Component:get_virtual_line_nr()
     return self.state.virtual_line_nr
 end
 
 function Component:is_mounted()
     return self.state.mounted
-end
-
-function Component:set_border(border)
-    assert(type(border) == 'table', 'type error :: expected table')
-    self.state.border = border
 end
 
 function Component:set_virtual_line_nr(virtual_line_nr)
@@ -340,26 +320,6 @@ end
 
 function Component:set_win_option(option, value)
     vim.api.nvim_win_set_option(self:get_win_id(), option, value)
-    return self
-end
-
-function Component:set_title(title)
-    if not self.config:get('border').enabled then
-        return
-    end
-    assert(type(title) == 'string', 'type error :: expected string')
-    assert(self:get_border(), 'BorderDecorator not created')
-    self:get_border():set_title(title)
-    return self
-end
-
-function Component:set_footer(footer)
-    if not self.config:get('border').enabled then
-        return
-    end
-    assert(type(footer) == 'string' or footer == nil, 'type error :: expected string or nil')
-    assert(self:get_border(), 'BorderDecorator not created')
-    self:get_border():set_footer(footer)
     return self
 end
 
@@ -498,7 +458,7 @@ function Component:set_mounted(value)
 end
 
 function Component:on(cmd, handler, options)
-    events.buf.on(self:get_buf(), cmd, handler, options)
+    autocmd.buf.on(self:get_buf(), cmd, handler, options)
     return self
 end
 
@@ -541,6 +501,22 @@ function Component:clear_timers()
     if self.anim_id then
         vim.fn.timer_stop(self.anim_id)
     end
+end
+
+function Component:make_border(config)
+    if config.hl then
+        local new_border = {}
+        for _, char in pairs(config.chars) do
+            if type(char) == 'table' then
+                char[2] = config.hl
+                new_border[#new_border + 1] = char
+            else
+                new_border[#new_border + 1] = { char, config.hl }
+            end
+        end
+        return new_border
+    end
+    return config.chars
 end
 
 function Component:clear(force)

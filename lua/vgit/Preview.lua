@@ -1,6 +1,6 @@
 local Object = require('plenary.class')
 local render_store = require('vgit.stores.render_store')
-local events = require('vgit.events')
+local autocmd = require('vgit.autocmd')
 local logger = require('vgit.logger')
 local sign = require('vgit.sign')
 local virtual_text = require('vgit.virtual_text')
@@ -30,39 +30,15 @@ function Preview:new(components, opts)
         selected = opts.selected or nil,
         data = nil,
         err = nil,
-        timer_id = nil,
     }, Preview)
 end
 
 function Preview:notify(text)
-    local epoch = 2000
-    if self.timer_id then
-        vim.fn.timer_stop(self.timer_id)
-        self.timer_id = nil
-    end
-    local components = self:get_components()
-    if self.layout_type == 'vertical' then
-        if components.previous:has_border() then
-            components.previous:set_footer(text)
-        end
-        if components.current:has_border() then
-            components.current:set_footer(text)
-        end
-    else
-        if components.preview:has_border() then
-            components.preview:set_footer(text)
+    for _, component in pairs(self.components) do
+        if component:is(CodeComponent) then
+            component:notify(text)
         end
     end
-    self.timer_id = vim.fn.timer_start(epoch, function()
-        if self.layout_type == 'vertical' then
-            pcall(components.previous.set_footer, components.previous)
-            pcall(components.current.set_footer, components.current)
-        else
-            pcall(components.preview.set_footer, components.preview)
-        end
-        vim.fn.timer_stop(self.timer_id)
-        self.timer_id = nil
-    end)
 end
 
 function Preview:navigate_code(direction)
@@ -75,28 +51,8 @@ function Preview:navigate_code(direction)
     if not self.data.diff_change.marks then
         return
     end
-    local code_win_ids = {}
     local components = self:get_components()
-    if self.layout_type == 'vertical' then
-        code_win_ids = {
-            components.previous:get_win_id(),
-            components.current:get_win_id(),
-        }
-    else
-        code_win_ids = {
-            components.preview:get_win_id(),
-        }
-    end
-    local win = vim.api.nvim_get_current_win()
-    local found_win = false
-    for i = 1, #code_win_ids do
-        local code_win = code_win_ids[i]
-        if code_win == win then
-            found_win = true
-            break
-        end
-    end
-    if not found_win then
+    if components.table and components.table:is_focused() then
         return
     end
     local marks = self.data.diff_change.marks
@@ -104,6 +60,7 @@ function Preview:navigate_code(direction)
         return self:notify('There are no changes')
     end
     local mark_index = nil
+    local win = vim.api.nvim_get_current_win()
     if direction == 'up' then
         mark_index = navigation.mark_up(win, vim.api.nvim_win_get_cursor(0), marks)
     end
@@ -112,19 +69,11 @@ function Preview:navigate_code(direction)
     end
     if mark_index then
         scheduler()
-        self:notify(string.format('%s/%s Changes', mark_index, #marks))
+        self:notify(string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks))
     end
 end
 
-function Preview:mark_up()
-    self:navigate_code('up')
-end
-
-function Preview:mark_down()
-    self:navigate_code('down')
-end
-
-function Preview:draw_changes(data)
+function Preview:highlight_diff_change(data)
     local lnum_changes = data.lnum_changes
     local layout_type = self.layout_type or 'horizontal'
     local components = self:get_components()
@@ -141,7 +90,7 @@ function Preview:draw_changes(data)
             buf = component:get_buf()
         end
         if not buf or not component then
-            logger.error('There are no component or buffer to draw the changes')
+            logger.error('There are no component or buffer to highlight the changes')
             return
         end
         local type, lnum, word_diff = datum.type, datum.lnum, datum.word_diff
@@ -454,7 +403,6 @@ function Preview:mount()
     local win_ids = {}
     for _, component in pairs(self.components) do
         win_ids[#win_ids + 1] = component:get_win_id()
-        win_ids[#win_ids + 1] = component:get_border_win_id()
         if component:is(CodeComponent) then
             win_ids[#win_ids + 1] = component:get_virtual_line_nr_win_id()
         end
@@ -474,7 +422,7 @@ function Preview:mount()
         scheduler()
         if is_buf_listed and buffer.is_valid(buf) then
             local event = self.temporary and 'BufEnter' or 'BufWinEnter'
-            events.buf.on(
+            autocmd.buf.on(
                 buf,
                 event,
                 string.format(':lua _G.package.loaded.vgit.renderer.hide_windows(%s)', vim.inspect(win_ids)),

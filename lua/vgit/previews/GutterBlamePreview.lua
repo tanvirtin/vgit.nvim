@@ -51,6 +51,9 @@ local GutterBlamePreview = Preview:extend()
 function GutterBlamePreview:new(opts)
     local this = Preview:new({
         blame = CodeComponent:new({
+            header = {
+                enabled = false,
+            },
             border = utils.retrieve(config.blame.border),
             win_options = {
                 ['winhl'] = string.format('Normal:%s', utils.retrieve(config.blame.background_hl) or ''),
@@ -68,6 +71,9 @@ function GutterBlamePreview:new(opts)
             },
         }),
         preview = CodeComponent:new({
+            header = {
+                enabled = false,
+            },
             border = utils.retrieve(config.blame.preview),
             win_options = {
                 ['winhl'] = string.format('Normal:%s', utils.retrieve(config.preview.background_hl) or ''),

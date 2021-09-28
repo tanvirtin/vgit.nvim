@@ -58,7 +58,7 @@ M.is_commit_valid = wrap(function(commit, callback)
     job:start()
 end, 2)
 
-M.create_log = function(line)
+M.create_log = function(line, revision_count)
     local log = vim.split(line, '-')
     -- Sometimes you can have multiple parents, in that instance we pick the first!
     local parents = vim.split(log[2], ' ')
@@ -66,6 +66,7 @@ M.create_log = function(line)
         log[2] = parents[1]
     end
     return {
+        revision = string.format('HEAD~%s', revision_count),
         commit_hash = log[1]:sub(2, #log[1]),
         parent_hash = log[2],
         timestamp = log[3],
@@ -270,16 +271,8 @@ end, 3)
 
 M.logs = wrap(function(filename, callback)
     local err = {}
-    local logs = {
-        {
-            author_name = M.state:get('config')['user.name'],
-            author_email = M.state:get('config')['user.email'],
-            commit_hash = nil,
-            parent_hash = nil,
-            summary = nil,
-            timestamp = nil,
-        },
-    }
+    local logs = {}
+    local revision_count = 0
     local job = Job:new({
         command = 'git',
         args = {
@@ -290,7 +283,8 @@ M.logs = wrap(function(filename, callback)
             filename,
         },
         on_stdout = function(_, data, _)
-            local log = M.create_log(data)
+            revision_count = revision_count + 1
+            local log = M.create_log(data, revision_count)
             if log then
                 logs[#logs + 1] = log
             end
