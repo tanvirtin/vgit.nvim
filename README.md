@@ -18,7 +18,7 @@
 
 <br />
 <br />
-<img src="https://user-images.githubusercontent.com/25164326/135162282-55b4840f-9340-4593-a994-61b835b86b34.gif" alt="preview" />
+<img src="https://user-images.githubusercontent.com/25164326/135163103-6f869926-1cb8-4aaf-a217-4f132aefb237.gif" alt="preview" />
 
 ## Highlighted Features
 - Gutter changes annotation to highlight any local (unpublished) changes or lines changed by the most recent commit
