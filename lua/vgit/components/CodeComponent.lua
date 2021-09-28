@@ -63,6 +63,7 @@ function CodeComponent:new(options)
                     row = 1,
                     col = 0,
                     focusable = true,
+                    zindex = 60,
                 },
                 virtual_line_nr = {
                     enabled = false,
@@ -89,19 +90,25 @@ end
 function CodeComponent:set_header(header)
     assert(type(header) == 'table', 'type error :: expected table')
     self.state.header = header
+    return self
 end
 
-function CodeComponent:set_title(text)
-    self:get_header():set_lines({ text })
-end
-
-function CodeComponent:set_filename_title(filename, filetype)
+function CodeComponent:set_title(title, filename, filetype)
     local icon, icon_hl = icons.file_icon(filename, filetype)
     local header = self:get_header()
-    header:set_lines({ string.format('%s %s', icon, filename) })
-    if icon_hl then
-        vim.api.nvim_buf_add_highlight(header:get_buf(), -1, icon_hl, 0, 0, #icon)
+    if title == '' then
+        header:set_lines({ string.format('%s %s', icon, filename) })
+    else
+        header:set_lines({ string.format('%s %s %s', title, icon, filename) })
     end
+    if icon_hl then
+        if title == '' then
+            vim.api.nvim_buf_add_highlight(header:get_buf(), -1, icon_hl, 0, 0, #icon)
+        else
+            vim.api.nvim_buf_add_highlight(header:get_buf(), -1, icon_hl, 0, #title + 1, #title + 1 + #icon)
+        end
+    end
+    return self
 end
 
 function CodeComponent:notify(text)
@@ -119,6 +126,7 @@ function CodeComponent:notify(text)
         vim.fn.timer_stop(self.timer_id)
         self.timer_id = nil
     end)
+    return self
 end
 
 function CodeComponent:mount()
@@ -156,7 +164,9 @@ function CodeComponent:mount()
     if header_config.enabled then
         -- Correct addition of header decorator parameters.
         window_props.row = window_props.row + 3
-        window_props.height = window_props.height - 3
+        if window_props.height - 3 > 1 then
+            window_props.height = window_props.height - 3
+        end
     end
     local win_id = vim.api.nvim_open_win(buf, true, window_props)
     for key, value in pairs(win_options) do
