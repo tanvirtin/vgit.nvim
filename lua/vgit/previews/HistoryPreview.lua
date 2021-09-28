@@ -224,16 +224,13 @@ function HistoryPreview:render()
         local filename = fs.short_filename(data.filename)
         local filetype = data.filetype
         if self.layout_type == 'horizontal' then
-            components.preview:set_cursor(1, 0):set_lines(diff_change.lines):set_filename_title(filename, filetype)
+            components.preview:set_cursor(1, 0):set_lines(diff_change.lines):set_title('History:', filename, filetype)
         else
             components.previous
                 :set_cursor(1, 0)
                 :set_lines(diff_change.previous_lines)
-                :set_filename_title(filename, filetype)
-            components.current
-                :set_cursor(1, 0)
-                :set_lines(diff_change.current_lines)
-                :set_filename_title(filename, filetype)
+                :set_title('History:', filename, filetype)
+            components.current:set_cursor(1, 0):set_lines(diff_change.current_lines)
         end
         if not table:has_lines() then
             self:make_table()

@@ -18,7 +18,7 @@
 
 <br />
 <br />
-<img src="https://user-images.githubusercontent.com/25164326/132966977-7b1d9f09-52fd-4d24-93c0-99aac1b180c5.gif" alt="overview" />
+<img src="https://user-images.githubusercontent.com/25164326/135163103-6f869926-1cb8-4aaf-a217-4f132aefb237.gif" alt="preview" />
 
 ## Highlighted Features
 - Gutter changes annotation to highlight any local (unpublished) changes or lines changed by the most recent commit
@@ -36,7 +36,7 @@
 If you have Telescope feel free to run `:VGit actions` to quickly checkout your execution options.
 <br />
 <br />
-<img src="https://user-images.githubusercontent.com/25164326/133190787-5a63b3f4-9ba9-4bdf-9123-5929b7aab69a.PNG" alt="commands"/>
+<img src="https://user-images.githubusercontent.com/25164326/135162562-648a3b64-e403-439f-b4fc-6bc7fc7ddcd0.PNG" alt="commands"/>
 
 ## Supported Neovim Versions:
 - Neovim **>=** 0.5

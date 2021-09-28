@@ -34,10 +34,10 @@ function Preview:new(components, opts)
 end
 
 function Preview:notify(text)
-    for _, component in pairs(self.components) do
-        if component:is(CodeComponent) then
-            component:notify(text)
-        end
+    if self.layout_type == 'horizontal' then
+        self.components.preview:notify(text)
+    else
+        self.components.previous:notify(text)
     end
 end
 

@@ -9,6 +9,9 @@ return {
         },
     },
     hunk_preview = {
+        height = function()
+            return 20
+        end,
         border = {
             enabled = true,
             chars = { '', '', '', ' ', '─', '─', '─', ' ' },
