@@ -11,13 +11,49 @@ local virtual_text = require('vgit.virtual_text')
 local buffer = require('vgit.buffer')
 local sign = require('vgit.sign')
 local scheduler = require('plenary.async.util').scheduler
+local void = require('plenary.async.async').void
 
 local M = {}
 
+local current_hunk_mark_timer_id = nil
+
 M.constants = utils.readonly({
     blame_ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/blame'),
+    current_hunk_mark_ns_id = vim.api.nvim_create_namespace('tanvirtin/vgit.nvim/current_hunk_mark_ns_id'),
     blame_line_id = 1,
 })
+
+M.render_current_hunk_mark = function(buf, selected, num_hunks)
+    M.hide_current_hunk_mark(buf)
+    scheduler()
+    local epoch = 1000
+    if current_hunk_mark_timer_id then
+        vim.fn.timer_stop(current_hunk_mark_timer_id)
+        current_hunk_mark_timer_id = nil
+    end
+    local cursor = vim.api.nvim_win_get_cursor(0)
+    scheduler()
+    virtual_text.transpose_text(
+        buf,
+        string.format(' %s/%s Changes ', selected, num_hunks),
+        M.constants.current_hunk_mark_ns_id,
+        'Comment',
+        cursor[1] - 1,
+        0,
+        'right_align'
+    )
+    current_hunk_mark_timer_id = vim.fn.timer_start(
+        epoch,
+        void(function()
+            if buffer.is_valid(buf) then
+                scheduler()
+                virtual_text.clear(buf, M.constants.current_hunk_mark_ns_id)
+            end
+            vim.fn.timer_stop(current_hunk_mark_timer_id)
+            current_hunk_mark_timer_id = nil
+        end)
+    )
+end
 
 M.render_blame_line = function(buf, blame, lnum, git_config)
     if buffer.is_valid(buf) then
@@ -230,6 +266,16 @@ M.rerender_project_diff_preview = function(fetch, selected)
     project_diff_preview.selected = selected
     project_diff_preview:render()
     scheduler()
+end
+
+M.hide_current_hunk_mark = function(buf)
+    if current_hunk_mark_timer_id then
+        vim.fn.timer_stop(current_hunk_mark_timer_id)
+        current_hunk_mark_timer_id = nil
+        if buffer.is_valid(buf) then
+            virtual_text.clear(buf, M.constants.current_hunk_mark_ns_id)
+        end
+    end
 end
 
 M.hide_blame_line = function(buf)

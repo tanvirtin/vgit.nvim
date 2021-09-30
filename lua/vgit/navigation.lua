@@ -98,13 +98,16 @@ end
 M.hunk_up = function(win, cursor, hunks)
     local lnum = cursor[1]
     local new_lnum = nil
+    local selected = nil
     for i = #hunks, 1, -1 do
         local hunk = hunks[i]
         if hunk.finish < lnum then
             new_lnum = hunk.finish
+            selected = i
             break
         elseif lnum > hunk.start then
             new_lnum = hunk.start
+            selected = i
             break
         end
     end
@@ -114,26 +117,33 @@ M.hunk_up = function(win, cursor, hunks)
     if new_lnum and lnum ~= new_lnum then
         vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
         vim.cmd('norm! zz')
+        return selected
     else
         local finish_hunks_lnum = hunks[#hunks].finish
+        selected = #hunks
         if finish_hunks_lnum < 1 then
             finish_hunks_lnum = 1
+            selected = 1
         end
         vim.api.nvim_win_set_cursor(win, { finish_hunks_lnum, 0 })
         vim.cmd('norm! zz')
+        return selected
     end
 end
 
 M.hunk_down = function(win, cursor, hunks)
     local lnum = cursor[1]
     local new_lnum = nil
+    local selected = nil
     for i = 1, #hunks do
         local hunk = hunks[i]
         if hunk.start > lnum then
             new_lnum = hunk.start
+            selected = i
             break
         elseif lnum < hunk.finish then
             new_lnum = hunk.finish
+            selected = i
             break
         end
     end
@@ -143,13 +153,17 @@ M.hunk_down = function(win, cursor, hunks)
     if new_lnum then
         vim.api.nvim_win_set_cursor(win, { new_lnum, 0 })
         vim.cmd('norm! zz')
+        return selected
     else
         local first_hunk_start_lnum = hunks[1].start
+        selected = 1
         if first_hunk_start_lnum < 1 then
             first_hunk_start_lnum = 1
+            selected = 1
         end
         vim.api.nvim_win_set_cursor(win, { first_hunk_start_lnum, 0 })
         vim.cmd('norm! zz')
+        return selected
     end
 end
 

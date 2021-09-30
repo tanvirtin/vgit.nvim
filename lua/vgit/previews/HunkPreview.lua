@@ -13,8 +13,13 @@ function HunkPreview:new(opts)
     local this = Preview:new({
         preview = CodeComponent:new({
             border = utils.retrieve(config.border),
+            header = {
+                enabled = false,
+            },
             win_options = {
                 ['winhl'] = string.format('Normal:%s', utils.retrieve(config.background_hl) or ''),
+                ['cursorbind'] = true,
+                ['scrollbind'] = true,
                 ['cursorline'] = true,
             },
             window_props = {

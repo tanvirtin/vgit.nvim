@@ -4,14 +4,8 @@ return {
     decorator = {
         app_bar = {
             border = {
-                { '─', 'VGitBorder' },
-                { '─', 'VGitBorder' },
-                { '─', 'VGitBorder' },
-                ' ',
-                { '─', 'VGitBorder' },
-                { '─', 'VGitBorder' },
-                { '─', 'VGitBorder' },
-                ' ',
+                chars = { '─', '─', '─', ' ', '─', '─', '─', ' ' },
+                hl = 'VGitBorder',
             },
         },
     },
@@ -28,7 +22,7 @@ return {
         end,
         border = {
             enabled = true,
-            chars = { '', '', '', ' ', '─', '─', '─', ' ' },
+            chars = { '─', '─', '─', ' ', '─', '─', '─', ' ' },
             hl = 'FloatBorder',
         },
     },

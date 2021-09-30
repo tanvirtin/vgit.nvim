@@ -170,6 +170,12 @@ function ProjectDiffPreview:mount()
     table:add_keymap('<enter>', '_rerender_project_diff()')
     table:add_keymap('<2-LeftMouse>', '_rerender_project_diff()')
     table:focus()
+    if self.layout_type == 'vertical' then
+        components.previous:add_keymap('<enter>', '_select_project_diff()')
+        components.current:add_keymap('<enter>', '_select_project_diff()')
+    else
+        components.preview:add_keymap('<enter>', '_select_project_diff()')
+    end
     return self
 end
 
@@ -323,6 +329,12 @@ function ProjectDiffPreview:render()
         table:set_centered_text('There are no changes')
         table:remove_keymap('<enter>')
         table:remove_keymap('<2-LeftMouse>')
+        if self.layout_type == 'vertical' then
+            components.previous:remove_keymap('<enter>')
+            components.current:remove_keymap('<enter>')
+        else
+            components.preview:remove_keymap('<enter>')
+        end
     end
     table:focus()
     return self

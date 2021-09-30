@@ -96,8 +96,16 @@ function Component:new(options)
     }, Component)
 end
 
+function Component:is_virtual_line_nr_enabled()
+    return self.config:get('virtual_line_nr').enabled
+end
+
 function Component:has_virtual_line_nr()
-    return self:get_virtual_line_nr() and self.config:get('virtual_line_nr').enabled
+    return self:get_virtual_line_nr() and self:is_virtual_line_nr_enabled()
+end
+
+function Component:is_border_enabled()
+    return self.config:get('border').enabled
 end
 
 function Component:is_static()

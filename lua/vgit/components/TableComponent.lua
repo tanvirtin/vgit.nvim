@@ -196,7 +196,7 @@ function TableComponent:mount()
     local buf = self:get_buf()
     buffer.assign_options(buf, buf_options)
     local win_ids = {}
-    if border_config.enabled then
+    if self:is_border_enabled() then
         window_props.border = self:make_border(border_config)
     end
     self:set_header(AppBarDecorator:new(window_props, buf):mount())
