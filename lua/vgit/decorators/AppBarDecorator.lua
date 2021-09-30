@@ -2,7 +2,10 @@ local Object = require('plenary.class')
 local autocmd = require('vgit.autocmd')
 local buffer = require('vgit.buffer')
 local virtual_text = require('vgit.virtual_text')
+local render_store = require('vgit.stores.render_store')
 local AppBarDecorator = Object:extend()
+
+local config = render_store.get('layout').decorator
 
 function AppBarDecorator:new(window_props, content_buf)
     return setmetatable({
@@ -22,7 +25,7 @@ function AppBarDecorator:mount()
         ['buflisted'] = false,
     })
     self.win_id = vim.api.nvim_open_win(self.buf, false, {
-        border = { '─', '─', '─', ' ', '─', '─', '─', ' ' },
+        border = config.app_bar.border,
         style = 'minimal',
         focusable = false,
         relative = self.window_props.relative,

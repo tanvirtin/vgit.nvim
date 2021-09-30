@@ -96,7 +96,7 @@ local function ext_hunk_generation(buf, original_lines, current_lines)
         renderer.hide_hunk_signs(buf)
         renderer.render_hunk_signs(buf, hunks)
     else
-        logger.debug(hunks_err, 'init.lua/ext_hunk_generation')
+        logger.debug(hunks_err, debug.traceback())
     end
     fs.remove_file(temp_filename_a)
     scheduler()
@@ -185,7 +185,7 @@ local generate_tracked_hunk_signs = debounce_trailing(
             show_err = nil
         end
         if show_err then
-            return logger.debug(show_err, 'init.lua/generate_tracked_hunk_signs')
+            return logger.debug(show_err, debug.traceback())
         end
         local current_lines = buffer.get_lines(buf)
         buffer.store.set(buf, 'temp_lines', current_lines)
@@ -259,7 +259,7 @@ local function buf_attach_tracked(buf)
     local err, hunks = calculate_hunks(buf)
     scheduler()
     if err then
-        logger.debug(err, 'init.lua/buf_attach_tracked')
+        logger.debug(err, debug.traceback())
         return
     end
     if not buffer.store.contains(buf) then
@@ -387,7 +387,7 @@ M._rerender_history = void(function(buf)
             err, computed_hunks = git.remote_hunks(tracked_filename, log.parent_hash, log.commit_hash)
             scheduler()
             if err then
-                logger.debug(err, 'init.lua/_rerender_history')
+                logger.debug(err, debug.traceback())
                 return err, nil
             end
             hunks = computed_hunks
@@ -400,7 +400,7 @@ M._rerender_history = void(function(buf)
                 scheduler()
             end
             if err then
-                logger.debug(err, 'init.lua/_rerender_history')
+                logger.debug(err, debug.traceback())
                 return err, nil
             end
             local data = calculate_change(lines, hunks)
@@ -428,7 +428,7 @@ M._rerender_project_diff = void(function()
             local changed_files_err, changed_files = git.ls_changed()
             scheduler()
             if changed_files_err then
-                logger.debug(changed_files_err, 'init.lua/_rerender_project_diff')
+                logger.debug(changed_files_err, debug.traceback())
                 return changed_files_err, nil
             end
             local file = changed_files[selected_file]
@@ -442,12 +442,12 @@ M._rerender_project_diff = void(function()
             local hunk_calculator = get_hunk_calculator()
             local hunks_err, hunks = hunk_calculator(filename)
             if hunks_err then
-                logger.debug(hunks_err, 'init.lua/_rerender_project_diff')
+                logger.debug(hunks_err, debug.traceback())
                 return hunks_err, nil
             end
             local files_err, lines = fs.read_file(filename)
             if files_err then
-                logger.debug(files_err, 'init.lua/_rerender_project_diff')
+                logger.debug(files_err, debug.traceback())
                 return files_err, utils.readonly({
                     changed_files = changed_files,
                 })
@@ -490,7 +490,7 @@ M._buf_update = void(function(buf)
         local err, hunks = calculate_hunks(buf)
         scheduler()
         if err then
-            return logger.debug(err, 'init.lua/_buf_update')
+            return logger.debug(err, debug.traceback())
         end
         if not buffer.store.contains(buf) then
             return
@@ -537,7 +537,7 @@ M._blame_line = debounce_trailing(
         local err, blame = git.blame_line(buffer.store.get(buf, 'tracked_filename'), lnum)
         scheduler()
         if err then
-            return logger.debug(err, 'init.lua/_blame_line')
+            return logger.debug(err, debug.traceback())
         end
         if not buffer.store.contains(buf) then
             return
@@ -642,7 +642,7 @@ M.buffer_reset = void(function()
             local err, lines = git.show(tracked_remote_filename, 'HEAD')
             scheduler()
             if not err then
-                logger.debug(err, 'init.lua/buffer_reset')
+                logger.debug(err, debug.traceback())
                 return
             end
             buffer.set_lines(buf, lines)
@@ -652,7 +652,7 @@ M.buffer_reset = void(function()
         local err, lines = git.show(tracked_remote_filename, '')
         scheduler()
         if err then
-            return logger.debug(err, 'init.lua/buffer_reset')
+            return logger.debug(err, debug.traceback())
         end
         buffer.set_lines(buf, lines)
         vim.cmd('update')
@@ -684,7 +684,7 @@ M.buffer_hunk_stage = void(function()
         local err = git.stage_file(filename)
         scheduler()
         if err then
-            logger.debug(err, 'init.lua/buffer_hunk_stage')
+            logger.debug(err, debug.traceback())
             return
         end
         local tracked_filename = git.tracked_filename(filename)
@@ -719,13 +719,13 @@ M.buffer_hunk_stage = void(function()
     fs.remove_file(patch_filename)
     scheduler()
     if err then
-        logger.debug(err, 'init.lua/buffer_hunk_stage')
+        logger.debug(err, debug.traceback())
         return
     end
     local hunks_err, calculated_hunks = git.index_hunks(tracked_filename)
     scheduler()
     if hunks_err then
-        logger.debug(err, 'init.lua/buffer_hunk_stage')
+        logger.debug(err, debug.traceback())
         return
     end
     if not buffer.store.contains(buf) then
@@ -759,7 +759,7 @@ M.buffer_stage = void(function()
     local err = git.stage_file((tracked_filename and tracked_filename ~= '' and tracked_filename) or filename)
     scheduler()
     if err then
-        logger.debug(err, 'init.lua/buffer_stage')
+        logger.debug(err, debug.traceback())
         return
     end
     if not buffer.store.contains(buf) then
@@ -808,7 +808,7 @@ M.buffer_unstage = void(function()
     local err = git.unstage_file(tracked_filename)
     scheduler()
     if err then
-        logger.debug(err, 'init.lua/buffer_unstage')
+        logger.debug(err, debug.traceback())
         return
     end
     tracked_filename = git.tracked_filename(filename)
@@ -829,7 +829,7 @@ M.buffer_unstage = void(function()
             renderer.hide_hunk_signs(buf)
             renderer.render_hunk_signs(buf, calculated_hunks)
         else
-            logger.debug(err, 'init.lua/buffer_unstage')
+            logger.debug(err, debug.traceback())
         end
     else
         buffer.store.set(buf, 'untracked', true)
@@ -948,7 +948,7 @@ M.toggle_buffer_hunks = void(function()
                     renderer.hide_hunk_signs(buf)
                     renderer.render_hunk_signs(buf, hunks)
                 else
-                    logger.debug(hunks_err, 'init.lua/toggle_buffer_hunks')
+                    logger.debug(hunks_err, debug.traceback())
                 end
             end
         end)
@@ -1085,7 +1085,7 @@ M.set_diff_base = void(function(diff_base)
         local hunks_err, hunks = git.remote_hunks(bcache:get('tracked_filename'))
         scheduler()
         if hunks_err then
-            logger.debug(hunks_err, 'init.lua/set_diff_base')
+            logger.debug(hunks_err, debug.traceback())
         else
             bcache:set('hunks', hunks)
             renderer.hide_hunk_signs(buf)
@@ -1109,7 +1109,7 @@ M.set_diff_strategy = void(function(strategy)
             local hunks_err, hunks = calculate_hunks(buf)
             scheduler()
             if hunks_err then
-                logger.debug(hunks_err, 'init.lua/set_diff_strategy')
+                logger.debug(hunks_err, debug.traceback())
             else
                 controller_store.set('hunks_enabled', true)
                 bcache:set('hunks', hunks)
@@ -1140,20 +1140,20 @@ M.buffer_gutter_blame_preview = void(function()
             local read_file_err, lines = fs.read_file(filename)
             scheduler()
             if read_file_err then
-                logger.debug(read_file_err, 'init.lua/buffer_gutter_blame_preview')
+                logger.debug(read_file_err, debug.traceback())
                 return read_file_err, nil
             end
             local blames_err, blames = git.blames(filename)
             scheduler()
             if blames_err then
-                logger.debug(blames_err, 'init.lua/buffer_gutter_blame_preview')
+                logger.debug(blames_err, debug.traceback())
                 return blames_err, nil
             end
             local hunk_calculator = get_hunk_calculator()
             local hunks_err, hunks = hunk_calculator(filename)
             scheduler()
             if hunks_err then
-                logger.debug(hunks_err, 'init.lua/buffer_gutter_blame_preview')
+                logger.debug(hunks_err, debug.traceback())
                 return hunks_err, nil
             end
             return nil,
@@ -1211,7 +1211,7 @@ M.buffer_history_preview = void(function()
             local logs_err, logs = git.logs(tracked_filename)
             scheduler()
             if logs_err then
-                logger.debug(logs_err, 'init.lua/buffer_history_preview')
+                logger.debug(logs_err, debug.traceback())
                 return logs_err, nil
             end
             buffer.store.set(buf, 'logs', logs)
@@ -1223,7 +1223,7 @@ M.buffer_history_preview = void(function()
             err, computed_hunks = git.remote_hunks(tracked_filename, log.parent_hash, log.commit_hash)
             scheduler()
             if err then
-                logger.debug(err, 'init.lua/_rerender_history')
+                logger.debug(err, debug.traceback())
                 return err, nil
             end
             hunks = computed_hunks
@@ -1236,7 +1236,7 @@ M.buffer_history_preview = void(function()
                 scheduler()
             end
             if err then
-                logger.debug(err, 'init.lua/_rerender_history')
+                logger.debug(err, debug.traceback())
                 return err, nil
             end
             local data = calculate_change(lines, hunks)
@@ -1283,7 +1283,7 @@ M.buffer_hunk_preview = void(function()
             local read_file_err, lines = fs.read_file(tracked_filename)
             scheduler()
             if read_file_err then
-                logger.debug(read_file_err, 'init.lua/buffer_hunk_preview')
+                logger.debug(read_file_err, debug.traceback())
                 return read_file_err, nil
             end
             local data = change.horizontal(lines, hunks)
@@ -1318,7 +1318,7 @@ M.buffer_diff_preview = void(function()
             local hunks_err, hunks = calculate_hunks(buf)
             scheduler()
             if hunks_err then
-                logger.debug(hunks_err, 'init.lua/buffer_diff_preview')
+                logger.debug(hunks_err, debug.traceback())
                 return hunks_err, nil
             end
             local temp_lines = buffer.store.get(buf, 'temp_lines')
@@ -1329,7 +1329,7 @@ M.buffer_diff_preview = void(function()
                 read_file_err, lines = fs.read_file(tracked_filename)
                 scheduler()
                 if read_file_err then
-                    logger.debug(read_file_err, 'init.lua/buffer_diff_preview')
+                    logger.debug(read_file_err, debug.traceback())
                     return read_file_err, nil
                 end
             end
@@ -1372,14 +1372,14 @@ M.buffer_staged_diff_preview = void(function()
             local hunks_err, hunks = git.staged_hunks(tracked_filename)
             scheduler()
             if hunks_err then
-                logger.debug(hunks_err, 'init.lua/buffer_staged_diff_preview')
+                logger.debug(hunks_err, debug.traceback())
                 return hunks_err, nil
             end
             scheduler()
             local show_err, lines = git.show(buffer.store.get(buf, 'tracked_remote_filename'))
             scheduler()
             if show_err then
-                logger.debug(show_err, 'init.lua/buffer_staged_diff_preview')
+                logger.debug(show_err, debug.traceback())
                 return show_err, nil
             end
             local data = calculate_change(lines, hunks)
@@ -1405,7 +1405,7 @@ M.project_diff_preview = void(function()
     local changed_files_err, changed_files = git.ls_changed()
     scheduler()
     if changed_files_err then
-        return logger.debug(changed_files_err, 'init.lua/project_diff_preview')
+        return logger.debug(changed_files_err, debug.traceback())
     end
     if #changed_files == 0 then
         logger.info('No changes found')
@@ -1425,12 +1425,12 @@ M.project_diff_preview = void(function()
             local hunk_calculator = get_hunk_calculator()
             local hunks_err, hunks = hunk_calculator(filename)
             if hunks_err then
-                logger.debug(hunks_err, 'init.lua/project_diff_preview')
+                logger.debug(hunks_err, debug.traceback())
                 return hunks_err, nil
             end
             local files_err, lines = fs.read_file(filename)
             if files_err then
-                logger.debug(files_err, 'init.lua/project_diff_preview')
+                logger.debug(files_err, debug.traceback())
                 return files_err, utils.readonly({
                     changed_files = changed_files,
                 })
@@ -1449,42 +1449,55 @@ M.project_diff_preview = void(function()
 end)
 
 M.project_hunks_qf = void(function()
-    if not controller_store.get('disabled') then
-        local qf_entries = {}
-        local err, filenames = git.ls_changed()
-        scheduler()
-        if err then
-            return logger.debug(err, 'init.lua/project_hunks_qf')
-        end
-        if #filenames == 0 then
-            logger.info('No changes found')
-            return
-        end
-        for i = 1, #filenames do
-            local filename = filenames[i].filename
-            local hunk_calculator = get_hunk_calculator()
-            local hunks_err, hunks = hunk_calculator(filename)
-            scheduler()
-            if not hunks_err then
-                for j = 1, #hunks do
-                    local hunk = hunks[j]
-                    qf_entries[#qf_entries + 1] = {
-                        text = string.format('[%s..%s]', hunk.start, hunk.finish),
-                        filename = filename,
-                        lnum = hunk.start,
-                        col = 0,
-                    }
-                end
-            else
-                logger.debug(hunks_err, 'init.lua/project_hunks_qf')
-            end
-        end
-        if #qf_entries == 0 then
-            return logger.info('No changes found')
-        end
-        vim.fn.setqflist(qf_entries, 'r')
-        vim.cmd('copen')
+    if controller_store.get('disabled') then
+        return
     end
+    local changed_files_err, changed_files = git.ls_changed()
+    scheduler()
+    if changed_files_err then
+        return logger.debug(changed_files_err, debug.traceback())
+    end
+    if #changed_files == 0 then
+        logger.info('No changes found')
+        return
+    end
+    local qf_entries = {}
+    for i = 1, #changed_files do
+        local file = changed_files[i]
+        local filename = file.filename
+        local status = file.status
+        local hunks_err, hunks
+        if status == '??' then
+            local show_err, lines = fs.read_file(filename)
+            if not show_err then
+                hunks = git.untracked_hunks(lines)
+            else
+                logger.debug(show_err, debug.traceback())
+            end
+        else
+            local hunk_calculator = get_hunk_calculator()
+            hunks_err, hunks = hunk_calculator(filename)
+        end
+        scheduler()
+        if not hunks_err then
+            for j = 1, #hunks do
+                local hunk = hunks[j]
+                qf_entries[#qf_entries + 1] = {
+                    text = string.format('[%s..%s]', hunk.start, hunk.finish),
+                    filename = filename,
+                    lnum = hunk.start,
+                    col = 0,
+                }
+            end
+        else
+            logger.debug(hunks_err, debug.traceback())
+        end
+    end
+    if #qf_entries == 0 then
+        return logger.info('No changes found')
+    end
+    vim.fn.setqflist(qf_entries, 'r')
+    vim.cmd('copen')
 end)
 
 M.actions = function()
