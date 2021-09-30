@@ -595,7 +595,6 @@ M._run_command = function(command, ...)
     end
     local vgit = require('vgit')
     if not command then
-        vim.cmd('help vgit.nvim')
         return
     end
     local starts_with = command:sub(1, 1)
