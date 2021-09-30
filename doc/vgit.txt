@@ -1,0 +1,313 @@
+*vgit.nvim*
+
+Supported Neovim Versions: >= 0.5.0
+
+Author: Tanvir Islam <tanvir.tinz@gmail.com>
+
+License: MIT license
+
+==============================================================================
+INTRODUCTION                                                      *vgit*
+
+VGit is a git integration plugin written in Lua for Neovim. It aims to
+beautify and enhance your git experience.
+
+==============================================================================
+USAGE                                                         *vgit-usage*
+
+For a basic setup with no configuration:
+>
+    require('vgit').setup()
+
+VGit can also be customized to your heart's content through it's advanced
+configuration:
+>
+    local vgit = require('vgit')
+    local utils = require('vgit.utils')
+
+    vgit.setup({
+        debug = false,
+        keymaps = {
+            ['n <C-k>'] = 'hunk_up',
+            ['n <C-j>'] = 'hunk_down',
+            ['n <leader>g'] = 'actions',
+            ['n <leader>gs'] = 'buffer_hunk_stage',
+            ['n <leader>gr'] = 'buffer_hunk_reset',
+            ['n <leader>gp'] = 'buffer_hunk_preview',
+            ['n <leader>gb'] = 'buffer_blame_preview',
+            ['n <leader>gf'] = 'buffer_diff_preview',
+            ['n <leader>gh'] = 'buffer_history_preview',
+            ['n <leader>gu'] = 'buffer_reset',
+            ['n <leader>gg'] = 'buffer_gutter_blame_preview',
+            ['n <leader>gd'] = 'project_diff_preview',
+            ['n <leader>gq'] = 'project',
+            ['n <leader>gx'] = 'toggle_diff_preference',
+        },
+        controller = {
+            hunks_enabled = true,
+            blames_enabled = true,
+            diff_strategy = 'index',
+            diff_preference = 'horizontal',
+            predict_hunk_signs = true,
+            predict_hunk_throttle_ms = 300,
+            predict_hunk_max_lines = 50000,
+            blame_line_throttle_ms = 150,
+            action_delay_ms = 300,
+        },
+        hls = vgit.themes.tokyonight,
+        sign = {
+            VGitViewSignAdd = {
+                name = 'DiffAdd',
+                line_hl = 'DiffAdd',
+                text_hl = nil,
+                num_hl = nil,
+                icon = nil,
+                text = '',
+            },
+            VGitViewSignRemove = {
+                name = 'DiffDelete',
+                line_hl = 'DiffDelete',
+                text_hl = nil,
+                num_hl = nil,
+                icon = nil,
+                text = '',
+            },
+            VGitSignAdd = {
+                name = 'VGitSignAdd',
+                text_hl = 'VGitSignAdd',
+                num_hl = nil,
+                icon = nil,
+                line_hl = nil,
+                text = '┃',
+            },
+            VGitSignRemove = {
+                name = 'VGitSignRemove',
+                text_hl = 'VGitSignRemove',
+                num_hl = nil,
+                icon = nil,
+                line_hl = nil,
+                text = '┃',
+            },
+            VGitSignChange = {
+                name = 'VGitSignChange',
+                text_hl = 'VGitSignChange',
+                num_hl = nil,
+                icon = nil,
+                line_hl = nil,
+                text = '┃',
+            },
+        },
+        render = {
+            layout = vgit.layouts.default,
+            sign = {
+                priority = 10,
+                hls = {
+                    add = 'VGitSignAdd',
+                    remove = 'VGitSignRemove',
+                    change = 'VGitSignChange',
+                },
+            },
+            line_blame = {
+                hl = 'Comment',
+                format = function(blame, git_config)
+                    -- Return your own blame string to show
+                    return ''
+                end,
+            },
+        },
+    })
+
+==============================================================================
+COMMAND                                                      *vgit-command*
+
+                                                                    *:VGit*
+:VGit {subcommand} {arguments} Runs a command exposed by the plugin. Typing
+VGit followed by tab will show you all the |vgit-functions| available to you.
+
+                           Note this command is equivalent to:
+                             `:lua require('vgit').{subcommand}({arguments})`
+
+==============================================================================
+FUNCTIONS                                               *vgit-functions*
+
+setup({config})                                               *vgit.setup()*
+                Sets VGit up for you. This command needs to run before any
+                VGit functionality can be used. 
+
+                Parameters: ~
+                    {config} Table object containing configuration. See
+                    |vgit-usage| for more details. 
+
+buffer_hunk_preview()                              *vgit.buffer_hunk_preview()*
+                Opens a diff preview showing the horizontal diff of the
+                current buffer. If the command is executed when the cursor is
+                on top of a hunk sign, the preview will focus on that hunk
+                when opened. Users can use the navigation commands to travel
+                through the hunks. Please see |vgit-navigation|. This preview
+                is also dependent on the the diff strategy and diff
+                base, please refer to |vgit-diff-base|.
+
+buffer_diff_preview()                            *vgit.buffer_diff_preview()*
+                Opens a diff preview showing the diff of the
+                current buffer. The changes seen in the preview is based on 
+                If the command is executed when the cursor is
+                on top of a hunk sign, the preview will focus on that hunk
+                when opened. Users can use the navigation commands to travel
+                through the hunks. Please see |vgit-navigation|. This preview
+                is also dependent on the the diff strategy and diff
+                base, please refer to |vgit-diff-base|.
+
+buffer_history_preview()                     *vgit.buffer_history_preview()*
+                Opens a diff preview along with a table of logs, enabling
+                users to see different iterations of the file through it's
+                lifecycle in git. Users can use the navigation commands to
+                travel through the hunks. Please refer to |vgit-navigation|.
+
+buffer_blame_preview()                   *vgit.buffer_blame_preview()*
+                Opens a preview detailing the blame of the line that
+                based on the cursor position within the buffer.
+
+buffer_gutter_blame_preview()                 *vgit.gutter_blame_preview()*
+                Opens a preview which shows all the blames related to the
+                lines of the buffer.
+
+buffer_staged_diff_preview()                 *vgit.buffer_staged_diff_preview()*
+                Opens a diff preview showing the diff of the staged changes in
+                the current buffer. Users can use the navigation commands to
+                travel through the hunks. Please see |vgit-navigation|. This
+                preview only works when diff strategy is "index". Please refer
+                to *vgit.set_diff_preference*
+
+project_diff_preview()                             *vgit.project_diff_preview()*
+                Opens a diff preview along with a table of all the files that
+                have been changed, enabling users to see all the files that
+                were changed in the current project. Users can use the
+                navigation commands to travel through the hunks. Please refer
+                to |vgit-navigation|.
+
+project_hunks_qf()                                     *vgit.project_hunks_qf()*
+                Populate the quickfix list with hunks. Automatically opens the
+                quickfix window.
+
+buffer_hunk_stage()                                   *vgit.buffer_hunk_stage()*
+                Stages a hunk, if a cursor is on the hunk sign. You can see
+                the staged changes using *vgit.buffer_staged_diff_preview* .
+                This function only works when diff strategy is "index". Please
+                refer to *vgit.set_diff_preference* .
+
+buffer_hunk_reset({target}, {opts})                   *vgit.buffer_hunk_reset()*
+                Removes all changes made in the buffer on the hunk the cursor
+                is currently on to what exists in HEAD.
+
+buffer_stage()                                             *vgit.buffer_stage()*
+                Stages all changes in the current buffer.
+
+buffer_unstage()                                         *vgit.buffer_unstage()*
+                Unstages all changes in the current buffer.
+
+buffer_reset()                                             *vgit.buffer_reset()*
+                Removes all current changes in the buffer and resets it to the
+                version in HEAD.
+
+hunk_up()                                                       *vgit.hunk_up()*
+                Moves the cursor to the hunk above the current cursor
+                position. This can be used on any buffer with changes in it.
+
+hunk_down()                                                   *vgit.hunk_down()*
+                Moves the cursor to the hunk below the current cursor
+                position. This can be used on any buffer with changes in it.
+
+toggle_buffer_hunks()                              *vgit.toggler_buffer_hunks()*
+                Enables/disables showing signs on the current buffer related
+                to git.
+
+toggle_diff_preference()                         *vgit.toggle_diff_preference()*
+                Used to switch between "vertical" and "horizontal" diff.
+
+toggle_buffer_blames()                             *vgit.toggle_buffer_blames()*
+                Enables/disables current line blame functionality that is seen
+                in the form of virtual texts.
+
+apply_highlights()                                     *vgit.apply_highlights()*
+                Applies all the highlight required for VGit to work. This
+                comes in handy when you switch colorschemes and the highlights
+                dissapear.
+
+show_debug_logs()                                       *vgit.show_debug_logs()*
+                If the "debug" flag is set to true using *vgit.setup* then
+                executing this command will show all the logs that VGit is
+                keeping track of.
+
+get_diff_preference()                               *vgit.get_diff_preference()*
+                Returns the current diff preference, this value will either be
+                "remote" or "index".
+
+get_diff_base()                                           *vgit.get_diff_base()*
+                Returns the current diff base. This value is not very useful
+                if the diff preference is not "remote".
+
+get_diff_strategy()                                   *vgit.get_diff_strategy()*
+                Returns the current diff strategy, this value will either be
+                "horizontal" or "vertical".
+
+set_diff_strategy({strategy})                         *vgit.set_diff_strategy()*
+                Diff strategy by VGit to determine how it's going to compare
+                changes to retrieve the hunk. This value can either be "index"
+                or "remote". Setting it to index will only show you changes
+                relative to the current filesystem, where "remote" will
+                compare changes to the remote repository. NOTE When the diff
+                strategy is set to "remote" the base to compare it against
+                will be HEAD.
+
+                Parameters: ~
+                    {strategy} (string):
+                             The strategy that VGit sets and uses to compare
+                             diff against.
+                             Possible values.
+                             • `"index"`: Against changes in the file system.
+                             • `"remote"`: Against changes in remote
+                             repository.
+
+set_diff_base({base})                                     *vgit.set_diff_base()*
+                This is a codependent function on the diff strategy meaning,
+                it will only work if the diff strategy is "remote". Please
+                refer to *set_diff_preference* . Once "remote" is set users
+                can then set the base to any acceptable git commit hash and
+                VGit will compare changes within the project relative to that
+                base.
+
+                Parameters: ~
+                    {base} (string):
+                             Any valid git commit hash.
+
+==============================================================================
+COMMAND                                                   *vgit-diff-base*
+
+                                                                    *:VGit*
+VGit allows you to customize how you want to see the changes in your project.
+Please refer to:
+• *vgit.get_diff_strategy*
+• *vgit.set_diff_strategy*
+• *vgit.set_diff_base*
+• *vgit.get_diff_base*
+
+==============================================================================
+COMMAND                                                   *vgit-navigation*
+
+                                                                    *:VGit*
+Any VGit preview that contains changes with highlights is navigatable,
+enhancing your git workflow drastically. Please refer to *vgit.hunk_up* and
+*vgit.hunk_down* mapping these functions to "<C-j>" and "<C-k>" is a personal
+recommendation.
+
+==============================================================================
+COMMAND                                              *vgit-diff-preference*
+
+                                                                    *:VGit*
+Diffs can be seen visually in all previews except hunk preview in two ways,
+horizontally and vertically. This is equivalent to Github's unified and split
+functionality. Please refer to *vgit.toggle_diff_preference*
+
+------------------------------------------------------------------------------
+
+vim:tw=78:ts=8:ft=help:norl:

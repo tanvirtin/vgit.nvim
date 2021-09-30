@@ -595,12 +595,11 @@ M._run_command = function(command, ...)
     end
     local vgit = require('vgit')
     if not command then
-        -- TODO: Show help doc
+        vim.cmd('help vgit.nvim')
         return
     end
     local starts_with = command:sub(1, 1)
     if starts_with == '_' or not vgit[command] or not type(vgit[command]) == 'function' then
-        -- TODO: Show help doc
         logger.error(string.format('Invalid command', command))
         return
     end
@@ -612,18 +611,18 @@ M._command_autocompletes = function(arglead, line)
     local parsed_line = #vim.split(line, '%s+')
     local matches = {}
     if parsed_line == 2 then
-        for func, _ in pairs(vgit) do
-            if not vim.startswith(func, '_') and vim.startswith(func, arglead) then
-                matches[#matches + 1] = func
+        for name, func in pairs(vgit) do
+            if not vim.startswith(name, '_') and vim.startswith(name, arglead) and type(func) == 'function' then
+                matches[#matches + 1] = name
             end
         end
     end
     return matches
 end
 
-M.buffer_reset = void(function(buf)
+M.buffer_reset = void(function()
     scheduler()
-    buf = buf or buffer.current()
+    local buf = buffer.current()
     if controller_store.get('disabled') then
         return
     end
@@ -660,9 +659,10 @@ M.buffer_reset = void(function(buf)
     end
 end)
 
-M.buffer_hunk_stage = void(function(buf, win)
+M.buffer_hunk_stage = void(function()
     scheduler()
-    buf = buf or buffer.current()
+    local buf = buffer.current()
+    local win = vim.api.nvim_get_current_win()
     if controller_store.get('disabled') then
         return
     end
@@ -702,7 +702,6 @@ M.buffer_hunk_stage = void(function(buf, win)
         renderer.render_hunk_signs(buf, {})
         return
     end
-    win = win or vim.api.nvim_get_current_win()
     local lnum = vim.api.nvim_win_get_cursor(win)[1]
     local hunks = buffer.store.get(buf, 'hunks')
     local selected_hunk = get_current_hunk(hunks, lnum)
@@ -737,9 +736,9 @@ M.buffer_hunk_stage = void(function(buf, win)
     renderer.render_hunk_signs(buf, calculated_hunks)
 end)
 
-M.buffer_stage = void(function(buf)
+M.buffer_stage = void(function()
     scheduler()
-    buf = buf or buffer.current()
+    local buf = buffer.current()
     if controller_store.get('disabled') then
         return
     end
@@ -783,9 +782,9 @@ M.buffer_stage = void(function(buf)
     renderer.render_hunk_signs(buf, {})
 end)
 
-M.buffer_unstage = void(function(buf)
+M.buffer_unstage = void(function()
     scheduler()
-    buf = buf or buffer.current()
+    local buf = buffer.current()
     if controller_store.get('disabled') then
         return
     end
@@ -845,8 +844,9 @@ M.buffer_unstage = void(function(buf)
     end
 end)
 
-M.buffer_hunk_reset = void(function(buf, win)
-    buf = buf or buffer.current()
+M.buffer_hunk_reset = void(function()
+    local buf = buffer.current()
+    local win = vim.api.nvim_get_current_win()
     if controller_store.get('disabled') then
         return
     end
@@ -862,7 +862,6 @@ M.buffer_hunk_reset = void(function(buf, win)
     if buffer.store.get(buf, 'untracked') then
         return
     end
-    win = win or vim.api.nvim_get_current_win()
     local hunks = buffer.store.get(buf, 'hunks')
     local lnum = vim.api.nvim_win_get_cursor(win)[1]
     if lnum == 1 then
@@ -990,9 +989,10 @@ M.toggle_diff_preference = function()
     controller_store.set('diff_preference', allowed_preference[controller_store.get('diff_preference')])
 end
 
-M.hunk_down = void(function(buf, win)
+M.hunk_down = void(function()
     scheduler()
-    buf = buf or buffer.current()
+    local buf = buffer.current()
+    local win = vim.api.nvim_get_current_win()
     if controller_store.get('disabled') then
         return
     end
@@ -1006,16 +1006,16 @@ M.hunk_down = void(function(buf, win)
         end
         local hunks = buffer.store.get(buf, 'hunks')
         if #hunks ~= 0 then
-            win = win or vim.api.nvim_get_current_win()
             navigation.hunk_down(win, vim.api.nvim_win_get_cursor(0), hunks)
             scheduler()
         end
     end
 end)
 
-M.hunk_up = void(function(buf, win)
+M.hunk_up = void(function()
     scheduler()
-    buf = buf or buffer.current()
+    local buf = buffer.current()
+    local win = vim.api.nvim_get_current_win()
     if controller_store.get('disabled') then
         return
     end
@@ -1029,7 +1029,6 @@ M.hunk_up = void(function(buf, win)
         end
         local hunks = buffer.store.get(buf, 'hunks')
         if #hunks ~= 0 then
-            win = win or vim.api.nvim_get_current_win()
             navigation.hunk_up(win, vim.api.nvim_win_get_cursor(0), hunks)
             scheduler()
         end
@@ -1095,17 +1094,6 @@ M.set_diff_base = void(function(diff_base)
     end
 end)
 
-M.set_diff_preference = function(preference)
-    if preference ~= 'horizontal' and preference ~= 'vertical' then
-        return logger.error(string.format('Failed to set diff preferece, "%s" is invalid', preference))
-    end
-    local current_preference = controller_store.get('diff_preference')
-    if current_preference == preference then
-        return
-    end
-    controller_store.set('diff_preference', preference)
-end
-
 M.set_diff_strategy = void(function(strategy)
     scheduler()
     if strategy ~= 'remote' and strategy ~= 'index' then
@@ -1132,8 +1120,8 @@ M.set_diff_strategy = void(function(strategy)
     end)
 end)
 
-M.buffer_gutter_blame_preview = void(function(buf)
-    buf = buf or buffer.current()
+M.buffer_gutter_blame_preview = void(function()
+    local buf = buffer.current()
     if controller_store.get('disabled') then
         return
     end
@@ -1179,8 +1167,8 @@ M.buffer_gutter_blame_preview = void(function(buf)
     )
 end)
 
-M.buffer_blame_preview = void(function(buf)
-    buf = buf or buffer.current()
+M.buffer_blame_preview = void(function()
+    local buf = buffer.current()
     if not buffer.store.contains(buf) then
         return
     end
@@ -1204,8 +1192,8 @@ M.buffer_blame_preview = void(function(buf)
     end, 0))
 end)
 
-M.buffer_history_preview = void(function(buf)
-    buf = buf or buffer.current()
+M.buffer_history_preview = void(function()
+    local buf = buffer.current()
     if not buffer.store.contains(buf) then
         return
     end
@@ -1265,8 +1253,9 @@ M.buffer_history_preview = void(function(buf)
     )
 end)
 
-M.buffer_hunk_preview = void(function(buf, win)
-    buf = buf or buffer.current()
+M.buffer_hunk_preview = void(function()
+    local buf = buffer.current()
+    local win = vim.api.nvim_get_current_win()
     if controller_store.get('disabled') then
         return
     end
@@ -1310,8 +1299,8 @@ M.buffer_hunk_preview = void(function(buf, win)
     )
 end)
 
-M.buffer_diff_preview = void(function(buf)
-    buf = buf or buffer.current()
+M.buffer_diff_preview = void(function()
+    local buf = buffer.current()
     if not buffer.store.contains(buf) then
         return
     end
@@ -1358,8 +1347,8 @@ M.buffer_diff_preview = void(function(buf)
     )
 end)
 
-M.buffer_staged_diff_preview = void(function(buf)
-    buf = buf or buffer.current()
+M.buffer_staged_diff_preview = void(function()
+    local buf = buffer.current()
     if controller_store.get('disabled') then
         return
     end
@@ -1549,6 +1538,10 @@ M.actions = function()
             return true
         end,
     }):find()
+end
+
+M.help = function()
+    vim.cmd('help vgit.nvim')
 end
 
 M.renderer = renderer
