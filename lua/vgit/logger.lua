@@ -23,8 +23,7 @@ M.warn = function(msg)
     vim.notify(msg, 'warn')
 end
 
-M.debug = function(msg, fn)
-    fn = fn or 'unknown'
+M.debug = function(msg, trace)
     if not M.state:get('debug') then
         return
     end
@@ -42,7 +41,13 @@ M.debug = function(msg, fn)
         new_msg = msg
     end
     local debug_logs = M.state:get('debug_logs')
-    debug_logs[#debug_logs + 1] = string.format('VGit[%s][%s]: %s', os.date('%H:%M:%S'), fn, new_msg)
+    local log = ''
+    if trace then
+        log = string.format('VGit[%s]: %s\n%s', os.date('%H:%M:%S'), new_msg, trace)
+    else
+        log = string.format('VGit[%s]: %s', os.date('%H:%M:%S'), new_msg)
+    end
+    debug_logs[#debug_logs + 1] = log
 end
 
 return M

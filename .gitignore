@@ -26,3 +26,4 @@ luac.out
 *.hex
 *.sh
 .DS_Store
+doc/tags

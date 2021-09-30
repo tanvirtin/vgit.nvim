@@ -27,8 +27,8 @@ return {
         fg = '#bb9af7',
         bg = '#3b4261',
     },
-    VGitBorderFocus = {
-        fg = '#536c9e',
+    VGitBorder = {
+        fg = '#504945',
         bg = nil,
     },
 }
