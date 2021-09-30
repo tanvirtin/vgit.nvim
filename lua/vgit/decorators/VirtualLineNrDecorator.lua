@@ -25,11 +25,11 @@ function VirtualLineNrDecorator:mount()
     self.win_id = vim.api.nvim_open_win(self.buf, false, {
         relative = 'editor',
         style = 'minimal',
+        focusable = false,
         row = self.window_props.row,
         col = self.window_props.col,
         height = self.window_props.height,
         width = self.config.width,
-        focusable = false,
     })
     vim.api.nvim_win_set_option(self.win_id, 'cursorbind', true)
     vim.api.nvim_win_set_option(self.win_id, 'scrollbind', true)

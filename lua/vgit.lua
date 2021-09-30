@@ -465,6 +465,16 @@ M._rerender_project_diff = void(function()
     )
 end)
 
+M._select_project_diff = function()
+    local preview = preview_store.get()
+    if not preview:is_mounted() then
+        return
+    end
+    local file = preview.data.changed_files[preview.selected + 1]
+    renderer.hide_preview()
+    vim.cmd(string.format('e %s', file.filename))
+end
+
 M._buf_update = void(function(buf)
     scheduler()
     buf = buf or buffer.current()
@@ -509,6 +519,13 @@ M._buf_detach = function(buf)
     buffer.store.remove(buf)
     detach_blames_autocmd(buf)
 end
+
+M._mark_current_navigated_hunk = void(function(selected, num_hunks)
+    if controller_store.get('disabled') then
+        return
+    end
+    renderer.render_current_hunk_mark(buffer.current(), selected, num_hunks)
+end)
 
 M._blame_line = debounce_trailing(
     void(function(buf)
@@ -1005,7 +1022,8 @@ M.hunk_down = void(function()
         end
         local hunks = buffer.store.get(buf, 'hunks')
         if #hunks ~= 0 then
-            navigation.hunk_down(win, vim.api.nvim_win_get_cursor(0), hunks)
+            local hunk_index = navigation.hunk_down(win, vim.api.nvim_win_get_cursor(0), hunks)
+            M._mark_current_navigated_hunk(hunk_index, #hunks)
             scheduler()
         end
     end
@@ -1028,7 +1046,8 @@ M.hunk_up = void(function()
         end
         local hunks = buffer.store.get(buf, 'hunks')
         if #hunks ~= 0 then
-            navigation.hunk_up(win, vim.api.nvim_win_get_cursor(0), hunks)
+            local hunk_index = navigation.hunk_up(win, vim.api.nvim_win_get_cursor(0), hunks)
+            M._mark_current_navigated_hunk(hunk_index, #hunks)
             scheduler()
         end
     end

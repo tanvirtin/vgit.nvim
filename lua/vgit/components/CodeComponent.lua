@@ -87,6 +87,10 @@ function CodeComponent:get_header()
     return self.state.header
 end
 
+function CodeComponent:is_header_enabled()
+    return self.config:get('header').enabled
+end
+
 function CodeComponent:set_header(header)
     assert(type(header) == 'table', 'type error :: expected table')
     self.state.header = header
@@ -94,6 +98,9 @@ function CodeComponent:set_header(header)
 end
 
 function CodeComponent:set_title(title, filename, filetype)
+    if not self:is_header_enabled() then
+        return self
+    end
     local icon, icon_hl = icons.file_icon(filename, filetype)
     local header = self:get_header()
     if title == '' then
@@ -112,6 +119,9 @@ function CodeComponent:set_title(title, filename, filetype)
 end
 
 function CodeComponent:notify(text)
+    if not self:is_header_enabled() then
+        return self
+    end
     local epoch = 2000
     local header = self:get_header()
     if self.timer_id then
@@ -134,17 +144,15 @@ function CodeComponent:mount()
         return self
     end
     local buf_options = self.config:get('buf_options')
-    local border_config = self.config:get('border')
     local window_props = self.config:get('window_props')
     local win_options = self.config:get('win_options')
     self:set_buf(vim.api.nvim_create_buf(false, true))
     local buf = self:get_buf()
     buffer.assign_options(buf, buf_options)
     local win_ids = {}
-    local virtual_line_nr_config = self.config:get('virtual_line_nr')
-    local header_config = self.config:get('header')
-    if virtual_line_nr_config.enabled then
-        if header_config.enabled then
+    if self:is_virtual_line_nr_enabled() then
+        local virtual_line_nr_config = self.config:get('virtual_line_nr')
+        if self:is_header_enabled() then
             self:set_header(AppBarDecorator:new(window_props, buf):mount())
         end
         self:set_virtual_line_nr(VirtualLineNrDecorator:new(virtual_line_nr_config, window_props, buf))
@@ -154,14 +162,15 @@ function CodeComponent:mount()
         window_props.col = window_props.col + virtual_line_nr_config.width
         win_ids[#win_ids + 1] = virtual_line_nr:get_win_id()
     else
-        if header_config.enabled then
+        if self:is_header_enabled() then
             self:set_header(AppBarDecorator:new(window_props, buf):mount())
         end
     end
-    if border_config.enabled then
+    if self:is_border_enabled() then
+        local border_config = self.config:get('border')
         window_props.border = self:make_border(border_config)
     end
-    if header_config.enabled then
+    if self:is_header_enabled() then
         -- Correct addition of header decorator parameters.
         window_props.row = window_props.row + 3
         if window_props.height - 3 > 1 then
@@ -174,7 +183,8 @@ function CodeComponent:mount()
     end
     self:set_win_id(win_id)
     self:set_ns_id(vim.api.nvim_create_namespace(string.format('tanvirtin/vgit.nvim/%s/%s', buf, win_id)))
-    if virtual_line_nr_config then
+    if self:is_virtual_line_nr_enabled() then
+        local virtual_line_nr_config = self.config:get('virtual_line_nr')
         window_props.width = window_props.width + virtual_line_nr_config.width
         window_props.col = window_props.col - virtual_line_nr_config.width
     end
