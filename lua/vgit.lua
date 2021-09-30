@@ -1540,7 +1540,6 @@ M.actions = function()
     }):find()
 end
 
-
 M.help = function()
     vim.cmd('help vgit.nvim')
 end
