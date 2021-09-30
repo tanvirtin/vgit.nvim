@@ -1,6 +1,20 @@
 local dimensions = require('vgit.dimensions')
 
 return {
+    decorator = {
+        app_bar = {
+            border = {
+                { '─', 'VGitBorder' },
+                { '─', 'VGitBorder' },
+                { '─', 'VGitBorder' },
+                ' ',
+                { '─', 'VGitBorder' },
+                { '─', 'VGitBorder' },
+                { '─', 'VGitBorder' },
+                ' ',
+            },
+        },
+    },
     blame_preview = {
         border = {
             enabled = true,
