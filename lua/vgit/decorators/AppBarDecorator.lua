@@ -17,6 +17,22 @@ function AppBarDecorator:new(window_props, content_buf)
     }, AppBarDecorator)
 end
 
+function AppBarDecorator:make_border(c)
+    if c.hl then
+        local new_border = {}
+        for _, char in pairs(c.chars) do
+            if type(char) == 'table' then
+                char[2] = c.hl
+                new_border[#new_border + 1] = char
+            else
+                new_border[#new_border + 1] = { char, c.hl }
+            end
+        end
+        return new_border
+    end
+    return c.chars
+end
+
 function AppBarDecorator:mount()
     self.buf = vim.api.nvim_create_buf(true, true)
     buffer.assign_options(self.buf, {
@@ -25,7 +41,7 @@ function AppBarDecorator:mount()
         ['buflisted'] = false,
     })
     self.win_id = vim.api.nvim_open_win(self.buf, false, {
-        border = config.app_bar.border,
+        border = self:make_border(config.app_bar.border),
         style = 'minimal',
         focusable = false,
         relative = self.window_props.relative,
