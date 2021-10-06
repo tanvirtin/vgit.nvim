@@ -292,14 +292,10 @@ end
 function ProjectDiffPreview:show_indicator()
   local components = self:get_components()
   local table = components.table
-  table:transpose_text(
-    {
-      render_store.get('preview').symbols.indicator,
-      render_store.get('preview').indicator_hl,
-    },
-    self.selected,
-    0
-  )
+  table:transpose_text({
+    render_store.get('preview').symbols.indicator,
+    render_store.get('preview').indicator_hl,
+  }, self.selected, 0)
 end
 
 function ProjectDiffPreview:render()
