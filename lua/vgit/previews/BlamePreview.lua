@@ -16,12 +16,11 @@ local function create_committed_lines(blame)
   local max_line_length = 88
   local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
   local time_format = string.format('%s days ago', utils.round(time))
-  local time_divisions =
-    {
-      { 24, 'hours' },
-      { 60, 'minutes' },
-      { 60, 'seconds' },
-    }
+  local time_divisions = {
+    { 24, 'hours' },
+    { 60, 'minutes' },
+    { 60, 'seconds' },
+  }
   local division_counter = 1
   while time < 1 and division_counter ~= #time_divisions do
     local division = time_divisions[division_counter]

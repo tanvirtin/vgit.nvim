@@ -157,7 +157,8 @@ function Component:get_virtual_line_nr_buf()
 end
 
 function Component:get_virtual_line_nr_win_id()
-  return self:get_virtual_line_nr() and self:get_virtual_line_nr():get_win_id()
+  return self:get_virtual_line_nr()
+      and self:get_virtual_line_nr():get_win_id()
     or nil
 end
 
