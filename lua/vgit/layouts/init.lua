@@ -1,3 +1,3 @@
 return {
-    default = require('vgit.layouts.default'),
+  default = require('vgit.layouts.default'),
 }
