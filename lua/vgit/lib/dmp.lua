@@ -279,8 +279,8 @@ function diff_cleanupSemantic(diffs)
   pointer = 2
   while diffs[pointer] do
     if
-      diffs[pointer - 1][1] == DIFF_DELETE and diffs[pointer][1]
-        == DIFF_INSERT
+      diffs[pointer - 1][1] == DIFF_DELETE
+      and diffs[pointer][1] == DIFF_INSERT
     then
       local deletion = diffs[pointer - 1][2]
       local insertion = diffs[pointer][2]
@@ -288,8 +288,8 @@ function diff_cleanupSemantic(diffs)
       local overlap_length2 = _diff_commonOverlap(insertion, deletion)
       if overlap_length1 >= overlap_length2 then
         if
-          overlap_length1 >= #deletion / 2 or overlap_length1
-            >= #insertion / 2
+          overlap_length1 >= #deletion / 2
+          or overlap_length1 >= #insertion / 2
         then
           -- Overlap found.  Insert an equality and trim the surrounding edits.
           tinsert(
@@ -307,8 +307,8 @@ function diff_cleanupSemantic(diffs)
         end
       else
         if
-          overlap_length2 >= #deletion / 2 or overlap_length2
-            >= #insertion / 2
+          overlap_length2 >= #deletion / 2
+          or overlap_length2 >= #insertion / 2
         then
           -- Reverse overlap found.
           -- Insert an equality and swap and trim the surrounding edits.
