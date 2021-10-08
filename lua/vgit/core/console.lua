@@ -19,7 +19,7 @@ local function vgit_stringify(msg)
       acc = string.format('%s%s\n', acc, msg[i])
     end
   end
-  return acc
+  return add_vgit_prefix(acc)
 end
 
 local function log_msg(msg, hi)

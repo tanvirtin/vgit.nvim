@@ -34,11 +34,6 @@ fs.short_filename = function(filepath)
   return filename
 end
 
-fs.filename = function(buf)
-  local filepath = vim.api.nvim_buf_get_name(buf)
-  return fs.relative_filename(filepath)
-end
-
 fs.filetype = function(buffer)
   return buffer:get_option('filetype')
 end
@@ -106,6 +101,10 @@ end
 
 fs.dirname = function(filepath)
   return filepath:match('(.*[/\\])') or ''
+end
+
+fs.is_dir = function(filepath)
+  return Path:new(filepath):is_dir()
 end
 
 return fs

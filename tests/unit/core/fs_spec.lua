@@ -14,22 +14,6 @@ describe('fs:', function()
     os.remove(filename)
   end)
 
-  describe('filename', function()
-    it('should return the relative path associated with the buffer', function()
-      local name = 'lua/vgit/init.lua'
-      local current = vim.loop.cwd()
-      local filepath = current .. '/' .. name
-      local buf = vim.api.nvim_create_buf(true, true)
-      vim.api.nvim_buf_set_name(buf, filepath)
-      eq(fs.filename(buf), name)
-    end)
-
-    it('should return empty string if buffer has no name', function()
-      local buf = vim.api.nvim_create_buf(true, true)
-      eq(fs.filename(buf), '')
-    end)
-  end)
-
   describe('relative_filename', function()
     it('should convert an absolute path to a relative path', function()
       local current = vim.loop.cwd()

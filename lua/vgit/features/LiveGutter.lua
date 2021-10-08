@@ -41,6 +41,7 @@ function LiveGutter:watch(buffer)
         return
       end
       if events.rename then
+        loop.await_fast_event()
         -- Deleting a buffer also triggers this event, so we need to check if the buffer is still valid
         if buffer:is_valid() then
           buffer:sync()
