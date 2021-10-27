@@ -32,8 +32,8 @@
 - See changes in your project in a VGit diff preview (`:VGit project_diff_preview`)
 - See changes in your project in a quickfix list (`:VGit project_hunks_qf`)
 - Enhance your workflow by using VGit's buffer navigation `:VGit hunk_up` and `:VGit hunk_down` that can be used on any VGit previews with changes.
+- Select vgit action in [telescope](https://github.com/nvim-telescope/telescope.nvim): `:Telescope vgit` or `:VGit actions`
 
-If you have Telescope feel free to run `:VGit actions` to quickly checkout your execution options.
 <br />
 <br />
 <img src="https://user-images.githubusercontent.com/25164326/135162562-648a3b64-e403-439f-b4fc-6bc7fc7ddcd0.PNG" alt="commands"/>
@@ -89,6 +89,14 @@ To embed the above code snippet in a .vim file wrap it in lua << EOF code-snippe
 lua << EOF
 require('vgit').setup()
 EOF
+```
+
+### Telescope Integration
+
+To get the `:Telescope vgit` command to work:
+
+```lua
+require('telescope').load_extension('vgit')
 ```
 
 ## Themes
