@@ -168,7 +168,7 @@ vgit.setup({
         action_delay_ms = 300,
     },
     hls = vgit.themes.tokyonight,
-    sign = {
+    signs = {
         VGitViewSignAdd = {
             name = 'DiffAdd',
             line_hl = 'DiffAdd',
