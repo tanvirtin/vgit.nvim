@@ -1725,6 +1725,11 @@ M.setup = function(config)
     )
   )
   M._buf_attach()
+  vim.cmd('echohl WarningMsg')
+  vim.cmd(
+    'echo "[VGit] Breaking changes will be introduced in an upcoming update. Please checkout issue #159 for more details."'
+  )
+  vim.cmd('echohl NONE')
 end
 
 return M
