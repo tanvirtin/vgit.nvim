@@ -10,7 +10,8 @@ function Buffer:new(bufnr)
   local filename = nil
   if bufnr == 0 then
     bufnr = vim.api.nvim_get_current_buf()
-    filename = fs.filename(bufnr)
+    local bufname = vim.api.nvim_buf_get_name(bufnr)
+    filename = fs.relative_filename(bufname)
   end
   return setmetatable({
     bufnr = bufnr,
@@ -19,6 +20,10 @@ function Buffer:new(bufnr)
     git_object = nil,
     namespace = Namespace:new(),
   }, Buffer)
+end
+
+function Buffer:get_name()
+  return vim.api.nvim_buf_get_name(self.bufnr)
 end
 
 function Buffer:add_highlight(hl, row, col_start, col_end)

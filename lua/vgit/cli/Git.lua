@@ -1,3 +1,4 @@
+local fs = require('vgit.core.fs')
 local utils = require('vgit.core.utils')
 local Job = require('vgit.core.Job')
 local loop = require('vgit.core.loop')
@@ -807,10 +808,15 @@ Git.ls_changed = loop.promisify(function(self, callback)
       '-u',
       '-s',
       '--no-renames',
+      '--ignore-submodules',
     },
     on_stdout = function(line)
+      local filename = line:sub(4, #line)
+      if fs.is_dir(filename) then
+        return
+      end
       result[#result + 1] = {
-        filename = line:sub(4, #line),
+        filename = filename,
         status = Status:new(line:sub(1, 2)),
       }
     end,
