@@ -1,4 +1,3 @@
-local console = require('vgit.core.console')
 local Git = require('vgit.cli.Git')
 local scene_setting = require('vgit.settings.scene')
 local DiffScene = require('vgit.features.scenes.DiffScene')
