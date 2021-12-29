@@ -22,6 +22,7 @@ function LiveBlame:display(lnum, buffer, config, blame)
   if buffer:is_valid() then
     local virt_text = live_blame_setting:get('format')(blame, config)
     if type(virt_text) == 'string' then
+      loop.await_fast_event()
       self.namespace:transpose_virtual_text(
         buffer,
         virt_text,
@@ -37,6 +38,7 @@ end
 function LiveBlame:hide(buffer)
   loop.await_fast_event()
   if buffer:is_valid() then
+    loop.await_fast_event()
     self.namespace:clear(buffer)
   end
 end
@@ -44,26 +46,32 @@ end
 LiveBlame.sync = loop.brakecheck(loop.async(function(self)
   loop.await_fast_event()
   local window = Window:new(0)
+  loop.await_fast_event()
   local buffer = self.git_store:current()
   if not buffer then
     return
   end
+  loop.await_fast_event()
   if buffer:editing() then
     console.debug(
       string.format('Buffer %s is being edited right now', buffer.bufnr)
     )
     return
   end
+  loop.await_fast_event()
   if not self:is_buffer_valid(buffer) then
     return
   end
+  loop.await_fast_event()
   if not self:is_buffer_tracked(buffer) then
     return
   end
+  loop.await_fast_event()
   local lnum = window:get_lnum()
   if self.last_lnum and self.last_lnum == lnum then
     return
   end
+  loop.await_fast_event()
   local blame_err, blame = buffer.git_object:blame_line(lnum)
   loop.await_fast_event()
   if not buffer:is_valid() then
@@ -71,6 +79,7 @@ LiveBlame.sync = loop.brakecheck(loop.async(function(self)
       'Buffer on which blame was live blame was being synced is no longer valid'
     )
   end
+  loop.await_fast_event()
   if not window:is_valid() then
     console.debug(
       'Window on which blame was live blame was being synced is no longer valid'
@@ -94,6 +103,7 @@ LiveBlame.sync = loop.brakecheck(loop.async(function(self)
     console.debug(blame_err, debug.traceback())
     return
   end
+  loop.await_fast_event()
   local config_err, config = buffer.git_object:config()
   if config_err then
     console.debug(config_err, debug.traceback())
@@ -111,7 +121,9 @@ function LiveBlame:desync(force)
   if not buffer then
     return
   end
+  loop.await_fast_event()
   buffer = self.git_store:get(buffer)
+  loop.await_fast_event()
   local lnum = window:get_lnum()
   if not force and self.last_lnum and self.last_lnum == lnum then
     return
