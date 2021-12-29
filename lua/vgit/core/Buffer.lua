@@ -57,9 +57,9 @@ function Buffer:clear_namespace()
 end
 
 function Buffer:sync()
-  local filename = fs.filename(self.bufnr)
-  self.filename = filename
-  self.git_object = GitObject:new(filename)
+  local bufname = vim.api.nvim_buf_get_name(self.bufnr)
+  self.filename = fs.relative_filename(bufname)
+  self.git_object = GitObject:new(self.filename)
   return self
 end
 

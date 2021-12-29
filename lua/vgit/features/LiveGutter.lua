@@ -33,26 +33,26 @@ end))
 function LiveGutter:watch(buffer)
   buffer.watcher = loop.watch(
     buffer.filename,
-    loop.async(function(err, _, events)
+    loop.async(function(err)
+      loop.await_fast_event()
       if err then
         console.debug(
           string.format('Error encountered while watching %s', buffer.filename)
         )
         return
       end
-      if events.rename then
-        loop.await_fast_event()
-        -- Deleting a buffer also triggers this event, so we need to check if the buffer is still valid
-        if buffer:is_valid() then
-          buffer:sync()
-          self:sync(buffer)
-        end
+      loop.await_fast_event()
+      -- Deleting a buffer also triggers this event, so we need to check if the buffer is still valid
+      if buffer:is_valid() then
+        buffer:sync()
+        self:sync(buffer)
       end
     end)
   )
 end
 
 function LiveGutter:display(buffer)
+  loop.await_fast_event()
   if not live_gutter_setting:get('enabled') then
     return
   end
@@ -72,34 +72,44 @@ function LiveGutter:display(buffer)
 end
 
 function LiveGutter:hide(buffer)
+  loop.await_fast_event()
   buffer:sign_unplace()
 end
 
 function LiveGutter:attach()
   loop.await_fast_event()
   local buffer = Buffer:new(0)
+  loop.await_fast_event()
   buffer:sync_git()
+  loop.await_fast_event()
   if not self:is_inside_git_dir(buffer) then
     return
   end
+  loop.await_fast_event()
   if not self:is_buffer_valid(buffer) then
     return
   end
+  loop.await_fast_event()
   if not self:is_buffer_in_disk(buffer) then
     return
   end
+  loop.await_fast_event()
   if self:is_buffer_ignored(buffer) then
     return
   end
+  loop.await_fast_event()
   self.git_store:add(buffer)
+  loop.await_fast_event()
   vim.api.nvim_buf_attach(buffer.bufnr, false, {
     on_lines = loop.async(function(_, _, _, _, p_lnum, n_lnum, byte_count)
+      loop.await_fast_event()
       if p_lnum == n_lnum and byte_count == 0 then
         return
       end
       self:sync(buffer)
     end),
     on_reload = loop.async(function()
+      loop.await_fast_event()
       self:sync(buffer)
     end),
   })
