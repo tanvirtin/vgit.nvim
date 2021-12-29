@@ -30,24 +30,4 @@ describe('Command:', function()
       assert.stub(vgit.hunk_up).was_called_with()
     end)
   end)
-
-  describe('list', function()
-    local command
-    before_each(function()
-      command = Command:new()
-    end)
-    it(
-      'should list all the commands exposed by vgit which are functions',
-      function()
-        local vgit = require('vgit')
-        local keys = {}
-        for key, value in pairs(vgit) do
-          if type(value) == 'function' then
-            keys[#keys + 1] = key
-          end
-        end
-        eq(command:list('', 'VGit '), keys)
-      end
-    )
-  end)
 end)

@@ -10,10 +10,15 @@ local function parse_commands(commands)
 end
 
 keymap.set = function(mode, key, action)
-  vim.api.nvim_set_keymap(mode, key, string.format(':VGit %s<CR>', action), {
-    noremap = true,
-    silent = true,
-  })
+  vim.api.nvim_set_keymap(
+    mode,
+    key,
+    string.format(':lua require("vgit").%s()<CR>', action),
+    {
+      noremap = true,
+      silent = true,
+    }
+  )
 end
 
 keymap.buffer_set = function(buffer, mode, key, action)
@@ -21,7 +26,7 @@ keymap.buffer_set = function(buffer, mode, key, action)
     buffer.bufnr,
     mode,
     key,
-    string.format(':VGit %s<CR>', action),
+    string.format(':lua require("vgit").%s()<CR>', action),
     {
       silent = true,
       noremap = true,
