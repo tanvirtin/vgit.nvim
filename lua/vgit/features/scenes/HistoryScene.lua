@@ -135,7 +135,9 @@ function HistoryScene:get_split_scene_options(options)
 end
 
 function HistoryScene:table_change()
-  self:update()
+  loop.await_fast_event()
+  local selected = self.scene.components.table:get_lnum()
+  self:update(selected)
 end
 
 function HistoryScene:make_table()
