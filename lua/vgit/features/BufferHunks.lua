@@ -14,7 +14,6 @@ function BufferHunks:new(git_store, navigation, marker)
 end
 
 function BufferHunks:move_up()
-  loop.await_fast_event()
   local buffer = self.git_store:current()
   if not buffer then
     return
@@ -32,7 +31,6 @@ function BufferHunks:move_up()
 end
 
 function BufferHunks:move_down()
-  loop.await_fast_event()
   local buffer = self.git_store:current()
   if not buffer then
     return

@@ -141,41 +141,47 @@ require('vgit').setup({
         if config_author == author then
           author = 'You'
         end
-        local function round(x)
-          return x >= 0 and math.floor(x + 0.5) or math.floor(x - 0.5)
-        end
-        local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
-        local time_format = string.format('%s days ago', round(time))
+        local time = os.difftime(os.time(), blame.author_time)
+          / (60 * 60 * 24 * 30 * 12)
         local time_divisions = {
+          { 1, 'years' },
+          { 12, 'months' },
+          { 30, 'days' },
           { 24, 'hours' },
           { 60, 'minutes' },
           { 60, 'seconds' },
         }
-        local division_counter = 1
-        while time < 1 and division_counter ~= #time_divisions do
-          local division = time_divisions[division_counter]
-          time = time * division[1]
-          time_format = string.format('%s %s ago', round(time), division[2])
-          division_counter = division_counter + 1
+        local counter = 1
+        local time_division = time_divisions[counter]
+        local time_boundary = time_division[1]
+        local time_postfix = time_division[2]
+        while time < 1 and counter ~= #time_divisions do
+          time_division = time_divisions[counter]
+          time_boundary = time_division[1]
+          time_postfix = time_division[2]
+          time = time * time_boundary
+          counter = counter + 1
         end
         local commit_message = blame.commit_message
         if not blame.committed then
           author = 'You'
           commit_message = 'Uncommitted changes'
-          local info = string.format('%s • %s', author, commit_message)
-          return string.format(' %s', info)
+          return string.format(' %s • %s', author, commit_message)
         end
         local max_commit_message_length = 255
         if #commit_message > max_commit_message_length then
           commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
         end
-        local info = string.format(
-          '%s, %s • %s',
+        return string.format(
+          ' %s, %s • %s',
           author,
-          time_format,
+          string.format(
+            '%s %s ago',
+            time >= 0 and math.floor(time + 0.5) or math.ceil(time - 0.5),
+            time_postfix
+          ),
           commit_message
         )
-        return string.format(' %s', info)
       end,
     },
     live_gutter = {
