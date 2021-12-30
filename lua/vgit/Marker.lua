@@ -18,7 +18,6 @@ end
 
 function Marker:mark_current_hunk(buffer, window, text)
   self:unmark_current_hunk(buffer)
-  self:clear_timer()
   buffer:transpose_virtual_text(
     text,
     'GitComment',
