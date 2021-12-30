@@ -82,10 +82,7 @@ end
 fs.write_file = function(filepath, lines)
   local f = io.open(filepath, 'wb')
   for i = 1, #lines do
-    -- TODO: This is only used in live hunks right now, we can get away with this now.
-    loop.await_fast_event()
-    local l = lines[i]
-    f:write(l)
+    f:write(lines[i])
     f:write('\n')
   end
   f:close()

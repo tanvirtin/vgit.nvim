@@ -34,8 +34,6 @@ a.describe('Git:', function()
       local err, config = git:config()
       assert(not err)
       assertion.assert_table(config)
-      assertion.assert_string(config['user.email'])
-      assertion.assert_string(config['user.name'])
     end)
   end)
 

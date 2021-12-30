@@ -206,8 +206,6 @@ function CodeComponent:mount(opts)
   self.mounted = true
   self.component_dimensions = component_dimensions
 
-  self:add_syntax_highlights()
-
   return self
 end
 

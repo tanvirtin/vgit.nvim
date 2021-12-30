@@ -153,21 +153,6 @@ a.describe('GitObject:', function()
         eq(hunks, untracked_hunks)
       end
     )
-    a.it('should retrieve tracked hunks if there is a filename', function()
-      git.tracked_filename = spy.new(function()
-        return filename
-      end)
-      local current_lines = {}
-      local err, hunks = git_object:live_hunks(current_lines)
-      assert(not err)
-      assert.stub(fs.tmpname).was_called(2)
-      assert.stub(fs.write_file).was_called(2)
-      assert.stub(fs.remove_file).was_called(2)
-      assert.stub(git.file_hunks).was_called(1)
-      assert.stub(git.file_hunks).was_called_with(git, 'temp', 'temp')
-      assert.stub(fs.remove_file).was_called_with('temp')
-      eq(hunks, file_hunks)
-    end)
 
     a.it(
       'should not return tracked hunks if an error is encountered',
