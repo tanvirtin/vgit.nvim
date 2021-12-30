@@ -27,7 +27,6 @@ More advanced configuration:
       keymaps = {
         ['n <C-k>'] = 'hunk_up',
         ['n <C-j>'] = 'hunk_down',
-        ['n <leader>g'] = 'actions',
         ['n <leader>gs'] = 'buffer_hunk_stage',
         ['n <leader>gr'] = 'buffer_hunk_reset',
         ['n <leader>gp'] = 'buffer_hunk_preview',
@@ -220,9 +219,6 @@ setup({config})                                                 *vgit.setup()*
                 Parameters: ~
                     {config} Table object containing configuration. See
                     |vgit-usage| for more details. 
-
-version()                                                      *vgit.version()*
-                Returns a table with VGit's current version information.
 
 buffer_hunk_preview()                                   *vgit.buffer_hunk_preview()*
                 Opens a diff preview showing the diff of the current buffer

@@ -11,16 +11,23 @@ function LiveGutter:new(git_store)
   return setmetatable({ git_store = git_store }, LiveGutter)
 end
 
-LiveGutter.sync = loop.brakecheck(loop.async(function(self, buffer)
-  loop.await_fast_event()
-  local err = buffer.git_object:live_hunks(buffer:get_lines())
-  if err then
-    console.debug(err, debug.traceback())
-    return
-  end
-  self:hide(buffer)
-  self:display(buffer)
-end))
+LiveGutter.sync = loop.brakecheck(
+  loop.async(function(self, buffer)
+    loop.await_fast_event()
+    local err = buffer.git_object:live_hunks(buffer:get_lines())
+    if err then
+      console.debug(err, debug.traceback())
+      return
+    end
+    self:hide(buffer)
+    self:display(buffer)
+  end),
+  {
+    initial_ms = 50,
+    cutoff_ms = 100,
+    step_ms = 10,
+  }
+)
 
 LiveGutter.resync = loop.brakecheck(loop.async(function(self)
   loop.await_fast_event()

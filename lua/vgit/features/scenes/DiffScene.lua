@@ -98,7 +98,7 @@ end
 function DiffScene:show(title, options)
   local buffer = self.git_store:current()
   if not buffer then
-    console.log('Buffer has no hunks')
+    console.log('Current buffer you are on has no hunks')
     return false
   end
   if buffer:editing() then

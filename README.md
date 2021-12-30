@@ -69,7 +69,6 @@ require('vgit').setup({
   keymaps = {
     ['n <C-k>'] = 'hunk_up',
     ['n <C-j>'] = 'hunk_down',
-    ['n <leader>g'] = 'actions',
     ['n <leader>gs'] = 'buffer_hunk_stage',
     ['n <leader>gr'] = 'buffer_hunk_reset',
     ['n <leader>gp'] = 'buffer_hunk_preview',
@@ -243,11 +242,12 @@ require('vgit').setup({
 })
 ```
 
+<img width="342" alt="VGit Commands" src="https://user-images.githubusercontent.com/25164326/147710754-fcbe0cef-3e74-41cd-a6d6-4b9a6a9eb258.png">
+
 ## API
 | Function Name | Description |
 |---------------|-------------|
 | setup | Sets VGit up for you. This plugin cannot be used before this function has been called. |
-| version | Returns a table with VGit's current version information |
 | buffer_hunk_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. This preview will open up in a smaller window relative to where your cursor is. |
 | buffer_diff_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. If the command is called while being on a hunk, the window will open focused on the diff of that hunk. |
 | buffer_history_preview | Opens a diff preview along with a table of logs, enabling users to see different iterations of the file through it's lifecycle in git. |

@@ -115,16 +115,16 @@ end
 function GutterBlameScene:show(title, options)
   local buffer = self.git_store:current()
   if not buffer then
-    console.log('Buffer has no blames')
+    console.log('Current buffer you are on has no blames')
     return false
   end
   local git_object = buffer.git_object
   if git_object:tracked_filename() == '' then
-    console.log('Buffer has no blames')
+    console.log('Current buffer you are on has no blames')
     return false
   end
   if not git_object:is_in_remote() then
-    console.log('Buffer has no blames')
+    console.log('Current buffer you are on has no blames')
     return false
   end
   local cache = self.cache
