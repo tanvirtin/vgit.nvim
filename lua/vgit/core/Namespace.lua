@@ -60,7 +60,7 @@ function Namespace:sign_unplace(buffer)
 end
 
 function Namespace:clear(buffer)
-  vim.api.nvim_buf_clear_namespace(buffer.bufnr, self.ns_id, 0, -1)
+  pcall(vim.api.nvim_buf_clear_namespace, buffer.bufnr, self.ns_id, 0, -1)
   return self
 end
 

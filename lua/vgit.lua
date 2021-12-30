@@ -126,7 +126,7 @@ local hunk_down = loop.async(function()
   buffer_hunks:move_down()
 end)
 
-local hunk_reset = loop.async(function()
+local buffer_hunk_reset = loop.async(function()
   buffer_hunks:cursor_reset()
 end)
 
@@ -339,7 +339,7 @@ return {
   hunk_down = hunk_down,
   stage_all = stage_all,
   unstage_all = unstage_all,
-  buffer_hunk_reset = hunk_reset,
+  buffer_hunk_reset = buffer_hunk_reset,
   buffer_reset = buffer_reset,
   buffer_stage = buffer_stage,
   buffer_unstage = buffer_unstage,
