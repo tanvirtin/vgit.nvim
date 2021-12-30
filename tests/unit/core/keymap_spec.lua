@@ -18,18 +18,46 @@ describe('keymap:', function()
   describe('define', function()
     it('should call vim api internally to define the given keys', function()
       local expected = {
-        { 'n', '<C-k>', ':VGit hunk_up<CR>' },
-        { 'n', '<C-j>', ':VGit hunk_down<CR>' },
-        { 'n', '<leader>gs', ':VGit buffer_hunk_stage<CR>' },
-        { 'n', '<leader>gr', ':VGit buffer_hunk_reset<CR>' },
-        { 'n', '<leader>gp', ':VGit buffer_hunk_preview<CR>' },
-        { 'n', '<leader>gb', ':VGit buffer_blame_preview<CR>' },
-        { 'n', '<leader>gf', ':VGit buffer_diff_preview<CR>' },
-        { 'n', '<leader>gh', ':VGit buffer_history_preview<CR>' },
-        { 'n', '<leader>gu', ':VGit buffer_reset<CR>' },
-        { 'n', '<leader>gg', ':VGit buffer_gutter_blame_preview<CR>' },
-        { 'n', '<leader>gd', ':VGit project_diff_preview<CR>' },
-        { 'n', '<leader>gx', ':VGit toggle_diff_preference<CR>' },
+        { 'n', '<C-k>', ':lua require("vgit").hunk_up()<CR>' },
+        { 'n', '<C-j>', ':lua require("vgit").hunk_down()<CR>' },
+        { 'n', '<leader>gs', ':lua require("vgit").buffer_hunk_stage()<CR>' },
+        { 'n', '<leader>gr', ':lua require("vgit").buffer_hunk_reset()<CR>' },
+        {
+          'n',
+          '<leader>gp',
+          ':lua require("vgit").buffer_hunk_preview()<CR>',
+        },
+        {
+          'n',
+          '<leader>gb',
+          ':lua require("vgit").buffer_blame_preview()<CR>',
+        },
+        {
+          'n',
+          '<leader>gf',
+          ':lua require("vgit").buffer_diff_preview()<CR>',
+        },
+        {
+          'n',
+          '<leader>gh',
+          ':lua require("vgit").buffer_history_preview()<CR>',
+        },
+        { 'n', '<leader>gu', ':lua require("vgit").buffer_reset()<CR>' },
+        {
+          'n',
+          '<leader>gg',
+          ':lua require("vgit").buffer_gutter_blame_preview()<CR>',
+        },
+        {
+          'n',
+          '<leader>gd',
+          ':lua require("vgit").project_diff_preview()<CR>',
+        },
+        {
+          'n',
+          '<leader>gx',
+          ':lua require("vgit").toggle_diff_preference()<CR>',
+        },
       }
       keymap.define({
         ['n <C-k>'] = 'hunk_up',

@@ -4,38 +4,53 @@ local Object = require('vgit.core.Object')
 local Command = Object:extend()
 
 function Command:new()
-  return setmetatable({}, Command)
+  return setmetatable({
+    commands = {
+      setup = true,
+      hunk_up = true,
+      hunk_down = true,
+      stage_all = true,
+      unstage_all = true,
+      buffer_hunk_preview = true,
+      buffer_diff_preview = true,
+      buffer_history_preview = true,
+      buffer_blame_preview = true,
+      buffer_gutter_blame_preview = true,
+      buffer_diff_staged_preview = true,
+      buffer_hunk_staged_preview = true,
+      project_diff_preview = true,
+      project_hunks_preview = true,
+      project_hunks_qf = true,
+      buffer_hunk_stage = true,
+      buffer_hunk_reset = true,
+      buffer_stage = true,
+      buffer_unstage = true,
+      buffer_reset = true,
+      toggle_diff_preference = true,
+      toggle_buffer_hunks = true,
+      toggle_buffer_blames = true,
+      enable_tracing = true,
+      disable_tracing = true,
+    },
+  }, Command)
 end
 
 function Command:execute(command, ...)
   local vgit = require('vgit')
-  if not command then
-    return
+  if not self.commands[command] then
+    console.error('Invalid command')
+    return self
   end
-  local starts_with = command:sub(1, 1)
-  if
-    starts_with == '_'
-    or not vgit[command]
-    or not type(vgit[command]) == 'function'
-  then
-    console.error(string.format('Invalid VGit command %s', command))
-    return
-  end
-  return vgit[command](...)
+  vgit[command](...)
+  return self
 end
 
 function Command:list(arglead, line)
-  local vgit = require('vgit')
-  local parsed_line = #vim.split(line, '%s+')
   local matches = {}
-  if parsed_line == 2 then
-    for name, func in pairs(vgit) do
-      if
-        not vim.startswith(name, '_')
-        and vim.startswith(name, arglead)
-        and type(func) == 'function'
-      then
-        matches[#matches + 1] = name
+  if #vim.split(line, '%s+') == 2 then
+    for command in pairs(self.commands) do
+      if vim.startswith(command, arglead) then
+        matches[#matches + 1] = command
       end
     end
   end
