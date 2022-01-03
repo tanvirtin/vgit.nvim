@@ -155,4 +155,9 @@ function Buffer:set_keymap(mode, key, action)
   return self
 end
 
+function Buffer:attach(opts)
+  vim.api.nvim_buf_attach(self.bufnr, false, opts)
+  return self
+end
+
 return Buffer

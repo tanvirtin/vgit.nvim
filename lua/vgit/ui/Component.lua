@@ -17,7 +17,6 @@ function Component:new(options)
       -- The properties that can be used to align components with each other.
       window_props = {},
       config = {
-        filetype = '',
         border = {
           hl = 'GitBorder',
           chars = { '', '', '', '', '', '', '', '' },
@@ -129,57 +128,14 @@ function Component:get_line_count()
 end
 
 function Component:set_filetype(filetype)
-  self.config.filetype = filetype
+  self.buffer:set_option('filetype', filetype)
+  self.buffer:set_option('ft', filetype)
+  self.buffer:set_option('syntax', filetype)
   return self
 end
 
 function Component:get_filetype()
-  return self.config.filetype
-end
-
-function Component:add_syntax_highlights()
-  local buffer = self.buffer
-  local config = self.config
-  local filetype = config.filetype
-  if not filetype or filetype == '' then
-    return self
-  end
-  local has_ts = false
-  local ts_highlight = nil
-  local ts_parsers = nil
-  if not has_ts then
-    has_ts, _ = pcall(require, 'nvim-treesitter')
-    if has_ts then
-      _, ts_highlight = pcall(require, 'nvim-treesitter.highlight')
-      _, ts_parsers = pcall(require, 'nvim-treesitter.parsers')
-    end
-  end
-  if has_ts and filetype and filetype ~= '' then
-    local lang = ts_parsers.ft_to_lang(filetype)
-    if ts_parsers.has_parser(lang) then
-      pcall(ts_highlight.attach, buffer.bufnr, lang)
-    else
-      buffer:set_option('syntax', filetype)
-    end
-  end
-  return self
-end
-
-function Component:clear_syntax_highlights()
-  local has_ts = false
-  local buffer = self.buffer
-  if not has_ts then
-    has_ts, _ = pcall(require, 'nvim-treesitter')
-  end
-  if has_ts then
-    local active_buf = vim.treesitter.highlighter.active[buffer.bufnr]
-    if active_buf then
-      active_buf:destroy()
-    else
-      buffer:set_option('syntax', '')
-    end
-  end
-  return self
+  return self.buffer:get_option('filetype')
 end
 
 function Component:set_lines(lines, force)

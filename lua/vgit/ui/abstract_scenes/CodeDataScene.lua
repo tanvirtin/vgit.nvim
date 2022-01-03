@@ -17,12 +17,19 @@ CodeDataScene.update = loop.brakecheck(loop.async(function(self, selected)
     console.error(cache.err)
     return self
   end
-  self:reset():set_title(cache.title, {
-    filename = cache.data.filename,
-    filetype = cache.data.filetype,
-    stat = cache.data.dto.stat,
-  })
-  self:make():paint():set_cursor_on_mark(1)
+  if not cache.data and not cache.data or not cache.data.dto then
+    return
+  end
+  self
+    :reset()
+    :set_title(cache.title, {
+      filename = cache.data.filename,
+      filetype = cache.data.filetype,
+      stat = cache.data.dto.stat,
+    })
+    :make()
+    :paint()
+    :set_cursor_on_mark(1)
 end))
 
 function CodeDataScene:table_move(direction)

@@ -28,6 +28,10 @@ function Versioning:previous()
   return self.history[#self.history - 1]
 end
 
+function Versioning:neovim_version()
+  return vim.version()
+end
+
 function Versioning:is_neovim_compatible()
   local plugin_version = self:current()
   local expected_neovim_version = {
@@ -35,7 +39,7 @@ function Versioning:is_neovim_compatible()
     minor = 5,
     major = 0,
   }
-  local actual_neovim_version = vim.version()
+  local actual_neovim_version = self:neovim_version()
   if
     actual_neovim_version.patch >= expected_neovim_version.patch
     and actual_neovim_version.minor >= expected_neovim_version.minor

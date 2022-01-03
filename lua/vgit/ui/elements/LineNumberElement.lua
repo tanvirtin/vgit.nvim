@@ -55,7 +55,6 @@ function LineNumberElement:mount(options)
       zindex = 50,
     })
     :assign_options({
-      cursorline = true,
       cursorbind = true,
       scrollbind = true,
       winhl = 'Normal:VGitBackgroundPrimary',

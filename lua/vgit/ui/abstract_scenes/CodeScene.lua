@@ -53,15 +53,9 @@ function CodeScene:set_filetype()
   if current:get_filetype() == filetype then
     return self
   end
-  current
-    :clear_syntax_highlights()
-    :set_filetype(filetype)
-    :add_syntax_highlights()
+  current:set_filetype(filetype)
   if self.layout_type == 'split' then
-    components.previous
-      :clear_syntax_highlights()
-      :set_filetype(filetype)
-      :add_syntax_highlights()
+    components.previous:set_filetype(filetype)
   end
   return self
 end
@@ -203,7 +197,7 @@ function CodeScene:set_cursor_on_mark(selected, position)
 end
 
 function CodeScene:make()
-  return self:make_lines():make_line_numbers()
+  return self:make_lines():make_line_numbers():set_filetype()
 end
 
 function CodeScene:make_lines()
@@ -215,7 +209,6 @@ function CodeScene:make_lines()
     components.previous:set_lines(dto.previous_lines)
     components.current:set_lines(dto.current_lines)
   end
-  self:set_filetype()
   return self
 end
 
