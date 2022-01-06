@@ -36,25 +36,12 @@ function GutterBlameScene:fetch()
 end
 
 function GutterBlameScene:get_blame_line(blame)
-  local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
-  local time_format = string.format('%s days ago', utils.round(time))
-  local time_divisions = {
-    { 24, 'hours' },
-    { 60, 'minutes' },
-    { 60, 'seconds' },
-  }
-  local division_counter = 1
-  while time < 1 and division_counter ~= #time_divisions do
-    local division = time_divisions[division_counter]
-    time = time * division[1]
-    time_format = string.format('%s %s ago', utils.round(time), division[2])
-    division_counter = division_counter + 1
-  end
   if blame.committed then
     return string.format(
-      '%s (%s) • %s',
+      '%s %s (%s) %s',
+      blame.commit_hash:sub(1, 8),
       blame.author,
-      time_format,
+      blame:age().display,
       blame.committed and blame.commit_message or 'Uncommitted changes'
     )
   end

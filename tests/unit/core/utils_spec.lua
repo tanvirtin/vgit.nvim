@@ -1,11 +1,133 @@
+local mock = require('luassert.mock')
 local utils = require('vgit.core.utils')
 
 local it = it
 local describe = describe
+local before_each = before_each
+local after_each = after_each
 local eq = assert.are.same
 local not_eq = assert.are_not.same
 
 describe('utils:', function()
+  describe('age', function()
+    before_each(function()
+      os.time = mock(os.time, true)
+    end)
+    after_each(function()
+      mock.revert(os.time)
+    end)
+
+    it('should handle a single second', function()
+      local current_time = 1609477202
+      local blame_time = 1609477201
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 1)
+      eq(age.how_long, 'second')
+      eq(age.display, '1 second ago')
+    end)
+
+    it('should handle seconds', function()
+      local current_time = 1609477205
+      local blame_time = 1609477200
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 5)
+      eq(age.how_long, 'seconds')
+      eq(age.display, '5 seconds ago')
+    end)
+
+    it('should handle a single minute', function()
+      local current_time = 1609477320
+      local blame_time = 1609477260
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 1)
+      eq(age.how_long, 'minute')
+      eq(age.display, '1 minute ago')
+    end)
+
+    it('should handle minutes', function()
+      local current_time = 1609477500
+      local blame_time = 1609477200
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 5)
+      eq(age.how_long, 'minutes')
+      eq(age.display, '5 minutes ago')
+    end)
+
+    it('should handle a single hour', function()
+      local current_time = 1609484400
+      local blame_time = 1609480800
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 1)
+      eq(age.how_long, 'hour')
+      eq(age.display, '1 hour ago')
+    end)
+
+    it('should handle hours', function()
+      local current_time = 1609495200
+      local blame_time = 1609477200
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 5)
+      eq(age.how_long, 'hours')
+      eq(age.display, '5 hours ago')
+    end)
+
+    it('should handle days', function()
+      local current_time = 1609822800
+      local blame_time = 1609477200
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 4)
+      eq(age.how_long, 'days')
+      eq(age.display, '4 days ago')
+    end)
+
+    it('should handle a single month', function()
+      local current_time = 1612155600
+      local blame_time = 1609477200
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 1)
+      eq(age.how_long, 'month')
+      eq(age.display, '1 month ago')
+    end)
+
+    it('should handle months', function()
+      local current_time = 1619841600
+      local blame_time = 1609477200
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 4)
+      eq(age.how_long, 'months')
+      eq(age.display, '4 months ago')
+    end)
+
+    it('should handle a single year', function()
+      local current_time = 1641020885
+      local blame_time = 1609484885
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 1)
+      eq(age.how_long, 'year')
+      eq(age.display, '1 year ago')
+    end)
+
+    it('should handle years', function()
+      local current_time = 1609477200
+      local blame_time = 1451624400
+      os.time.returns(current_time)
+      local age = utils.age(blame_time)
+      eq(age.unit, 5)
+      eq(age.how_long, 'years')
+      eq(age.display, '5 years ago')
+    end)
+  end)
+
   describe('retrieve', function()
     it('should invoke a function if passed in', function()
       local test_fn = function(value)

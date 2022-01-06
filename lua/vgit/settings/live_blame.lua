@@ -8,27 +8,6 @@ return Config:new({
     if config_author == author then
       author = 'You'
     end
-    local time = os.difftime(os.time(), blame.author_time)
-      / (60 * 60 * 24 * 30 * 12 * 1)
-    local time_divisions = {
-      { 1, 'years' },
-      { 12, 'months' },
-      { 30, 'days' },
-      { 24, 'hours' },
-      { 60, 'minutes' },
-      { 60, 'seconds' },
-    }
-    local counter = 1
-    local time_division = time_divisions[counter]
-    local time_boundary = time_division[1]
-    local time_postfix = time_division[2]
-    while time < 1 and counter ~= #time_divisions do
-      time_division = time_divisions[counter]
-      time_boundary = time_division[1]
-      time_postfix = time_division[2]
-      time = time * time_boundary
-      counter = counter + 1
-    end
     local commit_message = blame.commit_message
     if not blame.committed then
       author = 'You'
@@ -42,11 +21,7 @@ return Config:new({
     return string.format(
       ' %s, %s • %s',
       author,
-      string.format(
-        '%s %s ago',
-        time >= 0 and math.floor(time + 0.5) or math.ceil(time - 0.5),
-        time <= 1 and time_postfix:sub(1, #time_postfix - 1) or time_postfix
-      ),
+      blame:age().display,
       commit_message
     )
   end,

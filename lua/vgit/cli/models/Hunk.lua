@@ -21,6 +21,17 @@ function Hunk:parse_header(header)
   return previous, current
 end
 
+function Hunk:reconstruct_header(parsed_header)
+  local previous, current = unpack(parsed_header)
+  return string.format(
+    '@@ -%s,%s +%s,%s @@',
+    previous[1],
+    previous[2],
+    current[1],
+    current[2]
+  )
+end
+
 function Hunk:parse_diff(diff)
   diff = diff or self.diff
   local removed_lines = {}
@@ -69,6 +80,7 @@ function Hunk:new(header)
     previous, current = self:parse_header(header)
   else
     previous, current = unpack(header)
+    header = self:reconstruct_header(header)
   end
   local hunk = {
     header = header,

@@ -1,3 +1,4 @@
+local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 
 local Blame = Object:extend()
@@ -60,6 +61,10 @@ function Blame:new(info)
     commit_message = info[10]:sub(9, #info[10]),
     committed = committed,
   }, Blame)
+end
+
+function Blame:age()
+  return utils.age(self.author_time)
 end
 
 return Blame

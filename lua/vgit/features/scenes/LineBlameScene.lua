@@ -38,20 +38,6 @@ end
 
 function LineBlameScene:create_committed_lines(blame)
   local max_line_length = 88
-  local time = os.difftime(os.time(), blame.author_time) / (24 * 60 * 60)
-  local time_format = string.format('%s days ago', utils.round(time))
-  local time_divisions = {
-    { 24, 'hours' },
-    { 60, 'minutes' },
-    { 60, 'seconds' },
-  }
-  local division_counter = 1
-  while time < 1 and division_counter ~= #time_divisions do
-    local division = time_divisions[division_counter]
-    time = time * division[1]
-    time_format = string.format('%s %s ago', utils.round(time), division[2])
-    division_counter = division_counter + 1
-  end
   local commit_message = blame.commit_message
   if #commit_message > max_line_length then
     commit_message = commit_message:sub(1, max_line_length) .. '...'
@@ -59,7 +45,11 @@ function LineBlameScene:create_committed_lines(blame)
   return {
     string.format('%sLine #%s', '  ', blame.lnum),
     string.format('  %s (%s)', blame.author, blame.author_mail),
-    string.format('  %s (%s)', time_format, os.date('%c', blame.author_time)),
+    string.format(
+      '  %s (%s)',
+      blame:age().display,
+      os.date('%c', blame.author_time)
+    ),
     string.format('%s%s', '  ', commit_message),
     string.format('%s%s -> %s', '  ', blame.parent_hash, blame.commit_hash),
   }
