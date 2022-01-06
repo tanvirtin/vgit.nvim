@@ -133,11 +133,13 @@ function GitObject:native_hunks(filename, current_lines)
       if count_o > 0 then
         for i = start_o, start_o + count_o - 1 do
           hunk.diff[#hunk.diff + 1] = '-' .. (original_lines[i] or '')
+          hunk.stat.removed = hunk.stat.removed + 1
         end
       end
       if count_c > 0 then
         for i = start_c, start_c + count_c - 1 do
           hunk.diff[#hunk.diff + 1] = '+' .. (current_lines[i] or '')
+          hunk.stat.added = hunk.stat.added + 1
         end
       end
     end,
