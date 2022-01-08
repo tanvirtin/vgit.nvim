@@ -243,12 +243,14 @@ function CodeComponent:set_title(title, opts)
   end
   if filetype then
     local icon, icon_hl = icons.file_icon(filename, filetype)
-    local new_text, hl_range = utils.accumulate_string(text, icon)
-    text = utils.accumulate_string(new_text, ' ')
-    hl_range_infos[#hl_range_infos + 1] = {
-      hl = icon_hl,
-      range = hl_range,
-    }
+    if icon then
+      local new_text, hl_range = utils.accumulate_string(text, icon)
+      text = utils.accumulate_string(new_text, ' ')
+      hl_range_infos[#hl_range_infos + 1] = {
+        hl = icon_hl,
+        range = hl_range,
+      }
+    end
   end
   if stat then
     local more_added = stat.added > stat.removed
