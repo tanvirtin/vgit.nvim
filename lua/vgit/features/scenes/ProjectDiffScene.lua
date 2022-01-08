@@ -195,7 +195,7 @@ function ProjectDiffScene:run_command(command)
       stat = runtime_cache.data.dto.stat,
     })
     :make_code()
-    :attach_to_ui()
+    :paint_code_partially()
     :make_table()
     :set_code_cursor_on_mark(1)
 end
@@ -350,7 +350,7 @@ function ProjectDiffScene:show(title, options)
       stat = data.dto.stat,
     })
     :make_code()
-    :attach_to_ui()
+    :paint_code_partially()
     :make_table()
     :set_code_cursor_on_mark(1)
     :set_code_keymap('n', '<enter>', 'on_enter')

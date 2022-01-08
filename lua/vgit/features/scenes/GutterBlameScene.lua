@@ -133,7 +133,7 @@ function GutterBlameScene:show(title, options)
       filetype = data.filetype,
     })
     :make_code()
-    :attach_to_ui()
+    :paint_code_partially()
     :make_blames()
   console.clear()
   return true

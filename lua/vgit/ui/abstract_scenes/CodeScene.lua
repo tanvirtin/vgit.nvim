@@ -368,7 +368,7 @@ function CodeScene:paint_operation(lnum, metadata, component_type)
   component:transpose_virtual_line_number(number_line, line_number_hl, lnum - 1)
 end
 
-function CodeScene:attach_to_ui()
+function CodeScene:paint_code_partially()
   -- Attaching it to just current will always be enough.
   self.scene.components.current:attach_to_ui(function(top, bot)
     self:apply_brush(top, bot)

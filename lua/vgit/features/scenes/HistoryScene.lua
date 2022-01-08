@@ -198,7 +198,7 @@ function HistoryScene:show(title, options)
     })
     :make_code()
     :make_table()
-    :attach_to_ui()
+    :paint_code_partially()
     :set_code_cursor_on_mark(1)
   -- Must be after initial fetch
   runtime_cache.last_selected = 1
