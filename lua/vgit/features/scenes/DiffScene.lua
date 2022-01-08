@@ -133,7 +133,6 @@ function DiffScene:show(title, options)
       stat = data.dto.stat,
     })
     :make_code()
-    :paint_code()
     :attach_to_ui()
     :set_code_cursor_on_mark(selected_hunk, 'center')
   console.clear()

@@ -23,14 +23,6 @@ function CodeScene:new(buffer_hunks, navigation, git_store, git)
   }, CodeScene)
 end
 
-function CodeScene:attach_to_ui()
-  -- Attaching it to just current will always be enough.
-  self.scene.components.current:attach_to_ui(function(top, bot)
-    print('Current:', top, bot)
-  end)
-  return self
-end
-
 function CodeScene:generate_diff(hunks, lines)
   local diff
   if self.layout_type == 'unified' then
@@ -376,16 +368,34 @@ function CodeScene:paint_operation(lnum, metadata, component_type)
   component:transpose_virtual_line_number(number_line, line_number_hl, lnum - 1)
 end
 
-function CodeScene:paint_code()
+function CodeScene:attach_to_ui()
+  -- Attaching it to just current will always be enough.
+  self.scene.components.current:attach_to_ui(function(top, bot)
+    self:apply_brush(top, bot)
+  end)
+  return self
+end
+
+function CodeScene:apply_brush(top, bot)
   local current_lines_metadata = self.runtime_cache.current_lines_metadata
   local previous_lines_metadata = self.runtime_cache.previous_lines_metadata
-  for i = 1, #current_lines_metadata do
-    self:paint_operation(i, current_lines_metadata[i], 'current')
+  for i = top - 1, bot - 1 do
+    local current_line = current_lines_metadata[i]
+    local previous_line = previous_lines_metadata[i]
+    if current_line then
+      self:paint_operation(i, current_line, 'current')
+    end
     if self.layout_type == 'split' then
-      self:paint_operation(i, previous_lines_metadata[i], 'previous')
+      if previous_line then
+        self:paint_operation(i, previous_line, 'previous')
+      end
     end
   end
   return self
+end
+
+function CodeScene:paint_code()
+  return self:apply_brush(1, #self.runtime_cache.current_lines_metadata)
 end
 
 function CodeScene:show()

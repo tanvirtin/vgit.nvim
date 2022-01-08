@@ -182,7 +182,7 @@ ProjectHunksScene.update = loop.brakecheck(loop.async(function(self, selected)
       stat = data.dto.stat,
     })
     :make_code()
-    :paint_code()
+    :attach_to_ui()
     :set_code_cursor_on_mark(data.index, 'top')
     :notify(
       string.format(
@@ -284,7 +284,7 @@ function ProjectHunksScene:show(title, options)
     })
     :make_code()
     :make_table()
-    :paint_code()
+    :attach_to_ui()
     :set_code_cursor_on_mark(1, 'top')
   -- Must be after initial fetch
   runtime_cache.last_selected = 1
