@@ -273,12 +273,20 @@ function ProjectDiffScene:make_table()
     :unlock()
     :make_rows(self.cache.data.changed_files, function(file)
       local icon, icon_hl = icons.file_icon(file.filename, file.filetype)
+      if icon then
+        return {
+          {
+            icon_before = {
+              icon = icon,
+              hl = icon_hl,
+            },
+            text = file.filename,
+          },
+          file.status:to_string(),
+        }
+      end
       return {
         {
-          icon_before = {
-            icon = icon,
-            hl = icon_hl,
-          },
           text = file.filename,
         },
         file.status:to_string(),

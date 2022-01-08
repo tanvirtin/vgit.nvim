@@ -217,12 +217,20 @@ function ProjectHunksScene:make_table()
       local filename = entry.filename
       local filetype = entry.filetype
       local icon, icon_hl = icons.file_icon(filename, filetype)
+      if icon then
+        return {
+          {
+            icon_before = {
+              icon = icon,
+              hl = icon_hl,
+            },
+            text = filename,
+          },
+          string.format('%s/%s', entry.index, #entry.dto.marks),
+        }
+      end
       return {
         {
-          icon_before = {
-            icon = icon,
-            hl = icon_hl,
-          },
           text = filename,
         },
         string.format('%s/%s', entry.index, #entry.dto.marks),
