@@ -11,7 +11,7 @@ function Component:new(options)
     utils.object_assign({
       buffer = nil,
       window = nil,
-      cache = {},
+      runtime_cache = {},
       -- Elements are mini components which decorate a component.
       elements = {},
       -- The properties that can be used to align components with each other.

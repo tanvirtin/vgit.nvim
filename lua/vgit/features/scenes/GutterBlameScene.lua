@@ -17,16 +17,16 @@ function GutterBlameScene:new(...)
 end
 
 function GutterBlameScene:fetch()
-  local cache = self.cache
-  local buffer = cache.buffer
+  local runtime_cache = self.runtime_cache
+  local buffer = runtime_cache.buffer
   local blames_err, blames = buffer.git_object:blames()
   if blames_err then
     console.debug(blames_err, debug.traceback())
-    cache.err = blames_err
+    runtime_cache.err = blames_err
     return self
   end
   loop.await_fast_event()
-  cache.data = {
+  runtime_cache.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
     dto = CodeDTO:new({ lines = buffer:get_lines() }),
@@ -82,7 +82,7 @@ end
 
 function GutterBlameScene:make_blames()
   local lines = {}
-  local blames = self.cache.data.blames
+  local blames = self.runtime_cache.data.blames
   for i = 1, #blames do
     lines[#lines + 1] = self:get_blame_line(blames[i])
   end
@@ -114,19 +114,19 @@ function GutterBlameScene:show(title, options)
     console.log('Current buffer you are on has no blames')
     return false
   end
-  local cache = self.cache
-  cache.buffer = buffer
-  cache.title = title
-  cache.options = options
-  if cache.err then
-    console.error(cache.err)
+  local runtime_cache = self.runtime_cache
+  runtime_cache.buffer = buffer
+  runtime_cache.title = title
+  runtime_cache.options = options
+  if runtime_cache.err then
+    console.error(runtime_cache.err)
     return false
   end
   console.log('Processing buffer blames')
   self:fetch()
   loop.await_fast_event()
   self.scene = Scene:new(self:get_scene_options(options)):mount()
-  local data = cache.data
+  local data = runtime_cache.data
   self
     :set_title(title, {
       filename = data.filename,

@@ -19,7 +19,35 @@ function Buffer:new(bufnr)
     watcher = nil,
     git_object = nil,
     namespace = Namespace:new(),
+    runtime_cache = {
+      is_attached_to_screen = false,
+      on_render = function() end,
+    },
   }, Buffer)
+end
+
+function Buffer:attach(opts)
+  vim.api.nvim_buf_attach(self.bufnr, false, opts)
+  return self
+end
+
+function Buffer:attach_to_ui(on_render)
+  -- Method to inject on_render logic and only runtime_cache it.
+  -- This allows us to change rendering logic during run time.
+  local runtime_cache = self.runtime_cache
+  runtime_cache.on_render = on_render
+  if not runtime_cache.is_attached_to_screen then
+    vim.api.nvim_set_decoration_provider(self.namespace.ns_id, {
+      on_win = function(_, _, bufnr, top, bot)
+        if self.bufnr == bufnr then
+          -- Using render function found in runtime_state
+          runtime_cache.on_render(top, bot)
+        end
+      end,
+    })
+    runtime_cache.is_attached_to_screen = true
+  end
+  return self
 end
 
 function Buffer:get_name()
@@ -152,11 +180,6 @@ end
 
 function Buffer:set_keymap(mode, key, action)
   keymap.buffer_set(self, mode, key, action)
-  return self
-end
-
-function Buffer:attach(opts)
-  vim.api.nvim_buf_attach(self.bufnr, false, opts)
   return self
 end
 

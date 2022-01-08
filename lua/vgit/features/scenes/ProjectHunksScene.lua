@@ -19,13 +19,13 @@ end
 
 function ProjectHunksScene:fetch()
   local git = self.git
-  local cache = self.cache
-  cache.entries = {}
-  local entries = cache.entries
+  local runtime_cache = self.runtime_cache
+  runtime_cache.entries = {}
+  local entries = runtime_cache.entries
   local changed_files_err, changed_files = git:ls_changed()
   if changed_files_err then
     console.debug(changed_files_err, debug.traceback())
-    cache.err = changed_files_err
+    runtime_cache.err = changed_files_err
     return self
   end
   if #changed_files == 0 then
@@ -46,7 +46,7 @@ function ProjectHunksScene:fetch()
     end
     if lines_err then
       console.debug(lines_err, debug.traceback())
-      cache.err = lines_err
+      runtime_cache.err = lines_err
       return self
     end
     local hunks_err, hunks
@@ -59,7 +59,7 @@ function ProjectHunksScene:fetch()
     end
     if hunks_err then
       console.debug(hunks_err, debug.traceback())
-      cache.err = hunks_err
+      runtime_cache.err = hunks_err
       return self
     end
     local dto
@@ -92,7 +92,7 @@ function ProjectHunksScene:fetch()
       console.debug(hunks_err, debug.traceback())
     end
   end
-  cache.entries = entries
+  runtime_cache.entries = entries
   return self
 end
 
@@ -169,14 +169,14 @@ function ProjectHunksScene:get_split_scene_options(options)
 end
 
 ProjectHunksScene.update = loop.brakecheck(loop.async(function(self, selected)
-  local cache = self.cache
-  self.cache.last_selected = selected
-  self.cache.data = cache.entries[selected]
-  local data = cache.data
+  local runtime_cache = self.runtime_cache
+  self.runtime_cache.last_selected = selected
+  self.runtime_cache.data = runtime_cache.entries[selected]
+  local data = runtime_cache.data
   loop.await_fast_event()
   self
     :reset()
-    :set_title(cache.title, {
+    :set_title(runtime_cache.title, {
       filename = data.filename,
       filetype = data.filetype,
       stat = data.dto.stat,
@@ -198,8 +198,8 @@ function ProjectHunksScene:open_file()
   local table = self.scene.components.table
   loop.await_fast_event()
   local selected = table:get_lnum()
-  if self.cache.last_selected == selected then
-    local data = self.cache.data
+  if self.runtime_cache.last_selected == selected then
+    local data = self.runtime_cache.data
     self:hide()
     vim.cmd(string.format('e %s', data.filename))
     Window:new(0):set_lnum(data.hunks[data.index].start):call(function()
@@ -213,7 +213,7 @@ end
 function ProjectHunksScene:make_table()
   self.scene.components.table
     :unlock()
-    :make_rows(self.cache.entries, function(entry)
+    :make_rows(self.runtime_cache.entries, function(entry)
       local filename = entry.filename
       local filetype = entry.filetype
       local icon, icon_hl = icons.file_icon(filename, filetype)
@@ -256,34 +256,34 @@ function ProjectHunksScene:show(title, options)
     return false
   end
   self:hide()
-  local cache = self.cache
-  cache.title = title
-  cache.options = options
+  local runtime_cache = self.runtime_cache
+  runtime_cache.title = title
+  runtime_cache.options = options
   console.log('Processing project hunks')
   self:fetch()
   loop.await_fast_event()
-  if not cache.err and cache.entries and #cache.entries == 0 then
+  if not runtime_cache.err and runtime_cache.entries and #runtime_cache.entries == 0 then
     console.log('No hunks found')
     return false
   end
-  if cache.err then
-    console.error(cache.err)
+  if runtime_cache.err then
+    console.error(runtime_cache.err)
     return false
   end
   self.scene = Scene:new(self:get_scene_options(options)):mount()
-  cache.data = cache.entries[1]
+  runtime_cache.data = runtime_cache.entries[1]
   self
     :set_title(title, {
-      filename = cache.data.filename,
-      filetype = cache.data.filetype,
-      stat = cache.data.dto.stat,
+      filename = runtime_cache.data.filename,
+      filetype = runtime_cache.data.filetype,
+      stat = runtime_cache.data.dto.stat,
     })
     :make_code()
     :make_table()
     :paint_code()
     :set_code_cursor_on_mark(1, 'top')
   -- Must be after initial fetch
-  cache.last_selected = 1
+  runtime_cache.last_selected = 1
   console.clear()
   return true
 end

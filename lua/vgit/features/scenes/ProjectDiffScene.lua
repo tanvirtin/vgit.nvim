@@ -19,16 +19,16 @@ end
 
 function ProjectDiffScene:fetch(selected)
   selected = selected or 1
-  local cache = self.cache
+  local runtime_cache = self.runtime_cache
   local git = self.git
   local changed_files_err, changed_files = git:ls_changed()
   if changed_files_err then
     console.debug(changed_files_err, debug.traceback())
-    cache.err = changed_files_err
+    runtime_cache.err = changed_files_err
     return self
   end
   if #changed_files == 0 then
-    cache.data = {
+    runtime_cache.data = {
       changed_files = changed_files,
       selected = selected,
     }
@@ -51,7 +51,7 @@ function ProjectDiffScene:fetch(selected)
   end
   if lines_err then
     console.debug(lines_err, debug.traceback())
-    cache.err = lines_err
+    runtime_cache.err = lines_err
     return self
   end
   local hunks_err, hunks
@@ -64,7 +64,7 @@ function ProjectDiffScene:fetch(selected)
   end
   if hunks_err then
     console.debug(hunks_err, debug.traceback())
-    cache.err = hunks_err
+    runtime_cache.err = hunks_err
     return self
   end
   local dto
@@ -81,7 +81,7 @@ function ProjectDiffScene:fetch(selected)
       dto = Diff:new(hunks):split(lines)
     end
   end
-  cache.data = {
+  runtime_cache.data = {
     filename = filename,
     filetype = fs.detect_filetype(filename),
     changed_files = changed_files,
@@ -166,33 +166,33 @@ end
 function ProjectDiffScene:run_command(command)
   loop.await_fast_event()
   self:reset()
-  local cache = self.cache
+  local runtime_cache = self.runtime_cache
   local components = self.scene.components
   local table = components.table
   loop.await_fast_event()
   local selected = table:get_lnum()
-  local filename = cache.data.changed_files[selected].filename
+  local filename = runtime_cache.data.changed_files[selected].filename
   if type(command) == 'function' then
     command(filename)
   end
-  if cache.err then
-    console.error(cache.err)
+  if runtime_cache.err then
+    console.error(runtime_cache.err)
     return self
   end
   self:fetch(selected)
   loop.await_fast_event()
-  if cache.err then
-    console.error(cache.err)
+  if runtime_cache.err then
+    console.error(runtime_cache.err)
     return self
   end
-  if #cache.data.changed_files == 0 then
+  if #runtime_cache.data.changed_files == 0 then
     return self:hide()
   end
   self
-    :set_title(cache.title, {
-      filename = cache.data.filename,
-      filetype = cache.data.filetype,
-      stat = cache.data.dto.stat,
+    :set_title(runtime_cache.title, {
+      filename = runtime_cache.data.filename,
+      filetype = runtime_cache.data.filetype,
+      stat = runtime_cache.data.dto.stat,
     })
     :make_code()
     :paint_code()
@@ -228,14 +228,14 @@ function ProjectDiffScene:open_file()
   local table = components.table
   loop.await_fast_event()
   local selected = table:get_lnum()
-  if self.cache.last_selected == selected then
+  if self.runtime_cache.last_selected == selected then
     local focused_component_name = self.scene:get_focused_component_name()
-    local cache = self.cache
-    local data = cache.data
+    local runtime_cache = self.runtime_cache
+    local data = runtime_cache.data
     local dto = data.dto
     local marks = dto.marks
     local filename = data.changed_files[selected].filename
-    local mark = marks[cache.mark_index]
+    local mark = marks[runtime_cache.mark_index]
     local lnum
     if
       focused_component_name == 'current'
@@ -271,7 +271,7 @@ end
 function ProjectDiffScene:make_table()
   self.scene.components.table
     :unlock()
-    :make_rows(self.cache.data.changed_files, function(file)
+    :make_rows(self.runtime_cache.data.changed_files, function(file)
       local icon, icon_hl = icons.file_icon(file.filename, file.filetype)
       if icon then
         return {
@@ -321,22 +321,22 @@ function ProjectDiffScene:show(title, options)
     return false
   end
   self:hide()
-  local cache = self.cache
-  cache.title = title
-  cache.options = options
+  local runtime_cache = self.runtime_cache
+  runtime_cache.title = title
+  runtime_cache.options = options
   console.log('Processing project diff')
   self:fetch()
   loop.await_fast_event()
-  if not cache.err and cache.data and #cache.data.changed_files == 0 then
+  if not runtime_cache.err and runtime_cache.data and #runtime_cache.data.changed_files == 0 then
     console.log('No changes found')
     return false
   end
-  if cache.err then
-    console.error(cache.err)
+  if runtime_cache.err then
+    console.error(runtime_cache.err)
     return false
   end
   self.scene = Scene:new(self:get_scene_options(options)):mount()
-  local data = cache.data
+  local data = runtime_cache.data
   local filename = data.filename
   local filetype = data.filetype
   self
@@ -351,7 +351,7 @@ function ProjectDiffScene:show(title, options)
     :set_code_cursor_on_mark(1)
     :set_code_keymap('n', '<enter>', 'on_enter')
   -- Must be after initial fetch
-  cache.last_selected = 1
+  runtime_cache.last_selected = 1
   console.clear()
   return true
 end

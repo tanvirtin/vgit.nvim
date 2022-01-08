@@ -11,7 +11,7 @@ local DiffScene = CodeScene:extend()
 
 function DiffScene:new(...)
   local this = CodeScene:new(...)
-  this.cache = {
+  this.runtime_cache = {
     buffer = nil,
     title = nil,
     options = nil,
@@ -22,8 +22,8 @@ function DiffScene:new(...)
 end
 
 function DiffScene:fetch()
-  local cache = self.cache
-  local buffer = cache.buffer
+  local runtime_cache = self.runtime_cache
+  local buffer = runtime_cache.buffer
   local hunks = buffer.git_object.hunks
   local lines = buffer:get_lines()
   if not hunks then
@@ -31,12 +31,12 @@ function DiffScene:fetch()
     local hunks_err, calculated_hunks = buffer.git_object:live_hunks(lines)
     if hunks_err then
       console.debug(hunks_err, debug.traceback())
-      cache.err = hunks_err
+      runtime_cache.err = hunks_err
       return self
     end
     hunks = calculated_hunks
   end
-  cache.data = {
+  runtime_cache.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
     dto = self:generate_diff(hunks, lines),
@@ -107,25 +107,25 @@ function DiffScene:show(title, options)
     )
     return
   end
-  local cache = self.cache
-  cache.buffer = buffer
-  cache.title = title
-  cache.options = options
+  local runtime_cache = self.runtime_cache
+  runtime_cache.buffer = buffer
+  runtime_cache.title = title
+  runtime_cache.options = options
   console.log('Processing buffer diff')
   self:fetch()
   loop.await_fast_event()
-  if cache.err then
-    console.error(cache.err)
+  if runtime_cache.err then
+    console.error(runtime_cache.err)
     return false
   end
-  if #cache.data.dto.hunks == 0 then
+  if #runtime_cache.data.dto.hunks == 0 then
     console.log('No hunks found')
     return false
   end
   -- selected_hunk must always be called before creating the scene.
   local _, selected_hunk = self.buffer_hunks:cursor_hunk()
   self.scene = Scene:new(self:get_scene_options(options)):mount()
-  local data = cache.data
+  local data = runtime_cache.data
   self
     :set_title(title, {
       filename = data.filename,
@@ -134,6 +134,9 @@ function DiffScene:show(title, options)
     })
     :make_code()
     :paint_code()
+    :attach_to_ui(function(top, bot)
+      print('Current:', top, bot)
+    end)
     :set_code_cursor_on_mark(selected_hunk, 'center')
   console.clear()
   return true

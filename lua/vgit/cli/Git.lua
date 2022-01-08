@@ -15,7 +15,7 @@ function Git:new(cwd)
     cwd = cwd or '',
     diff_algorithm = 'myers',
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
-    cache = {
+    runtime_cache = {
       config = nil,
     },
   }, Git)
@@ -61,8 +61,8 @@ Git.is_commit_valid = loop.promisify(function(self, commit, callback)
 end, 3)
 
 Git.config = loop.promisify(function(self, callback)
-  if self.cache.config then
-    return callback(nil, self.cache.config)
+  if self.runtime_cache.config then
+    return callback(nil, self.runtime_cache.config)
   end
   local err = {}
   local result = {}
@@ -85,7 +85,7 @@ Git.config = loop.promisify(function(self, callback)
       if #err ~= 0 then
         return callback(err, nil)
       end
-      self.cache.config = result
+      self.runtime_cache.config = result
       callback(nil, result)
     end,
   })

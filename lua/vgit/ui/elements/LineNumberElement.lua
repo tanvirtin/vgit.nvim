@@ -9,7 +9,7 @@ function LineNumberElement:new()
   return setmetatable({
     buffer = nil,
     window = nil,
-    cache = {
+    runtime_cache = {
       lines = {},
     },
   }, LineNumberElement)
@@ -76,7 +76,7 @@ function LineNumberElement:make_lines(lines)
     actual_lines[#actual_lines + 1] = ''
   end
   self.buffer:set_lines(actual_lines)
-  self.cache.lines = lines
+  self.runtime_cache.lines = lines
   return self
 end
 

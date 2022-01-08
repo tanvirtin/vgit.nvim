@@ -9,23 +9,23 @@ function CodeDataScene:new(...)
 end
 
 CodeDataScene.update = loop.brakecheck(loop.async(function(self, selected)
-  local cache = self.cache
-  cache.last_selected = selected
+  local runtime_cache = self.runtime_cache
+  runtime_cache.last_selected = selected
   self:fetch(selected)
   loop.await_fast_event()
-  if cache.err then
-    console.error(cache.err)
+  if runtime_cache.err then
+    console.error(runtime_cache.err)
     return self
   end
-  if not cache.data and not cache.data or not cache.data.dto then
+  if not runtime_cache.data and not runtime_cache.data or not runtime_cache.data.dto then
     return
   end
   self
     :reset()
-    :set_title(cache.title, {
-      filename = cache.data.filename,
-      filetype = cache.data.filetype,
-      stat = cache.data.dto.stat,
+    :set_title(runtime_cache.title, {
+      filename = runtime_cache.data.filename,
+      filetype = runtime_cache.data.filetype,
+      stat = runtime_cache.data.dto.stat,
     })
     :make_code()
     :paint_code()
@@ -33,7 +33,7 @@ CodeDataScene.update = loop.brakecheck(loop.async(function(self, selected)
 end))
 
 function CodeDataScene:table_move(direction)
-  self:clear_cached_err()
+  self:clear_runtime_cached_err()
   local components = self.scene.components
   local table = components.table
   loop.await_fast_event()
@@ -49,7 +49,7 @@ function CodeDataScene:table_move(direction)
   elseif selected < 1 then
     selected = total_line_count
   end
-  if self.cache.last_selected == selected then
+  if self.runtime_cache.last_selected == selected then
     return
   end
   loop.await_fast_event()

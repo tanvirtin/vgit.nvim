@@ -26,6 +26,11 @@ function CodeComponent:new(options)
   )
 end
 
+function CodeComponent:attach_to_ui(on_render)
+  self.buffer:attach_to_ui(on_render)
+  return self
+end
+
 function CodeComponent:set_cursor(cursor)
   self.window:set_cursor(cursor)
   self.elements.line_number:set_cursor(cursor)

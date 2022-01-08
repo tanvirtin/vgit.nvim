@@ -15,12 +15,18 @@ function CodeScene:new(buffer_hunks, navigation, git_store, git)
     git = git,
     layout_type = 'unified',
     scene = nil,
-    cache = {
+    runtime_cache = {
       mark_index = 1,
       current_lines_metadata = {},
       previous_lines_metadata = {},
     },
   }, CodeScene)
+end
+
+function CodeScene:attach_to_ui(on_render)
+  -- Attaching it to just current will always be enough.
+  self.scene.components.current:attach_to_ui(on_render)
+  return self
 end
 
 function CodeScene:generate_diff(hunks, lines)
@@ -45,7 +51,7 @@ end
 
 function CodeScene:set_filetype()
   local components = self.scene.components
-  local filetype = self.cache.data.filetype
+  local filetype = self.runtime_cache.data.filetype
   if not filetype then
     return self
   end
@@ -95,11 +101,11 @@ function CodeScene:notify(text)
 end
 
 function CodeScene:navigate(direction)
-  local data = self.cache.data
+  local data = self.runtime_cache.data
   if not data then
     return self
   end
-  if self.cache.err then
+  if self.runtime_cache.err then
     return self
   end
   local marks = data.dto.marks
@@ -114,7 +120,7 @@ function CodeScene:navigate(direction)
   local window = component.window
   local buffer = component.buffer
   if focused_component_name == 'table' then
-    local selected = self.cache.mark_index
+    local selected = self.runtime_cache.mark_index
     if direction == 'up' then
       selected = selected - 1
     end
@@ -137,7 +143,7 @@ function CodeScene:navigate(direction)
     end
   end
   if mark_index then
-    self.cache.mark_index = mark_index
+    self.runtime_cache.mark_index = mark_index
     self:notify(
       string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks)
     )
@@ -164,11 +170,11 @@ function CodeScene:set_code_cursor_on_mark(selected, position)
   if not position then
     position = 'top'
   end
-  local data = self.cache.data
+  local data = self.runtime_cache.data
   if not data then
     return self
   end
-  if self.cache.err then
+  if self.runtime_cache.err then
     return self
   end
   local marks = data.dto.marks
@@ -190,7 +196,7 @@ function CodeScene:set_code_cursor_on_mark(selected, position)
     position
   )
   if mark_index then
-    self.cache.mark_index = selected
+    self.runtime_cache.mark_index = selected
     self:notify(
       string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks)
     )
@@ -205,7 +211,7 @@ end
 
 function CodeScene:make_lines()
   local components = self.scene.components
-  local dto = self.cache.data.dto
+  local dto = self.runtime_cache.data.dto
   if self.layout_type == 'unified' then
     components.current:set_lines(dto.lines)
   else
@@ -216,7 +222,7 @@ function CodeScene:make_lines()
 end
 
 function CodeScene:make_line_numbers()
-  local dto = self.cache.data.dto
+  local dto = self.runtime_cache.data.dto
   local components = self.scene.components
   local layout_type = self.layout_type or 'unified'
   local line_metadata = {}
@@ -245,7 +251,7 @@ function CodeScene:make_line_numbers()
         number_line = line,
       }
     end
-    self.cache.current_lines_metadata = line_metadata
+    self.runtime_cache.current_lines_metadata = line_metadata
     component:make_line_numbers(lines)
   elseif layout_type == 'split' then
     local previous_component = components.previous
@@ -282,7 +288,7 @@ function CodeScene:make_line_numbers()
         number_line = line,
       }
     end
-    self.cache.current_lines_metadata = line_metadata
+    self.runtime_cache.current_lines_metadata = line_metadata
     current_component:make_line_numbers(lines)
     line_metadata = {}
     lines = {}
@@ -309,7 +315,7 @@ function CodeScene:make_line_numbers()
         number_line = line,
       }
     end
-    self.cache.previous_lines_metadata = line_metadata
+    self.runtime_cache.previous_lines_metadata = line_metadata
     previous_component:make_line_numbers(lines)
   end
   return self
@@ -369,12 +375,11 @@ function CodeScene:paint_operation(lnum, metadata, component_type)
 end
 
 function CodeScene:paint_code()
-  local layout_type = self.layout_type or 'unified'
-  local current_lines_metadata = self.cache.current_lines_metadata
-  local previous_lines_metadata = self.cache.previous_lines_metadata
+  local current_lines_metadata = self.runtime_cache.current_lines_metadata
+  local previous_lines_metadata = self.runtime_cache.previous_lines_metadata
   for i = 1, #current_lines_metadata do
     self:paint_operation(i, current_lines_metadata[i], 'current')
-    if layout_type == 'split' then
+    if self.layout_type == 'split' then
       self:paint_operation(i, previous_lines_metadata[i], 'previous')
     end
   end
@@ -393,24 +398,24 @@ function CodeScene:hide()
   return self
 end
 
-function CodeScene:clear_cached_err()
-  self.cache.err = nil
+function CodeScene:clear_runtime_cached_err()
+  self.runtime_cache.err = nil
   return self
 end
 
-function CodeScene:clear_cached_data()
-  self.cache.data = nil
+function CodeScene:clear_runtime_cached_data()
+  self.runtime_cache.data = nil
   return self
 end
 
-function CodeScene:clear_cache()
-  self.cache = {}
+function CodeScene:clear_runtime_cache()
+  self.runtime_cache = {}
   return self
 end
 
 function CodeScene:destroy()
   self:hide()
-  self:clear_cache()
+  self:clear_runtime_cache()
   return self
 end
 

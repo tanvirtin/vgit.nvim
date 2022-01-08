@@ -13,18 +13,18 @@ function LineBlameScene:new(...)
 end
 
 function LineBlameScene:fetch()
-  local cache = self.cache
-  local buffer = cache.buffer
+  local runtime_cache = self.runtime_cache
+  local buffer = runtime_cache.buffer
   loop.await_fast_event()
   local blame_err, blame = buffer.git_object:blame_line(
     Window:new(0):get_lnum()
   )
   if blame_err then
     console.debug(blame_err, debug.traceback())
-    cache.err = blame_err
+    runtime_cache.err = blame_err
     return self
   end
-  cache.data = blame
+  runtime_cache.data = blame
   return self
 end
 
@@ -80,7 +80,7 @@ function LineBlameScene:make_lines()
     return max_line_width
   end
   local component = self.scene.components.current
-  local blame = self.cache.data
+  local blame = self.runtime_cache.data
   if not blame.committed then
     local uncommitted_lines = self:create_uncommitted_lines(blame)
     component
@@ -108,14 +108,14 @@ function LineBlameScene:show(options)
   if not git_object:is_in_remote() then
     return false
   end
-  local cache = self.cache
-  cache.buffer = buffer
-  cache.options = options
+  local runtime_cache = self.runtime_cache
+  runtime_cache.buffer = buffer
+  runtime_cache.options = options
   console.log('Processing buffer line blame')
   self:fetch()
   loop.await_fast_event()
-  if cache.err then
-    console.error(cache.err)
+  if runtime_cache.err then
+    console.error(runtime_cache.err)
     return false
   end
   self.scene = Scene:new(self:get_scene_options(options)):mount()
