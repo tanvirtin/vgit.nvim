@@ -116,6 +116,8 @@ function Diff:unified(lines)
         type = type,
         start = start,
         finish = finish,
+        start_lnum = start - new_lines_added,
+        finish_lnum = finish - new_lines_added,
       }
       for j = start, finish do
         lnum_changes[#lnum_changes + 1] = {
@@ -129,6 +131,8 @@ function Diff:unified(lines)
         type = type,
         start = start + 1,
         finish = nil,
+        start_lnum = start - new_lines_added,
+        finish_lnum = finish - new_lines_added,
       }
       local s = start
       for j = 1, #diff do
@@ -150,6 +154,8 @@ function Diff:unified(lines)
         type = type,
         start = start,
         finish = nil,
+        start_lnum = start - new_lines_added,
+        finish_lnum = finish - new_lines_added,
       }
       local s = start
       for j = 1, #diff do
@@ -252,6 +258,8 @@ function Diff:split(lines)
         type = type,
         start = start,
         finish = finish,
+        start_lnum = start - new_lines_added,
+        finish_lnum = finish - new_lines_added,
       }
       -- Remove the line indicating that these lines were inserted in current_lines.
       for j = start, finish do
@@ -273,6 +281,8 @@ function Diff:split(lines)
         type = type,
         start = start + 1,
         finish = nil,
+        start_lnum = start - new_lines_added,
+        finish_lnum = finish - new_lines_added,
       }
       for j = 1, #diff do
         local line = diff[j]
@@ -299,6 +309,8 @@ function Diff:split(lines)
         type = type,
         start = start,
         finish = nil,
+        start_lnum = start - new_lines_added,
+        finish_lnum = finish - new_lines_added,
       }
       -- Retrieve lines that have been removed and added without "-" and "+".
       local removed_lines, added_lines = hunk:parse_diff()
