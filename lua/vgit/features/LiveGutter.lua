@@ -107,7 +107,7 @@ function LiveGutter:attach()
   loop.await_fast_event()
   self.git_store:add(buffer)
   loop.await_fast_event()
-  buffer:attach({
+  buffer:attach_to_changes({
     on_lines = loop.async(function(_, _, _, _, p_lnum, n_lnum, byte_count)
       loop.await_fast_event()
       if p_lnum == n_lnum and byte_count == 0 then

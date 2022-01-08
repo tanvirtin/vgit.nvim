@@ -26,7 +26,7 @@ function Buffer:new(bufnr)
   }, Buffer)
 end
 
-function Buffer:attach(opts)
+function Buffer:attach_to_changes(opts)
   vim.api.nvim_buf_attach(self.bufnr, false, opts)
   return self
 end
