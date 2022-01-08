@@ -23,9 +23,11 @@ function CodeScene:new(buffer_hunks, navigation, git_store, git)
   }, CodeScene)
 end
 
-function CodeScene:attach_to_ui(on_render)
+function CodeScene:attach_to_ui()
   -- Attaching it to just current will always be enough.
-  self.scene.components.current:attach_to_ui(on_render)
+  self.scene.components.current:attach_to_ui(function(top, bot)
+    print('Current:', top, bot)
+  end)
   return self
 end
 
