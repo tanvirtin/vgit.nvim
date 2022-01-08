@@ -246,10 +246,7 @@ function CodeScene:make_line_numbers()
       }
     end
     self.runtime_cache.current_lines_metadata = line_metadata
-    component:make_line_numbers(lines)
   elseif layout_type == 'split' then
-    local previous_component = components.previous
-    local current_component = components.current
     local current_lnum_change_map = {}
     local previous_lnum_change_map = {}
     for i = 1, #dto.lnum_changes do
@@ -283,7 +280,6 @@ function CodeScene:make_line_numbers()
       }
     end
     self.runtime_cache.current_lines_metadata = line_metadata
-    current_component:make_line_numbers(lines)
     line_metadata = {}
     lines = {}
     line_count = 1
@@ -310,7 +306,6 @@ function CodeScene:make_line_numbers()
       }
     end
     self.runtime_cache.previous_lines_metadata = line_metadata
-    previous_component:make_line_numbers(lines)
   end
   return self
 end

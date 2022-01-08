@@ -1,7 +1,6 @@
 local loop = require('vgit.core.loop')
 local icons = require('vgit.core.icons')
 local utils = require('vgit.core.utils')
-local LineNumberElement = require('vgit.ui.elements.LineNumberElement')
 local HeaderElement = require('vgit.ui.elements.HeaderElement')
 local HorizontalBorderElement = require(
   'vgit.ui.elements.HorizontalBorderElement'
@@ -18,7 +17,6 @@ function CodeComponent:new(options)
     Component:new(utils.object_assign(options, {
       elements = {
         header = nil,
-        line_number = nil,
         horizontal_border = nil,
       },
     })),
@@ -28,31 +26,26 @@ end
 
 function CodeComponent:attach_to_ui(on_render)
   self.buffer:attach_to_ui(on_render)
-  self.elements.line_number:attach_to_ui(on_render)
   return self
 end
 
 function CodeComponent:set_cursor(cursor)
   self.window:set_cursor(cursor)
-  self.elements.line_number:set_cursor(cursor)
   return self
 end
 
 function CodeComponent:set_lnum(lnum)
   self.window:set_lnum(lnum)
-  self.elements.line_number:set_lnum(lnum)
   return self
 end
 
 function CodeComponent:call(callback)
   self.window:call(callback)
-  self.elements.line_number:call(callback)
   return self
 end
 
 function CodeComponent:reset_cursor()
   self.window:set_cursor({ 1, 1 })
-  self.elements.line_number:reset_cursor()
   return self
 end
 
@@ -63,13 +56,11 @@ end
 
 function CodeComponent:sign_place(lnum, defined_sign)
   self.buffer:sign_place(lnum, defined_sign)
-  self.elements.line_number:sign_place(lnum, defined_sign)
   return self
 end
 
 function CodeComponent:sign_unplace()
   self.buffer:sign_unplace()
-  self.elements.line_number:sign_unplace()
   return self
 end
 
@@ -83,12 +74,9 @@ function CodeComponent:transpose_virtual_line(texts, col, pos)
   return self
 end
 
-function CodeComponent:transpose_virtual_line_number(text, hl, row)
-  self.elements.line_number:transpose_virtual_line(
-    { { text, hl } },
-    row,
-    'right_align'
-  )
+function CodeComponent:transpose_virtual_line_number(texts, col, pos)
+  -- TODO
+  return self
 end
 
 function CodeComponent:clear_namespace()
@@ -104,11 +92,6 @@ function CodeComponent:get_dimensions(window_props, opts)
     row = window_props.row,
     col = window_props.col,
     width = window_props.width,
-  }
-  local line_number_window_props = {
-    row = window_props.row,
-    col = window_props.col,
-    height = window_props.height,
   }
   local horizontal_border_window_props = {
     row = window_props.row,
@@ -137,42 +120,28 @@ function CodeComponent:get_dimensions(window_props, opts)
   local header_height = HeaderElement:get_height()
   if window_props.height - header_height > 1 then
     window_props.height = window_props.height - header_height
-    line_number_window_props.height = line_number_window_props.height
-      - header_height
   end
   local height = header_height + window_props.height
   if is_at_cursor then
     local horizontal_border_height = HorizontalBorderElement:get_height()
     height = height + horizontal_border_height
     window_props.height = window_props.height - horizontal_border_height
-    line_number_window_props.height = line_number_window_props.height
-      - horizontal_border_height
   end
-
-  -- Width
-  local line_number_width = LineNumberElement:get_width()
-  window_props.width = window_props.width - line_number_width
-  local width = line_number_width + window_props.width
 
   -- Row
   window_props.row = window_props.row + header_height
-  line_number_window_props.row = window_props.row
   horizontal_border_window_props.row = window_props.row
   horizontal_border_window_props.row = horizontal_border_window_props.row
     + window_props.height
-
-  -- Col
-  window_props.col = window_props.col + line_number_width
 
   return {
     is_at_cursor = is_at_cursor,
     window_props = window_props,
     header_window_props = header_window_props,
-    line_number_window_props = line_number_window_props,
     horizontal_border_window_props = horizontal_border_window_props,
     global_window_props = {
       row = header_window_props.row,
-      col = line_number_window_props.col,
+      col = window_props.col,
       height = height,
       width = width,
     },
@@ -188,7 +157,6 @@ function CodeComponent:mount(opts)
   local component_dimensions = self:get_dimensions(config.window_props, opts)
   local window_props = component_dimensions.window_props
   local header_window_props = component_dimensions.header_window_props
-  local line_number_window_props = component_dimensions.line_number_window_props
   local horizontal_border_window_props =
     component_dimensions.horizontal_border_window_props
   local is_at_cursor = component_dimensions.is_at_cursor
@@ -200,9 +168,6 @@ function CodeComponent:mount(opts)
     :open(buffer, window_props)
     :assign_options(config.win_options)
   self.elements.header = HeaderElement:new():mount(header_window_props)
-  self.elements.line_number = LineNumberElement
-    :new()
-    :mount(line_number_window_props)
   if is_at_cursor then
     self.elements.horizontal_border = HorizontalBorderElement
       :new()
@@ -217,14 +182,10 @@ end
 
 function CodeComponent:unmount()
   local header = self.elements.header
-  local line_number = self.elements.line_number
   local horizontal_border = self.elements.horizontal_border
   self.window:close()
   if header then
     header:unmount()
-  end
-  if line_number then
-    line_number:unmount()
   end
   if horizontal_border then
     horizontal_border:unmount()
@@ -289,13 +250,6 @@ function CodeComponent:set_title(title, opts)
     local range = range_info.range
     header:add_highlight(hl, 0, range.top, range.bot)
   end
-  return self
-end
-
-function CodeComponent:make_line_numbers(lines)
-  local line_number = self.elements.line_number
-  line_number:clear_namespace()
-  line_number:make_lines(lines)
   return self
 end
 

@@ -28,7 +28,7 @@ function Component:new(options)
         },
         win_options = {
           wrap = false,
-          number = false,
+          number = true,
           winhl = 'Normal:VGitBackgroundPrimary',
           cursorline = false,
           cursorbind = false,
