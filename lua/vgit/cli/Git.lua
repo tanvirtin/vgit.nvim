@@ -724,6 +724,31 @@ Git.reset = loop.promisify(function(self, filename, callback)
   job:start()
 end, 3)
 
+Git.discard = loop.promisify(function(self, callback)
+  local err = {}
+  local job = Job:new({
+    command = 'git',
+    args = {
+      '-C',
+      self.cwd,
+      'checkout',
+      '-q',
+      '--',
+      '.',
+    },
+    on_stderr = function(line)
+      err[#err + 1] = line
+    end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err)
+      end
+      callback(nil)
+    end,
+  })
+  job:start()
+end, 2)
+
 Git.current_branch = loop.promisify(function(self, callback)
   local err = {}
   local result = {}

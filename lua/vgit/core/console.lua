@@ -57,6 +57,12 @@ console.info = loop.async(function(msg)
   vim.notify(msg, 'info')
 end)
 
+console.input = function(prompt)
+  local result = vim.fn.input(prompt)
+  console.clear()
+  return result
+end
+
 console.debug = loop.async(function(msg, trace)
   if not env.get('DEBUG') then
     return

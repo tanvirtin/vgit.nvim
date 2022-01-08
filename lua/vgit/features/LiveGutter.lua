@@ -29,13 +29,13 @@ LiveGutter.sync = loop.brakecheck(
   }
 )
 
-LiveGutter.resync = loop.brakecheck(loop.async(function(self)
+LiveGutter.resync = loop.async(function(self)
   loop.await_fast_event()
   local buffer = self.git_store:current()
   if buffer then
     self:sync(buffer)
   end
-end))
+end)
 
 function LiveGutter:watch(buffer)
   buffer.watcher = loop.watch(

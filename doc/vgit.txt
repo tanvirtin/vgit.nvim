@@ -297,6 +297,14 @@ buffer_unstage()                     *vgit.buffer_unstage()*
 buffer_reset()                                             *vgit.buffer_reset()*
                 Removes all current changes in the buffer and resets it to the
                 version in HEAD.
+stage_all()                                                    *vgit.stage_all()*
+                Stages all file changes in your project.
+
+unstage_all()                                                *vgit.unstage_all()*
+                Unstages all file changes in your project.
+
+reset_all()                                                    *vgit.reset_all()*
+                Discards all file changes that are not staged.
 
 hunk_up()                                                       *vgit.hunk_up()*
                 Moves the cursor to the hunk above the current cursor
