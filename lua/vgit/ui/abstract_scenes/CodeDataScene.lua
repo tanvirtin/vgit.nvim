@@ -17,7 +17,10 @@ CodeDataScene.update = loop.brakecheck(loop.async(function(self, selected)
     console.error(runtime_cache.err)
     return self
   end
-  if not runtime_cache.data and not runtime_cache.data or not runtime_cache.data.dto then
+  if
+    not runtime_cache.data and not runtime_cache.data
+    or not runtime_cache.data.dto
+  then
     return
   end
   self

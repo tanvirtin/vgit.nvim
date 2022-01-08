@@ -262,7 +262,11 @@ function ProjectHunksScene:show(title, options)
   console.log('Processing project hunks')
   self:fetch()
   loop.await_fast_event()
-  if not runtime_cache.err and runtime_cache.entries and #runtime_cache.entries == 0 then
+  if
+    not runtime_cache.err
+    and runtime_cache.entries
+    and #runtime_cache.entries == 0
+  then
     console.log('No hunks found')
     return false
   end
