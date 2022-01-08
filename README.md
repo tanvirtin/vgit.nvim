@@ -290,6 +290,9 @@ require('vgit').setup({
 | buffer_stage | Stages all changes in the current buffer. |
 | buffer_unstage | Unstages all changes in the current buffer. |
 | buffer_reset | Removes all current changes in the buffer and resets it to the version in HEAD. |
+| stage_all | Stages all file changes in your project |
+| unstage_all | Unstages all file changes in your project |
+| reset_all | Discards all file changes that are not staged |
 | hunk_up | Moves the cursor to the hunk above the current cursor position. |
 | hunk_down | Moves the cursor to the hunk below the current cursor position. |
 | toggle_diff_preference | Used to switch between "split" and "unified" diff. |

@@ -1,3 +1,4 @@
+local console = require('vgit.core.console')
 local env = require('vgit.core.env')
 local hls_setting = require('vgit.settings.hls')
 local live_blame_setting = require('vgit.settings.live_blame')
@@ -170,6 +171,20 @@ local unstage_all = loop.async(function()
   end
 end)
 
+local reset_all = loop.async(function()
+  local decision = console.input(
+    'Are you sure you want to discard all changes? (y/N) '
+  ):lower()
+  if decision ~= 'yes' and decision ~= 'y' then
+    return
+  end
+  git:discard()
+  if active_scene.exists() then
+    active_scene.refresh()
+  end
+  vim.cmd('bufdo edit!')
+end)
+
 local buffer_hunk_stage = loop.async(function()
   buffer_hunks:cursor_stage()
 end)
@@ -339,6 +354,7 @@ return {
   hunk_down = hunk_down,
   stage_all = stage_all,
   unstage_all = unstage_all,
+  reset_all = reset_all,
   buffer_hunk_reset = buffer_hunk_reset,
   buffer_reset = buffer_reset,
   buffer_stage = buffer_stage,

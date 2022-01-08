@@ -11,6 +11,7 @@ function Command:new()
       hunk_down = true,
       stage_all = true,
       unstage_all = true,
+      reset_all = true,
       buffer_hunk_preview = true,
       buffer_diff_preview = true,
       buffer_history_preview = true,
