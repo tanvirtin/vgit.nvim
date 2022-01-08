@@ -26,7 +26,7 @@ function Namespace:add_highlight(buffer, hl, row, col_start, col_end)
 end
 
 function Namespace:transpose_virtual_text(buffer, text, hl, row, col, pos)
-  pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, col, {
+  vim.api.nvim_buf_set_extmark(buffer.bufnr, self.ns_id, row, col, {
     id = row + 1 + col,
     virt_text = { { text, hl } },
     virt_text_pos = pos or 'overlay',
@@ -36,7 +36,7 @@ function Namespace:transpose_virtual_text(buffer, text, hl, row, col, pos)
 end
 
 function Namespace:transpose_virtual_line(buffer, texts, col, pos)
-  pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, col, 0, {
+  vim.api.nvim_buf_set_extmark(buffer.bufnr, self.ns_id, col, 0, {
     id = col + 1,
     virt_text = texts,
     virt_text_pos = pos or 'overlay',
@@ -60,7 +60,7 @@ function Namespace:sign_unplace(buffer)
 end
 
 function Namespace:clear(buffer)
-  pcall(vim.api.nvim_buf_clear_namespace, buffer.bufnr, self.ns_id, 0, -1)
+  vim.api.nvim_buf_clear_namespace(buffer.bufnr, self.ns_id, 0, -1)
   return self
 end
 

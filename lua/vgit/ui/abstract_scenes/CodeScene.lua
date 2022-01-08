@@ -336,11 +336,15 @@ function CodeScene:apply_paint_instructions(lnum, metadata, component_type)
       component:sign_place(lnum, defined_sign)
     end
     if type == 'void' then
-      local void_line = string.rep(
-        symbols_setting:get('symbols').void,
-        component.window:get_width()
+      component:transpose_virtual_text(
+        string.rep(
+          symbols_setting:get('symbols').void,
+          component.window:get_width()
+        ),
+        line_number_hl,
+        lnum - 1,
+        0
       )
-      component:transpose_virtual_text(void_line, line_number_hl, lnum - 1, 0)
     end
     -- Highlighting the word diff text here.
     local texts = {}

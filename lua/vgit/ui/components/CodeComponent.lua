@@ -28,6 +28,7 @@ end
 
 function CodeComponent:attach_to_ui(on_render)
   self.buffer:attach_to_ui(on_render)
+  self.elements.line_number:attach_to_ui(on_render)
   return self
 end
 

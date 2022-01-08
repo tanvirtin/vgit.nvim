@@ -15,6 +15,11 @@ function LineNumberElement:new()
   }, LineNumberElement)
 end
 
+function LineNumberElement:attach_to_ui(on_render)
+  self.buffer:attach_to_ui(on_render)
+  return self
+end
+
 function LineNumberElement:set_lnum(lnum)
   self.window:set_lnum(lnum)
   return self
