@@ -27,9 +27,9 @@ CodeDataScene.update = loop.brakecheck(loop.async(function(self, selected)
       filetype = cache.data.filetype,
       stat = cache.data.dto.stat,
     })
-    :make()
-    :paint()
-    :set_cursor_on_mark(1)
+    :make_code()
+    :paint_code()
+    :set_code_cursor_on_mark(1)
 end))
 
 function CodeDataScene:table_move(direction)

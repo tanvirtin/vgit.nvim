@@ -194,10 +194,10 @@ function ProjectDiffScene:run_command(command)
       filetype = cache.data.filetype,
       stat = cache.data.dto.stat,
     })
-    :make()
+    :make_code()
+    :paint_code()
     :make_table()
-    :set_cursor_on_mark(1)
-    :paint()
+    :set_code_cursor_on_mark(1)
 end
 
 function ProjectDiffScene:refresh()
@@ -224,16 +224,40 @@ function ProjectDiffScene:git_unstage()
 end
 
 function ProjectDiffScene:open_file()
-  local table = self.scene.components.table
+  local components = self.scene.components
+  local table = components.table
   loop.await_fast_event()
   local selected = table:get_lnum()
   if self.cache.last_selected == selected then
-    local data = self.cache.data
+    local focused_component_name = self.scene:get_focused_component_name()
+    local cache = self.cache
+    local data = cache.data
+    local dto = data.dto
+    local marks = dto.marks
     local filename = data.changed_files[selected].filename
+    local mark = marks[cache.mark_index]
+    local lnum
+    if
+      focused_component_name == 'current'
+      or focused_component_name == 'previous'
+    then
+      local component = components[focused_component_name]
+      loop.await_fast_event()
+      local current_lnum = component:get_lnum()
+      for i = 1, #marks do
+        local current_mark = marks[i]
+        if
+          current_lnum >= current_mark.start
+          and current_lnum <= current_mark.finish
+        then
+          mark = current_mark
+          break
+        end
+      end
+    end
+    lnum = mark and mark.start_lnum
     self:hide()
     vim.cmd(string.format('e %s', filename))
-    local mark = data.dto.marks[1]
-    local lnum = mark and mark.start
     if lnum then
       Window:new(0):set_lnum(lnum):call(function()
         vim.cmd('norm! zz')
@@ -267,6 +291,15 @@ function ProjectDiffScene:make_table()
     :set_keymap('n', '<enter>', 'on_enter')
     :focus()
     :lock()
+  return self
+end
+
+function ProjectDiffScene:set_code_keymap(mode, key, action)
+  local components = self.scene.components
+  components.current:set_keymap(mode, key, action)
+  if self.layout_type == 'split' then
+    components.previous:set_keymap(mode, key, action)
+  end
   return self
 end
 
@@ -304,10 +337,11 @@ function ProjectDiffScene:show(title, options)
       filetype = filetype,
       stat = data.dto.stat,
     })
-    :make()
+    :make_code()
+    :paint_code()
     :make_table()
-    :paint()
-    :set_cursor_on_mark(1)
+    :set_code_cursor_on_mark(1)
+    :set_code_keymap('n', '<enter>', 'on_enter')
   -- Must be after initial fetch
   cache.last_selected = 1
   console.clear()

@@ -261,7 +261,7 @@ require('vgit').setup({
 | buffer_gutter_blame_preview | Opens a preview which shows all the blames related to the lines of the buffer. |
 | buffer_diff_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. |
 | buffer_hunk_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. This preview will open up in a smaller window relative to where your cursor is. |
-| project_diff_preview | Opens a diff preview along with a table of all the files that have been changed, enabling users to see all the files that were changed in the current project. |
+| project_diff_preview | Opens a diff preview along with a table of all the files that have been changed, enabling users to see all the files that were changed in the current project. This preview supports the following commands, "buffer_stage", "buffer_unstage", "buffer_reset", "stage_all" and "unstage_all" |
 | project_hunks_preview | Opens a diff preview along with a table of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
 | project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
 | buffer_hunk_stage | Stages a hunk, if a cursor is on the hunk. |

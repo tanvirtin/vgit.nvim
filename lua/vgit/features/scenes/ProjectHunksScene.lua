@@ -181,9 +181,9 @@ ProjectHunksScene.update = loop.brakecheck(loop.async(function(self, selected)
       filetype = data.filetype,
       stat = data.dto.stat,
     })
-    :make()
-    :paint()
-    :set_cursor_on_mark(data.index, 'top')
+    :make_code()
+    :paint_code()
+    :set_code_cursor_on_mark(data.index, 'top')
     :notify(
       string.format(
         '%s%s/%s Changes',
@@ -270,10 +270,10 @@ function ProjectHunksScene:show(title, options)
       filetype = cache.data.filetype,
       stat = cache.data.dto.stat,
     })
-    :make()
+    :make_code()
     :make_table()
-    :paint()
-    :set_cursor_on_mark(1, 'top')
+    :paint_code()
+    :set_code_cursor_on_mark(1, 'top')
   -- Must be after initial fetch
   cache.last_selected = 1
   console.clear()

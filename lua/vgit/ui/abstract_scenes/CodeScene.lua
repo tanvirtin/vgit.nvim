@@ -160,7 +160,7 @@ function CodeScene:set_cursor(cursor)
   return self
 end
 
-function CodeScene:set_cursor_on_mark(selected, position)
+function CodeScene:set_code_cursor_on_mark(selected, position)
   if not position then
     position = 'top'
   end
@@ -176,12 +176,15 @@ function CodeScene:set_cursor_on_mark(selected, position)
     self:notify('There are no changes')
     return self
   end
-  local component = self.scene.components.current
+  local components = self.scene.components
   if not selected or selected > #marks then
     selected = 1
   end
+  if self.layout_type == 'split' then
+    self.navigation:mark_select(components.previous, selected, marks, position)
+  end
   local mark_index = self.navigation:mark_select(
-    component,
+    components.current,
     selected,
     marks,
     position
@@ -196,7 +199,7 @@ function CodeScene:set_cursor_on_mark(selected, position)
   return self
 end
 
-function CodeScene:make()
+function CodeScene:make_code()
   return self:make_lines():make_line_numbers():set_filetype()
 end
 
@@ -365,7 +368,7 @@ function CodeScene:paint_operation(lnum, metadata, component_type)
   component:transpose_virtual_line_number(number_line, line_number_hl, lnum - 1)
 end
 
-function CodeScene:paint()
+function CodeScene:paint_code()
   local layout_type = self.layout_type or 'unified'
   local current_lines_metadata = self.cache.current_lines_metadata
   local previous_lines_metadata = self.cache.previous_lines_metadata

@@ -110,7 +110,7 @@ function TableComponent:get_dimensions(window_props)
   }
 end
 
-function TableComponent:paint(hls)
+function TableComponent:paint_table(hls)
   for i = 1, #hls do
     local hl_info = hls[i]
     local hl = hl_info.hl
@@ -146,7 +146,7 @@ function TableComponent:set_lines(lines, force)
     max_column_len
   )
   buffer:set_lines(rows)
-  self:paint(hls)
+  self:paint_table(hls)
   self.elements.header:set_lines(column_header)
   self.paddings = paddings
   return self

@@ -196,10 +196,10 @@ function HistoryScene:show(title, options)
       filetype = data.filetype,
       stat = data.dto.stat,
     })
-    :make()
+    :make_code()
     :make_table()
-    :paint()
-    :set_cursor_on_mark(1)
+    :paint_code()
+    :set_code_cursor_on_mark(1)
   -- Must be after initial fetch
   cache.last_selected = 1
   console.clear()

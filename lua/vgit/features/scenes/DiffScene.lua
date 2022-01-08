@@ -132,9 +132,9 @@ function DiffScene:show(title, options)
       filetype = data.filetype,
       stat = data.dto.stat,
     })
-    :make()
-    :paint()
-    :set_cursor_on_mark(selected_hunk, 'center')
+    :make_code()
+    :paint_code()
+    :set_code_cursor_on_mark(selected_hunk, 'center')
   console.clear()
   return true
 end
