@@ -22,14 +22,14 @@ function Navigation:mark_select(component, selected, marks, position)
   for i = #marks, 1, -1 do
     local mark = marks[i]
     if i == selected then
-      new_lnum = mark.start
+      new_lnum = mark.top
       mark_index = i
       break
     end
   end
   if not new_lnum or new_lnum < 1 or new_lnum > line_count then
-    if marks and marks[#marks] and marks[#marks].start then
-      new_lnum = marks[#marks].start
+    if marks and marks[#marks] and marks[#marks].top then
+      new_lnum = marks[#marks].top
       mark_index = #marks
     else
       new_lnum = 1
@@ -41,16 +41,16 @@ function Navigation:mark_select(component, selected, marks, position)
     component:call(position_window)
     return mark_index
   else
-    local start_hunks_lnum = marks[#marks].start
-    start_hunks_lnum = start_hunks_lnum
-        and (start_hunks_lnum >= 1 or new_lnum <= line_count)
-        and start_hunks_lnum
+    local top_hunks_lnum = marks[#marks].top
+    top_hunks_lnum = top_hunks_lnum
+        and (top_hunks_lnum >= 1 or new_lnum <= line_count)
+        and top_hunks_lnum
       or 1
-    mark_index = start_hunks_lnum
-        and (start_hunks_lnum >= 1 or new_lnum <= line_count)
+    mark_index = top_hunks_lnum
+        and (top_hunks_lnum >= 1 or new_lnum <= line_count)
         and #marks
       or 1
-    component:set_lnum(start_hunks_lnum)
+    component:set_lnum(top_hunks_lnum)
     component:call(position_window)
     return mark_index
   end
@@ -63,19 +63,19 @@ function Navigation:mark_up(window, buffer, marks)
   local mark_index = 0
   for i = #marks, 1, -1 do
     local mark = marks[i]
-    if mark.finish < lnum then
-      new_lnum = mark.finish
+    if mark.bot < lnum then
+      new_lnum = mark.bot
       mark_index = i
       break
-    elseif lnum > mark.start then
-      new_lnum = mark.start
+    elseif lnum > mark.top then
+      new_lnum = mark.top
       mark_index = i
       break
     end
   end
   if not new_lnum or new_lnum < 1 or new_lnum > line_count then
-    if marks and marks[#marks] and marks[#marks].finish then
-      new_lnum = marks[#marks].finish
+    if marks and marks[#marks] and marks[#marks].bot then
+      new_lnum = marks[#marks].bot
       mark_index = #marks
     else
       new_lnum = 1
@@ -88,16 +88,16 @@ function Navigation:mark_up(window, buffer, marks)
     end)
     return mark_index
   else
-    local finish_hunks_lnum = marks[#marks].finish
-    finish_hunks_lnum = finish_hunks_lnum
-        and (finish_hunks_lnum >= 1 or new_lnum <= line_count)
-        and finish_hunks_lnum
+    local bot_hunks_lnum = marks[#marks].bot
+    bot_hunks_lnum = bot_hunks_lnum
+        and (bot_hunks_lnum >= 1 or new_lnum <= line_count)
+        and bot_hunks_lnum
       or 1
-    mark_index = finish_hunks_lnum
-        and (finish_hunks_lnum >= 1 or new_lnum <= line_count)
+    mark_index = bot_hunks_lnum
+        and (bot_hunks_lnum >= 1 or new_lnum <= line_count)
         and #marks
       or 1
-    window:set_lnum(finish_hunks_lnum):call(function()
+    window:set_lnum(bot_hunks_lnum):call(function()
       vim.cmd('norm! zz')
     end)
     return mark_index
@@ -113,23 +113,23 @@ function Navigation:mark_down(window, buffer, marks)
   for i = 1, #marks do
     local mark = marks[i]
     local compare_lnum = lnum
-    if mark.start > compare_lnum then
-      new_lnum = mark.start
+    if mark.top > compare_lnum then
+      new_lnum = mark.top
       mark_index = i
       break
-    elseif compare_lnum < mark.finish then
-      new_lnum = mark.finish
+    elseif compare_lnum < mark.bot then
+      new_lnum = mark.bot
       mark_index = i
       break
-    elseif compare_lnum == mark.finish and compare_lnum == line_count then
-      new_lnum = mark.finish
+    elseif compare_lnum == mark.bot and compare_lnum == line_count then
+      new_lnum = mark.bot
       mark_index = i
       break
     end
   end
   if not new_lnum or new_lnum < 1 or new_lnum > line_count then
-    if marks and marks[1] and marks[1].start then
-      new_lnum = marks[1].start
+    if marks and marks[1] and marks[1].top then
+      new_lnum = marks[1].top
       mark_index = 1
     else
       new_lnum = 1
@@ -146,16 +146,16 @@ function Navigation:mark_down(window, buffer, marks)
     end)
     return mark_index
   else
-    local first_hunk_start_lnum = marks[1].start
-    first_hunk_start_lnum = first_hunk_start_lnum
-        and (first_hunk_start_lnum >= 1 and new_lnum <= line_count)
-        and first_hunk_start_lnum
+    local first_hunk_top_lnum = marks[1].top
+    first_hunk_top_lnum = first_hunk_top_lnum
+        and (first_hunk_top_lnum >= 1 and new_lnum <= line_count)
+        and first_hunk_top_lnum
       or 1
-    mark_index = first_hunk_start_lnum
-        and (first_hunk_start_lnum >= 1 or new_lnum <= line_count)
+    mark_index = first_hunk_top_lnum
+        and (first_hunk_top_lnum >= 1 or new_lnum <= line_count)
         and 1
       or 1
-    window:set_lnum(first_hunk_start_lnum):call(function()
+    window:set_lnum(first_hunk_top_lnum):call(function()
       vim.cmd('norm! zz')
     end)
     return mark_index
@@ -168,12 +168,12 @@ function Navigation:hunk_up(window, hunks)
   local selected = nil
   for i = #hunks, 1, -1 do
     local hunk = hunks[i]
-    if hunk.finish < lnum then
-      new_lnum = hunk.finish
+    if hunk.bot < lnum then
+      new_lnum = hunk.bot
       selected = i
       break
-    elseif lnum > hunk.start then
-      new_lnum = hunk.start
+    elseif lnum > hunk.top then
+      new_lnum = hunk.top
       selected = i
       break
     end
@@ -187,13 +187,13 @@ function Navigation:hunk_up(window, hunks)
     end)
     return selected
   else
-    local finish_hunks_lnum = hunks[#hunks].finish
+    local bot_hunks_lnum = hunks[#hunks].bot
     selected = #hunks
-    if finish_hunks_lnum < 1 then
-      finish_hunks_lnum = 1
+    if bot_hunks_lnum < 1 then
+      bot_hunks_lnum = 1
       selected = 1
     end
-    window:set_lnum(finish_hunks_lnum):call(function()
+    window:set_lnum(bot_hunks_lnum):call(function()
       vim.cmd('norm! zz')
     end)
     return selected
@@ -206,12 +206,12 @@ function Navigation:hunk_down(window, hunks)
   local selected = nil
   for i = 1, #hunks do
     local hunk = hunks[i]
-    if hunk.start > lnum then
-      new_lnum = hunk.start
+    if hunk.top > lnum then
+      new_lnum = hunk.top
       selected = i
       break
-    elseif lnum < hunk.finish then
-      new_lnum = hunk.finish
+    elseif lnum < hunk.bot then
+      new_lnum = hunk.bot
       selected = i
       break
     end
@@ -225,13 +225,13 @@ function Navigation:hunk_down(window, hunks)
     end)
     return selected
   else
-    local first_hunk_start_lnum = hunks[1].start
+    local first_hunk_top_lnum = hunks[1].top
     selected = 1
-    if first_hunk_start_lnum < 1 then
-      first_hunk_start_lnum = 1
+    if first_hunk_top_lnum < 1 then
+      first_hunk_top_lnum = 1
       selected = 1
     end
-    window:set_lnum(first_hunk_start_lnum):call(function()
+    window:set_lnum(first_hunk_top_lnum):call(function()
       vim.cmd('norm! zz')
     end)
     return selected

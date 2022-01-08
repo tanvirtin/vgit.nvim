@@ -247,15 +247,15 @@ function ProjectDiffScene:open_file()
       for i = 1, #marks do
         local current_mark = marks[i]
         if
-          current_lnum >= current_mark.start
-          and current_lnum <= current_mark.finish
+          current_lnum >= current_mark.top
+          and current_lnum <= current_mark.bot
         then
           mark = current_mark
           break
         end
       end
     end
-    lnum = mark and mark.start_lnum
+    lnum = mark and mark.top_lnum
     self:hide()
     vim.cmd(string.format('e %s', filename))
     if lnum then
@@ -327,7 +327,11 @@ function ProjectDiffScene:show(title, options)
   console.log('Processing project diff')
   self:fetch()
   loop.await_fast_event()
-  if not runtime_cache.err and runtime_cache.data and #runtime_cache.data.changed_files == 0 then
+  if
+    not runtime_cache.err
+    and runtime_cache.data
+    and #runtime_cache.data.changed_files == 0
+  then
     console.log('No changes found')
     return false
   end

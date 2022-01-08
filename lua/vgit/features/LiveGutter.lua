@@ -69,7 +69,7 @@ function LiveGutter:display(buffer)
   end
   for i = 1, #hunks do
     local hunk = hunks[i]
-    for j = hunk.start, hunk.finish do
+    for j = hunk.top, hunk.bot do
       buffer:sign_place(
         (hunk.type == 'remove' and j == 0) and 1 or j,
         signs_setting:get('usage').main[hunk.type]

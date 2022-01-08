@@ -461,8 +461,8 @@ function Git:untracked_hunks(lines)
     diff[#diff + 1] = string.format('+%s', lines[i])
   end
   local hunk = Hunk:new()
-  hunk.start = 1
-  hunk.finish = #lines
+  hunk.top = 1
+  hunk.bot = #lines
   hunk.type = 'add'
   hunk.diff = diff
   hunk.stat = {
@@ -478,8 +478,8 @@ function Git:deleted_hunks(lines)
     diff[#diff + 1] = string.format('+%s', lines[i])
   end
   local hunk = Hunk:new()
-  hunk.start = 1
-  hunk.finish = #lines
+  hunk.top = 1
+  hunk.bot = #lines
   hunk.type = 'remove'
   hunk.diff = diff
   hunk.stat = {

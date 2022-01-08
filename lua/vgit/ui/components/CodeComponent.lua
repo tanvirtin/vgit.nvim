@@ -55,8 +55,8 @@ function CodeComponent:reset_cursor()
   return self
 end
 
-function CodeComponent:add_highlight(hl, row, col_start, col_end)
-  self.buffer:add_highlight(hl, row, col_start, col_end)
+function CodeComponent:add_highlight(hl, row, col_top, col_end)
+  self.buffer:add_highlight(hl, row, col_top, col_end)
   return self
 end
 
@@ -286,7 +286,7 @@ function CodeComponent:set_title(title, opts)
   for _, range_info in ipairs(hl_range_infos) do
     local hl = range_info.hl
     local range = range_info.range
-    header:add_highlight(hl, 0, range.start, range.finish)
+    header:add_highlight(hl, 0, range.top, range.bot)
   end
   return self
 end

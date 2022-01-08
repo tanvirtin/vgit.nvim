@@ -54,8 +54,8 @@ function Buffer:get_name()
   return vim.api.nvim_buf_get_name(self.bufnr)
 end
 
-function Buffer:add_highlight(hl, row, col_start, col_end)
-  self.namespace:add_highlight(self, hl, row, col_start, col_end)
+function Buffer:add_highlight(hl, row, col_top, col_end)
+  self.namespace:add_highlight(self, hl, row, col_top, col_end)
   return self
 end
 
@@ -119,27 +119,27 @@ function Buffer:delete(opts)
   return self
 end
 
-function Buffer:get_lines(start, finish)
-  start = start or 0
-  finish = finish or -1
-  return vim.api.nvim_buf_get_lines(self.bufnr, start, finish, false)
+function Buffer:get_lines(top, bot)
+  top = top or 0
+  bot = bot or -1
+  return vim.api.nvim_buf_get_lines(self.bufnr, top, bot, false)
 end
 
 function Buffer:get_option(key)
   return vim.api.nvim_buf_get_option(self.bufnr, key)
 end
 
-function Buffer:set_lines(lines, start, finish)
-  start = start or 0
-  finish = finish or -1
+function Buffer:set_lines(lines, top, bot)
+  top = top or 0
+  bot = bot or -1
   local bufnr = self.bufnr
   local modifiable = vim.api.nvim_buf_get_option(bufnr, 'modifiable')
   if modifiable then
-    vim.api.nvim_buf_set_lines(bufnr, start, finish, false, lines)
+    vim.api.nvim_buf_set_lines(bufnr, top, bot, false, lines)
     return
   end
   vim.api.nvim_buf_set_option(bufnr, 'modifiable', true)
-  vim.api.nvim_buf_set_lines(bufnr, start, finish, false, lines)
+  vim.api.nvim_buf_set_lines(bufnr, top, bot, false, lines)
   vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
   return self
 end
