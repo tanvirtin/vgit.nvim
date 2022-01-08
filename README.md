@@ -1,45 +1,55 @@
-# VGit
-
-<table>
-    <tr>
-        <td>
-            <strong>Visual Git Plugin for Neovim to enhance your git experience</strong>
-        </tr>
-    </td>
-</table>
-
-<a href="https://github.com/tanvirtin/vgit.nvim/actions?query=workflow%3ACI">
-    <img src="https://github.com/tanvirtin/vgit.nvim/workflows/CI/badge.svg?branch=main" alt="CI" />
-</a>
-<a href="https://opensource.org/licenses/MIT">
-    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
-</a>
+<div align="center">
+    
+  # VGit
+  
+  <table>
+      <tr>
+          <td>
+              <strong>Visual Git Plugin for Neovim to enhance your git experience</strong>
+          </tr>
+      </td>
+  </table>
+  
+  [![Lua](https://img.shields.io/badge/Lua-blue.svg?style=for-the-badge&logo=lua)](http://www.lua.org)
+  [![Neovim](https://img.shields.io/badge/Neovim%200.5+-green.svg?style=for-the-badge&logo=neovim)](https://neovim.io)
+  
+  <a href="https://github.com/tanvirtin/vgit.nvim/actions?query=workflow%3ACI">
+      <img src="https://github.com/tanvirtin/vgit.nvim/workflows/CI/badge.svg?branch=main" alt="CI" />
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+      <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
+  </a>
+</div>
 
 <br />
-<br />
 
-<img width="1512" alt="Hunk Preview" src="https://user-images.githubusercontent.com/25164326/147415891-32a0fa30-3adb-4df4-82af-2c866ed0e227.png">
-<img width="1512" alt="Diff Preview" src="https://user-images.githubusercontent.com/25164326/147415890-f4401bce-675a-46a5-9d2b-e4cc9f7cd69c.png">
+<div align="center">
+  <img width="1512" alt="Hunk Preview" src="https://user-images.githubusercontent.com/25164326/147415891-32a0fa30-3adb-4df4-82af-2c866ed0e227.png">
+</div>
 
-## Requirements
-- Neovim **>=** 0.5
-- Git **>=** 2.18.0
-- Operating System:
-    - linux-gnu*
-    - Darwin
+**Requirements**
+---
+- Neovim `0.5+`
+- Git `2.18.0+`
+- Supported Operating Systems:
+    - `linux-gnu*`
+    - `Darwin`
 
-## Prerequisites
+**Prerequisites**
+---
 - [Git](https://git-scm.com/)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 
-## Recommended Settings
+**Recommended Settings**
+---
 ```lua
 vim.o.updatetime = 300
 vim.o.incsearch = false
 vim.wo.signcolumn = 'yes'
 ```
 
-## Installation
+**Installation**
+---
 Default installation via Packer.
 ```lua
 use {
@@ -50,7 +60,8 @@ use {
 }
 ```
 
-## Setup
+**Setup**
+---
 You must instantiate the plugin in order for the features to work.
 ```lua
 require('vgit').setup()
@@ -64,6 +75,11 @@ EOF
 ```
 
 Highlights, signs, keymappings are few examples of what can be configured in VGit. Advanced setup below shows you all configurable parameters in VGit.
+
+<details><summary><b>Show advanced setup</b></summary>
+
+<br />
+
 ```lua
 require('vgit').setup({
   keymaps = {
@@ -248,9 +264,14 @@ require('vgit').setup({
 })
 ```
 
-<img width="342" alt="VGit Commands" src="https://user-images.githubusercontent.com/25164326/147710754-fcbe0cef-3e74-41cd-a6d6-4b9a6a9eb258.png">
+</details>
 
-## API
+**API**
+---
+
+<img width="342" alt="VGit Commands" src="https://user-images.githubusercontent.com/25164326/147710754-fcbe0cef-3e74-41cd-a6d6-4b9a6a9eb258.png">
+<br />
+
 | Function Name | Description |
 |---------------|-------------|
 | setup | Sets VGit up for you. This plugin cannot be used before this function has been called. |
