@@ -315,7 +315,7 @@ function CodeScene:make_line_numbers()
   return self
 end
 
-function CodeScene:paint_operation(lnum, metadata, component_type)
+function CodeScene:apply_paint_instructions(lnum, metadata, component_type)
   local lnum_change = metadata.lnum_change
   local number_line = metadata.number_line
   local line_number_hl = 'GitLineNr'
@@ -368,6 +368,23 @@ function CodeScene:paint_operation(lnum, metadata, component_type)
   component:transpose_virtual_line_number(number_line, line_number_hl, lnum - 1)
 end
 
+function CodeScene:apply_brush(top, bot)
+  local current_lines_metadata = self.runtime_cache.current_lines_metadata
+  local previous_lines_metadata = self.runtime_cache.previous_lines_metadata
+  for i = top - 1, bot - 1 do
+    if current_lines_metadata and current_lines_metadata[i] then
+      self:apply_paint_instructions(i, current_lines_metadata[i], 'current')
+    end
+    if self.layout_type == 'split' then
+      if previous_lines_metadata and previous_lines_metadata[i] then
+        self:apply_paint_instructions(i, previous_lines_metadata[i], 'previous')
+      end
+    end
+  end
+  return self
+end
+
+-- Applies brush to only a given range in a document.
 function CodeScene:paint_code_partially()
   -- Attaching it to just current will always be enough.
   self.scene.components.current:attach_to_ui(function(top, bot)
@@ -376,24 +393,7 @@ function CodeScene:paint_code_partially()
   return self
 end
 
-function CodeScene:apply_brush(top, bot)
-  local current_lines_metadata = self.runtime_cache.current_lines_metadata
-  local previous_lines_metadata = self.runtime_cache.previous_lines_metadata
-  for i = top - 1, bot - 1 do
-    local current_line = current_lines_metadata[i]
-    local previous_line = previous_lines_metadata[i]
-    if current_line then
-      self:paint_operation(i, current_line, 'current')
-    end
-    if self.layout_type == 'split' then
-      if previous_line then
-        self:paint_operation(i, previous_line, 'previous')
-      end
-    end
-  end
-  return self
-end
-
+-- Applies brush to the entire document.
 function CodeScene:paint_code()
   return self:apply_brush(1, #self.runtime_cache.current_lines_metadata)
 end
