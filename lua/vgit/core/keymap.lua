@@ -13,7 +13,7 @@ keymap.set = function(mode, key, action)
   vim.api.nvim_set_keymap(
     mode,
     key,
-    string.format(':lua require("vgit").%s()<CR>', action),
+    string.format('<Cmd>lua require("vgit").%s()<CR>', action),
     {
       noremap = true,
       silent = true,
@@ -26,7 +26,7 @@ keymap.buffer_set = function(buffer, mode, key, action)
     buffer.bufnr,
     mode,
     key,
-    string.format(':lua require("vgit").%s()<CR>', action),
+    string.format('<Cmd>lua require("vgit").%s()<CR>', action),
     {
       silent = true,
       noremap = true,

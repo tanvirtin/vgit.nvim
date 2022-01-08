@@ -206,7 +206,7 @@ function PresentationalComponent:set_title(title, opts)
   for _, range_info in ipairs(hl_range_infos) do
     local hl = range_info.hl
     local range = range_info.range
-    header.buffer:add_highlight(hl, 0, range.start, range.finish)
+    header.buffer:add_highlight(hl, 0, range.top, range.bot)
   end
   return self
 end

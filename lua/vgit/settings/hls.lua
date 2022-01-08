@@ -1,7 +1,7 @@
 local Config = require('vgit.core.Config')
 
 return Config:new({
-  GitBackgroundPrimary = 'NormalFloat',
+  GitBackgroundPrimary = 'Normal',
   GitBackgroundSecondary = {
     gui = nil,
     fg = nil,
