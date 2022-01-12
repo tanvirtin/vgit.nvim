@@ -453,12 +453,14 @@ function CodeScene:clear_runtime_cache()
 end
 
 function CodeScene:destroy()
-  -- TODO: This is a super important step to avoid memory leak.
-  -- Should be a better way to handle this
-  local components = self.scene.components
-  components.current:detach_from_renderer()
-  if self.layout_type == 'split' then
-    components.previous:detach_from_renderer()
+  if self.scene then
+    -- TODO: This is a super important step to avoid memory leak.
+    -- Should be a better way to handle this
+    local components = self.scene.components
+    components.current:detach_from_renderer()
+    if self.layout_type == 'split' then
+      components.previous:detach_from_renderer()
+    end
   end
   self:hide()
   self:clear_runtime_cache()
