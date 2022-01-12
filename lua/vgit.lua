@@ -1,3 +1,4 @@
+local renderer = require('vgit.core.renderer')
 local console = require('vgit.core.console')
 local env = require('vgit.core.env')
 local hls_setting = require('vgit.settings.hls')
@@ -36,8 +37,6 @@ local project_hunks_list = ProjectHunksList:new()
 
 active_scene.inject(buffer_hunks, navigation, git_store)
 
-local function prevent_default() end
-
 local on_enter = loop.async(function()
   if active_scene.exists() then
     return active_scene.on_enter()
@@ -70,11 +69,22 @@ local buf_enter = loop.async(function()
   live_gutter:resync()
 end)
 
+local buf_read = loop.async(function()
+  live_gutter:attach()
+end)
+
+local buf_new_file = loop.async(function()
+  live_gutter:attach()
+end)
+
+local buf_write_post = loop.async(function()
+  live_gutter:attach()
+end)
+
 local buf_win_enter = loop.async(function()
   if active_scene.exists() then
     active_scene.destroy()
   end
-  live_gutter:attach()
 end)
 
 local buf_win_leave = loop.async(function()
@@ -85,10 +95,6 @@ local buf_win_leave = loop.async(function()
   if active_scene.exists() then
     active_scene.destroy()
   end
-end)
-
-local buf_wipeout = loop.async(function()
-  live_gutter:detach()
 end)
 
 local cursor_hold = loop.async(function()
@@ -182,7 +188,6 @@ local reset_all = loop.async(function()
   if active_scene.exists() then
     active_scene.refresh()
   end
-  vim.cmd('bufdo edit!')
 end)
 
 local buffer_hunk_stage = loop.async(function()
@@ -276,6 +281,10 @@ local function version()
   return versioning:current()
 end
 
+local function help()
+  vim.cmd('h vgit')
+end
+
 local function setup_commands()
   vim.cmd(
     string.format(
@@ -291,14 +300,17 @@ local function register_modules()
     sign.register_module()
   end)
   autocmd.register_module()
+  renderer.register_module()
 end
 
 local function register_autocmds()
   autocmd.on('BufEnter', 'buf_enter()')
+  autocmd.on('BufRead', 'buf_read()')
+  autocmd.on('BufNewFile', 'buf_new_file()')
+  autocmd.on('BufWritePost', 'buf_write_post()')
   autocmd.on('WinEnter', 'win_enter()')
   autocmd.on('BufWinEnter', 'buf_win_enter()')
   autocmd.on('BufWinLeave', 'buf_win_leave()')
-  autocmd.on('BufWipeout', 'buf_wipeout()')
   autocmd.on('CursorHold', 'cursor_hold()')
   autocmd.on('CursorMoved', 'cursor_moved()')
   autocmd.on('InsertEnter', 'insert_enter()')
@@ -334,13 +346,16 @@ end
 
 return {
   setup = setup,
+  help = help,
+  h = help,
   version = version,
-  prevent_default = prevent_default,
   buf_enter = buf_enter,
+  buf_read = buf_read,
+  buf_new_file = buf_new_file,
+  buf_write_post = buf_write_post,
   win_enter = win_enter,
   buf_win_enter = buf_win_enter,
   buf_win_leave = buf_win_leave,
-  buf_wipeout = buf_wipeout,
   cursor_hold = cursor_hold,
   cursor_moved = cursor_moved,
   insert_enter = insert_enter,

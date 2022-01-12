@@ -38,7 +38,6 @@ end
 function LiveBlame:hide(buffer)
   loop.await_fast_event()
   if buffer:is_valid() then
-    loop.await_fast_event()
     self.namespace:clear(buffer)
   end
 end
@@ -109,6 +108,9 @@ LiveBlame.sync = loop.brakecheck(loop.async(function(self)
     console.debug(config_err, debug.traceback())
     return
   end
+  if not buffer then
+    return
+  end
   self:hide(buffer)
   self:display(lnum, buffer, config, blame)
   self.last_lnum = lnum
@@ -128,13 +130,19 @@ function LiveBlame:desync(force)
   if not force and self.last_lnum and self.last_lnum == lnum then
     return
   end
+  if not buffer then
+    return
+  end
   self:hide(buffer)
 end
 
 function LiveBlame:desync_all()
   local buffers = Buffer:list()
   for i = 1, #buffers do
-    self:hide(buffers[i])
+    local buffer = buffers[i]
+    if buffer then
+      self:hide(buffer)
+    end
   end
 end
 

@@ -115,7 +115,7 @@ function TableComponent:paint_table(hls)
     local hl_info = hls[i]
     local hl = hl_info.hl
     local range = hl_info.range
-    self.buffer:add_highlight(hl, hl_info.row - 1, range.start, range.finish)
+    self.buffer:add_highlight(hl, hl_info.row - 1, range.top, range.bot)
   end
 end
 

@@ -25,42 +25,56 @@ function Namespace:add_highlight(buffer, hl, row, col_start, col_end)
   return self
 end
 
-function Namespace:transpose_virtual_text(buffer, text, hl, row, col, pos)
-  pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, col, {
+function Namespace:transpose_virtual_text(
+  buffer,
+  text,
+  hl,
+  row,
+  col,
+  pos,
+  priority
+)
+  vim.api.nvim_buf_set_extmark(buffer.bufnr, self.ns_id, row, col, {
     id = row + 1 + col,
     virt_text = { { text, hl } },
     virt_text_pos = pos or 'overlay',
     hl_mode = 'combine',
+    priority = priority,
   })
   return self
 end
 
-function Namespace:transpose_virtual_line(buffer, texts, col, pos)
-  pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, col, 0, {
+function Namespace:transpose_virtual_line(buffer, texts, col, pos, priority)
+  vim.api.nvim_buf_set_extmark(buffer.bufnr, self.ns_id, col, 0, {
     id = col + 1,
     virt_text = texts,
     virt_text_pos = pos or 'overlay',
     hl_mode = 'combine',
+    priority = priority,
   })
   return self
 end
 
-function Namespace:sign_place(buffer, lnum, sign_definition)
-  vim.fn.sign_place(lnum, self:sign_ns_id(buffer), sign_definition, buffer.bufnr, {
+function Namespace:sign_place(buffer, lnum, sign_name)
+  vim.fn.sign_place(lnum, self:sign_ns_id(buffer), sign_name, buffer.bufnr, {
     id = lnum,
     lnum = lnum,
+    buffer = buffer.bufnr,
     priority = signs_setting:get('priority'),
   })
   return self
 end
 
-function Namespace:sign_unplace(buffer)
-  vim.fn.sign_unplace(self:sign_ns_id(buffer))
+function Namespace:sign_unplace(buffer, lnum)
+  vim.fn.sign_unplace(
+    self:sign_ns_id(buffer),
+    { buffer = buffer.bufnr, id = lnum }
+  )
   return self
 end
 
 function Namespace:clear(buffer)
-  pcall(vim.api.nvim_buf_clear_namespace, buffer.bufnr, self.ns_id, 0, -1)
+  vim.api.nvim_buf_clear_namespace(buffer.bufnr, self.ns_id, 0, -1)
   return self
 end
 

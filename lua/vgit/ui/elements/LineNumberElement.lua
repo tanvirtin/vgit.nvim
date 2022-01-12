@@ -9,7 +9,7 @@ function LineNumberElement:new()
   return setmetatable({
     buffer = nil,
     window = nil,
-    cache = {
+    runtime_cache = {
       lines = {},
     },
   }, LineNumberElement)
@@ -57,7 +57,7 @@ function LineNumberElement:mount(options)
     :assign_options({
       cursorbind = true,
       scrollbind = true,
-      winhl = 'Normal:VGitBackgroundPrimary',
+      winhl = 'Normal:GitBackgroundPrimary',
     })
   return self
 end
@@ -76,12 +76,12 @@ function LineNumberElement:make_lines(lines)
     actual_lines[#actual_lines + 1] = ''
   end
   self.buffer:set_lines(actual_lines)
-  self.cache.lines = lines
+  self.runtime_cache.lines = lines
   return self
 end
 
-function LineNumberElement:sign_place(lnum, defined_sign)
-  self.buffer:sign_place(lnum, defined_sign)
+function LineNumberElement:sign_place(lnum, sign_name)
+  self.buffer:sign_place(lnum, sign_name)
   return self
 end
 

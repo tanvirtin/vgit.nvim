@@ -65,8 +65,8 @@ function Hunk:new(header)
   if not header then
     return setmetatable({
       header = nil,
-      start = nil,
-      finish = nil,
+      top = nil,
+      bot = nil,
       type = nil,
       diff = {},
       stat = {
@@ -84,8 +84,8 @@ function Hunk:new(header)
   end
   local hunk = {
     header = header,
-    start = current[1],
-    finish = current[1] + current[2] - 1,
+    top = current[1],
+    bot = current[1] + current[2] - 1,
     type = nil,
     diff = {},
     stat = {
@@ -94,7 +94,7 @@ function Hunk:new(header)
     },
   }
   if current[2] == 0 then
-    hunk.finish = hunk.start
+    hunk.bot = hunk.top
     hunk.type = 'remove'
   elseif previous[2] == 0 then
     hunk.type = 'add'
