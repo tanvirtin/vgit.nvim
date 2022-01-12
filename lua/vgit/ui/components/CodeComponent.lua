@@ -26,6 +26,16 @@ function CodeComponent:new(options)
   )
 end
 
+function CodeComponent:attach_to_renderer(on_render)
+  self.buffer:attach_to_renderer(on_render)
+  return self
+end
+
+function CodeComponent:detach_from_renderer()
+  self.buffer:detach_from_renderer()
+  return self
+end
+
 function CodeComponent:set_cursor(cursor)
   self.window:set_cursor(cursor)
   self.elements.line_number:set_cursor(cursor)
@@ -50,14 +60,18 @@ function CodeComponent:reset_cursor()
   return self
 end
 
-function CodeComponent:add_highlight(hl, row, col_start, col_end)
-  self.buffer:add_highlight(hl, row, col_start, col_end)
+function CodeComponent:add_highlight(hl, row, col_top, col_end)
+  self.buffer:add_highlight(hl, row, col_top, col_end)
   return self
 end
 
-function CodeComponent:sign_place(lnum, defined_sign)
-  self.buffer:sign_place(lnum, defined_sign)
-  self.elements.line_number:sign_place(lnum, defined_sign)
+function CodeComponent:sign_place(lnum, sign_name)
+  self.buffer:sign_place(lnum, sign_name)
+  return self
+end
+
+function CodeComponent:sign_place_line_number(lnum, sign_name)
+  self.elements.line_number:sign_place(lnum, sign_name)
   return self
 end
 
@@ -281,7 +295,7 @@ function CodeComponent:set_title(title, opts)
   for _, range_info in ipairs(hl_range_infos) do
     local hl = range_info.hl
     local range = range_info.range
-    header:add_highlight(hl, 0, range.start, range.finish)
+    header:add_highlight(hl, 0, range.top, range.bot)
   end
   return self
 end

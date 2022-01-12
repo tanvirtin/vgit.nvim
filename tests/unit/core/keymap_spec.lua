@@ -6,7 +6,7 @@ local it = it
 local before_each = before_each
 local after_each = after_each
 
-describe('keymap:', function()
+describe('keymap<Cmd>', function()
   before_each(function()
     vim.api = mock(vim.api, true)
   end)
@@ -18,45 +18,53 @@ describe('keymap:', function()
   describe('define', function()
     it('should call vim api internally to define the given keys', function()
       local expected = {
-        { 'n', '<C-k>', ':lua require("vgit").hunk_up()<CR>' },
-        { 'n', '<C-j>', ':lua require("vgit").hunk_down()<CR>' },
-        { 'n', '<leader>gs', ':lua require("vgit").buffer_hunk_stage()<CR>' },
-        { 'n', '<leader>gr', ':lua require("vgit").buffer_hunk_reset()<CR>' },
+        { 'n', '<C-k>', '<Cmd>lua require("vgit").hunk_up()<CR>' },
+        { 'n', '<C-j>', '<Cmd>lua require("vgit").hunk_down()<CR>' },
+        {
+          'n',
+          '<leader>gs',
+          '<Cmd>lua require("vgit").buffer_hunk_stage()<CR>',
+        },
+        {
+          'n',
+          '<leader>gr',
+          '<Cmd>lua require("vgit").buffer_hunk_reset()<CR>',
+        },
         {
           'n',
           '<leader>gp',
-          ':lua require("vgit").buffer_hunk_preview()<CR>',
+          '<Cmd>lua require("vgit").buffer_hunk_preview()<CR>',
         },
         {
           'n',
           '<leader>gb',
-          ':lua require("vgit").buffer_blame_preview()<CR>',
+          '<Cmd>lua require("vgit").buffer_blame_preview()<CR>',
         },
         {
           'n',
           '<leader>gf',
-          ':lua require("vgit").buffer_diff_preview()<CR>',
+          '<Cmd>lua require("vgit").buffer_diff_preview()<CR>',
         },
         {
           'n',
           '<leader>gh',
-          ':lua require("vgit").buffer_history_preview()<CR>',
+          '<Cmd>lua require("vgit").buffer_history_preview()<CR>',
         },
-        { 'n', '<leader>gu', ':lua require("vgit").buffer_reset()<CR>' },
+        { 'n', '<leader>gu', '<Cmd>lua require("vgit").buffer_reset()<CR>' },
         {
           'n',
           '<leader>gg',
-          ':lua require("vgit").buffer_gutter_blame_preview()<CR>',
+          '<Cmd>lua require("vgit").buffer_gutter_blame_preview()<CR>',
         },
         {
           'n',
           '<leader>gd',
-          ':lua require("vgit").project_diff_preview()<CR>',
+          '<Cmd>lua require("vgit").project_diff_preview()<CR>',
         },
         {
           'n',
           '<leader>gx',
-          ':lua require("vgit").toggle_diff_preference()<CR>',
+          '<Cmd>lua require("vgit").toggle_diff_preference()<CR>',
         },
       }
       keymap.define({

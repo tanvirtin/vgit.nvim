@@ -32,6 +32,8 @@ function Command:new()
       toggle_buffer_blames = true,
       enable_tracing = true,
       disable_tracing = true,
+      h = true,
+      help = true,
     },
   }, Command)
 end

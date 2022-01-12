@@ -15,9 +15,9 @@ end
 
 function HistoryScene:fetch(selected)
   selected = selected or 1
-  local cache = self.cache
-  local data = cache.data
-  local buffer = cache.buffer
+  local runtime_cache = self.runtime_cache
+  local data = runtime_cache.data
+  local buffer = runtime_cache.buffer
   local git_object = buffer.git_object
   local lines, hunks
   local err, logs
@@ -28,14 +28,14 @@ function HistoryScene:fetch(selected)
   end
   if err then
     console.debug(err, debug.traceback())
-    cache.err = err
+    runtime_cache.err = err
     return self
   end
   local log = logs[selected]
   if not log then
     err = { 'Failed to access logs' }
     console.debug(err, debug.traceback())
-    cache.err = err
+    runtime_cache.err = err
     return self
   end
   local parent_hash = log.parent_hash
@@ -43,17 +43,17 @@ function HistoryScene:fetch(selected)
   err, hunks = git_object:remote_hunks(parent_hash, commit_hash)
   if err then
     console.debug(err, debug.traceback())
-    cache.err = err
+    runtime_cache.err = err
     return self
   end
   err, lines = git_object:lines(commit_hash)
   if err then
     console.debug(err, debug.traceback())
-    cache.err = err
+    runtime_cache.err = err
     return self
   end
   loop.await_fast_event()
-  cache.data = {
+  runtime_cache.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
     logs = logs,
@@ -143,7 +143,7 @@ end
 function HistoryScene:make_table()
   self.scene.components.table
     :unlock()
-    :make_rows(self.cache.data.logs, function(log)
+    :make_rows(self.runtime_cache.data.logs, function(log)
       return {
         log.revision,
         log.author_name or '',
@@ -179,17 +179,17 @@ function HistoryScene:show(title, options)
     console.log('Current buffer you are on has no history')
     return false
   end
-  local cache = self.cache
-  cache.title = title
-  cache.options = options
-  cache.buffer = buffer
+  local runtime_cache = self.runtime_cache
+  runtime_cache.title = title
+  runtime_cache.options = options
+  runtime_cache.buffer = buffer
   console.log('Processing buffer logs')
   self:fetch().scene = Scene:new(self:get_scene_options(options)):mount()
-  if cache.err then
-    console.error(cache.err)
+  if runtime_cache.err then
+    console.error(runtime_cache.err)
     return false
   end
-  local data = cache.data
+  local data = runtime_cache.data
   self
     :set_title(title, {
       filename = data.filename,
@@ -198,10 +198,10 @@ function HistoryScene:show(title, options)
     })
     :make_code()
     :make_table()
-    :paint_code()
+    :paint_code_partially()
     :set_code_cursor_on_mark(1)
   -- Must be after initial fetch
-  cache.last_selected = 1
+  runtime_cache.last_selected = 1
   console.clear()
   return true
 end

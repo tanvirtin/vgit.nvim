@@ -55,7 +55,7 @@ function HeaderElement:mount(options)
     :assign_options({
       cursorbind = false,
       scrollbind = false,
-      winhl = 'Normal:VGitBackgroundSecondary',
+      winhl = 'Normal:GitBackgroundSecondary',
     })
   self.namespace = Namespace:new()
   return self

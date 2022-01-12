@@ -61,10 +61,10 @@ function BufferHunks:cursor_hunk()
   end
   for i = 1, #hunks do
     local hunk = hunks[i]
-    if lnum == 1 and hunk.start == 0 and hunk.finish == 0 then
+    if lnum == 1 and hunk.top == 0 and hunk.bot == 0 then
       return hunk, i
     end
-    if lnum >= hunk.start and lnum <= hunk.finish then
+    if lnum >= hunk.top and lnum <= hunk.bot then
       return hunk, i
     end
   end
@@ -184,12 +184,12 @@ function BufferHunks:cursor_reset()
   for i = 1, #hunks do
     local hunk = hunks[i]
     if
-      (lnum >= hunk.start and lnum <= hunk.finish)
+      (lnum >= hunk.top and lnum <= hunk.bot)
       or (
-        hunk.start == 0
-        and hunk.finish == 0
-        and lnum - 1 == hunk.start
-        and lnum - 1 == hunk.finish
+        hunk.top == 0
+        and hunk.bot == 0
+        and lnum - 1 == hunk.top
+        and lnum - 1 == hunk.bot
       )
     then
       selected_hunk = hunk
@@ -206,15 +206,15 @@ function BufferHunks:cursor_reset()
         replaced_lines[#replaced_lines + 1] = string.sub(line, 2, -1)
       end
     end
-    local start = selected_hunk.start
-    local finish = selected_hunk.finish
-    if start and finish then
+    local top = selected_hunk.top
+    local bot = selected_hunk.bot
+    if top and bot then
       if selected_hunk.type == 'remove' then
-        buffer:set_lines(replaced_lines, start, finish)
+        buffer:set_lines(replaced_lines, top, bot)
       else
-        buffer:set_lines(replaced_lines, start - 1, finish)
+        buffer:set_lines(replaced_lines, top - 1, bot)
       end
-      local new_lnum = start
+      local new_lnum = top
       if new_lnum < 1 then
         new_lnum = 1
       end

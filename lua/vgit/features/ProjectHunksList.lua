@@ -45,14 +45,14 @@ function ProjectHunksList:fetch()
         entries[#entries + 1] = {
           text = string.format(
             'lines: [%s..%s] +%s -%s',
-            hunk.start,
-            hunk.finish,
+            hunk.top,
+            hunk.bot,
             hunk.stat.added,
             hunk.stat.removed,
             hunk.stat.modified
           ),
           filename = filename,
-          lnum = hunk.start,
+          lnum = hunk.top,
           col = 0,
         }
       end

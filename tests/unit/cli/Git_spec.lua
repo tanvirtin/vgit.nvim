@@ -15,7 +15,7 @@ a.describe('Git:', function()
     git:set_cwd('..')
   end
 
-  -- If path is tests/mock then git will start looking from tests/mock directory for fixtures/ignoreme
+  -- If path is tests/mock then git will top looking from tests/mock directory for fixtures/ignoreme
   local function use_mock_repository()
     git:set_cwd('tests/mock')
   end
@@ -82,8 +82,8 @@ a.describe('Git:', function()
       eq(hunks, {
         {
           diff = { '-file1-3' },
-          start = 2,
-          finish = 2,
+          top = 2,
+          bot = 2,
           header = '@@ -3 +2,0 @@ file1-2',
           type = 'remove',
           stat = {
@@ -93,8 +93,8 @@ a.describe('Git:', function()
         },
         {
           diff = { '+file1-6' },
-          start = 5,
-          finish = 5,
+          top = 5,
+          bot = 5,
           header = '@@ -5,0 +5 @@ file1-5',
           type = 'add',
           stat = {
@@ -135,8 +135,8 @@ a.describe('Git:', function()
             '+e',
             '+f',
           },
-          start = 1,
-          finish = 6,
+          top = 1,
+          bot = 6,
           type = 'add',
           stat = {
             added = 6,
@@ -152,8 +152,8 @@ a.describe('Git:', function()
       eq(hunks, {
         {
           diff = {},
-          start = 1,
-          finish = 0,
+          top = 1,
+          bot = 0,
           header = nil,
           type = 'add',
           stat = {

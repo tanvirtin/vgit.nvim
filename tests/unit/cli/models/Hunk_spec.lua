@@ -19,8 +19,8 @@ describe('Hunk:', function()
       eq(Hunk:new(headers['add']), {
         header = '@@ -17,0 +18,15 @@ foo bar',
         diff = {},
-        start = 18,
-        finish = 32,
+        top = 18,
+        bot = 32,
         type = 'add',
         stat = {
           added = 0,
@@ -30,8 +30,8 @@ describe('Hunk:', function()
       eq(Hunk:new(headers['remove']), {
         header = '@@ -9,9 +8,0 @@ @@ foo bar',
         diff = {},
-        start = 8,
-        finish = 8,
+        top = 8,
+        bot = 8,
         type = 'remove',
         stat = {
           added = 0,
@@ -41,8 +41,8 @@ describe('Hunk:', function()
       eq(Hunk:new(headers['change']), {
         header = '@@ -10,7 +10,7 @@ foo bar',
         diff = {},
-        start = 10,
-        finish = 16,
+        top = 10,
+        bot = 16,
         type = 'change',
         stat = {
           added = 0,
@@ -52,8 +52,8 @@ describe('Hunk:', function()
       eq(Hunk:new(headers['invalid']), {
         header = '@@ --10,-1 +-10,-7 @@ foo bar',
         diff = {},
-        start = -10,
-        finish = -18,
+        top = -10,
+        bot = -18,
         type = 'change',
         stat = {
           added = 0,
@@ -63,8 +63,8 @@ describe('Hunk:', function()
       eq(Hunk:new(headers['invalid_zero']), {
         header = '@@ -0,0 +0,0 @@ foo bar',
         diff = {},
-        start = 0,
-        finish = 0,
+        top = 0,
+        bot = 0,
         type = 'remove',
         stat = {
           added = 0,

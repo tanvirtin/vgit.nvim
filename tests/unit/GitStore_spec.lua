@@ -85,46 +85,4 @@ describe('GitStore:', function()
       eq(git_store:is_empty(), true)
     end)
   end)
-
-  describe('clean', function()
-    local size = 10
-    local bufnrs = {}
-    local git_store
-    before_each(function()
-      git_store = GitStore:new()
-      bufnrs = {}
-      for _ = 1, size do
-        local bufnr = vim.api.nvim_create_buf(false, false)
-        bufnrs[#bufnrs + 1] = bufnr
-        git_store:add(Buffer:new(bufnr))
-      end
-    end)
-    it('should clean any buffer that has been deleted from vim', function()
-      for i = 1, size do
-        local bufnr = bufnrs[i]
-        local buffer = Buffer:new(bufnr)
-        eq(git_store:contains(buffer), true)
-        vim.api.nvim_buf_delete(bufnr, { force = true })
-        git_store:clean()
-        eq(git_store:contains(buffer), false)
-      end
-    end)
-
-    it(
-      'should invoke a callback per buffer removed if a callback is passed',
-      function()
-        for i = 1, size do
-          local bufnr = bufnrs[i]
-          local buffer = Buffer:new(bufnr)
-          eq(git_store:contains(buffer), true)
-          vim.api.nvim_buf_delete(bufnr, { force = true })
-        end
-        local size_count = 0
-        git_store:clean(function()
-          size_count = size_count + 1
-        end)
-        eq(size, size_count)
-      end
-    )
-  end)
 end)

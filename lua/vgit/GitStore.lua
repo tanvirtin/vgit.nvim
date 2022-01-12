@@ -14,34 +14,23 @@ function GitStore:contains(buffer)
   return self.buffers[buffer.bufnr] ~= nil
 end
 
-function GitStore:remove(buffer)
+function GitStore:remove(buffer, callback)
+  if not buffer then
+    return buffer
+  end
   buffer = self.buffers[buffer.bufnr]
+  if not buffer then
+    return
+  end
   self.buffers[buffer.bufnr] = nil
+  if callback then
+    callback(buffer)
+  end
   return buffer
 end
 
 function GitStore:get(buffer)
   return self.buffers[buffer.bufnr]
-end
-
-function GitStore:clean(callback)
-  local bufnrs = vim.api.nvim_list_bufs()
-  local bufnr_map = {}
-  for i = 1, #bufnrs do
-    local bufnr = bufnrs[i]
-    bufnr_map[bufnr] = true
-  end
-  local buffers = {}
-  for bufnr, buffer in pairs(self.buffers) do
-    if not bufnr_map[bufnr] then
-      buffers[#buffers + 1] = buffer
-      self.buffers[bufnr] = nil
-      if callback then
-        callback(buffer)
-      end
-    end
-  end
-  return buffers
 end
 
 function GitStore:current()

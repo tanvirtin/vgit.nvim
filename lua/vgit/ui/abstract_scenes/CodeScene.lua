@@ -15,7 +15,7 @@ function CodeScene:new(buffer_hunks, navigation, git_store, git)
     git = git,
     layout_type = 'unified',
     scene = nil,
-    cache = {
+    runtime_cache = {
       mark_index = 1,
       current_lines_metadata = {},
       previous_lines_metadata = {},
@@ -45,7 +45,7 @@ end
 
 function CodeScene:set_filetype()
   local components = self.scene.components
-  local filetype = self.cache.data.filetype
+  local filetype = self.runtime_cache.data.filetype
   if not filetype then
     return self
   end
@@ -61,15 +61,16 @@ function CodeScene:set_filetype()
 end
 
 function CodeScene:reset()
-  self:reset_cursor()
-  return self
+  return self:reset_cursor():clear_namespace()
 end
 
 function CodeScene:reset_cursor()
-  local components = self.scene.components
-  components.current:reset_cursor()
-  if self.layout_type == 'split' then
-    components.previous:reset_cursor()
+  if self and self.scene then
+    local components = self.scene.components
+    components.current:reset_cursor()
+    if self.layout_type == 'split' then
+      components.previous:reset_cursor()
+    end
   end
   return self
 end
@@ -95,11 +96,11 @@ function CodeScene:notify(text)
 end
 
 function CodeScene:navigate(direction)
-  local data = self.cache.data
+  local data = self.runtime_cache.data
   if not data then
     return self
   end
-  if self.cache.err then
+  if self.runtime_cache.err then
     return self
   end
   local marks = data.dto.marks
@@ -114,7 +115,7 @@ function CodeScene:navigate(direction)
   local window = component.window
   local buffer = component.buffer
   if focused_component_name == 'table' then
-    local selected = self.cache.mark_index
+    local selected = self.runtime_cache.mark_index
     if direction == 'up' then
       selected = selected - 1
     end
@@ -137,7 +138,7 @@ function CodeScene:navigate(direction)
     end
   end
   if mark_index then
-    self.cache.mark_index = mark_index
+    self.runtime_cache.mark_index = mark_index
     self:notify(
       string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks)
     )
@@ -164,11 +165,11 @@ function CodeScene:set_code_cursor_on_mark(selected, position)
   if not position then
     position = 'top'
   end
-  local data = self.cache.data
+  local data = self.runtime_cache.data
   if not data then
     return self
   end
-  if self.cache.err then
+  if self.runtime_cache.err then
     return self
   end
   local marks = data.dto.marks
@@ -190,7 +191,7 @@ function CodeScene:set_code_cursor_on_mark(selected, position)
     position
   )
   if mark_index then
-    self.cache.mark_index = selected
+    self.runtime_cache.mark_index = selected
     self:notify(
       string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks)
     )
@@ -205,7 +206,7 @@ end
 
 function CodeScene:make_lines()
   local components = self.scene.components
-  local dto = self.cache.data.dto
+  local dto = self.runtime_cache.data.dto
   if self.layout_type == 'unified' then
     components.current:set_lines(dto.lines)
   else
@@ -216,7 +217,7 @@ function CodeScene:make_lines()
 end
 
 function CodeScene:make_line_numbers()
-  local dto = self.cache.data.dto
+  local dto = self.runtime_cache.data.dto
   local components = self.scene.components
   local layout_type = self.layout_type or 'unified'
   local line_metadata = {}
@@ -242,10 +243,10 @@ function CodeScene:make_line_numbers()
       end
       line_metadata[#line_metadata + 1] = {
         lnum_change = lnum_change,
-        number_line = line,
+        line_number = line,
       }
     end
-    self.cache.current_lines_metadata = line_metadata
+    self.runtime_cache.current_lines_metadata = line_metadata
     component:make_line_numbers(lines)
   elseif layout_type == 'split' then
     local previous_component = components.previous
@@ -279,10 +280,10 @@ function CodeScene:make_line_numbers()
       end
       line_metadata[#line_metadata + 1] = {
         lnum_change = lnum_change,
-        number_line = line,
+        line_number = line,
       }
     end
-    self.cache.current_lines_metadata = line_metadata
+    self.runtime_cache.current_lines_metadata = line_metadata
     current_component:make_line_numbers(lines)
     line_metadata = {}
     lines = {}
@@ -306,18 +307,18 @@ function CodeScene:make_line_numbers()
       end
       line_metadata[#line_metadata + 1] = {
         lnum_change = lnum_change,
-        number_line = line,
+        line_number = line,
       }
     end
-    self.cache.previous_lines_metadata = line_metadata
+    self.runtime_cache.previous_lines_metadata = line_metadata
     previous_component:make_line_numbers(lines)
   end
   return self
 end
 
-function CodeScene:paint_operation(lnum, metadata, component_type)
+function CodeScene:apply_paint_instructions(lnum, metadata, component_type)
   local lnum_change = metadata.lnum_change
-  local number_line = metadata.number_line
+  local line_number = metadata.line_number
   local line_number_hl = 'GitLineNr'
   local signs_usage_setting = signs_setting:get('usage')
   local scene_signs = signs_usage_setting.scene
@@ -327,20 +328,32 @@ function CodeScene:paint_operation(lnum, metadata, component_type)
     component = self.scene.components[lnum_change.buftype]
     local type = lnum_change.type
     local word_diff = lnum_change.word_diff
-    local defined_sign = scene_signs[type]
+    local sign_name = scene_signs[type]
     lnum = lnum_change.lnum
     if lnum_change.type ~= 'void' then
       line_number_hl = main_signs[type]
     end
-    if defined_sign then
-      component:sign_place(lnum, defined_sign)
+    if sign_name then
+      component:sign_place_line_number(lnum, sign_name)
+    end
+    component:transpose_virtual_line_number(
+      line_number,
+      line_number_hl,
+      lnum - 1
+    )
+    if sign_name then
+      component:sign_place(lnum, sign_name)
     end
     if type == 'void' then
-      local void_line = string.rep(
-        symbols_setting:get('symbols').void,
-        component.window:get_width()
+      component:transpose_virtual_text(
+        string.rep(
+          symbols_setting:get('symbols').void,
+          component.window:get_width()
+        ),
+        line_number_hl,
+        lnum - 1,
+        0
       )
-      component:transpose_virtual_text(void_line, line_number_hl, lnum - 1, 0)
     end
     -- Highlighting the word diff text here.
     local texts = {}
@@ -364,21 +377,43 @@ function CodeScene:paint_operation(lnum, metadata, component_type)
       end
       component:transpose_virtual_line(texts, lnum - 1)
     end
+  else
+    component:transpose_virtual_line_number(
+      line_number,
+      line_number_hl,
+      lnum - 1
+    )
   end
-  component:transpose_virtual_line_number(number_line, line_number_hl, lnum - 1)
 end
 
-function CodeScene:paint_code()
-  local layout_type = self.layout_type or 'unified'
-  local current_lines_metadata = self.cache.current_lines_metadata
-  local previous_lines_metadata = self.cache.previous_lines_metadata
-  for i = 1, #current_lines_metadata do
-    self:paint_operation(i, current_lines_metadata[i], 'current')
-    if layout_type == 'split' then
-      self:paint_operation(i, previous_lines_metadata[i], 'previous')
+function CodeScene:apply_brush(top, bot)
+  local current_lines_metadata = self.runtime_cache.current_lines_metadata
+  local previous_lines_metadata = self.runtime_cache.previous_lines_metadata
+  for i = top, bot do
+    if current_lines_metadata and current_lines_metadata[i] then
+      self:apply_paint_instructions(i, current_lines_metadata[i], 'current')
+    end
+    if self.layout_type == 'split' then
+      if previous_lines_metadata and previous_lines_metadata[i] then
+        self:apply_paint_instructions(i, previous_lines_metadata[i], 'previous')
+      end
     end
   end
   return self
+end
+
+-- Applies brush to only a given range in a document.
+function CodeScene:paint_code_partially()
+  -- Attaching it to just current will always be enough.
+  self.scene.components.current:attach_to_renderer(function(top, bot)
+    self:apply_brush(top, bot)
+  end)
+  return self
+end
+
+-- Applies brush to the entire document.
+function CodeScene:paint_code()
+  return self:apply_brush(1, #self.runtime_cache.current_lines_metadata)
 end
 
 function CodeScene:show()
@@ -393,24 +428,40 @@ function CodeScene:hide()
   return self
 end
 
-function CodeScene:clear_cached_err()
-  self.cache.err = nil
+function CodeScene:clear_namespace()
+  local components = self.scene.components
+  components.current:clear_namespace()
+  if self.layout_type == 'split' then
+    components.previous:clear_namespace()
+  end
   return self
 end
 
-function CodeScene:clear_cached_data()
-  self.cache.data = nil
+function CodeScene:clear_runtime_cached_err()
+  self.runtime_cache.err = nil
   return self
 end
 
-function CodeScene:clear_cache()
-  self.cache = {}
+function CodeScene:clear_runtime_cached_data()
+  self.runtime_cache.data = nil
+  return self
+end
+
+function CodeScene:clear_runtime_cache()
+  self.runtime_cache = {}
   return self
 end
 
 function CodeScene:destroy()
+  -- TODO: This is a super important step to avoid memory leak.
+  -- Should be a better way to handle this
+  local components = self.scene.components
+  components.current:detach_from_renderer()
+  if self.layout_type == 'split' then
+    components.previous:detach_from_renderer()
+  end
   self:hide()
-  self:clear_cache()
+  self:clear_runtime_cache()
   return self
 end
 

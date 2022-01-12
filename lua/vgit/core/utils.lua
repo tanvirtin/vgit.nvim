@@ -56,12 +56,12 @@ utils.shorten_string = function(str, limit)
 end
 
 utils.accumulate_string = function(existing_text, new_text)
-  local start_range = #existing_text
-  local end_range = start_range + #new_text
+  local top_range = #existing_text
+  local end_range = top_range + #new_text
   local text = existing_text .. new_text
   return text, {
-    start = start_range,
-    finish = end_range,
+    top = top_range,
+    bot = end_range,
   }
 end
 

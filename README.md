@@ -19,6 +19,12 @@
   <a href="https://opensource.org/licenses/MIT">
       <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
   </a>
+
+  <br />
+  <br />
+
+  <p>🚧 This is a work-in-progress project and can be unstable at times. 🚧</p>
+
 </div>
 
 <br />
@@ -39,6 +45,7 @@
 ---
 - [Git](https://git-scm.com/)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
+- [nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons) (optional dependency used to show icons)
 
 **Recommended Settings**
 ---
@@ -282,7 +289,7 @@ require('vgit').setup({
 | buffer_gutter_blame_preview | Opens a preview which shows all the blames related to the lines of the buffer. |
 | buffer_diff_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. |
 | buffer_hunk_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. This preview will open up in a smaller window relative to where your cursor is. |
-| project_diff_preview | Opens a diff preview along with a table of all the files that have been changed, enabling users to see all the files that were changed in the current project. This preview supports the following commands, "buffer_stage", "buffer_unstage", "buffer_reset", "stage_all" and "unstage_all" |
+| project_diff_preview | Opens a diff preview along with a table of all the files that have been changed, enabling users to see all the files that were changed in the current project. This preview supports the following commands, "buffer_stage", "buffer_unstage", "buffer_reset", "stage_all" and "unstage_all". |
 | project_hunks_preview | Opens a diff preview along with a table of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
 | project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
 | buffer_hunk_stage | Stages a hunk, if a cursor is on the hunk. |
@@ -290,9 +297,9 @@ require('vgit').setup({
 | buffer_stage | Stages all changes in the current buffer. |
 | buffer_unstage | Unstages all changes in the current buffer. |
 | buffer_reset | Removes all current changes in the buffer and resets it to the version in HEAD. |
-| stage_all | Stages all file changes in your project |
-| unstage_all | Unstages all file changes in your project |
-| reset_all | Discards all file changes that are not staged |
+| stage_all | Stages all file changes in your project. |
+| unstage_all | Unstages all file changes in your project. |
+| reset_all | Discards all file changes that are not staged. |
 | hunk_up | Moves the cursor to the hunk above the current cursor position. |
 | hunk_down | Moves the cursor to the hunk below the current cursor position. |
 | toggle_diff_preference | Used to switch between "split" and "unified" diff. |

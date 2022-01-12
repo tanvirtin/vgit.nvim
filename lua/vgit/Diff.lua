@@ -16,10 +16,10 @@ function Diff:deleted_unified(lines)
   local hunk = hunks[1]
   local type = hunk.type
   local diff = hunk.diff
-  local start = hunk.start
-  local finish = hunk.finish
+  local top = hunk.top
+  local bot = hunk.bot
   local lnum_changes = {}
-  local s = start
+  local s = top
   for _ = 1, #diff do
     lnum_changes[#lnum_changes + 1] = {
       lnum = s,
@@ -35,8 +35,8 @@ function Diff:deleted_unified(lines)
     marks = {
       {
         type = type,
-        start = start,
-        finish = finish,
+        top = top,
+        bot = bot,
       },
     },
     stat = hunk.stat,
@@ -48,10 +48,10 @@ function Diff:deleted_split(lines)
   local hunk = hunks[1]
   local type = hunk.type
   local diff = hunk.diff
-  local start = hunk.start
-  local finish = hunk.finish
+  local top = hunk.top
+  local bot = hunk.bot
   local lnum_changes = {}
-  local s = start
+  local s = top
   local current_lines = {}
   for _ = 1, #diff do
     current_lines[#current_lines + 1] = ''
@@ -75,8 +75,8 @@ function Diff:deleted_split(lines)
     marks = {
       {
         type = type,
-        start = start,
-        finish = finish,
+        top = top,
+        bot = bot,
       },
     },
     stat = hunk.stat,
@@ -106,20 +106,20 @@ function Diff:unified(lines)
     local hunk = hunks[i]
     local type = hunk.type
     local diff = hunk.diff
-    local start = hunk.start + new_lines_added
-    local finish = hunk.finish + new_lines_added
+    local top = hunk.top + new_lines_added
+    local bot = hunk.bot + new_lines_added
     local hunk_stat = hunk.stat
     stat.added = stat.added + hunk_stat.added
     stat.removed = stat.removed + hunk_stat.removed
     if type == 'add' then
       marks[#marks + 1] = {
         type = type,
-        start = start,
-        finish = finish,
-        start_lnum = start - new_lines_added,
-        finish_lnum = finish - new_lines_added,
+        top = top,
+        bot = bot,
+        top_lnum = top - new_lines_added,
+        bot_lnum = bot - new_lines_added,
       }
-      for j = start, finish do
+      for j = top, bot do
         lnum_changes[#lnum_changes + 1] = {
           lnum = j,
           type = 'add',
@@ -129,12 +129,12 @@ function Diff:unified(lines)
     elseif type == 'remove' then
       marks[#marks + 1] = {
         type = type,
-        start = start + 1,
-        finish = nil,
-        start_lnum = start - new_lines_added,
-        finish_lnum = finish - new_lines_added,
+        top = top + 1,
+        bot = nil,
+        top_lnum = top - new_lines_added,
+        bot_lnum = bot - new_lines_added,
       }
-      local s = start
+      local s = top
       for j = 1, #diff do
         local line = diff[j]
         s = s + 1
@@ -146,18 +146,18 @@ function Diff:unified(lines)
           buftype = 'current',
         }
       end
-      marks[#marks].finish = start + #diff
+      marks[#marks].bot = top + #diff
       marks[#marks] = marks[#marks]
     elseif type == 'change' then
       local removed_lines, added_lines = hunk:parse_diff()
       marks[#marks + 1] = {
         type = type,
-        start = start,
-        finish = nil,
-        start_lnum = start - new_lines_added,
-        finish_lnum = finish - new_lines_added,
+        top = top,
+        bot = nil,
+        top_lnum = top - new_lines_added,
+        bot_lnum = bot - new_lines_added,
       }
-      local s = start
+      local s = top
       for j = 1, #diff do
         local line = diff[j]
         local cleaned_line = line:sub(2, #line)
@@ -205,7 +205,7 @@ function Diff:unified(lines)
         end
         s = s + 1
       end
-      marks[#marks].finish = start + #diff - 1
+      marks[#marks].bot = top + #diff - 1
       marks[#marks] = marks[#marks]
     end
   end
@@ -247,8 +247,8 @@ function Diff:split(lines)
   for i = 1, #hunks do
     local hunk = hunks[i]
     local type = hunk.type
-    local start = hunk.start + new_lines_added
-    local finish = hunk.finish + new_lines_added
+    local top = hunk.top + new_lines_added
+    local bot = hunk.bot + new_lines_added
     local diff = hunk.diff
     local hunk_stat = hunk.stat
     stat.added = stat.added + hunk_stat.added
@@ -256,13 +256,13 @@ function Diff:split(lines)
     if type == 'add' then
       marks[#marks + 1] = {
         type = type,
-        start = start,
-        finish = finish,
-        start_lnum = start - new_lines_added,
-        finish_lnum = finish - new_lines_added,
+        top = top,
+        bot = bot,
+        top_lnum = top - new_lines_added,
+        bot_lnum = bot - new_lines_added,
       }
       -- Remove the line indicating that these lines were inserted in current_lines.
-      for j = start, finish do
+      for j = top, bot do
         previous_lines[j] = void_line
         lnum_changes[#lnum_changes + 1] = {
           lnum = j,
@@ -279,38 +279,38 @@ function Diff:split(lines)
       local current_new_lines_added = 0
       marks[#marks + 1] = {
         type = type,
-        start = start + 1,
-        finish = nil,
-        start_lnum = start - new_lines_added,
-        finish_lnum = finish - new_lines_added,
+        top = top + 1,
+        bot = nil,
+        top_lnum = top - new_lines_added,
+        bot_lnum = bot - new_lines_added,
       }
       for j = 1, #diff do
         local line = diff[j]
-        start = start + 1
+        top = top + 1
         current_new_lines_added = current_new_lines_added + 1
-        table.insert(current_lines, start, void_line)
-        table.insert(previous_lines, start, line:sub(2, #line))
+        table.insert(current_lines, top, void_line)
+        table.insert(previous_lines, top, line:sub(2, #line))
         lnum_changes[#lnum_changes + 1] = {
-          lnum = start,
+          lnum = top,
           buftype = 'current',
           type = 'void',
         }
         lnum_changes[#lnum_changes + 1] = {
-          lnum = start,
+          lnum = top,
           buftype = 'previous',
           type = 'remove',
         }
       end
       new_lines_added = new_lines_added + current_new_lines_added
-      marks[#marks].finish = finish + current_new_lines_added
+      marks[#marks].bot = bot + current_new_lines_added
       marks[#marks] = marks[#marks]
     elseif type == 'change' then
       marks[#marks + 1] = {
         type = type,
-        start = start,
-        finish = nil,
-        start_lnum = start - new_lines_added,
-        finish_lnum = finish - new_lines_added,
+        top = top,
+        bot = nil,
+        top_lnum = top - new_lines_added,
+        bot_lnum = bot - new_lines_added,
       }
       -- Retrieve lines that have been removed and added without "-" and "+".
       local removed_lines, added_lines = hunk:parse_diff()
@@ -321,17 +321,17 @@ function Diff:split(lines)
       else
         max_lines = #added_lines
       end
-      -- Hunk finish index does not indicate the total number of lines that may have a diff.
+      -- Hunk bot index does not indicate the total number of lines that may have a diff.
       -- Which is why I am inserting empty lines into both the current and previous data arrays.
-      for j = finish + 1, (start + max_lines) - 1 do
+      for j = bot + 1, (top + max_lines) - 1 do
         new_lines_added = new_lines_added + 1
         table.insert(current_lines, j, void_line)
         table.insert(previous_lines, j, void_line)
       end
       -- With the new calculated range I simply loop over and add the removed
       -- and added lines to their corresponding arrays that contain a buffer lines.
-      for j = start, start + max_lines - 1 do
-        local recalculated_index = (j - start) + 1
+      for j = top, top + max_lines - 1 do
+        local recalculated_index = (j - top) + 1
         local added_line = added_lines[recalculated_index]
         local removed_line = removed_lines[recalculated_index]
         if removed_line then
@@ -392,9 +392,9 @@ function Diff:split(lines)
         current_lines[j] = added_line or void_line
       end
       if #removed_lines > #added_lines then
-        marks[#marks].finish = finish + (#removed_lines - #added_lines)
+        marks[#marks].bot = bot + (#removed_lines - #added_lines)
       else
-        marks[#marks].finish = finish
+        marks[#marks].bot = bot
       end
       marks[#marks] = marks[#marks]
     end

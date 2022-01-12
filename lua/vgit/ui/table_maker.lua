@@ -11,8 +11,8 @@ table_maker.parse_item = function(item, row)
       hl = item.icon_before.hl,
       row = row,
       range = {
-        start = 1,
-        finish = 1 + #item.icon_before.icon,
+        top = 1,
+        bot = 1 + #item.icon_before.icon,
       },
     }
   end
@@ -22,8 +22,8 @@ table_maker.parse_item = function(item, row)
       hl = item.icon_after.hl,
       row = row,
       range = {
-        start = #value - 1,
-        finish = #value - 1 + #item.icon_after.icon,
+        top = #value - 1,
+        bot = #value - 1 + #item.icon_after.icon,
       },
     }
   end
@@ -75,8 +75,8 @@ table_maker.make_row =
       if hl then
         for i = 1, #hl do
           local hl_range = hl[i].range
-          hl_range.start = hl_range.start + #row
-          hl_range.finish = hl_range.finish + #row
+          hl_range.top = hl_range.top + #row
+          hl_range.bot = hl_range.bot + #row
           hls[#hls + 1] = hl[i]
         end
       end
@@ -123,8 +123,8 @@ table_maker.make_rows = function(rows, paddings, column_spacing, max_column_len)
   end
   for i = 1, #hls do
     local hl_info = hls[i]
-    hl_info.range.start = hl_info.range.start + 1
-    hl_info.range.finish = hl_info.range.finish + 1
+    hl_info.range.top = hl_info.range.top + 1
+    hl_info.range.bot = hl_info.range.bot + 1
   end
   return lines, hls
 end

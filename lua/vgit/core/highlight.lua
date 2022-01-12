@@ -4,10 +4,6 @@ local highlight = {}
 
 highlight.define = function(group, color)
   local link = color
-  if type(link) == 'string' then
-    vim.api.nvim_exec(string.format('highlight link %s %s', group, link), false)
-    return
-  end
   if color.override == false then
     local ok, hl = pcall(vim.api.nvim_get_hl_by_name, group, true)
     -- TODO: If a highlight gets cleared neovim returns { [true] = 'some id' }.
@@ -15,6 +11,10 @@ highlight.define = function(group, color)
     if ok and (type(hl) == 'table' and not hl[true] and hl ~= nil) then
       return
     end
+  end
+  if type(link) == 'string' then
+    vim.api.nvim_exec(string.format('highlight link %s %s', group, link), false)
+    return
   end
   local gui = color.gui and 'gui = ' .. color.gui or 'gui = NONE'
   local fg = color.fg and 'guifg = ' .. color.fg or 'guifg = NONE'

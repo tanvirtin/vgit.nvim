@@ -1,4 +1,3 @@
-local loop = require('vgit.core.loop')
 local Path = require('plenary.path')
 local pfiletype = require('plenary.filetype')
 
