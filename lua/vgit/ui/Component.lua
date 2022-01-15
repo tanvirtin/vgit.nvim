@@ -8,7 +8,7 @@ local Component = Object:extend()
 function Component:new(options)
   options = options or {}
   return setmetatable(
-    utils.object_assign({
+    utils.object.assign({
       buffer = nil,
       window = nil,
       runtime_cache = {},
@@ -27,13 +27,13 @@ function Component:new(options)
           bufhidden = 'wipe',
         },
         win_options = {
+          winhl = 'Normal:GitBackgroundPrimary',
+          signcolumn = 'auto',
           wrap = false,
           number = false,
-          winhl = 'Normal:GitBackgroundPrimary',
           cursorline = false,
           cursorbind = false,
           scrollbind = false,
-          signcolumn = 'auto',
         },
         window_props = {
           style = 'minimal',
@@ -51,6 +51,16 @@ function Component:new(options)
     }, options),
     Component
   )
+end
+
+function Component:attach_to_renderer(on_render)
+  self.buffer:attach_to_renderer(on_render)
+  return self
+end
+
+function Component:detach_from_renderer()
+  self.buffer:detach_from_renderer()
+  return self
 end
 
 function Component:set_width(width)

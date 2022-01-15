@@ -210,7 +210,7 @@ require('vgit').setup({
     live_gutter = {
       enabled = true,
     },
-    scene = {
+    screen = {
       diff_preference = 'unified',
     },
     signs = {
@@ -253,7 +253,7 @@ require('vgit').setup({
         },
       },
       usage = {
-        scene = {
+        screen = {
           add = 'GitSignsAddLn',
           remove = 'GitSignsDeleteLn',
         },

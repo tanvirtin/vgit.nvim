@@ -3,14 +3,14 @@ local Scene = require('vgit.ui.Scene')
 local loop = require('vgit.core.loop')
 local dimensions = require('vgit.ui.dimensions')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
-local CodeScene = require('vgit.ui.abstract_scenes.CodeScene')
+local CodeScreen = require('vgit.ui.screens.CodeScreen')
 local console = require('vgit.core.console')
 local Hunk = require('vgit.cli.models.Hunk')
 
-local DiffScene = CodeScene:extend()
+local DiffScreen = CodeScreen:extend()
 
-function DiffScene:new(...)
-  local this = CodeScene:new(...)
+function DiffScreen:new(...)
+  local this = CodeScreen:new(...)
   this.runtime_cache = {
     buffer = nil,
     title = nil,
@@ -18,10 +18,10 @@ function DiffScene:new(...)
     err = false,
     data = nil,
   }
-  return setmetatable(this, DiffScene)
+  return setmetatable(this, DiffScreen)
 end
 
-function DiffScene:fetch()
+function DiffScreen:fetch()
   local runtime_cache = self.runtime_cache
   local buffer = runtime_cache.buffer
   local hunks = buffer.git_object.hunks
@@ -45,9 +45,9 @@ function DiffScene:fetch()
   return self
 end
 
-function DiffScene:get_unified_scene_options(options)
+function DiffScreen:get_unified_scene_options(options)
   return {
-    current = CodeComponent:new(utils.object_assign({
+    current = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -63,9 +63,9 @@ function DiffScene:get_unified_scene_options(options)
   }
 end
 
-function DiffScene:get_split_scene_options(options)
+function DiffScreen:get_split_scene_options(options)
   return {
-    previous = CodeComponent:new(utils.object_assign({
+    previous = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -78,7 +78,7 @@ function DiffScene:get_split_scene_options(options)
         },
       },
     }, options)),
-    current = CodeComponent:new(utils.object_assign({
+    current = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -95,7 +95,7 @@ function DiffScene:get_split_scene_options(options)
   }
 end
 
-function DiffScene:show(title, options)
+function DiffScreen:show(title, options)
   local buffer = self.git_store:current()
   if not buffer then
     console.log('Current buffer you are on has no hunks')
@@ -133,10 +133,10 @@ function DiffScene:show(title, options)
       stat = data.dto.stat,
     })
     :make_code()
-    :paint_code_partially()
     :set_code_cursor_on_mark(selected_hunk, 'center')
+    :paint_code()
   console.clear()
   return true
 end
 
-return DiffScene
+return DiffScreen

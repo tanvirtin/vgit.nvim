@@ -186,7 +186,7 @@ describe('utils:', function()
     end)
   end)
 
-  describe('object_assign', function()
+  describe('object.assign', function()
     it(
       'should assign attributes in b into a regardless of if a has any of the attributes',
       function()
@@ -199,7 +199,7 @@ describe('utils:', function()
             },
           },
         }
-        local c = utils.object_assign(a, b)
+        local c = utils.object.assign(a, b)
         eq(c, b)
       end
     )
@@ -219,7 +219,7 @@ describe('utils:', function()
           },
         },
       }
-      local c = utils.object_assign(a, b)
+      local c = utils.object.assign(a, b)
       eq(c, b)
     end)
   end)

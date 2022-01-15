@@ -4,20 +4,20 @@ local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local TableComponent = require('vgit.ui.components.TableComponent')
-local CodeDataScene = require('vgit.ui.abstract_scenes.CodeDataScene')
+local CodeDataScreen = require('vgit.ui.screens.CodeDataScreen')
 local Scene = require('vgit.ui.Scene')
 local dimensions = require('vgit.ui.dimensions')
 local console = require('vgit.core.console')
 local fs = require('vgit.core.fs')
 local Diff = require('vgit.Diff')
 
-local ProjectHunksScene = CodeDataScene:extend()
+local ProjectHunksScreen = CodeDataScreen:extend()
 
-function ProjectHunksScene:new(...)
-  return setmetatable(CodeDataScene:new(...), ProjectHunksScene)
+function ProjectHunksScreen:new(...)
+  return setmetatable(CodeDataScreen:new(...), ProjectHunksScreen)
 end
 
-function ProjectHunksScene:fetch()
+function ProjectHunksScreen:fetch()
   local git = self.git
   local runtime_cache = self.runtime_cache
   runtime_cache.entries = {}
@@ -96,10 +96,10 @@ function ProjectHunksScene:fetch()
   return self
 end
 
-function ProjectHunksScene:get_unified_scene_options(options)
+function ProjectHunksScreen:get_unified_scene_options(options)
   local table_height = math.floor(dimensions.global_height() * 0.15)
   return {
-    current = CodeComponent:new(utils.object_assign({
+    current = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -112,7 +112,7 @@ function ProjectHunksScene:get_unified_scene_options(options)
         },
       },
     }, options)),
-    table = TableComponent:new(utils.object_assign({
+    table = TableComponent:new(utils.object.assign({
       header = { 'Filename', 'Hunk' },
       config = {
         window_props = {
@@ -124,10 +124,10 @@ function ProjectHunksScene:get_unified_scene_options(options)
   }
 end
 
-function ProjectHunksScene:get_split_scene_options(options)
+function ProjectHunksScreen:get_split_scene_options(options)
   local table_height = math.floor(dimensions.global_height() * 0.15)
   return {
-    previous = CodeComponent:new(utils.object_assign({
+    previous = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -141,7 +141,7 @@ function ProjectHunksScene:get_split_scene_options(options)
         },
       },
     }, options)),
-    current = CodeComponent:new(utils.object_assign({
+    current = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -156,7 +156,7 @@ function ProjectHunksScene:get_split_scene_options(options)
         },
       },
     }, options)),
-    table = TableComponent:new(utils.object_assign({
+    table = TableComponent:new(utils.object.assign({
       header = { 'Filename', 'Hunk' },
       config = {
         window_props = {
@@ -168,7 +168,7 @@ function ProjectHunksScene:get_split_scene_options(options)
   }
 end
 
-ProjectHunksScene.update = loop.brakecheck(loop.async(function(self, selected)
+ProjectHunksScreen.update = loop.brakecheck(loop.async(function(self, selected)
   local runtime_cache = self.runtime_cache
   self.runtime_cache.last_selected = selected
   self.runtime_cache.data = runtime_cache.entries[selected]
@@ -194,7 +194,7 @@ ProjectHunksScene.update = loop.brakecheck(loop.async(function(self, selected)
     )
 end))
 
-function ProjectHunksScene:open_file()
+function ProjectHunksScreen:open_file()
   local table = self.scene.components.table
   loop.await_fast_event()
   local selected = table:get_lnum()
@@ -202,7 +202,7 @@ function ProjectHunksScene:open_file()
     local data = self.runtime_cache.data
     self:hide()
     vim.cmd(string.format('e %s', data.filename))
-    Window:new(0):set_lnum(data.hunks[data.index].start):call(function()
+    Window:new(0):set_lnum(data.hunks[data.index].top):call(function()
       vim.cmd('norm! zz')
     end)
     return self
@@ -210,7 +210,7 @@ function ProjectHunksScene:open_file()
   self:update(selected)
 end
 
-function ProjectHunksScene:make_table()
+function ProjectHunksScreen:make_table()
   self.scene.components.table
     :unlock()
     :make_rows(self.runtime_cache.entries, function(entry)
@@ -246,7 +246,7 @@ function ProjectHunksScene:make_table()
   return self
 end
 
-function ProjectHunksScene:show(title, options)
+function ProjectHunksScreen:show(title, options)
   local is_inside_git_dir = self.git:is_inside_git_dir()
   if not is_inside_git_dir then
     console.log('Project has no git folder')
@@ -284,12 +284,12 @@ function ProjectHunksScene:show(title, options)
     })
     :make_code()
     :make_table()
-    :paint_code_partially()
     :set_code_cursor_on_mark(1, 'top')
+    :paint_code()
   -- Must be after initial fetch
   runtime_cache.last_selected = 1
   console.clear()
   return true
 end
 
-return ProjectHunksScene
+return ProjectHunksScreen
