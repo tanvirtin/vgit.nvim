@@ -4,20 +4,20 @@ local utils = require('vgit.core.utils')
 local loop = require('vgit.core.loop')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local TableComponent = require('vgit.ui.components.TableComponent')
-local CodeDataScene = require('vgit.ui.abstract_scenes.CodeDataScene')
+local CodeDataScreen = require('vgit.ui.screens.CodeDataScreen')
 local Scene = require('vgit.ui.Scene')
 local dimensions = require('vgit.ui.dimensions')
 local console = require('vgit.core.console')
 local fs = require('vgit.core.fs')
 local Diff = require('vgit.Diff')
 
-local ProjectDiffScene = CodeDataScene:extend()
+local ProjectDiffScreen = CodeDataScreen:extend()
 
-function ProjectDiffScene:new(...)
-  return setmetatable(CodeDataScene:new(...), ProjectDiffScene)
+function ProjectDiffScreen:new(...)
+  return setmetatable(CodeDataScreen:new(...), ProjectDiffScreen)
 end
 
-function ProjectDiffScene:fetch(selected)
+function ProjectDiffScreen:fetch(selected)
   selected = selected or 1
   local runtime_cache = self.runtime_cache
   local git = self.git
@@ -91,10 +91,10 @@ function ProjectDiffScene:fetch(selected)
   return self
 end
 
-function ProjectDiffScene:get_unified_scene_options(options)
+function ProjectDiffScreen:get_unified_scene_options(options)
   local table_height = math.floor(dimensions.global_height() * 0.15)
   return {
-    current = CodeComponent:new(utils.object_assign({
+    current = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -107,7 +107,7 @@ function ProjectDiffScene:get_unified_scene_options(options)
         },
       },
     }, options)),
-    table = TableComponent:new(utils.object_assign({
+    table = TableComponent:new(utils.object.assign({
       header = { 'Filename', 'Status' },
       config = {
         window_props = {
@@ -119,10 +119,10 @@ function ProjectDiffScene:get_unified_scene_options(options)
   }
 end
 
-function ProjectDiffScene:get_split_scene_options(options)
+function ProjectDiffScreen:get_split_scene_options(options)
   local table_height = math.floor(dimensions.global_height() * 0.15)
   return {
-    previous = CodeComponent:new(utils.object_assign({
+    previous = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -136,7 +136,7 @@ function ProjectDiffScene:get_split_scene_options(options)
         },
       },
     }, options)),
-    current = CodeComponent:new(utils.object_assign({
+    current = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -151,7 +151,7 @@ function ProjectDiffScene:get_split_scene_options(options)
         },
       },
     }, options)),
-    table = TableComponent:new(utils.object_assign({
+    table = TableComponent:new(utils.object.assign({
       header = { 'Filename', 'Status' },
       config = {
         window_props = {
@@ -163,7 +163,7 @@ function ProjectDiffScene:get_split_scene_options(options)
   }
 end
 
-function ProjectDiffScene:run_command(command)
+function ProjectDiffScreen:run_command(command)
   loop.await_fast_event()
   self:reset()
   local runtime_cache = self.runtime_cache
@@ -200,30 +200,30 @@ function ProjectDiffScene:run_command(command)
     :set_code_cursor_on_mark(1)
 end
 
-function ProjectDiffScene:refresh()
+function ProjectDiffScreen:refresh()
   self:run_command()
   return self
 end
 
-function ProjectDiffScene:git_reset()
+function ProjectDiffScreen:git_reset()
   return self:run_command(function(filename)
     return self.git:reset(filename)
   end)
 end
 
-function ProjectDiffScene:git_stage()
+function ProjectDiffScreen:git_stage()
   return self:run_command(function(filename)
     return self.git:stage_file(filename)
   end)
 end
 
-function ProjectDiffScene:git_unstage()
+function ProjectDiffScreen:git_unstage()
   return self:run_command(function(filename)
     return self.git:unstage_file(filename)
   end)
 end
 
-function ProjectDiffScene:open_file()
+function ProjectDiffScreen:open_file()
   local components = self.scene.components
   local table = components.table
   loop.await_fast_event()
@@ -268,7 +268,7 @@ function ProjectDiffScene:open_file()
   self:update(selected)
 end
 
-function ProjectDiffScene:make_table()
+function ProjectDiffScreen:make_table()
   self.scene.components.table
     :unlock()
     :make_rows(self.runtime_cache.data.changed_files, function(file)
@@ -302,7 +302,7 @@ function ProjectDiffScene:make_table()
   return self
 end
 
-function ProjectDiffScene:set_code_keymap(mode, key, action)
+function ProjectDiffScreen:set_code_keymap(mode, key, action)
   local components = self.scene.components
   components.current:set_keymap(mode, key, action)
   if self.layout_type == 'split' then
@@ -311,7 +311,7 @@ function ProjectDiffScene:set_code_keymap(mode, key, action)
   return self
 end
 
-function ProjectDiffScene:show(title, options)
+function ProjectDiffScreen:show(title, options)
   local is_inside_git_dir = self.git:is_inside_git_dir()
   if not is_inside_git_dir then
     console.log('Project has no git folder')
@@ -350,14 +350,14 @@ function ProjectDiffScene:show(title, options)
       stat = data.dto.stat,
     })
     :make_code()
-    :paint_code_partially()
     :make_table()
     :set_code_cursor_on_mark(1)
     :set_code_keymap('n', '<enter>', 'on_enter')
+    :paint_code()
   -- Must be after initial fetch
   runtime_cache.last_selected = 1
   console.clear()
   return true
 end
 
-return ProjectDiffScene
+return ProjectDiffScreen

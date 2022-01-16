@@ -5,9 +5,9 @@ local assertion = require('vgit.core.assertion')
 local signs_setting = require('vgit.settings.signs')
 local Object = require('vgit.core.Object')
 
-local CodeScene = Object:extend()
+local CodeScreen = Object:extend()
 
-function CodeScene:new(buffer_hunks, navigation, git_store, git)
+function CodeScreen:new(buffer_hunks, navigation, git_store, git)
   return setmetatable({
     buffer_hunks = buffer_hunks,
     git_store = git_store,
@@ -20,10 +20,10 @@ function CodeScene:new(buffer_hunks, navigation, git_store, git)
       current_lines_metadata = {},
       previous_lines_metadata = {},
     },
-  }, CodeScene)
+  }, CodeScreen)
 end
 
-function CodeScene:generate_diff(hunks, lines)
+function CodeScreen:generate_diff(hunks, lines)
   local diff
   if self.layout_type == 'unified' then
     diff = Diff:new(hunks):unified(lines)
@@ -33,7 +33,7 @@ function CodeScene:generate_diff(hunks, lines)
   return diff
 end
 
-function CodeScene:get_scene_options(...)
+function CodeScreen:get_scene_options(...)
   local scene_options = nil
   if self.layout_type == 'unified' then
     scene_options = self:get_unified_scene_options(...)
@@ -43,7 +43,7 @@ function CodeScene:get_scene_options(...)
   return scene_options
 end
 
-function CodeScene:set_filetype()
+function CodeScreen:set_filetype()
   local components = self.scene.components
   local filetype = self.runtime_cache.data.filetype
   if not filetype then
@@ -60,11 +60,11 @@ function CodeScene:set_filetype()
   return self
 end
 
-function CodeScene:reset()
+function CodeScreen:reset()
   return self:reset_cursor():clear_namespace()
 end
 
-function CodeScene:reset_cursor()
+function CodeScreen:reset_cursor()
   if self and self.scene then
     local components = self.scene.components
     components.current:reset_cursor()
@@ -75,7 +75,7 @@ function CodeScene:reset_cursor()
   return self
 end
 
-function CodeScene:set_title(title, options)
+function CodeScreen:set_title(title, options)
   local components = self.scene.components
   if self.layout_type == 'split' then
     components.previous:set_title(title, options)
@@ -85,7 +85,7 @@ function CodeScene:set_title(title, options)
   return self
 end
 
-function CodeScene:notify(text)
+function CodeScreen:notify(text)
   local components = self.scene.components
   if self.layout_type == 'split' then
     components.previous:notify(text)
@@ -95,7 +95,7 @@ function CodeScene:notify(text)
   return self
 end
 
-function CodeScene:navigate(direction)
+function CodeScreen:navigate(direction)
   local data = self.runtime_cache.data
   if not data then
     return self
@@ -103,7 +103,11 @@ function CodeScene:navigate(direction)
   if self.runtime_cache.err then
     return self
   end
-  local marks = data.dto.marks
+  local dto = data.dto
+  if not dto then
+    return self
+  end
+  local marks = dto.marks
   local mark_index = nil
   local components = self.scene.components
   if #marks == 0 then
@@ -147,12 +151,12 @@ function CodeScene:navigate(direction)
   return self
 end
 
-function CodeScene:has_active_scene()
+function CodeScreen:has_active_screen()
   local scene = self.scene
   return scene ~= nil and scene.mounted == true
 end
 
-function CodeScene:set_cursor(cursor)
+function CodeScreen:set_cursor(cursor)
   local components = self.scene.components
   components.current:set_cursor(cursor)
   if self.layout_type == 'split' then
@@ -161,7 +165,7 @@ function CodeScene:set_cursor(cursor)
   return self
 end
 
-function CodeScene:set_code_cursor_on_mark(selected, position)
+function CodeScreen:set_code_cursor_on_mark(selected, position)
   if not position then
     position = 'top'
   end
@@ -200,11 +204,11 @@ function CodeScene:set_code_cursor_on_mark(selected, position)
   return self
 end
 
-function CodeScene:make_code()
+function CodeScreen:make_code()
   return self:make_lines():make_line_numbers():set_filetype()
 end
 
-function CodeScene:make_lines()
+function CodeScreen:make_lines()
   local components = self.scene.components
   local dto = self.runtime_cache.data.dto
   if self.layout_type == 'unified' then
@@ -216,7 +220,7 @@ function CodeScene:make_lines()
   return self
 end
 
-function CodeScene:make_line_numbers()
+function CodeScreen:make_line_numbers()
   local dto = self.runtime_cache.data.dto
   local components = self.scene.components
   local layout_type = self.layout_type or 'unified'
@@ -316,7 +320,7 @@ function CodeScene:make_line_numbers()
   return self
 end
 
-function CodeScene:apply_paint_instructions(lnum, metadata, component_type)
+function CodeScreen:apply_paint_instructions(lnum, metadata, component_type)
   local lnum_change = metadata.lnum_change
   local line_number = metadata.line_number
   local line_number_hl = 'GitLineNr'
@@ -386,7 +390,7 @@ function CodeScene:apply_paint_instructions(lnum, metadata, component_type)
   end
 end
 
-function CodeScene:apply_brush(top, bot)
+function CodeScreen:apply_brush(top, bot)
   local current_lines_metadata = self.runtime_cache.current_lines_metadata
   local previous_lines_metadata = self.runtime_cache.previous_lines_metadata
   for i = top, bot do
@@ -403,7 +407,7 @@ function CodeScene:apply_brush(top, bot)
 end
 
 -- Applies brush to only a given range in a document.
-function CodeScene:paint_code_partially()
+function CodeScreen:paint_code_partially()
   -- Attaching it to just current will always be enough.
   self.scene.components.current:attach_to_renderer(function(top, bot)
     self:apply_brush(top, bot)
@@ -412,15 +416,15 @@ function CodeScene:paint_code_partially()
 end
 
 -- Applies brush to the entire document.
-function CodeScene:paint_code()
+function CodeScreen:paint_code()
   return self:apply_brush(1, #self.runtime_cache.current_lines_metadata)
 end
 
-function CodeScene:show()
+function CodeScreen:show()
   assertion.assert('Not yet implemented', debug.traceback())
 end
 
-function CodeScene:detach_from_renderer()
+function CodeScreen:detach_from_renderer()
   -- TODO: This is a super important step to avoid memory leak.
   -- Should be a better way to handle this
   local components = self.scene.components
@@ -431,7 +435,7 @@ function CodeScene:detach_from_renderer()
   return self
 end
 
-function CodeScene:hide()
+function CodeScreen:hide()
   if self.scene then
     self:detach_from_renderer()
     self.scene:unmount()
@@ -440,7 +444,7 @@ function CodeScene:hide()
   return self
 end
 
-function CodeScene:clear_namespace()
+function CodeScreen:clear_namespace()
   local components = self.scene.components
   components.current:clear_namespace()
   if self.layout_type == 'split' then
@@ -449,40 +453,40 @@ function CodeScene:clear_namespace()
   return self
 end
 
-function CodeScene:clear_runtime_cached_err()
+function CodeScreen:clear_runtime_cached_err()
   self.runtime_cache.err = nil
   return self
 end
 
-function CodeScene:clear_runtime_cached_data()
+function CodeScreen:clear_runtime_cached_data()
   self.runtime_cache.data = nil
   return self
 end
 
-function CodeScene:clear_runtime_cache()
+function CodeScreen:clear_runtime_cache()
   self.runtime_cache = {}
   return self
 end
 
-function CodeScene:destroy()
+function CodeScreen:destroy()
   self:hide()
   self:clear_runtime_cache()
   return self
 end
 
-function CodeScene:keep_focused()
+function CodeScreen:keep_focused()
   if self.scene then
     self.scene:keep_focused()
   end
   return self
 end
 
-function CodeScene:get_unified_scene_options()
+function CodeScreen:get_unified_scene_options()
   assertion.assert('Not yet implemented', debug.traceback())
 end
 
-function CodeScene:get_split_scene_options()
+function CodeScreen:get_split_scene_options()
   assertion.assert('Not yet implemented', debug.traceback())
 end
 
-return CodeScene
+return CodeScreen

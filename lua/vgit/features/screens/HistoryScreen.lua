@@ -2,18 +2,18 @@ local utils = require('vgit.core.utils')
 local loop = require('vgit.core.loop')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local TableComponent = require('vgit.ui.components.TableComponent')
-local CodeDataScene = require('vgit.ui.abstract_scenes.CodeDataScene')
+local CodeDataScreen = require('vgit.ui.screens.CodeDataScreen')
 local Scene = require('vgit.ui.Scene')
 local dimensions = require('vgit.ui.dimensions')
 local console = require('vgit.core.console')
 
-local HistoryScene = CodeDataScene:extend()
+local HistoryScreen = CodeDataScreen:extend()
 
-function HistoryScene:new(...)
-  return setmetatable(CodeDataScene:new(...), HistoryScene)
+function HistoryScreen:new(...)
+  return setmetatable(CodeDataScreen:new(...), HistoryScreen)
 end
 
-function HistoryScene:fetch(selected)
+function HistoryScreen:fetch(selected)
   selected = selected or 1
   local runtime_cache = self.runtime_cache
   local data = runtime_cache.data
@@ -62,10 +62,10 @@ function HistoryScene:fetch(selected)
   return self
 end
 
-function HistoryScene:get_unified_scene_options(options)
+function HistoryScreen:get_unified_scene_options(options)
   local table_height = math.floor(dimensions.global_height() * 0.15)
   return {
-    current = CodeComponent:new(utils.object_assign({
+    current = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -78,7 +78,7 @@ function HistoryScene:get_unified_scene_options(options)
         },
       },
     }, options)),
-    table = TableComponent:new(utils.object_assign({
+    table = TableComponent:new(utils.object.assign({
       header = { 'Revision', 'Author Name', 'Commit Hash', 'Time', 'Summary' },
       config = {
         window_props = {
@@ -90,10 +90,10 @@ function HistoryScene:get_unified_scene_options(options)
   }
 end
 
-function HistoryScene:get_split_scene_options(options)
+function HistoryScreen:get_split_scene_options(options)
   local table_height = math.floor(dimensions.global_height() * 0.15)
   return {
-    previous = CodeComponent:new(utils.object_assign({
+    previous = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -107,7 +107,7 @@ function HistoryScene:get_split_scene_options(options)
         },
       },
     }, options)),
-    current = CodeComponent:new(utils.object_assign({
+    current = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -122,7 +122,7 @@ function HistoryScene:get_split_scene_options(options)
         },
       },
     }, options)),
-    table = TableComponent:new(utils.object_assign({
+    table = TableComponent:new(utils.object.assign({
       header = { 'Revision', 'Author Name', 'Commit Hash', 'Time', 'Summary' },
       config = {
         window_props = {
@@ -134,13 +134,13 @@ function HistoryScene:get_split_scene_options(options)
   }
 end
 
-function HistoryScene:table_change()
+function HistoryScreen:table_change()
   loop.await_fast_event()
   local selected = self.scene.components.table:get_lnum()
   self:update(selected)
 end
 
-function HistoryScene:make_table()
+function HistoryScreen:make_table()
   self.scene.components.table
     :unlock()
     :make_rows(self.runtime_cache.data.logs, function(log)
@@ -162,7 +162,7 @@ function HistoryScene:make_table()
   return self
 end
 
-function HistoryScene:show(title, options)
+function HistoryScreen:show(title, options)
   local buffer = self.git_store:current()
   if not buffer then
     console.log('Current buffer you are on has no history')
@@ -198,12 +198,12 @@ function HistoryScene:show(title, options)
     })
     :make_code()
     :make_table()
-    :paint_code_partially()
     :set_code_cursor_on_mark(1)
+    :paint_code()
   -- Must be after initial fetch
   runtime_cache.last_selected = 1
   console.clear()
   return true
 end
 
-return HistoryScene
+return HistoryScreen

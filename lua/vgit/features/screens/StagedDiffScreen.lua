@@ -1,15 +1,15 @@
 local console = require('vgit.core.console')
 local Diff = require('vgit.Diff')
 local Hunk = require('vgit.cli.models.Hunk')
-local DiffScene = require('vgit.features.scenes.DiffScene')
+local DiffScreen = require('vgit.features.screens.DiffScreen')
 
-local StagedDiffScene = DiffScene:extend()
+local StagedDiffScreen = DiffScreen:extend()
 
-function StagedDiffScene:new(...)
-  return setmetatable(DiffScene:new(...), StagedDiffScene)
+function StagedDiffScreen:new(...)
+  return setmetatable(DiffScreen:new(...), StagedDiffScreen)
 end
 
-function StagedDiffScene:fetch()
+function StagedDiffScreen:fetch()
   local runtime_cache = self.runtime_cache
   local buffer = runtime_cache.buffer
   local show_err, lines = buffer.git_object:lines()
@@ -39,4 +39,4 @@ function StagedDiffScene:fetch()
   return self
 end
 
-return StagedDiffScene
+return StagedDiffScreen

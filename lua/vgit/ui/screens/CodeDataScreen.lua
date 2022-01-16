@@ -1,14 +1,14 @@
 local console = require('vgit.core.console')
 local loop = require('vgit.core.loop')
-local CodeScene = require('vgit.ui.abstract_scenes.CodeScene')
+local CodeScreen = require('vgit.ui.screens.CodeScreen')
 
-local CodeDataScene = CodeScene:extend()
+local CodeDataScreen = CodeScreen:extend()
 
-function CodeDataScene:new(...)
-  return setmetatable(CodeScene:new(...), CodeDataScene)
+function CodeDataScreen:new(...)
+  return setmetatable(CodeScreen:new(...), CodeDataScreen)
 end
 
-CodeDataScene.update = loop.brakecheck(loop.async(function(self, selected)
+CodeDataScreen.update = loop.brakecheck(loop.async(function(self, selected)
   local runtime_cache = self.runtime_cache
   runtime_cache.last_selected = selected
   self:fetch(selected)
@@ -35,7 +35,7 @@ CodeDataScene.update = loop.brakecheck(loop.async(function(self, selected)
     :set_code_cursor_on_mark(1)
 end))
 
-function CodeDataScene:table_move(direction)
+function CodeDataScreen:table_move(direction)
   self:clear_runtime_cached_err()
   local components = self.scene.components
   local table = components.table
@@ -60,4 +60,4 @@ function CodeDataScene:table_move(direction)
   self:update(selected)
 end
 
-return CodeDataScene
+return CodeDataScreen

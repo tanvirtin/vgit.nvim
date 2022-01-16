@@ -22,8 +22,8 @@ table_maker.parse_item = function(item, row)
       hl = item.icon_after.hl,
       row = row,
       range = {
-        top = #value - 1,
-        bot = #value - 1 + #item.icon_after.icon,
+        top = utils.sanitized_str_len(value) - 1,
+        bot = utils.sanitized_str_len(value) - 1 + #item.icon_after.icon,
       },
     }
   end
@@ -49,9 +49,14 @@ table_maker.make_paddings =
           value = utils.shorten_string(item, max_column_len)
         end
         if padding[j] then
-          padding[j] = math.max(padding[j], #value + column_spacing)
+          padding[j] = math.max(
+            padding[j],
+            utils.sanitized_str_len(value) + column_spacing
+          )
         else
-          padding[j] = column_spacing + #value + column_spacing
+          padding[j] = column_spacing
+            + utils.sanitized_str_len(value)
+            + column_spacing
         end
       end
     end
@@ -61,12 +66,10 @@ table_maker.make_paddings =
 table_maker.make_row =
   function(items, paddings, column_spacing, max_column_len, hls, r)
     local row = string.format('%s', string.rep(' ', column_spacing))
-    local icon_offset = 0
     for j = 1, #items do
       local item = items[j]
       local value, hl
       if type(item) == 'table' then
-        icon_offset = 2
         value, hl = table_maker.parse_item(item, r)
         value = utils.shorten_string(value, max_column_len)
       else
@@ -75,8 +78,8 @@ table_maker.make_row =
       if hl then
         for i = 1, #hl do
           local hl_range = hl[i].range
-          hl_range.top = hl_range.top + #row
-          hl_range.bot = hl_range.bot + #row
+          hl_range.top = hl_range.top + utils.sanitized_str_len(row)
+          hl_range.bot = hl_range.bot + utils.sanitized_str_len(row)
           hls[#hls + 1] = hl[i]
         end
       end
@@ -84,7 +87,7 @@ table_maker.make_row =
         '%s%s%s',
         row,
         value,
-        string.rep(' ', paddings[j] - #value + icon_offset)
+        string.rep(' ', paddings[j] - utils.sanitized_str_len(value))
       )
     end
     return row, hls
@@ -100,7 +103,7 @@ table_maker.make_heading =
         '%s%s%s',
         row,
         value,
-        string.rep(' ', paddings[j] - #value)
+        string.rep(' ', paddings[j] - utils.sanitized_str_len(value))
       )
     end
     return { row }
