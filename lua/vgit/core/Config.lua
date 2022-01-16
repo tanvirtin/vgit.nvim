@@ -24,16 +24,19 @@ function Config:set(key, value)
     string.format('type error :: expected %s', key)
   )
   self.data[key] = value
+  return self
 end
 
 function Config:assign(config)
-  return utils.object_assign(self.data, config)
+  self.data = utils.object.assign(self.data, config)
+  return self.data
 end
 
 function Config:for_each(callback)
   for key, value in pairs(self.data) do
     callback(key, value)
   end
+  return self
 end
 
 function Config:size()

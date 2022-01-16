@@ -42,7 +42,7 @@ LiveGutter.sync = loop.brakecheck(
   end),
   {
     initial_ms = 0,
-    cutoff_ms = 50,
+    cutoff_ms = 30,
     step_ms = 1,
   }
 )

@@ -3,16 +3,16 @@ local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Scene = require('vgit.ui.Scene')
 local PopupComponent = require('vgit.ui.components.PopupComponent')
-local CodeScene = require('vgit.ui.abstract_scenes.CodeScene')
+local CodeScreen = require('vgit.ui.screens.CodeScreen')
 local console = require('vgit.core.console')
 
-local LineBlameScene = CodeScene:extend()
+local LineBlameScreen = CodeScreen:extend()
 
-function LineBlameScene:new(...)
-  return setmetatable(CodeScene:new(...), LineBlameScene)
+function LineBlameScreen:new(...)
+  return setmetatable(CodeScreen:new(...), LineBlameScreen)
 end
 
-function LineBlameScene:fetch()
+function LineBlameScreen:fetch()
   local runtime_cache = self.runtime_cache
   local buffer = runtime_cache.buffer
   loop.await_fast_event()
@@ -28,7 +28,7 @@ function LineBlameScene:fetch()
   return self
 end
 
-function LineBlameScene:create_uncommitted_lines(blame)
+function LineBlameScreen:create_uncommitted_lines(blame)
   return {
     string.format('%sLine #%s', '  ', blame.lnum),
     string.format('%s%s', '  ', 'Uncommitted changes'),
@@ -36,7 +36,7 @@ function LineBlameScene:create_uncommitted_lines(blame)
   }
 end
 
-function LineBlameScene:create_committed_lines(blame)
+function LineBlameScreen:create_committed_lines(blame)
   local max_line_length = 88
   local commit_message = blame.commit_message
   if #commit_message > max_line_length then
@@ -55,9 +55,9 @@ function LineBlameScene:create_committed_lines(blame)
   }
 end
 
-function LineBlameScene:get_scene_options(options)
+function LineBlameScreen:get_scene_options(options)
   return {
-    current = PopupComponent:new(utils.object_assign({
+    current = PopupComponent:new(utils.object.assign({
       config = {
         window_props = {
           height = 10,
@@ -68,7 +68,7 @@ function LineBlameScene:get_scene_options(options)
   }
 end
 
-function LineBlameScene:make_lines()
+function LineBlameScreen:make_lines()
   local get_width = function(lines)
     local max_line_width = 50
     for i = 1, #lines do
@@ -96,7 +96,7 @@ function LineBlameScene:make_lines()
     :set_width(get_width(committed_lines))
 end
 
-function LineBlameScene:show(options)
+function LineBlameScreen:show(options)
   local buffer = self.git_store:current()
   if not buffer then
     return false
@@ -124,4 +124,4 @@ function LineBlameScene:show(options)
   return true
 end
 
-return LineBlameScene
+return LineBlameScreen

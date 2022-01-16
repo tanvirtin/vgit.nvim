@@ -16,7 +16,7 @@ end
 
 function PopupComponent:get_dimensions(window_props)
   return {
-    window_props = utils.object_assign(window_props, {
+    window_props = utils.object.assign(window_props, {
       relative = 'cursor',
     }),
     global_window_props = window_props,

@@ -14,7 +14,7 @@ local TableComponent = Component:extend()
 function TableComponent:new(options)
   options = options or {}
   return setmetatable(
-    Component:new(utils.object_assign(options, {
+    Component:new(utils.object.assign(options, {
       column_spacing = 3,
       max_column_len = 80,
       paddings = {},
@@ -180,7 +180,11 @@ function TableComponent:mount()
   self.window = Window
     :open(buffer, window_props)
     :assign_options(config.win_options)
-  self.elements.header = HeaderElement:new():mount(header_window_props)
+  self.elements.header = HeaderElement
+    :new()
+    :mount(utils.object.assign(header_window_props, {
+      type = 'bot',
+    }))
   if is_at_cursor then
     self.elements.horizontal_border = HorizontalBorderElement
       :new()

@@ -7,16 +7,16 @@ local PresentationalComponent = require(
   'vgit.ui.components.PresentationalComponent'
 )
 local CodeComponent = require('vgit.ui.components.CodeComponent')
-local CodeScene = require('vgit.ui.abstract_scenes.CodeScene')
+local CodeScreen = require('vgit.ui.screens.CodeScreen')
 local console = require('vgit.core.console')
 
-local GutterBlameScene = CodeScene:extend()
+local GutterBlameScreen = CodeScreen:extend()
 
-function GutterBlameScene:new(...)
-  return setmetatable(CodeScene:new(...), GutterBlameScene)
+function GutterBlameScreen:new(...)
+  return setmetatable(CodeScreen:new(...), GutterBlameScreen)
 end
 
-function GutterBlameScene:fetch()
+function GutterBlameScreen:fetch()
   local runtime_cache = self.runtime_cache
   local buffer = runtime_cache.buffer
   local blames_err, blames = buffer.git_object:blames()
@@ -35,7 +35,7 @@ function GutterBlameScene:fetch()
   return self
 end
 
-function GutterBlameScene:get_blame_line(blame)
+function GutterBlameScreen:get_blame_line(blame)
   if blame.committed then
     return string.format(
       '%s %s (%s) %s',
@@ -48,9 +48,9 @@ function GutterBlameScene:get_blame_line(blame)
   return 'Uncommitted changes'
 end
 
-function GutterBlameScene:get_scene_options(options)
+function GutterBlameScreen:get_scene_options(options)
   return {
-    blames = PresentationalComponent:new(utils.object_assign({
+    blames = PresentationalComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -63,7 +63,7 @@ function GutterBlameScene:get_scene_options(options)
         },
       },
     }, options)),
-    current = CodeComponent:new(utils.object_assign({
+    current = CodeComponent:new(utils.object.assign({
       config = {
         win_options = {
           cursorbind = true,
@@ -80,7 +80,7 @@ function GutterBlameScene:get_scene_options(options)
   }
 end
 
-function GutterBlameScene:make_blames()
+function GutterBlameScreen:make_blames()
   local lines = {}
   local blames = self.runtime_cache.data.blames
   for i = 1, #blames do
@@ -90,16 +90,16 @@ function GutterBlameScene:make_blames()
   return self
 end
 
-function GutterBlameScene:set_title(title, options)
+function GutterBlameScreen:set_title(title, options)
   self.scene.components.blames:set_title(title, options)
   return self
 end
 
-function GutterBlameScene:notify()
+function GutterBlameScreen:notify()
   return self
 end
 
-function GutterBlameScene:show(title, options)
+function GutterBlameScreen:show(title, options)
   local buffer = self.git_store:current()
   if not buffer then
     console.log('Current buffer you are on has no blames')
@@ -133,10 +133,10 @@ function GutterBlameScene:show(title, options)
       filetype = data.filetype,
     })
     :make_code()
-    :paint_code_partially()
     :make_blames()
+    :paint_code()
   console.clear()
   return true
 end
 
-return GutterBlameScene
+return GutterBlameScreen

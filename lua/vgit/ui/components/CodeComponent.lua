@@ -15,7 +15,7 @@ local CodeComponent = Component:extend()
 
 function CodeComponent:new(options)
   return setmetatable(
-    Component:new(utils.object_assign(options, {
+    Component:new(utils.object.assign(options, {
       elements = {
         header = nil,
         line_number = nil,
@@ -26,16 +26,6 @@ function CodeComponent:new(options)
   )
 end
 
-function CodeComponent:attach_to_renderer(on_render)
-  self.buffer:attach_to_renderer(on_render)
-  return self
-end
-
-function CodeComponent:detach_from_renderer()
-  self.buffer:detach_from_renderer()
-  return self
-end
-
 function CodeComponent:set_cursor(cursor)
   self.window:set_cursor(cursor)
   self.elements.line_number:set_cursor(cursor)
@@ -43,8 +33,8 @@ function CodeComponent:set_cursor(cursor)
 end
 
 function CodeComponent:set_lnum(lnum)
-  self.window:set_lnum(lnum)
   self.elements.line_number:set_lnum(lnum)
+  self.window:set_lnum(lnum)
   return self
 end
 
@@ -204,18 +194,25 @@ function CodeComponent:mount(opts)
   self.buffer = Buffer:new():create():assign_options(config.buf_options)
   local buffer = self.buffer
 
-  self.window = Window
-    :open(buffer, window_props)
-    :assign_options(config.win_options)
-  self.elements.header = HeaderElement:new():mount(header_window_props)
   self.elements.line_number = LineNumberElement
     :new()
     :mount(line_number_window_props)
+
+  self.elements.header = HeaderElement
+    :new()
+    :mount(utils.object.assign(header_window_props, {
+      type = is_at_cursor and 'topbottom' or 'bot',
+    }))
+
   if is_at_cursor then
     self.elements.horizontal_border = HorizontalBorderElement
       :new()
       :mount(horizontal_border_window_props)
   end
+
+  self.window = Window
+    :open(buffer, window_props)
+    :assign_options(config.win_options)
 
   self.mounted = true
   self.component_dimensions = component_dimensions

@@ -13,7 +13,7 @@ local PresentationalComponent = Component:extend()
 
 function PresentationalComponent:new(options)
   return setmetatable(
-    Component:new(utils.object_assign(options, {
+    Component:new(utils.object.assign(options, {
       elements = {
         header = nil,
         horizontal_border = nil,
@@ -125,7 +125,11 @@ function PresentationalComponent:mount()
   self.window = Window
     :open(buffer, window_props)
     :assign_options(config.win_options)
-  self.elements.header = HeaderElement:new():mount(header_window_props)
+  self.elements.header = HeaderElement
+    :new()
+    :mount(utils.object.assign(header_window_props, {
+      type = 'bot',
+    }))
   if is_at_cursor then
     self.elements.horizontal_border = HorizontalBorderElement
       :new()

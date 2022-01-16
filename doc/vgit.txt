@@ -145,7 +145,7 @@ More advanced configuration:
         live_gutter = {
           enabled = true,
         },
-        scene = {
+        screen = {
           diff_preference = 'unified',
         },
         signs = {
@@ -188,7 +188,7 @@ More advanced configuration:
             },
           },
           usage = {
-            scene = {
+            screen = {
               add = 'GitSignsAddLn',
               remove = 'GitSignsDeleteLn',
             },

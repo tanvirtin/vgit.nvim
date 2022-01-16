@@ -1,5 +1,8 @@
 local assertion = require('vgit.core.assertion')
-local utils = {}
+
+local utils = {
+  object = {},
+}
 
 utils.age = function(current_time)
   assertion.assert(current_time)
@@ -94,22 +97,17 @@ utils.strip_substring = function(given_string, substring)
   return rc_s
 end
 
--- Does deep object assign
-utils.object_assign = function(state_segment, config_segment)
-  if type(config_segment) == 'table' and not vim.tbl_islist(config_segment) then
-    for key, value in pairs(config_segment) do
-      if not state_segment[key] then
-        state_segment[key] = value
-      else
-        if type(value) == 'table' and not vim.tbl_islist(value) then
-          utils.object_assign(state_segment[key], value)
-        else
-          state_segment[key] = value
-        end
-      end
+utils.object.assign = function(state_object, config_object)
+  return vim.tbl_deep_extend('force', state_object or {}, config_object or {})
+end
+
+utils.object.pick = function(object, item)
+  for i = 1, #object do
+    if object[i] == item then
+      return item
     end
   end
-  return state_segment
+  return object[1]
 end
 
 utils.list_concat = function(a, b)
@@ -117,6 +115,11 @@ utils.list_concat = function(a, b)
     a[#a + 1] = b[i]
   end
   return a
+end
+
+utils.sanitized_str_len = function(str)
+  local _, count = string.gsub(str, '[^\128-\193]', '')
+  return count
 end
 
 return utils

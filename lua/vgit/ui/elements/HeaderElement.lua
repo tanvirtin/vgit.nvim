@@ -1,3 +1,4 @@
+local utils = require('vgit.core.utils')
 local Namespace = require('vgit.core.Namespace')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
@@ -29,18 +30,32 @@ function HeaderElement:make_border(c)
   return c.chars
 end
 
+local function get_border(options)
+  local type = utils.object.pick({ 'topbottom', 'top', 'bot' }, options.type)
+  if type == 'topbottom' then
+    return { '─', '─', '─', ' ', '─', '─', '─', ' ' }
+  end
+  if type == 'top' then
+    return { '─', '─', '─', ' ', ' ', ' ', ' ', ' ' }
+  end
+  if type == 'bot' then
+    return { ' ', ' ', ' ', ' ', '─', '─', '─', ' ' }
+  end
+  return { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' }
+end
+
 function HeaderElement:mount(options)
   self.buffer = Buffer:new():create()
   local buffer = self.buffer
   buffer:assign_options({
     modifiable = false,
-    bufhidden = 'wipe',
     buflisted = false,
+    bufhidden = 'wipe',
   })
   self.window = Window
     :open(buffer, {
       border = self:make_border({
-        chars = { '─', '─', '─', ' ', '─', '─', '─', ' ' },
+        chars = get_border(options),
         hl = 'GitBorder',
       }),
       style = 'minimal',
