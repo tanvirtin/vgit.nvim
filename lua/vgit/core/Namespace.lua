@@ -34,25 +34,38 @@ function Namespace:transpose_virtual_text(
   pos,
   priority
 )
+  local id = row + 1 + col
   vim.api.nvim_buf_set_extmark(buffer.bufnr, self.ns_id, row, col, {
-    id = row + 1 + col,
+    id = id,
     virt_text = { { text, hl } },
     virt_text_pos = pos or 'overlay',
     hl_mode = 'combine',
     priority = priority,
   })
-  return self
+  return id
 end
 
-function Namespace:transpose_virtual_line(buffer, texts, col, pos, priority)
-  vim.api.nvim_buf_set_extmark(buffer.bufnr, self.ns_id, col, 0, {
-    id = col + 1,
+function Namespace:transpose_virtual_line(buffer, texts, row, pos, priority)
+  local id = row + 1
+  vim.api.nvim_buf_set_extmark(buffer.bufnr, self.ns_id, row, 0, {
+    id = id,
     virt_text = texts,
     virt_text_pos = pos or 'overlay',
     hl_mode = 'combine',
     priority = priority,
   })
-  return self
+  return id
+end
+
+function Namespace:insert_virtual_lines(buffer, lines, row, priority)
+  local id = row + 1
+  vim.api.nvim_buf_set_extmark(buffer.bufnr, self.ns_id, row, 0, {
+    id = id,
+    virt_lines = lines,
+    virt_lines_above = true,
+    priority = priority,
+  })
+  return id
 end
 
 function Namespace:sign_place(buffer, lnum, sign_name)
@@ -75,6 +88,11 @@ end
 
 function Namespace:clear(buffer)
   vim.api.nvim_buf_clear_namespace(buffer.bufnr, self.ns_id, 0, -1)
+  return self
+end
+
+function Namespace:clear_extmark(buffer, id)
+  print(vim.api.nvim_buf_del_extmark(buffer.bufnr, self.ns_id, id))
   return self
 end
 

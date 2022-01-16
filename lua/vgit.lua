@@ -2,6 +2,9 @@ local renderer = require('vgit.core.renderer')
 local console = require('vgit.core.console')
 local env = require('vgit.core.env')
 local hls_setting = require('vgit.settings.hls')
+local authorship_code_lens_setting = require(
+  'vgit.settings.authorship_code_lens'
+)
 local live_blame_setting = require('vgit.settings.live_blame')
 local live_gutter_setting = require('vgit.settings.live_gutter')
 local scene_setting = require('vgit.settings.scene')
@@ -17,6 +20,7 @@ local Marker = require('vgit.Marker')
 local GitStore = require('vgit.GitStore')
 local autocmd = require('vgit.core.autocmd')
 local LiveGutter = require('vgit.features.LiveGutter')
+local AuthorshipCodeLens = require('vgit.features.AuthorshipCodeLens')
 local LiveBlame = require('vgit.features.LiveBlame')
 local ProjectHunksList = require('vgit.features.ProjectHunksList')
 local BufferHunks = require('vgit.features.BufferHunks')
@@ -30,10 +34,11 @@ local command = Command:new()
 local navigation = Navigation:new()
 local marker = Marker:new()
 local git_store = GitStore:new()
-local live_gutter = LiveGutter:new(git_store)
-local live_blame = LiveBlame:new(git_store)
-local buffer_hunks = BufferHunks:new(git_store, navigation, marker)
-local project_hunks_list = ProjectHunksList:new()
+local live_gutter = LiveGutter:new(git_store, versioning)
+local live_blame = LiveBlame:new(git_store, versioning)
+local authorship_code_lens = AuthorshipCodeLens:new(git_store, versioning)
+local buffer_hunks = BufferHunks:new(git_store, versioning, navigation, marker)
+local project_hunks_list = ProjectHunksList:new(versioning)
 
 active_screen.inject(buffer_hunks, navigation, git_store)
 
@@ -56,7 +61,7 @@ local on_k = loop.async(function()
 end)
 
 local win_enter = loop.async(function()
-  if not active_screen.exists() and live_blame_setting:get('enabled') then
+  if not active_screen.exists() then
     live_blame:desync_all()
   end
   if active_screen.exists() then
@@ -71,6 +76,7 @@ end)
 
 local buf_read = loop.async(function()
   live_gutter:attach()
+  authorship_code_lens:sync()
 end)
 
 local buf_new_file = loop.async(function()
@@ -98,9 +104,7 @@ local buf_win_leave = loop.async(function()
 end)
 
 local cursor_hold = loop.async(function()
-  if live_blame_setting:get('enabled') then
-    live_blame:sync()
-  end
+  live_blame:sync()
 end)
 
 local cursor_moved = loop.async(function()
@@ -230,28 +234,32 @@ local buffer_gutter_blame_preview = loop.async(function()
   active_screen.gutter_blame_screen()
 end)
 
-local toggle_diff_preference = loop.async(function()
-  active_screen.toggle_diff_preference()
-end)
-
 local project_hunks_qf = loop.async(function()
   project_hunks_list:show_as_quickfix(project_hunks_list:fetch())
 end)
 
-local toggle_buffer_blames = loop.async(function()
-  local blames_enabled = live_blame_setting:get('enabled')
-  if blames_enabled then
-    live_blame:desync_all()
-  else
-    live_blame:sync()
-  end
-  live_blame_setting:set('enabled', not blames_enabled)
+local toggle_diff_preference = loop.async(function()
+  active_screen.toggle_diff_preference()
 end)
 
-local toggle_buffer_hunks = loop.async(function()
-  local hunks_enabled = live_gutter_setting:get('enabled')
-  live_gutter_setting:set('enabled', not hunks_enabled)
+local toggle_live_blame = loop.async(function()
+  local blames_enabled = live_blame_setting:get('enabled')
+  live_blame_setting:set('enabled', not blames_enabled)
+  live_blame:resync()
+end)
+
+local toggle_live_gutter = loop.async(function()
+  local live_gutter_enabled = live_gutter_setting:get('enabled')
+  live_gutter_setting:set('enabled', not live_gutter_enabled)
   live_gutter:resync()
+end)
+
+local toggle_authorship_code_lens = loop.async(function()
+  local authorship_code_lens_enabled = authorship_code_lens_setting:get(
+    'enabled'
+  )
+  authorship_code_lens_setting:set('enabled', not authorship_code_lens_enabled)
+  authorship_code_lens:resync()
 end)
 
 local enable_tracing = loop.async(function()
@@ -264,9 +272,8 @@ end)
 
 local initialize_necessary_features = loop.async(function()
   live_gutter:attach()
-  if live_blame_setting:get('enabled') then
-    live_blame:sync()
-  end
+  live_blame:sync()
+  authorship_code_lens:sync()
 end)
 
 local function command_list(...)
@@ -321,6 +328,7 @@ local function configure_settings(config)
   local settings = config and config.settings or {}
   hls_setting:assign(settings.hls)
   live_blame_setting:assign(settings.live_blame)
+  authorship_code_lens_setting:assign(settings.authorship_code_lens)
   live_gutter_setting:assign(settings.live_gutter)
   scene_setting:assign(settings.scene)
   signs_setting:assign(settings.signs)
@@ -387,8 +395,9 @@ return {
   project_hunks_preview = project_hunks_preview,
   enable_tracing = enable_tracing,
   disable_tracing = disable_tracing,
-  toggle_buffer_blames = toggle_buffer_blames,
-  toggle_buffer_hunks = toggle_buffer_hunks,
+  toggle_live_gutter = toggle_live_gutter,
+  toggle_live_blame = toggle_live_blame,
+  toggle_authorship_code_lens = toggle_authorship_code_lens,
   toggle_diff_preference = toggle_diff_preference,
   settings = {
     screen = scene_setting,
@@ -397,4 +406,7 @@ return {
     signs = signs_setting,
     live_blame = live_blame_setting,
   },
+  -- @deprecated
+  toggle_buffer_hunks = toggle_live_gutter,
+  toggle_buffer_blames = toggle_live_blame,
 }
