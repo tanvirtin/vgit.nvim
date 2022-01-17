@@ -5,9 +5,11 @@ local Feature = require('vgit.Feature')
 
 local BufferHunks = Feature:extend()
 
-function BufferHunks:new(git_store, navigation, marker)
+function BufferHunks:new(git_store, versioning, navigation, marker)
   return setmetatable({
+    name = 'Buffer Hunks',
     git_store = git_store,
+    versioning = versioning,
     navigation = navigation,
     marker = marker,
   }, BufferHunks)

@@ -5,6 +5,11 @@ local Command = Object:extend()
 
 function Command:new()
   return setmetatable({
+    -- @deprecated
+    deprecated = {
+      toggle_buffer_hunks = 'toggle_live_gutter',
+      toggle_buffer_blames = 'toggle_live_blame',
+    },
     commands = {
       setup = true,
       hunk_up = true,
@@ -28,8 +33,9 @@ function Command:new()
       buffer_unstage = true,
       buffer_reset = true,
       toggle_diff_preference = true,
-      toggle_buffer_hunks = true,
-      toggle_buffer_blames = true,
+      toggle_live_gutter = true,
+      toggle_live_blame = true,
+      toggle_authorship_code_lens = true,
       enable_tracing = true,
       disable_tracing = true,
       h = true,
@@ -40,9 +46,18 @@ end
 
 function Command:execute(command, ...)
   local vgit = require('vgit')
-  if not self.commands[command] then
+  if not self.commands[command] and not self.deprecated[command] then
     console.error('Invalid command')
     return self
+  end
+  if self.deprecated[command] then
+    console.warn(
+      string.format(
+        'The command %s is deprecated and will be removed in the future, please use \'%s\' instead.',
+        command,
+        self.deprecated[command]
+      )
+    )
   end
   vgit[command](...)
   return self
