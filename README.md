@@ -30,8 +30,34 @@
 <br />
 
 <div align="center">
-  <img width="1512" alt="Hunk Preview" src="https://user-images.githubusercontent.com/25164326/147415891-32a0fa30-3adb-4df4-82af-2c866ed0e227.png">
+  <img width="1512" alt="Hunk Preview" src="https://user-images.githubusercontent.com/25164326/149684229-6fc1422a-3db2-4e17-88f9-eb5897ca5ddc.png">
 </div>
+
+**Features**
+---
+- Gutter changes
+- Current line blame
+- Authorship code lens (Scroll up on top of the file or press CTRL-B to see)
+- Current line blame preview
+- Gutter blame preview
+- File history preview
+- File diff preview
+- File staged diff preview
+- File hunk preview
+- Project diff preview
+- Project hunks preview
+- Send all project hunks to quickfix list
+- Smooth hunk navigations in all buffers with a diff
+- Actions on a current git file:
+  - Stage file
+  - Unstage file
+  - Reset file
+  - Stage a hunk
+  - Reset a hunk
+- Actions on project:
+  - Stage all changes in a project
+  - Unstage all changes in a project
+  - Reset all changes in a project
 
 **Requirements**
 ---
@@ -210,6 +236,9 @@ require('vgit').setup({
     live_gutter = {
       enabled = true,
     },
+    authorship_code_lens = {
+      enabled = true,
+    },
     screen = {
       diff_preference = 'unified',
     },
@@ -303,7 +332,8 @@ require('vgit').setup({
 | hunk_up | Moves the cursor to the hunk above the current cursor position. |
 | hunk_down | Moves the cursor to the hunk below the current cursor position. |
 | toggle_diff_preference | Used to switch between "split" and "unified" diff. |
-| toggle_buffer_hunks | Enables/disables git gutter signs. |
-| toggle_buffer_blames | Used to switch between "split" and "unified" diff. |
+| toggle_live_gutter | Enables/disables git gutter signs. |
+| toggle_live_blame | Used to switch between "split" and "unified" diff. |
+| toggle_authorship_code_lens | Enables/disables authorship code lens that can be found on top of the file |
 | enable_tracing | Enables debug logs that are used internally by VGit to make suppressed logs visible. |
 | disable_tracing | Disables debug logs that are used internally by VGit to make suppressed logs visible. |

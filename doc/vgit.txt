@@ -145,6 +145,9 @@ More advanced configuration:
         live_gutter = {
           enabled = true,
         },
+        authorship_code_lens = {
+          enabled = true,
+        },
         screen = {
           diff_preference = 'unified',
         },
@@ -226,7 +229,7 @@ setup({config})                                                 *vgit.setup()*
                     {config} Table object containing configuration. See
                     |vgit-usage| for more details. 
 
-buffer_hunk_preview()                                   *vgit.buffer_hunk_preview()*
+buffer_hunk_preview()                              *vgit.buffer_hunk_preview()*
                 Opens a diff preview showing the diff of the current buffer
                 in comparison to that found in index. This preview will open up in
                 a smaller window relative to where your cursor is. If the
@@ -239,29 +242,29 @@ buffer_diff_preview()                               *vgit.buffer_diff_preview()*
                 while being on a hunk, the window will open focused on the
                 diff of that hunk.
 
-buffer_history_preview()                    *vgit.buffer_history_preview()*
+buffer_history_preview()                         *vgit.buffer_history_preview()*
                 Opens a diff preview along with a table of logs, enabling
                 users to see different iterations of the file through it's
                 lifecycle in git.
 
-buffer_blame_preview()                   *vgit.buffer_blame_preview()*
+buffer_blame_preview()                             *vgit.buffer_blame_preview()*
                 Opens a preview detailing the blame of the line that
                 based on the cursor position within the buffer.
 
-buffer_gutter_blame_preview()          *vgit.buffer_gutter_blame_preview()*
+buffer_gutter_blame_preview()                *vgit.buffer_gutter_blame_preview()*
                 Opens a preview which shows all the blames related to the
                 lines of the buffer.
 
-buffer_diff_staged_preview()                 *vgit.buffer_staged_diff_preview()*
+buffer_diff_staged_preview()                  *vgit.buffer_staged_diff_preview()*
                 Opens a diff preview showing the diff of the staged changes in
                 the current buffer.
 
-buffer_hunk_staged_preview()                 *vgit.buffer_staged_hunk_preview()*
+buffer_hunk_staged_preview()                  *vgit.buffer_staged_hunk_preview()*
                 Opens a diff preview showing the diff of the staged changes in
                 the current buffer. This preview will open up in a smaller
                 window relative to where your cursor is.
 
-project_diff_preview()                            *vgit.project_diff_preview()*
+project_diff_preview()                              *vgit.project_diff_preview()*
                 Opens a diff preview along with a table of all the files that
                 have been changed, enabling users to see all the files that
                 were changed in the current project. Users can use this view
@@ -271,30 +274,30 @@ project_diff_preview()                            *vgit.project_diff_preview()*
                 |buffer_reset| while being on the cursor that corresponds to
                 the file.
 
-project_hunks_preview()                       *vgit.project_hunks_preview()*
+project_hunks_preview()                            *vgit.project_hunks_preview()*
                 Opens a diff preview along with a table of all the current
                 hunks in the project. Useers can use this preview to cycle
                 through all the hunks. Pressing enter on a hunk will open the
                 file and focus on the corresponding hunk.
 
-project_hunks_qf()                                     *vgit.project_hunks_qf()*
+project_hunks_qf()                                      *vgit.project_hunks_qf()*
                 Populate the quickfix list with hunks. Automatically opens the
                 quickfix window.
 
-buffer_hunk_stage()                                   *vgit.buffer_hunk_stage()*
+buffer_hunk_stage()                                    *vgit.buffer_hunk_stage()*
                 Stages a hunk, if a cursor is on the hunk.
 
-buffer_hunk_reset({target}, {opts})                   *vgit.buffer_hunk_reset()*
+buffer_hunk_reset({target}, {opts})                    *vgit.buffer_hunk_reset()*
                 Removes all changes made in the buffer on the hunk the cursor
                 is currently on to what exists in HEAD.
 
-buffer_stage()                       *vgit.buffer_stage()*
+buffer_stage()                                              *vgit.buffer_stage()*
                 Stages all changes in the current buffer.
 
-buffer_unstage()                     *vgit.buffer_unstage()*
+buffer_unstage()                                          *vgit.buffer_unstage()*
                 Unstages all changes in the current buffer.
 
-buffer_reset()                                             *vgit.buffer_reset()*
+buffer_reset()                                              *vgit.buffer_reset()*
                 Removes all current changes in the buffer and resets it to the
                 version in HEAD.
 stage_all()                                                    *vgit.stage_all()*
@@ -306,29 +309,33 @@ unstage_all()                                                *vgit.unstage_all()
 reset_all()                                                    *vgit.reset_all()*
                 Discards all file changes that are not staged.
 
-hunk_up()                                                       *vgit.hunk_up()*
+hunk_up()                                                        *vgit.hunk_up()*
                 Moves the cursor to the hunk above the current cursor
                 position.
 
-hunk_down()                                                   *vgit.hunk_down()*
+hunk_down()                                                    *vgit.hunk_down()*
                 Moves the cursor to the hunk below the current cursor
                 position.
 
-toggle_diff_preference()            *vgit.toggle_diff_preference()*
+toggle_diff_preference()                          *vgit.toggle_diff_preference()*
                 Used to switch between "split" and "unified" diff.
 
-toggle_buffer_hunks()                               *vgit.toggle_buffer_hunks()*
+toggle_live_gutter()                                  *vgit.toggle_live_gutter()*
                 Enables/disables git gutter signs.
 
-toggle_buffer_blames()                             *vgit.toggle_buffer_blames()*
+toggle_live_blame()                                    *vgit.toggle_live_blame()*
                 Enables/disables current line blame functionality that is seen
                 in the form of virtual texts.
 
-enable_tracing()
+toggle_authorship_code_lens()                *vgit.toggle_authorship_code_lens()*
+                Enables/disables authorship code lens that can be found on top
+                of the file.
+
+enable_tracing()                                          *vgit.enable_tracing()*
                 Enables debug logs that are used internally by VGit to make
                 suppressed logs visible.
 
-disable_tracing()
+disable_tracing()                                        *vgit.disable_tracing()*
                 Disables debug logs that are used internally by VGit to make
                 suppressed logs visible.
 

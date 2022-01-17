@@ -16,8 +16,28 @@ function Versioning:new()
         minor = 1,
         major = 0,
       },
+      {
+        patch = 1,
+        minor = 1,
+        major = 0,
+      },
     },
   }, Versioning)
+end
+
+function Versioning:guard(version)
+  if version then
+    local neovim_version = self:neovim_version()
+    if
+      neovim_version.patch >= version.patch
+      and neovim_version.minor >= version.minor
+      and neovim_version.major >= version.major
+    then
+      return true
+    end
+    return false
+  end
+  return true
 end
 
 function Versioning:current()
@@ -33,27 +53,24 @@ function Versioning:neovim_version()
 end
 
 function Versioning:is_neovim_compatible()
-  local plugin_version = self:current()
-  local expected_neovim_version = {
+  if self:guard({
     patch = 0,
     minor = 5,
     major = 0,
-  }
-  local actual_neovim_version = self:neovim_version()
-  if
-    actual_neovim_version.patch >= expected_neovim_version.patch
-    and actual_neovim_version.minor >= expected_neovim_version.minor
-    and actual_neovim_version.major >= expected_neovim_version.major
-  then
+  }) then
     return true
   end
+  local neovim_version = self:neovim_version()
+  local plugin_version = self:current()
   console.info(
     string.format(
-      'Current Neovim version %s.%s is incompatible with VGit %s.%s.',
-      actual_neovim_version.major,
-      actual_neovim_version.minor,
+      'Current Neovim version %s.%s.%s is incompatible with VGit %s.%s.%s',
+      neovim_version.major,
+      neovim_version.minor,
+      neovim_version.patch,
       plugin_version.major,
-      plugin_version.minor
+      plugin_version.minor,
+      plugin_version.patch
     )
   )
   return false

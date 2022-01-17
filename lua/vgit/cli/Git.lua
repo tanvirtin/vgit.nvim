@@ -141,6 +141,9 @@ Git.blames = loop.promisify(function(self, filename, callback)
   local result = {}
   local blame_info = {}
   local job = Job:new({
+    -- TODO: Expensive job, making it run in the background.
+    -- Would be nice to give users ability to control this in the future.
+    is_background = true,
     command = 'git',
     args = {
       '-C',
@@ -211,6 +214,9 @@ Git.logs = loop.promisify(function(self, filename, callback)
   local logs = {}
   local revision_count = 0
   local job = Job:new({
+    -- TODO: Expensive job, making it run in the background.
+    -- Would be nice to give users ability to control this in the future.
+    is_background = true,
     command = 'git',
     args = {
       '-C',

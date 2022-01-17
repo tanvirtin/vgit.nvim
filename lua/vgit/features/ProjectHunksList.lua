@@ -2,12 +2,14 @@ local fs = require('vgit.core.fs')
 local console = require('vgit.core.console')
 local loop = require('vgit.core.loop')
 local Git = require('vgit.cli.Git')
-local Object = require('vgit.core.Object')
+local Feature = require('vgit.Feature')
 
-local ProjectHunksList = Object:extend()
+local ProjectHunksList = Feature:extend()
 
-function ProjectHunksList:new()
+function ProjectHunksList:new(versioning)
   return setmetatable({
+    name = 'Project Hunks List',
+    versioning = versioning,
     git = Git:new(),
   }, ProjectHunksList)
 end

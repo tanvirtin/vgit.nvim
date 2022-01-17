@@ -6,8 +6,12 @@ local Feature = require('vgit.Feature')
 
 local LiveGutter = Feature:extend()
 
-function LiveGutter:new(git_store)
-  return setmetatable({ git_store = git_store }, LiveGutter)
+function LiveGutter:new(git_store, versioning)
+  return setmetatable({
+    name = 'Live Gutter',
+    git_store = git_store,
+    versioning = versioning,
+  }, LiveGutter)
 end
 
 LiveGutter.hide = loop.async(function(_, buffer)
@@ -81,26 +85,21 @@ end
 function LiveGutter:attach()
   loop.await_fast_event()
   local buffer = Buffer:new(0)
-  loop.await_fast_event()
   if self:is_buffer_in_git_store(buffer) then
     return
   end
   loop.await_fast_event()
   buffer:sync_git()
-  loop.await_fast_event()
   if not self:is_inside_git_dir(buffer) then
     self:resync(buffer)
     return
   end
-  loop.await_fast_event()
   if not self:is_buffer_valid(buffer) then
     return
   end
-  loop.await_fast_event()
   if not self:is_buffer_in_disk(buffer) then
     return
   end
-  loop.await_fast_event()
   if self:is_buffer_ignored(buffer) then
     return
   end
