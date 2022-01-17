@@ -92,7 +92,7 @@ function Namespace:clear(buffer)
 end
 
 function Namespace:clear_extmark(buffer, id)
-  print(vim.api.nvim_buf_del_extmark(buffer.bufnr, self.ns_id, id))
+  vim.api.nvim_buf_del_extmark(buffer.bufnr, self.ns_id, id)
   return self
 end
 

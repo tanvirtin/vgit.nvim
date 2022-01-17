@@ -37,7 +37,7 @@ function AuthorshipCodeLens:display(lnum, buffer, display)
       display,
       'GitComment',
     } },
-  }, lnum - 1)
+  }, lnum)
   return self
 end
 
@@ -167,7 +167,11 @@ function AuthorshipCodeLens:sync()
     console.debug(config_err, debug.traceback())
     return self
   end
-  self:display(1, buffer, self:generate_authorship(config, blames))
+  self:display(
+    buffer:get_line_count(),
+    buffer,
+    self:generate_authorship(config, blames)
+  )
   return self
 end
 

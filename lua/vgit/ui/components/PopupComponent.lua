@@ -1,12 +1,24 @@
 local utils = require('vgit.core.utils')
+local ComponentPlot = require('vgit.ui.ComponentPlot')
 local Component = require('vgit.ui.Component')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 
 local PopupComponent = Component:extend()
 
-function PopupComponent:new(options)
-  return setmetatable(Component:new(options), PopupComponent)
+function PopupComponent:new(props)
+  return setmetatable(
+    Component:new(utils.object.assign({
+      config = {
+        elements = {
+          header = false,
+          line_number = false,
+          footer = false,
+        },
+      },
+    }, props)),
+    PopupComponent
+  )
 end
 
 function PopupComponent:call(callback)
@@ -14,36 +26,36 @@ function PopupComponent:call(callback)
   return self
 end
 
-function PopupComponent:get_dimensions(window_props)
-  return {
-    window_props = utils.object.assign(window_props, {
-      relative = 'cursor',
-    }),
-    global_window_props = window_props,
-  }
+function PopupComponent:set_default_win_plot(win_plot)
+  win_plot.relative = 'cursor'
+  win_plot.border = self:make_border({
+    hl = 'GitBorder',
+    chars = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
+  })
 end
 
-function PopupComponent:mount()
+function PopupComponent:mount(opts)
   if self.mounted then
     return self
   end
   local config = self.config
-  local component_dimensions = self:get_dimensions(config.window_props)
-  local window_props = component_dimensions.window_props
+  local elements_config = config.elements
+
+  local plot = ComponentPlot
+    :new(config.win_plot, utils.object.merge(elements_config, opts))
+    :build()
+
+  local win_plot = plot.win_plot
+  self:set_default_win_plot(win_plot)
 
   self.buffer = Buffer:new():create():assign_options(config.buf_options)
 
-  window_props.border = self:make_border({
-    hl = 'GitBorder',
-    chars = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
-  })
-
   self.window = Window
-    :open(self.buffer, window_props)
+    :open(self.buffer, win_plot)
     :assign_options(config.win_options)
 
   self.mounted = true
-  self.component_dimensions = component_dimensions
+  self.plot = plot
 
   return self
 end

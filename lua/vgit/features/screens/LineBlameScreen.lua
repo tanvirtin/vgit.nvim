@@ -13,18 +13,18 @@ function LineBlameScreen:new(...)
 end
 
 function LineBlameScreen:fetch()
-  local runtime_cache = self.runtime_cache
-  local buffer = runtime_cache.buffer
+  local state = self.state
+  local buffer = state.buffer
   loop.await_fast_event()
   local blame_err, blame = buffer.git_object:blame_line(
     Window:new(0):get_lnum()
   )
   if blame_err then
     console.debug(blame_err, debug.traceback())
-    runtime_cache.err = blame_err
+    state.err = blame_err
     return self
   end
-  runtime_cache.data = blame
+  state.data = blame
   return self
 end
 
@@ -55,16 +55,16 @@ function LineBlameScreen:create_committed_lines(blame)
   }
 end
 
-function LineBlameScreen:get_scene_options(options)
+function LineBlameScreen:get_scene_definition()
   return {
-    current = PopupComponent:new(utils.object.assign({
+    current = PopupComponent:new({
       config = {
-        window_props = {
+        win_plot = {
           height = 10,
           width = 50,
         },
       },
-    }, options)),
+    }),
   }
 end
 
@@ -80,7 +80,7 @@ function LineBlameScreen:make_lines()
     return max_line_width
   end
   local component = self.scene.components.current
-  local blame = self.runtime_cache.data
+  local blame = self.state.data
   if not blame.committed then
     local uncommitted_lines = self:create_uncommitted_lines(blame)
     component
@@ -96,7 +96,7 @@ function LineBlameScreen:make_lines()
     :set_width(get_width(committed_lines))
 end
 
-function LineBlameScreen:show(options)
+function LineBlameScreen:show(props)
   local buffer = self.git_store:current()
   if not buffer then
     return false
@@ -108,17 +108,17 @@ function LineBlameScreen:show(options)
   if not git_object:is_in_remote() then
     return false
   end
-  local runtime_cache = self.runtime_cache
-  runtime_cache.buffer = buffer
-  runtime_cache.options = options
+  local state = self.state
+  state.buffer = buffer
+  state.props = props
   console.log('Processing buffer line blame')
   self:fetch()
   loop.await_fast_event()
-  if runtime_cache.err then
-    console.error(runtime_cache.err)
+  if state.err then
+    console.error(state.err)
     return false
   end
-  self.scene = Scene:new(self:get_scene_options(options)):mount()
+  self.scene = Scene:new(self:get_scene_definition(props)):mount()
   self:make_lines()
   console.clear()
   return true
