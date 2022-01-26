@@ -273,7 +273,7 @@ function CodeScreen:make_line_numbers()
         and (lnum_change.type == 'remove' or lnum_change.type == 'void')
       then
         line = string.rep(
-          symbols_setting:get('symbols').void,
+          symbols_setting:get('void'),
           LineNumberElement:get_width()
         )
         lines[#lines + 1] = line
@@ -300,7 +300,7 @@ function CodeScreen:make_line_numbers()
         and (lnum_change.type == 'add' or lnum_change.type == 'void')
       then
         line = string.rep(
-          symbols_setting:get('symbols').void,
+          symbols_setting:get('void'),
           LineNumberElement:get_width()
         )
         lines[#lines + 1] = line
@@ -350,10 +350,7 @@ function CodeScreen:apply_paint_instructions(lnum, metadata, component_type)
     end
     if type == 'void' then
       component:transpose_virtual_text(
-        string.rep(
-          symbols_setting:get('symbols').void,
-          component.window:get_width()
-        ),
+        string.rep(symbols_setting:get('void'), component.window:get_width()),
         line_number_hl,
         lnum - 1,
         0
