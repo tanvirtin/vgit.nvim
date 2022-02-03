@@ -1,17 +1,18 @@
+local Component = require('vgit.ui.Component')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
-local Object = require('vgit.core.Object')
 
-local HorizontalBorderElement = Object:extend()
+local FooterElement = Component:extend()
 
-function HorizontalBorderElement:new()
-  return setmetatable({
-    buffer = nil,
-    window = nil,
-  }, HorizontalBorderElement)
+function FooterElement:new(...)
+  return setmetatable(Component:new(...), FooterElement)
 end
 
-function HorizontalBorderElement:mount(options)
+function FooterElement:get_height()
+  return 1
+end
+
+function FooterElement:mount(options)
   self.buffer = Buffer:new():create()
   local buffer = self.buffer
   buffer:assign_options({
@@ -33,24 +34,16 @@ function HorizontalBorderElement:mount(options)
     :assign_options({
       cursorbind = false,
       scrollbind = false,
-      winhl = 'Normal:GitBorder',
+      winhl = 'Normal:GitBackgroundSecondary',
     })
-  self:set_lines({ string.rep('─', options.width) })
+  local border_char = ' '
+  self:set_lines({ string.rep(border_char, options.width) })
   return self
 end
 
-function HorizontalBorderElement:get_height()
-  return 1
-end
-
-function HorizontalBorderElement:unmount()
+function FooterElement:unmount()
   self.window:close()
   return self
 end
 
-function HorizontalBorderElement:set_lines(lines)
-  self.buffer:set_lines(lines)
-  return self
-end
-
-return HorizontalBorderElement
+return FooterElement

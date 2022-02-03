@@ -17,13 +17,25 @@ end
 
 function Status:has(status)
   local first, second = self:parse(status)
-  if self.first ~= ' ' then
-    return self.first == first
+  local actual_status = self.value
+  local actual_first, actual_second = self.first, self.second
+  if actual_first ~= ' ' then
+    if first == '*' then
+      return true
+    end
+    if first == actual_first then
+      return true
+    end
   end
-  if self.second ~= ' ' then
-    return self.second == second
+  if actual_second ~= ' ' then
+    if second == '*' then
+      return true
+    end
+    if second == actual_second then
+      return true
+    end
   end
-  return self.value == status
+  return status == '**' or status == actual_status
 end
 
 function Status:has_either(status)

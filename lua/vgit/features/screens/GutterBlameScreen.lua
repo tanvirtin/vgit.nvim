@@ -1,8 +1,6 @@
 local CodeDTO = require('vgit.core.CodeDTO')
 local loop = require('vgit.core.loop')
-local utils = require('vgit.core.utils')
 local Scene = require('vgit.ui.Scene')
-local dimensions = require('vgit.ui.dimensions')
 local PresentationalComponent = require(
   'vgit.ui.components.PresentationalComponent'
 )
@@ -17,16 +15,16 @@ function GutterBlameScreen:new(...)
 end
 
 function GutterBlameScreen:fetch()
-  local runtime_cache = self.runtime_cache
-  local buffer = runtime_cache.buffer
+  local state = self.state
+  local buffer = state.buffer
   local blames_err, blames = buffer.git_object:blames()
   if blames_err then
     console.debug(blames_err, debug.traceback())
-    runtime_cache.err = blames_err
+    state.err = blames_err
     return self
   end
   loop.await_fast_event()
-  runtime_cache.data = {
+  state.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
     dto = CodeDTO:new({ lines = buffer:get_lines() }),
@@ -48,41 +46,47 @@ function GutterBlameScreen:get_blame_line(blame)
   return 'Uncommitted changes'
 end
 
-function GutterBlameScreen:get_scene_options(options)
+function GutterBlameScreen:get_scene_definition()
   return {
-    blames = PresentationalComponent:new(utils.object.assign({
+    blames = PresentationalComponent:new({
       config = {
+        elements = {
+          footer = false,
+        },
         win_options = {
           cursorbind = true,
           scrollbind = true,
           cursorline = true,
         },
-        window_props = {
-          height = dimensions.global_height(),
-          width = math.floor(dimensions.global_width() * 0.4),
+        win_plot = {
+          height = '100vh',
+          width = '40vw',
         },
       },
-    }, options)),
-    current = CodeComponent:new(utils.object.assign({
+    }),
+    current = CodeComponent:new({
       config = {
+        elements = {
+          footer = false,
+        },
         win_options = {
           cursorbind = true,
           scrollbind = true,
           cursorline = true,
         },
-        window_props = {
-          height = dimensions.global_height(),
-          width = math.floor(dimensions.global_width() * 0.6),
-          col = math.floor(dimensions.global_width() * 0.4),
+        win_plot = {
+          height = '100vh',
+          width = '60vw',
+          col = '40vw',
         },
       },
-    }, options)),
+    }),
   }
 end
 
 function GutterBlameScreen:make_blames()
   local lines = {}
-  local blames = self.runtime_cache.data.blames
+  local blames = self.state.data.blames
   for i = 1, #blames do
     lines[#lines + 1] = self:get_blame_line(blames[i])
   end
@@ -90,8 +94,8 @@ function GutterBlameScreen:make_blames()
   return self
 end
 
-function GutterBlameScreen:set_title(title, options)
-  self.scene.components.blames:set_title(title, options)
+function GutterBlameScreen:set_title(title, props)
+  self.scene.components.blames:set_title(title, props)
   return self
 end
 
@@ -99,7 +103,7 @@ function GutterBlameScreen:notify()
   return self
 end
 
-function GutterBlameScreen:show(title, options)
+function GutterBlameScreen:show(title, props)
   local buffer = self.git_store:current()
   if not buffer then
     console.log('Current buffer you are on has no blames')
@@ -114,19 +118,19 @@ function GutterBlameScreen:show(title, options)
     console.log('Current buffer you are on has no blames')
     return false
   end
-  local runtime_cache = self.runtime_cache
-  runtime_cache.buffer = buffer
-  runtime_cache.title = title
-  runtime_cache.options = options
-  if runtime_cache.err then
-    console.error(runtime_cache.err)
+  local state = self.state
+  state.buffer = buffer
+  state.title = title
+  state.props = props
+  if state.err then
+    console.error(state.err)
     return false
   end
   console.log('Processing buffer blames')
   self:fetch()
   loop.await_fast_event()
-  self.scene = Scene:new(self:get_scene_options(options)):mount()
-  local data = runtime_cache.data
+  self.scene = Scene:new(self:get_scene_definition(props)):mount()
+  local data = state.data
   self
     :set_title(title, {
       filename = data.filename,

@@ -24,7 +24,7 @@ function Buffer:new(bufnr)
     file_watcher = nil,
     git_object = nil,
     namespace = Namespace:new(),
-    runtime_cache = {
+    state = {
       is_attached_to_screen = false,
       on_render = function() end,
       live_signs = {},
@@ -38,13 +38,13 @@ function Buffer:attach_to_changes(opts)
 end
 
 function Buffer:attach_to_renderer(on_render)
-  -- Method to inject on_render logic and only runtime_cache it.
+  -- Method to inject on_render logic and only state it.
   -- This allows us to change rendering logic during run time.
-  local runtime_cache = self.runtime_cache
-  runtime_cache.on_render = on_render
-  if not runtime_cache.is_attached_to_screen then
+  local state = self.state
+  state.on_render = on_render
+  if not state.is_attached_to_screen then
     renderer.attach(self)
-    runtime_cache.is_attached_to_screen = true
+    state.is_attached_to_screen = true
   end
   return self
 end
@@ -56,7 +56,7 @@ end
 
 function Buffer:on_render(top, bot)
   -- We invoke the render function called on runtime.
-  self.runtime_cache.on_render(top, bot)
+  self.state.on_render(top, bot)
   return self
 end
 
@@ -65,17 +65,17 @@ function Buffer:is_rendering()
 end
 
 function Buffer:set_cached_live_signs(live_signs)
-  self.runtime_cache.live_signs = live_signs
+  self.state.live_signs = live_signs
   return self
 end
 
 function Buffer:clear_cached_live_signs()
-  self.runtime_cache.live_signs = {}
+  self.state.live_signs = {}
   return self
 end
 
 function Buffer:get_cached_live_signs()
-  return self.runtime_cache.live_signs
+  return self.state.live_signs
 end
 
 function Buffer:cache_live_sign(hunk)
@@ -212,17 +212,18 @@ function Buffer:set_lines(lines, top, bot)
   local bufnr = self.bufnr
   local modifiable = vim.api.nvim_buf_get_option(bufnr, 'modifiable')
   if modifiable then
-    vim.api.nvim_buf_set_lines(bufnr, top, bot, false, lines)
-    return
+    pcall(vim.api.nvim_buf_set_lines, bufnr, top, bot, false, lines)
+    return self
   end
   vim.api.nvim_buf_set_option(bufnr, 'modifiable', true)
-  vim.api.nvim_buf_set_lines(bufnr, top, bot, false, lines)
+  -- TODO: Log this error in the future
+  pcall(vim.api.nvim_buf_set_lines, bufnr, top, bot, false, lines)
   vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
   return self
 end
 
 function Buffer:set_option(key, value)
-  vim.api.nvim_buf_set_option(self.bufnr, key, value)
+  pcall(vim.api.nvim_buf_set_option, self.bufnr, key, value)
   return self
 end
 

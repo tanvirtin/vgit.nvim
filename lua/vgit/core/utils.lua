@@ -1,10 +1,16 @@
 local assertion = require('vgit.core.assertion')
 
+-- Standard utility functions used throughout the app.
+
 local utils = {
   object = {},
+  list = {},
+  time = {},
+  math = {},
+  str = {},
 }
 
-utils.age = function(current_time)
+utils.time.age = function(current_time)
   assertion.assert(current_time)
   local time = os.difftime(os.time(), current_time)
   local time_divisions = {
@@ -29,7 +35,7 @@ utils.age = function(current_time)
     time = time * time_boundary
     counter = counter + 1
   end
-  local unit = utils.round(time)
+  local unit = utils.math.round(time)
   local how_long = unit <= 1 and time_postfix:sub(1, #time_postfix - 1)
     or time_postfix
   return {
@@ -39,18 +45,16 @@ utils.age = function(current_time)
   }
 end
 
-utils.retrieve = function(cmd, ...)
-  if type(cmd) == 'function' then
-    return cmd(...)
-  end
-  return cmd
-end
-
-utils.round = function(x)
+utils.math.round = function(x)
   return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
 end
 
-utils.shorten_string = function(str, limit)
+utils.str.length = function(str)
+  local _, count = string.gsub(str, '[^\128-\193]', '')
+  return count
+end
+
+utils.str.shorten = function(str, limit)
   if #str > limit then
     str = str:sub(1, limit - 3)
     str = str .. '...'
@@ -58,7 +62,7 @@ utils.shorten_string = function(str, limit)
   return str
 end
 
-utils.accumulate_string = function(existing_text, new_text)
+utils.str.concat = function(existing_text, new_text)
   local top_range = #existing_text
   local end_range = top_range + #new_text
   local text = existing_text .. new_text
@@ -68,7 +72,7 @@ utils.accumulate_string = function(existing_text, new_text)
   }
 end
 
-utils.strip_substring = function(given_string, substring)
+utils.str.strip = function(given_string, substring)
   if substring == '' then
     return given_string
   end
@@ -97,8 +101,39 @@ utils.strip_substring = function(given_string, substring)
   return rc_s
 end
 
-utils.object.assign = function(state_object, config_object)
-  return vim.tbl_deep_extend('force', state_object or {}, config_object or {})
+utils.object.defaults = function(object, ...)
+  object = object or {}
+  local objects = { ... }
+  for i = 1, #objects do
+    object = vim.tbl_deep_extend('keep', object, objects[i])
+  end
+  return object
+end
+
+utils.object.assign = function(object, ...)
+  object = object or {}
+  local objects = { ... }
+  for i = 1, #objects do
+    object = vim.tbl_deep_extend('force', object, objects[i])
+  end
+  return object
+end
+
+utils.object.merge = function(...)
+  local object = {}
+  local objects = { ... }
+  for i = 1, #objects do
+    object = vim.tbl_deep_extend('force', object, objects[i])
+  end
+  return object
+end
+
+utils.object.clone_deep = function(config_object)
+  return vim.tbl_deep_extend('force', {}, config_object)
+end
+
+utils.object.clone = function(config_object)
+  return vim.tbl_extend('force', {}, config_object)
 end
 
 utils.object.pick = function(object, item)
@@ -110,16 +145,51 @@ utils.object.pick = function(object, item)
   return object[1]
 end
 
-utils.list_concat = function(a, b)
+utils.object.each = function(object, callback)
+  for key, value in pairs(object) do
+    local break_loop = callback(value, key)
+    if break_loop then
+      return
+    end
+  end
+end
+
+utils.list.concat = function(a, b)
   for i = 1, #b do
     a[#a + 1] = b[i]
   end
   return a
 end
 
-utils.sanitized_str_len = function(str)
-  local _, count = string.gsub(str, '[^\128-\193]', '')
-  return count
+utils.list.map = function(list, callback)
+  local new_list = {}
+  for i = 1, #list do
+    new_list[#new_list + 1] = callback(list[i], i)
+  end
+  return new_list
+end
+
+utils.list.filter = function(list, callback)
+  local new_list = {}
+  for i = 1, #list do
+    local list_item = list[i]
+    local result = callback(list_item, i)
+    if result then
+      new_list[#new_list + 1] = list_item
+    end
+  end
+  return new_list
+end
+
+utils.list.is_list = vim.tbl_islist
+
+utils.list.each = function(list, callback)
+  for i = 1, #list do
+    local break_loop = callback(list[i], i)
+    if break_loop then
+      return
+    end
+  end
 end
 
 return utils

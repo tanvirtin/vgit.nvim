@@ -17,16 +17,16 @@ end
 function ProjectHunksList:fetch()
   local git = self.git
   local entries = {}
-  local changed_files_err, changed_files = git:ls_changed()
+  local status_files_err, status_files = git:status()
   loop.await_fast_event()
-  if changed_files_err then
-    return console.debug(changed_files_err, debug.traceback())
+  if status_files_err then
+    return console.debug(status_files_err, debug.traceback())
   end
-  if #changed_files == 0 then
+  if #status_files == 0 then
     return entries
   end
-  for i = 1, #changed_files do
-    local file = changed_files[i]
+  for i = 1, #status_files do
+    local file = status_files[i]
     local filename = file.filename
     local status = file.status
     local hunks_err, hunks
