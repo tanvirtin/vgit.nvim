@@ -12,7 +12,7 @@ table_maker.parse_item = function(item, row)
       row = row,
       range = {
         top = 1,
-        bot = 1 + #item.icon_before.icon,
+        bot = #item.icon_before.icon,
       },
     }
   end
@@ -22,8 +22,8 @@ table_maker.parse_item = function(item, row)
       hl = item.icon_after.hl,
       row = row,
       range = {
-        top = utils.sanitized_str_len(value) - 1,
-        bot = utils.sanitized_str_len(value) - 1 + #item.icon_after.icon,
+        top = utils.str.length(value) - 1,
+        bot = utils.str.length(value) - 1 + #item.icon_after.icon,
       },
     }
   end
@@ -44,19 +44,17 @@ table_maker.make_paddings =
         local value
         if type(item) == 'table' then
           value, _ = table_maker.parse_item(item, i)
-          value = utils.shorten_string(value, max_column_len)
+          value = utils.str.shorten(value, max_column_len)
         else
-          value = utils.shorten_string(item, max_column_len)
+          value = utils.str.shorten(item, max_column_len)
         end
         if padding[j] then
           padding[j] = math.max(
             padding[j],
-            utils.sanitized_str_len(value) + column_spacing
+            utils.str.length(value) + column_spacing
           )
         else
-          padding[j] = column_spacing
-            + utils.sanitized_str_len(value)
-            + column_spacing
+          padding[j] = column_spacing + utils.str.length(value) + column_spacing
         end
       end
     end
@@ -71,15 +69,15 @@ table_maker.make_row =
       local value, hl
       if type(item) == 'table' then
         value, hl = table_maker.parse_item(item, r)
-        value = utils.shorten_string(value, max_column_len)
+        value = utils.str.shorten(value, max_column_len)
       else
-        value = utils.shorten_string(item, max_column_len)
+        value = utils.str.shorten(item, max_column_len)
       end
       if hl then
         for i = 1, #hl do
           local hl_range = hl[i].range
-          hl_range.top = hl_range.top + utils.sanitized_str_len(row)
-          hl_range.bot = hl_range.bot + utils.sanitized_str_len(row)
+          hl_range.top = hl_range.top + utils.str.length(row)
+          hl_range.bot = hl_range.bot + utils.str.length(row)
           hls[#hls + 1] = hl[i]
         end
       end
@@ -87,7 +85,7 @@ table_maker.make_row =
         '%s%s%s',
         row,
         value,
-        string.rep(' ', paddings[j] - utils.sanitized_str_len(value))
+        string.rep(' ', paddings[j] - utils.str.length(value))
       )
     end
     return row, hls
@@ -98,12 +96,12 @@ table_maker.make_heading =
     local row = string.format('%s', string.rep(' ', column_spacing))
     for j = 1, #column_labels do
       local item = column_labels[j]
-      local value = utils.shorten_string(item, max_column_len)
+      local value = utils.str.shorten(item, max_column_len)
       row = string.format(
         '%s%s%s',
         row,
         value,
-        string.rep(' ', paddings[j] - utils.sanitized_str_len(value))
+        string.rep(' ', paddings[j] - utils.str.length(value))
       )
     end
     return { row }
@@ -113,16 +111,14 @@ table_maker.make_rows = function(rows, paddings, column_spacing, max_column_len)
   local lines = {}
   local hls = {}
   for i = 1, #rows do
-    -- Need to add a extra space in the front to account for the border in the header offset
-    lines[#lines + 1] = ' '
-      .. table_maker.make_row(
-        rows[i],
-        paddings,
-        column_spacing,
-        max_column_len,
-        hls,
-        i
-      )
+    lines[#lines + 1] = table_maker.make_row(
+      rows[i],
+      paddings,
+      column_spacing,
+      max_column_len,
+      hls,
+      i
+    )
   end
   for i = 1, #hls do
     local hl_info = hls[i]

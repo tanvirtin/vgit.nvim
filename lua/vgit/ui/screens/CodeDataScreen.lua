@@ -7,57 +7,67 @@ local CodeDataScreen = CodeScreen:extend()
 function CodeDataScreen:new(...)
   return setmetatable(CodeScreen:new(...), CodeDataScreen)
 end
-
-CodeDataScreen.update = loop.brakecheck(loop.async(function(self, selected)
-  local runtime_cache = self.runtime_cache
-  runtime_cache.last_selected = selected
-  self:fetch(selected)
+function CodeDataScreen:render()
   loop.await_fast_event()
-  if runtime_cache.err then
-    console.error(runtime_cache.err)
+  local state = self.state
+  if state.err then
+    console.error(state.err)
     return self
   end
-  if
-    not runtime_cache.data and not runtime_cache.data
-    or not runtime_cache.data.dto
-  then
-    return
+  if not state.data and not state.data or not state.data.dto then
+    return self
   end
+  local data = state.data
   self
     :reset()
-    :set_title(runtime_cache.title, {
-      filename = runtime_cache.data.filename,
-      filetype = runtime_cache.data.filetype,
-      stat = runtime_cache.data.dto.stat,
+    :set_title(state.title, {
+      filename = data.filename,
+      filetype = data.filetype,
+      stat = data.dto.stat,
     })
     :make_code()
     :paint_code_partially()
     :set_code_cursor_on_mark(1)
-end))
+end
+
+CodeDataScreen.refetch_and_render = loop.debounce(
+  loop.async(function(self, lnum)
+    self
+      :fetch(lnum, {
+        cached = true,
+      })
+      :render()
+  end),
+  50
+)
 
 function CodeDataScreen:table_move(direction)
-  self:clear_runtime_cached_err()
+  self:clear_state_err()
   local components = self.scene.components
   local table = components.table
+  -- NOTE: Don't remove this, important for the UI flow
   loop.await_fast_event()
-  local selected = table:get_lnum()
+  local lnum = table:get_lnum()
   if direction == 'up' then
-    selected = selected - 1
+    lnum = lnum - 1
   elseif direction == 'down' then
-    selected = selected + 1
+    lnum = lnum + 1
   end
   local total_line_count = table:get_line_count()
-  if selected > total_line_count then
-    selected = 1
-  elseif selected < 1 then
-    selected = total_line_count
+  if lnum > total_line_count then
+    lnum = 1
+  elseif lnum < 1 then
+    lnum = total_line_count
   end
-  if self.runtime_cache.last_selected == selected then
-    return
+  local state = self.state
+  if state.last_lnum == lnum then
+    return self
   end
+  state.last_lnum = lnum
+  -- NOTE: Don't remove this, important for the UI flow
   loop.await_fast_event()
-  table:unlock():set_lnum(selected):lock()
-  self:update(selected)
+  table:unlock():set_lnum(lnum):lock()
+  self:refetch_and_render(lnum)
 end
 
 return CodeDataScreen

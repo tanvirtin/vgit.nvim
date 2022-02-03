@@ -2,7 +2,7 @@ local Config = require('vgit.core.Config')
 
 return Config:new({
   GitBackgroundPrimary = 'Normal',
-  GitBackgroundSecondary = 'Normal',
+  GitBackgroundSecondary = 'StatusLine',
   GitBorder = 'LineNr',
   GitLineNr = 'LineNr',
   GitComment = 'Comment',

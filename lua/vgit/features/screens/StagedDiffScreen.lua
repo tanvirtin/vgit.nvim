@@ -10,19 +10,19 @@ function StagedDiffScreen:new(...)
 end
 
 function StagedDiffScreen:fetch()
-  local runtime_cache = self.runtime_cache
-  local buffer = runtime_cache.buffer
+  local state = self.state
+  local buffer = state.buffer
   local show_err, lines = buffer.git_object:lines()
   if show_err then
     console.debug(show_err, debug.traceback())
-    runtime_cache.err = show_err
+    state.err = show_err
     return self
   end
   local dto
   local hunks_err, hunks = buffer.git_object:staged_hunks()
   if hunks_err then
     console.debug(hunks_err, debug.traceback())
-    runtime_cache.err = hunks_err
+    state.err = hunks_err
     return self
   end
   if self.layout_type == 'unified' then
@@ -30,7 +30,7 @@ function StagedDiffScreen:fetch()
   else
     dto = Diff:new(hunks):split(lines)
   end
-  runtime_cache.data = {
+  state.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
     dto = dto,

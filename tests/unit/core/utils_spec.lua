@@ -21,7 +21,7 @@ describe('utils:', function()
       local current_time = 1609477202
       local blame_time = 1609477201
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 1)
       eq(age.how_long, 'second')
       eq(age.display, '1 second ago')
@@ -31,7 +31,7 @@ describe('utils:', function()
       local current_time = 1609477205
       local blame_time = 1609477200
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 5)
       eq(age.how_long, 'seconds')
       eq(age.display, '5 seconds ago')
@@ -41,7 +41,7 @@ describe('utils:', function()
       local current_time = 1609477320
       local blame_time = 1609477260
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 1)
       eq(age.how_long, 'minute')
       eq(age.display, '1 minute ago')
@@ -51,7 +51,7 @@ describe('utils:', function()
       local current_time = 1609477500
       local blame_time = 1609477200
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 5)
       eq(age.how_long, 'minutes')
       eq(age.display, '5 minutes ago')
@@ -61,7 +61,7 @@ describe('utils:', function()
       local current_time = 1609484400
       local blame_time = 1609480800
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 1)
       eq(age.how_long, 'hour')
       eq(age.display, '1 hour ago')
@@ -71,7 +71,7 @@ describe('utils:', function()
       local current_time = 1609495200
       local blame_time = 1609477200
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 5)
       eq(age.how_long, 'hours')
       eq(age.display, '5 hours ago')
@@ -81,7 +81,7 @@ describe('utils:', function()
       local current_time = 1609822800
       local blame_time = 1609477200
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 4)
       eq(age.how_long, 'days')
       eq(age.display, '4 days ago')
@@ -91,7 +91,7 @@ describe('utils:', function()
       local current_time = 1612155600
       local blame_time = 1609477200
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 1)
       eq(age.how_long, 'month')
       eq(age.display, '1 month ago')
@@ -101,7 +101,7 @@ describe('utils:', function()
       local current_time = 1619841600
       local blame_time = 1609477200
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 4)
       eq(age.how_long, 'months')
       eq(age.display, '4 months ago')
@@ -111,7 +111,7 @@ describe('utils:', function()
       local current_time = 1641020885
       local blame_time = 1609484885
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 1)
       eq(age.how_long, 'year')
       eq(age.display, '1 year ago')
@@ -121,41 +121,31 @@ describe('utils:', function()
       local current_time = 1609477200
       local blame_time = 1451624400
       os.time.returns(current_time)
-      local age = utils.age(blame_time)
+      local age = utils.time.age(blame_time)
       eq(age.unit, 5)
       eq(age.how_long, 'years')
       eq(age.display, '5 years ago')
     end)
   end)
 
-  describe('retrieve', function()
-    it('should invoke a function if passed in', function()
-      local test_fn = function(value)
-        return value
-      end
-      eq(utils.retrieve(test_fn, 42), 42)
-      not_eq(utils.retrieve(test_fn, 42), 22)
-    end)
-  end)
-
   describe('round', function()
     it('should round pi to 3', function()
-      eq(utils.round(3.14159265359), 3)
+      eq(utils.math.round(3.14159265359), 3)
     end)
   end)
 
   describe('strip_substring', function()
     it('should remove "/bar" from "foo/bar/baz"', function()
-      eq(utils.strip_substring('foo/bar/baz', '/bar'), 'foo/baz')
+      eq(utils.str.strip('foo/bar/baz', '/bar'), 'foo/baz')
     end)
     it('should remove "foo/baz" from "foo/bar/baz"', function()
-      eq(utils.strip_substring('foo/bar/baz', '/bar'), 'foo/baz')
+      eq(utils.str.strip('foo/bar/baz', '/bar'), 'foo/baz')
     end)
     it(
       'should remove "helix-core/src" from "helix-core/src/comment.rs"',
       function()
         eq(
-          utils.strip_substring('helix-core/src/comment.rs', 'helix-core/src'),
+          utils.str.strip('helix-core/src/comment.rs', 'helix-core/src'),
           '/comment.rs'
         )
       end
@@ -164,25 +154,25 @@ describe('utils:', function()
       'should remove "helix-core/src/" from "helix-core/src/comment.rs"',
       function()
         eq(
-          utils.strip_substring('helix-core/src/comment.rs', 'helix-core/src/'),
+          utils.str.strip('helix-core/src/comment.rs', 'helix-core/src/'),
           'comment.rs'
         )
       end
     )
     it('should remove "x-c" from "helix-core"', function()
-      eq(utils.strip_substring('helix-core', 'x-c'), 'heliore')
+      eq(utils.str.strip('helix-core', 'x-c'), 'heliore')
     end)
     it('should remove "ab" from "ababababa"', function()
-      eq(utils.strip_substring('ababababa', 'ab'), 'abababa')
+      eq(utils.str.strip('ababababa', 'ab'), 'abababa')
     end)
     it('should remove "ababababa" from "abababab"', function()
-      eq(utils.strip_substring('ababababa', 'abababab'), 'a')
+      eq(utils.str.strip('ababababa', 'abababab'), 'a')
     end)
     it('should remove "ababababa" from "ababababa"', function()
-      eq(utils.strip_substring('ababababa', 'ababababa'), '')
+      eq(utils.str.strip('ababababa', 'ababababa'), '')
     end)
     it('should not remove "lua/" from "vgit.lua"', function()
-      eq(utils.strip_substring('vgit.lua', 'lua/'), 'vgit.lua')
+      eq(utils.str.strip('vgit.lua', 'lua/'), 'vgit.lua')
     end)
   end)
 

@@ -1,22 +1,22 @@
 local Object = require('vgit.core.Object')
 
-local Marker = Object:extend()
+local NavigationMarker = Object:extend()
 
-function Marker:new()
+function NavigationMarker:new()
   return setmetatable({
     timer_id = nil,
     epoch = 1000,
-  }, Marker)
+  }, NavigationMarker)
 end
 
-function Marker:clear_timer()
+function NavigationMarker:clear_timer()
   if self.timer_id then
     vim.fn.timer_stop(self.timer_id)
     self.timer_id = nil
   end
 end
 
-function Marker:mark_current_hunk(buffer, window, text)
+function NavigationMarker:mark_current_hunk(buffer, window, text)
   self:unmark_current_hunk(buffer)
   buffer:transpose_virtual_text(
     text,
@@ -33,11 +33,11 @@ function Marker:mark_current_hunk(buffer, window, text)
   end)
 end
 
-function Marker:unmark_current_hunk(buffer)
+function NavigationMarker:unmark_current_hunk(buffer)
   self:clear_timer()
   if buffer:is_valid() then
     buffer:clear_namespace()
   end
 end
 
-return Marker
+return NavigationMarker

@@ -8,6 +8,9 @@ local authorship_code_lens_setting = require(
 local live_blame_setting = require('vgit.settings.live_blame')
 local live_gutter_setting = require('vgit.settings.live_gutter')
 local scene_setting = require('vgit.settings.scene')
+local project_diff_preview_setting = require(
+  'vgit.settings.project_diff_preview'
+)
 local signs_setting = require('vgit.settings.signs')
 local loop = require('vgit.core.loop')
 local symbols_setting = require('vgit.settings.symbols')
@@ -16,7 +19,7 @@ local highlight = require('vgit.core.highlight')
 local sign = require('vgit.core.sign')
 local Command = require('vgit.Command')
 local Navigation = require('vgit.Navigation')
-local Marker = require('vgit.Marker')
+local NavigationMarker = require('vgit.NavigationMarker')
 local GitStore = require('vgit.GitStore')
 local autocmd = require('vgit.core.autocmd')
 local LiveGutter = require('vgit.features.LiveGutter')
@@ -32,41 +35,46 @@ local versioning = Versioning:new()
 local git = Git:new()
 local command = Command:new()
 local navigation = Navigation:new()
-local marker = Marker:new()
+local navigation_marker = NavigationMarker:new()
 local git_store = GitStore:new()
 local live_gutter = LiveGutter:new(git_store, versioning)
 local live_blame = LiveBlame:new(git_store, versioning)
 local authorship_code_lens = AuthorshipCodeLens:new(git_store, versioning)
-local buffer_hunks = BufferHunks:new(git_store, versioning, navigation, marker)
+local buffer_hunks = BufferHunks:new(
+  git_store,
+  versioning,
+  navigation,
+  navigation_marker
+)
 local project_hunks_list = ProjectHunksList:new(versioning)
 
 active_screen.inject(buffer_hunks, navigation, git_store)
 
-local on_enter = loop.async(function()
-  if active_screen.exists() then
-    return active_screen.on_enter()
-  end
-end)
-
-local on_j = loop.async(function()
-  if active_screen.exists() then
-    return active_screen.on_j()
-  end
-end)
-
-local on_k = loop.async(function()
-  if active_screen.exists() then
-    return active_screen.on_k()
-  end
-end)
+local keys = {
+  enter = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress('<enter>')
+    end
+  end),
+  j = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress('j')
+    end
+  end),
+  k = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress('k')
+    end
+  end),
+  prevent_default = function() end,
+}
 
 local win_enter = loop.async(function()
   if not active_screen.exists() then
     live_blame:desync_all()
   end
   if active_screen.exists() then
-    active_screen.keep_focused()
-    return
+    return active_screen.keep_focused()
   end
 end)
 
@@ -89,7 +97,7 @@ end)
 
 local buf_win_enter = loop.async(function()
   if active_screen.exists() then
-    active_screen.destroy()
+    return active_screen.destroy()
   end
 end)
 
@@ -99,7 +107,7 @@ local buf_win_leave = loop.async(function()
   loop.await_fast_event()
   -- After this call buf_win_enter should fire, where window will be destroyed.
   if active_screen.exists() then
-    active_screen.destroy()
+    return active_screen.destroy()
   end
 end)
 
@@ -123,16 +131,14 @@ end)
 
 local hunk_up = loop.async(function()
   if active_screen.exists() then
-    active_screen.navigate('up')
-    return
+    return active_screen.action('navigate', 'up')
   end
   buffer_hunks:move_up()
 end)
 
 local hunk_down = loop.async(function()
   if active_screen.exists() then
-    active_screen.navigate('down')
-    return
+    return active_screen.action('navigate', 'down')
   end
   buffer_hunks:move_down()
 end)
@@ -143,24 +149,21 @@ end)
 
 local buffer_reset = loop.async(function()
   if active_screen.exists() then
-    active_screen.git_reset()
-    return
+    return active_screen.action('git_reset')
   end
   buffer_hunks:reset_all()
 end)
 
 local buffer_stage = loop.async(function()
   if active_screen.exists() then
-    active_screen.git_stage()
-    return
+    return active_screen.action('git_stage')
   end
   buffer_hunks:stage_all()
 end)
 
 local buffer_unstage = loop.async(function()
   if active_screen.exists() then
-    active_screen.git_unstage()
-    return
+    return active_screen.action('git_unstage')
   end
   buffer_hunks:unstage_all()
 end)
@@ -168,16 +171,14 @@ end)
 local stage_all = loop.async(function()
   git:stage()
   if active_screen.exists() then
-    active_screen.refresh()
-    return
+    return active_screen.action('refresh')
   end
 end)
 
 local unstage_all = loop.async(function()
   git:unstage()
   if active_screen.exists() then
-    active_screen.refresh()
-    return
+    return active_screen.action('refresh')
   end
 end)
 
@@ -190,7 +191,7 @@ local reset_all = loop.async(function()
   end
   git:discard()
   if active_screen.exists() then
-    active_screen.refresh()
+    return active_screen.action('refresh')
   end
 end)
 
@@ -199,39 +200,39 @@ local buffer_hunk_stage = loop.async(function()
 end)
 
 local buffer_hunk_preview = loop.async(function()
-  active_screen.hunk_screen()
+  active_screen.activate('diff_hunk_screen')
 end)
 
 local buffer_hunk_staged_preview = loop.async(function()
-  active_screen.staged_hunk_screen()
+  active_screen.activate('staged_hunk_screen')
 end)
 
 local buffer_diff_preview = loop.async(function()
-  active_screen.diff_screen()
+  active_screen.activate('diff_screen')
 end)
 
 local buffer_diff_staged_preview = loop.async(function()
-  active_screen.staged_diff_screen()
+  active_screen.activate('staged_diff_screen')
 end)
 
 local buffer_history_preview = loop.async(function()
-  active_screen.history_screen()
+  active_screen.activate('history_screen')
 end)
 
 local buffer_blame_preview = loop.async(function()
-  active_screen.line_blame_screen()
+  active_screen.activate('line_blame_screen')
 end)
 
 local project_diff_preview = loop.async(function()
-  active_screen.project_diff_screen()
+  active_screen.activate('project_diff_screen')
 end)
 
 local project_hunks_preview = loop.async(function()
-  active_screen.project_hunks_screen()
+  active_screen.activate('project_hunks_screen')
 end)
 
 local buffer_gutter_blame_preview = loop.async(function()
-  active_screen.gutter_blame_screen()
+  active_screen.activate('gutter_blame_screen')
 end)
 
 local project_hunks_qf = loop.async(function()
@@ -333,6 +334,7 @@ local function configure_settings(config)
   scene_setting:assign(settings.scene)
   signs_setting:assign(settings.signs)
   symbols_setting:assign(settings.symbols)
+  project_diff_preview_setting:assign(settings.project_diff_preview)
 end
 
 local function define_keymaps(config)
@@ -367,9 +369,6 @@ return {
   cursor_hold = cursor_hold,
   cursor_moved = cursor_moved,
   insert_enter = insert_enter,
-  on_enter = on_enter,
-  on_j = on_j,
-  on_k = on_k,
   colorscheme = colorscheme,
   execute_command = execute_command,
   command_list = command_list,
@@ -399,6 +398,7 @@ return {
   toggle_live_blame = toggle_live_blame,
   toggle_authorship_code_lens = toggle_authorship_code_lens,
   toggle_diff_preference = toggle_diff_preference,
+  keys = keys,
   settings = {
     screen = scene_setting,
     hls = hls_setting,

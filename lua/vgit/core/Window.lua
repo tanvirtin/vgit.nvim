@@ -79,15 +79,15 @@ function Window:set_width(width)
   return self
 end
 
-function Window:set_window_props(window_props)
-  if window_props.focus then
-    window_props.focus = nil
+function Window:set_win_plot(win_plot)
+  if win_plot.focus then
+    win_plot.focus = nil
   end
-  vim.api.nvim_win_set_config(self.win_id, window_props)
+  vim.api.nvim_win_set_config(self.win_id, win_plot)
   return self
 end
 
-function Window:get_window_props()
+function Window:get_win_plot()
   return vim.api.nvim_win_get_config(self.win_id)
 end
 

@@ -1,7 +1,5 @@
-local utils = require('vgit.core.utils')
 local Scene = require('vgit.ui.Scene')
 local loop = require('vgit.core.loop')
-local dimensions = require('vgit.ui.dimensions')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local CodeScreen = require('vgit.ui.screens.CodeScreen')
 local console = require('vgit.core.console')
@@ -11,10 +9,9 @@ local DiffScreen = CodeScreen:extend()
 
 function DiffScreen:new(...)
   local this = CodeScreen:new(...)
-  this.runtime_cache = {
+  this.state = {
     buffer = nil,
     title = nil,
-    options = nil,
     err = false,
     data = nil,
   }
@@ -22,8 +19,8 @@ function DiffScreen:new(...)
 end
 
 function DiffScreen:fetch()
-  local runtime_cache = self.runtime_cache
-  local buffer = runtime_cache.buffer
+  local state = self.state
+  local buffer = state.buffer
   local hunks = buffer.git_object.hunks
   local lines = buffer:get_lines()
   if not hunks then
@@ -31,12 +28,12 @@ function DiffScreen:fetch()
     local hunks_err, calculated_hunks = buffer.git_object:live_hunks(lines)
     if hunks_err then
       console.debug(hunks_err, debug.traceback())
-      runtime_cache.err = hunks_err
+      state.err = hunks_err
       return self
     end
     hunks = calculated_hunks
   end
-  runtime_cache.data = {
+  state.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
     dto = self:generate_diff(hunks, lines),
@@ -45,57 +42,57 @@ function DiffScreen:fetch()
   return self
 end
 
-function DiffScreen:get_unified_scene_options(options)
+function DiffScreen:get_unified_scene_definition()
   return {
-    current = CodeComponent:new(utils.object.assign({
+    current = CodeComponent:new({
       config = {
         win_options = {
           cursorbind = true,
           scrollbind = true,
           cursorline = true,
         },
-        window_props = {
-          height = dimensions.global_height(),
-          width = dimensions.global_width(),
+        win_plot = {
+          height = '100vh',
+          width = '100vw',
         },
       },
-    }, options)),
+    }),
   }
 end
 
-function DiffScreen:get_split_scene_options(options)
+function DiffScreen:get_split_scene_definition()
   return {
-    previous = CodeComponent:new(utils.object.assign({
+    previous = CodeComponent:new({
       config = {
         win_options = {
           cursorbind = true,
           scrollbind = true,
           cursorline = true,
         },
-        window_props = {
-          height = dimensions.global_height(),
-          width = math.floor(dimensions.global_width() / 2),
+        win_plot = {
+          height = '100vh',
+          width = '50vw',
         },
       },
-    }, options)),
-    current = CodeComponent:new(utils.object.assign({
+    }),
+    current = CodeComponent:new({
       config = {
         win_options = {
           cursorbind = true,
           scrollbind = true,
           cursorline = true,
         },
-        window_props = {
-          height = dimensions.global_height(),
-          width = math.floor(dimensions.global_width() / 2),
-          col = math.floor(dimensions.global_width() / 2),
+        win_plot = {
+          height = '100vh',
+          width = '50vw',
+          col = '50vw',
         },
       },
-    }, options)),
+    }),
   }
 end
 
-function DiffScreen:show(title, options)
+function DiffScreen:show(title)
   local buffer = self.git_store:current()
   if not buffer then
     console.log('Current buffer you are on has no hunks')
@@ -107,25 +104,24 @@ function DiffScreen:show(title, options)
     )
     return
   end
-  local runtime_cache = self.runtime_cache
-  runtime_cache.buffer = buffer
-  runtime_cache.title = title
-  runtime_cache.options = options
+  local state = self.state
+  state.buffer = buffer
+  state.title = title
   console.log('Processing buffer diff')
   self:fetch()
   loop.await_fast_event()
-  if runtime_cache.err then
-    console.error(runtime_cache.err)
+  if state.err then
+    console.error(state.err)
     return false
   end
-  if #runtime_cache.data.dto.hunks == 0 then
+  if #state.data.dto.hunks == 0 then
     console.log('No hunks found')
     return false
   end
   -- selected_hunk must always be called before creating the scene.
   local _, selected_hunk = self.buffer_hunks:cursor_hunk()
-  self.scene = Scene:new(self:get_scene_options(options)):mount()
-  local data = runtime_cache.data
+  self.scene = Scene:new(self:get_scene_definition()):mount()
+  local data = state.data
   self
     :set_title(title, {
       filename = data.filename,

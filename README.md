@@ -242,6 +242,15 @@ require('vgit').setup({
     screen = {
       diff_preference = 'unified',
     },
+    project_diff_preview = {
+      keymaps = {
+        buffer_stage = 's',
+        buffer_unstage = 'u',
+        stage_all = 'a',
+        unstage_all = 'd',
+        reset_all = 'r',
+      },
+    },
     signs = {
       priority = 10,
       definitions = {

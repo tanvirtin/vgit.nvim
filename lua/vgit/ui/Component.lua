@@ -1,21 +1,23 @@
-local dimensions = require('vgit.ui.dimensions')
+local loop = require('vgit.core.loop')
 local assertion = require('vgit.core.assertion')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 
 local Component = Object:extend()
 
-function Component:new(options)
-  options = options or {}
+function Component:new(props)
   return setmetatable(
     utils.object.assign({
       buffer = nil,
       window = nil,
-      runtime_cache = {},
-      -- Elements are mini components which decorate a component.
+      notification = nil,
+      namespace = nil,
+      component_plot = nil,
       elements = {},
+      -- Stores keypress callbacks
+      keys = {},
+      state = {},
       -- The properties that can be used to align components with each other.
-      window_props = {},
       config = {
         border = {
           hl = 'GitBorder',
@@ -35,11 +37,11 @@ function Component:new(options)
           cursorbind = false,
           scrollbind = false,
         },
-        window_props = {
+        win_plot = {
           style = 'minimal',
           relative = 'editor',
           height = 20,
-          width = dimensions.global_width(),
+          width = '100vw',
           row = 0,
           col = 0,
           focusable = true,
@@ -48,7 +50,7 @@ function Component:new(options)
         },
         locked = false,
       },
-    }, options),
+    }, props),
     Component
   )
 end
@@ -73,8 +75,8 @@ function Component:set_height(height)
   return self
 end
 
-function Component:set_window_props(window_props)
-  self.window:set_window_props(window_props)
+function Component:set_win_plot(win_plot)
+  self.window:set_win_plot(win_plot)
   return self
 end
 
@@ -106,7 +108,50 @@ function Component:unmount()
   assertion.assert('Not yet implemented', debug.traceback())
 end
 
-function Component:set_keymap(mode, key, action)
+function Component:clear_namespace()
+  self.buffer:clear_namespace()
+  return self
+end
+
+function Component:add_highlight(hl, row, col_top, col_end)
+  self.buffer:add_highlight(hl, row, col_top, col_end)
+  return self
+end
+
+function Component:sign_place(lnum, sign_name)
+  self.buffer:sign_place(lnum, sign_name)
+  return self
+end
+
+function Component:sign_unplace()
+  self.buffer:sign_unplace()
+  return self
+end
+
+function Component:transpose_virtual_text(text, hl, row, col, pos)
+  self.buffer:transpose_virtual_text(text, hl, row, col, pos)
+  return self
+end
+
+function Component:transpose_virtual_line(texts, col, pos)
+  self.buffer:transpose_virtual_line(texts, col, pos)
+  return self
+end
+
+function Component:trigger_keypress(key, ...)
+  local callback = self.keys[key]
+  loop.await_fast_event()
+  if type(callback) == 'function' and self:is_focused() then
+    callback(...)
+  end
+  return self
+end
+
+function Component:set_keymap(mode, key, action, callback)
+  -- Storing the callback within this scope.
+  if callback then
+    self.keys[key] = callback
+  end
   self.buffer:set_keymap(mode, key, action)
   return self
 end

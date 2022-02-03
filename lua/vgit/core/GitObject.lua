@@ -62,7 +62,7 @@ end
 function GitObject:stage()
   local filename = self:tracked_filename()
   if not self:is_tracked() then
-    filename = utils.strip_substring(self.filename.native, self.dirname)
+    filename = utils.str.strip(self.filename.native, self.dirname)
   end
   return self.git:stage_file(filename)
 end
@@ -80,24 +80,26 @@ function GitObject:lines(commit_hash)
   return self.git:show(self:tracked_filename(), commit_hash)
 end
 
-function GitObject:revision_lines(commit_hash)
-  return self.git:show(self:tracked_filename(), commit_hash)
-end
-
 function GitObject:is_ignored()
   return self.git:is_ignored(self.filename.native)
 end
 
 function GitObject:blame_line(lnum)
-  return self.git:blame_line(self:tracked_filename(), lnum)
+  return self.git:blame_line(self:tracked_filename(), lnum, {
+    is_background = true,
+  })
 end
 
 function GitObject:blames()
-  return self.git:blames(self:tracked_filename())
+  return self.git:blames(self:tracked_filename(), {
+    is_background = true,
+  })
 end
 
 function GitObject:config()
-  return self.git:config()
+  return self.git:config({
+    is_background = true,
+  })
 end
 
 function GitObject:native_hunks(filename, current_lines)
@@ -197,15 +199,15 @@ function GitObject:staged_hunks()
 end
 
 function GitObject:remote_hunks(parent_hash, commit_hash)
-  return self.git:remote_hunks(
-    self:tracked_filename(),
-    parent_hash,
-    commit_hash
-  )
+  return self.git:remote_hunks(self:tracked_filename(), parent_hash, commit_hash, {
+    is_background = true,
+  })
 end
 
 function GitObject:logs()
-  return self.git:logs(self:tracked_filename())
+  return self.git:logs(self:tracked_filename(), {
+    is_background = true,
+  })
 end
 
 return GitObject

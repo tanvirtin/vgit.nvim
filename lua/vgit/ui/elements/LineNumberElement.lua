@@ -1,37 +1,23 @@
-local dimensions = require('vgit.ui.dimensions')
+local Component = require('vgit.ui.Component')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
-local Object = require('vgit.core.Object')
 
-local LineNumberElement = Object:extend()
+local LineNumberElement = Component:extend()
 
-function LineNumberElement:new()
-  return setmetatable({
-    buffer = nil,
-    window = nil,
-    runtime_cache = {
-      lines = {},
-    },
-  }, LineNumberElement)
+function LineNumberElement:new(...)
+  return setmetatable(Component:new(...), LineNumberElement)
 end
 
-function LineNumberElement:set_lnum(lnum)
-  self.window:set_lnum(lnum)
-  return self
+function LineNumberElement:get_width()
+  return 6
 end
 
-function LineNumberElement:set_cursor(cursor)
-  self.window:set_cursor(cursor)
-  return self
-end
-
-function LineNumberElement:reset_cursor()
-  self.window:set_cursor({ 1, 1 })
-  return self
-end
-
-function LineNumberElement:call(callback)
-  self.window:call(callback)
+function LineNumberElement:set_lines(lines)
+  local actual_lines = {}
+  for _ = 1, #lines do
+    actual_lines[#actual_lines + 1] = ''
+  end
+  self.buffer:set_lines(actual_lines)
   return self
 end
 
@@ -59,39 +45,6 @@ function LineNumberElement:mount(options)
       scrollbind = true,
       winhl = 'Normal:GitBackgroundPrimary',
     })
-  return self
-end
-
-function LineNumberElement:get_width()
-  return 6
-end
-
-function LineNumberElement:make_lines(lines)
-  local global_height = dimensions.global_height()
-  local actual_lines = {}
-  for _ = 1, #lines do
-    actual_lines[#actual_lines + 1] = ''
-  end
-  for _ = #lines, global_height do
-    actual_lines[#actual_lines + 1] = ''
-  end
-  self.buffer:set_lines(actual_lines)
-  self.runtime_cache.lines = lines
-  return self
-end
-
-function LineNumberElement:sign_place(lnum, sign_name)
-  self.buffer:sign_place(lnum, sign_name)
-  return self
-end
-
-function LineNumberElement:transpose_virtual_line(texts, col, pos)
-  self.buffer:transpose_virtual_line(texts, col, pos)
-  return self
-end
-
-function LineNumberElement:clear_namespace()
-  self.buffer:clear_namespace()
   return self
 end
 

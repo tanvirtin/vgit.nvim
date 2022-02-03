@@ -5,13 +5,13 @@ local Feature = require('vgit.Feature')
 
 local BufferHunks = Feature:extend()
 
-function BufferHunks:new(git_store, versioning, navigation, marker)
+function BufferHunks:new(git_store, versioning, navigation, navigation_marker)
   return setmetatable({
     name = 'Buffer Hunks',
     git_store = git_store,
     versioning = versioning,
     navigation = navigation,
-    marker = marker,
+    navigation_marker = navigation_marker,
   }, BufferHunks)
 end
 
@@ -24,7 +24,7 @@ function BufferHunks:move_up()
   if hunks and #hunks ~= 0 then
     local window = Window:new(0)
     local selected = self.navigation:hunk_up(window, hunks)
-    self.marker:mark_current_hunk(
+    self.navigation_marker:mark_current_hunk(
       buffer,
       window,
       string.format('%s/%s Changes', selected, #hunks)
@@ -41,7 +41,7 @@ function BufferHunks:move_down()
   if hunks and #hunks ~= 0 then
     local window = Window:new(0)
     local selected = self.navigation:hunk_down(window, hunks)
-    self.marker:mark_current_hunk(
+    self.navigation_marker:mark_current_hunk(
       buffer,
       window,
       string.format('%s/%s Changes', selected, #hunks)

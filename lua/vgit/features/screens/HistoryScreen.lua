@@ -1,10 +1,8 @@
-local utils = require('vgit.core.utils')
 local loop = require('vgit.core.loop')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local TableComponent = require('vgit.ui.components.TableComponent')
 local CodeDataScreen = require('vgit.ui.screens.CodeDataScreen')
 local Scene = require('vgit.ui.Scene')
-local dimensions = require('vgit.ui.dimensions')
 local console = require('vgit.core.console')
 
 local HistoryScreen = CodeDataScreen:extend()
@@ -13,29 +11,30 @@ function HistoryScreen:new(...)
   return setmetatable(CodeDataScreen:new(...), HistoryScreen)
 end
 
-function HistoryScreen:fetch(selected)
-  selected = selected or 1
-  local runtime_cache = self.runtime_cache
-  local data = runtime_cache.data
-  local buffer = runtime_cache.buffer
+function HistoryScreen:fetch(lnum, opts)
+  lnum = lnum or 1
+  opts = opts or {}
+  local state = self.state
+  local data = state.data
+  local buffer = state.buffer
   local git_object = buffer.git_object
   local lines, hunks
   local err, logs
-  if data then
+  if opts.cached then
     logs = data.logs
   else
     err, logs = git_object:logs()
   end
   if err then
     console.debug(err, debug.traceback())
-    runtime_cache.err = err
+    state.err = err
     return self
   end
-  local log = logs[selected]
+  local log = logs[lnum]
   if not log then
     err = { 'Failed to access logs' }
     console.debug(err, debug.traceback())
-    runtime_cache.err = err
+    state.err = err
     return self
   end
   local parent_hash = log.parent_hash
@@ -43,17 +42,17 @@ function HistoryScreen:fetch(selected)
   err, hunks = git_object:remote_hunks(parent_hash, commit_hash)
   if err then
     console.debug(err, debug.traceback())
-    runtime_cache.err = err
+    state.err = err
     return self
   end
   err, lines = git_object:lines(commit_hash)
   if err then
     console.debug(err, debug.traceback())
-    runtime_cache.err = err
+    state.err = err
     return self
   end
   loop.await_fast_event()
-  runtime_cache.data = {
+  state.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
     logs = logs,
@@ -62,88 +61,110 @@ function HistoryScreen:fetch(selected)
   return self
 end
 
-function HistoryScreen:get_unified_scene_options(options)
-  local table_height = math.floor(dimensions.global_height() * 0.15)
+function HistoryScreen:get_unified_scene_definition()
   return {
-    current = CodeComponent:new(utils.object.assign({
+    current = CodeComponent:new({
       config = {
+        elements = {
+          header = true,
+          footer = false,
+        },
         win_options = {
           cursorbind = true,
           scrollbind = true,
           cursorline = true,
         },
-        window_props = {
-          height = dimensions.global_height() - table_height,
-          row = table_height,
+        win_plot = {
+          height = '85vh',
+          row = '15vh',
         },
       },
-    }, options)),
-    table = TableComponent:new(utils.object.assign({
-      header = { 'Revision', 'Author Name', 'Commit Hash', 'Time', 'Summary' },
+    }),
+    table = TableComponent:new({
       config = {
-        window_props = {
-          height = table_height,
-          row = 0,
+        elements = {
+          header = true,
+          footer = false,
+        },
+        header = {
+          'Revision',
+          'Author Name',
+          'Commit Hash',
+          'Time',
+          'Summary',
+        },
+        win_plot = {
+          height = '15vh',
         },
       },
-    }, options)),
+    }),
   }
 end
 
-function HistoryScreen:get_split_scene_options(options)
-  local table_height = math.floor(dimensions.global_height() * 0.15)
+function HistoryScreen:get_split_scene_definition()
   return {
-    previous = CodeComponent:new(utils.object.assign({
+    previous = CodeComponent:new({
       config = {
+        elements = {
+          header = true,
+          footer = false,
+        },
         win_options = {
           cursorbind = true,
           scrollbind = true,
           cursorline = true,
         },
-        window_props = {
-          height = dimensions.global_height() - table_height,
-          width = math.floor(dimensions.global_width() / 2),
-          row = table_height,
+        win_plot = {
+          height = '85vh',
+          width = '50vw',
+          row = '15vh',
         },
       },
-    }, options)),
-    current = CodeComponent:new(utils.object.assign({
+    }),
+    current = CodeComponent:new({
       config = {
+        elements = {
+          header = true,
+          footer = false,
+        },
         win_options = {
           cursorbind = true,
           scrollbind = true,
           cursorline = true,
         },
-        window_props = {
-          height = dimensions.global_height() - table_height,
-          width = math.floor(dimensions.global_width() / 2),
-          col = math.floor(dimensions.global_width() / 2),
-          row = table_height,
+        win_plot = {
+          height = '85vh',
+          width = '50vw',
+          row = '15vh',
+          col = '50vw',
         },
       },
-    }, options)),
-    table = TableComponent:new(utils.object.assign({
-      header = { 'Revision', 'Author Name', 'Commit Hash', 'Time', 'Summary' },
+    }),
+    table = TableComponent:new({
       config = {
-        window_props = {
-          height = table_height,
-          row = 0,
+        elements = {
+          header = true,
+          footer = false,
+        },
+        header = {
+          'Revision',
+          'Author Name',
+          'Commit Hash',
+          'Time',
+          'Summary',
+        },
+        win_plot = {
+          height = '15vh',
         },
       },
-    }, options)),
+    }),
   }
-end
-
-function HistoryScreen:table_change()
-  loop.await_fast_event()
-  local selected = self.scene.components.table:get_lnum()
-  self:update(selected)
 end
 
 function HistoryScreen:make_table()
   self.scene.components.table
     :unlock()
-    :make_rows(self.runtime_cache.data.logs, function(log)
+    :make_rows(self.state.data.logs, function(log)
       return {
         log.revision,
         log.author_name or '',
@@ -152,17 +173,20 @@ function HistoryScreen:make_table()
         log.summary or '',
       }
     end)
-    :set_keymap('n', 'j', 'on_j')
-    :set_keymap('n', 'J', 'on_j')
-    :set_keymap('n', 'k', 'on_k')
-    :set_keymap('n', 'K', 'on_k')
-    :set_keymap('n', '<enter>', 'on_enter')
+    :set_keymap('n', 'j', 'keys.j', function()
+      self:table_move('down')
+    end)
+    :set_keymap('n', 'k', 'keys.k', function()
+      self:table_move('up')
+    end)
+    :set_keymap('n', '<enter>', 'keys.prevent_default')
     :focus()
     :lock()
+  self.state.last_lnum = 1
   return self
 end
 
-function HistoryScreen:show(title, options)
+function HistoryScreen:show(title, props)
   local buffer = self.git_store:current()
   if not buffer then
     console.log('Current buffer you are on has no history')
@@ -179,17 +203,17 @@ function HistoryScreen:show(title, options)
     console.log('Current buffer you are on has no history')
     return false
   end
-  local runtime_cache = self.runtime_cache
-  runtime_cache.title = title
-  runtime_cache.options = options
-  runtime_cache.buffer = buffer
+  local state = self.state
+  state.title = title
+  state.props = props
+  state.buffer = buffer
   console.log('Processing buffer logs')
-  self:fetch().scene = Scene:new(self:get_scene_options(options)):mount()
-  if runtime_cache.err then
-    console.error(runtime_cache.err)
+  self:fetch().scene = Scene:new(self:get_scene_definition(props)):mount()
+  if state.err then
+    console.error(state.err)
     return false
   end
-  local data = runtime_cache.data
+  local data = state.data
   self
     :set_title(title, {
       filename = data.filename,
@@ -201,7 +225,6 @@ function HistoryScreen:show(title, options)
     :set_code_cursor_on_mark(1)
     :paint_code()
   -- Must be after initial fetch
-  runtime_cache.last_selected = 1
   console.clear()
   return true
 end
