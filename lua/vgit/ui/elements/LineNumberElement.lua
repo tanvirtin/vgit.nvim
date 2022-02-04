@@ -14,7 +14,11 @@ end
 
 function LineNumberElement:set_lines(lines)
   local actual_lines = {}
+  local height = self.window:get_height()
   for _ = 1, #lines do
+    actual_lines[#actual_lines + 1] = ''
+  end
+  for _ = 1, height - #lines do
     actual_lines[#actual_lines + 1] = ''
   end
   self.buffer:set_lines(actual_lines)
