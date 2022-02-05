@@ -1,6 +1,5 @@
 local console = require('vgit.core.console')
 local Diff = require('vgit.Diff')
-local Hunk = require('vgit.cli.models.Hunk')
 local DiffScreen = require('vgit.features.screens.DiffScreen')
 
 local StagedDiffScreen = DiffScreen:extend()
@@ -34,7 +33,6 @@ function StagedDiffScreen:fetch()
     filename = buffer.filename,
     filetype = buffer:filetype(),
     dto = dto,
-    selected_hunk = self.buffer_hunks:cursor_hunk() or Hunk:new(),
   }
   return self
 end

@@ -1,18 +1,17 @@
 local loop = require('vgit.core.loop')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local TableComponent = require('vgit.ui.components.TableComponent')
-local CodeDataScreen = require('vgit.ui.screens.CodeDataScreen')
+local CodeListScreen = require('vgit.ui.screens.CodeListScreen')
 local Scene = require('vgit.ui.Scene')
 local console = require('vgit.core.console')
 
-local HistoryScreen = CodeDataScreen:extend()
+local HistoryScreen = CodeListScreen:extend()
 
 function HistoryScreen:new(...)
-  return setmetatable(CodeDataScreen:new(...), HistoryScreen)
+  return setmetatable(CodeListScreen:new(...), HistoryScreen)
 end
 
-function HistoryScreen:fetch(lnum, opts)
-  lnum = lnum or 1
+function HistoryScreen:fetch(opts)
   opts = opts or {}
   local state = self.state
   local data = state.data
@@ -30,7 +29,7 @@ function HistoryScreen:fetch(lnum, opts)
     state.err = err
     return self
   end
-  local log = logs[lnum]
+  local log = logs[self.list_control:i()]
   if not log then
     err = { 'Failed to access logs' }
     console.debug(err, debug.traceback())
@@ -80,7 +79,7 @@ function HistoryScreen:get_unified_scene_definition()
         },
       },
     }),
-    table = TableComponent:new({
+    list = TableComponent:new({
       config = {
         elements = {
           header = true,
@@ -140,7 +139,7 @@ function HistoryScreen:get_split_scene_definition()
         },
       },
     }),
-    table = TableComponent:new({
+    list = TableComponent:new({
       config = {
         elements = {
           header = true,
@@ -161,8 +160,8 @@ function HistoryScreen:get_split_scene_definition()
   }
 end
 
-function HistoryScreen:make_table()
-  self.scene.components.table
+function HistoryScreen:resync_list()
+  self.scene.components.list
     :unlock()
     :make_rows(self.state.data.logs, function(log)
       return {
@@ -174,19 +173,20 @@ function HistoryScreen:make_table()
       }
     end)
     :set_keymap('n', 'j', 'keys.j', function()
-      self:table_move('down')
+      self:list_move('down')
     end)
     :set_keymap('n', 'k', 'keys.k', function()
-      self:table_move('up')
+      self:list_move('up')
     end)
     :set_keymap('n', '<enter>', 'keys.prevent_default')
     :focus()
     :lock()
-  self.state.last_lnum = 1
   return self
 end
 
 function HistoryScreen:show(title, props)
+  self:clear_state()
+  self.list_control:resync()
   local buffer = self.git_store:current()
   if not buffer then
     console.log('Current buffer you are on has no history')
@@ -209,21 +209,7 @@ function HistoryScreen:show(title, props)
   state.buffer = buffer
   console.log('Processing buffer logs')
   self:fetch().scene = Scene:new(self:get_scene_definition(props)):mount()
-  if state.err then
-    console.error(state.err)
-    return false
-  end
-  local data = state.data
-  self
-    :set_title(title, {
-      filename = data.filename,
-      filetype = data.filetype,
-      stat = data.dto.stat,
-    })
-    :make_code()
-    :make_table()
-    :set_code_cursor_on_mark(1)
-    :paint_code()
+  self:resync_list():resync_code()
   -- Must be after initial fetch
   console.clear()
   return true

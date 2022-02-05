@@ -18,8 +18,6 @@ local keymap = require('vgit.core.keymap')
 local highlight = require('vgit.core.highlight')
 local sign = require('vgit.core.sign')
 local Command = require('vgit.Command')
-local Navigation = require('vgit.Navigation')
-local NavigationMarker = require('vgit.NavigationMarker')
 local GitStore = require('vgit.GitStore')
 local autocmd = require('vgit.core.autocmd')
 local LiveGutter = require('vgit.features.LiveGutter')
@@ -34,21 +32,14 @@ local active_screen = require('vgit.ui.active_screen')
 local versioning = Versioning:new()
 local git = Git:new()
 local command = Command:new()
-local navigation = Navigation:new()
-local navigation_marker = NavigationMarker:new()
 local git_store = GitStore:new()
 local live_gutter = LiveGutter:new(git_store, versioning)
 local live_blame = LiveBlame:new(git_store, versioning)
 local authorship_code_lens = AuthorshipCodeLens:new(git_store, versioning)
-local buffer_hunks = BufferHunks:new(
-  git_store,
-  versioning,
-  navigation,
-  navigation_marker
-)
+local buffer_hunks = BufferHunks:new(git_store, versioning)
 local project_hunks_list = ProjectHunksList:new(versioning)
 
-active_screen.inject(buffer_hunks, navigation, git_store)
+active_screen.inject(buffer_hunks, git_store)
 
 local keys = {
   enter = loop.async(function()
@@ -171,14 +162,14 @@ end)
 local stage_all = loop.async(function()
   git:stage()
   if active_screen.exists() then
-    return active_screen.action('refresh')
+    return active_screen.action('resync')
   end
 end)
 
 local unstage_all = loop.async(function()
   git:unstage()
   if active_screen.exists() then
-    return active_screen.action('refresh')
+    return active_screen.action('resync')
   end
 end)
 
@@ -191,7 +182,7 @@ local reset_all = loop.async(function()
   end
   git:discard()
   if active_screen.exists() then
-    return active_screen.action('refresh')
+    return active_screen.action('resync')
   end
 end)
 
@@ -225,6 +216,10 @@ end)
 
 local project_diff_preview = loop.async(function()
   active_screen.activate('project_diff_screen')
+end)
+
+local project_commits_preview = loop.async(function(...)
+  active_screen.activate('project_commits_screen', ...)
 end)
 
 local project_hunks_preview = loop.async(function()
@@ -391,6 +386,7 @@ return {
   buffer_gutter_blame_preview = buffer_gutter_blame_preview,
   project_hunks_qf = project_hunks_qf,
   project_diff_preview = project_diff_preview,
+  project_commits_preview = project_commits_preview,
   project_hunks_preview = project_hunks_preview,
   enable_tracing = enable_tracing,
   disable_tracing = disable_tracing,

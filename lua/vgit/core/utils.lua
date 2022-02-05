@@ -10,7 +10,7 @@ local utils = {
   str = {},
 }
 
-utils.time.age = function(current_time)
+function utils.time.age(current_time)
   assertion.assert(current_time)
   local time = os.difftime(os.time(), current_time)
   local time_divisions = {
@@ -45,16 +45,16 @@ utils.time.age = function(current_time)
   }
 end
 
-utils.math.round = function(x)
+function utils.math.round(x)
   return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
 end
 
-utils.str.length = function(str)
+function utils.str.length(str)
   local _, count = string.gsub(str, '[^\128-\193]', '')
   return count
 end
 
-utils.str.shorten = function(str, limit)
+function utils.str.shorten(str, limit)
   if #str > limit then
     str = str:sub(1, limit - 3)
     str = str .. '...'
@@ -62,7 +62,7 @@ utils.str.shorten = function(str, limit)
   return str
 end
 
-utils.str.concat = function(existing_text, new_text)
+function utils.str.concat(existing_text, new_text)
   local top_range = #existing_text
   local end_range = top_range + #new_text
   local text = existing_text .. new_text
@@ -72,7 +72,7 @@ utils.str.concat = function(existing_text, new_text)
   }
 end
 
-utils.str.strip = function(given_string, substring)
+function utils.str.strip(given_string, substring)
   if substring == '' then
     return given_string
   end
@@ -101,7 +101,7 @@ utils.str.strip = function(given_string, substring)
   return rc_s
 end
 
-utils.object.defaults = function(object, ...)
+function utils.object.defaults(object, ...)
   object = object or {}
   local objects = { ... }
   for i = 1, #objects do
@@ -110,7 +110,7 @@ utils.object.defaults = function(object, ...)
   return object
 end
 
-utils.object.assign = function(object, ...)
+function utils.object.assign(object, ...)
   object = object or {}
   local objects = { ... }
   for i = 1, #objects do
@@ -119,7 +119,7 @@ utils.object.assign = function(object, ...)
   return object
 end
 
-utils.object.merge = function(...)
+function utils.object.merge(...)
   local object = {}
   local objects = { ... }
   for i = 1, #objects do
@@ -128,15 +128,15 @@ utils.object.merge = function(...)
   return object
 end
 
-utils.object.clone_deep = function(config_object)
+function utils.object.clone_deep(config_object)
   return vim.tbl_deep_extend('force', {}, config_object)
 end
 
-utils.object.clone = function(config_object)
+function utils.object.clone(config_object)
   return vim.tbl_extend('force', {}, config_object)
 end
 
-utils.object.pick = function(object, item)
+function utils.object.pick(object, item)
   for i = 1, #object do
     if object[i] == item then
       return item
@@ -145,7 +145,7 @@ utils.object.pick = function(object, item)
   return object[1]
 end
 
-utils.object.each = function(object, callback)
+function utils.object.each(object, callback)
   for key, value in pairs(object) do
     local break_loop = callback(value, key)
     if break_loop then
@@ -154,14 +154,14 @@ utils.object.each = function(object, callback)
   end
 end
 
-utils.list.concat = function(a, b)
+function utils.list.concat(a, b)
   for i = 1, #b do
     a[#a + 1] = b[i]
   end
   return a
 end
 
-utils.list.map = function(list, callback)
+function utils.list.map(list, callback)
   local new_list = {}
   for i = 1, #list do
     new_list[#new_list + 1] = callback(list[i], i)
@@ -169,7 +169,7 @@ utils.list.map = function(list, callback)
   return new_list
 end
 
-utils.list.filter = function(list, callback)
+function utils.list.filter(list, callback)
   local new_list = {}
   for i = 1, #list do
     local list_item = list[i]
@@ -181,9 +181,7 @@ utils.list.filter = function(list, callback)
   return new_list
 end
 
-utils.list.is_list = vim.tbl_islist
-
-utils.list.each = function(list, callback)
+function utils.list.each(list, callback)
   for i = 1, #list do
     local break_loop = callback(list[i], i)
     if break_loop then
@@ -191,5 +189,24 @@ utils.list.each = function(list, callback)
     end
   end
 end
+
+function utils.list.reduce(list, accumulator, callback)
+  for i = 1, #list do
+    accumulator = callback(accumulator, list[i], i)
+  end
+  return accumulator
+end
+
+function utils.list.find(list, callback)
+  for i = 1, #list do
+    local item = list[i]
+    local found = callback(item, i)
+    if found then
+      return item
+    end
+  end
+end
+
+utils.list.is_list = vim.tbl_islist
 
 return utils

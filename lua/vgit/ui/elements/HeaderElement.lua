@@ -32,7 +32,7 @@ function HeaderElement:clear_notification()
   return self
 end
 
-function HeaderElement:mount(options)
+function HeaderElement:mount(opts)
   self.buffer = Buffer:new():create()
   local buffer = self.buffer
   buffer:assign_options({
@@ -45,9 +45,9 @@ function HeaderElement:mount(options)
       style = 'minimal',
       focusable = false,
       relative = 'editor',
-      row = options.row - HeaderElement:get_height(),
-      col = options.col,
-      width = options.width,
+      row = opts.row - HeaderElement:get_height(),
+      col = opts.col,
+      width = opts.width,
       height = 1,
       zindex = 100,
     })

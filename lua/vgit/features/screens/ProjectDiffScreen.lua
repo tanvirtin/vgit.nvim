@@ -4,7 +4,7 @@ local loop = require('vgit.core.loop')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local HeaderComponent = require('vgit.ui.components.HeaderComponent')
 local FoldableListComponent = require('vgit.ui.components.FoldedListComponent')
-local CodeDataScreen = require('vgit.ui.screens.CodeDataScreen')
+local CodeListScreen = require('vgit.ui.screens.CodeListScreen')
 local Scene = require('vgit.ui.Scene')
 local console = require('vgit.core.console')
 local FileEntry = require('vgit.ui.FileEntry')
@@ -14,10 +14,10 @@ local project_diff_preview_setting = require(
   'vgit.settings.project_diff_preview'
 )
 
-local ProjectDiffScreen = CodeDataScreen:extend()
+local ProjectDiffScreen = CodeListScreen:extend()
 
 function ProjectDiffScreen:new(...)
-  return setmetatable(CodeDataScreen:new(...), ProjectDiffScreen)
+  return setmetatable(CodeListScreen:new(...), ProjectDiffScreen)
 end
 
 function ProjectDiffScreen:generate_dto(file_entry)
@@ -89,46 +89,21 @@ function ProjectDiffScreen:partition_status(status_files)
   return changed_files, staged_files
 end
 
-function ProjectDiffScreen:get_file_entry(lnum)
+function ProjectDiffScreen:get_file_entry_from_list()
   local scene = self.scene
-  local data = self.state.data
-  local changed_files = data.changed_files
-  local staged_files = data.staged_files
-  local first_changed_file, last_changed_file, first_staged_file, last_staged_file =
-    changed_files[1],
-    changed_files[#changed_files],
-    staged_files[1],
-    staged_files[#staged_files]
   if scene then
-    local item = scene.components.table:get_list_item(lnum)
+    local list = scene.components.list
+    loop.await_fast_event()
+    local item = list:get_list_item(self.list_control:i())
     if item then
-      local file_entry = item.file_entry
-      if file_entry then
-        return file_entry
-      end
+      return item.file_entry
     end
-    if data.file_entry then
-      return nil
-    end
-    if last_staged_file then
-      return FileEntry:new(last_staged_file, 'staged')
-    end
-    if last_changed_file then
-      return FileEntry:new(last_changed_file, 'changed')
-    end
-  end
-  if first_changed_file then
-    return FileEntry:new(first_changed_file, 'changed')
-  end
-  if first_staged_file then
-    return FileEntry:new(first_staged_file, 'staged')
   end
 end
 
-function ProjectDiffScreen:generate_file_entry(lnum)
-  lnum = lnum or 1
+function ProjectDiffScreen:resync_code_data()
   local state = self.state
-  local file_entry = self:get_file_entry(lnum)
+  local file_entry = self:get_file_entry_from_list()
   if file_entry then
     state.data = utils.object.assign(state.data, {
       file_entry = file_entry,
@@ -140,8 +115,7 @@ function ProjectDiffScreen:generate_file_entry(lnum)
   return self
 end
 
-function ProjectDiffScreen:fetch(lnum, opts)
-  lnum = lnum or 1
+function ProjectDiffScreen:fetch(opts)
   opts = opts or {}
   local state = self.state
   local git = self.git
@@ -158,6 +132,22 @@ function ProjectDiffScreen:fetch(lnum, opts)
       changed_files = changed_files,
       staged_files = staged_files,
     }
+    local first_changed_file, first_staged_file =
+      changed_files[1], staged_files[1]
+    if first_changed_file or first_staged_file then
+      local file_entry
+      if first_changed_file then
+        file_entry = FileEntry:new(first_changed_file, 'changed')
+      elseif first_staged_file then
+        file_entry = FileEntry:new(first_staged_file, 'staged')
+      end
+      state.data = utils.object.assign(state.data, {
+        file_entry = file_entry,
+        filename = file_entry.file.filename,
+        filetype = file_entry.file.filetype,
+        dto = self:generate_dto(file_entry),
+      })
+    end
   end
   return self
 end
@@ -190,7 +180,7 @@ function ProjectDiffScreen:get_unified_scene_definition()
         },
       },
     }),
-    table = FoldableListComponent:new({
+    list = FoldableListComponent:new({
       config = {
         elements = {
           header = false,
@@ -253,7 +243,7 @@ function ProjectDiffScreen:get_split_scene_definition(props)
         },
       },
     }, props)),
-    table = FoldableListComponent:new(utils.object.assign({
+    list = FoldableListComponent:new(utils.object.assign({
       config = {
         elements = {
           header = false,
@@ -284,33 +274,34 @@ end
 
 function ProjectDiffScreen:run_command(command)
   local components = self.scene.components
-  local table = components.table
+  local list = components.list
   loop.await_fast_event()
-  local lnum = table:get_lnum()
-  local item = table:get_list_item(lnum)
-  if table:is_fold(item) then
+  local item = list:get_list_item(self.list_control:i())
+  if list:is_fold(item) then
     return self
   end
-  local file_entry = self:get_file_entry(lnum)
+  local file_entry = self:get_file_entry_from_list()
   local filename = file_entry.file.filename
   if type(command) == 'function' then
     command(filename)
   end
-  return self:refresh(lnum)
+  return self:resync()
 end
 
-function ProjectDiffScreen:refresh(lnum)
-  local table = self.scene.components.table
+function ProjectDiffScreen:sync_list()
   loop.await_fast_event()
-  self:reset():fetch(lnum)
+  self.scene.components.list:define(self:define_foldable_list()):sync()
+  return self
+end
+
+function ProjectDiffScreen:resync()
   loop.await_fast_event()
+  self:fetch()
   if self:hide_when_no_data() then
     return self
   end
-  table:define(self:define_foldable_list())
   loop.await_fast_event()
-  table:render()
-  return self:generate_file_entry(lnum):render()
+  return self:sync_list():resync_code_data():resync_code()
 end
 
 function ProjectDiffScreen:git_reset()
@@ -331,58 +322,38 @@ function ProjectDiffScreen:git_unstage()
   end)
 end
 
-ProjectDiffScreen.refetch_and_render = loop.debounce(
-  loop.async(function(self, lnum)
+ProjectDiffScreen.sync = loop.debounce(
+  loop.async(function(self)
     self
-      :fetch(lnum, {
+      :fetch({
         cached = true,
       })
-      :generate_file_entry(lnum)
-      :render()
+      :resync_code_data()
+      :resync_code()
   end),
   50
 )
 
-function ProjectDiffScreen:table_move(direction)
-  self:clear_state_err()
+function ProjectDiffScreen:open()
   local components = self.scene.components
-  local table = components.table
-  local lnum = table:get_lnum()
-  if direction == 'up' then
-    lnum = lnum - 1
-  elseif direction == 'down' then
-    lnum = lnum + 1
-  end
-  table:set_lnum(lnum)
-  local state = self.state
-  if state.last_lnum ~= lnum then
-    state.last_lnum = lnum
-    self:refetch_and_render(lnum)
-  end
-  return self
-end
-
-function ProjectDiffScreen:open_file()
-  local components = self.scene.components
-  local table = components.table
-  local lnum = table:get_lnum()
+  local list = components.list
+  local lnum = self.list_control:i()
   local state = self.state
   local data = state.data
   loop.await_fast_event()
   local focused_component_name = self.scene:get_focused_component_name()
   local is_in_code_window = focused_component_name == 'current'
     or focused_component_name == 'previous'
-  local item = table:get_list_item(lnum)
+  local item = list:get_list_item(lnum)
   if not is_in_code_window then
-    table:toggle_list_item(item)
-    table:render()
+    list:toggle_list_item(item):sync()
   end
-  if table:is_fold(item) then
+  if list:is_fold(item) then
     return self
   end
   local dto = data.dto
   local marks = dto.marks
-  local file_entry = self:get_file_entry(lnum)
+  local file_entry = self:get_file_entry_from_list()
   if not file_entry then
     return self
   end
@@ -418,14 +389,13 @@ function ProjectDiffScreen:define_foldable_list()
   local changed_fold_list = {
     value = 'Changes',
     open = true,
-    items = utils.list.map(data.changed_files, function(file, i)
+    items = utils.list.map(data.changed_files, function(file)
       return {
         value = string.format(
           '%s %s',
           fs.short_filename(file.filename),
           file.status:to_string()
         ),
-        lnum = i,
         file_entry = FileEntry:new(file, 'changed'),
       }
     end),
@@ -433,14 +403,13 @@ function ProjectDiffScreen:define_foldable_list()
   local staged_fold_list = {
     value = 'Staged',
     open = true,
-    items = utils.list.map(data.staged_files, function(file, i)
+    items = utils.list.map(data.staged_files, function(file)
       return {
         value = string.format(
           '%s %s',
           fs.short_filename(file.filename),
           file.status:to_string()
         ),
-        lnum = i,
         file_entry = FileEntry:new(file, 'staged'),
       }
     end),
@@ -455,30 +424,28 @@ function ProjectDiffScreen:define_foldable_list()
   return foldable_list
 end
 
-function ProjectDiffScreen:make_table()
-  local table = self.scene.components.table
+function ProjectDiffScreen:resync_list()
+  local list = self.scene.components.list
   local keymaps = project_diff_preview_setting:get('keymaps')
 
-  table
+  list
     :define(self:define_foldable_list())
     :set_keymap('n', 'j', 'keys.j', function()
-      self:table_move('down')
+      self:list_move('down')
     end)
     :set_keymap('n', 'k', 'keys.k', function()
-      self:table_move('up')
+      self:list_move('up')
     end)
     :set_keymap('n', '<enter>', 'keys.enter', function()
-      self:open_file()
+      self:open()
     end)
-    :render()
+    :sync()
     :set_lnum(2) -- lnum #1 is the fold list header
     :focus()
 
   utils.object.each(keymaps, function(key, action)
-    table:set_keymap('n', key, action)
+    list:set_keymap('n', key, action)
   end)
-
-  self.state.last_lnum = 2
   return self
 end
 
@@ -487,9 +454,9 @@ function ProjectDiffScreen:make_code()
   local key = '<enter>'
   local action = 'keys.enter'
   local callback = function()
-    self:open_file()
+    self:open()
   end
-  CodeDataScreen.make_code(self)
+  CodeListScreen.make_code(self)
   local components = self.scene.components
   components.current:set_keymap(mode, key, action, callback)
   if self.layout_type == 'split' then
@@ -499,6 +466,8 @@ function ProjectDiffScreen:make_code()
 end
 
 function ProjectDiffScreen:show(title, props)
+  self:clear_state()
+  self.list_control:resync()
   local is_inside_git_dir = self.git:is_inside_git_dir()
   if not is_inside_git_dir then
     console.log('Project has no git folder')
@@ -511,7 +480,7 @@ function ProjectDiffScreen:show(title, props)
   state.title = title
   state.props = props
   console.log('Processing project diff')
-  self:fetch():generate_file_entry()
+  self:fetch()
   if not state.err and not self:has_data() then
     console.log('No changes found')
     return false
@@ -522,19 +491,9 @@ function ProjectDiffScreen:show(title, props)
   end
   loop.await_fast_event()
   self.scene = Scene:new(self:get_scene_definition(props)):mount()
-  local data = self.state.data
-  local file_entry = data.file_entry
-  local file = file_entry.file
-  self
-    :set_title(title, {
-      filename = file.filename,
-      filetype = file.filetype,
-      stat = data.dto.stat,
-    })
-    :make_code()
-    :make_table()
-    :paint_code()
-    :set_code_cursor_on_mark(1)
+  self:resync_list():resync_code()
+  -- TODO: Foldable list index should start with 2
+  self.list_control:set_i(2)
   console.clear()
   return true
 end

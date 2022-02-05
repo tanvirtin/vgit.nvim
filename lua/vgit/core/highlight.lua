@@ -2,7 +2,7 @@ local hls_setting = require('vgit.settings.hls')
 
 local highlight = {}
 
-highlight.define = function(group, color)
+function highlight.define(group, color)
   local link = color
   if color.override == false then
     local ok, hl = pcall(vim.api.nvim_get_hl_by_name, group, true)
@@ -26,7 +26,7 @@ highlight.define = function(group, color)
   )
 end
 
-highlight.register_module = function(dependency)
+function highlight.register_module(dependency)
   hls_setting:for_each(function(hl, color)
     highlight.define(hl, color)
   end)

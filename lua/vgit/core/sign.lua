@@ -2,7 +2,7 @@ local signs_setting = require('vgit.settings.signs')
 
 local sign = {}
 
-sign.define = function(name, config)
+function sign.define(name, config)
   vim.fn.sign_define(name, {
     text = config.text,
     texthl = config.texthl,
@@ -12,7 +12,7 @@ sign.define = function(name, config)
   })
 end
 
-sign.register_module = function(dependency)
+function sign.register_module(dependency)
   for name, config in pairs(signs_setting:get('definitions')) do
     sign.define(name, config)
   end

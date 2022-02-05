@@ -1,17 +1,58 @@
 local console = require('vgit.core.console')
+local navigation = require('vgit.navigation')
 local Window = require('vgit.core.Window')
+local Object = require('vgit.core.Object')
 local loop = require('vgit.core.loop')
 local Feature = require('vgit.Feature')
 
+local NavigationVirtualText = Object:extend()
+
+function NavigationVirtualText:new()
+  return setmetatable({
+    timer_id = nil,
+    epoch = 1000,
+  }, NavigationVirtualText)
+end
+
+function NavigationVirtualText:clear_timer()
+  if self.timer_id then
+    vim.fn.timer_stop(self.timer_id)
+    self.timer_id = nil
+  end
+end
+
+function NavigationVirtualText:place(buffer, window, text)
+  self:unplace(buffer)
+  buffer:transpose_virtual_text(
+    text,
+    'GitComment',
+    window:get_lnum() - 1,
+    0,
+    'right_align'
+  )
+  self.timer_id = vim.fn.timer_start(self.epoch, function()
+    if buffer:is_valid() then
+      buffer:clear_namespace()
+    end
+    self:clear_timer()
+  end)
+end
+
+function NavigationVirtualText:unplace(buffer)
+  self:clear_timer()
+  if buffer:is_valid() then
+    buffer:clear_namespace()
+  end
+end
+
 local BufferHunks = Feature:extend()
 
-function BufferHunks:new(git_store, versioning, navigation, navigation_marker)
+function BufferHunks:new(git_store, versioning)
   return setmetatable({
     name = 'Buffer Hunks',
     git_store = git_store,
     versioning = versioning,
-    navigation = navigation,
-    navigation_marker = navigation_marker,
+    navigation_virtual_text = NavigationVirtualText:new(),
   }, BufferHunks)
 end
 
@@ -23,8 +64,8 @@ function BufferHunks:move_up()
   local hunks = buffer.git_object.hunks
   if hunks and #hunks ~= 0 then
     local window = Window:new(0)
-    local selected = self.navigation:hunk_up(window, hunks)
-    self.navigation_marker:mark_current_hunk(
+    local selected = navigation.hunk_up(window, hunks)
+    self.navigation_virtual_text:place(
       buffer,
       window,
       string.format('%s/%s Changes', selected, #hunks)
@@ -40,8 +81,8 @@ function BufferHunks:move_down()
   local hunks = buffer.git_object.hunks
   if hunks and #hunks ~= 0 then
     local window = Window:new(0)
-    local selected = self.navigation:hunk_down(window, hunks)
-    self.navigation_marker:mark_current_hunk(
+    local selected = navigation.hunk_down(window, hunks)
+    self.navigation_virtual_text:place(
       buffer,
       window,
       string.format('%s/%s Changes', selected, #hunks)

@@ -52,4 +52,8 @@ function Status:to_string()
   return self.value
 end
 
+function Status:is_unchanged()
+  return self.value == '--'
+end
+
 return Status

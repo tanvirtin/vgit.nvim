@@ -84,7 +84,7 @@ function GutterBlameScreen:get_scene_definition()
   }
 end
 
-function GutterBlameScreen:make_blames()
+function GutterBlameScreen:resync_blames()
   local lines = {}
   local blames = self.state.data.blames
   for i = 1, #blames do
@@ -104,6 +104,7 @@ function GutterBlameScreen:notify()
 end
 
 function GutterBlameScreen:show(title, props)
+  self:clear_state()
   local buffer = self.git_store:current()
   if not buffer then
     console.log('Current buffer you are on has no blames')
@@ -129,16 +130,8 @@ function GutterBlameScreen:show(title, props)
   console.log('Processing buffer blames')
   self:fetch()
   loop.await_fast_event()
-  self.scene = Scene:new(self:get_scene_definition(props)):mount()
-  local data = state.data
-  self
-    :set_title(title, {
-      filename = data.filename,
-      filetype = data.filetype,
-    })
-    :make_code()
-    :make_blames()
-    :paint_code()
+  self.scene = Scene:new(self:get_scene_definition()):mount()
+  self:resync_blames():resync_code()
   console.clear()
   return true
 end

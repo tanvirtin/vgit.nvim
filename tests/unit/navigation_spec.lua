@@ -1,7 +1,7 @@
 local a = require('plenary.async.tests')
 local mock = require('luassert.mock')
 local Window = require('vgit.core.Window')
-local Navigation = require('vgit.Navigation')
+local navigation = require('vgit.navigation')
 
 local describe = describe
 local it = it
@@ -10,9 +10,7 @@ local after_each = after_each
 local eq = assert.are.same
 
 a.describe('Navigation:', function()
-  local win_id = 1
   local window = Window:new(0)
-  local navigation
   local hunks = {
     {
       top = 30,
@@ -41,17 +39,10 @@ a.describe('Navigation:', function()
   }
 
   before_each(function()
-    navigation = Navigation:new()
     vim.api.nvim_win_set_cursor = mock(vim.api.nvim_win_set_cursor, true)
   end)
   after_each(function()
     mock.revert(vim.api.nvim_win_set_cursor)
-  end)
-
-  a.describe('new', function()
-    a.it('should create an instance of the command object', function()
-      eq(navigation:is(Navigation), true)
-    end)
   end)
 
   a.describe('hunk_up', function()
@@ -61,7 +52,7 @@ a.describe('Navigation:', function()
         for i = 1, hunks[1].top do
           vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
           vim.api.nvim_win_get_cursor.returns({ i, 0 })
-          eq(navigation:hunk_up(window, hunks), #hunks)
+          eq(navigation.hunk_up(window, hunks), #hunks)
         end
       end
     )
@@ -71,7 +62,7 @@ a.describe('Navigation:', function()
         for i = hunks[#hunks].top, hunks[#hunks - 1].bot, -1 do
           vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
           vim.api.nvim_win_get_cursor.returns({ i, 0 })
-          eq(navigation:hunk_up(window, hunks), #hunks - 1)
+          eq(navigation.hunk_up(window, hunks), #hunks - 1)
         end
       end
     )
@@ -83,7 +74,7 @@ a.describe('Navigation:', function()
         for i = hunk.top + 1, hunk.bot do
           vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
           vim.api.nvim_win_get_cursor.returns({ i, 0 })
-          eq(navigation:hunk_up(window, hunks), selected)
+          eq(navigation.hunk_up(window, hunks), selected)
         end
       end
     )
@@ -95,7 +86,7 @@ a.describe('Navigation:', function()
         for i = hunk.bot - 1, hunk.top + 1, -1 do
           vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
           vim.api.nvim_win_get_cursor.returns({ i, 0 })
-          eq(navigation:hunk_up(window, hunks), selected)
+          eq(navigation.hunk_up(window, hunks), selected)
         end
       end
     )
@@ -106,7 +97,7 @@ a.describe('Navigation:', function()
         local hunk = hunks[selected]
         vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
         vim.api.nvim_win_get_cursor.returns({ hunk.top, 0 })
-        eq(navigation:hunk_up(window, hunks), selected - 1)
+        eq(navigation.hunk_up(window, hunks), selected - 1)
       end
     )
   end)
@@ -118,7 +109,7 @@ a.describe('Navigation:', function()
         local hunk = hunks[#hunks]
         vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
         vim.api.nvim_win_get_cursor.returns({ hunk.bot, 0 })
-        eq(navigation:hunk_down(window, hunks), 1)
+        eq(navigation.hunk_down(window, hunks), 1)
       end
     )
     a.it(
@@ -126,7 +117,7 @@ a.describe('Navigation:', function()
       function()
         vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
         vim.api.nvim_win_get_cursor.returns({ hunks[2].top, 0 })
-        eq(navigation:hunk_down(window, hunks), 2)
+        eq(navigation.hunk_down(window, hunks), 2)
       end
     )
     a.it(
@@ -137,7 +128,7 @@ a.describe('Navigation:', function()
         for i = hunk.top, hunk.bot - 1 do
           vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
           vim.api.nvim_win_get_cursor.returns({ i, 0 })
-          eq(navigation:hunk_down(window, hunks), selected)
+          eq(navigation.hunk_down(window, hunks), selected)
         end
       end
     )
@@ -148,7 +139,7 @@ a.describe('Navigation:', function()
         local hunk = hunks[selected]
         vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
         vim.api.nvim_win_get_cursor.returns({ hunk.top, 0 })
-        eq(navigation:hunk_down(window, hunks), selected)
+        eq(navigation.hunk_down(window, hunks), selected)
       end
     )
   end)

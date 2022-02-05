@@ -283,6 +283,10 @@ project_diff_preview()                              *vgit.project_diff_preview()
                 |buffer_reset| while being on the cursor that corresponds to
                 the file.
 
+project_commits_preview()                              *vgit.project_commits_preview()*
+                Opens a diff preview along with a list of all the commits that
+                are taken as argument params.
+
 project_hunks_preview()                            *vgit.project_hunks_preview()*
                 Opens a diff preview along with a table of all the current
                 hunks in the project. Useers can use this preview to cycle

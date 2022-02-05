@@ -97,6 +97,7 @@ function LineBlameScreen:make_lines()
 end
 
 function LineBlameScreen:show(props)
+  self:clear_state()
   local buffer = self.git_store:current()
   if not buffer then
     return false

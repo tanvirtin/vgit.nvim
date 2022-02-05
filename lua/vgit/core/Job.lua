@@ -1,6 +1,10 @@
+local utils = require('vgit.core.utils')
+local env = require('vgit.core.env')
+local console = require('vgit.core.console')
 local Object = require('vgit.core.Object')
 local loop = require('vgit.core.loop')
 
+-- Make children, which attaches custom logger.
 local Job = Object:extend()
 
 function Job:new(spec)
@@ -77,6 +81,17 @@ function Job:start()
       self.spec.on_exit(code, signal)
     end
   end)
+
+  -- Store git logs seprately. We can create a console in the future and do some health check stuff.
+  if env.get('DEBUG') then
+    console.info(string.format(
+      '%s %s',
+      self.spec.command,
+      utils.list.reduce(self.spec.args, '', function(acc, value)
+        return string.format('%s %s', acc, value)
+      end)
+    ))
+  end
 
   vim.loop.spawn(self.spec.command, {
     args = self.spec.args,

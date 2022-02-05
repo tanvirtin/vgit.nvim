@@ -27,6 +27,7 @@ function Command:new()
       project_diff_preview = true,
       project_hunks_preview = true,
       project_hunks_qf = true,
+      project_commits_preview = true,
       buffer_hunk_stage = true,
       buffer_hunk_reset = true,
       buffer_stage = true,

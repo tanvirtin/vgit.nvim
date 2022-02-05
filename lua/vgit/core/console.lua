@@ -1,3 +1,4 @@
+local utils = require('vgit.core.utils')
 local loop = require('vgit.core.loop')
 local env = require('vgit.core.env')
 
@@ -7,29 +8,28 @@ local function add_vgit_prefix(msg)
   return string.format('[VGit] %s', msg)
 end
 
+local function add_indentiation(msg)
+  return string.format('       %s', msg)
+end
+
 local function vgit_stringify(msg)
   if type(msg) ~= 'table' then
     return add_vgit_prefix(msg)
   end
-  local acc = ''
-  for i = 1, #msg do
-    if i == #msg then
-      acc = string.format('%s%s', acc, msg[i])
+  return utils.list.reduce(msg, '', function(acc, line, i)
+    if i == 1 then
+      acc = string.format('%s%s\n', acc, add_vgit_prefix(line))
+    elseif i ~= #msg then
+      acc = string.format('%s%s\n', acc, add_indentiation(line))
     else
-      acc = string.format('%s%s\n', acc, msg[i])
+      acc = string.format('%s%s', acc, add_indentiation(line))
     end
-  end
-  return add_vgit_prefix(acc)
+    return acc
+  end)
 end
 
 local function log_msg(msg, hi)
-  if hi then
-    vim.cmd(string.format('echohl %s', hi))
-  end
-  vim.cmd(string.format('echo "%s"', vgit_stringify(msg)))
-  if hi then
-    vim.cmd('echohl NONE')
-  end
+  vim.api.nvim_echo({ { vgit_stringify(msg), hi } }, false, {})
 end
 
 console.error = loop.async(function(msg)

@@ -31,6 +31,7 @@ local function generate_lines(list, depth, accumulator)
   return accumulator
 end
 
+-- BUG: If there is only one folded list item, you can't open it. get_list_item is buggy.
 local function find_in_list(list, lnum, running_lnum)
   running_lnum = running_lnum or 0
   for i = 1, #list do
@@ -107,11 +108,12 @@ function FoldableListComponent:is_fold(item)
   return item and item.items and #item.items > 0
 end
 
+-- BUG: If there is only one folded list item, you can't open it. get_list_item is buggy.
 function FoldableListComponent:get_list_item(lnum)
   return find_in_list(self.state.list, lnum)
 end
 
-function FoldableListComponent:render()
+function FoldableListComponent:sync()
   local buffer = self.buffer
   buffer:clear_namespace():set_lines(generate_lines(self.state.list, 0, {}))
   return self

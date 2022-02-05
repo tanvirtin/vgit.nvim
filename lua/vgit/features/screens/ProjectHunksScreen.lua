@@ -3,24 +3,23 @@ local Window = require('vgit.core.Window')
 local loop = require('vgit.core.loop')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local TableComponent = require('vgit.ui.components.TableComponent')
-local CodeDataScreen = require('vgit.ui.screens.CodeDataScreen')
+local CodeListScreen = require('vgit.ui.screens.CodeListScreen')
 local Scene = require('vgit.ui.Scene')
 local console = require('vgit.core.console')
 local fs = require('vgit.core.fs')
 local Diff = require('vgit.Diff')
 
-local ProjectHunksScreen = CodeDataScreen:extend()
+local ProjectHunksScreen = CodeListScreen:extend()
 
 function ProjectHunksScreen:new(...)
-  return setmetatable(CodeDataScreen:new(...), ProjectHunksScreen)
+  return setmetatable(CodeListScreen:new(...), ProjectHunksScreen)
 end
 
-function ProjectHunksScreen:fetch(lnum, opts)
-  lnum = lnum or 1
+function ProjectHunksScreen:fetch(opts)
   opts = opts or {}
   local state = self.state
   if opts.cached then
-    state.data = self.state.entries[lnum]
+    state.data = self.state.entries[self.list_control:i()]
     return self
   end
   local git = self.git
@@ -119,7 +118,7 @@ function ProjectHunksScreen:get_unified_scene_definition()
         },
       },
     }),
-    table = TableComponent:new({
+    list = TableComponent:new({
       elements = {
         header = true,
         footer = false,
@@ -173,7 +172,7 @@ function ProjectHunksScreen:get_split_scene_definition()
         },
       },
     }),
-    table = TableComponent:new({
+    list = TableComponent:new({
       config = {
         elements = {
           header = true,
@@ -188,23 +187,34 @@ function ProjectHunksScreen:get_split_scene_definition()
   }
 end
 
-function ProjectHunksScreen:open_file()
-  local table = self.scene.components.table
-  loop.await_fast_event()
-  local lnum = table:get_lnum()
-  if self.state.last_lnum == lnum then
-    local data = self.state.data
-    self:hide()
-    vim.cmd(string.format('e %s', data.filename))
-    Window:new(0):set_lnum(data.hunks[data.index].top):call(function()
-      vim.cmd('norm! zz')
-    end)
+function ProjectHunksScreen:resync_code()
+  local state = self.state
+  if state.err then
+    console.error(state.err)
     return self
   end
+  if not state.data and not state.data or not state.data.dto then
+    return self
+  end
+  local data = state.data
+  local index = data.index
+  return CodeListScreen.resync_code(self):set_code_cursor_on_mark(index):notify(
+    string.format('%s%s/%s Changes', string.rep(' ', 1), index, #data.dto.marks)
+  )
 end
 
-function ProjectHunksScreen:make_table()
-  self.scene.components.table
+function ProjectHunksScreen:open()
+  local data = self.state.data
+  self:hide()
+  vim.cmd(string.format('e %s', data.filename))
+  Window:new(0):set_lnum(data.hunks[data.index].top):call(function()
+    vim.cmd('norm! zz')
+  end)
+  return self
+end
+
+function ProjectHunksScreen:resync_list()
+  self.scene.components.list
     :unlock()
     :make_rows(self.state.entries, function(entry)
       local filename = entry.filename
@@ -230,53 +240,22 @@ function ProjectHunksScreen:make_table()
       }
     end)
     :set_keymap('n', 'j', 'keys.j', function()
-      self:table_move('down')
+      self:list_move('down')
     end)
     :set_keymap('n', 'k', 'keys.k', function()
-      self:table_move('up')
+      self:list_move('up')
     end)
     :set_keymap('n', '<enter>', 'keys.enter', function()
-      self:open_file()
+      self:open()
     end)
     :focus()
     :lock()
-  self.state.last_lnum = 1
-  return self
-end
-
-function ProjectHunksScreen:render()
-  local state = self.state
-  loop.await_fast_event()
-  if state.err then
-    console.error(state.err)
-    return self
-  end
-  if not state.data and not state.data or not state.data.dto then
-    return self
-  end
-  local data = state.data
-  self
-    :reset()
-    :set_title(state.title, {
-      filename = data.filename,
-      filetype = data.filetype,
-      stat = data.dto.stat,
-    })
-    :make_code()
-    :paint_code_partially()
-    :set_code_cursor_on_mark(data.index, 'top')
-    :notify(
-      string.format(
-        '%s%s/%s Changes',
-        string.rep(' ', 1),
-        data.index,
-        #data.dto.marks
-      )
-    )
   return self
 end
 
 function ProjectHunksScreen:show(title, props)
+  self:clear_state()
+  self.list_control:resync()
   local is_inside_git_dir = self.git:is_inside_git_dir()
   if not is_inside_git_dir then
     console.log('Project has no git folder')
@@ -301,16 +280,7 @@ function ProjectHunksScreen:show(title, props)
   end
   self.scene = Scene:new(self:get_scene_definition(props)):mount()
   state.data = state.entries[1]
-  self
-    :set_title(title, {
-      filename = state.data.filename,
-      filetype = state.data.filetype,
-      stat = state.data.dto.stat,
-    })
-    :make_code()
-    :make_table()
-    :paint_code()
-    :set_code_cursor_on_mark(1, 'top')
+  self:resync_list():resync_code()
   console.clear()
   return true
 end

@@ -3,7 +3,6 @@ local loop = require('vgit.core.loop')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local CodeScreen = require('vgit.ui.screens.CodeScreen')
 local console = require('vgit.core.console')
-local Hunk = require('vgit.cli.models.Hunk')
 
 local DiffScreen = CodeScreen:extend()
 
@@ -37,7 +36,6 @@ function DiffScreen:fetch()
     filename = buffer.filename,
     filetype = buffer:filetype(),
     dto = self:generate_diff(hunks, lines),
-    selected_hunk = self.buffer_hunks:cursor_hunk() or Hunk:new(),
   }
   return self
 end
@@ -92,7 +90,13 @@ function DiffScreen:get_split_scene_definition()
   }
 end
 
+function DiffScreen:navigate(direction)
+  CodeScreen.navigate(self, direction, 'center')
+  return self
+end
+
 function DiffScreen:show(title)
+  self:clear_state()
   local buffer = self.git_store:current()
   if not buffer then
     console.log('Current buffer you are on has no hunks')
@@ -118,19 +122,9 @@ function DiffScreen:show(title)
     console.log('No hunks found')
     return false
   end
-  -- selected_hunk must always be called before creating the scene.
-  local _, selected_hunk = self.buffer_hunks:cursor_hunk()
+  local _, initial_mark_index = self.buffer_hunks:cursor_hunk()
   self.scene = Scene:new(self:get_scene_definition()):mount()
-  local data = state.data
-  self
-    :set_title(title, {
-      filename = data.filename,
-      filetype = data.filetype,
-      stat = data.dto.stat,
-    })
-    :make_code()
-    :set_code_cursor_on_mark(selected_hunk, 'center')
-    :paint_code()
+  self:resync_code(initial_mark_index, 'center')
   console.clear()
   return true
 end

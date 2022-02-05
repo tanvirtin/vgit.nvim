@@ -12,7 +12,7 @@ function FooterElement:get_height()
   return 1
 end
 
-function FooterElement:mount(options)
+function FooterElement:mount(opts)
   self.buffer = Buffer:new():create()
   local buffer = self.buffer
   buffer:assign_options({
@@ -25,9 +25,9 @@ function FooterElement:mount(options)
       style = 'minimal',
       focusable = false,
       relative = 'editor',
-      row = options.row,
-      col = options.col,
-      width = options.width,
+      row = opts.row,
+      col = opts.col,
+      width = opts.width,
       height = 1,
       zindex = 100,
     })
@@ -37,7 +37,7 @@ function FooterElement:mount(options)
       winhl = 'Normal:GitBackgroundSecondary',
     })
   local border_char = ' '
-  self:set_lines({ string.rep(border_char, options.width) })
+  self:set_lines({ string.rep(border_char, opts.width) })
   return self
 end
 

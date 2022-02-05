@@ -5,7 +5,7 @@ local renderer = {
 
 local namespace = vim.api.nvim_create_namespace('vgit')
 
-renderer.register_module = function()
+function renderer.register_module()
   if renderer.registered then
     return
   end
@@ -21,11 +21,11 @@ renderer.register_module = function()
   renderer.registered = true
 end
 
-renderer.attach = function(buffer)
+function renderer.attach(buffer)
   renderer.buffers[buffer.bufnr] = buffer
 end
 
-renderer.detach = function(buffer)
+function renderer.detach(buffer)
   renderer.buffers[buffer.bufnr] = nil
 end
 

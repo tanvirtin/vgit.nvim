@@ -10,7 +10,7 @@ function Log:new(line, revision_count)
     log[2] = parents[1]
   end
   return setmetatable({
-    revision = string.format('HEAD~%s', revision_count),
+    revision = revision_count and string.format('HEAD~%s', revision_count),
     commit_hash = log[1]:sub(2, #log[1]),
     parent_hash = log[2],
     timestamp = log[3],

@@ -2,7 +2,7 @@ local utils = require('vgit.core.utils')
 
 local table_maker = {}
 
-table_maker.parse_item = function(item, row)
+function table_maker.parse_item(item, row)
   local hl = {}
   local value = item.text
   if item.icon_before then
@@ -30,36 +30,40 @@ table_maker.parse_item = function(item, row)
   return value, hl
 end
 
-table_maker.make_paddings =
-  function(rows, column_labels, column_spacing, max_column_len)
-    local padding = {}
-    for i = 1, #rows do
-      local items = rows[i]
-      assert(
-        #column_labels == #items,
-        'number of columns should be the same as number of column_labels'
-      )
-      for j = 1, #items do
-        local item = items[j]
-        local value
-        if type(item) == 'table' then
-          value, _ = table_maker.parse_item(item, i)
-          value = utils.str.shorten(value, max_column_len)
-        else
-          value = utils.str.shorten(item, max_column_len)
-        end
-        if padding[j] then
-          padding[j] = math.max(
-            padding[j],
-            utils.str.length(value) + column_spacing
-          )
-        else
-          padding[j] = column_spacing + utils.str.length(value) + column_spacing
-        end
+function table_maker.make_paddings(
+  rows,
+  column_labels,
+  column_spacing,
+  max_column_len
+)
+  local padding = {}
+  for i = 1, #rows do
+    local items = rows[i]
+    assert(
+      #column_labels == #items,
+      'number of columns should be the same as number of column_labels'
+    )
+    for j = 1, #items do
+      local item = items[j]
+      local value
+      if type(item) == 'table' then
+        value, _ = table_maker.parse_item(item, i)
+        value = utils.str.shorten(value, max_column_len)
+      else
+        value = utils.str.shorten(item, max_column_len)
+      end
+      if padding[j] then
+        padding[j] = math.max(
+          padding[j],
+          utils.str.length(value) + column_spacing
+        )
+      else
+        padding[j] = column_spacing + utils.str.length(value) + column_spacing
       end
     end
-    return padding
   end
+  return padding
+end
 
 table_maker.make_row =
   function(items, paddings, column_spacing, max_column_len, hls, r)
@@ -91,23 +95,27 @@ table_maker.make_row =
     return row, hls
   end
 
-table_maker.make_heading =
-  function(column_labels, paddings, column_spacing, max_column_len)
-    local row = string.format('%s', string.rep(' ', column_spacing))
-    for j = 1, #column_labels do
-      local item = column_labels[j]
-      local value = utils.str.shorten(item, max_column_len)
-      row = string.format(
-        '%s%s%s',
-        row,
-        value,
-        string.rep(' ', paddings[j] - utils.str.length(value))
-      )
-    end
-    return { row }
+function table_maker.make_heading(
+  column_labels,
+  paddings,
+  column_spacing,
+  max_column_len
+)
+  local row = string.format('%s', string.rep(' ', column_spacing))
+  for j = 1, #column_labels do
+    local item = column_labels[j]
+    local value = utils.str.shorten(item, max_column_len)
+    row = string.format(
+      '%s%s%s',
+      row,
+      value,
+      string.rep(' ', paddings[j] - utils.str.length(value))
+    )
   end
+  return { row }
+end
 
-table_maker.make_rows = function(rows, paddings, column_spacing, max_column_len)
+function table_maker.make_rows(rows, paddings, column_spacing, max_column_len)
   local lines = {}
   local hls = {}
   for i = 1, #rows do

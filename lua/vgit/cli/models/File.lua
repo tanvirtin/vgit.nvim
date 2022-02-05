@@ -1,17 +1,16 @@
 local fs = require('vgit.core.fs')
-local Status = require('vgit.cli.models.Status')
 local Object = require('vgit.core.Object')
 
 local File = Object:extend()
 
-function File:new(line)
-  local filename = line:sub(4, #line)
+function File:new(filename, status, log)
   local is_dir = fs.is_dir(filename)
   return setmetatable({
     is_dir = is_dir,
     filename = filename,
     filetype = not is_dir and fs.detect_filetype(filename) or nil,
-    status = not is_dir and Status:new(line:sub(1, 2)) or nil,
+    status = status,
+    log = log,
   }, File)
 end
 

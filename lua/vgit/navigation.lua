@@ -1,27 +1,22 @@
-local Object = require('vgit.core.Object')
+local navigation = {}
 
-local Navigation = Object:extend()
-
-function Navigation:new()
-  return setmetatable({}, Navigation)
+local position_window = function(position)
+  if position == 'top' then
+    vim.cmd('norm! zt')
+  elseif position == 'center' then
+    vim.cmd('norm! zz')
+  elseif position == 'bottom' then
+    vim.cmd('norm! zb')
+  end
 end
 
-function Navigation:mark_select(component, selected, marks, position)
-  local position_window = function()
-    if position == 'top' then
-      vim.cmd('norm! zt')
-    elseif position == 'center' then
-      vim.cmd('norm! zz')
-    elseif position == 'bottom' then
-      vim.cmd('norm! zb')
-    end
-  end
+function navigation.mark_select(component, marks, given_mark_index, position)
   local line_count = component:get_line_count()
   local new_lnum = nil
   local mark_index = 0
   for i = #marks, 1, -1 do
     local mark = marks[i]
-    if i == selected then
+    if i == given_mark_index then
       new_lnum = mark.top
       mark_index = i
       break
@@ -38,7 +33,9 @@ function Navigation:mark_select(component, selected, marks, position)
   end
   if new_lnum then
     component:set_lnum(new_lnum)
-    component:call(position_window)
+    component:call(function()
+      position_window(position)
+    end)
     return mark_index
   else
     local top_hunks_lnum = marks[#marks].top
@@ -51,12 +48,14 @@ function Navigation:mark_select(component, selected, marks, position)
         and #marks
       or 1
     component:set_lnum(top_hunks_lnum)
-    component:call(position_window)
+    component:call(function()
+      position_window(position)
+    end)
     return mark_index
   end
 end
 
-function Navigation:mark_up(window, buffer, marks)
+function navigation.mark_up(window, buffer, marks)
   local lnum = window:get_lnum()
   local line_count = buffer:get_line_count()
   local new_lnum = nil
@@ -104,7 +103,7 @@ function Navigation:mark_up(window, buffer, marks)
   end
 end
 
-function Navigation:mark_down(window, buffer, marks)
+function navigation.mark_down(window, buffer, marks)
   local lnum = window:get_lnum()
   local line_count = buffer:get_line_count()
   local new_lnum = nil
@@ -162,7 +161,7 @@ function Navigation:mark_down(window, buffer, marks)
   end
 end
 
-function Navigation:hunk_up(window, hunks)
+function navigation.hunk_up(window, hunks)
   local lnum = window:get_lnum()
   local new_lnum = nil
   local selected = nil
@@ -200,7 +199,7 @@ function Navigation:hunk_up(window, hunks)
   end
 end
 
-function Navigation:hunk_down(window, hunks)
+function navigation.hunk_down(window, hunks)
   local lnum = window:get_lnum()
   local new_lnum = nil
   local selected = nil
@@ -238,4 +237,4 @@ function Navigation:hunk_down(window, hunks)
   end
 end
 
-return Navigation
+return navigation

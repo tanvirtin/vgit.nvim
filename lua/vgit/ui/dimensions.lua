@@ -1,23 +1,23 @@
 local utils = require('vgit.core.utils')
 local dimensions = {}
 
-dimensions.global_width = function()
+function dimensions.global_width()
   return vim.o.columns
 end
 
-dimensions.global_height = function()
+function dimensions.global_height()
   return vim.o.lines - 1
 end
 
-dimensions.vh = function(value)
+function dimensions.vh(value)
   return string.format('%svh', value)
 end
 
-dimensions.vw = function(value)
+function dimensions.vw(value)
   return string.format('%svw', value)
 end
 
-dimensions.convert = function(value)
+function dimensions.convert(value)
   if type(value) == 'string' then
     local number_value = value:sub(1, #value - 2)
     local type = value:sub(#value - 1, #value)
@@ -40,7 +40,7 @@ dimensions.convert = function(value)
   return value
 end
 
-dimensions.calculate_text_center = function(text, width)
+function dimensions.calculate_text_center(text, width)
   local rep = utils.math.round((width / 2) - utils.math.round(#text / 2))
   return (rep < 0 and 0) or rep
 end

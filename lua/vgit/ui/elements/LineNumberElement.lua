@@ -25,7 +25,7 @@ function LineNumberElement:set_lines(lines)
   return self
 end
 
-function LineNumberElement:mount(options)
+function LineNumberElement:mount(opts)
   self.buffer = Buffer:new():create()
   local buffer = self.buffer
   buffer:assign_options({
@@ -38,9 +38,9 @@ function LineNumberElement:mount(options)
       style = 'minimal',
       focusable = false,
       relative = 'editor',
-      row = options.row,
-      col = options.col,
-      height = options.height,
+      row = opts.row,
+      col = opts.col,
+      height = opts.height,
       width = LineNumberElement:get_width(),
       zindex = 50,
     })

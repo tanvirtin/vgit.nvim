@@ -1,4 +1,5 @@
 local fs = require('vgit.core.fs')
+local Status = require('vgit.cli.models.Status')
 local utils = require('vgit.core.utils')
 local Job = require('vgit.core.Job')
 local loop = require('vgit.core.loop')
@@ -7,9 +8,6 @@ local Hunk = require('vgit.cli.models.Hunk')
 local Log = require('vgit.cli.models.Log')
 local File = require('vgit.cli.models.File')
 local Blame = require('vgit.cli.models.Blame')
-
--- TODO: Expensive jobs can be run in the background by leveraging coroutines.
--- The decision to make a job run in background cannot be controlled, which needs to changed.
 
 local Git = Object:extend()
 
@@ -214,6 +212,42 @@ Git.blame_line = loop.promisify(function(self, filename, lnum, spec, callback)
     }, spec))
     :start()
 end, 5)
+
+Git.log = loop.promisify(function(self, commit_hash, spec, callback)
+  local err = {}
+  local logs = {}
+  local revision_count = 0
+  Job
+    :new(utils.object.defaults({
+      command = 'git',
+      args = {
+        '-C',
+        self.cwd,
+        'show',
+        commit_hash,
+        '--color=never',
+        '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
+        '--no-patch',
+      },
+      on_stdout = function(line)
+        revision_count = revision_count + 1
+        local log = Log:new(line, revision_count)
+        if log then
+          logs[#logs + 1] = log
+        end
+      end,
+      on_stderr = function(line)
+        err[#err + 1] = line
+      end,
+      on_exit = function()
+        if #err ~= 0 then
+          return callback(err, nil)
+        end
+        return callback(nil, logs[1])
+      end,
+    }, spec))
+    :start()
+end, 4)
 
 Git.logs = loop.promisify(function(self, filename, spec, callback)
   local err = {}
@@ -541,7 +575,8 @@ Git.show = loop.promisify(
 )
 
 Git.is_in_remote = loop.promisify(
-  function(self, tracked_filename, spec, callback)
+  function(self, tracked_filename, commit_hash, spec, callback)
+    commit_hash = commit_hash or 'HEAD'
     local err = false
     Job
       :new(utils.object.defaults({
@@ -552,7 +587,7 @@ Git.is_in_remote = loop.promisify(
           'show',
           -- git will attach self.cwd to the command which means we are going to search
           -- from the current relative path "./" basically just means "${self.cwd}/".
-          string.format('HEAD:./%s', tracked_filename),
+          string.format('%s:./%s', commit_hash, tracked_filename),
         },
         on_stderr = function(line)
           if line then
@@ -565,7 +600,7 @@ Git.is_in_remote = loop.promisify(
       }, spec))
       :start()
   end,
-  4
+  5
 )
 
 Git.stage = loop.promisify(function(self, spec, callback)
@@ -602,8 +637,6 @@ Git.unstage = loop.promisify(function(self, spec, callback)
         self.cwd,
         'reset',
         '-q',
-        'HEAD',
-        '.',
       },
       on_stderr = function(line)
         err[#err + 1] = line
@@ -807,28 +840,32 @@ Git.current_branch = loop.promisify(function(self, spec, callback)
     :start()
 end, 3)
 
-Git.tracked_filename = loop.promisify(function(self, filename, spec, callback)
-  filename = utils.str.strip(filename, self.cwd)
-  local result = {}
-  Job
-    :new(utils.object.defaults({
-      command = 'git',
-      args = {
-        '-C',
-        self.cwd,
-        'ls-files',
-        '--exclude-standard',
-        filename,
-      },
-      on_stdout = function(line)
-        result[#result + 1] = line
-      end,
-      on_exit = function()
-        callback(result[1])
-      end,
-    }, spec))
-    :start()
-end, 4)
+Git.tracked_filename = loop.promisify(
+  function(self, filename, commit_hash, spec, callback)
+    filename = utils.str.strip(filename, self.cwd)
+    local result = {}
+    Job
+      :new(utils.object.defaults({
+        command = 'git',
+        args = {
+          '-C',
+          self.cwd,
+          'ls-files',
+          '--exclude-standard',
+          commit_hash or 'HEAD',
+          filename,
+        },
+        on_stdout = function(line)
+          result[#result + 1] = line
+        end,
+        on_exit = function()
+          callback(result[1])
+        end,
+      }, spec))
+      :start()
+  end,
+  5
+)
 
 Git.tracked_full_filename = loop.promisify(
   function(self, filename, spec, callback)
@@ -877,7 +914,10 @@ Git.status = loop.promisify(function(self, spec, callback)
         if fs.is_dir(filename) then
           return
         end
-        result[#result + 1] = File:new(line)
+        result[#result + 1] = File:new(
+          line:sub(4, #line),
+          Status:new(line:sub(1, 2))
+        )
       end,
       on_stderr = function(line)
         err[#err + 1] = line
@@ -891,5 +931,37 @@ Git.status = loop.promisify(function(self, spec, callback)
     }, spec))
     :start()
 end, 3)
+
+Git.ls_log = loop.promisify(function(self, log, spec, callback)
+  local err = {}
+  local result = {}
+  Job
+    :new(utils.object.defaults({
+      command = 'git',
+      args = {
+        '-C',
+        self.cwd,
+        'diff-tree',
+        '--no-commit-id',
+        '--name-only',
+        '-r',
+        log.commit_hash,
+        log.parent_hash == '' and self.empty_tree_hash or log.parent_hash,
+      },
+      on_stdout = function(line)
+        result[#result + 1] = File:new(line, Status:new('--'), log)
+      end,
+      on_stderr = function(line)
+        err[#err + 1] = line
+      end,
+      on_exit = function()
+        if #err ~= 0 then
+          return callback(err, result)
+        end
+        callback(nil, result)
+      end,
+    }, spec))
+    :start()
+end, 4)
 
 return Git

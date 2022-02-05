@@ -1,4 +1,6 @@
+local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
+local navigation = require('vgit.navigation')
 local Diff = require('vgit.Diff')
 local LineNumberElement = require('vgit.ui.elements.LineNumberElement')
 local symbols_setting = require('vgit.settings.symbols')
@@ -7,11 +9,10 @@ local signs_setting = require('vgit.settings.signs')
 
 local CodeScreen = Object:extend()
 
-function CodeScreen:new(buffer_hunks, navigation, git_store, git)
+function CodeScreen:new(buffer_hunks, git_store, git)
   return setmetatable({
     buffer_hunks = buffer_hunks,
     git_store = git_store,
-    navigation = navigation,
     git = git,
     layout_type = 'unified',
     events = {},
@@ -22,6 +23,18 @@ function CodeScreen:new(buffer_hunks, navigation, git_store, git)
       previous_lines_metadata = {},
     },
   }, CodeScreen)
+end
+
+function CodeScreen:get_dto()
+  local data = self.state.data
+  if not data then
+    return
+  end
+  local dto = data.dto
+  if not dto then
+    return
+  end
+  return dto
 end
 
 function CodeScreen:trigger_keypress(key, ...)
@@ -67,10 +80,6 @@ function CodeScreen:set_filetype()
     components.previous:set_filetype(filetype)
   end
   return self
-end
-
-function CodeScreen:reset()
-  return self:reset_cursor():clear_namespace()
 end
 
 function CodeScreen:reset_cursor()
@@ -120,54 +129,29 @@ function CodeScreen:notify(text)
 end
 
 function CodeScreen:navigate(direction)
-  local data = self.state.data
-  if not data then
-    return self
+  if not self:has_active_screen() then
+    return
   end
-  if self.state.err then
-    return self
-  end
-  local dto = data.dto
+  local dto = self:get_dto()
   if not dto then
     return self
   end
   local marks = dto.marks
   local mark_index = nil
-  if not self:has_active_screen() then
-    return
-  end
   local scene = self.scene
   local components = scene.components
   if #marks == 0 then
     self:notify('There are no changes')
     return self
   end
-  local focused_component_name = scene:get_focused_component_name()
   local component = components.current
   local window = component.window
   local buffer = component.buffer
-  if focused_component_name == 'table' then
-    local selected = self.state.mark_index
-    if direction == 'up' then
-      selected = selected - 1
-    end
-    if direction == 'down' then
-      selected = selected + 1
-    end
-    if selected > #marks then
-      selected = 1
-    end
-    if selected < 1 then
-      selected = #marks
-    end
-    mark_index = self.navigation:mark_select(component, selected, marks, 'top')
-  else
-    if direction == 'up' then
-      mark_index = self.navigation:mark_up(window, buffer, marks)
-    end
-    if direction == 'down' then
-      mark_index = self.navigation:mark_down(window, buffer, marks)
-    end
+  if direction == 'up' then
+    mark_index = navigation.mark_up(window, buffer, marks)
+  end
+  if direction == 'down' then
+    mark_index = navigation.mark_down(window, buffer, marks)
   end
   if mark_index then
     self.state.mark_index = mark_index
@@ -193,20 +177,15 @@ function CodeScreen:set_cursor(cursor)
 end
 
 function CodeScreen:set_code_cursor_on_mark(selected, position)
+  loop.await_fast_event()
   if not position then
     position = 'top'
   end
-  local data = self.state.data
-  if not data then
+  local dto = self:get_dto()
+  if not dto then
     return self
   end
-  if self.state.err then
-    return self
-  end
-  if not data.dto then
-    return self
-  end
-  local marks = data.dto.marks
+  local marks = dto.marks
   if #marks == 0 then
     self:notify('There are no changes')
     return self
@@ -220,12 +199,12 @@ function CodeScreen:set_code_cursor_on_mark(selected, position)
     selected = 1
   end
   if self.layout_type == 'split' then
-    self.navigation:mark_select(components.previous, selected, marks, position)
+    navigation.mark_select(components.previous, marks, selected, position)
   end
-  local mark_index = self.navigation:mark_select(
+  local mark_index = navigation.mark_select(
     components.current,
-    selected,
     marks,
+    selected,
     position
   )
   if mark_index then
@@ -243,8 +222,11 @@ function CodeScreen:make_code()
 end
 
 function CodeScreen:make_lines()
+  local dto = self:get_dto()
+  if not dto then
+    return self
+  end
   local components = self.scene.components
-  local dto = self.state.data.dto
   if self.layout_type == 'unified' then
     components.current:set_lines(dto.lines)
   else
@@ -255,7 +237,7 @@ function CodeScreen:make_lines()
 end
 
 function CodeScreen:make_line_numbers()
-  local dto = self.state.data.dto
+  local dto = self:get_dto()
   if not dto then
     return self
   end
@@ -456,6 +438,35 @@ end
 
 function CodeScreen:show()
   assertion.assert('Not yet implemented', debug.traceback())
+end
+
+function CodeScreen:resync_code(initial_mark_index, mark_screen_pos)
+  initial_mark_index = initial_mark_index or 1
+  local state = self.state
+  if not state then
+    return self
+  end
+  local data = state.data
+  if not data then
+    return self
+  end
+  local dto = data.dto
+  if not dto then
+    return self
+  end
+  loop.await_fast_event()
+  self
+    :reset_cursor()
+    :clear_namespace()
+    :set_title(state.title, {
+      filename = data.filename,
+      filetype = data.filetype,
+      stat = dto.stat,
+    })
+    :make_code()
+    :paint_code()
+    :set_code_cursor_on_mark(initial_mark_index, mark_screen_pos)
+  return self
 end
 
 function CodeScreen:detach_from_renderer()
