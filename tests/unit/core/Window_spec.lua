@@ -2,14 +2,11 @@ local a = require('plenary.async.tests')
 local Window = require('vgit.core.Window')
 local mock = require('luassert.mock')
 
-local describe = describe
-local it = it
-local before_each = before_each
-local after_each = after_each
 local eq = assert.are.same
 
 a.describe('Window:', function()
   local cursor = { 10, 2 }
+
   before_each(function()
     vim.api.nvim_win_set_cursor = mock(vim.api.nvim_win_set_cursor, true)
     vim.api.nvim_win_get_cursor = mock(vim.api.nvim_win_get_cursor, true)
@@ -26,7 +23,7 @@ a.describe('Window:', function()
       'should throw an error no win_id is provided to construct the window',
       function()
         assert.has_error(function()
-          Window:new()
+          Window()
         end)
       end
     )
@@ -38,7 +35,8 @@ a.describe('Window:', function()
           false,
           { relative = 'win', row = 3, col = 3, width = 12, height = 3 }
         )
-        local window = Window:new(win_id)
+        local window = Window(win_id)
+
         eq(window:is(Window), true)
       end
     )
@@ -46,7 +44,8 @@ a.describe('Window:', function()
       'should create a window object binding the current win_id if the win_id is 0',
       function()
         local win_id = vim.api.nvim_get_current_win()
-        local window = Window:new(0)
+        local window = Window(0)
+
         eq(window:is(Window), true)
         eq(window.win_id, win_id)
       end
@@ -56,7 +55,6 @@ a.describe('Window:', function()
   describe('set_cursor', function()
     local window
     local win_id
-    local cursor
 
     before_each(function()
       cursor = { 1, 1 }
@@ -65,7 +63,7 @@ a.describe('Window:', function()
         false,
         { relative = 'win', row = 3, col = 3, width = 12, height = 3 }
       )
-      window = Window:new(win_id)
+      window = Window(win_id)
     end)
 
     a.it('should call nvim_win_set_cursor using the bounded win_id', function()
@@ -84,21 +82,24 @@ a.describe('Window:', function()
         false,
         { relative = 'win', row = 3, col = 3, width = 12, height = 3 }
       )
-      window = Window:new(win_id)
+      window = Window(win_id)
     end)
 
     a.it('should call nvim_win_set_cursor using the bounded win_id', function()
       local returned_cursor = window:get_cursor()
+
       eq(cursor, returned_cursor)
     end)
 
     a.it('should return the lnum from the current cursor', function()
       local lnum = window:get_lnum()
-      eq(lnum, 10)
+
+      eq(lnum, 1)
     end)
 
     a.it('should set the current lnum', function()
       window:set_lnum(111)
+
       assert.stub(vim.api.nvim_win_set_cursor).was_called_with(
         win_id,
         { 111, cursor[2] }

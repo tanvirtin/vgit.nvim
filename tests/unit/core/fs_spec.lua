@@ -2,9 +2,6 @@ local a = require('plenary.async.tests')
 local Buffer = require('vgit.core.Buffer')
 local fs = require('vgit.core.fs')
 
-local it = it
-local describe = describe
-local after_each = after_each
 local eq = assert.are.same
 
 describe('fs:', function()
@@ -19,12 +16,14 @@ describe('fs:', function()
       local current = vim.loop.cwd()
       local path = current .. '/lua/vgit/init.lua'
       local filepath = fs.relative_filename(path)
+
       eq(filepath, 'lua/vgit/init.lua')
     end)
 
     it('should return the unchanged path if it is not absolute', function()
       local path = 'lua/vgit/init.lua'
       local filepath = fs.relative_filename(path)
+
       eq(filepath, 'lua/vgit/init.lua')
     end)
   end)
@@ -43,7 +42,8 @@ describe('fs:', function()
   a.describe('filetype', function()
     a.it('should retrieve the correct filetype for a given buffer', function()
       local bufnr = vim.api.nvim_create_buf(true, true)
-      local buffer = Buffer:new(bufnr)
+      local buffer = Buffer(bufnr)
+
       vim.api.nvim_buf_set_option(bufnr, 'filetype', 'bar')
       eq(fs.filetype(buffer), 'bar')
     end)
@@ -52,7 +52,8 @@ describe('fs:', function()
       'should retrieve empty string for a buffer with no filetype',
       function()
         local bufnr = vim.api.nvim_create_buf(true, true)
-        local buffer = Buffer:new(bufnr)
+        local buffer = Buffer(bufnr)
+
         eq(fs.filetype(buffer), '')
       end
     )
@@ -63,6 +64,7 @@ describe('fs:', function()
       'should retrieve an err_result for a given file path that does not exist',
       function()
         local err, data = fs.read_file('IDONTEXIST.md')
+
         assert.are_not.same(err, nil)
         eq(data, nil)
       end
@@ -162,8 +164,11 @@ describe('fs:', function()
       'should create a new file and append the contents inside it',
       function()
         local lines = { 'foo', 'bar' }
+
         fs.write_file(filename, lines)
+
         local err, data = fs.read_file(filename)
+
         eq(err, nil)
         eq(data, { 'foo', 'bar' })
       end
@@ -174,10 +179,13 @@ describe('fs:', function()
       function()
         local lines = { 'foo', 'baz' }
         local file = io.open(filename, 'w')
+
         file:write('hello world')
         file:close()
         fs.write_file(filename, lines)
+
         local err, data = fs.read_file(filename)
+
         eq(err, nil)
         eq(data, { 'foo', 'baz' })
       end
@@ -202,15 +210,19 @@ describe('fs:', function()
         file:close()
         fs.write_file(name, { '' })
       end
+
       for i = 1, num_files do
         create_file(string.format('%s_%s', filename, i))
       end
+
       for i = 1, num_files do
         eq(file_exists(string.format('%s_%s', filename, i)), true)
       end
+
       for i = 1, num_files do
         fs.remove_file(string.format('%s_%s', filename, i))
       end
+
       for i = 1, num_files do
         eq(file_exists(string.format('%s_%s', filename, i)), false)
       end

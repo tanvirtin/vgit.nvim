@@ -1,11 +1,6 @@
 local keymap = require('vgit.core.keymap')
 local mock = require('luassert.mock')
 
-local describe = describe
-local it = it
-local before_each = before_each
-local after_each = after_each
-
 describe('keymap<Cmd>', function()
   before_each(function()
     vim.api = mock(vim.api, true)
@@ -67,6 +62,7 @@ describe('keymap<Cmd>', function()
           '<Cmd>lua require("vgit").toggle_diff_preference()<CR>',
         },
       }
+
       keymap.define({
         ['n <C-k>'] = 'hunk_up',
         ['n <C-j>'] = 'hunk_down',
@@ -81,6 +77,7 @@ describe('keymap<Cmd>', function()
         ['n <leader>gd'] = 'project_diff_preview',
         ['n <leader>gx'] = 'toggle_diff_preference',
       })
+
       for index in ipairs(expected) do
         assert.stub(vim.api.nvim_set_keymap).was.called_with(
           expected[index][1],

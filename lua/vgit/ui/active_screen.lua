@@ -1,218 +1,250 @@
-local Git = require('vgit.cli.Git')
 local scene_setting = require('vgit.settings.scene')
 local DiffScreen = require('vgit.features.screens.DiffScreen')
 local DiffHunkScreen = require('vgit.features.screens.DiffHunkScreen')
 local HistoryScreen = require('vgit.features.screens.HistoryScreen')
 local StagedDiffScreen = require('vgit.features.screens.StagedDiffScreen')
+local ProjectDiffScreen = require('vgit.features.screens.ProjectDiffScreen')
+local ProjectCommitsScreen = require(
+  'vgit.features.screens.ProjectCommitsScreen'
+)
 local StagedDiffHunkScreen = require(
   'vgit.features.screens.StagedDiffHunkScreen'
 )
-local ProjectDiffScreen = require('vgit.features.screens.ProjectDiffScreen')
 local ProjectHunksScreen = require('vgit.features.screens.ProjectHunksScreen')
 local GutterBlameScreen = require('vgit.features.screens.GutterBlameScreen')
 local LineBlameScreen = require('vgit.features.screens.LineBlameScreen')
+local DebugScreen = require('vgit.features.screens.DebugScreen')
+local project_diff_preview_setting = require(
+  'vgit.settings.project_diff_preview'
+)
 
 local current_screen
-local diff_screen
-local diff_hunk_screen
-local staged_diff_screen
-local staged_diff_hunk_screen
-local history_screen
-local project_diff_screen
-local project_hunks_screen
-local gutter_blame_screen
-local line_blame_screen
+
+local diff_screen = DiffScreen()
+local diff_hunk_screen = DiffHunkScreen()
+local staged_diff_screen = StagedDiffScreen()
+local staged_diff_hunk_screen = StagedDiffHunkScreen()
+local history_screen = HistoryScreen()
+local project_diff_screen = ProjectDiffScreen()
+local project_commits_screen = ProjectCommitsScreen()
+local project_hunks_screen = ProjectHunksScreen()
+local gutter_blame_screen = GutterBlameScreen()
+local line_blame_screen = LineBlameScreen()
+local debug_screen = DebugScreen()
 
 local active_screen = {
   screens = {},
-  actions = {},
   keys = {},
 }
 
--- Factory and dependency injection
-active_screen.inject = function(buffer_hunks, navigation, git_store)
-  diff_screen = DiffScreen:new(buffer_hunks, navigation, git_store, Git:new())
-  diff_hunk_screen = DiffHunkScreen:new(
-    buffer_hunks,
-    navigation,
-    git_store,
-    Git:new()
-  )
-  staged_diff_screen = StagedDiffScreen:new(
-    buffer_hunks,
-    navigation,
-    git_store,
-    Git:new()
-  )
-  staged_diff_hunk_screen = StagedDiffHunkScreen:new(
-    buffer_hunks,
-    navigation,
-    git_store,
-    Git:new()
-  )
-  history_screen = HistoryScreen:new(
-    buffer_hunks,
-    navigation,
-    git_store,
-    Git:new()
-  )
-  project_diff_screen = ProjectDiffScreen:new(
-    buffer_hunks,
-    navigation,
-    git_store,
-    Git:new()
-  )
-  project_hunks_screen = ProjectHunksScreen:new(
-    buffer_hunks,
-    navigation,
-    git_store,
-    Git:new()
-  )
-  gutter_blame_screen = GutterBlameScreen:new(
-    buffer_hunks,
-    navigation,
-    git_store,
-    Git:new()
-  )
-  line_blame_screen = LineBlameScreen:new(
-    buffer_hunks,
-    navigation,
-    git_store,
-    Git:new()
-  )
-end
-
-active_screen.activate = function(screen_name)
+function active_screen.activate(screen_name, ...)
   if active_screen.exists() then
-    return
+    return active_screen
   end
+
   if active_screen.is_screen_registered(screen_name) then
-    local success, screen = active_screen.screens[screen_name]()
+    local success, screen = active_screen.screens[screen_name](...)
     if success then
       current_screen = screen
     end
   end
+
+  return active_screen
 end
 
-active_screen.keypress = function(key, ...)
+function active_screen.keypress(key, ...)
   if active_screen.is_key_registered(key) then
     active_screen.keys[key](...)
   end
+
+  return active_screen
 end
 
-active_screen.action = function(action_name, ...)
+function active_screen.action(action_name, ...)
   if active_screen.has_action(action_name) then
-    active_screen.actions[action_name](...)
+    current_screen[action_name](current_screen, ...)
   end
+
+  return active_screen
 end
 
-active_screen.screens.diff_screen = function()
+function active_screen.screens.diff_screen()
   diff_screen.layout_type = scene_setting:get('diff_preference')
-  return diff_screen:show('Diff'), diff_screen
+
+  return diff_screen:show(), diff_screen
 end
 
-active_screen.screens.staged_diff_screen = function()
+function active_screen.screens.staged_diff_screen()
   staged_diff_screen.layout_type = scene_setting:get('diff_preference')
-  return staged_diff_screen:show('Staged Diff'), staged_diff_screen
+
+  return staged_diff_screen:show(), staged_diff_screen
 end
 
-active_screen.screens.diff_hunk_screen = function()
+function active_screen.screens.diff_hunk_screen()
   diff_hunk_screen.layout_type = scene_setting:get('diff_preference')
-  return diff_hunk_screen:show('Hunk'), diff_hunk_screen
+
+  return diff_hunk_screen:show(), diff_hunk_screen
 end
 
-active_screen.screens.staged_hunk_screen = function()
+function active_screen.screens.staged_hunk_screen()
   staged_diff_hunk_screen.layout_type = scene_setting:get('diff_preference')
-  return staged_diff_hunk_screen:show('Staged Hunk'), staged_diff_hunk_screen
+
+  return staged_diff_hunk_screen:show(), staged_diff_hunk_screen
 end
 
-active_screen.screens.gutter_blame_screen = function()
-  return gutter_blame_screen:show('Gutter Blame'), gutter_blame_screen
+function active_screen.screens.gutter_blame_screen()
+  return gutter_blame_screen:show(), gutter_blame_screen
 end
 
-active_screen.screens.project_diff_screen = function()
+function active_screen.screens.project_diff_screen()
   project_diff_screen.layout_type = scene_setting:get('diff_preference')
-  return project_diff_screen:show('Project Diff'), project_diff_screen
+
+  return project_diff_screen:show(), project_diff_screen
 end
 
-active_screen.screens.project_hunks_screen = function()
+function active_screen.screens.project_commits_screen(...)
+  project_commits_screen.layout_type = scene_setting:get('diff_preference')
+
+  return project_commits_screen:show({ ... }), project_commits_screen
+end
+
+function active_screen.screens.project_hunks_screen()
   project_hunks_screen.layout_type = scene_setting:get('diff_preference')
-  return project_hunks_screen:show('Project Hunks'), project_hunks_screen
+
+  return project_hunks_screen:show(), project_hunks_screen
 end
 
-active_screen.screens.history_screen = function()
+function active_screen.screens.history_screen()
   history_screen.layout_type = scene_setting:get('diff_preference')
-  return history_screen:show('History'), history_screen
+
+  return history_screen:show(), history_screen
 end
 
-active_screen.screens.line_blame_screen = function()
+function active_screen.screens.debug_screen(...)
+  return debug_screen:show(...), debug_screen
+end
+
+function active_screen.screens.line_blame_screen()
   return line_blame_screen:show(), line_blame_screen
+end
+
+function active_screen.keys.j()
+  current_screen:trigger_keypress('j')
+
+  return active_screen
+end
+
+function active_screen.keys.k()
+  current_screen:trigger_keypress('k')
+
+  return active_screen
 end
 
 active_screen.keys['<enter>'] = function()
   current_screen:trigger_keypress('<enter>')
+
+  return active_screen
 end
 
-active_screen.keys.j = function()
-  current_screen:trigger_keypress('j')
+active_screen.keys['<C-j>'] = function()
+  current_screen:trigger_keypress('<C-j>')
+
+  return active_screen
 end
 
-active_screen.keys.k = function()
-  current_screen:trigger_keypress('k')
+active_screen.keys['<C-k>'] = function()
+  current_screen:trigger_keypress('<C-k>')
+
+  return active_screen
 end
 
-active_screen.actions.navigate = function(direction)
-  current_screen:navigate(direction)
-end
+active_screen.keys[project_diff_preview_setting:get('keymaps').buffer_stage] =
+  function()
+    current_screen:trigger_keypress(
+      project_diff_preview_setting:get('keymaps').buffer_stage
+    )
 
-active_screen.actions.git_stage = function()
-  current_screen:git_stage()
-end
+    return active_screen
+  end
 
-active_screen.actions.git_unstage = function()
-  current_screen:git_unstage()
-end
+active_screen.keys[project_diff_preview_setting:get('keymaps').buffer_unstage] =
+  function()
+    current_screen:trigger_keypress(
+      project_diff_preview_setting:get('keymaps').buffer_unstage
+    )
 
-active_screen.actions.git_reset = function()
-  current_screen:git_reset()
-end
+    return active_screen
+  end
 
-active_screen.actions.refresh = function()
-  current_screen:refresh()
-end
+active_screen.keys[project_diff_preview_setting:get('keymaps').stage_all] =
+  function()
+    current_screen:trigger_keypress(
+      project_diff_preview_setting:get('keymaps').stage_all
+    )
 
-active_screen.keep_focused = function()
-  current_screen:keep_focused()
-end
+    return active_screen
+  end
 
-active_screen.is_screen_registered = function(screen_name)
+active_screen.keys[project_diff_preview_setting:get('keymaps').unstage_all] =
+  function()
+    current_screen:trigger_keypress(
+      project_diff_preview_setting:get('keymaps').unstage_all
+    )
+
+    return active_screen
+  end
+
+active_screen.keys[project_diff_preview_setting:get('keymaps').reset_all] =
+  function()
+    current_screen:trigger_keypress(
+      project_diff_preview_setting:get('keymaps').reset_all
+    )
+
+    return active_screen
+  end
+
+active_screen.keys[project_diff_preview_setting:get('keymaps').clean_all] =
+  function()
+    current_screen:trigger_keypress(
+      project_diff_preview_setting:get('keymaps').clean_all
+    )
+
+    return active_screen
+  end
+
+function active_screen.is_screen_registered(screen_name)
   return type(active_screen.screens[screen_name]) == 'function'
 end
 
-active_screen.is_key_registered = function(key)
+function active_screen.is_key_registered(key)
   return type(active_screen.keys[key]) == 'function'
 end
 
-active_screen.has_action = function(action)
+function active_screen.has_action(action)
   return type(current_screen[action]) == 'function'
 end
 
-active_screen.exists = function()
+function active_screen.exists()
   return current_screen ~= nil
 end
 
-active_screen.destroy = function()
+function active_screen.destroy()
   current_screen:destroy()
   current_screen = nil
+
+  return active_screen
 end
 
-active_screen.toggle_diff_preference = function()
+function active_screen.toggle_diff_preference()
   local diff_preference = scene_setting:get('diff_preference')
+
   if diff_preference == 'unified' then
     scene_setting:set('diff_preference', 'split')
   elseif diff_preference == 'split' then
     scene_setting:set('diff_preference', 'unified')
   end
+
+  return active_screen
 end
 
 return active_screen

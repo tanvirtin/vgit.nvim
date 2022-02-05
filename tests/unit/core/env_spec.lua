@@ -1,7 +1,5 @@
 local env = require('vgit.core.env')
 
-local describe = describe
-local it = it
 local eq = assert.are.same
 
 describe('env:', function()
@@ -34,6 +32,7 @@ describe('env:', function()
         env.get(3)
       end)
     end)
+
     it('should retrieve a value that has been set', function()
       eq(env.set('foo', 'bar').get('foo'), 'bar')
     end)
@@ -45,11 +44,13 @@ describe('env:', function()
         env.unset(3)
       end)
     end)
+
     it('should throw an error if value is not set', function()
       assert.has_error(function()
         env.unset('hello')
       end)
     end)
+
     it('should unset a key that has been set', function()
       eq(env.set('foo', 'bar').get('foo'), 'bar')
       env.unset('foo')
