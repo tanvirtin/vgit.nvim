@@ -70,3 +70,5 @@ function versioning.is_neovim_compatible()
   )
   return false
 end
+
+return versioning
