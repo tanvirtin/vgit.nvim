@@ -2,21 +2,21 @@ local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
 local console = require('vgit.core.console')
 local Object = require('vgit.core.Object')
+local git_buffer_store = require('vgit.git_buffer_store')
+local versioning = require('vgit.core.versioning')
 
 local Feature = Object:extend()
 
-function Feature:new(git_store, versioning)
+function Feature:new()
   return setmetatable({
     name = 'Feature',
-    git_store = git_store,
-    versioning = versioning,
   }, Feature)
 end
 
 function Feature:guard()
-  local neovim_version = self.versioning:neovim_version()
+  local neovim_version = versioning.neovim_version()
   local requires_version = self.requires_neovim_version
-  local result = self.versioning:guard(requires_version)
+  local result = versioning.guard(requires_version)
   if not result then
     console.info(
       string.format(
@@ -44,9 +44,9 @@ function Feature:is_buffer_valid(buffer)
   return true
 end
 
-function Feature:is_buffer_in_git_store(buffer)
+function Feature:is_buffer_in_store(buffer)
   loop.await_fast_event()
-  if not self.git_store:contains(buffer) then
+  if not git_buffer_store.contains(buffer) then
     console.debug(
       string.format('The buffer %s not in git store', buffer.filename)
     )

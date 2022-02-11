@@ -1,4 +1,5 @@
 local CodeDTO = require('vgit.core.CodeDTO')
+local git_buffer_store = require('vgit.git_buffer_store')
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
 local PresentationalComponent = require(
@@ -105,7 +106,7 @@ end
 
 function GutterBlameScreen:show(title, props)
   self:clear_state()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     console.log('Current buffer you are on has no blames')
     return false

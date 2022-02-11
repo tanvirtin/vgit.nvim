@@ -1,4 +1,5 @@
 local renderer = require('vgit.core.renderer')
+local versioning = require('vgit.core.versioning')
 local console = require('vgit.core.console')
 local env = require('vgit.core.env')
 local hls_setting = require('vgit.settings.hls')
@@ -18,7 +19,6 @@ local keymap = require('vgit.core.keymap')
 local highlight = require('vgit.core.highlight')
 local sign = require('vgit.core.sign')
 local Command = require('vgit.Command')
-local GitStore = require('vgit.GitStore')
 local autocmd = require('vgit.core.autocmd')
 local LiveGutter = require('vgit.features.LiveGutter')
 local AuthorshipCodeLens = require('vgit.features.AuthorshipCodeLens')
@@ -26,20 +26,17 @@ local LiveBlame = require('vgit.features.LiveBlame')
 local ProjectHunksList = require('vgit.features.ProjectHunksList')
 local BufferHunks = require('vgit.features.BufferHunks')
 local Git = require('vgit.cli.Git')
-local Versioning = require('vgit.core.Versioning')
 local active_screen = require('vgit.ui.active_screen')
 
-local versioning = Versioning:new()
 local git = Git:new()
 local command = Command:new()
-local git_store = GitStore:new()
-local live_gutter = LiveGutter:new(git_store, versioning)
-local live_blame = LiveBlame:new(git_store, versioning)
-local authorship_code_lens = AuthorshipCodeLens:new(git_store, versioning)
-local buffer_hunks = BufferHunks:new(git_store, versioning)
-local project_hunks_list = ProjectHunksList:new(versioning)
+local live_gutter = LiveGutter:new()
+local live_blame = LiveBlame:new()
+local authorship_code_lens = AuthorshipCodeLens:new()
+local buffer_hunks = BufferHunks:new()
+local project_hunks_list = ProjectHunksList:new()
 
-active_screen.inject(buffer_hunks, git_store)
+active_screen.inject(buffer_hunks)
 
 local keys = {
   enter = loop.async(function()
@@ -281,7 +278,7 @@ local function execute_command(...)
 end
 
 local function version()
-  return versioning:current()
+  return versioning.current()
 end
 
 local function help()
@@ -338,7 +335,7 @@ local function define_keymaps(config)
 end
 
 local setup = function(config)
-  if not versioning:is_neovim_compatible() then
+  if not versioning.is_neovim_compatible() then
     return
   end
   define_keymaps(config)

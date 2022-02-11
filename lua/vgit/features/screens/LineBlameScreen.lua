@@ -1,6 +1,6 @@
 local Window = require('vgit.core.Window')
+local git_buffer_store = require('vgit.git_buffer_store')
 local loop = require('vgit.core.loop')
-local utils = require('vgit.core.utils')
 local Scene = require('vgit.ui.Scene')
 local PopupComponent = require('vgit.ui.components.PopupComponent')
 local CodeScreen = require('vgit.ui.screens.CodeScreen')
@@ -98,7 +98,7 @@ end
 
 function LineBlameScreen:show(props)
   self:clear_state()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return false
   end

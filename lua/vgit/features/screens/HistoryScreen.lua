@@ -1,5 +1,6 @@
 local loop = require('vgit.core.loop')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
+local git_buffer_store = require('vgit.git_buffer_store')
 local TableComponent = require('vgit.ui.components.TableComponent')
 local CodeListScreen = require('vgit.ui.screens.CodeListScreen')
 local Scene = require('vgit.ui.Scene')
@@ -187,7 +188,7 @@ end
 function HistoryScreen:show(title, props)
   self:clear_state()
   self.list_control:resync()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     console.log('Current buffer you are on has no history')
     return false

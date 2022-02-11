@@ -3,17 +3,16 @@ local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
 local live_blame_setting = require('vgit.settings.live_blame')
+local git_buffer_store = require('vgit.git_buffer_store')
 local loop = require('vgit.core.loop')
 
 local Feature = require('vgit.Feature')
 local LiveBlame = Feature:extend()
 
-function LiveBlame:new(git_store, versioning)
+function LiveBlame:new()
   return setmetatable({
     name = 'Live Blame',
     id = 1,
-    git_store = git_store,
-    versioning = versioning,
     last_lnum = nil,
     namespace = Namespace:new(),
   }, LiveBlame)
@@ -49,7 +48,7 @@ LiveBlame.sync = loop.brakecheck(loop.async(function(self)
   loop.await_fast_event()
   local window = Window:new(0)
   loop.await_fast_event()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end
@@ -110,12 +109,12 @@ end))
 function LiveBlame:desync(force)
   loop.await_fast_event()
   local window = Window:new(0)
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end
   loop.await_fast_event()
-  buffer = self.git_store:get(buffer)
+  buffer = git_buffer_store.get(buffer)
   loop.await_fast_event()
   local lnum = window:get_lnum()
   if not force and self.last_lnum and self.last_lnum == lnum then

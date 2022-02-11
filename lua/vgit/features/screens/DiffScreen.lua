@@ -2,6 +2,7 @@ local Scene = require('vgit.ui.Scene')
 local loop = require('vgit.core.loop')
 local CodeComponent = require('vgit.ui.components.CodeComponent')
 local CodeScreen = require('vgit.ui.screens.CodeScreen')
+local git_buffer_store = require('vgit.git_buffer_store')
 local console = require('vgit.core.console')
 
 local DiffScreen = CodeScreen:extend()
@@ -91,13 +92,13 @@ function DiffScreen:get_split_scene_definition()
 end
 
 function DiffScreen:navigate(direction)
-  CodeScreen.navigate(self, direction, 'center')
+  CodeScreen.navigate(self, direction)
   return self
 end
 
 function DiffScreen:show(title)
   self:clear_state()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store:current()
   if not buffer then
     console.log('Current buffer you are on has no hunks')
     return false

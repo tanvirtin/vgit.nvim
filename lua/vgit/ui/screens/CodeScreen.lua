@@ -9,10 +9,9 @@ local signs_setting = require('vgit.settings.signs')
 
 local CodeScreen = Object:extend()
 
-function CodeScreen:new(buffer_hunks, git_store, git)
+function CodeScreen:new(buffer_hunks, git)
   return setmetatable({
     buffer_hunks = buffer_hunks,
-    git_store = git_store,
     git = git,
     layout_type = 'unified',
     events = {},

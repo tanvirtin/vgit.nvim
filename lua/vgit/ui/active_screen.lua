@@ -33,37 +33,17 @@ local active_screen = {
 }
 
 -- Factory and dependency injection
-function active_screen.inject(buffer_hunks, git_store)
-  diff_screen = DiffScreen:new(buffer_hunks, git_store, Git:new())
-  diff_hunk_screen = DiffHunkScreen:new(buffer_hunks, git_store, Git:new())
-  staged_diff_screen = StagedDiffScreen:new(buffer_hunks, git_store, Git:new())
-  staged_diff_hunk_screen = StagedDiffHunkScreen:new(
-    buffer_hunks,
-    git_store,
-    Git:new()
-  )
-  history_screen = HistoryScreen:new(buffer_hunks, git_store, Git:new())
-  project_diff_screen = ProjectDiffScreen:new(
-    buffer_hunks,
-    git_store,
-    Git:new()
-  )
-  project_commits_screen = ProjectCommitsScreen:new(
-    buffer_hunks,
-    git_store,
-    Git:new()
-  )
-  project_hunks_screen = ProjectHunksScreen:new(
-    buffer_hunks,
-    git_store,
-    Git:new()
-  )
-  gutter_blame_screen = GutterBlameScreen:new(
-    buffer_hunks,
-    git_store,
-    Git:new()
-  )
-  line_blame_screen = LineBlameScreen:new(buffer_hunks, git_store, Git:new())
+function active_screen.inject(buffer_hunks)
+  diff_screen = DiffScreen:new(buffer_hunks, Git:new())
+  diff_hunk_screen = DiffHunkScreen:new(buffer_hunks, Git:new())
+  staged_diff_screen = StagedDiffScreen:new(buffer_hunks, Git:new())
+  staged_diff_hunk_screen = StagedDiffHunkScreen:new(buffer_hunks, Git:new())
+  history_screen = HistoryScreen:new(buffer_hunks, Git:new())
+  project_diff_screen = ProjectDiffScreen:new(buffer_hunks, Git:new())
+  project_commits_screen = ProjectCommitsScreen:new(buffer_hunks, Git:new())
+  project_hunks_screen = ProjectHunksScreen:new(buffer_hunks, Git:new())
+  gutter_blame_screen = GutterBlameScreen:new(buffer_hunks, Git:new())
+  line_blame_screen = LineBlameScreen:new(buffer_hunks, Git:new())
 end
 
 function active_screen.activate(screen_name, ...)

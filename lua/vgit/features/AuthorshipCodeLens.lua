@@ -6,14 +6,13 @@ local Feature = require('vgit.Feature')
 local Namespace = require('vgit.core.Namespace')
 local console = require('vgit.core.console')
 local loop = require('vgit.core.loop')
+local git_buffer_store = require('vgit.git_buffer_store')
 
 local AuthorshipCodeLens = Feature:extend()
 
-function AuthorshipCodeLens:new(git_store, versioning)
+function AuthorshipCodeLens:new()
   return setmetatable({
     name = 'Authorship Code Lens',
-    git_store = git_store,
-    versioning = versioning,
     namespace = Namespace:new(),
     -- TODO: When some of the neovim versions become more stable in various linux distros we can remove this.
     requires_neovim_version = {
@@ -141,7 +140,7 @@ function AuthorshipCodeLens:sync()
     return self
   end
   loop.await_fast_event()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return self
   end

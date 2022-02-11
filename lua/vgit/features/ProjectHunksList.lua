@@ -6,10 +6,9 @@ local Feature = require('vgit.Feature')
 
 local ProjectHunksList = Feature:extend()
 
-function ProjectHunksList:new(versioning)
+function ProjectHunksList:new()
   return setmetatable({
     name = 'Project Hunks List',
-    versioning = versioning,
     git = Git:new(),
   }, ProjectHunksList)
 end

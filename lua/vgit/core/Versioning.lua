@@ -1,33 +1,28 @@
 local console = require('vgit.core.console')
-local Object = require('vgit.core.Object')
 
-local Versioning = Object:extend()
+local history = {
+  {
+    patch = 0,
+    minor = 0,
+    major = 0,
+  },
+  {
+    patch = 0,
+    minor = 1,
+    major = 0,
+  },
+  {
+    patch = 1,
+    minor = 1,
+    major = 0,
+  },
+}
 
-function Versioning:new()
-  return setmetatable({
-    history = {
-      {
-        patch = 0,
-        minor = 0,
-        major = 0,
-      },
-      {
-        patch = 0,
-        minor = 1,
-        major = 0,
-      },
-      {
-        patch = 1,
-        minor = 1,
-        major = 0,
-      },
-    },
-  }, Versioning)
-end
+local versioning = {}
 
-function Versioning:guard(version)
+function versioning.guard(version)
   if version then
-    local neovim_version = self:neovim_version()
+    local neovim_version = versioning.neovim_version()
     if
       neovim_version.patch >= version.patch
       and neovim_version.minor >= version.minor
@@ -40,28 +35,28 @@ function Versioning:guard(version)
   return true
 end
 
-function Versioning:current()
-  return self.history[#self.history]
+function versioning.current()
+  return history[#history]
 end
 
-function Versioning:previous()
-  return self.history[#self.history - 1]
+function versioning.previous()
+  return history[#history - 1]
 end
 
-function Versioning:neovim_version()
+function versioning.neovim_version()
   return vim.version()
 end
 
-function Versioning:is_neovim_compatible()
-  if self:guard({
+function versioning.is_neovim_compatible()
+  if versioning.guard({
     patch = 0,
     minor = 5,
     major = 0,
   }) then
     return true
   end
-  local neovim_version = self:neovim_version()
-  local plugin_version = self:current()
+  local neovim_version = versioning.neovim_version()
+  local plugin_version = versioning.current()
   console.info(
     string.format(
       'Current Neovim version %s.%s.%s is incompatible with VGit %s.%s.%s',
@@ -76,4 +71,4 @@ function Versioning:is_neovim_compatible()
   return false
 end
 
-return Versioning
+return versioning

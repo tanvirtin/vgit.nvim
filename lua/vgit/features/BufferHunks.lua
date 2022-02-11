@@ -4,6 +4,7 @@ local Window = require('vgit.core.Window')
 local Object = require('vgit.core.Object')
 local loop = require('vgit.core.loop')
 local Feature = require('vgit.Feature')
+local git_buffer_store = require('vgit.git_buffer_store')
 
 local NavigationVirtualText = Object:extend()
 
@@ -47,17 +48,15 @@ end
 
 local BufferHunks = Feature:extend()
 
-function BufferHunks:new(git_store, versioning)
+function BufferHunks:new()
   return setmetatable({
     name = 'Buffer Hunks',
-    git_store = git_store,
-    versioning = versioning,
     navigation_virtual_text = NavigationVirtualText:new(),
   }, BufferHunks)
 end
 
 function BufferHunks:move_up()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end
@@ -74,7 +73,7 @@ function BufferHunks:move_up()
 end
 
 function BufferHunks:move_down()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end
@@ -92,7 +91,7 @@ end
 
 function BufferHunks:cursor_hunk()
   loop.await_fast_event()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end
@@ -115,7 +114,7 @@ end
 
 function BufferHunks:stage_all()
   loop.await_fast_event()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end
@@ -130,7 +129,7 @@ end
 
 function BufferHunks:cursor_stage()
   loop.await_fast_event()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end
@@ -162,7 +161,7 @@ end
 
 function BufferHunks:unstage_all()
   loop.await_fast_event()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end
@@ -177,7 +176,7 @@ end
 
 function BufferHunks:reset_all()
   loop.await_fast_event()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end
@@ -196,7 +195,7 @@ end
 
 function BufferHunks:cursor_reset()
   loop.await_fast_event()
-  local buffer = self.git_store:current()
+  local buffer = git_buffer_store.current()
   if not buffer then
     return
   end

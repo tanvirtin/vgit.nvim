@@ -2,15 +2,14 @@ local live_gutter_setting = require('vgit.settings.live_gutter')
 local loop = require('vgit.core.loop')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
+local git_buffer_store = require('vgit.git_buffer_store')
 local Feature = require('vgit.Feature')
 
 local LiveGutter = Feature:extend()
 
-function LiveGutter:new(git_store, versioning)
+function LiveGutter:new()
   return setmetatable({
     name = 'Live Gutter',
-    git_store = git_store,
-    versioning = versioning,
   }, LiveGutter)
 end
 
@@ -53,7 +52,7 @@ LiveGutter.sync = loop.brakecheck(
 
 LiveGutter.resync = loop.async(function(self, buffer)
   loop.await_fast_event()
-  buffer = buffer or self.git_store:current()
+  buffer = buffer or git_buffer_store.current()
   if buffer then
     self:sync(buffer)
   end
@@ -85,7 +84,7 @@ end
 function LiveGutter:attach()
   loop.await_fast_event()
   local buffer = Buffer:new(0)
-  if self:is_buffer_in_git_store(buffer) then
+  if self:is_buffer_in_store(buffer) then
     return
   end
   loop.await_fast_event()
@@ -104,7 +103,7 @@ function LiveGutter:attach()
     return
   end
   loop.await_fast_event()
-  self.git_store:add(buffer)
+  git_buffer_store.add(buffer)
   loop.await_fast_event()
   buffer
     :attach_to_changes({
@@ -131,7 +130,7 @@ function LiveGutter:attach()
 end
 
 function LiveGutter:detach(buffer)
-  self.git_store:remove(buffer, function()
+  git_buffer_store.remove(buffer, function()
     buffer:unwatch_file():detach_from_renderer()
   end)
   return self
