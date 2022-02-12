@@ -100,32 +100,4 @@ function GitStatusFile:get_dto()
   return nil, dto
 end
 
-function GitStatusFile:get_hunk_entries()
-  if self._cache['entries'] then
-    return nil, self._cache['entries']
-  end
-  local hunks_err, hunks = self:get_hunks()
-  if hunks_err then
-    return hunks_err
-  end
-  local dto_err, dto = self:get_dto()
-  if dto_err then
-    return dto_err
-  end
-  local file = self.file
-  local entries = {}
-  for j = 1, #hunks do
-    entries[#entries + 1] = {
-      -- data reveals it's own position in the array.
-      dto = dto,
-      index = j,
-      hunks = hunks,
-      filename = file.filename,
-      filetype = file.filetype,
-    }
-  end
-  self._cache['entries'] = entries
-  return nil, entries
-end
-
 return GitStatusFile

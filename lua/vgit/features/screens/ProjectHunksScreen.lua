@@ -21,12 +21,13 @@ function ProjectHunksScreen:fetch(opts)
     state.data = self.state.entries[self.list_control:i()]
     return self
   end
-  local err, entries = GitInterpreter:new(self.layout_type):get_hunks_entries()
+  local err, entries = GitInterpreter
+    :new(self.layout_type)
+    :get_hunks_as_entries()
   if err then
     state.err = err
     return self
   end
-  -- Storing the entries, any given entry in the list of entries will get shown on the screen with diff.
   state.entries = entries
   return self
 end

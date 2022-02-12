@@ -16,7 +16,7 @@ function GitInterpreter:new(layout_type)
   }, GitInterpreter)
 end
 
-function GitInterpreter:get_hunks_entries()
+function GitInterpreter:get_hunks_as_entries()
   local status_files_err, status_files = git:status()
   if status_files_err then
     return status_files_err
@@ -26,15 +26,57 @@ function GitInterpreter:get_hunks_entries()
   end
   local entries = {}
   for i = 1, #status_files do
-    local hunk_entries_err, hunk_entries = GitStatusFile
-      :new(status_files[i], self.layout_type)
-      :get_hunk_entries()
-    if hunk_entries_err then
-      return hunk_entries_err
+    local git_status_file = GitStatusFile:new(status_files[i], self.layout_type)
+    local hunks_err, hunks = git_status_file:get_hunks()
+    if hunks_err then
+      return hunks_err
+    end
+    local dto_err, dto = git_status_file:get_dto()
+    if dto_err then
+      return dto_err
+    end
+    local hunk_entries = {}
+    for j = 1, #hunks do
+      hunk_entries[#hunk_entries + 1] = {
+        dto = dto,
+        index = j,
+        hunks = hunks,
+        filename = git_status_file.file.filename,
+        filetype = git_status_file.file.filetype,
+      }
     end
     entries = utils.list.concat(entries, hunk_entries)
   end
   return nil, entries
+end
+
+function GitInterpreter:get_partitioned_files_as_entries()
+  local status_files_err, status_files = git:status()
+  if status_files_err then
+    return status_files_err
+  end
+  if #status_files == 0 then
+    return { 'No files found' }
+  end
+  return nil,
+    utils.list.reduce(status_files, {
+      changed_files = {},
+      staged_files = {},
+    }, function(acc, file)
+      local changed_files = acc.changed_files
+      local staged_files = acc.staged_files
+      if file:is_untracked() then
+        changed_files[#changed_files + 1] = file
+      else
+        if file:is_unstaged() then
+          changed_files[#changed_files + 1] = file
+        end
+        if file:is_staged() then
+          staged_files[#staged_files + 1] = file
+        end
+      end
+      return acc
+    end)
 end
 
 return GitInterpreter
