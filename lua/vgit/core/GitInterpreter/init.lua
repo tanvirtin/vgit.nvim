@@ -17,32 +17,9 @@ function GitInterpreter:new(layout_type)
 end
 
 -- Create GitStatusFile as an interpretor for git commands.
-function GitInterpreter:get_status_file_hunk_entries(status_file)
+function GitInterpreter:get_hunk_entries(status_file)
   local git_status_file = GitStatusFile:new(status_file, self.layout_type)
-  local lines_err, lines = git_status_file:lines()
-  if lines_err then
-    return lines_err
-  end
-  local hunks_err, hunks = git_status_file:hunks(lines)
-  if hunks_err then
-    return hunks_err
-  end
-  local dto_err, dto = git_status_file:dto(lines, hunks)
-  if dto_err then
-    return dto_err
-  end
-  local entries = {}
-  for j = 1, #hunks do
-    entries[#entries + 1] = {
-      -- data reveals it's own position in the array.
-      dto = dto,
-      index = j,
-      hunks = hunks,
-      filename = status_file.filename,
-      filetype = status_file.filetype,
-    }
-  end
-  return nil, entries
+  return git_status_file:hunk_entries()
 end
 
 function GitInterpreter:project_hunks_entries()
@@ -55,7 +32,7 @@ function GitInterpreter:project_hunks_entries()
   end
   local entries = {}
   for i = 1, #status_files do
-    local hunk_entries_err, hunk_entries = self:get_status_file_hunk_entries(
+    local hunk_entries_err, hunk_entries = self:get_hunk_entries(
       status_files[i]
     )
     if hunk_entries_err then
