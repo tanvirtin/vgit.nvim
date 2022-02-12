@@ -100,7 +100,7 @@ function GitStatusFile:get_dto()
   return nil, dto
 end
 
-function GitStatusFile:hunk_entries()
+function GitStatusFile:get_hunk_entries()
   if self._cache['entries'] then
     return nil, self._cache['entries']
   end

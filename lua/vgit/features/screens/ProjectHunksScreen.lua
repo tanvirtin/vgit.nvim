@@ -21,9 +21,7 @@ function ProjectHunksScreen:fetch(opts)
     state.data = self.state.entries[self.list_control:i()]
     return self
   end
-  local err, entries = GitInterpreter
-    :new(self.layout_type)
-    :project_hunks_entries()
+  local err, entries = GitInterpreter:new(self.layout_type):get_hunks_entries()
   if err then
     state.err = err
     return self
