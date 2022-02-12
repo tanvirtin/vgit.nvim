@@ -15,6 +15,10 @@ function GutterBlameScreen:new(...)
   return setmetatable(CodeScreen:new(...), GutterBlameScreen)
 end
 
+function GutterBlameScreen:generate_dto(lines)
+  return CodeDTO:new({ lines = lines })
+end
+
 function GutterBlameScreen:fetch()
   local state = self.state
   local buffer = state.buffer
@@ -28,7 +32,7 @@ function GutterBlameScreen:fetch()
   state.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
-    dto = CodeDTO:new({ lines = buffer:get_lines() }),
+    dto = self:generate_dto(buffer:get_lines()),
     blames = blames,
   }
   return self

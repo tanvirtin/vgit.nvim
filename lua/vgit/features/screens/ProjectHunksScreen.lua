@@ -6,8 +6,7 @@ local TableComponent = require('vgit.ui.components.TableComponent')
 local CodeListScreen = require('vgit.ui.screens.CodeListScreen')
 local Scene = require('vgit.ui.Scene')
 local console = require('vgit.core.console')
-local fs = require('vgit.core.fs')
-local Diff = require('vgit.Diff')
+local GitInterpreter = require('vgit.core.GitInterpreter')
 
 local ProjectHunksScreen = CodeListScreen:extend()
 
@@ -22,79 +21,14 @@ function ProjectHunksScreen:fetch(opts)
     state.data = self.state.entries[self.list_control:i()]
     return self
   end
-  local git = self.git
-  state.entries = {}
-  local entries = state.entries
-  local status_files_err, status_files = git:status()
-  if status_files_err then
-    console.debug(status_files_err, debug.traceback())
-    state.err = status_files_err
+  local err, entries = GitInterpreter
+    :new(self.layout_type)
+    :project_hunks_entries()
+  if err then
+    state.err = err
     return self
   end
-  if #status_files == 0 then
-    console.debug({ 'No changes found' }, debug.traceback())
-    return self
-  end
-  for i = 1, #status_files do
-    local file = status_files[i]
-    local filename = file.filename
-    local status = file.status
-    local lines_err, lines
-    if status:has('D ') then
-      lines_err, lines = git:show(filename, 'HEAD')
-    elseif status:has(' D') then
-      lines_err, lines = git:show(git:tracked_filename(filename))
-    else
-      lines_err, lines = fs.read_file(filename)
-    end
-    if lines_err then
-      console.debug(lines_err, debug.traceback())
-      state.err = lines_err
-      return self
-    end
-    local hunks_err, hunks
-    if status:has_both('??') then
-      hunks = git:untracked_hunks(lines)
-    elseif status:has_either('DD') then
-      hunks = git:deleted_hunks(lines)
-    else
-      hunks_err, hunks = git:index_hunks(filename)
-    end
-    if hunks_err then
-      console.debug(hunks_err, debug.traceback())
-      state.err = hunks_err
-      return self
-    end
-    local dto
-    if self.layout_type == 'unified' then
-      if status:has_either('DD') then
-        dto = Diff:new(hunks):deleted_unified(lines)
-      else
-        dto = Diff:new(hunks):unified(lines)
-      end
-    else
-      if status:has_either('DD') then
-        dto = Diff:new(hunks):deleted_split(lines)
-      else
-        dto = Diff:new(hunks):split(lines)
-      end
-    end
-    if not hunks_err then
-      for j = 1, #hunks do
-        local hunk = hunks[j]
-        entries[#entries + 1] = {
-          hunk = hunk,
-          hunks = hunks,
-          filename = filename,
-          filetype = fs.detect_filetype(filename),
-          dto = dto,
-          index = j,
-        }
-      end
-    else
-      console.debug(hunks_err, debug.traceback())
-    end
-  end
+  -- Storing the entries, any given entry in the list of entries will get shown on the screen with diff.
   state.entries = entries
   return self
 end
@@ -270,12 +204,14 @@ function ProjectHunksScreen:show(title, props)
   console.log('Processing project hunks')
   self:fetch()
   loop.await_fast_event()
-  if not state.err and state.entries and #state.entries == 0 then
-    console.log('No hunks found')
+  local err = state.err
+  local entries = state.entries
+  if err then
+    console.error(state.err)
     return false
   end
-  if state.err then
-    console.error(state.err)
+  if entries and #entries == 0 then
+    console.log('No hunks found')
     return false
   end
   self.scene = Scene:new(self:get_scene_definition(props)):mount()

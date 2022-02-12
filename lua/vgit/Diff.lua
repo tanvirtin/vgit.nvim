@@ -11,6 +11,30 @@ function Diff:new(hunks)
   }, Diff)
 end
 
+function Diff:call(lines, type)
+  local choices = {
+    unified = function()
+      return self:unified(lines)
+    end,
+    split = function()
+      return self:split(lines)
+    end,
+  }
+  return choices[type]()
+end
+
+function Diff:call_deleted(lines, type)
+  local choices = {
+    unified = function()
+      return self:deleted_unified(lines)
+    end,
+    split = function()
+      return self:deleted_split(lines)
+    end,
+  }
+  return choices[type]()
+end
+
 function Diff:deleted_unified(lines)
   local hunks = self.hunks
   local hunk = hunks[1]

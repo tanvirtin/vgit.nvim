@@ -47,13 +47,7 @@ function ProjectCommitsScreen:generate_dto(file)
     state.err = hunks_err
     return self
   end
-  local dto
-  if self.layout_type == 'unified' then
-    dto = Diff:new(hunks):unified(lines)
-  else
-    dto = Diff:new(hunks):split(lines)
-  end
-  return dto
+  return Diff:new(hunks):call(lines)
 end
 
 function ProjectCommitsScreen:get_entry_from_list()

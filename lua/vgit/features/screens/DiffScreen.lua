@@ -36,7 +36,7 @@ function DiffScreen:fetch()
   state.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
-    dto = self:generate_diff(hunks, lines),
+    dto = self:generate_dto(hunks, lines),
   }
   return self
 end

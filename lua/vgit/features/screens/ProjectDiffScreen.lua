@@ -55,18 +55,10 @@ function ProjectDiffScreen:generate_dto(file_entry)
     return self
   end
   local dto
-  if self.layout_type == 'unified' then
-    if status:has_either('DD') then
-      dto = Diff:new(hunks):deleted_unified(lines)
-    else
-      dto = Diff:new(hunks):unified(lines)
-    end
+  if status:has_either('DD') then
+    dto = Diff:new(hunks):call_deleted(lines, self.layout_type)
   else
-    if status:has_either('DD') then
-      dto = Diff:new(hunks):deleted_split(lines)
-    else
-      dto = Diff:new(hunks):split(lines)
-    end
+    dto = Diff:new(hunks):call(lines, self.layout_type)
   end
   return dto
 end
@@ -134,13 +126,13 @@ function ProjectDiffScreen:fetch(opts)
     }
     local first_changed_file, first_staged_file =
       changed_files[1], staged_files[1]
-    if first_changed_file or first_staged_file then
-      local file_entry
-      if first_changed_file then
-        file_entry = FileEntry:new(first_changed_file, 'changed')
-      elseif first_staged_file then
-        file_entry = FileEntry:new(first_staged_file, 'staged')
-      end
+    local file_entry
+    if first_changed_file then
+      file_entry = FileEntry:new(first_changed_file, 'changed')
+    elseif first_staged_file then
+      file_entry = FileEntry:new(first_staged_file, 'staged')
+    end
+    if file_entry then
       state.data = utils.object.assign(state.data, {
         file_entry = file_entry,
         filename = file_entry.file.filename,

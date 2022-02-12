@@ -41,7 +41,7 @@ function CodeScreen:trigger_keypress(key, ...)
   return self
 end
 
-function CodeScreen:generate_diff(hunks, lines)
+function CodeScreen:generate_dto(hunks, lines)
   local diff
   if self.layout_type == 'unified' then
     diff = Diff:new(hunks):unified(lines)

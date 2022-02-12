@@ -17,22 +17,16 @@ function StagedDiffScreen:fetch()
     state.err = show_err
     return self
   end
-  local dto
   local hunks_err, hunks = buffer.git_object:staged_hunks()
   if hunks_err then
     console.debug(hunks_err, debug.traceback())
     state.err = hunks_err
     return self
   end
-  if self.layout_type == 'unified' then
-    dto = Diff:new(hunks):unified(lines)
-  else
-    dto = Diff:new(hunks):split(lines)
-  end
   state.data = {
     filename = buffer.filename,
     filetype = buffer:filetype(),
-    dto = dto,
+    dto = self:generate_dto(hunks, lines),
   }
   return self
 end

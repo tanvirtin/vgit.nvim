@@ -209,4 +209,6 @@ end
 
 utils.list.is_list = vim.tbl_islist
 
+utils.list.is_empty = vim.tbl_isempty
+
 return utils
