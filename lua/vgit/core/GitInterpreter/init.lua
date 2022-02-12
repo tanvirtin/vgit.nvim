@@ -1,8 +1,7 @@
 local Object = require('vgit.core.Object')
+local GitStatusFile = require('vgit.core.GitInterpreter.GitStatusFile')
 local utils = require('vgit.core.utils')
 local Git = require('vgit.cli.Git')
-local Diff = require('vgit.Diff')
-local fs = require('vgit.core.fs')
 
 -- VGit git interpreter.
 local git = Git:new()
@@ -17,55 +16,18 @@ function GitInterpreter:new(layout_type)
   }, GitInterpreter)
 end
 
-function GitInterpreter:get_status_file_lines(status_file)
-  local filename = status_file.filename
-  local status = status_file.status
-  local lines_err, lines
-  if status:has('D ') then
-    lines_err, lines = git:show(filename, 'HEAD')
-  elseif status:has(' D') then
-    lines_err, lines = git:show(git:tracked_filename(filename))
-  else
-    lines_err, lines = fs.read_file(filename)
-  end
-  return lines_err, lines
-end
-
-function GitInterpreter:get_status_file_hunks(status_file, lines)
-  local filename = status_file.filename
-  local status = status_file.status
-  local hunks_err, hunks
-  if status:has_both('??') then
-    hunks = git:untracked_hunks(lines)
-  elseif status:has_either('DD') then
-    hunks = git:deleted_hunks(lines)
-  else
-    hunks_err, hunks = git:index_hunks(filename)
-  end
-  return hunks_err, hunks
-end
-
-function GitInterpreter:get_status_file_dto(status_file, lines, hunks)
-  local status = status_file.status
-  local dto
-  if status:has_either('DD') then
-    dto = Diff:new(hunks):call_deleted(lines, self.layout_type)
-  else
-    dto = Diff:new(hunks):call(lines, self.layout_type)
-  end
-  return nil, dto
-end
-
+-- Create GitStatusFile as an interpretor for git commands.
 function GitInterpreter:get_status_file_hunk_entries(status_file)
-  local lines_err, lines = self:get_status_file_lines(status_file)
+  local git_status_file = GitStatusFile:new(status_file, self.layout_type)
+  local lines_err, lines = git_status_file:lines()
   if lines_err then
     return lines_err
   end
-  local hunks_err, hunks = self:get_status_file_hunks(status_file, lines)
+  local hunks_err, hunks = git_status_file:hunks(lines)
   if hunks_err then
     return hunks_err
   end
-  local dto_err, dto = self:get_status_file_dto(status_file, lines, hunks)
+  local dto_err, dto = git_status_file:dto(lines, hunks)
   if dto_err then
     return dto_err
   end

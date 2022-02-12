@@ -11,7 +11,7 @@ function Diff:new(hunks)
   }, Diff)
 end
 
-function Diff:call(lines, type)
+function Diff:call(lines, layout_type)
   local choices = {
     unified = function()
       return self:unified(lines)
@@ -20,10 +20,10 @@ function Diff:call(lines, type)
       return self:split(lines)
     end,
   }
-  return choices[type]()
+  return choices[layout_type]()
 end
 
-function Diff:call_deleted(lines, type)
+function Diff:call_deleted(lines, layout_type)
   local choices = {
     unified = function()
       return self:deleted_unified(lines)
@@ -32,7 +32,7 @@ function Diff:call_deleted(lines, type)
       return self:deleted_split(lines)
     end,
   }
-  return choices[type]()
+  return choices[layout_type]()
 end
 
 function Diff:deleted_unified(lines)
