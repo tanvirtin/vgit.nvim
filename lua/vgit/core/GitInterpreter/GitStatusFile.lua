@@ -19,20 +19,6 @@ function GitStatusFile:new(file, layout_type)
   }, GitStatusFile)
 end
 
--- This is where we start doing caching magic
-
-function GitStatusFile:is_untracked()
-  return self.file:is_untracked()
-end
-
-function GitStatusFile:is_staged()
-  return self.file:is_staged()
-end
-
-function GitStatusFile:is_unstaged()
-  return self.file:is_unstaged()
-end
-
 function GitStatusFile:get_lines()
   if self._cache['lines'] then
     return nil, self._cache['lines']
