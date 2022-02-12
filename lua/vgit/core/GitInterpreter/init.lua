@@ -41,7 +41,6 @@ function GitInterpreter:get_hunks_as_entries()
       hunk_entries[#hunk_entries + 1] = {
         dto = dto,
         index = j,
-        hunks = hunks,
         filename = status_file.filename,
         filetype = status_file.filetype,
       }
@@ -51,7 +50,7 @@ function GitInterpreter:get_hunks_as_entries()
   return nil, entries
 end
 
-function GitInterpreter:get_partitioned_files_as_entries()
+function GitInterpreter:get_file_changes_as_entries()
   local status_files_err, status_files = git:status()
   if status_files_err then
     return status_files_err
@@ -59,25 +58,44 @@ function GitInterpreter:get_partitioned_files_as_entries()
   if #status_files == 0 then
     return { 'No files found' }
   end
-  local entries = utils.list.reduce(status_files, {
-    changed_files = {},
-    staged_files = {},
-  }, function(acc, file)
-    local changed_files = acc.changed_files
-    local staged_files = acc.staged_files
-    if file:is_untracked() then
-      changed_files[#changed_files + 1] = file
+  local changed_files = {}
+  local staged_files = {}
+  for i = 1, #staged_files do
+    local status_file = status_files[i]
+    local git_status_file = GitStatusFile:new(status_file, self.layout_type)
+    if status_file:is_untracked() then
+      changed_files[#changed_files + 1] = {
+        dto = function()
+          return git_status_file:get_dto()
+        end,
+        index = i,
+        filename = status_file.filename,
+        filetype = status_file.filetype,
+      }
     else
-      if file:is_unstaged() then
-        changed_files[#changed_files + 1] = file
+      if status_file:is_unstaged() then
+        changed_files[#changed_files + 1] = {
+          dto = function()
+            return git_status_file:get_dto()
+          end,
+          index = i,
+          filename = status_file.filename,
+          filetype = status_file.filetype,
+        }
       end
-      if file:is_staged() then
-        staged_files[#staged_files + 1] = file
+      if status_file:is_staged() then
+        staged_files[#staged_files + 1] = {
+          dto = function()
+            return git_status_file:get_dto()
+          end,
+          index = i,
+          filename = status_file.filename,
+          filetype = status_file.filetype,
+        }
       end
     end
-    return acc
-  end)
-  return nil, entries.changed_files, entries.staged_files
+  end
+  return nil, changed_files, staged_files
 end
 
 return GitInterpreter
