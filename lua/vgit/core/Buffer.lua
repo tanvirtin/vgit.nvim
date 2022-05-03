@@ -326,4 +326,10 @@ function Buffer:set_keymap(mode, key, action)
   return self
 end
 
+function Buffer:set_var(name, value)
+  vim.api.nvim_buf_set_var(self.bufnr, name, value)
+
+  return self
+end
+
 return Buffer
