@@ -218,7 +218,7 @@ require('vgit').setup({
     authorship_code_lens = {
       enabled = true,
     },
-    screen = {
+    scene = {
       diff_preference = 'unified',
     },
     project_diff_preview = {
