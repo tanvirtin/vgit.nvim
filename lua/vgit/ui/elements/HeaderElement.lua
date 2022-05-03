@@ -5,8 +5,8 @@ local Window = require('vgit.core.Window')
 
 local HeaderElement = Component:extend()
 
-function HeaderElement:new(...)
-  return setmetatable(Component:new(...), HeaderElement)
+function HeaderElement:constructor(...)
+  return Component.constructor(self, ...)
 end
 
 function HeaderElement:get_height()
@@ -22,6 +22,7 @@ function HeaderElement:trigger_notification(text)
     0,
     'eol'
   )
+
   return self
 end
 
@@ -29,39 +30,44 @@ function HeaderElement:clear_notification()
   if self.buffer:is_valid() then
     self.namespace:clear(self.buffer)
   end
+
   return self
 end
 
-function HeaderElement:mount(options)
-  self.buffer = Buffer:new():create()
-  local buffer = self.buffer
+function HeaderElement:mount(opts)
+  local buffer = Buffer():create()
+  self.buffer = buffer
+
   buffer:assign_options({
     modifiable = false,
     buflisted = false,
     bufhidden = 'wipe',
   })
+
   self.window = Window
     :open(buffer, {
       style = 'minimal',
       focusable = false,
       relative = 'editor',
-      row = options.row - HeaderElement:get_height(),
-      col = options.col,
-      width = options.width,
+      row = opts.row - HeaderElement:get_height(),
+      col = opts.col,
+      width = opts.width,
       height = 1,
       zindex = 100,
     })
     :assign_options({
       cursorbind = false,
       scrollbind = false,
-      winhl = 'Normal:GitBackgroundSecondary',
+      winhl = 'Normal:GitHeader',
     })
-  self.namespace = Namespace:new()
+  self.namespace = Namespace()
+
   return self
 end
 
 function HeaderElement:unmount()
   self.window:close()
+
   return self
 end
 

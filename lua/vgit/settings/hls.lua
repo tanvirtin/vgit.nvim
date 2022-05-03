@@ -1,46 +1,80 @@
+local Color = require('vgit.core.Color')
 local Config = require('vgit.core.Config')
 
-return Config:new({
-  GitBackgroundPrimary = 'Normal',
-  GitBackgroundSecondary = 'StatusLine',
-  GitBorder = 'LineNr',
-  GitLineNr = 'LineNr',
-  GitComment = 'Comment',
-  GitSignsAdd = {
-    gui = nil,
-    fg = '#d7ffaf',
-    bg = nil,
-    sp = nil,
-    override = false,
-  },
+return Config({
+  GitCount = 'Keyword',
+  GitSymbol = 'CursorLineNr',
+  GitTitle = 'Directory',
+  GitBackground = function()
+    return {
+      bg = Color({ name = 'Normal', attribute = 'bg' }):darken(8):get(),
+      fg = Color({ name = 'Normal', attribute = 'fg' }):get(),
+      override = false,
+    }
+  end,
+  GitHeader = function()
+    return {
+      bg = Color({ name = 'StatusLine', attribute = 'bg' }):darken(35):get(),
+      fg = Color({ name = 'StatusLine', attribute = 'fg' }):get(),
+      override = false,
+    }
+  end,
+  GitFooter = function()
+    return {
+      bg = Color({ name = 'StatusLine', attribute = 'bg' }):darken(35):get(),
+      fg = Color({ name = 'StatusLine', attribute = 'fg' }):get(),
+      override = false,
+    }
+  end,
+  GitBorder = function()
+    return {
+      bg = Color({ name = 'LineNr', attribute = 'bg' }):darken(5):get(),
+      fg = Color({ name = 'LineNr', attribute = 'fg' }):darken(5):get(),
+      override = false,
+    }
+  end,
+  GitLineNr = function()
+    return {
+      bg = Color({ name = 'LineNr', attribute = 'bg' }):darken(8):get(),
+      fg = Color({ name = 'LineNr', attribute = 'fg' }):darken(8):get(),
+      override = false,
+    }
+  end,
+  GitComment = function()
+    return {
+      bg = Color({ name = 'Comment', attribute = 'bg' }):get(),
+      fg = Color({ name = 'Comment', attribute = 'fg' }):get(),
+      override = false,
+    }
+  end,
+  GitSignsAdd = function()
+    return {
+      fg = Color({ name = 'DiffAdd', attribute = 'bg' }):lighten(200):get(),
+      override = false,
+    }
+  end,
   GitSignsChange = {
-    gui = nil,
     fg = '#7AA6DA',
-    bg = nil,
-    sp = nil,
     override = false,
   },
-  GitSignsDelete = {
-    gui = nil,
-    fg = '#e95678',
-    bg = nil,
-    sp = nil,
-    override = false,
-  },
+  GitSignsDelete = function()
+    return {
+      fg = Color({ name = 'DiffDelete', attribute = 'bg' }):lighten(200):get(),
+      override = false,
+    }
+  end,
   GitSignsAddLn = 'DiffAdd',
   GitSignsDeleteLn = 'DiffDelete',
-  GitWordAdd = {
-    gui = nil,
-    fg = nil,
-    bg = '#5d7a22',
-    sp = nil,
-    override = false,
-  },
-  GitWordDelete = {
-    gui = nil,
-    fg = nil,
-    bg = '#960f3d',
-    sp = nil,
-    override = false,
-  },
+  GitWordAdd = function()
+    return {
+      bg = Color({ name = 'DiffAdd', attribute = 'bg' }):lighten(50):get(),
+      override = false,
+    }
+  end,
+  GitWordDelete = function()
+    return {
+      bg = Color({ name = 'DiffDelete', attribute = 'bg' }):lighten(50):get(),
+      override = false,
+    }
+  end,
 })

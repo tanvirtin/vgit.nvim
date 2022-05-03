@@ -4,17 +4,18 @@ local Window = require('vgit.core.Window')
 
 local FooterElement = Component:extend()
 
-function FooterElement:new(...)
-  return setmetatable(Component:new(...), FooterElement)
+function FooterElement:constructor(...)
+  return Component.constructor(self, ...)
 end
 
 function FooterElement:get_height()
   return 1
 end
 
-function FooterElement:mount(options)
-  self.buffer = Buffer:new():create()
-  local buffer = self.buffer
+function FooterElement:mount(opts)
+  local buffer = Buffer():create()
+  self.buffer = buffer
+
   buffer:assign_options({
     modifiable = false,
     bufhidden = 'wipe',
@@ -25,24 +26,27 @@ function FooterElement:mount(options)
       style = 'minimal',
       focusable = false,
       relative = 'editor',
-      row = options.row,
-      col = options.col,
-      width = options.width,
+      row = opts.row,
+      col = opts.col,
+      width = opts.width,
       height = 1,
       zindex = 100,
     })
     :assign_options({
       cursorbind = false,
       scrollbind = false,
-      winhl = 'Normal:GitBackgroundSecondary',
+      winhl = 'Normal:GitFooter',
     })
   local border_char = ' '
-  self:set_lines({ string.rep(border_char, options.width) })
+
+  self:set_lines({ string.rep(border_char, opts.width) })
+
   return self
 end
 
 function FooterElement:unmount()
   self.window:close()
+
   return self
 end
 

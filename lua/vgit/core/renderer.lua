@@ -1,15 +1,18 @@
+local Namespace = require('vgit.core.Namespace')
+
 local renderer = {
   registered = false,
   buffers = {},
 }
 
-local namespace = vim.api.nvim_create_namespace('vgit')
+local namespace = Namespace('vgit')
 
-renderer.register_module = function()
+function renderer.register_module()
   if renderer.registered then
-    return
+    return renderer
   end
-  vim.api.nvim_set_decoration_provider(namespace, {
+
+  vim.api.nvim_set_decoration_provider(namespace.ns_id, {
     on_win = function(_, _, bufnr, top, bot)
       local buffer = renderer.buffers[bufnr]
       if buffer and bufnr == buffer.bufnr then
@@ -18,15 +21,22 @@ renderer.register_module = function()
       return false
     end,
   })
+
   renderer.registered = true
+
+  return renderer
 end
 
-renderer.attach = function(buffer)
+function renderer.attach(buffer)
   renderer.buffers[buffer.bufnr] = buffer
+
+  return renderer
 end
 
-renderer.detach = function(buffer)
+function renderer.detach(buffer)
   renderer.buffers[buffer.bufnr] = nil
+
+  return renderer
 end
 
 return renderer

@@ -1,0 +1,168 @@
+local live_gutter_setting = require('vgit.settings.live_gutter')
+local loop = require('vgit.core.loop')
+local Buffer = require('vgit.core.Buffer')
+local GitBuffer = require('vgit.git.GitBuffer')
+local console = require('vgit.core.console')
+local git_buffer_store = require('vgit.git.git_buffer_store')
+local Feature = require('vgit.Feature')
+
+local LiveGutter = Feature:extend()
+
+function LiveGutter:constructor()
+  return {
+    name = 'Live Gutter',
+  }
+end
+
+LiveGutter.clear = loop.async(function(_, buffer)
+  loop.await_fast_event()
+  if buffer:is_rendering() then
+    return
+  end
+
+  buffer:sign_unplace()
+end)
+
+LiveGutter.sync = loop.debounce(
+  loop.async(function(self, buffer)
+    local live_signs = buffer:clear_cached_live_signs()
+
+    loop.await_fast_event()
+    buffer:clear_cached_live_signs()
+    loop.await_fast_event()
+
+    local err = buffer.git_object:live_hunks(buffer:get_lines())
+
+    if err then
+      buffer:set_cached_live_signs(live_signs)
+      console.debug.error(err)
+      return
+    end
+
+    local hunks = buffer.git_object.hunks
+
+    if not hunks then
+      buffer:set_cached_live_signs(live_signs)
+      return
+    end
+
+    self:clear(buffer)
+
+    for i = 1, #hunks do
+      loop.await_fast_event()
+      buffer:cache_live_sign(hunks[i])
+    end
+  end),
+  20
+)
+
+LiveGutter.resync = loop.async(function(self, buffer)
+  loop.await_fast_event()
+  buffer = buffer or git_buffer_store.current()
+
+  if buffer then
+    self:sync(buffer)
+  end
+end)
+
+function LiveGutter:watch(buffer)
+  buffer:watch_file(function()
+    buffer:sync()
+    self:sync(buffer)
+  end)
+end
+
+function LiveGutter:render(buffer, top, bot)
+  if not live_gutter_setting:get('enabled') then
+    return
+  end
+
+  local hunks = buffer.git_object.hunks
+
+  if not hunks then
+    return
+  end
+
+  local cached_live_signs = buffer:get_cached_live_signs()
+  local gutter_signs = {}
+
+  for i = top, bot do
+    gutter_signs[#gutter_signs + 1] = cached_live_signs[i]
+  end
+
+  buffer:sign_placelist(gutter_signs)
+end
+
+function LiveGutter:attach()
+  loop.await_fast_event()
+  local buffer = Buffer(0)
+  local git_buffer = GitBuffer(buffer)
+
+  if git_buffer:is_in_store() then
+    return
+  end
+
+  loop.await_fast_event()
+  buffer:sync_git()
+
+  if not git_buffer:is_inside_git_dir() then
+    self:resync(buffer)
+    return
+  end
+
+  loop.await_fast_event()
+  if not buffer:is_valid() then
+    return
+  end
+
+  loop.await_fast_event()
+  if not buffer:is_in_disk() then
+    return
+  end
+
+  loop.await_fast_event()
+  if git_buffer:is_ignored() then
+    return
+  end
+
+  loop.await_fast_event()
+  git_buffer_store.add(buffer)
+  loop.await_fast_event()
+
+  buffer
+    :attach_to_changes({
+      on_lines = loop.async(function(_, _, _, _, p_lnum, n_lnum, byte_count)
+        if p_lnum == n_lnum and byte_count == 0 then
+          return
+        end
+
+        loop.await_fast_event()
+        self:sync(buffer)
+      end),
+
+      on_reload = loop.async(function()
+        loop.await_fast_event()
+        self:sync(buffer)
+      end),
+
+      on_detach = loop.async(function()
+        self:detach(buffer)
+      end),
+    })
+    :attach_to_renderer(function(top, bot)
+      self:render(buffer, top, bot)
+    end)
+
+  self:sync(buffer)
+  self:watch(buffer)
+end
+
+function LiveGutter:detach(buffer)
+  git_buffer_store.remove(buffer, function()
+    buffer:unwatch_file():detach_from_renderer()
+  end)
+
+  return self
+end
+
+return LiveGutter

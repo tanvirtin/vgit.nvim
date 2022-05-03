@@ -1,8 +1,5 @@
 local Config = require('vgit.core.Config')
 
-local it = it
-local describe = describe
-local before_each = before_each
 local eq = assert.are.same
 
 describe('Config:', function()
@@ -21,7 +18,8 @@ describe('Config:', function()
 
   describe('new', function()
     it('should bind the object provided into into the state object', function()
-      local state = Config:new(initial_state)
+      local state = Config(initial_state)
+
       eq(state, {
         data = initial_state,
       })
@@ -29,24 +27,26 @@ describe('Config:', function()
 
     it('should throw error if invalid data type is provided', function()
       assert.has_error(function()
-        Config:new(42)
+        Config(42)
       end)
     end)
   end)
 
   describe('size', function()
     it('should return the size of the current config', function()
-      local state = Config:new(initial_state)
+      local state = Config(initial_state)
+
       eq(state:size(), 3)
-      state = Config:new({})
+      state = Config({})
       eq(state:size(), 0)
     end)
   end)
 
   describe('for_each', function()
     it('should loop over all the key value pairs', function()
-      local state = Config:new(initial_state)
+      local state = Config(initial_state)
       local copy_state = {}
+
       state:for_each(function(key, value)
         copy_state[key] = value
       end)
@@ -56,9 +56,10 @@ describe('Config:', function()
 
   describe('get', function()
     it('should throw error on invalid argument types', function()
-      local state = Config:new({
+      local state = Config({
         foo = 'bar',
       })
+
       assert.has_error(function()
         state:get(true)
       end)
@@ -79,7 +80,8 @@ describe('Config:', function()
     it(
       'should succesfully retrieve a value given a key from the state object',
       function()
-        local state = Config:new(initial_state)
+        local state = Config(initial_state)
+
         eq(state:get('foo'), 'bar')
         eq(state:get('bar'), 'foo')
         eq(state:get('baz'), {
@@ -92,7 +94,8 @@ describe('Config:', function()
     it(
       'should throw an error if a state object does not have the given key',
       function()
-        local state = Config:new(initial_state)
+        local state = Config(initial_state)
+
         assert.has_error(function()
           eq(state:get('test'), nil)
         end)
@@ -102,9 +105,10 @@ describe('Config:', function()
 
   describe('set', function()
     it('should throw error on invalid argument types', function()
-      local state = Config:new({
+      local state = Config({
         foo = 'bar',
       })
+
       assert.has_error(function()
         state:set('foo', true)
       end)
@@ -123,13 +127,15 @@ describe('Config:', function()
     end)
 
     it('should alter an existing state attribute', function()
-      local state = Config:new(initial_state)
+      local state = Config(initial_state)
+
       state:set('foo', 'a')
       state:set('bar', 'b')
       state:set('baz', {
         test1 = 1,
         test2 = 2,
       })
+
       eq(state:get('foo'), 'a')
       eq(state:get('bar'), 'b')
       eq(state:get('baz'), {
@@ -141,12 +147,14 @@ describe('Config:', function()
     it(
       'should not change the state attribute if no values are present',
       function()
-        local state = Config:new(initial_state)
+        local state = Config(initial_state)
+
         for i = 10, 1, -1 do
           assert.has_error(function()
             state:set(i, i)
           end)
         end
+
         eq(state, {
           data = initial_state,
         })
@@ -157,8 +165,10 @@ describe('Config:', function()
   describe('assign', function()
     it('should return unmodified state when nil value is passed', function()
       local initial = { foo = true }
-      local state = Config:new(initial)
+      local state = Config(initial)
+
       state:assign(nil)
+
       eq(state, {
         data = initial,
       })
@@ -169,11 +179,13 @@ describe('Config:', function()
         is_list = { 1, 2, 3, 4, 5 },
         isnt_list = { a = 1, b = 2 },
       }
-      local state = Config:new(initial)
+      local state = Config(initial)
+
       state:assign({
         is_list = { 'a', 'b' },
         isnt_list = { a = 1, b = 2 },
       })
+
       eq(state, {
         data = {
           is_list = { 'a', 'b' },
@@ -201,7 +213,8 @@ describe('Config:', function()
           },
         },
       }
-      local state = Config:new(initial)
+      local state = Config(initial)
+
       state:assign({
         foo = false,
         bar = {
@@ -214,6 +227,7 @@ describe('Config:', function()
           },
         },
       })
+
       local data = {
         foo = false,
         bar = {
@@ -232,6 +246,7 @@ describe('Config:', function()
           },
         },
       }
+
       eq(state, {
         data = data,
       })

@@ -1,6 +1,5 @@
 <div align="center">
-    
-  # VGit
+  <h1>VGit</h1>
   
   <table>
       <tr>
@@ -19,12 +18,6 @@
   <a href="https://opensource.org/licenses/MIT">
       <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
   </a>
-
-  <br />
-  <br />
-
-  <p>🚧 This is a work-in-progress project and can be unstable at times. 🚧</p>
-
 </div>
 
 <br />
@@ -33,11 +26,11 @@
   <img width="1512" alt="Hunk Preview" src="https://user-images.githubusercontent.com/25164326/149684229-6fc1422a-3db2-4e17-88f9-eb5897ca5ddc.png">
 </div>
 
-**Features**
+**Highlighted features**
 ---
 - Gutter changes
 - Current line blame
-- Authorship code lens (Scroll up on top of the file or press CTRL-B to see)
+- Authorship code lens 
 - Current line blame preview
 - Gutter blame preview
 - File history preview
@@ -46,18 +39,9 @@
 - File hunk preview
 - Project diff preview
 - Project hunks preview
+- Project commits preview
 - Send all project hunks to quickfix list
-- Smooth hunk navigations in all buffers with a diff
-- Actions on a current git file:
-  - Stage file
-  - Unstage file
-  - Reset file
-  - Stage a hunk
-  - Reset a hunk
-- Actions on project:
-  - Stage all changes in a project
-  - Unstage all changes in a project
-  - Reset all changes in a project
+- Hunk navigations in all buffers with a diff
 
 **Requirements**
 ---
@@ -71,9 +55,9 @@
 ---
 - [Git](https://git-scm.com/)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
-- [nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons) (optional dependency used to show icons)
+- [nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons) (optional)
 
-**Recommended Settings**
+**Recommended settings**
 ---
 ```lua
 vim.o.updatetime = 300
@@ -133,14 +117,9 @@ require('vgit').setup({
   },
   settings = {
     hls = {
-      GitBackgroundPrimary = 'NormalFloat',
-      GitBackgroundSecondary = {
-        gui = nil,
-        fg = nil,
-        bg = nil,
-        sp = nil,
-        override = false,
-      },
+      GitBackground = 'Normal',
+      GitHeader = 'NormalFloat',
+      GitFooter = 'NormalFloat',
       GitBorder = 'LineNr',
       GitLineNr = 'LineNr',
       GitComment = 'Comment',
@@ -246,9 +225,10 @@ require('vgit').setup({
       keymaps = {
         buffer_stage = 's',
         buffer_unstage = 'u',
-        stage_all = 'a',
-        unstage_all = 'd',
-        reset_all = 'r',
+        stage_all = 'S',
+        unstage_all = 'U',
+        reset_all = 'R',
+        clean_all = 'C',
       },
     },
     signs = {
@@ -320,6 +300,8 @@ require('vgit').setup({
 | Function Name | Description |
 |---------------|-------------|
 | setup | Sets VGit up for you. This plugin cannot be used before this function has been called. |
+| hunk_up | Moves the cursor to the hunk above the current cursor position. |
+| hunk_down | Moves the cursor to the hunk below the current cursor position. |
 | buffer_hunk_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. This preview will open up in a smaller window relative to where your cursor is. |
 | buffer_diff_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. If the command is called while being on a hunk, the window will open focused on the diff of that hunk. |
 | buffer_history_preview | Opens a diff preview along with a table of logs, enabling users to see different iterations of the file through it's lifecycle in git. |
@@ -327,22 +309,33 @@ require('vgit').setup({
 | buffer_gutter_blame_preview | Opens a preview which shows all the blames related to the lines of the buffer. |
 | buffer_diff_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. |
 | buffer_hunk_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. This preview will open up in a smaller window relative to where your cursor is. |
-| project_diff_preview | Opens a diff preview along with a table of all the files that have been changed, enabling users to see all the files that were changed in the current project. This preview supports the following commands, "buffer_stage", "buffer_unstage", "buffer_reset", "stage_all" and "unstage_all". |
-| project_hunks_preview | Opens a diff preview along with a table of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
-| project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
 | buffer_hunk_stage | Stages a hunk, if a cursor is on the hunk. |
 | buffer_hunk_reset | Removes all changes made in the buffer on the hunk the cursor is currently on to what exists in HEAD. |
 | buffer_stage | Stages all changes in the current buffer. |
 | buffer_unstage | Unstages all changes in the current buffer. |
 | buffer_reset | Removes all current changes in the buffer and resets it to the version in HEAD. |
-| stage_all | Stages all file changes in your project. |
-| unstage_all | Unstages all file changes in your project. |
-| reset_all | Discards all file changes that are not staged. |
-| hunk_up | Moves the cursor to the hunk above the current cursor position. |
-| hunk_down | Moves the cursor to the hunk below the current cursor position. |
+| project_diff_preview | Opens a diff preview along with a list of all the files that have been changed, enabling users to see all the files that were changed in the current project. This preview supports the following commands, "buffer_stage", "buffer_unstage", "buffer_reset", "stage_all" and "unstage_all". |
+| project_commits_preview | Opens a diff preview along with a list of all your commits |
+| project_hunks_preview | Opens a diff preview along with a table of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
+| project_debug_preview | Opens a VGit view showing logs of a pariticular kind traced within the application. |
+| project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
+| project_stage_all | Stages all file changes in your project. |
+| project_unstage_all | Unstages all file changes in your project. |
+| project_reset_all | Discards all file changes that are not staged. |
 | toggle_diff_preference | Used to switch between "split" and "unified" diff. |
 | toggle_live_gutter | Enables/disables git gutter signs. |
 | toggle_live_blame | Used to switch between "split" and "unified" diff. |
 | toggle_authorship_code_lens | Enables/disables authorship code lens that can be found on top of the file |
-| enable_tracing | Enables debug logs that are used internally by VGit to make suppressed logs visible. |
-| disable_tracing | Disables debug logs that are used internally by VGit to make suppressed logs visible. |
+| toggle_tracing | Enables/disables debug logs that are used internally by VGit to make suppressed logs visible. |
+
+<details>
+<summary><h3> Debugging </h3></summary>
+
+Start off by allowing VGit to trace your actions:
+- `:VGit toggle_tracing`
+
+Each category of logs can be previewed using the following commands:
+- `:VGit debug_preview infos`
+- `:VGit debug_preview warnings`
+- `:VGit debug_preview errors`
+</details>

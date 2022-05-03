@@ -1,6 +1,6 @@
 local Config = require('vgit.core.Config')
 
-return Config:new({
+return Config({
   priority = 10,
   definitions = {
     GitSignsAddLn = {
