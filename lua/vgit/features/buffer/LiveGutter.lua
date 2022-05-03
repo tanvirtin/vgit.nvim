@@ -44,6 +44,10 @@ LiveGutter.sync = loop.debounce(
     if not hunks then
       buffer:set_cached_live_signs(live_signs)
       return
+    else
+      local diff_status = buffer.git_object:generate_diff_status()
+      loop.await_fast_event() -- vim.schedule
+      buffer:set_var('vgit_status', diff_status)
     end
 
     self:clear(buffer)
