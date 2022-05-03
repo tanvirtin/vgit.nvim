@@ -7,8 +7,8 @@ local FooterElement = require('vgit.ui.elements.FooterElement')
 
 local ComponentPlot = Object:extend()
 
-function ComponentPlot:new(win_plot, config)
-  return setmetatable({
+function ComponentPlot:constructor(win_plot, config)
+  return {
     is_built = false,
     config = config,
     win_plot = ComponentPlot:sanitize_plot(win_plot),
@@ -16,7 +16,7 @@ function ComponentPlot:new(win_plot, config)
     line_number_win_plot = nil,
     footer_win_plot = nil,
     is_at_cursor = win_plot.relative == 'cursor',
-  }, ComponentPlot)
+  }
 end
 
 -- Plots must always be sanitized.
@@ -26,6 +26,7 @@ function ComponentPlot:sanitize_plot(plot)
   plot.col = dimensions.convert(plot.col)
   plot.height = dimensions.convert(plot.height)
   plot.width = dimensions.convert(plot.width)
+
   return plot
 end
 
@@ -39,22 +40,25 @@ function ComponentPlot:configure_bounds()
   local has_footer = config.footer
   local footer_height = FooterElement:get_height()
   local win_plot = self.win_plot
-
   local global_height = dimensions.global_height()
+
   if win_plot.row + win_plot.height > global_height then
     if self.is_at_cursor then
       win_plot.row = win_plot.row
         - (win_plot.row + win_plot.height - global_height)
+
       if has_footer then
         win_plot.row = win_plot.row - footer_height
       end
     else
       win_plot.height = win_plot.height - win_plot.row
+
       if has_line_number then
         self.line_number_win_plot.height = win_plot.height
       end
     end
   end
+
   return self
 end
 
@@ -75,12 +79,15 @@ function ComponentPlot:configure_height()
   if has_header and win_plot.height - header_height > 1 then
     win_plot.height = win_plot.height - header_height
   end
+
   if has_footer then
     win_plot.height = win_plot.height - footer_height
   end
+
   if has_line_number then
     self.line_number_win_plot.height = win_plot.height
   end
+
   return self
 end
 
@@ -94,9 +101,11 @@ function ComponentPlot:configure_width()
 
   -- Width
   local line_number_width = LineNumberElement:get_width()
+
   if has_line_number then
     win_plot.width = win_plot.width - line_number_width
   end
+
   return self
 end
 
@@ -118,13 +127,16 @@ function ComponentPlot:configure_row()
     self.header_win_plot.row = win_plot.row + header_height
     win_plot.row = win_plot.row + header_height
   end
+
   if has_line_number then
     self.line_number_win_plot.row = win_plot.row
   end
+
   if has_footer then
     footer_win_plot.row = win_plot.row
     footer_win_plot.row = footer_win_plot.row + win_plot.height
   end
+
   return self
 end
 
@@ -135,11 +147,13 @@ function ComponentPlot:configure_col()
 
   local win_plot = self.win_plot
   local has_line_number = self.config.line_number
+
   -- Col
   if has_line_number then
     local line_number_width = LineNumberElement:get_width()
     win_plot.col = win_plot.col + line_number_width
   end
+
   return self
 end
 

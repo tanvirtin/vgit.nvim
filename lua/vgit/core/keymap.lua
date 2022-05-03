@@ -2,14 +2,17 @@ local keymap = {}
 
 local function parse_commands(commands)
   local parsed_commands = vim.split(commands, ' ')
+
   for i = 1, #parsed_commands do
     local c = parsed_commands[i]
+
     parsed_commands[i] = vim.trim(c)
   end
+
   return parsed_commands
 end
 
-keymap.set = function(mode, key, action)
+function keymap.set(mode, key, action)
   vim.api.nvim_set_keymap(
     mode,
     key,
@@ -19,9 +22,11 @@ keymap.set = function(mode, key, action)
       silent = true,
     }
   )
+
+  return keymap
 end
 
-keymap.buffer_set = function(buffer, mode, key, action)
+function keymap.buffer_set(buffer, mode, key, action)
   vim.api.nvim_buf_set_keymap(
     buffer.bufnr,
     mode,
@@ -32,13 +37,17 @@ keymap.buffer_set = function(buffer, mode, key, action)
       noremap = true,
     }
   )
+
+  return keymap
 end
 
-keymap.define = function(keymaps)
+function keymap.define(keymaps)
   for commands, action in pairs(keymaps) do
     commands = parse_commands(commands)
     keymap.set(commands[1], commands[2], action)
   end
+
+  return keymap
 end
 
 return keymap
