@@ -43,15 +43,19 @@ function AuthorshipCodeLens:display(lnum, buffer, text)
   return self
 end
 
-function AuthorshipCodeLens:clear()
+function AuthorshipCodeLens:clear(buffer)
+  if buffer then
+    self.namespace:clear(buffer)
+  end
+
+  return self
+end
+
+function AuthorshipCodeLens:clear_all()
   local buffers = Buffer:list()
 
   for i = 1, #buffers do
-    local buffer = buffers[i]
-
-    if buffer then
-      self.namespace:clear(buffer)
-    end
+    self:clear(buffers[i])
   end
 
   return self
@@ -201,7 +205,7 @@ function AuthorshipCodeLens:sync()
     return self
   end
 
-  self:display(
+  self:clear(buffer):display(
     buffer:get_line_count(),
     buffer,
     self:generate_authorship(config, blames)
@@ -211,7 +215,7 @@ function AuthorshipCodeLens:sync()
 end
 
 function AuthorshipCodeLens:resync()
-  return self:clear():sync()
+  return self:clear_all():sync()
 end
 
 return AuthorshipCodeLens
