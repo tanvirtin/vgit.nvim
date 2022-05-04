@@ -7,14 +7,13 @@ local Object = require('vgit.core.Object')
 
 local Query = Object:extend()
 
-local git = Git()
-
 function Query:constructor()
   return {
     id = nil,
     err = nil,
     data = nil,
     shape = nil,
+    git = Git(),
     _list_entry_cache = {},
     _diff_dto_cache = {},
   }
@@ -70,9 +69,9 @@ function Query:get_file_lines(file, status)
   local lines_err, lines
 
   if file_status:has('D ') then
-    lines_err, lines = git:show(filename, 'HEAD')
+    lines_err, lines = self.git:show(filename, 'HEAD')
   elseif status == 'staged' or file_status:has(' D') then
-    lines_err, lines = git:show(git:tracked_filename(filename))
+    lines_err, lines = self.git:show(self.git:tracked_filename(filename))
   else
     lines_err, lines = fs.read_file(filename)
   end
@@ -87,13 +86,13 @@ function Query:get_file_hunks(file, status, lines)
   local hunks_err, hunks
 
   if file_status:has_both('??') then
-    hunks = git:untracked_hunks(lines)
+    hunks = self.git:untracked_hunks(lines)
   elseif file_status:has_either('DD') then
-    hunks = git:deleted_hunks(lines)
+    hunks = self.git:deleted_hunks(lines)
   elseif status == 'staged' then
-    hunks_err, hunks = git:staged_hunks(filename)
+    hunks_err, hunks = self.git:staged_hunks(filename)
   elseif status == 'unstaged' then
-    hunks_err, hunks = git:index_hunks(filename)
+    hunks_err, hunks = self.git:index_hunks(filename)
   end
 
   loop.await_fast_event()
@@ -135,11 +134,11 @@ function Query:fetch(shape, preserve_caching)
     self._diff_dto_cache = {}
   end
 
-  if not git:is_inside_git_dir() then
+  if not self.git:is_inside_git_dir() then
     return { 'Project has no .git folder' }, nil
   end
 
-  local status_files_err, status_files = git:status()
+  local status_files_err, status_files = self.git:status()
   loop.await_fast_event()
 
   if status_files_err then

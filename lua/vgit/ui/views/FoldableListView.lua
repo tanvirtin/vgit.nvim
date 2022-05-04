@@ -41,8 +41,6 @@ function FoldableListView:define()
         win_plot = dimensions.relative_win_plot(self.plot, {
           height = '100vh',
           width = '100vw',
-          row = '0vh',
-          col = '0vw',
         }),
       },
     })

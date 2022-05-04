@@ -18,8 +18,6 @@ function DebugScreen:constructor()
     view = SimpleView(scene, query, {
       height = '100vh',
       width = '100vw',
-      row = '0vh',
-      col = '0vw',
     }),
   }
 end
