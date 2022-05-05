@@ -25,7 +25,6 @@ function ProjectHunksScreen:constructor()
       height = '80vh',
       width = '100vw',
       row = '20vh',
-      col = '0vw',
     }, {
       elements = {
         header = true,
@@ -35,8 +34,6 @@ function ProjectHunksScreen:constructor()
     foldable_list_view = FoldableListView(scene, query, {
       height = '20vh',
       width = '100vw',
-      row = '0vh',
-      col = '0vw',
     }, {
       elements = {
         header = true,
@@ -91,14 +88,16 @@ function ProjectHunksScreen:trigger_keypress(key, ...)
   return self
 end
 
-function ProjectHunksScreen:show()
+function ProjectHunksScreen:show(opts)
+  opts = opts or {}
+
   console.log('Processing project hunks')
 
   local query = self.query
   local layout_type = self.layout_type
 
   loop.await_fast_event()
-  local err = query:fetch(layout_type)
+  local err = query:fetch(layout_type, opts)
 
   if err then
     console.debug.error(err).error(err)

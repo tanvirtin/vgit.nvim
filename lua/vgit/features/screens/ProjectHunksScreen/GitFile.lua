@@ -3,21 +3,20 @@ local Diff = require('vgit.git.Diff')
 local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
 
-local git = Git()
-
 local GitFile = Object:extend()
 
 function GitFile:constructor(file, shape)
   return {
+    git = Git(),
     file = file,
     shape = shape,
-    _diff_dto_cache = {},
+    _cache = {},
   }
 end
 
 function GitFile:get_lines()
-  if self._diff_dto_cache['lines'] then
-    return nil, self._diff_dto_cache['lines']
+  if self._cache['lines'] then
+    return nil, self._cache['lines']
   end
 
   local file = self.file
@@ -27,9 +26,9 @@ function GitFile:get_lines()
 
   if status then
     if status:has('D ') then
-      lines_err, lines = git:show(filename, 'HEAD')
+      lines_err, lines = self.git:show(filename, 'HEAD')
     elseif status:has(' D') then
-      lines_err, lines = git:show(git:tracked_filename(filename))
+      lines_err, lines = self.git:show(self.git:tracked_filename(filename))
     else
       lines_err, lines = fs.read_file(filename)
     end
@@ -37,14 +36,14 @@ function GitFile:get_lines()
     lines_err, lines = fs.read_file(filename)
   end
 
-  self._diff_dto_cache['lines'] = lines
+  self._cache['lines'] = lines
 
   return lines_err, lines
 end
 
 function GitFile:get_hunks()
-  if self._diff_dto_cache['hunks'] then
-    return nil, self._diff_dto_cache['hunks']
+  if self._cache['hunks'] then
+    return nil, self._cache['hunks']
   end
 
   local lines_err, lines = self:get_lines()
@@ -60,26 +59,44 @@ function GitFile:get_hunks()
 
   if status then
     if status:has_both('??') then
-      hunks = git:untracked_hunks(lines)
+      hunks = self.git:untracked_hunks(lines)
     elseif status:has_either('DD') then
-      hunks = git:deleted_hunks(lines)
+      hunks = self.git:deleted_hunks(lines)
     else
-      hunks_err, hunks = git:index_hunks(filename)
+      hunks_err, hunks = self.git:index_hunks(filename)
     end
   elseif log then
-    hunks = git:remote_hunks(filename, log.parent_hash, log.commit_hash)
+    hunks = self.git:remote_hunks(filename, log.parent_hash, log.commit_hash)
   else
-    hunks_err, hunks = git:index_hunks(filename)
+    hunks_err, hunks = self.git:index_hunks(filename)
   end
 
-  self._diff_dto_cache['hunks'] = hunks
+  self._cache['hunks'] = hunks
+
+  return hunks_err, hunks
+end
+
+function GitFile:get_staged_hunks()
+  if self._cache['hunks'] then
+    return nil, self._cache['hunks']
+  end
+
+  local file = self.file
+  local filename = file.filename
+  local hunks_err, hunks
+
+  if file:is_staged() then
+    hunks_err, hunks = self.git:staged_hunks(filename)
+  end
+
+  self._cache['hunks'] = hunks
 
   return hunks_err, hunks
 end
 
 function GitFile:get_diff_dto()
-  if self._diff_dto_cache['diff_dto'] then
-    return nil, self._diff_dto_cache['diff_dto']
+  if self._cache['diff_dto'] then
+    return nil, self._cache['diff_dto']
   end
 
   local lines_err, lines = self:get_lines()
@@ -104,9 +121,9 @@ function GitFile:get_diff_dto()
     diff_dto = Diff(hunks):call(lines, self.shape)
   end
 
-  self._diff_dto_cache['diff_dto'] = diff_dto
+  self._cache['diff_dto'] = diff_dto
 
-  return nil, self._diff_dto_cache['diff_dto']
+  return nil, self._cache['diff_dto']
 end
 
 return GitFile

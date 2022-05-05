@@ -10,7 +10,28 @@ local Query = require('vgit.features.screens.DiffScreen.Query')
 
 local DiffScreen = Feature:extend()
 
-function DiffScreen:constructor()
+function DiffScreen:create_code_view(scene, query, opts)
+  if opts.is_hunk then
+    return CodeView(scene, query, {
+      relative = 'cursor',
+      height = '35vh',
+      width = '100vw',
+    }, {
+      elements = {
+        header = true,
+        footer = true,
+      },
+    })
+  end
+
+  return CodeView(scene, query, {
+    height = '100vh',
+    width = '100vw',
+  })
+end
+
+function DiffScreen:constructor(opts)
+  opts = opts or {}
   local scene = Scene()
   local query = Query()
 
@@ -19,12 +40,7 @@ function DiffScreen:constructor()
     scene = scene,
     query = query,
     layout_type = nil,
-    code_view = CodeView(scene, query, {
-      height = '100vh',
-      width = '100vw',
-      row = '0vh',
-      col = '0vw',
-    }),
+    code_view = DiffScreen:create_code_view(scene, query, opts),
   }
 end
 
@@ -34,7 +50,7 @@ function DiffScreen:trigger_keypress(key, ...)
   return self
 end
 
-function DiffScreen:show()
+function DiffScreen:show(opts)
   console.log('Processing diff')
 
   local query = self.query
@@ -42,7 +58,7 @@ function DiffScreen:show()
   local buffer = Buffer(0)
 
   loop.await_fast_event()
-  local err = query:fetch(layout_type, buffer.filename)
+  local err = query:fetch(layout_type, buffer.filename, opts)
 
   if err then
     console.debug.error(err).error(err)

@@ -21,8 +21,6 @@ function GutterBlameScreen:constructor()
     gutter_blame_view = GutterBlameView(scene, query, {
       height = '100vh',
       width = '40vw',
-      row = '0vh',
-      col = '0vw',
     }, {
       elements = {
         header = false,
@@ -31,7 +29,6 @@ function GutterBlameScreen:constructor()
     code_view = CodeView(scene, query, {
       height = '100vh',
       width = '60vw',
-      row = '0vh',
       col = '40vw',
     }, {
       elements = {

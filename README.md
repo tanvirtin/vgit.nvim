@@ -110,7 +110,8 @@ require('vgit').setup({
     ['n <leader>gh'] = 'buffer_history_preview',
     ['n <leader>gu'] = 'buffer_reset',
     ['n <leader>gg'] = 'buffer_gutter_blame_preview',
-    ['n <leader>gl'] = 'project_hunks_preview',
+    ['n <leader>glu'] = 'project_hunks_preview',
+    ['n <leader>gls'] = 'project_hunks_staged_preview',
     ['n <leader>gd'] = 'project_diff_preview',
     ['n <leader>gq'] = 'project_hunks_qf',
     ['n <leader>gx'] = 'toggle_diff_preference',
@@ -316,7 +317,8 @@ require('vgit').setup({
 | buffer_reset | Removes all current changes in the buffer and resets it to the version in HEAD. |
 | project_diff_preview | Opens a diff preview along with a list of all the files that have been changed, enabling users to see all the files that were changed in the current project. This preview supports the following commands, "buffer_stage", "buffer_unstage", "buffer_reset", "stage_all" and "unstage_all". |
 | project_commits_preview | Opens a diff preview along with a list of all your commits |
-| project_hunks_preview | Opens a diff preview along with a table of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
+| project_hunks_preview | Opens a diff preview along with a foldable list of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
+| project_hunks_staged_preview | Opens a diff preview along with a foldable list of all the current staged hunks in the project. Users can use this preview to cycle through all the hunks. |
 | project_debug_preview | Opens a VGit view showing logs of a pariticular kind traced within the application. |
 | project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
 | project_stage_all | Stages all file changes in your project. |
