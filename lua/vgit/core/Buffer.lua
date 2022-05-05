@@ -97,14 +97,14 @@ function Buffer:set_cached_live_signs(live_signs)
   return self
 end
 
+function Buffer:get_cached_live_signs()
+  return self.state.live_signs
+end
+
 function Buffer:clear_cached_live_signs()
   self.state.live_signs = {}
 
   return self
-end
-
-function Buffer:get_cached_live_signs()
-  return self.state.live_signs
 end
 
 function Buffer:cache_live_sign(hunk)
