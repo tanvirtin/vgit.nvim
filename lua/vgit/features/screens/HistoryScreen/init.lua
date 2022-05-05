@@ -57,6 +57,18 @@ function HistoryScreen:constructor()
   }
 end
 
+function HistoryScreen:hunk_up()
+  self.code_view:prev()
+
+  return self
+end
+
+function HistoryScreen:hunk_down()
+  self.code_view:next()
+
+  return self
+end
+
 function HistoryScreen:trigger_keypress(key, ...)
   self.scene:trigger_keypress(key, ...)
 
@@ -80,25 +92,6 @@ function HistoryScreen:show()
   self.code_view:show(layout_type)
   self.table_view:show()
 
-  self.code_view:set_keymap({
-    {
-      mode = 'n',
-      key = '<C-j>',
-      vgit_key = 'keys.Cj',
-      handler = loop.async(function()
-        self.code_view:next()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-k>',
-      vgit_key = 'keys.Ck',
-      handler = loop.async(function()
-        self.code_view:prev()
-      end),
-    },
-  })
-
   -- Set keymap
   self.table_view:set_keymap({
     {
@@ -121,22 +114,6 @@ function HistoryScreen:show()
         self.code_view:render_debounced(function()
           self.code_view:navigate_to_mark(1)
         end)
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-j>',
-      vgit_key = 'keys.Cj',
-      handler = loop.async(function()
-        self.code_view:next()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-k>',
-      vgit_key = 'keys.Ck',
-      handler = loop.async(function()
-        self.code_view:prev()
       end),
     },
   })

@@ -128,18 +128,6 @@ active_screen.keys['<enter>'] = function()
   return active_screen
 end
 
-active_screen.keys['<C-j>'] = function()
-  active_screen.current:trigger_keypress('<C-j>')
-
-  return active_screen
-end
-
-active_screen.keys['<C-k>'] = function()
-  active_screen.current:trigger_keypress('<C-k>')
-
-  return active_screen
-end
-
 active_screen.keys[project_diff_preview_setting:get('keymaps').buffer_stage] =
   function()
     active_screen.current:trigger_keypress(

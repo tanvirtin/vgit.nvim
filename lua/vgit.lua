@@ -44,16 +44,6 @@ local keys = {
       return active_screen.keypress('<enter>')
     end
   end),
-  Cj = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress('<C-j>')
-    end
-  end),
-  Ck = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress('<C-k>')
-    end
-  end),
   j = loop.async(function()
     if active_screen.exists() then
       return active_screen.keypress('j')
@@ -180,10 +170,18 @@ local events = {
 local controls = {
   hunk_up = loop.async(function()
     hunks:move_up()
+
+    if active_screen.exists() then
+      return active_screen.action('hunk_up')
+    end
   end),
 
   hunk_down = loop.async(function()
     hunks:move_down()
+
+    if active_screen.exists() then
+      return active_screen.action('hunk_down')
+    end
   end),
 }
 

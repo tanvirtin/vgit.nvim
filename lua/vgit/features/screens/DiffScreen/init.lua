@@ -44,6 +44,18 @@ function DiffScreen:constructor(opts)
   }
 end
 
+function DiffScreen:hunk_up()
+  self.code_view:prev('center')
+
+  return self
+end
+
+function DiffScreen:hunk_down()
+  self.code_view:next('center')
+
+  return self
+end
+
 function DiffScreen:trigger_keypress(key, ...)
   self.scene:trigger_keypress(key, ...)
 
@@ -69,22 +81,6 @@ function DiffScreen:show(opts)
   self.code_view
     :show(layout_type, 'center', { winline = vim.fn.winline() })
     :set_keymap({
-      {
-        mode = 'n',
-        key = '<C-j>',
-        vgit_key = 'keys.Cj',
-        handler = loop.async(function()
-          self.code_view:next('center')
-        end),
-      },
-      {
-        mode = 'n',
-        key = '<C-k>',
-        vgit_key = 'keys.Ck',
-        handler = loop.async(function()
-          self.code_view:prev('center')
-        end),
-      },
       {
         mode = 'n',
         key = '<enter>',
