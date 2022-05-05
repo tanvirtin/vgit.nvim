@@ -25,17 +25,24 @@ end)
 
 LiveGutter.sync = loop.debounce(
   loop.async(function(self, buffer)
-    local live_signs = buffer:clear_cached_live_signs()
-
     loop.await_fast_event()
+    if not buffer:is_valid() then
+      return
+    end
+    loop.await_fast_event()
+
+    local live_signs = buffer:get_cached_live_signs()
+
     buffer:clear_cached_live_signs()
-    loop.await_fast_event()
 
+    loop.await_fast_event()
     local err = buffer.git_object:live_hunks(buffer:get_lines())
+    loop.await_fast_event()
 
     if err then
       buffer:set_cached_live_signs(live_signs)
       console.debug.error(err)
+
       return
     end
 
@@ -43,10 +50,12 @@ LiveGutter.sync = loop.debounce(
 
     if not hunks then
       buffer:set_cached_live_signs(live_signs)
+
       return
     else
       local diff_status = buffer.git_object:generate_diff_status()
-      loop.await_fast_event() -- vim.schedule
+
+      loop.await_fast_event()
       buffer:set_var('vgit_status', diff_status)
     end
 
