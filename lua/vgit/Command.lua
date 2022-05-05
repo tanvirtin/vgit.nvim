@@ -25,14 +25,15 @@ function Command:constructor()
       'buffer_unstage',
       'buffer_reset',
 
+      'project_hunks_qf',
       'project_reset_all',
       'project_stage_all',
       'project_unstage_all',
       'project_diff_preview',
       'project_hunks_preview',
-      'project_hunks_qf',
-      'project_commits_preview',
       'project_debug_preview',
+      'project_commits_preview',
+      'project_hunks_staged_preview',
 
       'toggle_tracing',
       'toggle_diff_preference',

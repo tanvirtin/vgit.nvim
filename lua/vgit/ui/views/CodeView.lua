@@ -50,8 +50,6 @@ function CodeView:define()
             win_plot = dimensions.relative_win_plot(self.plot, {
               height = '100vh',
               width = '100vw',
-              row = '0vh',
-              col = '0vw',
             }),
           },
         })
@@ -77,8 +75,6 @@ function CodeView:define()
               -- 49 and not 50 because nvim cannot have height or width be a non integer.
               -- This ensures that the other window never overflows.
               width = '49vw',
-              row = '0vh',
-              col = '0vw',
             }),
           },
         })

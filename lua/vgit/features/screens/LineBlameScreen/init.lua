@@ -21,8 +21,6 @@ function LineBlameScreen:constructor()
       relative = 'cursor',
       height = 6,
       width = '100vw',
-      row = '0vh',
-      col = '0vw',
     }, {
       elements = {
         header = false,

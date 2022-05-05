@@ -310,10 +310,16 @@ project_commits_preview()                       *vgit.project_commits_preview()*
                 are taken as argument params.
 
 project_hunks_preview()                           *vgit.project_hunks_preview()*
-                Opens a diff preview along with a table of all the current
-                hunks in the project. Useers can use this preview to cycle
-                through all the hunks. Pressing enter on a hunk will open the
-                file and focus on the corresponding hunk.
+                Opens a diff preview along with a foldable list of all the
+                current hunks in the project. Users can use this preview to
+                cycle through all the hunks. Pressing enter on a hunk will
+                open the file and focus on the hunk.
+
+project_staged_hunks_preview()           *vgit.project_hunks_staged_preview()*
+                Opens a diff preview along with a foldable list of all the
+                current staged hunks in the project. Users can use this
+                preview to cycle through all the hunks. Pressing enter on a
+                hunk will open the file and focus on the hunk.
 
 project_debug_preview()                               *vgit.project_debug_preview()*
                 Opens a VGit view showing logs of a pariticular kind traced within

@@ -22,7 +22,6 @@ function HistoryScreen:constructor()
       height = '80vh',
       width = '100vw',
       row = '20vh',
-      col = '0vw',
     }, {
       elements = {
         header = true,
@@ -32,8 +31,6 @@ function HistoryScreen:constructor()
     table_view = TableView(scene, query, {
       height = '20vh',
       width = '100vw',
-      row = '0vh',
-      col = '0vw',
     }, {
       elements = {
         header = true,

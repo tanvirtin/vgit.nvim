@@ -5,14 +5,13 @@ local GitFile = require('vgit.features.screens.ProjectHunksScreen.GitFile')
 
 local Query = Object:extend()
 
-local git = Git()
-
 function Query:constructor()
   return {
     id = nil,
     err = nil,
     data = nil,
     shape = nil,
+    git = Git(),
     _list_entry_cache = {},
   }
 end
@@ -26,14 +25,16 @@ function Query:reset()
   return self
 end
 
-function Query:fetch(shape)
+function Query:fetch(shape, opts)
+  opts = opts or {}
+
   self:reset()
 
-  if not git:is_inside_git_dir() then
+  if not self.git:is_inside_git_dir() then
     return { 'Project has no .git folder' }, nil
   end
 
-  local status_err, files = git:status()
+  local status_err, files = self.git:status()
 
   if status_err then
     return status_err
@@ -49,13 +50,19 @@ function Query:fetch(shape)
   for i = 1, #files do
     local file = files[i]
     local git_file = GitFile(file, shape)
-    local hunks_err, hunks = git_file:get_hunks()
+    local hunks_err, hunks
+
+    if opts.is_staged then
+      hunks_err, hunks = git_file:get_staged_hunks()
+    else
+      hunks_err, hunks = git_file:get_hunks()
+    end
 
     if hunks_err then
       return hunks_err
     end
 
-    if #hunks > 0 then
+    if hunks and #hunks > 0 then
       is_empty = false
       local entry = data[file.filename]
 

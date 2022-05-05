@@ -31,7 +31,6 @@ local Hunks = require('vgit.features.buffer.Hunks')
 local Git = require('vgit.git.cli.Git')
 local active_screen = require('vgit.ui.active_screen')
 
-local git = Git()
 local hunks = Hunks()
 local command = Command()
 local live_blame = LiveBlame()
@@ -223,7 +222,9 @@ local buffer = {
   end),
 
   hunk_staged_preview = loop.async(function()
-    active_screen.activate('staged_hunk_screen')
+    active_screen.activate('diff_hunk_screen', {
+      is_staged = true,
+    })
   end),
 
   diff_preview = loop.async(function()
@@ -231,7 +232,9 @@ local buffer = {
   end),
 
   diff_staged_preview = loop.async(function()
-    active_screen.activate('staged_diff_screen')
+    active_screen.activate('diff_screen', {
+      is_staged = true,
+    })
   end),
 
   history_preview = loop.async(function()
@@ -249,11 +252,11 @@ local buffer = {
 
 local project = {
   stage_all = loop.async(function()
-    git:stage()
+    Git():stage()
   end),
 
   unstage_all = loop.async(function()
-    git:unstage()
+    Git():unstage()
   end),
 
   reset_all = loop.async(function()
@@ -265,7 +268,7 @@ local project = {
       return
     end
 
-    git:reset_all()
+    Git():reset_all()
   end),
 
   diff_preview = loop.async(function()
@@ -278,6 +281,12 @@ local project = {
 
   hunks_preview = loop.async(function()
     active_screen.activate('project_hunks_screen')
+  end),
+
+  hunks_staged_preview = loop.async(function()
+    active_screen.activate('project_hunks_screen', {
+      is_staged = true,
+    })
   end),
 
   hunks_qf = loop.async(function()
@@ -449,4 +458,5 @@ return {
   project_hunks_preview = project.hunks_preview,
   project_debug_preview = project.debug_preview,
   project_commits_preview = project.commits_preview,
+  project_hunks_staged_preview = project.hunks_staged_preview,
 }

@@ -6,14 +6,13 @@ local Object = require('vgit.core.Object')
 
 local Query = Object:extend()
 
-local git = Git()
-
 function Query:constructor()
   return {
     id = nil,
     err = nil,
     data = nil,
     shape = nil,
+    git = Git(),
     _diff_dto_cache = {},
   }
 end
@@ -36,7 +35,7 @@ function Query:fetch(shape, commits)
 
   self._diff_dto_cache = {}
 
-  if not git:is_inside_git_dir() then
+  if not self.git:is_inside_git_dir() then
     return { 'Project has no .git folder' }, nil
   end
 
@@ -45,14 +44,14 @@ function Query:fetch(shape, commits)
 
   for i = 1, #commits do
     local commit = commits[i]
-    local log_err, log = git:log(commit)
+    local log_err, log = self.git:log(commit)
     loop.await_fast_event()
 
     if log_err then
       return log_err
     end
 
-    local err, files = git:ls_log(log)
+    local err, files = self.git:ls_log(log)
     loop.await_fast_event()
 
     if err then
@@ -129,9 +128,9 @@ function Query:get_diff_dto()
   loop.await_fast_event()
   if not git:is_in_remote(filename, commit_hash) then
     is_deleted = true
-    lines_err, lines = git:show(filename, parent_hash)
+    lines_err, lines = self.git:show(filename, parent_hash)
   else
-    lines_err, lines = git:show(filename, commit_hash)
+    lines_err, lines = self.git:show(filename, commit_hash)
   end
   loop.await_fast_event()
 
@@ -141,9 +140,9 @@ function Query:get_diff_dto()
 
   local hunks_err, hunks
   if is_deleted then
-    hunks = git:deleted_hunks(lines)
+    hunks = self.git:deleted_hunks(lines)
   else
-    hunks_err, hunks = git:remote_hunks(filename, parent_hash, commit_hash)
+    hunks_err, hunks = self.git:remote_hunks(filename, parent_hash, commit_hash)
   end
   loop.await_fast_event()
 

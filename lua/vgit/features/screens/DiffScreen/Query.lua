@@ -5,12 +5,12 @@ local GitObject = require('vgit.git.GitObject')
 
 local Query = Object:extend()
 
-function Query:shape()
+function Query:constructor()
   return {
-    shape = nil,
-    git_object = nil,
     err = nil,
     data = nil,
+    shape = nil,
+    git_object = nil,
     _diff_dto_cache = {},
   }
 end
@@ -23,7 +23,9 @@ function Query:reset()
   return self
 end
 
-function Query:fetch(shape, filename)
+function Query:fetch(shape, filename, opts)
+  opts = opts or {}
+
   self:reset()
 
   self.shape = shape
@@ -37,7 +39,12 @@ function Query:fetch(shape, filename)
   end
 
   self._diff_dto_cache['lines'] = lines
-  self.err, self.data = self.git_object:live_hunks(lines)
+
+  if opts.is_staged then
+    self.err, self.data = self.git_object:staged_hunks(lines)
+  else
+    self.err, self.data = self.git_object:live_hunks(lines)
+  end
 
   return self.err, self.data
 end
