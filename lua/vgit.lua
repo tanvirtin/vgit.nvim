@@ -13,6 +13,7 @@ local project_diff_preview_setting = require(
   'vgit.settings.project_diff_preview'
 )
 local signs_setting = require('vgit.settings.signs')
+local git_setting = require('vgit.settings.git')
 local loop = require('vgit.core.loop')
 local symbols_setting = require('vgit.settings.symbols')
 local keymap = require('vgit.core.keymap')
@@ -192,6 +193,7 @@ local settings = {
   hls = hls_setting,
   symbols = symbols_setting,
   signs = signs_setting,
+  git = git_setting,
   live_blame = live_blame_setting,
 }
 
@@ -381,6 +383,7 @@ local function configure_settings(config)
   live_gutter_setting:assign(config_settings.live_gutter)
   scene_setting:assign(config_settings.scene)
   signs_setting:assign(config_settings.signs)
+  git_setting:assign(config_settings.git)
   symbols_setting:assign(config_settings.symbols)
   project_diff_preview_setting:assign(config_settings.project_diff_preview)
 end

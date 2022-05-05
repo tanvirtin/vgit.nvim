@@ -129,4 +129,8 @@ function fs.open(filepath)
   return fs
 end
 
+function fs.make_relative(filepath, cwd)
+  return not cwd and filepath or Path:new(filepath):make_relative(cwd)
+end
+
 return fs

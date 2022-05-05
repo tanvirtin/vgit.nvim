@@ -247,6 +247,14 @@ function utils.list.concat(a, b)
   return a
 end
 
+function utils.list.merge(t, b)
+  local a = vim.deepcopy(t)
+  for _, value in ipairs(b) do
+    a[#a + 1] = value
+  end
+  return a
+end
+
 function utils.list.map(list, callback)
   local new_list = {}
 

@@ -8,18 +8,26 @@ local Hunk = require('vgit.git.cli.models.Hunk')
 local Log = require('vgit.git.cli.models.Log')
 local File = require('vgit.git.cli.models.File')
 local Blame = require('vgit.git.cli.models.Blame')
+local git_setting = require('vgit.settings.git')
 
 local Git = Object:extend()
 
 function Git:constructor(cwd)
-  return {
+  local newself = {
     cwd = cwd or '',
+    cmd = git_setting:get('cmd'),
+    fallback_args = {},
     diff_algorithm = 'myers',
     empty_tree_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904',
     state = {
       config = nil,
     },
   }
+  if cwd and not self.is_inside_git_dir(newself) then
+    newself.cwd = git_setting:get('fallback_cwd') or ''
+    newself.fallback_args = vim.deepcopy(git_setting:get('fallback_args'))
+  end
+  return newself
 end
 
 function Git:set_cwd(cwd)
@@ -31,8 +39,8 @@ Git.is_commit_valid = loop.promisify(function(self, commit, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'show',
@@ -42,7 +50,7 @@ Git.is_commit_valid = loop.promisify(function(self, commit, spec, callback)
       '--no-patch',
       '--no-color',
       commit,
-    },
+    }),
     on_stdout = function(line)
       result[#result + 1] = line
     end,
@@ -70,13 +78,13 @@ Git.config = loop.promisify(function(self, spec, callback)
   local result = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'config',
       '--list',
-    },
+    }),
     on_stdout = function(line)
       local line_chunks = vim.split(line, '=')
 
@@ -100,12 +108,12 @@ Git.has_commits = loop.promisify(function(self, spec, callback)
   local result = true
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'status',
-    },
+    }),
     on_stdout = function(line)
       if line == 'No commits yet' then
         result = false
@@ -121,13 +129,13 @@ Git.is_inside_git_dir = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'rev-parse',
       '--is-inside-git-dir',
-    },
+    }),
     on_stderr = function(line)
       err[#err + 1] = line
     end,
@@ -147,15 +155,15 @@ Git.blames = loop.promisify(function(self, filename, spec, callback)
   local blame_info = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'blame',
       '--line-porcelain',
       '--',
       filename,
-    },
+    }),
     on_stdout = function(line)
       if string.byte(line:sub(1, 3)) ~= 9 then
         table.insert(blame_info, line)
@@ -183,13 +191,13 @@ Git.blames = loop.promisify(function(self, filename, spec, callback)
 end, 4)
 
 Git.blame_line = loop.promisify(function(self, filename, lnum, spec, callback)
-  filename = utils.str.strip(filename, self.cwd)
+  filename = fs.make_relative(filename, self.cwd)
   local err = {}
   local result = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'blame',
@@ -198,7 +206,7 @@ Git.blame_line = loop.promisify(function(self, filename, lnum, spec, callback)
       '--line-porcelain',
       '--',
       filename,
-    },
+    }),
     on_stdout = function(line)
       result[#result + 1] = line
     end,
@@ -221,8 +229,8 @@ Git.log = loop.promisify(function(self, commit_hash, spec, callback)
   local revision_count = 0
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'show',
@@ -230,7 +238,7 @@ Git.log = loop.promisify(function(self, commit_hash, spec, callback)
       '--color=never',
       '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
       '--no-patch',
-    },
+    }),
     on_stdout = function(line)
       revision_count = revision_count + 1
       local log = Log(line, revision_count)
@@ -257,8 +265,8 @@ Git.logs = loop.promisify(function(self, filename, spec, callback)
   local logs = {}
   local revision_count = 0
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'log',
@@ -266,7 +274,7 @@ Git.logs = loop.promisify(function(self, filename, spec, callback)
       '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
       '--',
       filename,
-    },
+    }),
     on_stdout = function(line)
       revision_count = revision_count + 1
       local log = Log(line, revision_count)
@@ -292,7 +300,7 @@ Git.file_hunks = loop.promisify(
   function(self, filename_a, filename_b, spec, callback)
     local result = {}
     local err = {}
-    local args = {
+    local args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       '--no-pager',
@@ -306,10 +314,10 @@ Git.file_hunks = loop.promisify(
       '--no-index',
       filename_a,
       filename_b,
-    }
+    })
 
     GitReadStream(utils.object.defaults({
-      command = 'git',
+      command = self.cmd,
       args = args,
       on_stdout = function(line)
         result[#result + 1] = line
@@ -347,7 +355,7 @@ Git.file_hunks = loop.promisify(
 Git.index_hunks = loop.promisify(function(self, filename, spec, callback)
   local result = {}
   local err = {}
-  local args = {
+  local args = utils.list.merge(self.fallback_args, {
     '-C',
     self.cwd,
     '--no-pager',
@@ -360,10 +368,10 @@ Git.index_hunks = loop.promisify(function(self, filename, spec, callback)
     '--unified=0',
     '--',
     filename,
-  }
+  })
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
+    command = self.cmd,
     args = args,
     on_stdout = function(line)
       result[#result + 1] = line
@@ -396,7 +404,7 @@ Git.remote_hunks = loop.promisify(
   function(self, filename, parent_hash, commit_hash, spec, callback)
     local result = {}
     local err = {}
-    local args = {
+    local args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       '--no-pager',
@@ -407,7 +415,7 @@ Git.remote_hunks = loop.promisify(
       string.format('--diff-algorithm=%s', self.diff_algorithm),
       '--patch-with-raw',
       '--unified=0',
-    }
+    })
 
     if parent_hash and commit_hash then
       utils.list.concat(args, {
@@ -430,7 +438,7 @@ Git.remote_hunks = loop.promisify(
     end
 
     GitReadStream(utils.object.defaults({
-      command = 'git',
+      command = self.cmd,
       args = args,
       on_stdout = function(line)
         result[#result + 1] = line
@@ -464,7 +472,7 @@ Git.remote_hunks = loop.promisify(
 Git.staged_hunks = loop.promisify(function(self, filename, spec, callback)
   local result = {}
   local err = {}
-  local args = {
+  local args = utils.list.merge(self.fallback_args, {
     '-C',
     self.cwd,
     '--no-pager',
@@ -478,10 +486,10 @@ Git.staged_hunks = loop.promisify(function(self, filename, spec, callback)
     '--cached',
     '--',
     filename,
-  }
+  })
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
+    command = self.cmd,
     args = args,
     on_stdout = function(line)
       result[#result + 1] = line
@@ -562,15 +570,15 @@ Git.show = loop.promisify(
     commit_hash = commit_hash or ''
 
     GitReadStream(utils.object.defaults({
-      command = 'git',
-      args = {
+      command = self.cmd,
+      args = utils.list.merge(self.fallback_args, {
         '-C',
         self.cwd,
         'show',
         -- git will attach self.cwd to the command which means we are going to search
         -- from the current relative path "./" basically just means "${self.cwd}/".
         string.format('%s:./%s', commit_hash, tracked_filename),
-      },
+      }),
       on_stdout = function(line)
         result[#result + 1] = line
       end,
@@ -595,15 +603,15 @@ Git.is_in_remote = loop.promisify(
     local err = false
 
     GitReadStream(utils.object.defaults({
-      command = 'git',
-      args = {
+      command = self.cmd,
+      args = utils.list.merge(self.fallback_args, {
         '-C',
         self.cwd,
         'show',
         -- git will attach self.cwd to the command which means we are going to search
         -- from the current relative path "./" basically just means "${self.cwd}/".
         string.format('%s:./%s', commit_hash, tracked_filename),
-      },
+      }),
       on_stderr = function(line)
         if line then
           err = true
@@ -621,13 +629,13 @@ Git.stage = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'add',
       '.',
-    },
+    }),
     on_stderr = function(line)
       err[#err + 1] = line
     end,
@@ -645,13 +653,13 @@ Git.unstage = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'reset',
       '-q',
-    },
+    }),
     on_stderr = function(line)
       err[#err + 1] = line
     end,
@@ -669,13 +677,13 @@ Git.stage_file = loop.promisify(function(self, filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'add',
       filename,
-    },
+    }),
     on_stderr = function(line)
       err[#err + 1] = line
     end,
@@ -693,8 +701,8 @@ Git.unstage_file = loop.promisify(function(self, filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'reset',
@@ -702,7 +710,7 @@ Git.unstage_file = loop.promisify(function(self, filename, spec, callback)
       'HEAD',
       '--',
       filename,
-    },
+    }),
     on_stderr = function(line)
       err[#err + 1] = line
     end,
@@ -721,8 +729,8 @@ Git.stage_hunk_from_patch = loop.promisify(
     local err = {}
 
     GitReadStream(utils.object.defaults({
-      command = 'git',
-      args = {
+      command = self.cmd,
+      args = utils.list.merge(self.fallback_args, {
         '-C',
         self.cwd,
         'apply',
@@ -730,7 +738,7 @@ Git.stage_hunk_from_patch = loop.promisify(
         '--whitespace=nowarn',
         '--unidiff-zero',
         patch_filename,
-      },
+      }),
       on_stderr = function(line)
         err[#err + 1] = line
       end,
@@ -747,17 +755,17 @@ Git.stage_hunk_from_patch = loop.promisify(
 )
 
 Git.is_ignored = loop.promisify(function(self, filename, spec, callback)
-  filename = utils.str.strip(filename, self.cwd)
+  filename = fs.make_relative(filename, self.cwd)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'check-ignore',
       filename,
-    },
+    }),
     on_stdout = function(line)
       err[#err + 1] = line
     end,
@@ -779,15 +787,15 @@ Git.reset = loop.promisify(function(self, filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'checkout',
       '-q',
       '--',
       filename,
-    },
+    }),
     on_stderr = function(line)
       err[#err + 1] = line
     end,
@@ -805,15 +813,15 @@ Git.reset_all = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'checkout',
       '-q',
       '--',
       '.',
-    },
+    }),
     on_stderr = function(line)
       err[#err + 1] = line
     end,
@@ -832,15 +840,15 @@ Git.clean = loop.promisify(function(self, filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'clean',
       '-fd',
       '--',
       filename,
-    },
+    }),
     on_stderr = function(line)
       err[#err + 1] = line
     end,
@@ -858,13 +866,13 @@ Git.clean_all = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'clean',
       '-fd',
-    },
+    }),
     on_stderr = function(line)
       err[#err + 1] = line
     end,
@@ -883,13 +891,13 @@ Git.current_branch = loop.promisify(function(self, spec, callback)
   local result = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'branch',
       '--show-current',
-    },
+    }),
     on_stdout = function(line)
       result[#result + 1] = line
     end,
@@ -908,19 +916,19 @@ end, 3)
 
 Git.tracked_filename = loop.promisify(
   function(self, filename, commit_hash, spec, callback)
-    filename = utils.str.strip(filename, self.cwd)
+    filename = fs.make_relative(filename, self.cwd)
     local result = {}
 
     GitReadStream(utils.object.defaults({
-      command = 'git',
-      args = {
+      command = self.cmd,
+      args = utils.list.merge(self.fallback_args, {
         '-C',
         self.cwd,
         'ls-files',
         '--exclude-standard',
         commit_hash or 'HEAD',
         filename,
-      },
+      }),
       on_stdout = function(line)
         result[#result + 1] = line
       end,
@@ -934,19 +942,19 @@ Git.tracked_filename = loop.promisify(
 
 Git.tracked_full_filename = loop.promisify(
   function(self, filename, spec, callback)
-    filename = utils.str.strip(filename, self.cwd)
+    filename = fs.make_relative(filename, self.cwd)
     local result = {}
 
     GitReadStream(utils.object.defaults({
-      command = 'git',
-      args = {
+      command = self.cmd,
+      args = utils.list.merge(self.fallback_args, {
         '-C',
         self.cwd,
         'ls-files',
         '--exclude-standard',
         '--full-name',
         filename,
-      },
+      }),
       on_stdout = function(line)
         result[#result + 1] = line
       end,
@@ -963,8 +971,8 @@ Git.status = loop.promisify(function(self, spec, callback)
   local result = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'status',
@@ -972,7 +980,7 @@ Git.status = loop.promisify(function(self, spec, callback)
       '-s',
       '--no-renames',
       '--ignore-submodules',
-    },
+    }),
     on_stdout = function(line)
       local filename = line:sub(4, #line)
 
@@ -1000,8 +1008,8 @@ Git.ls_log = loop.promisify(function(self, log, spec, callback)
   local result = {}
 
   GitReadStream(utils.object.defaults({
-    command = 'git',
-    args = {
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
       'diff-tree',
@@ -1010,7 +1018,7 @@ Git.ls_log = loop.promisify(function(self, log, spec, callback)
       '-r',
       log.commit_hash,
       log.parent_hash == '' and self.empty_tree_hash or log.parent_hash,
-    },
+    }),
     on_stdout = function(line)
       result[#result + 1] = File(line, Status('--'), log)
     end,
