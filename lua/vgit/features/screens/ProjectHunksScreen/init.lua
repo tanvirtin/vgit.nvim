@@ -82,6 +82,18 @@ function ProjectHunksScreen:constructor()
   }
 end
 
+function ProjectHunksScreen:hunk_up()
+  self.code_view:prev()
+
+  return self
+end
+
+function ProjectHunksScreen:hunk_down()
+  self.code_view:next()
+
+  return self
+end
+
 function ProjectHunksScreen:trigger_keypress(key, ...)
   self.scene:trigger_keypress(key, ...)
 
@@ -109,22 +121,6 @@ function ProjectHunksScreen:show(opts)
   self.foldable_list_view:show()
 
   self.code_view:set_keymap({
-    {
-      mode = 'n',
-      key = '<C-j>',
-      vgit_key = 'keys.Cj',
-      handler = loop.async(function()
-        self.code_view:next()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-k>',
-      vgit_key = 'keys.Ck',
-      handler = loop.async(function()
-        self.code_view:prev()
-      end),
-    },
     {
       mode = 'n',
       key = '<enter>',
@@ -194,22 +190,6 @@ function ProjectHunksScreen:show(opts)
             self.code_view:navigate_to_mark(data.mark_index)
           end
         end))
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-j>',
-      vgit_key = 'keys.Cj',
-      handler = loop.async(function()
-        self.code_view:next()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-k>',
-      vgit_key = 'keys.Ck',
-      handler = loop.async(function()
-        self.code_view:prev()
       end),
     },
     {

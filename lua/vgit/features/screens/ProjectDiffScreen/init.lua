@@ -88,8 +88,14 @@ function ProjectDiffScreen:constructor()
   }
 end
 
-function ProjectDiffScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
+function ProjectDiffScreen:hunk_up()
+  self.code_view:prev()
+
+  return self
+end
+
+function ProjectDiffScreen:hunk_down()
+  self.code_view:next()
 
   return self
 end
@@ -266,6 +272,12 @@ ProjectDiffScreen.clean_all = loop.debounce(
   15
 )
 
+function ProjectDiffScreen:trigger_keypress(key, ...)
+  self.scene:trigger_keypress(key, ...)
+
+  return self
+end
+
 function ProjectDiffScreen:show()
   console.log('Processing project diff')
 
@@ -285,22 +297,6 @@ function ProjectDiffScreen:show()
   self.foldable_list_view:show()
 
   self.code_view:set_keymap({
-    {
-      mode = 'n',
-      key = '<C-j>',
-      vgit_key = 'keys.Cj',
-      handler = loop.async(function()
-        self.code_view:next()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-k>',
-      vgit_key = 'keys.Ck',
-      handler = loop.async(function()
-        self.code_view:prev()
-      end),
-    },
     {
       mode = 'n',
       key = '<enter>',
@@ -438,22 +434,6 @@ function ProjectDiffScreen:show()
         self:destroy()
 
         fs.open(filename)
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-j>',
-      vgit_key = 'keys.Cj',
-      handler = loop.async(function()
-        self.code_view:next()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-k>',
-      vgit_key = 'keys.Ck',
-      handler = loop.async(function()
-        self.code_view:prev()
       end),
     },
   })

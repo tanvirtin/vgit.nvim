@@ -74,6 +74,18 @@ function ProjectCommitsScreen:constructor()
   }
 end
 
+function ProjectCommitsScreen:hunk_up()
+  self.code_view:prev()
+
+  return self
+end
+
+function ProjectCommitsScreen:hunk_down()
+  self.code_view:next()
+
+  return self
+end
+
 function ProjectCommitsScreen:trigger_keypress(key, ...)
   self.scene:trigger_keypress(key, ...)
 
@@ -97,25 +109,6 @@ function ProjectCommitsScreen:show(commits)
   loop.await_fast_event()
   self.code_view:show(layout_type)
   self.foldable_list_view:show()
-
-  self.code_view:set_keymap({
-    {
-      mode = 'n',
-      key = '<C-j>',
-      vgit_key = 'keys.Cj',
-      handler = loop.async(function()
-        self.code_view:next()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-k>',
-      vgit_key = 'keys.Ck',
-      handler = loop.async(function()
-        self.code_view:prev()
-      end),
-    },
-  })
 
   self.foldable_list_view:set_keymap({
     {
@@ -150,22 +143,6 @@ function ProjectCommitsScreen:show(commits)
       vgit_key = 'keys.enter',
       handler = loop.async(function()
         self.foldable_list_view:toggle_current_list_item():render()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-j>',
-      vgit_key = 'keys.Cj',
-      handler = loop.async(function()
-        self.code_view:next()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<C-k>',
-      vgit_key = 'keys.Ck',
-      handler = loop.async(function()
-        self.code_view:prev()
       end),
     },
   })
