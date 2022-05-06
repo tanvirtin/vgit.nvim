@@ -14,8 +14,10 @@ function Query:constructor()
     data = nil,
     shape = nil,
     git = Git(),
-    _list_entry_cache = {},
-    _diff_dto_cache = {},
+    _cache = {
+      list_entries = {},
+      diff_dtos = {},
+    },
   }
 end
 
@@ -32,7 +34,7 @@ function Query:partition_status(status_files)
         status = 'unstaged',
       }
 
-      self._list_entry_cache[id] = data
+      self._cache.list_entries[id] = data
       changed_files[#changed_files + 1] = data
     else
       if file:is_unstaged() then
@@ -43,7 +45,7 @@ function Query:partition_status(status_files)
           status = 'unstaged',
         }
 
-        self._list_entry_cache[id] = data
+        self._cache.list_entries[id] = data
         changed_files[#changed_files + 1] = data
       end
       if file:is_staged() then
@@ -54,7 +56,7 @@ function Query:partition_status(status_files)
           status = 'staged',
         }
 
-        self._list_entry_cache[id] = data
+        self._cache.list_entries[id] = data
         staged_files[#staged_files + 1] = data
       end
     end
@@ -117,11 +119,13 @@ function Query:get_file_diff(file, lines, hunks)
 end
 
 function Query:reset()
-  self._list_entry_cache = {}
-  self._diff_dto_cache = {}
   self.id = nil
   self.err = nil
   self.data = nil
+  self._cache = {
+    list_entries = {},
+    diff_dtos = {},
+  }
 
   return self
 end
@@ -130,8 +134,10 @@ function Query:fetch(shape, preserve_caching)
   self:reset()
 
   if not preserve_caching then
-    self._list_entry_cache = {}
-    self._diff_dto_cache = {}
+    self._cache = {
+      list_entries = {},
+      diff_dtos = {},
+    }
   end
 
   if not self.git:is_inside_git_dir() then
@@ -173,7 +179,7 @@ function Query:get(id)
     self.id = id
   end
 
-  local datum = self._list_entry_cache[self.id]
+  local datum = self._cache.list_entries[self.id]
 
   if not datum then
     return { 'Item not found' }, nil
@@ -199,8 +205,8 @@ function Query:get_diff_dto()
 
   local cache_key = string.format('%s-%s-%s', id, status, file.id)
 
-  if self._diff_dto_cache[cache_key] then
-    return nil, self._diff_dto_cache[cache_key]
+  if self._cache.diff_dtos[cache_key] then
+    return nil, self._cache.diff_dtos[cache_key]
   end
 
   local lines_err, lines = self:get_file_lines(file, status)
@@ -215,9 +221,9 @@ function Query:get_diff_dto()
     return hunks_err
   end
 
-  self._diff_dto_cache[cache_key] = self:get_file_diff(file, lines, hunks)
+  self._cache.diff_dtos[cache_key] = self:get_file_diff(file, lines, hunks)
 
-  return nil, self._diff_dto_cache[cache_key]
+  return nil, self._cache.diff_dtos[cache_key]
 end
 
 function Query:get_filename()

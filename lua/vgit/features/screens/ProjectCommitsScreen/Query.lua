@@ -13,7 +13,7 @@ function Query:constructor()
     data = nil,
     shape = nil,
     git = Git(),
-    _diff_dto_cache = {},
+    _cache = {},
   }
 end
 
@@ -21,7 +21,7 @@ function Query:reset()
   self.id = nil
   self.err = nil
   self.data = nil
-  self._diff_dto_cache = {}
+  self._cache = {}
 
   return self
 end
@@ -33,7 +33,7 @@ function Query:fetch(shape, commits)
     return { 'No commits specified' }, nil
   end
 
-  self._diff_dto_cache = {}
+  self._cache = {}
 
   if not self.git:is_inside_git_dir() then
     return { 'Project has no .git folder' }, nil
@@ -64,7 +64,7 @@ function Query:fetch(shape, commits)
         log = log,
         file = file,
       }
-      self._diff_dto_cache[datum.id] = datum
+      self._cache[datum.id] = datum
 
       return datum
     end)
@@ -90,7 +90,7 @@ function Query:get(id)
     self.id = id
   end
 
-  local datum = self._diff_dto_cache[self.id]
+  local datum = self._cache[self.id]
 
   if not datum then
     return { 'Item not found' }, nil
@@ -118,15 +118,15 @@ function Query:get_diff_dto()
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self._diff_dto_cache[id] then
-    return nil, self._diff_dto_cache[id]
+  if self._cache[id] then
+    return nil, self._cache[id]
   end
 
   local lines_err, lines
   local is_deleted = false
 
   loop.await_fast_event()
-  if not git:is_in_remote(filename, commit_hash) then
+  if not self.git:is_in_remote(filename, commit_hash) then
     is_deleted = true
     lines_err, lines = self.git:show(filename, parent_hash)
   else
@@ -157,7 +157,7 @@ function Query:get_diff_dto()
     diff = Diff(hunks):call(lines, self.shape)
   end
 
-  self._diff_dto_cache[id] = diff
+  self._cache[id] = diff
 
   return nil, diff
 end
