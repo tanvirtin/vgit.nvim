@@ -11,14 +11,20 @@ function Query:constructor()
     data = nil,
     shape = nil,
     git_object = nil,
-    _diff_dto_cache = {},
+    _cache = {
+      lines = nil,
+      diff_dto = nil,
+    },
   }
 end
 
 function Query:reset()
   self.err = nil
   self.data = nil
-  self._diff_dto_cache = {}
+  self._cache = {
+    lines = nil,
+    diff_dto = nil,
+  }
 
   return self
 end
@@ -38,7 +44,7 @@ function Query:fetch(shape, filename, opts)
     return lines_err
   end
 
-  self._diff_dto_cache['lines'] = lines
+  self._cache.lines = lines
 
   if opts.is_staged then
     self.err, self.data = self.git_object:staged_hunks(lines)
@@ -60,16 +66,13 @@ function Query:get_diff_dto()
     return data_err
   end
 
-  if self._diff_dto_cache['diff_dto'] then
-    return nil, self._diff_dto_cache['diff_dto']
+  if self._cache.diff_dto then
+    return nil, self._cache.diff_dto
   end
 
-  self._diff_dto_cache['diff_dto'] = Diff(data):call(
-    self._diff_dto_cache['lines'],
-    self.shape
-  )
+  self._cache.diff_dto = Diff(data):call(self._cache.lines, self.shape)
 
-  return nil, self._diff_dto_cache['diff_dto']
+  return nil, self._cache.diff_dto
 end
 
 function Query:get_filename()

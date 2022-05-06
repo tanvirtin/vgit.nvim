@@ -21,6 +21,9 @@ function GitObject:constructor(filename)
       tracked = nil,
     },
     filetype = fs.detect_filetype(filename),
+    _cache = {
+      line_blames = {},
+    },
   }
 end
 
@@ -107,9 +110,19 @@ function GitObject:is_ignored()
 end
 
 function GitObject:blame_line(lnum)
-  return self.git:blame_line(self:tracked_filename(), lnum, {
+  if self._cache.line_blames[lnum] then
+    return nil, self._cache.line_blames[lnum]
+  end
+
+  local err, blame = self.git:blame_line(self:tracked_filename(), lnum, {
     is_background = true,
   })
+
+  if blame then
+    self._cache.line_blames[lnum] = blame
+  end
+
+  return err, blame
 end
 
 function GitObject:blames()

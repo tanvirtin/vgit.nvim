@@ -13,7 +13,7 @@ function Query:constructor()
     index = 1,
     err = nil,
     data = nil,
-    _diff_dto_cache = {},
+    _cache = {},
   }
 end
 
@@ -21,7 +21,7 @@ function Query:reset()
   self.err = nil
   self.data = nil
   self.index = 1
-  self._diff_dto_cache = {}
+  self._cache = {}
 
   return self
 end
@@ -74,8 +74,8 @@ function Query:get_diff_dto(index)
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self._diff_dto_cache[id] then
-    return nil, self._diff_dto_cache[id]
+  if self._cache[id] then
+    return nil, self._cache[id]
   end
 
   local hunks_err, hunks = self.git_object:remote_hunks(
@@ -102,7 +102,7 @@ function Query:get_diff_dto(index)
     diff = Diff(hunks):split(lines)
   end
 
-  self._diff_dto_cache[id] = diff
+  self._cache[id] = diff
 
   return nil, diff
 end
