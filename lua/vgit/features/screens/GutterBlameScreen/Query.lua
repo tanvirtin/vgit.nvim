@@ -10,13 +10,14 @@ function Query:constructor()
     err = nil,
     data = nil,
     git_object = nil,
-    _diff_dto_cache = nil,
+    _cache = nil,
   }
 end
 
 function Query:reset()
   self.err = nil
   self.data = nil
+  self._cache = nil
 
   return self
 end
@@ -38,8 +39,8 @@ function Query:get_blames()
 end
 
 function Query:get_diff_dto()
-  if self._diff_dto_cache then
-    return nil, self._diff_dto_cache
+  if self._cache then
+    return nil, self._cache
   end
 
   loop.await_fast_event()
@@ -50,11 +51,11 @@ function Query:get_diff_dto()
     return err
   end
 
-  self._diff_dto_cache = DiffDTO({
+  self._cache = DiffDTO({
     lines = lines,
   })
 
-  return nil, self._diff_dto_cache
+  return nil, self._cache
 end
 
 function Query:get_filename()

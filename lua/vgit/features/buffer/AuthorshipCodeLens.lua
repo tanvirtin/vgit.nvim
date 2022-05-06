@@ -101,6 +101,8 @@ function AuthorshipCodeLens:generate_blame_statistics(blames)
   local num_authors = 0
 
   for i = 1, #blames do
+    loop.await_fast_event()
+
     local blame = blames[i]
 
     if blame.committed then

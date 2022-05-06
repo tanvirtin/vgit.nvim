@@ -43,79 +43,84 @@ function LiveBlame:clear(buffer)
   end
 end
 
-LiveBlame.sync = loop.brakecheck(loop.async(function(self)
-  if not live_blame_setting:get('enabled') then
-    return
-  end
+LiveBlame.sync = loop.debounce(
+  loop.async(function(self)
+    if not live_blame_setting:get('enabled') then
+      return
+    end
 
-  loop.await_fast_event()
-  local window = Window(0)
-  loop.await_fast_event()
-  local buffer = git_buffer_store.current()
-  local git_buffer = GitBuffer(buffer)
+    loop.await_fast_event()
+    local window = Window(0)
+    loop.await_fast_event()
+    local buffer = git_buffer_store.current()
+    local git_buffer = GitBuffer(buffer)
 
-  if not buffer then
-    return
-  end
-  loop.await_fast_event()
+    if not buffer then
+      return
+    end
+    loop.await_fast_event()
 
-  if buffer:editing() then
-    console.debug.warning(
-      string.format('Buffer %s is being edited right now', buffer.bufnr)
-    )
-    return
-  end
+    if buffer:editing() then
+      console.debug.warning(
+        string.format('Buffer %s is being edited right now', buffer.bufnr)
+      )
+      return
+    end
 
-  if not buffer:is_valid() then
-    return
-  end
+    if not buffer:is_valid() then
+      return
+    end
 
-  if not git_buffer:is_tracked() then
-    return
-  end
+    if not git_buffer:is_tracked() then
+      return
+    end
 
-  loop.await_fast_event()
-  local lnum = window:get_lnum()
+    loop.await_fast_event()
+    local lnum = window:get_lnum()
 
-  if self.last_lnum and self.last_lnum == lnum then
-    return
-  end
+    if self.last_lnum and self.last_lnum == lnum then
+      return
+    end
 
-  loop.await_fast_event()
-  local blame_err, blame = buffer.git_object:blame_line(lnum)
+    loop.await_fast_event()
+    local blame_err, blame = buffer.git_object:blame_line(lnum)
 
-  if not buffer:is_valid() then
-    return self
-  end
+    loop.await_fast_event()
+    if not buffer:is_valid() then
+      return self
+    end
 
-  loop.await_fast_event()
-  local new_lnum = window:get_lnum()
+    loop.await_fast_event()
+    local new_lnum = window:get_lnum()
 
-  if lnum ~= new_lnum then
-    return
-  end
+    if lnum ~= new_lnum then
+      return
+    end
 
-  if blame_err then
-    console.debug.error(blame_err)
-    return
-  end
+    if blame_err then
+      console.debug.error(blame_err)
+      return
+    end
 
-  loop.await_fast_event()
-  local config_err, config = buffer.git_object:config()
+    loop.await_fast_event()
+    local config_err, config = buffer.git_object:config()
 
-  if config_err then
-    console.debug.error(config_err)
-    return
-  end
+    if config_err then
+      console.debug.error(config_err)
+      return
+    end
 
-  if not buffer then
-    return
-  end
+    if not buffer then
+      return
+    end
 
-  self:clear(buffer)
-  self:display(lnum, buffer, config, blame)
-  self.last_lnum = lnum
-end))
+    loop.await_fast_event()
+    self:clear(buffer)
+    self:display(lnum, buffer, config, blame)
+    self.last_lnum = lnum
+  end),
+  20
+)
 
 function LiveBlame:desync(force)
   loop.await_fast_event()
