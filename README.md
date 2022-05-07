@@ -215,6 +215,7 @@ require('vgit').setup({
     },
     live_gutter = {
       enabled = true,
+      edge_navigation = true, -- This allows users to navigate within a hunk
     },
     authorship_code_lens = {
       enabled = true,

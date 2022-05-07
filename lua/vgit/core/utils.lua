@@ -219,16 +219,6 @@ function utils.object.clone(config_object)
   return vim.tbl_extend('force', {}, config_object)
 end
 
-function utils.object.pick(object, item)
-  for i = 1, #object do
-    if object[i] == item then
-      return item
-    end
-  end
-
-  return object[1]
-end
-
 function utils.object.each(object, callback)
   for key, value in pairs(object) do
     local break_loop = callback(value, key)
@@ -237,6 +227,16 @@ function utils.object.each(object, callback)
       return
     end
   end
+end
+
+function utils.list.pick(list, item)
+  for i = 1, #list do
+    if list[i] == item then
+      return item
+    end
+  end
+
+  return list[1]
 end
 
 function utils.list.concat(a, b)
