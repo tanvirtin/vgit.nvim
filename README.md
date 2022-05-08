@@ -227,6 +227,7 @@ require('vgit').setup({
       keymaps = {
         buffer_stage = 's',
         buffer_unstage = 'u',
+        buffer_hunk_stage = 'gs',
         stage_all = 'S',
         unstage_all = 'U',
         reset_all = 'R',

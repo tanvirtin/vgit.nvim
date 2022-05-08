@@ -1,5 +1,6 @@
 local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
+local GitObject = require('vgit.git.GitObject')
 
 local Mutation = Object:extend()
 
@@ -7,6 +8,10 @@ function Mutation:constructor()
   return {
     git = Git(),
   }
+end
+
+function Mutation:stage_hunk(filename, hunk)
+  return GitObject(filename):stage_hunk(hunk)
 end
 
 function Mutation:stage_file(filename)

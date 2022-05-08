@@ -80,6 +80,10 @@ function FoldableListView:get_current_list_item()
   return self:get_list_item(self.scene:get('list'):get_lnum())
 end
 
+function FoldableListView:query_list_item(callback)
+  return self.scene:get('list'):query_list_item(callback)
+end
+
 function FoldableListView:toggle_current_list_item()
   local item = self:get_list_item(self.scene:get('list'):get_lnum())
 

@@ -1,8 +1,8 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
-local icons = require('vgit.core.icons')
 local Scene = require('vgit.ui.Scene')
 local Feature = require('vgit.Feature')
+local icons = require('vgit.core.icons')
 local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
@@ -68,6 +68,10 @@ function ProjectDiffScreen:constructor()
               local list_entry = {
                 id = entry.id,
                 value = value,
+                metadata = {
+                  category = key,
+                  file = file,
+                },
               }
 
               if icon then
@@ -100,6 +104,84 @@ function ProjectDiffScreen:hunk_down()
   return self
 end
 
+function ProjectDiffScreen:is_current_list_item_staged()
+  loop.await_fast_event()
+  local current_list_item = self.foldable_list_view:get_current_list_item()
+  local metadata = current_list_item.metadata
+
+  if metadata and metadata.category == 'staged' then
+    return true
+  end
+
+  return false
+end
+
+function ProjectDiffScreen:is_current_list_item_unstaged()
+  loop.await_fast_event()
+  local current_list_item = self.foldable_list_view:get_current_list_item()
+  local metadata = current_list_item.metadata
+
+  if metadata and metadata.category == 'unstaged' then
+    return true
+  end
+
+  return false
+end
+
+ProjectDiffScreen.stage_hunk = loop.debounce(
+  loop.async(function(self)
+    if self:is_current_list_item_staged() then
+      return self
+    end
+
+    local _, filename = self.query:get_filename()
+
+    if not filename then
+      return self
+    end
+
+    loop.await_fast_event()
+    local hunk = self.code_view:get_current_hunk_under_cursor()
+
+    if not hunk then
+      return self
+    end
+
+    local err = self.mutation:stage_hunk(filename, hunk)
+
+    if err then
+      console.debug.error(err)
+      return
+    end
+
+    loop.await_fast_event()
+    self.query:fetch(self.layout_type, true)
+    loop.await_fast_event()
+
+    local list_item = self.foldable_list_view
+      :evict_cache()
+      :render()
+      :query_list_item(function(list_item)
+        if list_item.items then
+          return false
+        end
+
+        local metadata = list_item.metadata
+
+        return metadata.category == 'changes'
+          and filename == metadata.file.filename
+          and metadata.file:is_unstaged()
+      end) or self.foldable_list_view:get_current_list_item()
+
+    self.query:set_id(list_item.id)
+
+    self.code_view:render()
+
+    return self
+  end),
+  15
+)
+
 ProjectDiffScreen.stage_file = loop.debounce(
   loop.async(function(self)
     local _, filename = self.query:get_filename()
@@ -110,21 +192,7 @@ ProjectDiffScreen.stage_file = loop.debounce(
 
     self.mutation:stage_file(filename)
 
-    self.foldable_list_view:evict_cache()
-
-    loop.await_fast_event()
-    self.query:fetch(self.layout_type)
-    loop.await_fast_event()
-
-    self.foldable_list_view:render()
-
-    local list_item = self.foldable_list_view:get_current_list_item()
-
-    self.query:set_id(list_item.id)
-
-    self.code_view:render():navigate_to_mark(1)
-
-    return self
+    return self:render()
   end),
   15
 )
@@ -139,21 +207,7 @@ ProjectDiffScreen.unstage_file = loop.debounce(
 
     self.mutation:unstage_file(filename)
 
-    self.foldable_list_view:evict_cache()
-
-    loop.await_fast_event()
-    self.query:fetch(self.layout_type, true)
-    loop.await_fast_event()
-
-    self.foldable_list_view:render()
-
-    local list_item = self.foldable_list_view:get_current_list_item()
-
-    self.query:set_id(list_item.id)
-
-    self.code_view:render():navigate_to_mark(1)
-
-    return self
+    return self:render()
   end),
   15
 )
@@ -162,21 +216,7 @@ ProjectDiffScreen.stage_all = loop.debounce(
   loop.async(function(self)
     self.mutation:stage_all()
 
-    self.foldable_list_view:evict_cache()
-
-    loop.await_fast_event()
-    self.query:fetch(self.layout_type)
-    loop.await_fast_event()
-
-    self.foldable_list_view:render()
-
-    local list_item = self.foldable_list_view:get_current_list_item()
-
-    self.query:set_id(list_item.id)
-
-    self.code_view:render():navigate_to_mark(1)
-
-    return self
+    return self:render()
   end),
   15
 )
@@ -185,21 +225,7 @@ ProjectDiffScreen.unstage_all = loop.debounce(
   loop.async(function(self)
     self.mutation:unstage_all()
 
-    self.foldable_list_view:evict_cache()
-
-    loop.await_fast_event()
-    self.query:fetch(self.layout_type)
-    loop.await_fast_event()
-
-    self.foldable_list_view:render()
-
-    local list_item = self.foldable_list_view:get_current_list_item()
-
-    self.query:set_id(list_item.id)
-
-    self.code_view:render():navigate_to_mark(1)
-
-    return self
+    return self:render()
   end),
   15
 )
@@ -215,25 +241,9 @@ ProjectDiffScreen.reset_all = loop.debounce(
       return
     end
 
-    loop.await_fast_event()
     self.mutation:reset_all()
-    loop.await_fast_event()
 
-    self.foldable_list_view:evict_cache()
-
-    loop.await_fast_event()
-    self.query:fetch(self.layout_type)
-    loop.await_fast_event()
-
-    self.foldable_list_view:render()
-
-    local list_item = self.foldable_list_view:get_current_list_item()
-
-    self.query:set_id(list_item.id)
-
-    self.code_view:render():navigate_to_mark(1)
-
-    return self
+    return self:render()
   end),
   15
 )
@@ -249,31 +259,32 @@ ProjectDiffScreen.clean_all = loop.debounce(
       return
     end
 
-    loop.await_fast_event()
     self.mutation:clean_all()
-    loop.await_fast_event()
 
-    self.foldable_list_view:evict_cache()
-
-    loop.await_fast_event()
-    self.query:fetch(self.layout_type)
-    loop.await_fast_event()
-
-    self.foldable_list_view:render()
-
-    local list_item = self.foldable_list_view:get_current_list_item()
-
-    self.query:set_id(list_item.id)
-
-    self.code_view:render():navigate_to_mark(1)
-
-    return self
+    return self:render()
   end),
   15
 )
 
 function ProjectDiffScreen:trigger_keypress(key, ...)
   self.scene:trigger_keypress(key, ...)
+
+  return self
+end
+
+function ProjectDiffScreen:render()
+  loop.await_fast_event()
+  self.query:fetch(self.layout_type)
+  loop.await_fast_event()
+
+  local list_item = self.foldable_list_view
+    :evict_cache()
+    :render()
+    :get_current_list_item()
+
+  self.query:set_id(list_item.id)
+
+  self.code_view:render():navigate_to_mark(1)
 
   return self
 end
@@ -297,6 +308,17 @@ function ProjectDiffScreen:show()
   self.foldable_list_view:show()
 
   self.code_view:set_keymap({
+    {
+      mode = 'n',
+      key = project_diff_preview_setting:get('keymaps').buffer_hunk_stage,
+      vgit_key = string.format(
+        'keys.%s',
+        project_diff_preview_setting:get('keymaps').buffer_hunk_stage
+      ),
+      handler = loop.async(function()
+        self:stage_hunk()
+      end),
+    },
     {
       mode = 'n',
       key = '<enter>',

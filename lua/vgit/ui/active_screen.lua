@@ -146,6 +146,15 @@ active_screen.keys[project_diff_preview_setting:get('keymaps').buffer_unstage] =
     return active_screen
   end
 
+active_screen.keys[project_diff_preview_setting:get('keymaps').buffer_hunk_stage] =
+  function()
+    active_screen.current:trigger_keypress(
+      project_diff_preview_setting:get('keymaps').buffer_hunk_stage
+    )
+
+    return active_screen
+  end
+
 active_screen.keys[project_diff_preview_setting:get('keymaps').stage_all] =
   function()
     active_screen.current:trigger_keypress(

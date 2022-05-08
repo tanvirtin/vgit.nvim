@@ -607,6 +607,35 @@ function CodeView:get_current_mark_under_cursor()
   return nil
 end
 
+function CodeView:get_current_hunk_under_cursor()
+  local err, diff_dto = self.query:get_diff_dto()
+
+  if err then
+    console.debug.error(err)
+    return nil
+  end
+
+  local selected
+  local marks = diff_dto.marks
+  local hunks = diff_dto.hunks
+  local lnum = self.scene:get('current'):get_lnum()
+
+  for i = 1, #marks do
+    local mark = marks[i]
+
+    if lnum >= mark.top and lnum <= mark.bot then
+      selected = i
+      break
+    end
+  end
+
+  if selected then
+    return hunks[selected]
+  end
+
+  return nil
+end
+
 function CodeView:select_mark(marks, mark_index, position)
   local lnum = nil
   local mark = marks[mark_index]

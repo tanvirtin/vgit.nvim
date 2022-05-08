@@ -38,7 +38,7 @@ function navigation.hunk_up(window, hunks)
     return selected
   else
     local hunk = hunks[#hunks]
-    new_lnum = is_edge_navigation == 'edge' and hunk.bot or hunk.top
+    new_lnum = is_edge_navigation and hunk.bot or hunk.top
 
     selected = #hunks
 

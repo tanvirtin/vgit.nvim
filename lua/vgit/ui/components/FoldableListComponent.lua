@@ -59,6 +59,18 @@ function FoldableListComponent:get_list_item(lnum)
   return self._cache[lnum]
 end
 
+function FoldableListComponent:query_list_item(callback)
+  for _, list_item in ipairs(self._cache) do
+    local result = callback(list_item)
+
+    if result == true then
+      return list_item
+    end
+  end
+
+  return nil
+end
+
 function FoldableListComponent:generate_lines()
   local spacing = 2
   local current_lnum = 0
