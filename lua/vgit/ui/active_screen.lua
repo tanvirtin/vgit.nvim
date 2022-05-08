@@ -9,6 +9,7 @@ local ProjectHunksScreen = require('vgit.features.screens.ProjectHunksScreen')
 local GutterBlameScreen = require('vgit.features.screens.GutterBlameScreen')
 local LineBlameScreen = require('vgit.features.screens.LineBlameScreen')
 local DebugScreen = require('vgit.features.screens.DebugScreen')
+local ProjectLogsScreen = require('vgit.features.screens.ProjectLogsScreen')
 local project_diff_preview_setting = require(
   'vgit.settings.project_diff_preview'
 )
@@ -70,6 +71,12 @@ function active_screen.screens.gutter_blame_screen()
   return gutter_blame_screen:show(), gutter_blame_screen
 end
 
+function active_screen.screens.project_logs_screen(...)
+  local project_logs_screen = ProjectLogsScreen()
+
+  return project_logs_screen:show({ ... }), project_logs_screen
+end
+
 function active_screen.screens.project_diff_screen()
   local project_diff_screen = ProjectDiffScreen()
   project_diff_screen.layout_type = scene_setting:get('diff_preference')
@@ -118,6 +125,12 @@ end
 
 function active_screen.keys.k()
   active_screen.current:trigger_keypress('k')
+
+  return active_screen
+end
+
+active_screen.keys['<tab>'] = function()
+  active_screen.current:trigger_keypress('<tab>')
 
   return active_screen
 end

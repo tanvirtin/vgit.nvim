@@ -129,6 +129,12 @@ function Component:add_highlight(hl, row, col_top, col_end)
   return self
 end
 
+function Component:clear_highlight(row_start, row_end)
+  self.buffer:clear_highlight(row_start, row_end)
+
+  return self
+end
+
 function Component:sign_place(lnum, sign_name)
   self.buffer:sign_place(lnum, sign_name)
 
