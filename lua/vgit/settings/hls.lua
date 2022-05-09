@@ -5,7 +5,14 @@ return Config({
   GitCount = 'Keyword',
   GitSymbol = 'CursorLineNr',
   GitTitle = 'Directory',
-  GitSelected = 'QuickfixLine',
+  GitSelected = function()
+    return {
+      bg = Color({ name = 'QuickfixLine', attribute = 'bg' }):get(),
+      fg = Color({ name = 'QuickfixLine', attribute = 'fg' }):get(),
+      gui = 'italic',
+      override = false,
+    }
+  end,
   GitBackground = function()
     return {
       bg = Color({ name = 'Normal', attribute = 'bg' }):darken(8):get(),

@@ -38,7 +38,7 @@
 - File hunk preview
 - File staged diff preview
 - Project diff preview
-  - Gives ability for users to discard all changes
+  - Discard all changes
   - Stage/unstage all changes
   - Stage/unstage individual files
   - Stage hunks
