@@ -78,6 +78,10 @@ function FoldableListComponent:generate_lines()
   local hls = {}
 
   local function generate_lines(list, depth)
+    if not list then
+      return
+    end
+
     for i = 1, #list do
       local item = list[i]
       current_lnum = current_lnum + 1

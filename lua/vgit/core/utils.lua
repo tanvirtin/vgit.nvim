@@ -247,11 +247,18 @@ function utils.list.concat(a, b)
   return a
 end
 
-function utils.list.merge(t, b)
+function utils.list.merge(t, ...)
   local a = vim.deepcopy(t)
-  for _, value in ipairs(b) do
-    a[#a + 1] = value
+  local lists = { ... }
+
+  for i = 1, #lists do
+    local b = lists[i]
+
+    for _, value in ipairs(b) do
+      a[#a + 1] = value
+    end
   end
+
   return a
 end
 

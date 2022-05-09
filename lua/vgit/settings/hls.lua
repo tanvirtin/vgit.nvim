@@ -5,6 +5,7 @@ return Config({
   GitCount = 'Keyword',
   GitSymbol = 'CursorLineNr',
   GitTitle = 'Directory',
+  GitSelected = 'QuickfixLine',
   GitBackground = function()
     return {
       bg = Color({ name = 'Normal', attribute = 'bg' }):darken(8):get(),

@@ -66,7 +66,11 @@ function GitFile:get_hunks()
       hunks_err, hunks = self.git:index_hunks(filename)
     end
   elseif log then
-    hunks = self.git:remote_hunks(filename, log.parent_hash, log.commit_hash)
+    hunks_err, hunks = self.git:remote_hunks(
+      filename,
+      log.parent_hash,
+      log.commit_hash
+    )
   else
     hunks_err, hunks = self.git:index_hunks(filename)
   end
