@@ -271,7 +271,7 @@ function GitObject:remote_hunks(parent_hash, commit_hash)
 end
 
 function GitObject:logs()
-  return self.git:logs(self:tracked_filename(), {
+  return self.git:file_logs(self:tracked_filename(), {
     is_background = true,
   })
 end

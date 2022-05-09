@@ -29,7 +29,7 @@ function DebugScreen:trigger_keypress(key, ...)
 end
 
 function DebugScreen:show(source)
-  console.log('Processing info')
+  console.log(string.format('Processing %s', source))
 
   local query = self.query
 

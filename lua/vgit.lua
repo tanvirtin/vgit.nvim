@@ -39,6 +39,11 @@ local authorship_code_lens = AuthorshipCodeLens()
 local project_hunks_quickfix = ProjectHunksQuickfix()
 
 local keys = {
+  tab = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress('<tab>')
+    end
+  end),
   enter = loop.async(function()
     if active_screen.exists() then
       return active_screen.keypress('<enter>')
@@ -282,6 +287,10 @@ local project = {
     active_screen.activate('project_diff_screen')
   end),
 
+  logs_preview = loop.async(function(...)
+    active_screen.activate('project_logs_screen', ...)
+  end),
+
   commits_preview = loop.async(function(...)
     active_screen.activate('project_commits_screen', ...)
   end),
@@ -461,6 +470,7 @@ return {
   project_stage_all = project.stage_all,
   project_reset_all = project.reset_all,
   project_unstage_all = project.unstage_all,
+  project_logs_preview = project.logs_preview,
   project_diff_preview = project.diff_preview,
   project_hunks_preview = project.hunks_preview,
   project_debug_preview = project.debug_preview,

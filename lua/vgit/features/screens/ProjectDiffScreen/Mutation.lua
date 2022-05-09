@@ -11,7 +11,13 @@ function Mutation:constructor()
 end
 
 function Mutation:stage_hunk(filename, hunk)
-  return GitObject(filename):stage_hunk(hunk)
+  local git_object = GitObject(filename)
+
+  if not git_object:is_tracked() then
+    return git_object:stage()
+  end
+
+  return git_object:stage_hunk(hunk)
 end
 
 function Mutation:stage_file(filename)

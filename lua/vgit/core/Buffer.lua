@@ -167,6 +167,12 @@ function Buffer:add_highlight(hl, row, col_top, col_end)
   return self
 end
 
+function Buffer:clear_highlight(row_start, row_end)
+  self.namespace:clear(self, row_start, row_end)
+
+  return self
+end
+
 function Buffer:sign_place(lnum, sign_name)
   self.namespace:sign_place(self, lnum, sign_name)
 

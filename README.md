@@ -35,10 +35,17 @@
 - Gutter blame preview
 - File history preview
 - File diff preview
-- File staged diff preview
 - File hunk preview
+- File staged diff preview
 - Project diff preview
+  - Gives ability for users to discard all changes
+  - Stage/unstage all changes
+  - Stage/unstage individual files
+  - Stage hunks
+  - Open the file with changes
 - Project hunks preview
+- Project staged hunks preview
+- Project logs preview
 - Project commits preview
 - Send all project hunks to quickfix list
 - Hunk navigations in all buffers with a diff
@@ -318,7 +325,8 @@ require('vgit').setup({
 | buffer_unstage | Unstages all changes in the current buffer. |
 | buffer_reset | Removes all current changes in the buffer and resets it to the version in HEAD. |
 | project_diff_preview | Opens a diff preview along with a list of all the files that have been changed, enabling users to see all the files that were changed in the current project. This preview supports the following commands, "buffer_stage", "buffer_unstage", "buffer_reset", "stage_all" and "unstage_all". |
-| project_commits_preview | Opens a diff preview along with a list of all your commits |
+| project_logs_preview {options} | Opens a preview listing all the logs in the current working branch. Users can filter the list by passing options to this list. Pressing the "tab" key on a list item will keep the item selected. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected commits |
+| project_commits_preview {commits} | Opens a diff preview along with a list of all your commits |
 | project_hunks_preview | Opens a diff preview along with a foldable list of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
 | project_hunks_staged_preview | Opens a diff preview along with a foldable list of all the current staged hunks in the project. Users can use this preview to cycle through all the hunks. |
 | project_debug_preview | Opens a VGit view showing logs of a pariticular kind traced within the application. |

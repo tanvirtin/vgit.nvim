@@ -104,8 +104,17 @@ function Namespace:sign_unplace(buffer, lnum)
   return self
 end
 
-function Namespace:clear(buffer)
-  pcall(vim.api.nvim_buf_clear_namespace, buffer.bufnr, self.ns_id, 0, -1)
+function Namespace:clear(buffer, row_start, row_end)
+  row_start = row_start or 0
+  row_end = row_end or -1
+
+  pcall(
+    vim.api.nvim_buf_clear_namespace,
+    buffer.bufnr,
+    self.ns_id,
+    row_start,
+    row_end
+  )
 
   return self
 end
