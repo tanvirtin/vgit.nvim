@@ -1,5 +1,4 @@
 local Object = require('vgit.core.Object')
-local utils = require('vgit.core.utils')
 
 local Patch = Object:extend()
 
@@ -18,7 +17,6 @@ function Patch:constructor(filename, hunk)
   end
 
   local patch = {
-    id = utils.math.uuid(),
     string.format('diff --git a/%s b/%s', filename, filename),
     'index 000000..000000',
     string.format('--- a/%s', filename),
