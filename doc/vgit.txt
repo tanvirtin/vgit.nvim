@@ -152,6 +152,7 @@ More advanced configuration:
             buffer_stage = 's',
             buffer_unstage = 'u',
             buffer_hunk_stage = 'gs',
+            buffer_hunk_unstage = 'gu',
             stage_all = 'S',
             unstage_all = 'U',
             reset_all = 'R',
@@ -298,14 +299,15 @@ project_reset_all()                          *vgit.reset_all()*
                 Discards all file changes that are not staged.
 
 project_diff_preview()                            *vgit.project_diff_preview()*
-                Opens a diff preview along with a table of all the files that
-                have been changed, enabling users to see all the files that
-                were changed in the current project. Users can use this view
-                to stage and unstage all files using stage_all and
-                unstage_all. Users can also trigger changes on individual
-                files using |buffer_stage|, |buffer_unstage| and
-                |buffer_reset| while being on the cursor that corresponds to
-                the file.
+                Opens a diff preview along with a list of staged and unstaged
+                files in your project.
+
+                Using configurable keymaps users can perform the following
+                actions:
+                - Discard changes
+                - Stage/unstage a file
+                - Stage/unstage a hunk
+                - Open the file
 
 project_commits_preview({commits})              *vgit.project_commits_preview()*
                 Opens a preview listing all the logs in the current working
