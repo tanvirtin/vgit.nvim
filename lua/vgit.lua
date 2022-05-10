@@ -86,6 +86,15 @@ local keys = {
       end
     end
   ),
+  [project_diff_preview_setting:get('keymaps').buffer_hunk_unstage] = loop.async(
+    function()
+      if active_screen.exists() then
+        return active_screen.keypress(
+          project_diff_preview_setting:get('keymaps').buffer_hunk_unstage
+        )
+      end
+    end
+  ),
   [project_diff_preview_setting:get('keymaps').stage_all] = loop.async(
     function()
       if active_screen.exists() then

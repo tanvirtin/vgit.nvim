@@ -73,8 +73,27 @@ function GitObject:stage_hunk_from_patch(patch)
   return err
 end
 
+function GitObject:unstage_hunk_from_patch(patch)
+  local patch_filename = fs.tmpname()
+
+  fs.write_file(patch_filename, patch)
+
+  loop.await_fast_event()
+  local err = self.git:unstage_hunk_from_patch(patch_filename)
+
+  loop.await_fast_event()
+  fs.remove_file(patch_filename)
+  loop.await_fast_event()
+
+  return err
+end
+
 function GitObject:stage_hunk(hunk)
   return self:stage_hunk_from_patch(self:patch_hunk(hunk))
+end
+
+function GitObject:unstage_hunk(hunk)
+  return self:unstage_hunk_from_patch(self:patch_hunk(hunk))
 end
 
 function GitObject:stage()

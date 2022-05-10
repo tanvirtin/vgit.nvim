@@ -41,7 +41,7 @@
   - Discard all changes
   - Stage/unstage all changes
   - Stage/unstage individual files
-  - Stage hunks
+  - Stage/unstage hunks
   - Open the file with changes
 - Project hunks preview
 - Project staged hunks preview
@@ -235,6 +235,7 @@ require('vgit').setup({
         buffer_stage = 's',
         buffer_unstage = 'u',
         buffer_hunk_stage = 'gs',
+        buffer_hunk_unstage = 'gu',
         stage_all = 'S',
         unstage_all = 'U',
         reset_all = 'R',
@@ -324,7 +325,7 @@ require('vgit').setup({
 | buffer_stage | Stages all changes in the current buffer. |
 | buffer_unstage | Unstages all changes in the current buffer. |
 | buffer_reset | Removes all current changes in the buffer and resets it to the version in HEAD. |
-| project_diff_preview | Opens a diff preview along with a list of all the files that have been changed, enabling users to see all the files that were changed in the current project. This preview supports the following commands, "buffer_stage", "buffer_unstage", "buffer_reset", "stage_all" and "unstage_all". |
+| project_diff_preview | Opens a diff preview along with a list of all the files that have been changed, enabling users to see all the files that were changed in the current project |
 | project_logs_preview {options} | Opens a preview listing all the logs in the current working branch. Users can filter the list by passing options to this list. Pressing the "tab" key on a list item will keep the item selected. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected commits |
 | project_commits_preview {commits} | Opens a diff preview along with a list of all your commits |
 | project_hunks_preview | Opens a diff preview along with a foldable list of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |

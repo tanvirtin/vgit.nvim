@@ -182,6 +182,60 @@ ProjectDiffScreen.stage_hunk = loop.debounce(
   15
 )
 
+ProjectDiffScreen.unstage_hunk = loop.debounce(
+  loop.async(function(self)
+    if self:is_current_list_item_unstaged() then
+      return self
+    end
+
+    local _, filename = self.query:get_filename()
+
+    if not filename then
+      return self
+    end
+
+    loop.await_fast_event()
+    local hunk = self.code_view:get_current_hunk_under_cursor()
+
+    if not hunk then
+      return self
+    end
+
+    local err = self.mutation:unstage_hunk(filename, hunk)
+
+    if err then
+      console.debug.error(err)
+      return
+    end
+
+    loop.await_fast_event()
+    self.query:fetch(self.layout_type, true)
+    loop.await_fast_event()
+
+    local list_item = self.foldable_list_view
+      :evict_cache()
+      :render()
+      :query_list_item(function(list_item)
+        if list_item.items then
+          return false
+        end
+
+        local metadata = list_item.metadata
+
+        return metadata.category == 'staged'
+          and filename == metadata.file.filename
+          and metadata.file:is_unstaged()
+      end) or self.foldable_list_view:get_current_list_item()
+
+    self.query:set_id(list_item.id)
+
+    self.code_view:render()
+
+    return self
+  end),
+  15
+)
+
 ProjectDiffScreen.stage_file = loop.debounce(
   loop.async(function(self)
     local _, filename = self.query:get_filename()
@@ -317,6 +371,17 @@ function ProjectDiffScreen:show()
       ),
       handler = loop.async(function()
         self:stage_hunk()
+      end),
+    },
+    {
+      mode = 'n',
+      key = project_diff_preview_setting:get('keymaps').buffer_hunk_unstage,
+      vgit_key = string.format(
+        'keys.%s',
+        project_diff_preview_setting:get('keymaps').buffer_hunk_unstage
+      ),
+      handler = loop.async(function()
+        self:unstage_hunk()
       end),
     },
     {

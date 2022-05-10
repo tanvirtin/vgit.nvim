@@ -790,6 +790,37 @@ Git.stage_hunk_from_patch = loop.promisify(
   4
 )
 
+Git.unstage_hunk_from_patch = loop.promisify(
+  function(self, patch_filename, spec, callback)
+    local err = {}
+
+    GitReadStream(utils.object.defaults({
+      command = self.cmd,
+      args = utils.list.merge(self.fallback_args, {
+        '-C',
+        self.cwd,
+        'apply',
+        '--reverse',
+        '--cached',
+        '--whitespace=nowarn',
+        '--unidiff-zero',
+        patch_filename,
+      }),
+      on_stderr = function(line)
+        err[#err + 1] = line
+      end,
+      on_exit = function()
+        if #err ~= 0 then
+          return callback(err)
+        end
+
+        callback(nil)
+      end,
+    }, spec)):start()
+  end,
+  4
+)
+
 Git.is_ignored = loop.promisify(function(self, filename, spec, callback)
   filename = fs.make_relative(filename, self.cwd)
   local err = {}
