@@ -230,6 +230,15 @@ require('vgit').setup({
     scene = {
       diff_preference = 'unified',
     },
+    diff_preview = {
+      keymaps = {
+        buffer_stage = 'S',
+        buffer_unstage = 'U',
+        buffer_hunk_stage = 's',
+        buffer_hunk_unstage = 'u',
+        toggle_view = 't',
+      },
+    },
     project_diff_preview = {
       keymaps = {
         buffer_stage = 's',

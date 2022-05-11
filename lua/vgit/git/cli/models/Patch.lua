@@ -6,13 +6,17 @@ function Patch:constructor(filename, hunk)
   local header = hunk.header
 
   if hunk.type == 'add' then
-    local previous, current = hunk:parse_header(header)
+    local previous, _ = hunk:parse_header(header)
+    -- NOTE: Header indicates metadata of the change between the two version of a file.
+    --       @@ -3, 0, +4, 5 @@ means in the previous file changes start at line 3 and
+    --       there are 0 additions. In the current file changes start at line 4 with 5
+    --       new line additions.
     header = string.format(
       '@@ -%s,%s +%s,%s @@',
       previous[1],
-      0,
+      previous[2],
       previous[1] + 1,
-      current[2]
+      #hunk.diff
     )
   end
 
