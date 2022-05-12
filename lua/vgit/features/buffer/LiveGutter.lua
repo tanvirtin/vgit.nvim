@@ -23,51 +23,48 @@ LiveGutter.clear = loop.async(function(_, buffer)
   buffer:sign_unplace()
 end)
 
-LiveGutter.sync = loop.debounce(
-  loop.async(function(self, buffer)
+LiveGutter.sync = loop.debounced_async(function(self, buffer)
+  loop.await_fast_event()
+  if not buffer:is_valid() then
+    return
+  end
+  loop.await_fast_event()
+
+  local live_signs = buffer:get_cached_live_signs()
+
+  buffer:clear_cached_live_signs()
+
+  loop.await_fast_event()
+  local err = buffer.git_object:live_hunks(buffer:get_lines())
+  loop.await_fast_event()
+
+  if err then
+    buffer:set_cached_live_signs(live_signs)
+    console.debug.error(err)
+
+    return
+  end
+
+  local hunks = buffer.git_object.hunks
+
+  if not hunks then
+    buffer:set_cached_live_signs(live_signs)
+
+    return
+  else
+    local diff_status = buffer.git_object:generate_diff_status()
+
     loop.await_fast_event()
-    if not buffer:is_valid() then
-      return
-    end
+    buffer:set_var('vgit_status', diff_status)
+  end
+
+  self:clear(buffer)
+
+  for i = 1, #hunks do
     loop.await_fast_event()
-
-    local live_signs = buffer:get_cached_live_signs()
-
-    buffer:clear_cached_live_signs()
-
-    loop.await_fast_event()
-    local err = buffer.git_object:live_hunks(buffer:get_lines())
-    loop.await_fast_event()
-
-    if err then
-      buffer:set_cached_live_signs(live_signs)
-      console.debug.error(err)
-
-      return
-    end
-
-    local hunks = buffer.git_object.hunks
-
-    if not hunks then
-      buffer:set_cached_live_signs(live_signs)
-
-      return
-    else
-      local diff_status = buffer.git_object:generate_diff_status()
-
-      loop.await_fast_event()
-      buffer:set_var('vgit_status', diff_status)
-    end
-
-    self:clear(buffer)
-
-    for i = 1, #hunks do
-      loop.await_fast_event()
-      buffer:cache_live_sign(hunks[i])
-    end
-  end),
-  20
-)
+    buffer:cache_live_sign(hunks[i])
+  end
+end, 20)
 
 LiveGutter.resync = loop.async(function(self, buffer)
   loop.await_fast_event()

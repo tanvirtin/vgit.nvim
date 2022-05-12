@@ -84,8 +84,6 @@ describe('Set:', function()
   describe('for_each', function()
     local set = Set({ 'a', 'a', 'b', 'b', 'c', 'c', 'd' })
 
-    local list = set:to_list()
-
     local count_map = {}
     local count = 0
 

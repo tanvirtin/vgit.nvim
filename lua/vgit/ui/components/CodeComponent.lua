@@ -1,4 +1,3 @@
-local fold = require('vgit.core.fold')
 local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
@@ -78,22 +77,6 @@ function CodeComponent:transpose_virtual_line_number(text, hl, row)
     row,
     'right_align'
   )
-
-  return self
-end
-
-function CodeComponent:fold(top, bot)
-  self:call(function()
-    fold.create(top, bot)
-  end)
-
-  return self
-end
-
-function CodeComponent:unfold_all()
-  self:call(function()
-    fold.delete_all()
-  end)
 
   return self
 end
