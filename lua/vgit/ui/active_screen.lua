@@ -1,4 +1,5 @@
 local scene_setting = require('vgit.settings.scene')
+local diff_preview = require('vgit.settings.diff_preview')
 local DiffScreen = require('vgit.features.screens.DiffScreen')
 local HistoryScreen = require('vgit.features.screens.HistoryScreen')
 local ProjectDiffScreen = require('vgit.features.screens.ProjectDiffScreen')
@@ -139,6 +140,46 @@ active_screen.keys['<enter>'] = function()
   active_screen.current:trigger_keypress('<enter>')
 
   return active_screen
+end
+
+active_screen.keys[diff_preview:get('keymaps').toggle_view] = function()
+  if active_screen.exists() then
+    return active_screen.current:trigger_keypress(
+      diff_preview:get('keymaps').toggle_view
+    )
+  end
+end
+
+active_screen.keys[diff_preview:get('keymaps').buffer_stage] = function()
+  if active_screen.exists() then
+    return active_screen.current:trigger_keypress(
+      diff_preview:get('keymaps').buffer_stage
+    )
+  end
+end
+
+active_screen.keys[diff_preview:get('keymaps').buffer_unstage] = function()
+  if active_screen.exists() then
+    return active_screen.current:trigger_keypress(
+      diff_preview:get('keymaps').buffer_unstage
+    )
+  end
+end
+
+active_screen.keys[diff_preview:get('keymaps').buffer_hunk_stage] = function()
+  if active_screen.exists() then
+    return active_screen.current:trigger_keypress(
+      diff_preview:get('keymaps').buffer_hunk_stage
+    )
+  end
+end
+
+active_screen.keys[diff_preview:get('keymaps').buffer_hunk_unstage] = function()
+  if active_screen.exists() then
+    return active_screen.current:trigger_keypress(
+      diff_preview:get('keymaps').buffer_hunk_unstage
+    )
+  end
 end
 
 active_screen.keys[project_diff_preview_setting:get('keymaps').buffer_stage] =

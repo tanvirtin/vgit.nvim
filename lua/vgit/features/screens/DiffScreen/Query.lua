@@ -36,7 +36,14 @@ function Query:fetch(shape, filename, opts)
 
   self.shape = shape
   self.git_object = GitObject(filename)
-  local lines_err, lines = fs.read_file(filename)
+
+  local lines_err, lines
+
+  if opts.is_staged then
+    lines_err, lines = self.git_object:lines()
+  else
+    lines_err, lines = fs.read_file(filename)
+  end
 
   if lines_err then
     self.err = lines_err

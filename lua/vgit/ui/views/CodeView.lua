@@ -21,6 +21,7 @@ end
 
 function CodeView:constructor(scene, query, plot, config)
   return {
+    title = 'Diff',
     scene = scene,
     query = query,
     plot = plot,
@@ -110,6 +111,16 @@ end
 
 function CodeView:trigger_keypress(key, ...)
   self.scene:trigger_keypress(key, ...)
+
+  return self
+end
+
+function CodeView:set_title(title)
+  if not title then
+    return self
+  end
+
+  self.title = title
 
   return self
 end
@@ -308,7 +319,7 @@ function CodeView:clear_notification()
   return self
 end
 
-function CodeView:set_title()
+function CodeView:make_title()
   local filename_err, filename = self.query:get_filename()
 
   if filename_err then
@@ -336,23 +347,24 @@ function CodeView:set_title()
     stat = diff_dto.stat,
   }
 
+  local title = self.title
   local header_component = self.scene:get('header')
 
   if header_component then
-    header_component:set_title('Diff', options)
+    header_component:set_title(title, options)
     return self
   end
 
   if self.layout_type == 'split' then
-    self.scene:get('previous'):set_title('Diff', options)
+    self.scene:get('previous'):set_title(title, options)
   else
-    self.scene:get('current'):set_title('Diff', options)
+    self.scene:get('current'):set_title(title, options)
   end
 
   return self
 end
 
-function CodeView:set_filetype()
+function CodeView:make_filetype()
   local err, filetype = self.query:get_filetype()
 
   if err then
@@ -805,8 +817,8 @@ function CodeView:render()
   end
 
   return self
-    :set_title()
-    :set_filetype()
+    :make_title()
+    :make_filetype()
     :make_lines()
     :make_line_numbers()
     :paint()
