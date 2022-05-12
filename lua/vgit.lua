@@ -1,35 +1,36 @@
-local renderer = require('vgit.core.renderer')
-local versioning = require('vgit.core.versioning')
-local console = require('vgit.core.console')
 local env = require('vgit.core.env')
-local hls_setting = require('vgit.settings.hls')
+local loop = require('vgit.core.loop')
+local sign = require('vgit.core.sign')
+local Git = require('vgit.git.cli.Git')
+local Command = require('vgit.Command')
+local keymap = require('vgit.core.keymap')
+local autocmd = require('vgit.core.autocmd')
+local console = require('vgit.core.console')
+local renderer = require('vgit.core.renderer')
 local authorship_code_lens_setting = require(
   'vgit.settings.authorship_code_lens'
 )
-local live_blame_setting = require('vgit.settings.live_blame')
-local live_gutter_setting = require('vgit.settings.live_gutter')
-local scene_setting = require('vgit.settings.scene')
 local project_diff_preview_setting = require(
   'vgit.settings.project_diff_preview'
 )
-local signs_setting = require('vgit.settings.signs')
+local hls_setting = require('vgit.settings.hls')
 local git_setting = require('vgit.settings.git')
-local loop = require('vgit.core.loop')
-local symbols_setting = require('vgit.settings.symbols')
-local keymap = require('vgit.core.keymap')
 local highlight = require('vgit.core.highlight')
-local sign = require('vgit.core.sign')
-local Command = require('vgit.Command')
-local autocmd = require('vgit.core.autocmd')
-local LiveGutter = require('vgit.features.buffer.LiveGutter')
-local AuthorshipCodeLens = require('vgit.features.buffer.AuthorshipCodeLens')
+local versioning = require('vgit.core.versioning')
+local Hunks = require('vgit.features.buffer.Hunks')
+local scene_setting = require('vgit.settings.scene')
+local signs_setting = require('vgit.settings.signs')
+local active_screen = require('vgit.ui.active_screen')
+local symbols_setting = require('vgit.settings.symbols')
+local diff_preview = require('vgit.settings.diff_preview')
 local LiveBlame = require('vgit.features.buffer.LiveBlame')
+local LiveGutter = require('vgit.features.buffer.LiveGutter')
+local live_blame_setting = require('vgit.settings.live_blame')
+local live_gutter_setting = require('vgit.settings.live_gutter')
+local AuthorshipCodeLens = require('vgit.features.buffer.AuthorshipCodeLens')
 local ProjectHunksQuickfix = require(
   'vgit.features.quickfix.ProjectHunksQuickfix'
 )
-local Hunks = require('vgit.features.buffer.Hunks')
-local Git = require('vgit.git.cli.Git')
-local active_screen = require('vgit.ui.active_screen')
 
 local hunks = Hunks()
 local command = Command()
@@ -57,6 +58,35 @@ local keys = {
   k = loop.async(function()
     if active_screen.exists() then
       return active_screen.keypress('k')
+    end
+  end),
+  [diff_preview:get('keymaps').toggle_view] = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress(diff_preview:get('keymaps').toggle_view)
+    end
+  end),
+  [diff_preview:get('keymaps').buffer_stage] = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress(diff_preview:get('keymaps').buffer_stage)
+    end
+  end),
+  [diff_preview:get('keymaps').buffer_unstage] = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress(diff_preview:get('keymaps').buffer_unstage)
+    end
+  end),
+  [diff_preview:get('keymaps').buffer_hunk_stage] = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress(
+        diff_preview:get('keymaps').buffer_hunk_stage
+      )
+    end
+  end),
+  [diff_preview:get('keymaps').buffer_hunk_unstage] = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress(
+        diff_preview:get('keymaps').buffer_hunk_unstage
+      )
     end
   end),
   [project_diff_preview_setting:get('keymaps').buffer_stage] = loop.async(
@@ -412,6 +442,7 @@ local function configure_settings(config)
   local config_settings = config and config.settings or {}
 
   hls_setting:assign(config_settings.hls)
+  diff_preview:assign(config_settings.diff_preview)
   live_blame_setting:assign(config_settings.live_blame)
   authorship_code_lens_setting:assign(config_settings.authorship_code_lens)
   live_gutter_setting:assign(config_settings.live_gutter)

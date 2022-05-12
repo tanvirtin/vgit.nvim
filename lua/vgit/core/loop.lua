@@ -54,6 +54,10 @@ function loop.debounce(fn, ms)
   end
 end
 
+function loop.debounced_async(fn, ms)
+  return loop.debounce(loop.async(fn), ms)
+end
+
 function loop.watch(filepath, callback)
   local watcher = vim.loop.new_fs_event()
 
