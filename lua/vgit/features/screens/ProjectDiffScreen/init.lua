@@ -128,197 +128,161 @@ function ProjectDiffScreen:is_current_list_item_unstaged()
   return false
 end
 
-ProjectDiffScreen.stage_hunk = loop.debounce(
-  loop.async(function(self)
-    if self:is_current_list_item_staged() then
-      return self
-    end
-
-    local _, filename = self.query:get_filename()
-
-    if not filename then
-      return self
-    end
-
-    loop.await_fast_event()
-    local hunk = self.code_view:get_current_hunk_under_cursor()
-
-    if not hunk then
-      return self
-    end
-
-    local err = self.mutation:stage_hunk(filename, hunk)
-
-    if err then
-      console.debug.error(err)
-      return
-    end
-
-    loop.await_fast_event()
-    self.query:fetch(self.layout_type, true)
-    loop.await_fast_event()
-
-    local list_item = self.foldable_list_view
-      :evict_cache()
-      :render()
-      :query_list_item(function(list_item)
-        if list_item.items then
-          return false
-        end
-
-        local metadata = list_item.metadata
-
-        return metadata.category == 'changes'
-          and filename == metadata.file.filename
-          and metadata.file:is_unstaged()
-      end) or self.foldable_list_view:get_current_list_item()
-
-    self.query:set_id(list_item.id)
-
-    self.code_view:render()
-
+ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
+  if self:is_current_list_item_staged() then
     return self
-  end),
-  15
-)
+  end
 
-ProjectDiffScreen.unstage_hunk = loop.debounce(
-  loop.async(function(self)
-    if self:is_current_list_item_unstaged() then
-      return self
-    end
+  local _, filename = self.query:get_filename()
 
-    local _, filename = self.query:get_filename()
-
-    if not filename then
-      return self
-    end
-
-    loop.await_fast_event()
-    local hunk = self.code_view:get_current_hunk_under_cursor()
-
-    if not hunk then
-      return self
-    end
-
-    local err = self.mutation:unstage_hunk(filename, hunk)
-
-    if err then
-      console.debug.error(err)
-      return
-    end
-
-    loop.await_fast_event()
-    self.query:fetch(self.layout_type, true)
-    loop.await_fast_event()
-
-    local list_item = self.foldable_list_view
-      :evict_cache()
-      :render()
-      :query_list_item(function(list_item)
-        if list_item.items then
-          return false
-        end
-
-        local metadata = list_item.metadata
-
-        return metadata.category == 'staged'
-          and filename == metadata.file.filename
-          and metadata.file:is_unstaged()
-      end) or self.foldable_list_view:get_current_list_item()
-
-    self.query:set_id(list_item.id)
-
-    self.code_view:render()
-
+  if not filename then
     return self
-  end),
-  15
-)
+  end
 
-ProjectDiffScreen.stage_file = loop.debounce(
-  loop.async(function(self)
-    local _, filename = self.query:get_filename()
+  loop.await_fast_event()
+  local hunk = self.code_view:get_current_hunk_under_cursor()
 
-    if not filename then
-      return self
-    end
+  if not hunk then
+    return self
+  end
 
-    self.mutation:stage_file(filename)
+  local err = self.mutation:stage_hunk(filename, hunk)
 
-    return self:render()
-  end),
-  15
-)
+  if err then
+    console.debug.error(err)
+    return
+  end
 
-ProjectDiffScreen.unstage_file = loop.debounce(
-  loop.async(function(self)
-    local _, filename = self.query:get_filename()
+  loop.await_fast_event()
+  self.query:fetch(self.layout_type, true)
+  loop.await_fast_event()
 
-    if not filename then
-      return self
-    end
+  local list_item = self.foldable_list_view
+    :evict_cache()
+    :render()
+    :query_list_item(function(list_item)
+      if list_item.items then
+        return false
+      end
 
-    self.mutation:unstage_file(filename)
+      local metadata = list_item.metadata
 
-    return self:render()
-  end),
-  15
-)
+      return metadata.category == 'changes'
+        and filename == metadata.file.filename
+        and metadata.file:is_unstaged()
+    end) or self.foldable_list_view:get_current_list_item()
 
-ProjectDiffScreen.stage_all = loop.debounce(
-  loop.async(function(self)
-    self.mutation:stage_all()
+  self.query:set_id(list_item.id)
 
-    return self:render()
-  end),
-  15
-)
+  self.code_view:render()
 
-ProjectDiffScreen.unstage_all = loop.debounce(
-  loop.async(function(self)
-    self.mutation:unstage_all()
+  return self
+end, 15)
 
-    return self:render()
-  end),
-  15
-)
+ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
+  if self:is_current_list_item_unstaged() then
+    return self
+  end
 
-ProjectDiffScreen.reset_all = loop.debounce(
-  loop.async(function(self)
-    loop.await_fast_event()
-    local decision = console.input(
-      'Are you sure you want to discard all tracked changes? (y/N) '
-    ):lower()
+  local _, filename = self.query:get_filename()
 
-    if decision ~= 'yes' and decision ~= 'y' then
-      return
-    end
+  if not filename then
+    return self
+  end
 
-    self.mutation:reset_all()
+  loop.await_fast_event()
+  local hunk = self.code_view:get_current_hunk_under_cursor()
 
-    return self:render()
-  end),
-  15
-)
+  if not hunk then
+    return self
+  end
 
-ProjectDiffScreen.clean_all = loop.debounce(
-  loop.async(function(self)
-    loop.await_fast_event()
-    local decision = console.input(
-      'Are you sure you want to discard all untracked changes? (y/N) '
-    ):lower()
+  local err = self.mutation:unstage_hunk(filename, hunk)
 
-    if decision ~= 'yes' and decision ~= 'y' then
-      return
-    end
+  if err then
+    console.debug.error(err)
+    return
+  end
 
-    self.mutation:clean_all()
+  loop.await_fast_event()
+  self.query:fetch(self.layout_type, true)
+  loop.await_fast_event()
 
-    return self:render()
-  end),
-  15
-)
+  local list_item = self.foldable_list_view
+    :evict_cache()
+    :render()
+    :query_list_item(function(list_item)
+      if list_item.items then
+        return false
+      end
+
+      local metadata = list_item.metadata
+
+      return metadata.category == 'staged'
+        and filename == metadata.file.filename
+        and metadata.file:is_unstaged()
+    end) or self.foldable_list_view:get_current_list_item()
+
+  self.query:set_id(list_item.id)
+
+  self.code_view:render()
+
+  return self
+end, 15)
+
+ProjectDiffScreen.stage_file = loop.debounced_async(function(self)
+  local _, filename = self.query:get_filename()
+
+  if not filename then
+    return self
+  end
+
+  self.mutation:stage_file(filename)
+
+  return self:render()
+end, 15)
+
+ProjectDiffScreen.unstage_file = loop.debounced_async(function(self)
+  local _, filename = self.query:get_filename()
+
+  if not filename then
+    return self
+  end
+
+  self.mutation:unstage_file(filename)
+
+  return self:render()
+end, 15)
+
+ProjectDiffScreen.stage_all = loop.debounced_async(function(self)
+  self.mutation:stage_all()
+
+  return self:render()
+end, 15)
+
+ProjectDiffScreen.unstage_all = loop.debounced_async(function(self)
+  self.mutation:unstage_all()
+
+  return self:render()
+end, 15)
+
+ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
+  loop.await_fast_event()
+  local decision = console.input(
+    'Are you sure you want to discard all unstaged changes? (y/N) '
+  ):lower()
+
+  if decision ~= 'yes' and decision ~= 'y' then
+    return
+  end
+
+  loop.await_fast_event()
+  self.mutation:reset_all()
+  self.mutation:clean_all()
+  loop.await_fast_event()
+
+  return self:render()
+end, 15)
 
 function ProjectDiffScreen:trigger_keypress(key, ...)
   self.scene:trigger_keypress(key, ...)
@@ -405,9 +369,7 @@ function ProjectDiffScreen:show()
 
         fs.open(filename)
 
-        Window(0):set_lnum(mark.top_relative):call(function()
-          vim.cmd('norm! zz')
-        end)
+        Window(0):set_lnum(mark.top_relative):position_cursor('center')
       end),
     },
   })
@@ -466,17 +428,6 @@ function ProjectDiffScreen:show()
       ),
       handler = loop.async(function()
         self:reset_all()
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').clean_all,
-      vgit_key = string.format(
-        'keys.%s',
-        project_diff_preview_setting:get('keymaps').clean_all
-      ),
-      handler = loop.async(function()
-        self:clean_all()
       end),
     },
     {

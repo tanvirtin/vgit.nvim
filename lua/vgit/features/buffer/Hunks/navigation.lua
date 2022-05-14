@@ -31,9 +31,7 @@ function navigation.hunk_up(window, hunks)
   end
 
   if new_lnum and lnum ~= new_lnum then
-    window:set_lnum(new_lnum):call(function()
-      vim.cmd('norm! zz')
-    end)
+    window:set_lnum(new_lnum):position_cursor('center')
 
     return selected
   else
@@ -47,10 +45,7 @@ function navigation.hunk_up(window, hunks)
       selected = 1
     end
 
-    window:set_lnum(new_lnum):call(function()
-      vim.cmd('norm! zz')
-    end)
-
+    window:set_lnum(new_lnum):position_cursor('center')
     return selected
   end
 end
@@ -84,9 +79,7 @@ function navigation.hunk_down(window, hunks)
   end
 
   if new_lnum then
-    window:set_lnum(new_lnum):call(function()
-      vim.cmd('norm! zz')
-    end)
+    window:set_lnum(new_lnum):position_cursor('center')
 
     return selected
   else
@@ -98,9 +91,7 @@ function navigation.hunk_down(window, hunks)
       selected = 1
     end
 
-    window:set_lnum(new_lnum):call(function()
-      vim.cmd('norm! zz')
-    end)
+    window:set_lnum(new_lnum):position_cursor('center')
 
     return selected
   end

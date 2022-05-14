@@ -136,6 +136,24 @@ function Window:is_same(window)
   return self.win_id == window.win_id
 end
 
+function Window:position_cursor(placement)
+  local placement_map = {
+    top = function()
+      vim.cmd('norm! zt')
+    end,
+    center = function()
+      vim.cmd('norm! zz')
+    end,
+    bottom = function()
+      vim.cmd('norm! zb')
+    end,
+  }
+
+  placement = placement or 'center'
+
+  return self:call(placement_map[placement])
+end
+
 function Window:call(callback)
   vim.api.nvim_win_call(self.win_id, callback)
 

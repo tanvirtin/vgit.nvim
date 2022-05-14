@@ -248,7 +248,6 @@ require('vgit').setup({
         stage_all = 'S',
         unstage_all = 'U',
         reset_all = 'R',
-        clean_all = 'C',
       },
     },
     signs = {

@@ -197,6 +197,12 @@ function Component:set_lnum(lnum)
   return self
 end
 
+function Component:position_cursor(placement)
+  self.window:position_cursor(placement)
+
+  return self
+end
+
 function Component:clear_lines()
   return self.buffer:set_lines({})
 end

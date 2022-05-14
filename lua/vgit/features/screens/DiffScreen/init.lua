@@ -116,7 +116,7 @@ function DiffScreen:show(opts)
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
-            return false
+            return
           end
 
           loop.await_fast_event()
@@ -149,7 +149,7 @@ function DiffScreen:show(opts)
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
-            return false
+            return
           end
 
           loop.await_fast_event()
@@ -191,7 +191,7 @@ function DiffScreen:show(opts)
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
-            return false
+            return
           end
 
           self.code_view:render()
@@ -235,7 +235,7 @@ function DiffScreen:show(opts)
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
-            return false
+            return
           end
 
           loop.await_fast_event()
@@ -269,9 +269,7 @@ function DiffScreen:show(opts)
           fs.open(filename)
 
           loop.await_fast_event()
-          Window(0):set_lnum(mark.top_relative):call(function()
-            vim.cmd('norm! zz')
-          end)
+          Window(0):set_lnum(mark.top_relative):position_cursor('center')
         end, 100),
       },
       {
@@ -296,7 +294,7 @@ function DiffScreen:show(opts)
 
             if refetch_err then
               console.debug.error(refetch_err).error(refetch_err)
-              return false
+              return
             end
 
             loop.await_fast_event()
@@ -313,7 +311,7 @@ function DiffScreen:show(opts)
 
             if refetch_err then
               console.debug.error(refetch_err).error(refetch_err)
-              return false
+              return
             end
 
             loop.await_fast_event()

@@ -152,15 +152,6 @@ local keys = {
       end
     end
   ),
-  [project_diff_preview_setting:get('keymaps').clean_all] = loop.async(
-    function()
-      if active_screen.exists() then
-        return active_screen.keypress(
-          project_diff_preview_setting:get('keymaps').clean_all
-        )
-      end
-    end
-  ),
   prevent_default = function() end,
 }
 
