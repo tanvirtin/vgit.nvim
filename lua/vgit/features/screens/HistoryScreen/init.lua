@@ -41,7 +41,7 @@ function HistoryScreen:constructor()
         'Time',
         'Summary',
       },
-      on_row = function(log)
+      get_row = function(log)
         return {
           log.revision,
           log.author_name or '',
@@ -92,6 +92,26 @@ function HistoryScreen:show()
 
   -- Set keymap
   self.table_view:set_keymap({
+    {
+      mode = 'n',
+      key = '<enter>',
+      vgit_key = 'keys.enter',
+      handler = loop.async(function()
+        loop.await_fast_event()
+        local row = self.table_view:get_current_row()
+
+        if not row then
+          return
+        end
+
+        vim.cmd('quit')
+
+        loop.await_fast_event()
+        vim.cmd(
+          string.format('VGit project_commits_preview %s', row.commit_hash)
+        )
+      end),
+    },
     {
       mode = 'n',
       key = 'j',
