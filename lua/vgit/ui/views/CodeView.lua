@@ -758,7 +758,7 @@ end
 
 function CodeView:navigate_to_mark(mark_index, pos)
   if not pos then
-    pos = 'center'
+    pos = 'top'
   end
 
   if not mark_index then
