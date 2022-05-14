@@ -66,6 +66,16 @@ function TableView:move(direction)
   return lnum
 end
 
+function TableView:get_current_row()
+  local _, entries = self.query:get_all()
+
+  if not entries then
+    return nil
+  end
+
+  return entries[self.scene:get('table'):get_lnum()]
+end
+
 function TableView:render()
   local err, entries = self.query:get_all()
 
@@ -77,7 +87,7 @@ function TableView:render()
   self.scene
     :get('table')
     :unlock()
-    :make_rows(entries, self.config.on_row)
+    :make_rows(entries, self.config.get_row)
     :focus()
     :lock()
 
