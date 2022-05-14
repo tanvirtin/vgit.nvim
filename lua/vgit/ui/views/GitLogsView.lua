@@ -81,6 +81,10 @@ function GitLogsView:select()
   return self
 end
 
+function GitLogsView:has_selection()
+  return not utils.object.is_empty(self.state.selected)
+end
+
 function GitLogsView:get_selected()
   local err, data = self.query:get_data()
 
