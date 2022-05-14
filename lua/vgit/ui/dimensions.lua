@@ -72,6 +72,9 @@ end
 
 -- Get dimension of child in relation to parent.
 function dimensions.relative_win_plot(parent, child)
+  parent = parent or {}
+  child = child or {}
+
   return {
     relative = child.relative or parent.relative,
     height = dimensions.relative_size(parent.height, child.height),
