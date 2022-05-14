@@ -92,6 +92,45 @@ function DiffScreen:show(opts)
     :set_keymap({
       {
         mode = 'n',
+        key = diff_preview:get('keymaps').reset,
+        vgit_key = string.format('keys.%s', diff_preview:get('keymaps').reset),
+        handler = loop.debounced_async(function()
+          loop.await_fast_event()
+          local decision = console.input(
+            'Are you sure you want to discard all unstaged changes? (y/N) '
+          ):lower()
+
+          if decision ~= 'yes' and decision ~= 'y' then
+            return
+          end
+
+          loop.await_fast_event()
+          local _, filename = self.query:get_filename()
+          loop.await_fast_event()
+
+          if not filename then
+            return
+          end
+
+          loop.await_fast_event()
+          self.mutation:reset_file(filename)
+          loop.await_fast_event()
+
+          loop.await_fast_event()
+          local refetch_err = query:fetch(layout_type, buffer.filename, opts)
+          loop.await_fast_event()
+
+          if refetch_err then
+            console.debug.error(refetch_err).error(refetch_err)
+            return
+          end
+
+          loop.await_fast_event()
+          self.code_view:render()
+        end, 100),
+      },
+      {
+        mode = 'n',
         key = diff_preview:get('keymaps').buffer_stage,
         vgit_key = string.format(
           'keys.%s',

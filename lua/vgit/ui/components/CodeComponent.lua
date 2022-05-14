@@ -81,6 +81,13 @@ function CodeComponent:transpose_virtual_line_number(text, hl, row)
   return self
 end
 
+function CodeComponent:position_cursor(placement)
+  Component.position_cursor(self, placement)
+  self.elements.line_number:position_cursor(placement)
+
+  return self
+end
+
 function CodeComponent:mount(opts)
   if self.mounted then
     return self
