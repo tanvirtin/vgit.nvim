@@ -19,7 +19,6 @@ function GutterBlameScreen:constructor()
     query = query,
     layout_type = 'unified',
     gutter_blame_view = GutterBlameView(scene, query, {
-      height = '100vh',
       width = '40vw',
     }, {
       elements = {
@@ -27,7 +26,6 @@ function GutterBlameScreen:constructor()
       },
     }),
     code_view = CodeView(scene, query, {
-      height = '100vh',
       width = '60vw',
       col = '40vw',
     }, {
