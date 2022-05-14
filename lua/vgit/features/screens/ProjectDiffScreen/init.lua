@@ -472,6 +472,16 @@ function ProjectDiffScreen:show()
         self:destroy()
 
         fs.open(filename)
+
+        local diff_dto_err, diff_dto = self.query:get_diff_dto()
+
+        if diff_dto_err or not diff_dto then
+          return
+        end
+
+        Window(0)
+          :set_lnum(diff_dto.marks[1].top_relative)
+          :position_cursor('center')
       end),
     },
   })

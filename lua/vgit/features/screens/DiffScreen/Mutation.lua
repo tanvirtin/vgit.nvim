@@ -38,4 +38,8 @@ function Mutation:unstage_file(filename)
   return self.git:unstage_file(filename)
 end
 
+function Mutation:reset_file(filename)
+  return self.git:reset(filename)
+end
+
 return Mutation
