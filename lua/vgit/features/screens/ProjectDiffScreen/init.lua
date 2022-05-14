@@ -28,8 +28,7 @@ function ProjectDiffScreen:constructor()
     mutation = mutation,
     layout_type = nil,
     code_view = CodeView(scene, query, {
-      height = '80vh',
-      width = '100vw',
+      height = '70vh',
     }, {
       elements = {
         header = true,
@@ -37,9 +36,8 @@ function ProjectDiffScreen:constructor()
       },
     }),
     foldable_list_view = FoldableListView(scene, query, {
-      height = '100vh',
-      width = '100vw',
-      row = '80vh',
+      row = '70vh',
+      height = '30vh',
     }, {
       elements = {
         header = true,

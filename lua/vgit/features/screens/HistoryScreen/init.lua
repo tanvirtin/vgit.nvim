@@ -19,9 +19,8 @@ function HistoryScreen:constructor()
     query = query,
     layout_type = nil,
     code_view = CodeView(scene, query, {
-      height = '80vh',
-      width = '100vw',
-      row = '20vh',
+      height = '70vh',
+      row = '30vh',
     }, {
       elements = {
         header = true,
@@ -29,8 +28,7 @@ function HistoryScreen:constructor()
       },
     }),
     table_view = TableView(scene, query, {
-      height = '20vh',
-      width = '100vw',
+      height = '30vh',
     }, {
       elements = {
         header = true,

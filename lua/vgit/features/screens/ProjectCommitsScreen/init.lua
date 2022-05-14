@@ -20,8 +20,7 @@ function ProjectCommitsScreen:constructor()
     query = query,
     layout_type = nil,
     code_view = CodeView(scene, query, {
-      height = '80vh',
-      width = '100vw',
+      height = '70vh',
     }, {
       elements = {
         header = true,
@@ -29,9 +28,8 @@ function ProjectCommitsScreen:constructor()
       },
     }),
     foldable_list_view = FoldableListView(scene, query, {
-      row = '80vh',
-      height = '20vh',
-      width = '100vw',
+      row = '70vh',
+      height = '30vh',
     }, {
       elements = {
         header = true,

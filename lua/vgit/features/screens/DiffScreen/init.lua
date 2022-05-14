@@ -17,7 +17,6 @@ function DiffScreen:create_code_view(scene, query, opts)
     return CodeView(scene, query, {
       relative = 'cursor',
       height = '35vh',
-      width = '100vw',
     }, {
       elements = {
         header = true,
@@ -26,10 +25,7 @@ function DiffScreen:create_code_view(scene, query, opts)
     })
   end
 
-  return CodeView(scene, query, {
-    height = '100vh',
-    width = '100vw',
-  })
+  return CodeView(scene, query)
 end
 
 function DiffScreen:constructor(opts)

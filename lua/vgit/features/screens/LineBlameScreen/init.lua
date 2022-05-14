@@ -20,7 +20,6 @@ function LineBlameScreen:constructor()
     line_blame_view = LineBlameView(scene, query, {
       relative = 'cursor',
       height = 6,
-      width = '100vw',
     }, {
       elements = {
         header = false,

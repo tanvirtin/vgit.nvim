@@ -16,10 +16,7 @@ function ProjectLogsScreen:constructor()
     name = 'Logs Screen',
     scene = scene,
     query = query,
-    view = GitLogsView(scene, query, {
-      height = '100vh',
-      width = '100vw',
-    }),
+    view = GitLogsView(scene, query),
   }
 end
 

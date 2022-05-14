@@ -15,10 +15,7 @@ function DebugScreen:constructor()
     name = 'Debug Screen',
     scene = scene,
     query = query,
-    view = SimpleView(scene, query, {
-      height = '100vh',
-      width = '100vw',
-    }),
+    view = SimpleView(scene, query),
   }
 end
 
