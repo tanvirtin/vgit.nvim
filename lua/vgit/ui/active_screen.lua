@@ -150,6 +150,14 @@ active_screen.keys[diff_preview:get('keymaps').toggle_view] = function()
   end
 end
 
+active_screen.keys[diff_preview:get('keymaps').reset] = function()
+  if active_screen.exists() then
+    return active_screen.current:trigger_keypress(
+      diff_preview:get('keymaps').reset
+    )
+  end
+end
+
 active_screen.keys[diff_preview:get('keymaps').buffer_stage] = function()
   if active_screen.exists() then
     return active_screen.current:trigger_keypress(
@@ -240,15 +248,6 @@ active_screen.keys[project_diff_preview_setting:get('keymaps').reset_all] =
   function()
     active_screen.current:trigger_keypress(
       project_diff_preview_setting:get('keymaps').reset_all
-    )
-
-    return active_screen
-  end
-
-active_screen.keys[project_diff_preview_setting:get('keymaps').clean_all] =
-  function()
-    active_screen.current:trigger_keypress(
-      project_diff_preview_setting:get('keymaps').clean_all
     )
 
     return active_screen

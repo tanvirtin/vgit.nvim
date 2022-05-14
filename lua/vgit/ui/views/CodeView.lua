@@ -666,22 +666,12 @@ function CodeView:select_mark(marks, mark_index, position)
     end
   end
 
-  local callback = function()
-    if position == 'top' then
-      vim.cmd('norm! zt')
-    elseif position == 'center' then
-      vim.cmd('norm! zz')
-    elseif position == 'bottom' then
-      vim.cmd('norm! zb')
-    end
-  end
-
   if self.layout_type == 'split' then
-    self.scene:get('previous'):set_lnum(lnum):call(callback)
+    self.scene:get('previous'):set_lnum(lnum):position_cursor(position)
   end
 
   -- NOTE: Current must always be set after previous.
-  self.scene:get('current'):set_lnum(lnum):call(callback)
+  self.scene:get('current'):set_lnum(lnum):position_cursor(position)
 
   return self
 end
@@ -768,7 +758,7 @@ end
 
 function CodeView:navigate_to_mark(mark_index, pos)
   if not pos then
-    pos = 'top'
+    pos = 'center'
   end
 
   if not mark_index then
@@ -824,15 +814,12 @@ function CodeView:render()
     :paint()
 end
 
-CodeView.render_debounced = loop.debounce(
-  loop.async(function(self, callback)
-    self:render()
-    if callback then
-      callback()
-    end
-  end),
-  100
-)
+CodeView.render_debounced = loop.debounced_async(function(self, callback)
+  self:render()
+  if callback then
+    callback()
+  end
+end, 100)
 
 function CodeView:mount_scene(mount_opts)
   if self.layout_type == 'split' then

@@ -142,9 +142,7 @@ function ProjectHunksScreen:show(opts)
 
         fs.open(filename)
 
-        Window(0):set_lnum(mark.top_relative):call(function()
-          vim.cmd('norm! zz')
-        end)
+        Window(0):set_lnum(mark.top_relative):position_cursor('center')
       end),
     },
   })
@@ -216,9 +214,7 @@ function ProjectHunksScreen:show(opts)
 
         fs.open(filename)
 
-        Window(0):set_lnum(hunk.top):call(function()
-          vim.cmd('norm! zz')
-        end)
+        Window(0):set_lnum(hunk.top):position_cursor('center')
       end),
     },
   })
