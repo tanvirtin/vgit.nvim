@@ -60,6 +60,11 @@ local keys = {
       return active_screen.keypress('k')
     end
   end),
+  [diff_preview:get('keymaps').reset] = loop.async(function()
+    if active_screen.exists() then
+      return active_screen.keypress(diff_preview:get('keymaps').reset)
+    end
+  end),
   [diff_preview:get('keymaps').toggle_view] = loop.async(function()
     if active_screen.exists() then
       return active_screen.keypress(diff_preview:get('keymaps').toggle_view)
