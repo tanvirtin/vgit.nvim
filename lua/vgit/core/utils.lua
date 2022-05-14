@@ -229,6 +229,8 @@ function utils.object.each(object, callback)
   end
 end
 
+utils.object.is_empty = vim.tbl_isempty
+
 function utils.list.pick(list, item)
   for i = 1, #list do
     if list[i] == item then

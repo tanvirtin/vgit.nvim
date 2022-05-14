@@ -56,12 +56,18 @@ function ProjectLogsScreen:show(options)
       key = '<enter>',
       vgit_key = 'keys.enter',
       handler = loop.async(function()
+        local view = self.view
+
+        if not view:has_selection() then
+          view:select()
+        end
+
         vim.cmd('quit')
 
         loop.await_fast_event()
         vim.cmd(
           utils.list.reduce(
-            self.view:get_selected(),
+            view:get_selected(),
             'VGit project_commits_preview',
             function(cmd, log)
               return cmd .. ' ' .. log.commit_hash
