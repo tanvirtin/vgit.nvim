@@ -11,6 +11,7 @@ local FoldableListView = Object:extend()
 
 function FoldableListView:constructor(scene, query, plot, config)
   return {
+    title = '',
     scene = scene,
     query = query,
     plot = plot,
@@ -25,6 +26,12 @@ function FoldableListView:set_keymap(configs)
       :get('list')
       :set_keymap(config.mode, config.key, config.vgit_key, config.handler)
   end)
+
+  return self
+end
+
+function FoldableListView:set_title(text)
+  self.title = text
 
   return self
 end
@@ -125,7 +132,7 @@ function FoldableListView:render()
   local parsed_list = self:get_list()
   loop.await_fast_event()
 
-  list:unlock():set_list(parsed_list):sync():lock()
+  list:unlock():set_title(self.title):set_list(parsed_list):sync():lock()
   loop.await_fast_event()
 
   return self
