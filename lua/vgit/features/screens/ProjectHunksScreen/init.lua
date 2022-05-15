@@ -44,7 +44,7 @@ function ProjectHunksScreen:constructor()
           local entries = list[key]
 
           local icon_before = nil
-          local icon, icon_hl = icons.file_icon(key)
+          local icon, icon_hl = icons.get(key)
 
           if icon then
             icon_before = {

@@ -1,11 +1,12 @@
 local loop = require('vgit.core.loop')
-local icons = require('vgit.core.icons')
 local Scene = require('vgit.ui.Scene')
 local Feature = require('vgit.Feature')
-local utils = require('vgit.core.utils')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
+local FSListGenerator = require(
+  'vgit.features.screens.ProjectCommitsScreen.FSListGenerator'
+)
 local Query = require('vgit.features.screens.ProjectCommitsScreen.Query')
 
 local ProjectCommitsScreen = Feature:extend()
@@ -20,7 +21,8 @@ function ProjectCommitsScreen:constructor()
     query = query,
     layout_type = nil,
     code_view = CodeView(scene, query, {
-      height = '70vh',
+      col = '25vw',
+      width = '75vw',
     }, {
       elements = {
         header = true,
@@ -28,8 +30,7 @@ function ProjectCommitsScreen:constructor()
       },
     }),
     foldable_list_view = FoldableListView(scene, query, {
-      row = '70vh',
-      height = '30vh',
+      width = '25vw',
     }, {
       elements = {
         header = true,
@@ -39,30 +40,10 @@ function ProjectCommitsScreen:constructor()
         local foldable_list = {}
 
         for key in pairs(list) do
-          local entries = list[key]
-
           foldable_list[#foldable_list + 1] = {
             open = true,
-            value = key,
-            items = utils.list.map(entries, function(entry)
-              local file = entry.file
-              local filename = file.filename
-              local icon, icon_hl = icons.file_icon(filename, file.filetype)
-
-              local list_entry = {
-                id = entry.id,
-                value = filename,
-              }
-
-              if icon then
-                list_entry.icon_before = {
-                  icon = icon,
-                  hl = icon_hl,
-                }
-              end
-
-              return list_entry
-            end),
+            value = key:sub(1, 8),
+            items = FSListGenerator(list[key]):generate(),
           }
         end
 
@@ -106,7 +87,7 @@ function ProjectCommitsScreen:show(commits)
 
   loop.await_fast_event()
   self.code_view:show(layout_type)
-  self.foldable_list_view:show()
+  self.foldable_list_view:set_title('Project commits'):show()
 
   self.foldable_list_view:set_keymap({
     {
