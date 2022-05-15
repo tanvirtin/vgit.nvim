@@ -38,6 +38,14 @@ function Mutation:unstage_file(filename)
   return self.git:unstage_file(filename)
 end
 
+function Mutation:reset_file(filename)
+  if self.git:is_in_remote(filename) then
+    return self.git:reset(filename)
+  end
+
+  return self.git:clean(filename)
+end
+
 function Mutation:stage_all()
   return self.git:stage()
 end
@@ -47,11 +55,19 @@ function Mutation:unstage_all()
 end
 
 function Mutation:reset_all()
-  return self.git:reset_all()
-end
+  local reset_err, _ = self.git:reset_all()
 
-function Mutation:clean_all()
-  return self.git:clean_all()
+  if reset_err then
+    return reset_err
+  end
+
+  local clean_err, _ = self.git:clean_all()
+
+  if clean_err then
+    return clean_err
+  end
+
+  return nil, nil
 end
 
 return Mutation

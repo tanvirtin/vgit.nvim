@@ -929,7 +929,7 @@ Git.clean = loop.promisify(function(self, filename, spec, callback)
       callback(nil)
     end,
   }, spec)):start()
-end, 3)
+end, 4)
 
 Git.clean_all = loop.promisify(function(self, spec, callback)
   local err = {}
