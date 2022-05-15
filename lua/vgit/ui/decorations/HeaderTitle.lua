@@ -24,7 +24,7 @@ function HeaderTitle:set(source, title, opts)
   end
 
   if filetype then
-    local icon, icon_hl = icons.file_icon(filename, filetype)
+    local icon, icon_hl = icons.get(filename, filetype)
     if icon then
       local new_text, hl_range = utils.str.concat(text, icon)
       text = utils.str.concat(new_text, ' ')

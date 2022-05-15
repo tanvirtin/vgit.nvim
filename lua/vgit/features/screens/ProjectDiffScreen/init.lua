@@ -61,7 +61,7 @@ function ProjectDiffScreen:constructor()
               local filename = file.filename
               local filestatus = file.status:to_string()
               local value = string.format('%s %s', filename, filestatus)
-              local icon, icon_hl = icons.file_icon(filename, file.filetype)
+              local icon, icon_hl = icons.get(filename, file.filetype)
 
               local list_entry = {
                 id = entry.id,

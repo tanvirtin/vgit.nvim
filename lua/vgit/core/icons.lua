@@ -2,7 +2,7 @@ local has_web_devicons, web_devicons = pcall(require, 'nvim-web-devicons')
 
 local icons = {}
 
-function icons.file_icon(fname, extension)
+function icons.get(fname, extension)
   if not has_web_devicons or not web_devicons.has_loaded() then
     return nil, ''
   end

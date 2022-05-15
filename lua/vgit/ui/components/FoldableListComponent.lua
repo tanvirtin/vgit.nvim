@@ -43,6 +43,12 @@ function FoldableListComponent:set_list(list)
   return self
 end
 
+function FoldableListComponent:set_title(text)
+  self.elements.header:set_lines({ text })
+
+  return self
+end
+
 function FoldableListComponent:toggle_list_item(item)
   if item.items then
     item.open = not item.open
