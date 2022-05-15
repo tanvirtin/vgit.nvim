@@ -2,6 +2,16 @@ local Object = require('vgit.core.Object')
 
 local Hunk = Object:extend()
 
+function Hunk:generate_header(previous, current)
+  return string.format(
+    '@@ -%s,%s +%s,%s @@',
+    previous[1],
+    previous[2],
+    current[1],
+    current[2]
+  )
+end
+
 function Hunk:parse_header(header)
   header = header or self.header
   local diffkey = vim.trim(vim.split(header, '@@', true)[2])
@@ -68,13 +78,7 @@ function Hunk:constructor(header)
     previous, current = self:parse_header(header)
   else
     previous, current = unpack(header)
-    header = string.format(
-      '@@ -%s,%s +%s,%s @@',
-      previous[1],
-      previous[2],
-      current[1],
-      current[2]
-    )
+    header = self:generate_header(previous, current)
   end
 
   hunk.header = header

@@ -566,6 +566,7 @@ function Git:untracked_hunks(lines)
 
   local hunk = Hunk()
 
+  hunk.header = hunk:generate_header({ 0, 0 }, { 1, #lines })
   hunk.top = 1
   hunk.bot = #lines
   hunk.type = 'add'
@@ -587,6 +588,7 @@ function Git:deleted_hunks(lines)
 
   local hunk = Hunk()
 
+  hunk.header = hunk:generate_header({ 1, #lines }, { 0, 0 })
   hunk.top = 1
   hunk.bot = #lines
   hunk.type = 'remove'
