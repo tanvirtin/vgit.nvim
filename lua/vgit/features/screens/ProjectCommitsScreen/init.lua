@@ -1,6 +1,7 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
 local Feature = require('vgit.Feature')
+local utils = require('vgit.core.utils')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
@@ -36,14 +37,18 @@ function ProjectCommitsScreen:constructor()
         header = true,
         footer = false,
       },
-      get_list = function(list)
+      get_list = function(commits)
+        if utils.object.size(commits) == 1 then
+          return FSListGenerator(utils.object.first(commits)):generate()
+        end
+
         local foldable_list = {}
 
-        for key in pairs(list) do
+        for commit_hash, files in pairs(commits) do
           foldable_list[#foldable_list + 1] = {
             open = true,
-            value = key:sub(1, 8),
-            items = FSListGenerator(list[key]):generate(),
+            value = commit_hash:sub(1, 8),
+            items = FSListGenerator(files):generate(),
           }
         end
 
@@ -51,6 +56,12 @@ function ProjectCommitsScreen:constructor()
       end,
     }),
   }
+end
+
+function ProjectCommitsScreen:get_list_title(commits)
+  return utils.object.size(commits) == 1
+      and utils.object.first(commits):sub(1, 8)
+    or 'Project commits'
 end
 
 function ProjectCommitsScreen:hunk_up()
@@ -87,7 +98,7 @@ function ProjectCommitsScreen:show(commits)
 
   loop.await_fast_event()
   self.code_view:show(layout_type)
-  self.foldable_list_view:set_title('Project commits'):show()
+  self.foldable_list_view:set_title(self:get_list_title(commits)):show()
 
   self.foldable_list_view:set_keymap({
     {
