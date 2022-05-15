@@ -205,6 +205,15 @@ active_screen.keys[diff_preview:get('keymaps').reset] = function()
   end
 end
 
+active_screen.keys[project_diff_preview_setting:get('keymaps').buffer_reset] =
+  function()
+    active_screen.current:trigger_keypress(
+      project_diff_preview_setting:get('keymaps').buffer_reset
+    )
+
+    return active_screen
+  end
+
 active_screen.keys[project_diff_preview_setting:get('keymaps').buffer_stage] =
   function()
     active_screen.current:trigger_keypress(

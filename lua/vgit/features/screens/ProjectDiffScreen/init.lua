@@ -235,7 +235,12 @@ ProjectDiffScreen.stage_file = loop.debounced_async(function(self)
     return self
   end
 
-  self.mutation:stage_file(filename)
+  local err = self.mutation:stage_file(filename)
+
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   return self:render()
 end, 15)
@@ -247,19 +252,69 @@ ProjectDiffScreen.unstage_file = loop.debounced_async(function(self)
     return self
   end
 
-  self.mutation:unstage_file(filename)
+  local err = self.mutation:unstage_file(filename)
+
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   return self:render()
 end, 15)
 
 ProjectDiffScreen.stage_all = loop.debounced_async(function(self)
-  self.mutation:stage_all()
+  local err = self.mutation:stage_all()
+
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   return self:render()
 end, 15)
 
 ProjectDiffScreen.unstage_all = loop.debounced_async(function(self)
-  self.mutation:unstage_all()
+  local err = self.mutation:unstage_all()
+
+  if err then
+    console.debug.error(err)
+    return
+  end
+
+  return self:render()
+end, 15)
+
+ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
+  if self:is_current_list_item_staged() then
+    return self
+  end
+
+  local _, filename = self.query:get_filename()
+
+  if not filename then
+    return self
+  end
+
+  loop.await_fast_event()
+  local decision = console.input(
+    string.format(
+      'Are you sure you want to discard changes in %s? (y/N) ',
+      filename
+    )
+  ):lower()
+
+  if decision ~= 'yes' and decision ~= 'y' then
+    return
+  end
+
+  loop.await_fast_event()
+  local err = self.mutation:reset_file(filename)
+  loop.await_fast_event()
+
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   return self:render()
 end, 15)
@@ -275,9 +330,13 @@ ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
   end
 
   loop.await_fast_event()
-  self.mutation:reset_all()
-  self.mutation:clean_all()
+  local err = self.mutation:reset_all()
   loop.await_fast_event()
+
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   return self:render()
 end, 15)
@@ -373,6 +432,17 @@ function ProjectDiffScreen:show()
   })
 
   self.foldable_list_view:set_keymap({
+    {
+      mode = 'n',
+      key = project_diff_preview_setting:get('keymaps').buffer_reset,
+      vgit_key = string.format(
+        'keys.%s',
+        project_diff_preview_setting:get('keymaps').buffer_reset
+      ),
+      handler = loop.async(function()
+        self:reset_file()
+      end),
+    },
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_stage,
