@@ -138,6 +138,27 @@ function utils.str.strip(given_string, substring)
   return rc_s
 end
 
+function utils.object.first(object)
+  object = object or {}
+
+  for _, value in pairs(object) do
+    return value
+  end
+
+  return nil
+end
+
+function utils.object.size(object)
+  object = object or {}
+  local count = 0
+
+  for _ in pairs(object) do
+    count = count + 1
+  end
+
+  return count
+end
+
 function utils.object.defaults(object, ...)
   object = object or {}
   local objects = { ... }
