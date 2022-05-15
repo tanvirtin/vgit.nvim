@@ -39,6 +39,7 @@
 - File staged diff preview
 - Project diff preview
   - Discard all changes
+  - Discard individual file
   - Stage/unstage all changes
   - Stage/unstage individual files
   - Stage/unstage hunks
@@ -246,6 +247,7 @@ require('vgit').setup({
         buffer_unstage = 'u',
         buffer_hunk_stage = 'gs',
         buffer_hunk_unstage = 'gu',
+        buffer_reset = 'r',
         stage_all = 'S',
         unstage_all = 'U',
         reset_all = 'R',
