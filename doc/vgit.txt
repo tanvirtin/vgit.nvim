@@ -317,6 +317,19 @@ project_diff_preview()                            *vgit.project_diff_preview()*
                 - Stage/unstage a hunk
                 - Open the file
 
+project_logs_preview({commits})                 *vgit.project_logs_preview()*
+                Opens a preview listing all logs in the current working
+                branch. Users can filter the list by passing options to this
+                list. Pressing the "tab" key on a list item will keep the item
+                selected. Pressing the "enter" key on the preview will send the
+                selected commits to "project_commits_preview".
+
+project_stash_preview({commits})                 *vgit.project_stash_preview()*
+                Opens a preview listing all stashes. Pressing the "tab" key on
+                a list item will keep the item selected. Pressing the "enter"
+                key on the preview will send the selected stashes to
+                "project_commits_preview"
+
 project_commits_preview({commits})              *vgit.project_commits_preview()*
                 Opens a preview listing all the logs in the current working
                 branch. Users can filter the list by passing options when

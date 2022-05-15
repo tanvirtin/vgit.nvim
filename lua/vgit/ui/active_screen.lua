@@ -11,6 +11,7 @@ local GutterBlameScreen = require('vgit.features.screens.GutterBlameScreen')
 local LineBlameScreen = require('vgit.features.screens.LineBlameScreen')
 local DebugScreen = require('vgit.features.screens.DebugScreen')
 local ProjectLogsScreen = require('vgit.features.screens.ProjectLogsScreen')
+local ProjectStashScreen = require('vgit.features.screens.ProjectStashScreen')
 local project_diff_preview_setting = require(
   'vgit.settings.project_diff_preview'
 )
@@ -76,6 +77,12 @@ function active_screen.screens.project_logs_screen(...)
   local project_logs_screen = ProjectLogsScreen()
 
   return project_logs_screen:show({ ... }), project_logs_screen
+end
+
+function active_screen.screens.project_stash_screen(...)
+  local project_stash_screen = ProjectStashScreen()
+
+  return project_stash_screen:show({ ... }), project_stash_screen
 end
 
 function active_screen.screens.project_diff_screen()

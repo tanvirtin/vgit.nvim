@@ -30,6 +30,7 @@ function Command:constructor()
       'project_stage_all',
       'project_unstage_all',
       'project_logs_preview',
+      'project_stash_preview',
       'project_diff_preview',
       'project_hunks_preview',
       'project_debug_preview',

@@ -1102,4 +1102,40 @@ Git.ls_log = loop.promisify(function(self, log, spec, callback)
   }, spec)):start()
 end, 4)
 
+Git.ls_stash = loop.promisify(function(self, spec, callback)
+  local err = {}
+  local logs = {}
+  local revision_count = 0
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      '--no-pager',
+      'stash',
+      'list',
+      '--color=never',
+      '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
+    }),
+    on_stdout = function(line)
+      revision_count = revision_count + 1
+      local log = Log(line, revision_count)
+
+      if log then
+        logs[#logs + 1] = log
+      end
+    end,
+    on_stderr = function(line)
+      err[#err + 1] = line
+    end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err, nil)
+      end
+
+      return callback(nil, logs)
+    end,
+  }, spec)):start()
+end, 3)
+
 return Git
