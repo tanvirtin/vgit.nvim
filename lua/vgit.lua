@@ -326,6 +326,10 @@ local project = {
     active_screen.activate('project_logs_screen', ...)
   end),
 
+  stash_preview = loop.async(function(...)
+    active_screen.activate('project_stash_screen', ...)
+  end),
+
   commits_preview = loop.async(function(...)
     active_screen.activate('project_commits_screen', ...)
   end),
@@ -507,6 +511,7 @@ return {
   project_reset_all = project.reset_all,
   project_unstage_all = project.unstage_all,
   project_logs_preview = project.logs_preview,
+  project_stash_preview = project.stash_preview,
   project_diff_preview = project.diff_preview,
   project_hunks_preview = project.hunks_preview,
   project_debug_preview = project.debug_preview,
