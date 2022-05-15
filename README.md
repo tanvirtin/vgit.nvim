@@ -46,6 +46,7 @@
 - Project hunks preview
 - Project staged hunks preview
 - Project logs preview
+- Project stash preview
 - Project commits preview
 - Send all project hunks to quickfix list
 - Hunk navigations in all buffers with a diff
