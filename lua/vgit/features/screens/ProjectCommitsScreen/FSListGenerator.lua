@@ -6,11 +6,11 @@ local FSListGenerator = Object:extend()
 
 function FSListGenerator:constructor(entries)
   return {
+    tree = {},
     seperator = '/',
     entries = entries,
-    paths = {},
-    tree = {},
-    tree_by_depth = {},
+    normalized_paths = {},
+    normalized_paths_sorted_by_depth = {},
   }
 end
 
@@ -26,16 +26,19 @@ function FSListGenerator:get_parent_folder(segmented_folders, current_index)
     end
 
     count = count + 1
-    acc = string.format('%s/%s', acc, foldername)
+    acc = string.format('%s%s%s', acc, self.seperator, foldername)
   end
 
   return acc, count
 end
 
-function FSListGenerator:generate_paths(id, filename, file)
-  local paths = self.paths
+function FSListGenerator:normalize_filename(filename, id, file)
+  local normalized_paths = self.normalized_paths
+  -- Split the filename by it's seperator and create a list of all folders.
   local segmented_folders = vim.split(filename, self.seperator)
 
+  -- Loop over each segment and create paths by concanating 1..i items in
+  -- the segmented folder, storing all the necessary metadata in the process.
   for i = 1, #segmented_folders do
     local parent_folder_name, depth = self:get_parent_folder(
       segmented_folders,
@@ -48,7 +51,11 @@ function FSListGenerator:generate_paths(id, filename, file)
       self.seperator,
       current_folder_name
     )
-    paths[path] = {
+    -- normalized_paths will never contain duplicate entries, since a path will always be unique!
+    -- When we split the path by seperator, the number of seperators for
+    -- a given position (i) is the depth of the path in the file tree.
+    -- Note: two folders can have the same depth even if they don't live in the same folder.
+    normalized_paths[path] = {
       id = id,
       depth = depth,
       parent = parent_folder_name,
@@ -61,12 +68,15 @@ function FSListGenerator:generate_paths(id, filename, file)
   return self
 end
 
-function FSListGenerator:generate_tree_by_depth()
-  local paths = self.paths
-
+function FSListGenerator:sort_normalized_paths_by_depth()
+  local normalized_paths = self.normalized_paths
   local filter_by_depth = {}
 
-  for _, path in pairs(paths) do
+  -- Using the paths we normalized and storing them in a key-value table called normalized_paths
+  -- I am now creating a list, which will have a size of total depth in the tree.
+  -- Each item in the list will be another list of paths, e.g:
+  -- { [1] = { Path{}, Path{} }, [2] = { Path{} }, [3] = { Path{}, Path{} } }
+  for _, path in pairs(normalized_paths) do
     local depth_list = filter_by_depth[path.depth]
 
     if not depth_list then
@@ -76,7 +86,7 @@ function FSListGenerator:generate_tree_by_depth()
     end
   end
 
-  self.tree_by_depth = filter_by_depth
+  self.normalized_paths_sorted_by_depth = filter_by_depth
 
   return self
 end
@@ -113,7 +123,9 @@ function FSListGenerator:create_node(path)
   }
 end
 
-function FSListGenerator:find(path)
+-- Finds the parent from the tree for a given path
+-- (path obj will contain it's parent path string).
+function FSListGenerator:find_parent(path)
   local function _find(tree)
     if not tree then
       return nil
@@ -173,33 +185,21 @@ function FSListGenerator:sort()
   return self
 end
 
-function FSListGenerator:debug()
-  local function _print(tree)
-    for i = 1, #tree do
-      local item = tree[i]
-
-      if item.items then
-        print(item.value)
-        _print(item.items)
-      else
-        print(item.value)
-      end
-    end
-  end
-
-  _print(self.tree)
-
-  return self
-end
-
 function FSListGenerator:generate_tree()
-  for i = 1, #self.tree_by_depth do
-    local level_paths = self.tree_by_depth[i]
+  local normalized_paths_sorted_by_depth = self.normalized_paths_sorted_by_depth
 
-    for j = 1, #level_paths do
-      local path = level_paths[j]
-      local parent = self:find(path) or self.tree
+  for i = 1, #normalized_paths_sorted_by_depth do
+    -- As we now, each element in the normalized_paths_sorted_by_depth is a list of paths.
+    local paths = normalized_paths_sorted_by_depth[i]
 
+    for j = 1, #paths do
+      local path = paths[j]
+      -- Given a path self:find_parent will find the parent list from the tree.
+      -- NOTE: path is an object which contains metadata on it's own pathname, parent pathname, etc.
+      -- If we are in the root depth, self:find_parent(path) will return nil, so we just point to the root list.
+      local parent = self:find_parent(path) or self.tree
+
+      -- We create a node which can be a file item entry or a folder item entry to the parent list we found.
       parent[#parent + 1] = self:create_node(path)
     end
   end
@@ -216,10 +216,10 @@ function FSListGenerator:generate()
     local file = entry.file
     local filename = file.filename
 
-    self:generate_paths(id, filename, file)
+    self:normalize_filename(filename, id, file)
   end
 
-  self:generate_tree_by_depth():generate_tree():sort()
+  self:sort_normalized_paths_by_depth():generate_tree():sort()
 
   return self.tree
 end

@@ -44,6 +44,7 @@ function Query:fetch(shape, commits)
 
   for i = 1, #commits do
     local commit = commits[i]
+    -- Get the log associated with the commit
     local log_err, log = self.git:log(commit)
     loop.await_fast_event()
 
@@ -51,6 +52,8 @@ function Query:fetch(shape, commits)
       return log_err
     end
 
+    -- We will use the parent_hash and the commit_hash inside
+    -- the log object to list all the files associated with the log.
     local err, files = self.git:ls_log(log)
     loop.await_fast_event()
 
@@ -59,6 +62,10 @@ function Query:fetch(shape, commits)
     end
 
     data[commit] = utils.list.map(files, function(file)
+      -- Log contains the metadata about parent_hash and commit_hash
+      -- File contains the name of the file in that particular working tree.
+      -- Using commit_hash, parent_hash and the name of the file we can easily get the lines
+      -- and hunks to recreate the diffs by feeding this info into our algorithm.
       local datum = {
         id = utils.math.uuid(),
         log = log,
