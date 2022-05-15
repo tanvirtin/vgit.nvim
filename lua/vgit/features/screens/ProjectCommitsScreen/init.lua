@@ -108,6 +108,10 @@ function ProjectCommitsScreen:show(commits)
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('down')
 
+        if not list_item then
+          return
+        end
+
         query:set_id(list_item.id)
         self.code_view:render_debounced(loop.async(function()
           self.code_view:navigate_to_mark(1)
@@ -120,6 +124,10 @@ function ProjectCommitsScreen:show(commits)
       vgit_key = 'keys.k',
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('up')
+
+        if not list_item then
+          return
+        end
 
         query:set_id(list_item.id)
         self.code_view:render_debounced(function()
