@@ -362,6 +362,14 @@ local project = {
   end),
 }
 
+local checkout = loop.async(function(...)
+  local err = Git():checkout({ ... })
+
+  if err then
+    console.debug.error(err).error(err)
+  end
+end)
+
 local toggle_diff_preference = loop.async(function()
   active_screen.toggle_diff_preference()
 end)
@@ -501,6 +509,8 @@ return {
 
   hunk_up = controls.hunk_up,
   hunk_down = controls.hunk_down,
+
+  checkout = checkout,
 
   buffer_reset = buffer.reset,
   buffer_stage = buffer.stage,
