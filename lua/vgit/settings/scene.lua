@@ -1,5 +1,5 @@
 local Config = require('vgit.core.Config')
 
 return Config({
-  diff_preference = 'split',
+  diff_preference = 'unified',
 })
