@@ -28,17 +28,18 @@ LiveGutter.sync = loop.debounced_async(function(self, buffer)
   if not buffer:is_valid() then
     return
   end
-  loop.await_fast_event()
 
+  loop.await_fast_event()
   local live_signs = buffer:get_cached_live_signs()
 
+  loop.await_fast_event()
   buffer:clear_cached_live_signs()
 
   loop.await_fast_event()
   local err = buffer.git_object:live_hunks(buffer:get_lines())
-  loop.await_fast_event()
 
   if err then
+    loop.await_fast_event()
     buffer:set_cached_live_signs(live_signs)
     console.debug.error(err)
 
@@ -48,6 +49,7 @@ LiveGutter.sync = loop.debounced_async(function(self, buffer)
   local hunks = buffer.git_object.hunks
 
   if not hunks then
+    loop.await_fast_event()
     buffer:set_cached_live_signs(live_signs)
 
     return
@@ -58,6 +60,7 @@ LiveGutter.sync = loop.debounced_async(function(self, buffer)
     buffer:set_var('vgit_status', diff_status)
   end
 
+  loop.await_fast_event()
   self:clear(buffer)
 
   for i = 1, #hunks do
@@ -108,6 +111,7 @@ function LiveGutter:attach()
   local buffer = Buffer(0)
   local git_buffer = GitBuffer(buffer)
 
+  loop.await_fast_event()
   if git_buffer:is_in_store() then
     return
   end
@@ -115,6 +119,7 @@ function LiveGutter:attach()
   loop.await_fast_event()
   buffer:sync_git()
 
+  loop.await_fast_event()
   if not git_buffer:is_inside_git_dir() then
     self:resync(buffer)
     return
