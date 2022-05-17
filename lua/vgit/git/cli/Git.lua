@@ -1140,4 +1140,24 @@ Git.ls_stash = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
+Git.checkout = loop.promisify(function(self, options, spec, callback)
+  local err = {}
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      'checkout',
+      '--quiet',
+    }, options),
+    on_stderr = function(line)
+      err[#err + 1] = line
+    end,
+    on_exit = function()
+      return callback(#err ~= 0 and err or nil)
+    end,
+  }, spec)):start()
+end, 4)
+
 return Git

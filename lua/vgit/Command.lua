@@ -12,6 +12,8 @@ function Command:constructor()
       'hunk_up',
       'hunk_down',
 
+      'checkout',
+
       'buffer_hunk_preview',
       'buffer_diff_preview',
       'buffer_history_preview',

@@ -233,7 +233,7 @@ COMMAND                                                           *vgit-command*
 VGit followed by tab will show you all the |vgit-functions| available to you.
 
                            Note this command is equivalent to:
-                             `:lua require('vgit').{subcommand}({arguments})`
+                             `:lua require('vgit').{subcommand}([arguments])`
 
 ==============================================================================
 FUNCTIONS                                                       *vgit-functions*
@@ -243,15 +243,16 @@ setup({config})                                                 *vgit.setup()*
                 function has been called.
 
                 Parameters: ~
-                    {config} Table object containing configuration. See
-                    |vgit-usage| for more details. 
+                  {config} Table object containing configuration.
 
-buffer_hunk_preview()                              *vgit.buffer_hunk_preview()*
-                Opens a diff preview showing the diff of the current buffer
-                in comparison to that found in index. This preview will open up in
-                a smaller window relative to where your cursor is. If the
-                command is called while being on a hunk, the window will open
-                focused on the diff of that hunk.
+checkout([args])                                               *vgit.checkout()*
+                Wrapper command for "git checkout". Used to switch branches or
+                restore working tree files.
+
+                Parameters: ~
+                  [args] Can take all options that can be passed to "git
+                  checkout". For example ":VGit checkout main"
+
 
 buffer_diff_preview()                               *vgit.buffer_diff_preview()*
                 Opens a diff preview showing the diff of the current buffer in
@@ -259,18 +260,23 @@ buffer_diff_preview()                               *vgit.buffer_diff_preview()*
                 while being on a hunk, the window will open focused on the
                 diff of that hunk.
 
+buffer_hunk_preview()                                *vgit.buffer_hunk_preview()*
+                Opens a diff preview showing the diff of the current buffer in
+                comparison to that found in index. This preview will open up in
+                a smaller window relative to where your cursor is.
+
 buffer_history_preview()                         *vgit.buffer_history_preview()*
                 Opens a diff preview along with a table of logs, enabling
                 users to see different iterations of the file through it's
                 lifecycle in git.
 
 buffer_blame_preview()                             *vgit.buffer_blame_preview()*
-                Opens a preview detailing the blame of the line that
-                based on the cursor position within the buffer.
+                Opens a preview detailing the blame of the line based on the
+                current cursor position.
 
 buffer_gutter_blame_preview()                *vgit.buffer_gutter_blame_preview()*
-                Opens a preview which shows all the blames related to the
-                lines of the buffer.
+                Opens a preview which shows all the blames related to each
+                line in the buffer.
 
 buffer_diff_staged_preview()                  *vgit.buffer_staged_diff_preview()*
                 Opens a diff preview showing the diff of the staged changes in
@@ -318,20 +324,14 @@ project_diff_preview()                            *vgit.project_diff_preview()*
                 - Stage/unstage a hunk
                 - Open the file
 
-project_logs_preview({commits})                 *vgit.project_logs_preview()*
+project_logs_preview(opt1, opt2, ...)                 *vgit.project_logs_preview()*
                 Opens a preview listing all logs in the current working
                 branch. Users can filter the list by passing options to this
                 list. Pressing the "tab" key on a list item will keep the item
                 selected. Pressing the "enter" key on the preview will send the
                 selected commits to "project_commits_preview".
 
-project_stash_preview({commits})                 *vgit.project_stash_preview()*
-                Opens a preview listing all stashes. Pressing the "tab" key on
-                a list item will keep the item selected. Pressing the "enter"
-                key on the preview will send the selected stashes to
-                "project_commits_preview"
-
-project_commits_preview({commits})              *vgit.project_commits_preview()*
+project_commits_preview(commit1, commit2, ...)      *vgit.project_commits_preview()*
                 Opens a preview listing all the logs in the current working
                 branch. Users can filter the list by passing options when
                 calling this preview. Pressing the "tab" key on a list item
@@ -339,9 +339,12 @@ project_commits_preview({commits})              *vgit.project_commits_preview()*
                 close the current preview and open "project_commits_preview"
                 with the commits that were selected.
 
-project_commits_preview({commits})              *vgit.project_commits_preview()*
-                Opens a diff preview along with a list of all the commits that
-                are taken as argument params.
+
+project_stash_preview()                 *vgit.project_stash_preview()*
+                Opens a preview listing all stashes. Pressing the "tab" key on
+                a list item will keep the item selected. Pressing the "enter"
+                key on the preview will send the selected stashes to
+                "project_commits_preview"
 
 project_hunks_preview()                           *vgit.project_hunks_preview()*
                 Opens a diff preview along with a foldable list of all the
