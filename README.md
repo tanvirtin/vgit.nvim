@@ -126,6 +126,16 @@ require('vgit').setup({
     ['n <leader>gx'] = 'toggle_diff_preference',
   },
   settings = {
+    git = {
+      cmd = 'git', -- optional setting, not really required
+      fallback_cwd = vim.fn.expand("$HOME"),
+      fallback_args = {
+        "--git-dir",
+        vim.fn.expand("$HOME/dots/yadm-repo"),
+        "--work-tree",
+        vim.fn.expand("$HOME"),
+      },
+    },
     hls = {
       GitBackground = 'Normal',
       GitHeader = 'NormalFloat',
@@ -312,6 +322,16 @@ require('vgit').setup({
 ```
 
 </details>
+
+
+## Status Line
+
+Use `b:vgit_status`, a table containing the current buffer's number of `added`, `removed`, `changed` lines.
+
+Example:
+```viml
+set statusline+=%{get(b:,'vgit_status','')}
+```
 
 **API**
 ---
