@@ -37,7 +37,7 @@ function HistoryScreen:constructor()
       column_labels = {
         'Revision',
         'Author Name',
-        'Commit Hash',
+        'Commit',
         'Time',
         'Summary',
       },
@@ -45,7 +45,7 @@ function HistoryScreen:constructor()
         return {
           log.revision,
           log.author_name or '',
-          log.commit_hash or '',
+          log.commit_hash:sub(1, 8) or '',
           (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp)))
             or '',
           log.summary or '',
