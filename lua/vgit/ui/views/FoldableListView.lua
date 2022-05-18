@@ -49,6 +49,9 @@ function FoldableListView:define()
           height = '100vh',
           width = '100vw',
         }),
+        win_options = {
+          cursorline = true,
+        },
       },
     })
   )
