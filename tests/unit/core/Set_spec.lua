@@ -102,7 +102,7 @@ describe('Set:', function()
     eq(count_map['b'], 1)
     eq(count_map['c'], 1)
     eq(count_map['d'], 1)
-    eq(count, 11)
+    eq(count, 14)
   end)
 
   it('should allow chaining side effect commands', function()

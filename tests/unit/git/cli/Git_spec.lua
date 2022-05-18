@@ -138,6 +138,8 @@ a.describe('Git:', function()
       assert(hunks)
       eq(hunks, {
         {
+          type = 'add',
+          header = '@@ -0,0 +1,6 @@',
           diff = {
             '+a',
             '+b',
@@ -148,7 +150,6 @@ a.describe('Git:', function()
           },
           top = 1,
           bot = 6,
-          type = 'add',
           stat = {
             added = 6,
             removed = 0,
@@ -163,11 +164,11 @@ a.describe('Git:', function()
       assert(hunks)
       eq(hunks, {
         {
+          type = 'add',
+          header = '@@ -0,0 +1,0 @@',
           diff = {},
           top = 1,
           bot = 0,
-          header = nil,
-          type = 'add',
           stat = {
             added = 0,
             removed = 0,

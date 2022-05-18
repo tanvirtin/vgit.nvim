@@ -13,8 +13,8 @@ function GitObject:constructor(filename)
   local dirname = fs.dirname(filename)
 
   return {
-    hunks = nil,
     git = Git(dirname),
+    hunks = nil,
     dirname = dirname,
     filename = {
       native = filename,

@@ -5,6 +5,7 @@ local Object = require('vgit.core.Object')
 local File = Object:extend()
 
 function File:constructor(filename, status, log)
+  filename = filename:gsub('"', '')
   local is_dir = fs.is_dir(filename)
   local dirname = fs.dirname(filename)
   local filetype = fs.detect_filetype(filename)

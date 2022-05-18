@@ -31,10 +31,11 @@ function Set:delete(key)
 end
 
 function Set:for_each(callback)
-  local count = 1
+  local index = 1
 
   for key in pairs(self.set) do
-    local result = callback(key, count)
+    index = index + 1
+    local result = callback(key, index)
 
     if result == false then
       break
