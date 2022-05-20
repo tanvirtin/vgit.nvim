@@ -123,7 +123,7 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
 
   if err then
     console.debug.error(err)
-    return
+    return self
   end
 
   loop.await_fast_event()
@@ -149,7 +149,7 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
 
   self.query:set_id(list_item.id)
 
-  self.code_view:render():navigate_to_mark(index + 1)
+  self.code_view:render():navigate_to_mark(index)
 
   return self
 end, 15)
@@ -176,7 +176,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
 
   if err then
     console.debug.error(err)
-    return
+    return self
   end
 
   loop.await_fast_event()
@@ -202,7 +202,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
 
   self.query:set_id(list_item.id)
 
-  self.code_view:render():navigate_to_mark(index + 1)
+  self.code_view:render():navigate_to_mark(index)
 
   return self
 end, 15)
@@ -218,7 +218,7 @@ ProjectDiffScreen.stage_file = loop.debounced_async(function(self)
 
   if err then
     console.debug.error(err)
-    return
+    return self
   end
 
   return self:render()
@@ -235,7 +235,7 @@ ProjectDiffScreen.unstage_file = loop.debounced_async(function(self)
 
   if err then
     console.debug.error(err)
-    return
+    return self
   end
 
   return self:render()
@@ -246,7 +246,7 @@ ProjectDiffScreen.stage_all = loop.debounced_async(function(self)
 
   if err then
     console.debug.error(err)
-    return
+    return self
   end
 
   return self:render()
@@ -257,7 +257,7 @@ ProjectDiffScreen.unstage_all = loop.debounced_async(function(self)
 
   if err then
     console.debug.error(err)
-    return
+    return self
   end
 
   return self:render()
@@ -283,7 +283,7 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
   ):lower()
 
   if decision ~= 'yes' and decision ~= 'y' then
-    return
+    return self
   end
 
   loop.await_fast_event()
@@ -292,7 +292,7 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
 
   if err then
     console.debug.error(err)
-    return
+    return self
   end
 
   return self:render()
@@ -305,7 +305,7 @@ ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
   ):lower()
 
   if decision ~= 'yes' and decision ~= 'y' then
-    return
+    return self
   end
 
   loop.await_fast_event()
@@ -314,7 +314,7 @@ ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
 
   if err then
     console.debug.error(err)
-    return
+    return self
   end
 
   return self:render()
