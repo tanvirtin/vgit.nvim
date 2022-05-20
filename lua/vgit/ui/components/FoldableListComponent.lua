@@ -107,6 +107,10 @@ function FoldableListComponent:generate_lines()
       end
 
       if icon_before then
+        if type(icon_before) == 'function' then
+          icon_before = icon_before(item)
+        end
+
         value = string.format('%s %s', icon_before.icon, value)
         hls[#hls + 1] = {
           hl = icon_before.hl,
@@ -120,6 +124,10 @@ function FoldableListComponent:generate_lines()
           },
         }
       elseif icon_after then
+        if type(icon_after) == 'function' then
+          icon_after = icon_after(item)
+        end
+
         value = string.format('%s %s', value, icon_after.icon)
         hls[#hls + 1] = {
           hl = icon_after.hl,
@@ -136,15 +144,32 @@ function FoldableListComponent:generate_lines()
       end
 
       if items then
-        local item_count = string.format('(%s)', #items)
         local fold_symbol = symbols_setting:get(item.open and 'open' or 'close')
         local fold_header = string.format(
-          '%s%s %s %s',
+          '%s%s %s',
           indentation,
           fold_symbol,
-          value,
-          item_count
+          value
         )
+        local show_count = item.show_count
+
+        if show_count ~= false then
+          show_count = true
+        end
+
+        if show_count then
+          local item_count = string.format('(%s)', #items)
+          fold_header = string.format('%s %s', fold_header, item_count)
+          hls[#hls + 1] = {
+            hl = 'GitCount',
+            lnum = current_lnum,
+            range = {
+              top = #fold_header - #item_count,
+              bot = #fold_header,
+            },
+          }
+        end
+
         foldable_list_shadow[#foldable_list_shadow + 1] = fold_header
         hls[#hls + 1] = {
           hl = 'GitSymbol',
@@ -152,14 +177,6 @@ function FoldableListComponent:generate_lines()
           range = {
             top = 1 + indentation_count,
             bot = 1 + indentation_count + #fold_symbol,
-          },
-        }
-        hls[#hls + 1] = {
-          hl = 'GitCount',
-          lnum = current_lnum,
-          range = {
-            top = #fold_header - #item_count,
-            bot = #fold_header,
           },
         }
         hls[#hls + 1] = {

@@ -271,6 +271,16 @@ function CodeView:paint_full()
   return self:apply_brush(1, #self.state.current_lines_changes)
 end
 
+function CodeView:reset_cursor()
+  if self.layout_type == 'split' then
+    self.scene:get('previous'):reset_cursor()
+  end
+
+  self.scene:get('current'):reset_cursor()
+
+  return self
+end
+
 function CodeView:clear_namespace()
   if self.layout_type == 'split' then
     self.scene:get('previous'):clear_namespace()
@@ -291,10 +301,10 @@ end
 
 function CodeView:clear_lines()
   if self.layout_type == 'split' then
-    self.scene:get('previous'):clear_lines()
+    self.scene:get('previous'):clear_lines():disable_cursorline()
   end
 
-  self.scene:get('current'):clear_lines()
+  self.scene:get('current'):clear_lines():disable_cursorline()
 
   return self
 end
@@ -560,10 +570,16 @@ function CodeView:make_lines()
   end
 
   if self.layout_type == 'unified' then
-    self.scene:get('current'):set_lines(diff_dto.lines)
+    self.scene:get('current'):set_lines(diff_dto.lines):enable_cursorline()
   else
-    self.scene:get('previous'):set_lines(diff_dto.previous_lines)
-    self.scene:get('current'):set_lines(diff_dto.current_lines)
+    self.scene
+      :get('previous')
+      :set_lines(diff_dto.previous_lines)
+      :enable_cursorline()
+    self.scene
+      :get('current')
+      :set_lines(diff_dto.current_lines)
+      :enable_cursorline()
   end
 
   return self
@@ -612,11 +628,11 @@ function CodeView:get_current_mark_under_cursor()
     local mark = marks[i]
 
     if lnum >= mark.top and lnum <= mark.bot then
-      return mark
+      return mark, i
     end
   end
 
-  return nil
+  return nil, nil
 end
 
 function CodeView:get_current_hunk_under_cursor()
@@ -642,10 +658,10 @@ function CodeView:get_current_hunk_under_cursor()
   end
 
   if selected then
-    return hunks[selected]
+    return hunks[selected], selected
   end
 
-  return nil
+  return nil, nil
 end
 
 function CodeView:select_mark(marks, mark_index, position)
@@ -794,7 +810,7 @@ function CodeView:render()
   -- NOTE: important to clear the namespace first.
   loop.await_fast_event(5)
   self:clear_namespace()
-  loop.await_fast_event(10)
+  loop.await_fast_event(5)
 
   local err, _ = self.query:get_diff_dto()
 
@@ -806,7 +822,10 @@ function CodeView:render()
     return self:clear_title():clear_lines():clear_notification()
   end
 
+  -- NOTE: It is super important to reset the cursor or else
+  -- you will randomly see line numbers not aligning with the current view.
   return self
+    :reset_cursor()
     :make_title()
     :make_filetype()
     :make_lines()

@@ -4,10 +4,8 @@ local Feature = require('vgit.Feature')
 local utils = require('vgit.core.utils')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
+local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
-local FSListGenerator = require(
-  'vgit.features.screens.ProjectCommitsScreen.FSListGenerator'
-)
 local Query = require('vgit.features.screens.ProjectCommitsScreen.Query')
 
 local ProjectCommitsScreen = Feature:extend()

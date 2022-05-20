@@ -3,7 +3,12 @@ local Config = require('vgit.core.Config')
 
 return Config({
   GitCount = 'Keyword',
-  GitSymbol = 'CursorLineNr',
+  GitSymbol = function()
+    return {
+      fg = Color({ name = 'CursorLineNr', attribute = 'fg' }):get(),
+      override = false,
+    }
+  end,
   GitTitle = 'Directory',
   GitSelected = function()
     return {
