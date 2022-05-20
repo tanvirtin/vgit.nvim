@@ -40,3 +40,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --color always --check .
+
+  commit_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: webiny/action-conventional-commits@v1.0.3
