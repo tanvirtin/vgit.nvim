@@ -212,7 +212,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await_fast_event()
-          local hunk = self.code_view:get_current_hunk_under_cursor()
+          local hunk, index = self.code_view:get_current_hunk_under_cursor()
           loop.await_fast_event()
 
           if not hunk then
@@ -229,7 +229,7 @@ function DiffScreen:show(opts)
             return
           end
 
-          self.code_view:render()
+          self.code_view:render():navigate_to_mark(index + 1, 'center')
         end, 100),
       },
       {
@@ -253,7 +253,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await_fast_event()
-          local hunk = self.code_view:get_current_hunk_under_cursor()
+          local hunk, index = self.code_view:get_current_hunk_under_cursor()
           loop.await_fast_event()
 
           if not hunk then
@@ -274,7 +274,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await_fast_event()
-          self.code_view:render()
+          self.code_view:render():navigate_to_mark(index + 1, 'center')
         end, 100),
       },
       {
