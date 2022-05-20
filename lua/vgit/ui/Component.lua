@@ -203,6 +203,18 @@ function Component:position_cursor(placement)
   return self
 end
 
+function Component:enable_cursorline()
+  self.window:set_option('cursorline', true)
+
+  return self
+end
+
+function Component:disable_cursorline()
+  self.window:set_option('cursorline', false)
+
+  return self
+end
+
 function Component:clear_lines()
   return self.buffer:set_lines({})
 end

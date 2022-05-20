@@ -2,6 +2,12 @@ local utils = require('vgit.core.utils')
 local icons = require('vgit.core.icons')
 local Object = require('vgit.core.Object')
 
+--[[
+  The foldable list component draws itself using a configuration table.
+  This means we can create a file tree config generator that given a
+  generic data shape can generate a tree blueprint out of it.
+--]]
+
 local FSListGenerator = Object:extend()
 
 function FSListGenerator:constructor(entries)
@@ -92,6 +98,8 @@ function FSListGenerator:sort_normalized_paths_by_depth()
 end
 
 function FSListGenerator:create_node(path)
+  local metadata = self.metadata
+
   if path.file then
     local id = path.id
     local file = path.file
@@ -101,8 +109,9 @@ function FSListGenerator:create_node(path)
 
     local list_entry = {
       id = id,
-      value = path.current,
       path = path,
+      metadata = metadata,
+      value = path.current,
     }
 
     if icon then
@@ -116,10 +125,17 @@ function FSListGenerator:create_node(path)
   end
 
   return {
-    open = true,
-    value = path.current,
     items = {},
+    open = true,
     path = path,
+    show_count = false,
+    metadata = metadata,
+    value = path.current,
+    icon_before = function(item)
+      return {
+        icon = item.open and '' or '',
+      }
+    end,
   }
 end
 
@@ -207,7 +223,8 @@ function FSListGenerator:generate_tree()
   return self
 end
 
-function FSListGenerator:generate()
+function FSListGenerator:generate(metadata)
+  self.metadata = metadata
   local entries = self.entries
 
   for i = 1, #entries do

@@ -15,8 +15,6 @@ end
 function LineNumberElement:make_lines(lines)
   local num_lines = #lines
 
-  num_lines = math.max(self.window:get_height(), num_lines)
-
   local actual_lines = {}
 
   for _ = 1, num_lines do
@@ -54,7 +52,6 @@ function LineNumberElement:mount(opts)
     :assign_options({
       cursorbind = true,
       scrollbind = true,
-      cursorline = true,
       winhl = 'Normal:GitBackground',
     })
 

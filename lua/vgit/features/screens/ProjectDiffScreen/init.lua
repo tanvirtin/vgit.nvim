@@ -2,14 +2,13 @@ local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
 local Feature = require('vgit.Feature')
-local icons = require('vgit.core.icons')
-local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
 local project_diff_preview_setting = require(
   'vgit.settings.project_diff_preview'
 )
 local CodeView = require('vgit.ui.views.CodeView')
+local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
 local Query = require('vgit.features.screens.ProjectDiffScreen.Query')
 local Mutation = require('vgit.features.screens.ProjectDiffScreen.Mutation')
@@ -28,7 +27,8 @@ function ProjectDiffScreen:constructor()
     mutation = mutation,
     layout_type = nil,
     code_view = CodeView(scene, query, {
-      height = '70vh',
+      col = '25vw',
+      width = '75vw',
     }, {
       elements = {
         header = true,
@@ -36,8 +36,7 @@ function ProjectDiffScreen:constructor()
       },
     }),
     foldable_list_view = FoldableListView(scene, query, {
-      row = '70vh',
-      height = '30vh',
+      width = '25vw',
     }, {
       elements = {
         header = true,
@@ -51,36 +50,12 @@ function ProjectDiffScreen:constructor()
         local foldable_list = {}
 
         for key in pairs(list) do
-          local entries = list[key]
-
           foldable_list[#foldable_list + 1] = {
             open = true,
             value = key,
-            items = utils.list.map(entries, function(entry)
-              local file = entry.file
-              local filename = file.filename
-              local filestatus = file.status:to_string()
-              local value = string.format('%s %s', filename, filestatus)
-              local icon, icon_hl = icons.get(filename, file.filetype)
-
-              local list_entry = {
-                id = entry.id,
-                value = value,
-                metadata = {
-                  category = key,
-                  file = file,
-                },
-              }
-
-              if icon then
-                list_entry.icon_before = {
-                  icon = icon,
-                  hl = icon_hl,
-                }
-              end
-
-              return list_entry
-            end),
+            items = FSListGenerator(list[key]):generate({
+              category = key,
+            }),
           }
         end
 
@@ -138,7 +113,7 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
   end
 
   loop.await_fast_event()
-  local hunk = self.code_view:get_current_hunk_under_cursor()
+  local hunk, index = self.code_view:get_current_hunk_under_cursor()
 
   if not hunk then
     return self
@@ -164,15 +139,17 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
       end
 
       local metadata = list_item.metadata
+      local path = list_item.path
+      local file = path.file
 
       return metadata.category == 'changes'
-        and filename == metadata.file.filename
-        and metadata.file:is_unstaged()
+        and filename == file.filename
+        and file:is_unstaged()
     end) or self.foldable_list_view:get_current_list_item()
 
   self.query:set_id(list_item.id)
 
-  self.code_view:render()
+  self.code_view:render():navigate_to_mark(index + 1)
 
   return self
 end, 15)
@@ -189,7 +166,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
   end
 
   loop.await_fast_event()
-  local hunk = self.code_view:get_current_hunk_under_cursor()
+  local hunk, index = self.code_view:get_current_hunk_under_cursor()
 
   if not hunk then
     return self
@@ -215,15 +192,17 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
       end
 
       local metadata = list_item.metadata
+      local path = list_item.path
+      local file = path.file
 
       return metadata.category == 'staged'
-        and filename == metadata.file.filename
-        and metadata.file:is_unstaged()
+        and filename == file.filename
+        and file:is_unstaged()
     end) or self.foldable_list_view:get_current_list_item()
 
   self.query:set_id(list_item.id)
 
-  self.code_view:render()
+  self.code_view:render():navigate_to_mark(index + 1)
 
   return self
 end, 15)
@@ -410,7 +389,7 @@ function ProjectDiffScreen:show()
       key = '<enter>',
       vgit_key = 'keys.enter',
       handler = loop.async(function()
-        local mark = self.code_view:get_current_mark_under_cursor()
+        local mark, _ = self.code_view:get_current_mark_under_cursor()
 
         if not mark then
           return
