@@ -1,6 +1,7 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
 local Feature = require('vgit.Feature')
+local utils = require('vgit.core.utils')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
@@ -38,16 +39,17 @@ function HistoryScreen:constructor()
         'Revision',
         'Author Name',
         'Commit',
-        'Time',
+        'Date',
         'Summary',
       },
       get_row = function(log)
+        local timestamp = log.timestamp
+
         return {
           log.revision,
           log.author_name or '',
           log.commit_hash:sub(1, 8) or '',
-          (log.timestamp and os.date('%Y-%m-%d', tonumber(log.timestamp)))
-            or '',
+          utils.time.format(timestamp),
           log.summary or '',
         }
       end,

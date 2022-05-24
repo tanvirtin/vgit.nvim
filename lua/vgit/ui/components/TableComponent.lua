@@ -5,7 +5,7 @@ local FooterElement = require('vgit.ui.elements.FooterElement')
 local HeaderElement = require('vgit.ui.elements.HeaderElement')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
-local table_maker = require('vgit.ui.components.TableComponent.table_maker')
+local TableGenerator = require('vgit.ui.TableGenerator')
 
 local TableComponent = Component:extend()
 
@@ -51,18 +51,17 @@ function TableComponent:set_lines(lines, force)
   local header = self.elements.header
   local buffer = self.buffer
 
-  local column_labels, rows, hls = table_maker.make(
-    lines,
+  local labels, rows, hls = TableGenerator(
     self.config.column_labels,
+    lines,
     self.column_spacing,
     self.column_len
-  )
+  ):generate()
 
-  header:set_lines(column_labels)
+  header:set_lines(labels)
   buffer:set_lines(rows)
-  self:paint(hls)
 
-  return self
+  return self:paint(hls)
 end
 
 function TableComponent:make_rows(rows, format)

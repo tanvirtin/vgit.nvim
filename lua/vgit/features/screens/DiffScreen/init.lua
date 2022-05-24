@@ -229,7 +229,7 @@ function DiffScreen:show(opts)
             return
           end
 
-          self.code_view:render():navigate_to_mark(index + 1, 'center')
+          self.code_view:render():navigate_to_mark(index, 'center')
         end, 100),
       },
       {
@@ -274,7 +274,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await_fast_event()
-          self.code_view:render():navigate_to_mark(index + 1, 'center')
+          self.code_view:render():navigate_to_mark(index, 'center')
         end, 100),
       },
       {
