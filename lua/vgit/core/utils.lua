@@ -10,6 +10,12 @@ local utils = {
   str = {},
 }
 
+function utils.time.format(time, format)
+  format = format or '%d %b %Y'
+
+  return os.date(format, tonumber(time))
+end
+
 function utils.time.age(current_time)
   assertion.assert(current_time)
   local time = os.difftime(os.time(), current_time)
@@ -136,6 +142,10 @@ function utils.str.strip(given_string, substring)
   end
 
   return rc_s
+end
+
+function utils.str.spit(...)
+  return vim.split(...)
 end
 
 function utils.object.first(object)

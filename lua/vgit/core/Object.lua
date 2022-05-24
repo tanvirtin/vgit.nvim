@@ -18,19 +18,7 @@ function Object:extend()
   cls.__index = cls
   cls.super = self
 
-  setmetatable(cls, self)
-
-  return cls
-end
-
-function Object:implement(...)
-  for _, cls in pairs({ ... }) do
-    for k, v in pairs(cls) do
-      if self[k] == nil and type(v) == 'function' then
-        self[k] = v
-      end
-    end
-  end
+  return setmetatable(cls, self)
 end
 
 function Object:is(T)
@@ -46,12 +34,8 @@ function Object:is(T)
   return false
 end
 
-function Object:__tostring()
-  return 'Object'
-end
-
 function Object:__call(...)
-  return setmetatable(self:constructor(...), self)
+  return setmetatable(self:constructor(...) or self, self)
 end
 
 return Object

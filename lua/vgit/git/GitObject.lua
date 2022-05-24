@@ -295,6 +295,10 @@ function GitObject:logs()
   })
 end
 
+function GitObject:status()
+  return self.git:file_status(self:tracked_filename())
+end
+
 function GitObject:generate_diff_status()
   local hunks = self.hunks or {}
   local stats_dict = {

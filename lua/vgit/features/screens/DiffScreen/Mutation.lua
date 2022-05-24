@@ -39,7 +39,11 @@ function Mutation:unstage_file(filename)
 end
 
 function Mutation:reset_file(filename)
-  return self.git:reset(filename)
+  if self.git:is_in_remote(filename) then
+    return self.git:reset(filename)
+  end
+
+  return self.git:clean(filename)
 end
 
 return Mutation

@@ -17,6 +17,18 @@ function Mutation:stage_hunk(filename, hunk)
     return git_object:stage()
   end
 
+  local err, file = git_object:status()
+
+  if err then
+    return err, nil
+  end
+
+  local file_status = file.status
+
+  if file_status:has('D ') or file_status:has(' D') then
+    return git_object:stage()
+  end
+
   return git_object:stage_hunk(hunk)
 end
 
@@ -25,6 +37,21 @@ function Mutation:unstage_hunk(filename, hunk)
 
   if not git_object:is_in_remote() then
     return git_object:unstage()
+  end
+
+  local err, file = self.git:file_status(filename)
+
+  if err then
+    return err, nil
+  end
+
+  local file_status = file.status
+
+  if file_status:has('D ') or file_status:has(' D') then
+    -- TODO: We cannot use git_object:stage() here because GitObject uses
+    -- tracked_filename which will be '' as the resolution won't be
+    -- possible since the file does not exist in index.
+    return self.git:unstage_file(filename)
   end
 
   return git_object:unstage_hunk(hunk)

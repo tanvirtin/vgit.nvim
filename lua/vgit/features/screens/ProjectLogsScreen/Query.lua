@@ -37,24 +37,4 @@ function Query:get_data()
   return self.err, self.data
 end
 
-function Query:get_lines()
-  if self.err then
-    return self.err
-  end
-
-  local data = {}
-
-  for i = 1, #self.data do
-    local log = self.data[i]
-
-    data[#data + 1] = string.format('%s %s', log.commit_hash, log.summary)
-  end
-
-  return nil, data
-end
-
-function Query:get_title()
-  return nil, 'Git Logs'
-end
-
 return Query

@@ -6,6 +6,7 @@ local dimensions = require('vgit.ui.dimensions')
 local PresentationalComponent = require(
   'vgit.ui.components.PresentationalComponent'
 )
+local TableGenerator = require('vgit.ui.TableGenerator')
 
 local GitLogsView = Object:extend()
 
@@ -55,10 +56,8 @@ function GitLogsView:set_keymap(configs)
   return self
 end
 
-function GitLogsView:set_title()
-  local _, title = self.query:get_title()
-
-  self.scene:get('selectable_view'):set_title(title)
+function GitLogsView:make_title(labels)
+  self.scene:get('selectable_view'):set_title(labels[1])
 
   return self
 end
@@ -77,7 +76,7 @@ function GitLogsView:select()
 
   self.state.selected[lnum] = true
 
-  self.namespace:add_highlight(buffer, 'GitSelected', lnum - 1, 0, 40)
+  self.namespace:add_highlight(buffer, 'GitSelected', lnum - 1, 1, 41)
   return self
 end
 
@@ -103,22 +102,39 @@ function GitLogsView:paint()
   local num_lines = component:get_line_count()
 
   for i = 1, num_lines do
-    component:add_highlight('TODO', i - 1, 0, 40)
+    component:add_highlight('Constant', i - 1, 0, 41)
   end
 
   return self
 end
 
 function GitLogsView:render()
-  local err, lines = self.query:get_lines()
+  local err, logs = self.query:get_data()
 
   if err then
     console.debug.error(err).error(err)
     return self
   end
 
-  self:set_title()
-  self.scene:get('selectable_view'):unlock():set_lines(lines):focus():lock()
+  local labels, rows, _ = TableGenerator(
+    {
+      'Commit',
+      'Author',
+      'Date',
+      'Summary',
+    },
+    utils.list.map(logs, function(log)
+      local time = utils.time.format(log.timestamp)
+
+      return { log.commit_hash, time, log.author_name, log.summary }
+    end),
+    1,
+    80
+  ):generate()
+
+  self:make_title(labels)
+
+  self.scene:get('selectable_view'):unlock():set_lines(rows):focus():lock()
 
   return self:paint()
 end

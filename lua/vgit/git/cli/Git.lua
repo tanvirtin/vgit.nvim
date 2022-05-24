@@ -43,6 +43,7 @@ Git.is_commit_valid = loop.promisify(function(self, commit, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'show',
       '--abbrev-commit',
       '--oneline',
@@ -719,11 +720,17 @@ Git.stage_file = loop.promisify(function(self, filename, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'add',
+      '--',
       filename,
     }),
     on_stderr = function(line)
-      err[#err + 1] = line
+      local is_warning, _ = line:find('warning')
+
+      if not is_warning then
+        err[#err + 1] = line
+      end
     end,
     on_exit = function()
       if #err ~= 0 then
@@ -750,7 +757,11 @@ Git.unstage_file = loop.promisify(function(self, filename, spec, callback)
       filename,
     }),
     on_stderr = function(line)
-      err[#err + 1] = line
+      local is_warning, _ = line:find('warning')
+
+      if not is_warning then
+        err[#err + 1] = line
+      end
     end,
     on_exit = function()
       if #err ~= 0 then
@@ -771,6 +782,7 @@ Git.stage_hunk_from_patch = loop.promisify(
       args = utils.list.merge(self.fallback_args, {
         '-C',
         self.cwd,
+        '--no-pager',
         'apply',
         '--cached',
         '--whitespace=nowarn',
@@ -801,6 +813,7 @@ Git.unstage_hunk_from_patch = loop.promisify(
       args = utils.list.merge(self.fallback_args, {
         '-C',
         self.cwd,
+        '--no-pager',
         'apply',
         '--reverse',
         '--cached',
@@ -832,6 +845,7 @@ Git.is_ignored = loop.promisify(function(self, filename, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'check-ignore',
       filename,
     }),
@@ -860,6 +874,7 @@ Git.reset = loop.promisify(function(self, filename, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'checkout',
       '-q',
       '--',
@@ -886,6 +901,7 @@ Git.reset_all = loop.promisify(function(self, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'checkout',
       '-q',
       '--',
@@ -913,6 +929,7 @@ Git.clean = loop.promisify(function(self, filename, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'clean',
       '-fd',
       '--',
@@ -939,6 +956,7 @@ Git.clean_all = loop.promisify(function(self, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'clean',
       '-fd',
     }),
@@ -964,6 +982,7 @@ Git.current_branch = loop.promisify(function(self, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'branch',
       '--show-current',
     }),
@@ -993,6 +1012,7 @@ Git.tracked_filename = loop.promisify(
       args = utils.list.merge(self.fallback_args, {
         '-C',
         self.cwd,
+        '--no-pager',
         'ls-files',
         '--exclude-standard',
         commit_hash or 'HEAD',
@@ -1019,6 +1039,7 @@ Git.tracked_full_filename = loop.promisify(
       args = utils.list.merge(self.fallback_args, {
         '-C',
         self.cwd,
+        '--no-pager',
         'ls-files',
         '--exclude-standard',
         '--full-name',
@@ -1035,6 +1056,49 @@ Git.tracked_full_filename = loop.promisify(
   4
 )
 
+Git.file_status = loop.promisify(
+  function(self, tracked_filename, spec, callback)
+    local err = {}
+    local file = nil
+
+    GitReadStream(utils.object.defaults({
+      command = self.cmd,
+      args = utils.list.merge(self.fallback_args, {
+        '-C',
+        self.cwd,
+        '--no-pager',
+        'status',
+        '-u',
+        '-s',
+        '--no-renames',
+        '--ignore-submodules',
+        '--',
+        tracked_filename,
+      }),
+      on_stdout = function(line)
+        local filename = line:sub(4, #line)
+
+        if fs.is_dir(filename) then
+          return
+        end
+
+        file = File(line:sub(4, #line), Status(line:sub(1, 2)))
+      end,
+      on_stderr = function(line)
+        err[#err + 1] = line
+      end,
+      on_exit = function()
+        if #err ~= 0 then
+          return callback(err, file)
+        end
+
+        callback(nil, file)
+      end,
+    }, spec)):start()
+  end,
+  4
+)
+
 Git.status = loop.promisify(function(self, spec, callback)
   local err = {}
   local result = {}
@@ -1044,6 +1108,7 @@ Git.status = loop.promisify(function(self, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'status',
       '-u',
       '-s',
@@ -1081,6 +1146,7 @@ Git.ls_log = loop.promisify(function(self, log, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'diff-tree',
       '--no-commit-id',
       '--name-only',
@@ -1148,6 +1214,7 @@ Git.checkout = loop.promisify(function(self, options, spec, callback)
     args = utils.list.merge(self.fallback_args, {
       '-C',
       self.cwd,
+      '--no-pager',
       'checkout',
       '--quiet',
     }, options),
