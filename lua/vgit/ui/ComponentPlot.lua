@@ -51,7 +51,11 @@ function ComponentPlot:configure_bounds()
         win_plot.row = win_plot.row - footer_height
       end
     else
-      win_plot.height = win_plot.height - win_plot.row
+      local height = win_plot.height - win_plot.row
+
+      if height > 0 then
+        win_plot.height = height
+      end
 
       if has_line_number then
         self.line_number_win_plot.height = win_plot.height
@@ -103,7 +107,11 @@ function ComponentPlot:configure_width()
   local line_number_width = LineNumberElement:get_width()
 
   if has_line_number then
-    win_plot.width = win_plot.width - line_number_width
+    local width = win_plot.width - line_number_width
+
+    if width > 0 then
+      win_plot.width = width
+    end
   end
 
   return self
