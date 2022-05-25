@@ -7,7 +7,7 @@ local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
 local diff_preview_setting = require('vgit.settings.diff_preview')
-local FooterView = require('vgit.ui.views.FooterView')
+local AppBarView = require('vgit.ui.views.AppBarView')
 local Query = require('vgit.features.screens.DiffScreen.Query')
 local Mutation = require('vgit.features.screens.DiffScreen.Mutation')
 
@@ -27,7 +27,7 @@ function DiffScreen:create_code_view(scene, query, opts)
   end
 
   return CodeView(scene, query, {
-    height = '99vh',
+    row = 1,
   }, {
     elements = {
       header = true,
@@ -36,14 +36,12 @@ function DiffScreen:create_code_view(scene, query, opts)
   })
 end
 
-function DiffScreen:create_footer_view(scene, query, opts)
+function DiffScreen:create_app_bar_view(scene, query, opts)
   if opts.is_hunk then
     return nil
   end
 
-  return FooterView(scene, query, {
-    row = '99vh',
-  })
+  return AppBarView(scene, query)
 end
 
 function DiffScreen:constructor(opts)
@@ -60,7 +58,7 @@ function DiffScreen:constructor(opts)
     layout_type = nil,
     is_staged = nil,
     code_view = DiffScreen:create_code_view(scene, query, opts),
-    footer_view = DiffScreen:create_footer_view(scene, query, opts),
+    app_bar_view = DiffScreen:create_app_bar_view(scene, query, opts),
   }
 end
 
@@ -107,7 +105,7 @@ function DiffScreen:make_footer_lines()
       or string.format('%s | %s: %s', text, translations[i], keymaps[keys[i]])
   end
 
-  self.footer_view:set_lines({ text })
+  self.app_bar_view:set_lines({ text })
 
   return self
 end
@@ -132,8 +130,8 @@ function DiffScreen:show(opts)
 
   loop.await_fast_event()
 
-  if self.footer_view then
-    self.footer_view:show()
+  if self.app_bar_view then
+    self.app_bar_view:show()
   end
 
   self.code_view
@@ -413,7 +411,7 @@ function DiffScreen:show(opts)
       },
     })
 
-  if self.footer_view then
+  if self.app_bar_view then
     self:make_footer_lines()
   end
 

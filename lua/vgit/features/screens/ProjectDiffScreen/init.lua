@@ -10,7 +10,7 @@ local project_diff_preview_setting = require(
 local CodeView = require('vgit.ui.views.CodeView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
-local FooterView = require('vgit.ui.views.FooterView')
+local AppBarView = require('vgit.ui.views.AppBarView')
 local Query = require('vgit.features.screens.ProjectDiffScreen.Query')
 local Mutation = require('vgit.features.screens.ProjectDiffScreen.Mutation')
 
@@ -27,8 +27,9 @@ function ProjectDiffScreen:constructor()
     query = query,
     mutation = mutation,
     layout_type = nil,
+    app_bar_view = AppBarView(scene, query),
     code_view = CodeView(scene, query, {
-      height = '99vh',
+      row = 1,
       col = '25vw',
       width = '75vw',
     }, {
@@ -38,11 +39,11 @@ function ProjectDiffScreen:constructor()
       },
     }),
     foldable_list_view = FoldableListView(scene, query, {
-      height = '99vh',
+      row = 1,
       width = '25vw',
     }, {
       elements = {
-        header = true,
+        header = false,
         footer = false,
       },
       get_list = function(list)
@@ -64,9 +65,6 @@ function ProjectDiffScreen:constructor()
 
         return foldable_list
       end,
-    }),
-    footer_view = FooterView(scene, query, {
-      row = '99vh',
     }),
   }
 end
@@ -378,7 +376,7 @@ function ProjectDiffScreen:make_footer_lines()
       or string.format('%s | %s: %s', text, translations[i], keymaps[keys[i]])
   end
 
-  self.footer_view:set_lines({ text })
+  self.app_bar_view:set_lines({ text })
 
   return self
 end
@@ -398,7 +396,7 @@ function ProjectDiffScreen:show()
   end
 
   loop.await_fast_event()
-  self.footer_view:show()
+  self.app_bar_view:show()
   self.code_view:show(layout_type)
   self.foldable_list_view:show()
 

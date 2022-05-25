@@ -833,7 +833,7 @@ function CodeView:render()
 
     self.state = CodeView:get_initial_state()
 
-    return self:clear_title():clear_lines():clear_notification()
+    return self:clear_title():clear_lines():clear_notification():reset_cursor()
   end
 
   -- NOTE: It is super important to reset the cursor or else

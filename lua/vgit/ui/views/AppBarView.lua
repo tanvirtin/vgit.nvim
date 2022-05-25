@@ -1,10 +1,10 @@
 local Object = require('vgit.core.Object')
 local dimensions = require('vgit.ui.dimensions')
-local FooterComponent = require('vgit.ui.components.FooterComponent')
+local AppBarComponent = require('vgit.ui.components.AppBarComponent')
 
-local FooterView = Object:extend()
+local AppBarView = Object:extend()
 
-function FooterView:constructor(scene, query, plot)
+function AppBarView:constructor(scene, query, plot)
   return {
     scene = scene,
     query = query,
@@ -12,10 +12,10 @@ function FooterView:constructor(scene, query, plot)
   }
 end
 
-function FooterView:define()
+function AppBarView:define()
   self.scene:set(
     'footer',
-    FooterComponent({
+    AppBarComponent({
       config = {
         win_plot = dimensions.relative_win_plot(self.plot, {
           height = '100vh',
@@ -28,22 +28,22 @@ function FooterView:define()
   return self
 end
 
-function FooterView:set_lines(lines)
+function AppBarView:set_lines(lines)
   self.scene:get('footer'):set_lines(lines)
 
   return self
 end
 
-function FooterView:mount_scene(mount_opts)
+function AppBarView:mount_scene(mount_opts)
   self.scene:get('footer'):mount(mount_opts)
 
   return self
 end
 
-function FooterView:show(mount_opts)
+function AppBarView:show(mount_opts)
   self:define():mount_scene(mount_opts)
 
   return self
 end
 
-return FooterView
+return AppBarView
