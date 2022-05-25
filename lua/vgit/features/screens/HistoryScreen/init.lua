@@ -49,7 +49,7 @@ function HistoryScreen:constructor()
           log.revision,
           log.author_name or '',
           log.commit_hash:sub(1, 8) or '',
-          utils.time.format(timestamp),
+          utils.date.format(timestamp),
           log.summary or '',
         }
       end,
