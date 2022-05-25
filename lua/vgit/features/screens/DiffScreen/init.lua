@@ -6,7 +6,8 @@ local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
-local diff_preview = require('vgit.settings.diff_preview')
+local diff_preview_setting = require('vgit.settings.diff_preview')
+local FooterView = require('vgit.ui.views.FooterView')
 local Query = require('vgit.features.screens.DiffScreen.Query')
 local Mutation = require('vgit.features.screens.DiffScreen.Mutation')
 
@@ -25,7 +26,24 @@ function DiffScreen:create_code_view(scene, query, opts)
     })
   end
 
-  return CodeView(scene, query)
+  return CodeView(scene, query, {
+    height = '99vh',
+  }, {
+    elements = {
+      header = true,
+      footer = false,
+    },
+  })
+end
+
+function DiffScreen:create_footer_view(scene, query, opts)
+  if opts.is_hunk then
+    return nil
+  end
+
+  return FooterView(scene, query, {
+    row = '99vh',
+  })
 end
 
 function DiffScreen:constructor(opts)
@@ -42,6 +60,7 @@ function DiffScreen:constructor(opts)
     layout_type = nil,
     is_staged = nil,
     code_view = DiffScreen:create_code_view(scene, query, opts),
+    footer_view = DiffScreen:create_footer_view(scene, query, opts),
   }
 end
 
@@ -59,6 +78,36 @@ end
 
 function DiffScreen:trigger_keypress(key, ...)
   self.scene:trigger_keypress(key, ...)
+
+  return self
+end
+
+function DiffScreen:make_footer_lines()
+  local text = ''
+  local keymaps = diff_preview_setting:get('keymaps')
+  local keys = {
+    'buffer_stage',
+    'buffer_unstage',
+    'buffer_hunk_stage',
+    'buffer_hunk_unstage',
+    'reset',
+    'toggle_view',
+  }
+  local translations = {
+    'stage',
+    'unstage',
+    'stage hunk',
+    'unstage hunk',
+    'reset',
+    'toggle view',
+  }
+
+  for i = 1, #keys do
+    text = i == 1 and string.format('%s: %s', translations[i], keymaps[keys[i]])
+      or string.format('%s | %s: %s', text, translations[i], keymaps[keys[i]])
+  end
+
+  self.footer_view:set_lines({ text })
 
   return self
 end
@@ -82,14 +131,22 @@ function DiffScreen:show(opts)
   end
 
   loop.await_fast_event()
+
+  if self.footer_view then
+    self.footer_view:show()
+  end
+
   self.code_view
     :set_title(self.is_staged and 'Staged Diff' or 'Diff')
     :show(layout_type, 'center', { winline = vim.fn.winline() })
     :set_keymap({
       {
         mode = 'n',
-        key = diff_preview:get('keymaps').reset,
-        vgit_key = string.format('keys.%s', diff_preview:get('keymaps').reset),
+        key = diff_preview_setting:get('keymaps').reset,
+        vgit_key = string.format(
+          'keys.%s',
+          diff_preview_setting:get('keymaps').reset
+        ),
         handler = loop.debounced_async(function()
           loop.await_fast_event()
           local decision = console.input(
@@ -127,10 +184,10 @@ function DiffScreen:show(opts)
       },
       {
         mode = 'n',
-        key = diff_preview:get('keymaps').buffer_stage,
+        key = diff_preview_setting:get('keymaps').buffer_stage,
         vgit_key = string.format(
           'keys.%s',
-          diff_preview:get('keymaps').buffer_stage
+          diff_preview_setting:get('keymaps').buffer_stage
         ),
         handler = loop.debounced_async(function()
           loop.await_fast_event()
@@ -160,10 +217,10 @@ function DiffScreen:show(opts)
       },
       {
         mode = 'n',
-        key = diff_preview:get('keymaps').buffer_unstage,
+        key = diff_preview_setting:get('keymaps').buffer_unstage,
         vgit_key = string.format(
           'keys.%s',
-          diff_preview:get('keymaps').buffer_unstage
+          diff_preview_setting:get('keymaps').buffer_unstage
         ),
         handler = loop.debounced_async(function()
           loop.await_fast_event()
@@ -193,10 +250,10 @@ function DiffScreen:show(opts)
       },
       {
         mode = 'n',
-        key = diff_preview:get('keymaps').buffer_hunk_stage,
+        key = diff_preview_setting:get('keymaps').buffer_hunk_stage,
         vgit_key = string.format(
           'keys.%s',
-          diff_preview:get('keymaps').buffer_hunk_stage
+          diff_preview_setting:get('keymaps').buffer_hunk_stage
         ),
         handler = loop.debounced_async(function()
           if self.is_staged then
@@ -234,10 +291,10 @@ function DiffScreen:show(opts)
       },
       {
         mode = 'n',
-        key = diff_preview:get('keymaps').buffer_hunk_unstage,
+        key = diff_preview_setting:get('keymaps').buffer_hunk_unstage,
         vgit_key = string.format(
           'keys.%s',
-          diff_preview:get('keymaps').buffer_hunk_unstage
+          diff_preview_setting:get('keymaps').buffer_hunk_unstage
         ),
         handler = loop.debounced_async(function()
           if not self.is_staged then
@@ -309,10 +366,10 @@ function DiffScreen:show(opts)
       },
       {
         mode = 'n',
-        key = diff_preview:get('keymaps').toggle_view,
+        key = diff_preview_setting:get('keymaps').toggle_view,
         vgit_key = string.format(
           'keys.%s',
-          diff_preview:get('keymaps').toggle_view
+          diff_preview_setting:get('keymaps').toggle_view
         ),
         handler = loop.debounced_async(function()
           local is_staged = self.is_staged
@@ -333,7 +390,7 @@ function DiffScreen:show(opts)
             end
 
             loop.await_fast_event()
-            self.code_view:render()
+            self.code_view:render():navigate_to_mark(1, 'center')
           elseif not is_staged then
             self.code_view:set_title('Staged Diff')
 
@@ -350,11 +407,15 @@ function DiffScreen:show(opts)
             end
 
             loop.await_fast_event()
-            self.code_view:render()
+            self.code_view:render():navigate_to_mark(1, 'center')
           end
         end, 100),
       },
     })
+
+  if self.footer_view then
+    self:make_footer_lines()
+  end
 
   return true
 end
