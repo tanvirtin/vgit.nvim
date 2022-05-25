@@ -19,7 +19,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 1)
       eq(age.how_long, 'second')
@@ -32,7 +32,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 5)
       eq(age.how_long, 'seconds')
@@ -45,7 +45,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 1)
       eq(age.how_long, 'minute')
@@ -58,7 +58,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
       eq(age.unit, 5)
       eq(age.how_long, 'minutes')
       eq(age.display, '5 minutes ago')
@@ -70,7 +70,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 1)
       eq(age.how_long, 'hour')
@@ -83,7 +83,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 5)
       eq(age.how_long, 'hours')
@@ -96,7 +96,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 4)
       eq(age.how_long, 'days')
@@ -109,7 +109,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 1)
       eq(age.how_long, 'month')
@@ -122,7 +122,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 4)
       eq(age.how_long, 'months')
@@ -135,7 +135,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 1)
       eq(age.how_long, 'year')
@@ -148,7 +148,7 @@ describe('utils:', function()
 
       os.time.returns(current_time)
 
-      local age = utils.time.age(blame_time)
+      local age = utils.date.age(blame_time)
 
       eq(age.unit, 5)
       eq(age.how_long, 'years')

@@ -124,7 +124,7 @@ function GitLogsView:render()
       'Summary',
     },
     utils.list.map(logs, function(log)
-      local time = utils.time.format(log.timestamp)
+      local time = utils.date.format(log.timestamp)
 
       return { log.commit_hash, time, log.author_name, log.summary }
     end),
