@@ -10,6 +10,7 @@ local project_diff_preview_setting = require(
 local CodeView = require('vgit.ui.views.CodeView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
+local FooterView = require('vgit.ui.views.FooterView')
 local Query = require('vgit.features.screens.ProjectDiffScreen.Query')
 local Mutation = require('vgit.features.screens.ProjectDiffScreen.Mutation')
 
@@ -27,6 +28,7 @@ function ProjectDiffScreen:constructor()
     mutation = mutation,
     layout_type = nil,
     code_view = CodeView(scene, query, {
+      height = '99vh',
       col = '25vw',
       width = '75vw',
     }, {
@@ -36,6 +38,7 @@ function ProjectDiffScreen:constructor()
       },
     }),
     foldable_list_view = FoldableListView(scene, query, {
+      height = '99vh',
       width = '25vw',
     }, {
       elements = {
@@ -61,6 +64,9 @@ function ProjectDiffScreen:constructor()
 
         return foldable_list
       end,
+    }),
+    footer_view = FooterView(scene, query, {
+      row = '99vh',
     }),
   }
 end
@@ -343,6 +349,40 @@ function ProjectDiffScreen:render()
   return self
 end
 
+function ProjectDiffScreen:make_footer_lines()
+  local text = ''
+  local keymaps = project_diff_preview_setting:get('keymaps')
+  local keys = {
+    'buffer_stage',
+    'buffer_unstage',
+    'buffer_hunk_stage',
+    'buffer_hunk_unstage',
+    'buffer_reset',
+    'stage_all',
+    'unstage_all',
+    'reset_all',
+  }
+  local translations = {
+    'stage',
+    'unstage',
+    'stage hunk',
+    'unstage hunk',
+    'reset',
+    'stage all',
+    'unstage all',
+    'reset all',
+  }
+
+  for i = 1, #keys do
+    text = i == 1 and string.format('%s: %s', translations[i], keymaps[keys[i]])
+      or string.format('%s | %s: %s', text, translations[i], keymaps[keys[i]])
+  end
+
+  self.footer_view:set_lines({ text })
+
+  return self
+end
+
 function ProjectDiffScreen:show()
   console.log('Processing project diff')
 
@@ -358,6 +398,7 @@ function ProjectDiffScreen:show()
   end
 
   loop.await_fast_event()
+  self.footer_view:show()
   self.code_view:show(layout_type)
   self.foldable_list_view:show()
 
@@ -532,6 +573,9 @@ function ProjectDiffScreen:show()
       end),
     },
   })
+
+  self:make_footer_lines()
+
   return true
 end
 
