@@ -83,6 +83,12 @@ function HeaderComponent:unmount()
   return self
 end
 
+function HeaderComponent:clear_title()
+  self.header_title:clear(self)
+
+  return self
+end
+
 function HeaderComponent:set_title(title, opts)
   self.header_title:set(self, title, opts)
 

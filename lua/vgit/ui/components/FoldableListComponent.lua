@@ -44,7 +44,9 @@ function FoldableListComponent:set_list(list)
 end
 
 function FoldableListComponent:set_title(text)
-  self.elements.header:set_lines({ text })
+  if self.elements.header then
+    self.elements.header:set_lines({ text })
+  end
 
   return self
 end

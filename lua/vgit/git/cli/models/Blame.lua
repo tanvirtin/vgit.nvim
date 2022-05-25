@@ -64,7 +64,7 @@ function Blame:constructor(info)
 end
 
 function Blame:age()
-  return utils.time.age(self.author_time)
+  return utils.date.age(self.author_time)
 end
 
 return Blame

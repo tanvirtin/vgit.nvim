@@ -281,6 +281,23 @@ function CodeView:reset_cursor()
   return self
 end
 
+function CodeView:clear_title()
+  local header_component = self.scene:get('header')
+
+  if header_component then
+    header_component:clear_title()
+    return self
+  end
+
+  if self.layout_type == 'split' then
+    self.scene:get('previous'):clear_title()
+  else
+    self.scene:get('current'):clear_title()
+  end
+
+  return self
+end
+
 function CodeView:clear_namespace()
   if self.layout_type == 'split' then
     self.scene:get('previous'):clear_namespace()
@@ -309,17 +326,14 @@ function CodeView:clear_lines()
   return self
 end
 
-function CodeView:clear_title()
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):clear_title()
+function CodeView:clear_notification()
+  local header_component = self.scene:get('header')
+
+  if header_component then
+    header_component:clear_notification()
+    return self
   end
 
-  self.scene:get('current'):clear_title()
-
-  return self
-end
-
-function CodeView:clear_notification()
   if self.layout_type == 'split' then
     self.scene:get('previous'):clear_notification()
   end
