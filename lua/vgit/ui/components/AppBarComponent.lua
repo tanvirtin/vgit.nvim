@@ -6,9 +6,9 @@ local Notification = require('vgit.ui.decorations.Notification')
 local Buffer = require('vgit.core.Buffer')
 local Component = require('vgit.ui.Component')
 
-local FooterComponent = Component:extend()
+local AppBarComponent = Component:extend()
 
-function FooterComponent:constructor(props)
+function AppBarComponent:constructor(props)
   return utils.object.assign(Component.constructor(self), {
     config = {
       elements = {
@@ -20,17 +20,17 @@ function FooterComponent:constructor(props)
   }, props)
 end
 
-function FooterComponent:call(callback)
+function AppBarComponent:call(callback)
   self.window:call(callback)
 
   return self
 end
 
-function FooterComponent:get_height()
+function AppBarComponent:get_height()
   return 1
 end
 
-function FooterComponent:set_default_win_plot(win_plot)
+function AppBarComponent:set_default_win_plot(win_plot)
   win_plot.focusable = false
   win_plot.zindex = 100
   win_plot.height = 1
@@ -38,13 +38,13 @@ function FooterComponent:set_default_win_plot(win_plot)
   return self
 end
 
-function FooterComponent:set_default_win_options(win_options)
-  win_options.winhl = 'Normal:GitFooter'
+function AppBarComponent:set_default_win_options(win_options)
+  win_options.winhl = 'Normal:GitAppBar'
 
   return self
 end
 
-function FooterComponent:mount(opts)
+function AppBarComponent:mount(opts)
   if self.mounted then
     return self
   end
@@ -75,13 +75,13 @@ function FooterComponent:mount(opts)
   return self
 end
 
-function FooterComponent:unmount()
+function AppBarComponent:unmount()
   self.window:close()
 
   return self
 end
 
-function FooterComponent:clear_notification()
+function AppBarComponent:clear_notification()
   if self.buffer:is_valid() then
     self.namespace:clear(self.buffer)
   end
@@ -89,7 +89,7 @@ function FooterComponent:clear_notification()
   return self
 end
 
-function FooterComponent:trigger_notification(text)
+function AppBarComponent:trigger_notification(text)
   self.namespace:transpose_virtual_text(
     self.buffer,
     text,
@@ -102,10 +102,10 @@ function FooterComponent:trigger_notification(text)
   return self
 end
 
-function FooterComponent:notify(text)
+function AppBarComponent:notify(text)
   self.notification:notify(self, text)
 
   return self
 end
 
-return FooterComponent
+return AppBarComponent
