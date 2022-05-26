@@ -155,7 +155,7 @@ function Window:position_cursor(placement)
 end
 
 function Window:call(callback)
-  vim.api.nvim_win_call(self.win_id, callback)
+  pcall(vim.api.nvim_win_call, self.win_id, callback)
 
   return self
 end

@@ -821,30 +821,42 @@ function CodeView:navigate_to_mark(mark_index, pos)
 end
 
 function CodeView:render()
-  -- NOTE: important to clear the namespace first.
-  loop.await_fast_event(5)
-  self:clear_namespace()
-  loop.await_fast_event(5)
+  local ok, msg = pcall(function()
+    -- NOTE: important to clear the namespace first.
+    loop.await_fast_event(5)
+    self:clear_namespace()
+    loop.await_fast_event(5)
 
-  local err, _ = self.query:get_diff_dto()
+    local err, _ = self.query:get_diff_dto()
 
-  if err then
-    console.debug.error(err)
+    if err then
+      console.debug.error(err)
 
-    self.state = CodeView:get_initial_state()
+      self.state = CodeView:get_initial_state()
 
-    return self:clear_title():clear_lines():clear_notification():reset_cursor()
+      return self
+        :clear_title()
+        :clear_lines()
+        :clear_notification()
+        :reset_cursor()
+    end
+
+    -- NOTE: It is super important to reset the cursor or else
+    -- you will randomly see line numbers not aligning with the current view.
+    return self
+      :reset_cursor()
+      :make_title()
+      :make_filetype()
+      :make_lines()
+      :make_line_numbers()
+      :paint()
+  end)
+
+  if not ok then
+    console.debug.error(msg)
   end
 
-  -- NOTE: It is super important to reset the cursor or else
-  -- you will randomly see line numbers not aligning with the current view.
   return self
-    :reset_cursor()
-    :make_title()
-    :make_filetype()
-    :make_lines()
-    :make_line_numbers()
-    :paint()
 end
 
 CodeView.render_debounced = loop.debounced_async(function(self, callback)
