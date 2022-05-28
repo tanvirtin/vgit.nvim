@@ -119,6 +119,7 @@ function DiffScreen:show(opts)
   local query = self.query
   local layout_type = self.layout_type
   local buffer = Buffer(0)
+  local window = Window(0)
 
   loop.await_fast_event()
   local err = query:fetch(layout_type, buffer.filename, opts)
@@ -136,7 +137,10 @@ function DiffScreen:show(opts)
 
   self.code_view
     :set_title(self.is_staged and 'Staged Diff' or 'Diff')
-    :show(layout_type, 'center', { winline = vim.fn.winline() })
+    :show(layout_type, 'center', {
+      lnum = window:get_lnum(),
+      winline = vim.fn.winline(),
+    })
     :set_keymap({
       {
         mode = 'n',
