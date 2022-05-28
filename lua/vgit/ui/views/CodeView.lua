@@ -1,6 +1,5 @@
 local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
-local Window = require('vgit.core.Window')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local dimensions = require('vgit.ui.dimensions')
@@ -761,7 +760,7 @@ function CodeView:next(pos)
   return self:navigate_to_mark(mark_index, pos)
 end
 
-function CodeView:get_relative_mark_index(parent_lnum)
+function CodeView:get_relative_mark_index(lnum)
   local err, diff_dto = self.query:get_diff_dto()
 
   if err then
@@ -775,9 +774,7 @@ function CodeView:get_relative_mark_index(parent_lnum)
   for i = 1, #marks do
     local mark = marks[i]
 
-    if
-      parent_lnum >= mark.top_relative and parent_lnum <= mark.bot_relative
-    then
+    if lnum >= mark.top_relative and lnum <= mark.bot_relative then
       mark_index = i
       break
     end
@@ -881,18 +878,11 @@ function CodeView:show(layout_type, pos, mount_opts)
   self.layout_type = layout_type
   self.state = CodeView:get_initial_state()
 
-  local mark_index = 1
-  local is_relative_to_parent = mount_opts.winline ~= nil
-
-  if is_relative_to_parent then
-    mark_index = self:get_relative_mark_index(Window(0):get_lnum())
-  end
-
   self
     :define()
     :mount_scene(mount_opts)
     :render()
-    :navigate_to_mark(mark_index, pos)
+    :navigate_to_mark(self:get_relative_mark_index(mount_opts.lnum or 1), pos)
 
   return self
 end
