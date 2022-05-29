@@ -19,15 +19,6 @@ function HistoryScreen:constructor()
     scene = scene,
     query = query,
     layout_type = nil,
-    code_view = CodeView(scene, query, {
-      height = '70vh',
-      row = '30vh',
-    }, {
-      elements = {
-        header = true,
-        footer = false,
-      },
-    }),
     table_view = TableView(scene, query, {
       height = '30vh',
     }, {
@@ -53,6 +44,14 @@ function HistoryScreen:constructor()
           log.summary or '',
         }
       end,
+    }),
+    code_view = CodeView(scene, query, {
+      row = '30vh',
+    }, {
+      elements = {
+        header = true,
+        footer = false,
+      },
     }),
   }
 end
