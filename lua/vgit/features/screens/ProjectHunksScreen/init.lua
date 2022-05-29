@@ -21,15 +21,6 @@ function ProjectHunksScreen:constructor()
     scene = scene,
     query = query,
     layout_type = nil,
-    code_view = CodeView(scene, query, {
-      height = '70vh',
-      row = '30vh',
-    }, {
-      elements = {
-        header = true,
-        footer = false,
-      },
-    }),
     foldable_list_view = FoldableListView(scene, query, {
       height = '30vh',
     }, {
@@ -76,6 +67,14 @@ function ProjectHunksScreen:constructor()
 
         return foldable_list
       end,
+    }),
+    code_view = CodeView(scene, query, {
+      row = '30vh',
+    }, {
+      elements = {
+        header = true,
+        footer = false,
+      },
     }),
   }
 end
