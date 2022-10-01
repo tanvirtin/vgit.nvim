@@ -4,10 +4,10 @@ local AppBarComponent = require('vgit.ui.components.AppBarComponent')
 
 local AppBarView = Object:extend()
 
-function AppBarView:constructor(scene, query, plot)
+function AppBarView:constructor(scene, store, plot)
   return {
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
   }
 end
@@ -34,14 +34,14 @@ function AppBarView:set_lines(lines)
   return self
 end
 
-function AppBarView:mount_scene(mount_opts)
-  self.scene:get('footer'):mount(mount_opts)
+function AppBarView:mount(opts)
+  self.scene:get('footer'):mount(opts)
 
   return self
 end
 
-function AppBarView:show(mount_opts)
-  self:define():mount_scene(mount_opts)
+function AppBarView:show(opts)
+  self:define():mount(opts)
 
   return self
 end

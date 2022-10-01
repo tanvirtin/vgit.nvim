@@ -21,6 +21,18 @@ function Scene:get(key)
   return self.components[key]
 end
 
+function Scene:is_focused()
+  local focused = false
+
+  for _, component in pairs(self.components) do
+    if component:is_focused() then
+      return true
+    end
+  end
+
+  return focused
+end
+
 function Scene:destroy()
   for _, component in pairs(self.components) do
     component:unmount()

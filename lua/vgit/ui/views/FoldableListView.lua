@@ -9,14 +9,13 @@ local FoldableListComponent = require(
 
 local FoldableListView = Object:extend()
 
-function FoldableListView:constructor(scene, query, plot, config)
+function FoldableListView:constructor(scene, store, plot, config)
   return {
     title = '',
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
     config = config or {},
-    _cache = {},
   }
 end
 
@@ -58,26 +57,30 @@ function FoldableListView:define()
 end
 
 function FoldableListView:evict_cache()
-  self._cache['list'] = nil
+  self.store:set_list_folds(nil)
 
   return self
 end
 
 function FoldableListView:get_list()
-  if self._cache['list'] then
-    return self._cache['list']
+  local _, list = self.store:get_list_folds()
+
+  if list then
+    return list
   end
 
-  local err, data = self.query:get_all()
+  local err, data = self.store:get_all()
 
   if err then
     console.debug.error(err).error(err)
     return {}
   end
 
-  self._cache['list'] = self.config.get_list(data)
+  list = self.config.get_list(data)
 
-  return self._cache['list']
+  self.store:set_list_folds(list)
+
+  return list
 end
 
 function FoldableListView:get_list_item(lnum)
@@ -103,9 +106,9 @@ function FoldableListView:toggle_current_list_item()
 end
 
 function FoldableListView:move(direction)
-  local component = self.scene:get('list')
-  local lnum = component:get_lnum()
-  local count = component:get_line_count()
+  local list = self.scene:get('list')
+  local lnum = list:get_lnum()
+  local count = list:get_line_count()
 
   if direction == 'down' then
     lnum = lnum + 1
@@ -121,34 +124,41 @@ function FoldableListView:move(direction)
     lnum = 1
   end
 
-  component:unlock():set_lnum(lnum):lock()
+  list:unlock():set_lnum(lnum):lock()
+
+  self.store:set_lnum(lnum)
 
   return self:get_list_item(lnum)
 end
 
 function FoldableListView:render()
+  local _, lnum = self.store:get_lnum()
   local list = self.scene:get('list')
 
   loop.await_fast_event()
   local parsed_list = self:get_list()
   loop.await_fast_event()
 
-  list:unlock():set_title(self.title):set_list(parsed_list):sync():lock()
+  list
+    :unlock()
+    :set_title(self.title)
+    :set_list(parsed_list)
+    :sync()
+    :set_lnum(lnum)
+    :lock()
   loop.await_fast_event()
 
   return self
 end
 
-function FoldableListView:mount_scene(mount_opts)
-  self.scene:get('list'):mount(mount_opts)
+function FoldableListView:mount(opts)
+  self.scene:get('list'):mount(opts)
 
   return self
 end
 
-function FoldableListView:show(mount_opts)
-  self._cache = {}
-
-  self:define():mount_scene(mount_opts):render()
+function FoldableListView:show(opts)
+  self:define():mount(opts):render()
 
   return self
 end

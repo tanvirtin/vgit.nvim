@@ -19,7 +19,7 @@ function Window:open(buffer, opts)
   opts = opts or {}
   local focus = opts.focus
 
-  if opts.focus then
+  if opts.focus ~= nil then
     opts.focus = nil
   end
 

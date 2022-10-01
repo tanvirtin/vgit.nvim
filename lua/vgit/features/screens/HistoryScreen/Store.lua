@@ -4,9 +4,9 @@ local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
 
-local Query = Object:extend()
+local Store = Object:extend()
 
-function Query:constructor()
+function Store:constructor()
   return {
     shape = nil,
     git_object = nil,
@@ -17,7 +17,7 @@ function Query:constructor()
   }
 end
 
-function Query:reset()
+function Store:reset()
   self.err = nil
   self.data = nil
   self.index = 1
@@ -26,7 +26,13 @@ function Query:reset()
   return self
 end
 
-function Query:fetch(shape, filename)
+function Store:fetch(shape, filename, opts)
+  opts = opts or {}
+
+  if self.data and opts.hydrate then
+    return
+  end
+
   self:reset()
 
   self.shape = shape
@@ -40,29 +46,29 @@ function Query:fetch(shape, filename)
   return self.err, self.data
 end
 
-function Query:get_all()
+function Store:get_all()
   return self.err, self.data
 end
 
-function Query:set_index(index)
+function Store:set_index(index)
   self.index = index
 
   return self
 end
 
-function Query:get(index)
+function Store:get(index)
   if index then
     self.index = index
   end
 
   if not self.data or not self.data[self.index] then
-    return { 'No data found, check how you are defining query data' }
+    return { 'No data found, check how you are defining store data' }
   end
 
   return nil, self.data[self.index]
 end
 
-function Query:get_diff_dto(index)
+function Store:get_diff_dto(index)
   local log_err, log = self:get(index)
   loop.await_fast_event()
 
@@ -107,12 +113,22 @@ function Query:get_diff_dto(index)
   return nil, diff
 end
 
-function Query:get_filename()
+function Store:get_filename()
   return nil, self.git_object:get_filename()
 end
 
-function Query:get_filetype()
+function Store:get_filetype()
   return nil, self.git_object:get_filetype()
 end
 
-return Query
+function Store:get_lnum()
+  return nil, self._cache.lnum
+end
+
+function Store:set_lnum(lnum)
+  self._cache.lnum = lnum
+
+  return self
+end
+
+return Store

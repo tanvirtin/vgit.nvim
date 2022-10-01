@@ -1,7 +1,7 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
 local project_diff_preview_setting = require(
@@ -11,24 +11,25 @@ local CodeView = require('vgit.ui.views.CodeView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
 local AppBarView = require('vgit.ui.views.AppBarView')
-local Query = require('vgit.features.screens.ProjectDiffScreen.Query')
+local Store = require('vgit.features.screens.ProjectDiffScreen.Store')
 local Mutation = require('vgit.features.screens.ProjectDiffScreen.Mutation')
 
-local ProjectDiffScreen = Feature:extend()
+local ProjectDiffScreen = Object:extend()
 
 function ProjectDiffScreen:constructor()
   local scene = Scene()
-  local query = Query()
+  local store = Store()
   local mutation = Mutation()
 
   return {
     name = 'Project Diff Screen',
     scene = scene,
-    query = query,
+    store = store,
     mutation = mutation,
+    hydrate = false,
     layout_type = nil,
-    app_bar_view = AppBarView(scene, query),
-    code_view = CodeView(scene, query, {
+    app_bar_view = AppBarView(scene, store),
+    code_view = CodeView(scene, store, {
       row = 1,
       col = '25vw',
       width = '75vw',
@@ -38,7 +39,7 @@ function ProjectDiffScreen:constructor()
         footer = false,
       },
     }),
-    foldable_list_view = FoldableListView(scene, query, {
+    foldable_list_view = FoldableListView(scene, store, {
       row = 1,
       width = '25vw',
     }, {
@@ -105,12 +106,31 @@ function ProjectDiffScreen:is_current_list_item_unstaged()
   return false
 end
 
+function ProjectDiffScreen:get_list_item(filename)
+  local query_fn = function(list_item)
+    if list_item.items then
+      return false
+    end
+
+    local metadata = list_item.metadata
+    local path = list_item.path
+    local file = path.file
+
+    return metadata.category == 'changes'
+      and filename == file.filename
+      and file:is_unstaged()
+  end
+
+  return self.foldable_list_view:query_list_item(query_fn)
+    or self.foldable_list_view:get_current_list_item()
+end
+
 ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
   if self:is_current_list_item_staged() then
     return self
   end
 
-  local _, filename = self.query:get_filename()
+  local _, filename = self.store:get_filename()
 
   if not filename then
     return self
@@ -131,27 +151,14 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
   end
 
   loop.await_fast_event()
-  self.query:fetch(self.layout_type, true)
+  self.store:fetch(self.layout_type, { partial_hydrate = true })
   loop.await_fast_event()
 
-  local list_item = self.foldable_list_view
-    :evict_cache()
-    :render()
-    :query_list_item(function(list_item)
-      if list_item.items then
-        return false
-      end
+  self.foldable_list_view:evict_cache():render()
 
-      local metadata = list_item.metadata
-      local path = list_item.path
-      local file = path.file
+  local list_item = self:get_list_item(filename)
 
-      return metadata.category == 'changes'
-        and filename == file.filename
-        and file:is_unstaged()
-    end) or self.foldable_list_view:get_current_list_item()
-
-  self.query:set_id(list_item.id)
+  self.store:set_id(list_item.id)
 
   self.code_view:render():navigate_to_mark(index)
 
@@ -163,7 +170,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
     return self
   end
 
-  local _, filename = self.query:get_filename()
+  local _, filename = self.store:get_filename()
 
   if not filename then
     return self
@@ -184,7 +191,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
   end
 
   loop.await_fast_event()
-  self.query:fetch(self.layout_type, true)
+  self.store:fetch(self.layout_type, { partial_hydrate = true })
   loop.await_fast_event()
 
   local list_item = self.foldable_list_view
@@ -204,7 +211,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
         and file:is_unstaged()
     end) or self.foldable_list_view:get_current_list_item()
 
-  self.query:set_id(list_item.id)
+  self.store:set_id(list_item.id)
 
   self.code_view:render():navigate_to_mark(index)
 
@@ -212,7 +219,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
 end, 15)
 
 ProjectDiffScreen.stage_file = loop.debounced_async(function(self)
-  local _, filename = self.query:get_filename()
+  local _, filename = self.store:get_filename()
 
   if not filename then
     return self
@@ -225,11 +232,13 @@ ProjectDiffScreen.stage_file = loop.debounced_async(function(self)
     return self
   end
 
+  self.hydrate = false
+
   return self:render()
 end, 15)
 
 ProjectDiffScreen.unstage_file = loop.debounced_async(function(self)
-  local _, filename = self.query:get_filename()
+  local _, filename = self.store:get_filename()
 
   if not filename then
     return self
@@ -242,6 +251,8 @@ ProjectDiffScreen.unstage_file = loop.debounced_async(function(self)
     return self
   end
 
+  self.hydrate = false
+
   return self:render()
 end, 15)
 
@@ -252,6 +263,8 @@ ProjectDiffScreen.stage_all = loop.debounced_async(function(self)
     console.debug.error(err)
     return self
   end
+
+  self.hydrate = false
 
   return self:render()
 end, 15)
@@ -264,6 +277,8 @@ ProjectDiffScreen.unstage_all = loop.debounced_async(function(self)
     return self
   end
 
+  self.hydrate = false
+
   return self:render()
 end, 15)
 
@@ -272,7 +287,7 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
     return self
   end
 
-  local _, filename = self.query:get_filename()
+  local _, filename = self.store:get_filename()
 
   if not filename then
     return self
@@ -299,6 +314,8 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
     return self
   end
 
+  self.hydrate = false
+
   return self:render()
 end, 15)
 
@@ -321,20 +338,19 @@ ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
     return self
   end
 
+  self.hydrate = false
+
   return self:render()
 end, 15)
 
 function ProjectDiffScreen:render()
   loop.await_fast_event()
-  self.query:fetch(self.layout_type)
+  self.store:fetch(self.layout_type, { hydrate = self.hydrate })
   loop.await_fast_event()
 
-  local list_item = self.foldable_list_view
-    :evict_cache()
-    :render()
-    :get_current_list_item()
+  local list_item = self.foldable_list_view:render():get_current_list_item()
 
-  self.query:set_id(list_item.id)
+  self.store:set_id(list_item.id)
 
   self.code_view:render():navigate_to_mark(1)
 
@@ -378,11 +394,8 @@ end
 function ProjectDiffScreen:show()
   console.log('Processing project diff')
 
-  local query = self.query
-  local layout_type = self.layout_type
-
   loop.await_fast_event()
-  local err = query:fetch(layout_type)
+  local err = self.store:fetch(self.layout_type, { hydrate = self.hydrate })
 
   if err then
     console.debug.error(err).error(err)
@@ -391,7 +404,7 @@ function ProjectDiffScreen:show()
 
   loop.await_fast_event()
   self.app_bar_view:show()
-  self.code_view:show(layout_type)
+  self.code_view:show(self.layout_type)
   self.foldable_list_view:show()
 
   self.code_view:set_keymap({
@@ -419,7 +432,7 @@ function ProjectDiffScreen:show()
           return
         end
 
-        local _, filename = self.query:get_filename()
+        local _, filename = self.store:get_filename()
 
         if not filename then
           return
@@ -483,7 +496,7 @@ function ProjectDiffScreen:show()
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('down')
 
-        query:set_id(list_item.id)
+        self.store:set_id(list_item.id)
         self.code_view:render_debounced(function()
           self.code_view:navigate_to_mark(1)
         end)
@@ -495,7 +508,7 @@ function ProjectDiffScreen:show()
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('up')
 
-        query:set_id(list_item.id)
+        self.store:set_id(list_item.id)
         self.code_view:render_debounced(function()
           self.code_view:navigate_to_mark(1)
         end)
@@ -505,7 +518,7 @@ function ProjectDiffScreen:show()
       mode = 'n',
       key = '<enter>',
       handler = loop.async(function()
-        local _, filename = self.query:get_filename()
+        local _, filename = self.store:get_filename()
 
         if not filename then
           self.foldable_list_view:toggle_current_list_item():render()
@@ -517,7 +530,7 @@ function ProjectDiffScreen:show()
 
         fs.open(filename)
 
-        local diff_dto_err, diff_dto = self.query:get_diff_dto()
+        local diff_dto_err, diff_dto = self.store:get_diff_dto()
 
         if diff_dto_err or not diff_dto then
           return

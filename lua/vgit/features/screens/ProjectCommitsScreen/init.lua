@@ -1,25 +1,26 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 local utils = require('vgit.core.utils')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
-local Query = require('vgit.features.screens.ProjectCommitsScreen.Query')
+local Store = require('vgit.features.screens.ProjectCommitsScreen.Store')
 
-local ProjectCommitsScreen = Feature:extend()
+local ProjectCommitsScreen = Object:extend()
 
 function ProjectCommitsScreen:constructor()
   local scene = Scene()
-  local query = Query()
+  local store = Store()
 
   return {
     name = 'Project Commits Screen',
     scene = scene,
-    query = query,
+    store = store,
+    hydrate = false,
     layout_type = nil,
-    code_view = CodeView(scene, query, {
+    code_view = CodeView(scene, store, {
       col = '25vw',
       width = '75vw',
     }, {
@@ -28,7 +29,7 @@ function ProjectCommitsScreen:constructor()
         footer = false,
       },
     }),
-    foldable_list_view = FoldableListView(scene, query, {
+    foldable_list_view = FoldableListView(scene, store, {
       width = '25vw',
     }, {
       elements = {
@@ -77,11 +78,12 @@ end
 function ProjectCommitsScreen:show(commits)
   console.log('Processing project commits')
 
-  local query = self.query
-  local layout_type = self.layout_type
-
   loop.await_fast_event()
-  local err = query:fetch(layout_type, commits)
+  local err = self.store:fetch(
+    self.layout_type,
+    commits,
+    { hydrate = self.hydrate }
+  )
 
   if err then
     console.debug.error(err).error(err)
@@ -89,7 +91,7 @@ function ProjectCommitsScreen:show(commits)
   end
 
   loop.await_fast_event()
-  self.code_view:show(layout_type)
+  self.code_view:show(self.layout_type)
   self.foldable_list_view:set_title(self:get_list_title(commits)):show()
 
   self.foldable_list_view:set_keymap({
@@ -103,7 +105,7 @@ function ProjectCommitsScreen:show(commits)
           return
         end
 
-        query:set_id(list_item.id)
+        self.store:set_id(list_item.id)
         self.code_view:render_debounced(loop.async(function()
           self.code_view:navigate_to_mark(1)
         end))
@@ -119,7 +121,7 @@ function ProjectCommitsScreen:show(commits)
           return
         end
 
-        query:set_id(list_item.id)
+        self.store:set_id(list_item.id)
         self.code_view:render_debounced(function()
           self.code_view:navigate_to_mark(1)
         end)

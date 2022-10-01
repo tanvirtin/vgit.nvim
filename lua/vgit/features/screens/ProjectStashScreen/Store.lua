@@ -1,23 +1,29 @@
 local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
 
-local Query = Object:extend()
+local Store = Object:extend()
 
-function Query:constructor()
+function Store:constructor()
   return {
     err = nil,
     data = nil,
   }
 end
 
-function Query:reset()
+function Store:reset()
   self.err = nil
   self.data = nil
 
   return self
 end
 
-function Query:fetch()
+function Store:fetch(opts)
+  opts = opts or {}
+
+  if self.data and opts.hydrate then
+    return nil, self.data
+  end
+
   self:reset()
 
   local err, logs = Git():ls_stash({ is_background = true })
@@ -33,11 +39,11 @@ function Query:fetch()
   return self.err, self.data
 end
 
-function Query:get_data()
+function Store:get_data()
   return self.err, self.data
 end
 
-function Query:get_lines()
+function Store:get_lines()
   if self.err then
     return self.err
   end
@@ -53,8 +59,8 @@ function Query:get_lines()
   return nil, data
 end
 
-function Query:get_title()
+function Store:get_title()
   return nil, 'Git Stash'
 end
 
-return Query
+return Store

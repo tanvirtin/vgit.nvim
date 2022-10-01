@@ -18,11 +18,11 @@ function CodeView:get_initial_state()
   }
 end
 
-function CodeView:constructor(scene, query, plot, config)
+function CodeView:constructor(scene, store, plot, config)
   return {
     title = 'Diff',
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
     layout_type = nil,
     config = config or {},
@@ -337,21 +337,21 @@ function CodeView:clear_notification()
 end
 
 function CodeView:make_title()
-  local filename_err, filename = self.query:get_filename()
+  local filename_err, filename = self.store:get_filename()
 
   if filename_err then
     console.debug.error(filename_err)
     return self
   end
 
-  local filetype_err, filetype = self.query:get_filetype()
+  local filetype_err, filetype = self.store:get_filetype()
 
   if filetype_err then
     console.debug.error(filetype_err)
     return self
   end
 
-  local diff_dto_err, diff_dto = self.query:get_diff_dto()
+  local diff_dto_err, diff_dto = self.store:get_diff_dto()
 
   if diff_dto_err then
     console.debug.error(diff_dto_err)
@@ -382,7 +382,7 @@ function CodeView:make_title()
 end
 
 function CodeView:make_filetype()
-  local err, filetype = self.query:get_filetype()
+  local err, filetype = self.store:get_filetype()
 
   if err then
     console.debug.error(err)
@@ -486,7 +486,7 @@ function CodeView:make_split_previous_line_numbers(
 end
 
 function CodeView:make_split_line_numbers()
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -513,7 +513,7 @@ function CodeView:make_split_line_numbers()
 end
 
 function CodeView:make_unified_line_numbers()
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -570,7 +570,7 @@ function CodeView:make_line_numbers()
 end
 
 function CodeView:make_lines()
-  local diff_dto_err, diff_dto = self.query:get_diff_dto()
+  local diff_dto_err, diff_dto = self.store:get_diff_dto()
   if diff_dto_err then
     console.debug.error(diff_dto_err)
     return self
@@ -621,7 +621,7 @@ function CodeView:notify(msg)
 end
 
 function CodeView:get_current_mark_under_cursor()
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -643,7 +643,7 @@ function CodeView:get_current_mark_under_cursor()
 end
 
 function CodeView:get_current_hunk_under_cursor()
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -700,7 +700,7 @@ function CodeView:select_mark(marks, mark_index, position)
 end
 
 function CodeView:prev(pos)
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -727,7 +727,7 @@ function CodeView:prev(pos)
 end
 
 function CodeView:next(pos)
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -755,7 +755,7 @@ function CodeView:next(pos)
 end
 
 function CodeView:get_relative_mark_index(lnum)
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -786,7 +786,7 @@ function CodeView:navigate_to_mark(mark_index, pos)
     mark_index = 1
   end
 
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -818,7 +818,7 @@ function CodeView:render()
     self:clear_namespace()
     loop.await_fast_event(5)
 
-    local err, _ = self.query:get_diff_dto()
+    local err, _ = self.store:get_diff_dto()
 
     if err then
       console.debug.error(err)
@@ -857,26 +857,26 @@ CodeView.render_debounced = loop.debounced_async(function(self, callback)
   end
 end, 100)
 
-function CodeView:mount_scene(mount_opts)
+function CodeView:mount(opts)
   if self.layout_type == 'split' then
-    self.scene:get('previous'):mount(mount_opts)
+    self.scene:get('previous'):mount(opts)
   end
 
-  self.scene:get('current'):mount(mount_opts)
+  self.scene:get('current'):mount(opts)
 
   return self
 end
 
-function CodeView:show(layout_type, pos, mount_opts)
-  mount_opts = mount_opts or {}
+function CodeView:show(layout_type, pos, opts)
+  opts = opts or {}
   self.layout_type = layout_type
   self.state = CodeView:get_initial_state()
 
   self
     :define()
-    :mount_scene(mount_opts)
+    :mount(opts)
     :render()
-    :navigate_to_mark(self:get_relative_mark_index(mount_opts.lnum or 1), pos)
+    :navigate_to_mark(self:get_relative_mark_index(opts.lnum or 1), pos)
 
   return self
 end

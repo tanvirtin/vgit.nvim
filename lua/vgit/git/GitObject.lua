@@ -5,7 +5,6 @@ local Hunk = require('vgit.git.cli.models.Hunk')
 local Patch = require('vgit.git.cli.models.Patch')
 local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
-local versioning = require('vgit.core.versioning')
 
 local GitObject = Object:extend()
 
@@ -261,12 +260,6 @@ function GitObject:live_hunks(current_lines)
   local inexpensive_lines_limit = 5000
 
   if #current_lines > inexpensive_lines_limit then
-    return self:piped_hunks(filename, current_lines)
-  end
-
-  local version = versioning.neovim_version()
-
-  if version.minor <= 5 then
     return self:piped_hunks(filename, current_lines)
   end
 

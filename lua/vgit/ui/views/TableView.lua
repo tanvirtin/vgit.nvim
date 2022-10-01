@@ -6,10 +6,10 @@ local TableComponent = require('vgit.ui.components.TableComponent')
 
 local TableView = Object:extend()
 
-function TableView:constructor(scene, query, plot, config)
+function TableView:constructor(scene, store, plot, config)
   return {
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
     config = config or {},
   }
@@ -60,12 +60,13 @@ function TableView:move(direction)
   end
 
   component:unlock():set_lnum(lnum):lock()
+  self.store:set_lnum(lnum)
 
   return lnum
 end
 
 function TableView:get_current_row()
-  local _, entries = self.query:get_all()
+  local _, entries = self.store:get_all()
 
   if not entries then
     return nil
@@ -75,7 +76,8 @@ function TableView:get_current_row()
 end
 
 function TableView:render()
-  local err, entries = self.query:get_all()
+  local _, lnum = self.store:get_lnum()
+  local err, entries = self.store:get_all()
 
   if err then
     console.debug.error(err).error(err)
@@ -87,19 +89,20 @@ function TableView:render()
     :unlock()
     :make_rows(entries, self.config.get_row)
     :focus()
+    :set_lnum(lnum)
     :lock()
 
   return self
 end
 
-function TableView:mount_scene(mount_opts)
-  self.scene:get('table'):mount(mount_opts)
+function TableView:mount(opts)
+  self.scene:get('table'):mount(opts)
 
   return self
 end
 
-function TableView:show(mount_opts)
-  self:define():mount_scene(mount_opts):render()
+function TableView:show(opts)
+  self:define():mount(opts):render()
 
   return self
 end

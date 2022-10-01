@@ -3,9 +3,9 @@ local fs = require('vgit.core.fs')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
 
-local Query = Object:extend()
+local Store = Object:extend()
 
-function Query:constructor()
+function Store:constructor()
   return {
     err = nil,
     data = nil,
@@ -18,7 +18,7 @@ function Query:constructor()
   }
 end
 
-function Query:reset()
+function Store:reset()
   self.err = nil
   self.data = nil
   self._cache = {
@@ -29,8 +29,12 @@ function Query:reset()
   return self
 end
 
-function Query:fetch(shape, filename, opts)
+function Store:fetch(shape, filename, opts)
   opts = opts or {}
+
+  if self.data and opts.hydrate then
+    return nil, self.data
+  end
 
   self:reset()
 
@@ -62,32 +66,22 @@ function Query:fetch(shape, filename, opts)
   return self.err, self.data
 end
 
-function Query:get()
-  return nil, self.data
-end
-
-function Query:get_diff_dto()
-  local data_err, data = self:get()
-
-  if data_err then
-    return data_err
-  end
-
+function Store:get_diff_dto()
   if self._cache.diff_dto then
     return nil, self._cache.diff_dto
   end
 
-  self._cache.diff_dto = Diff(data):call(self._cache.lines, self.shape)
+  self._cache.diff_dto = Diff(self.data):call(self._cache.lines, self.shape)
 
   return nil, self._cache.diff_dto
 end
 
-function Query:get_filename()
+function Store:get_filename()
   return nil, self.git_object:get_filename()
 end
 
-function Query:get_filetype()
+function Store:get_filetype()
   return nil, self.git_object:get_filetype()
 end
 
-return Query
+return Store

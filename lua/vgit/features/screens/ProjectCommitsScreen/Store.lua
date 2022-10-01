@@ -4,36 +4,54 @@ local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 
-local Query = Object:extend()
+local Store = Object:extend()
 
-function Query:constructor()
+function Store:constructor()
   return {
     id = nil,
     err = nil,
     data = nil,
     shape = nil,
     git = Git(),
-    _cache = {},
+    _cache = {
+      lnum = 1,
+      list_entry_cache = {},
+      commits = {},
+    },
   }
 end
 
-function Query:reset()
+function Store:reset()
   self.id = nil
   self.err = nil
   self.data = nil
-  self._cache = {}
+  self._cache = {
+    lnum = 1,
+    list_entry_cache = {},
+    commits = {},
+  }
 
   return self
 end
 
-function Query:fetch(shape, commits)
+function Store:fetch(shape, commits, opts)
+  opts = opts or {}
+
+  if self.data and opts.hydrate then
+    return nil, self.data
+  end
+
   self:reset()
 
   if not commits or #commits == 0 then
     return { 'No commits specified' }, nil
   end
 
-  self._cache = {}
+  self._cache = {
+    lnum = 1,
+    list_entry_cache = {},
+    commits = {},
+  }
 
   if not self.git:is_inside_git_dir() then
     return { 'Project has no .git folder' }, nil
@@ -71,7 +89,7 @@ function Query:fetch(shape, commits)
         log = log,
         file = file,
       }
-      self._cache[datum.id] = datum
+      self._cache.commits[datum.id] = datum
 
       return datum
     end)
@@ -82,22 +100,22 @@ function Query:fetch(shape, commits)
   return nil, self.data
 end
 
-function Query:get_all()
+function Store:get_all()
   return self.err, self.data
 end
 
-function Query:set_id(id)
+function Store:set_id(id)
   self.id = id
 
   return self
 end
 
-function Query:get(id)
+function Store:get(id)
   if id then
     self.id = id
   end
 
-  local datum = self._cache[self.id]
+  local datum = self._cache.commits[self.id]
 
   if not datum then
     return { 'Item not found' }, nil
@@ -106,7 +124,7 @@ function Query:get(id)
   return nil, datum
 end
 
-function Query:get_diff_dto()
+function Store:get_diff_dto()
   local err, datum = self:get()
 
   if err then
@@ -125,8 +143,8 @@ function Query:get_diff_dto()
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self._cache[id] then
-    return nil, self._cache[id]
+  if self._cache.commits[id] then
+    return nil, self._cache.commits[id]
   end
 
   local lines_err, lines
@@ -164,12 +182,12 @@ function Query:get_diff_dto()
     diff = Diff(hunks):call(lines, self.shape)
   end
 
-  self._cache[id] = diff
+  self._cache.commits[id] = diff
 
   return nil, diff
 end
 
-function Query:get_filename()
+function Store:get_filename()
   local err, datum = self:get()
 
   if err then
@@ -179,7 +197,7 @@ function Query:get_filename()
   return nil, datum.file.filename
 end
 
-function Query:get_filetype()
+function Store:get_filetype()
   local err, datum = self:get()
 
   if err then
@@ -189,4 +207,24 @@ function Query:get_filetype()
   return nil, datum.file.filetype
 end
 
-return Query
+function Store:get_lnum()
+  return nil, self._cache.lnum
+end
+
+function Store:set_lnum(lnum)
+  self._cache.lnum = lnum
+
+  return self
+end
+
+function Store:get_list_folds()
+  return nil, self._cache.list_folds
+end
+
+function Store:set_list_folds(list_folds)
+  self._cache.list_folds = list_folds
+
+  return self
+end
+
+return Store

@@ -5,7 +5,6 @@ local Git = require('vgit.git.cli.Git')
 local Command = require('vgit.Command')
 local event = require('vgit.core.event')
 local keymap = require('vgit.core.keymap')
-local autocmd = require('vgit.core.autocmd')
 local console = require('vgit.core.console')
 local renderer = require('vgit.core.renderer')
 local authorship_code_lens_setting = require(
@@ -17,7 +16,6 @@ local project_diff_preview_setting = require(
 local hls_setting = require('vgit.settings.hls')
 local git_setting = require('vgit.settings.git')
 local highlight = require('vgit.core.highlight')
-local versioning = require('vgit.core.versioning')
 local Hunks = require('vgit.features.buffer.Hunks')
 local scene_setting = require('vgit.settings.scene')
 local signs_setting = require('vgit.settings.signs')
@@ -53,17 +51,13 @@ local controls = {
   hunk_up = loop.async(function()
     hunks:move_up()
 
-    if screen_manager.exists() then
-      return screen_manager.dispatch_action('hunk_up')
-    end
+    return screen_manager.dispatch_action('hunk_up')
   end),
 
   hunk_down = loop.async(function()
     hunks:move_down()
 
-    if screen_manager.exists() then
-      return screen_manager.dispatch_action('hunk_down')
-    end
+    return screen_manager.dispatch_action('hunk_down')
   end),
 }
 
@@ -89,35 +83,35 @@ local buffer = {
   end),
 
   hunk_preview = loop.async(function()
-    screen_manager.activate('diff_hunk_screen')
+    screen_manager.show('diff_hunk_screen')
   end),
 
   hunk_staged_preview = loop.async(function()
-    screen_manager.activate('diff_hunk_screen', {
+    screen_manager.show('diff_hunk_screen', {
       is_staged = true,
     })
   end),
 
   diff_preview = loop.async(function()
-    screen_manager.activate('diff_screen')
+    screen_manager.show('diff_screen')
   end),
 
   diff_staged_preview = loop.async(function()
-    screen_manager.activate('diff_screen', {
+    screen_manager.show('diff_screen', {
       is_staged = true,
     })
   end),
 
   history_preview = loop.async(function()
-    screen_manager.activate('history_screen')
+    screen_manager.show('history_screen')
   end),
 
   blame_preview = loop.async(function()
-    screen_manager.activate('line_blame_screen')
+    screen_manager.show('line_blame_screen')
   end),
 
   gutter_blame_preview = loop.async(function()
-    screen_manager.activate('gutter_blame_screen')
+    screen_manager.show('gutter_blame_screen')
   end),
 }
 
@@ -143,27 +137,27 @@ local project = {
   end),
 
   diff_preview = loop.async(function()
-    screen_manager.activate('project_diff_screen')
+    screen_manager.show('project_diff_screen')
   end),
 
   logs_preview = loop.async(function(...)
-    screen_manager.activate('project_logs_screen', ...)
+    screen_manager.show('project_logs_screen', ...)
   end),
 
   stash_preview = loop.async(function(...)
-    screen_manager.activate('project_stash_screen', ...)
+    screen_manager.show('project_stash_screen', ...)
   end),
 
   commits_preview = loop.async(function(...)
-    screen_manager.activate('project_commits_screen', ...)
+    screen_manager.show('project_commits_screen', ...)
   end),
 
   hunks_preview = loop.async(function()
-    screen_manager.activate('project_hunks_screen')
+    screen_manager.show('project_hunks_screen')
   end),
 
   hunks_staged_preview = loop.async(function()
-    screen_manager.activate('project_hunks_screen', {
+    screen_manager.show('project_hunks_screen', {
       is_staged = true,
     })
   end),
@@ -173,7 +167,7 @@ local project = {
   end),
 
   debug_preview = loop.async(function(...)
-    screen_manager.activate('debug_screen', ...)
+    screen_manager.show('debug_screen', ...)
   end),
 }
 
@@ -230,10 +224,6 @@ local function execute_command(...)
   command:execute(...)
 end
 
-local function version()
-  return versioning.current()
-end
-
 local function help()
   vim.cmd('h vgit')
 end
@@ -252,7 +242,6 @@ local function register_modules()
   highlight.register_module(function()
     sign.register_module()
   end)
-  autocmd.register_module()
   renderer.register_module()
 end
 
@@ -273,6 +262,13 @@ local function register_events()
   end)
 end
 
+local function register_keymaps(config)
+  local keymaps = config and config.keymaps or {}
+
+  screen_manager.register_keymaps()
+  keymap.define(keymaps)
+end
+
 local function configure_settings(config)
   local config_settings = config and config.settings or {}
 
@@ -288,22 +284,12 @@ local function configure_settings(config)
   project_diff_preview_setting:assign(config_settings.project_diff_preview)
 end
 
-local function define_keymaps(config)
-  local keymaps = config and config.keymaps or {}
-
-  keymap.define(keymaps)
-end
-
 local setup = function(config)
-  if not versioning.is_neovim_compatible() then
-    return
-  end
-
-  define_keymaps(config)
   configure_settings(config)
   setup_commands()
   register_modules()
   register_events()
+  register_keymaps(config)
   initialize_necessary_features()
 end
 
@@ -311,7 +297,6 @@ return {
   h = help,
   help = help,
   setup = setup,
-  version = version,
   command_list = command_list,
   execute_command = execute_command,
 

@@ -1,11 +1,10 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
 local Git = require('vgit.git.cli.Git')
-
 local console = require('vgit.core.console')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 
-local ProjectHunksQuickfix = Feature:extend()
+local ProjectHunksQuickfix = Object:extend()
 
 function ProjectHunksQuickfix:constructor()
   return {

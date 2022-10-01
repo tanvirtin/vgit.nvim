@@ -240,7 +240,10 @@ require('vgit').setup({
       enabled = true,
     },
     scene = {
-      diff_preference = 'unified',
+      diff_preference = 'unified', -- unified or split
+      keymaps = {
+        quit = 'q'
+      }
     },
     diff_preview = {
       keymaps = {

@@ -1,25 +1,26 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 local utils = require('vgit.core.utils')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
 local TableView = require('vgit.ui.views.TableView')
-local Query = require('vgit.features.screens.HistoryScreen.Query')
+local Store = require('vgit.features.screens.HistoryScreen.Store')
 
-local HistoryScreen = Feature:extend()
+local HistoryScreen = Object:extend()
 
 function HistoryScreen:constructor()
   local scene = Scene()
-  local query = Query()
+  local store = Store()
 
   return {
     name = 'History Screen',
     scene = scene,
-    query = query,
+    store = store,
+    hydrate = false,
     layout_type = nil,
-    table_view = TableView(scene, query, {
+    table_view = TableView(scene, store, {
       height = '30vh',
     }, {
       elements = {
@@ -45,7 +46,7 @@ function HistoryScreen:constructor()
         }
       end,
     }),
-    code_view = CodeView(scene, query, {
+    code_view = CodeView(scene, store, {
       row = '30vh',
     }, {
       elements = {
@@ -71,10 +72,12 @@ end
 function HistoryScreen:show()
   console.log('Processing history')
 
-  local query = self.query
-  local layout_type = self.layout_type
   local buffer = Buffer(0)
-  local err = query:fetch(layout_type, buffer.filename)
+  local err = self.store:fetch(
+    self.layout_type,
+    buffer.filename,
+    { hydrate = self.hydrate }
+  )
 
   if err then
     console.debug.error(err).error(err)
@@ -82,7 +85,7 @@ function HistoryScreen:show()
   end
 
   -- Show and bind data (data will have all the necessary shape required)
-  self.code_view:show(layout_type)
+  self.code_view:show(self.layout_type)
   self.table_view:show()
 
   -- Set keymap
@@ -110,7 +113,7 @@ function HistoryScreen:show()
       mode = 'n',
       key = 'j',
       handler = loop.async(function()
-        query:set_index(self.table_view:move('down'))
+        self.store:set_index(self.table_view:move('down'))
         self.code_view:render_debounced(function()
           self.code_view:navigate_to_mark(1)
         end)
@@ -120,7 +123,7 @@ function HistoryScreen:show()
       mode = 'n',
       key = 'k',
       handler = loop.async(function()
-        query:set_index(self.table_view:move('up'))
+        self.store:set_index(self.table_view:move('up'))
         self.code_view:render_debounced(function()
           self.code_view:navigate_to_mark(1)
         end)

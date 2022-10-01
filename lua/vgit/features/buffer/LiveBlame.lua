@@ -6,10 +6,10 @@ local console = require('vgit.core.console')
 local event = require('vgit.core.event')
 local live_blame_setting = require('vgit.settings.live_blame')
 local git_buffer_store = require('vgit.git.git_buffer_store')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 local loop = require('vgit.core.loop')
 
-local LiveBlame = Feature:extend()
+local LiveBlame = Object:extend()
 
 function LiveBlame:constructor()
   return {

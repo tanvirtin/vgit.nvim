@@ -5,9 +5,9 @@ local Buffer = require('vgit.core.Buffer')
 local GitBuffer = require('vgit.git.GitBuffer')
 local console = require('vgit.core.console')
 local git_buffer_store = require('vgit.git.git_buffer_store')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 
-local LiveGutter = Feature:extend()
+local LiveGutter = Object:extend()
 
 function LiveGutter:constructor()
   return {

@@ -1,32 +1,33 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
 local GutterBlameView = require('vgit.ui.views.GutterBlameView')
-local Query = require('vgit.features.screens.GutterBlameScreen.Query')
+local Store = require('vgit.features.screens.GutterBlameScreen.Store')
 
-local GutterBlameScreen = Feature:extend()
+local GutterBlameScreen = Object:extend()
 
 function GutterBlameScreen:constructor()
   local scene = Scene()
-  local query = Query()
+  local store = Store()
 
   return {
     name = 'Gutter Blame Screen',
     scene = scene,
-    query = query,
+    store = store,
     layout_type = 'unified',
-    gutter_blame_view = GutterBlameView(scene, query, {
+    hydrate = false,
+    gutter_blame_view = GutterBlameView(scene, store, {
       width = '40vw',
     }, {
       elements = {
         header = false,
       },
     }),
-    code_view = CodeView(scene, query, {
+    code_view = CodeView(scene, store, {
       width = '60vw',
       col = '40vw',
     }, {
@@ -41,7 +42,7 @@ function GutterBlameScreen:open_commit()
   loop.await_fast_event()
   local lnum = Window(0):get_lnum()
   loop.await_fast_event()
-  local err_blames, blames = self.query:get_blames()
+  local err_blames, blames = self.store:get_blames()
 
   if err_blames then
     return self
@@ -64,12 +65,10 @@ end
 function GutterBlameScreen:show()
   console.log('Processing blames')
 
-  local query = self.query
-  local layout_type = self.layout_type
   local buffer = Buffer(0)
 
   loop.await_fast_event()
-  local err = query:fetch(buffer.filename)
+  local err = self.store:fetch(buffer.filename, { hydrate = self.hydrate })
 
   if err then
     console.debug.error(err).error(err)
@@ -86,7 +85,7 @@ function GutterBlameScreen:show()
       end),
     },
   })
-  self.code_view:show(layout_type):set_keymap({
+  self.code_view:show(self.layout_type):set_keymap({
     {
       mode = 'n',
       key = '<enter>',

@@ -1,5 +1,5 @@
 local loop = require('vgit.core.loop')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local GitBuffer = require('vgit.git.GitBuffer')
 local console = require('vgit.core.console')
@@ -10,17 +10,12 @@ local authorship_code_lens_setting = require(
 local Namespace = require('vgit.core.Namespace')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 
-local AuthorshipCodeLens = Feature:extend()
+local AuthorshipCodeLens = Object:extend()
 
 function AuthorshipCodeLens:constructor()
   return {
     name = 'Authorship Code Lens',
     namespace = Namespace(),
-    requires_neovim_version = {
-      major = 0,
-      minor = 6,
-      patch = 0,
-    },
   }
 end
 
@@ -172,10 +167,6 @@ end
 
 function AuthorshipCodeLens:sync()
   if not authorship_code_lens_setting:get('enabled') then
-    return self
-  end
-
-  if not self:guard() then
     return self
   end
 

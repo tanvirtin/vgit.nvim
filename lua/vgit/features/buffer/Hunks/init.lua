@@ -1,14 +1,14 @@
 local console = require('vgit.core.console')
 local Window = require('vgit.core.Window')
 local loop = require('vgit.core.loop')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local navigation = require('vgit.features.buffer.Hunks.navigation')
 local NavigationVirtualText = require(
   'vgit.features.buffer.Hunks.NavigationVirtualText'
 )
 
-local Hunks = Feature:extend()
+local Hunks = Object:extend()
 
 function Hunks:constructor()
   return {

@@ -1,4 +1,3 @@
-local loop = require('vgit.core.loop')
 local assertion = require('vgit.core.assertion')
 local Object = require('vgit.core.Object')
 

@@ -1,32 +1,31 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 local utils = require('vgit.core.utils')
 local console = require('vgit.core.console')
 local GitLogsView = require('vgit.ui.views.GitLogsView')
-local Query = require('vgit.features.screens.ProjectStashScreen.Query')
+local Store = require('vgit.features.screens.ProjectStashScreen.Store')
 
-local ProjectStashScreen = Feature:extend()
+local ProjectStashScreen = Object:extend()
 
 function ProjectStashScreen:constructor()
   local scene = Scene()
-  local query = Query()
+  local store = Store()
 
   return {
     name = 'Stash Screen',
+    hydrate = false,
     scene = scene,
-    query = query,
-    view = GitLogsView(scene, query),
+    store = store,
+    view = GitLogsView(scene, store),
   }
 end
 
 function ProjectStashScreen:show(options)
   console.log('Processing logs')
 
-  local query = self.query
-
   loop.await_fast_event()
-  local err = query:fetch(options)
+  local err = self.store:fetch(options, { hydrate = self.hydrate })
 
   if err then
     console.debug.error(err).error(err)

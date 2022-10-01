@@ -8,10 +8,10 @@ local PresentationalComponent = require(
 
 local LineBlameView = Object:extend()
 
-function LineBlameView:constructor(scene, query, plot, config)
+function LineBlameView:constructor(scene, store, plot, config)
   return {
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
     config = config or {},
   }
@@ -73,7 +73,7 @@ function LineBlameView:create_committed_lines(blame)
 end
 
 function LineBlameView:render()
-  local err, blame = self.query:get_blame()
+  local err, blame = self.store:get_blame()
 
   if err then
     console.debug.error(err).error(err)
@@ -93,14 +93,14 @@ function LineBlameView:render()
   return self
 end
 
-function LineBlameView:mount_scene(mount_opts)
-  self.scene:get('current'):mount(mount_opts)
+function LineBlameView:mount(opts)
+  self.scene:get('current'):mount(opts)
 
   return self
 end
 
-function LineBlameView:show(mount_opts)
-  self:define():mount_scene(mount_opts):render()
+function LineBlameView:show(opts)
+  self:define():mount(opts):render()
 
   return self
 end

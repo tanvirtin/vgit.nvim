@@ -5,9 +5,9 @@ local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 
-local Query = Object:extend()
+local Store = Object:extend()
 
-function Query:constructor()
+function Store:constructor()
   return {
     id = nil,
     err = nil,
@@ -15,13 +15,15 @@ function Query:constructor()
     shape = nil,
     git = Git(),
     _cache = {
+      list_folds = {},
       list_entries = {},
       diff_dtos = {},
+      lnum = 1,
     },
   }
 end
 
-function Query:partition_status(status_files)
+function Store:partition_status(status_files)
   local changed_files = {}
   local staged_files = {}
 
@@ -65,7 +67,7 @@ function Query:partition_status(status_files)
   return changed_files, staged_files
 end
 
-function Query:get_file_lines(file, status)
+function Store:get_file_lines(file, status)
   local filename = file.filename
   local file_status = file.status
   local lines_err, lines
@@ -82,7 +84,7 @@ function Query:get_file_lines(file, status)
   return lines_err, lines
 end
 
-function Query:get_file_hunks(file, status, lines)
+function Store:get_file_hunks(file, status, lines)
   local filename = file.filename
   local file_status = file.status
   local hunks_err, hunks
@@ -102,7 +104,7 @@ function Query:get_file_hunks(file, status, lines)
   return hunks_err, hunks
 end
 
-function Query:get_file_diff(file, lines, hunks)
+function Store:get_file_diff(file, lines, hunks)
   local shape = self.shape
   local status = file.status
   local diff
@@ -118,22 +120,30 @@ function Query:get_file_diff(file, lines, hunks)
   return diff
 end
 
-function Query:reset()
+function Store:reset()
   self.id = nil
   self.err = nil
   self.data = nil
   self._cache = {
+    list_folds = {},
     list_entries = {},
     diff_dtos = {},
+    lnum = 1,
   }
 
   return self
 end
 
-function Query:fetch(shape, preserve_caching)
+function Store:fetch(shape, opts)
+  opts = opts or {}
+
+  if self.data and opts.hydrate and not opts.partial_hydrate then
+    return nil, self.data
+  end
+
   self:reset()
 
-  if not preserve_caching then
+  if not opts.partial_hydrate then
     self._cache = {
       list_entries = {},
       diff_dtos = {},
@@ -164,17 +174,17 @@ function Query:fetch(shape, preserve_caching)
   return nil, self.data
 end
 
-function Query:get_all()
+function Store:get_all()
   return self.err, self.data
 end
 
-function Query:set_id(id)
+function Store:set_id(id)
   self.id = id
 
   return self
 end
 
-function Query:get(id)
+function Store:get(id)
   if id then
     self.id = id
   end
@@ -188,7 +198,7 @@ function Query:get(id)
   return nil, datum
 end
 
-function Query:get_diff_dto()
+function Store:get_diff_dto()
   local err, datum = self:get()
 
   if err then
@@ -226,7 +236,7 @@ function Query:get_diff_dto()
   return nil, self._cache.diff_dtos[cache_key]
 end
 
-function Query:get_filename()
+function Store:get_filename()
   local err, datum = self:get()
 
   if err then
@@ -236,7 +246,7 @@ function Query:get_filename()
   return nil, datum.file.filename
 end
 
-function Query:get_filetype()
+function Store:get_filetype()
   local err, datum = self:get()
 
   if err then
@@ -246,4 +256,24 @@ function Query:get_filetype()
   return nil, datum.file.filetype
 end
 
-return Query
+function Store:get_lnum()
+  return nil, self._cache.lnum
+end
+
+function Store:set_lnum(lnum)
+  self._cache.lnum = lnum
+
+  return self
+end
+
+function Store:get_list_folds()
+  return nil, self._cache.list_folds
+end
+
+function Store:set_list_folds(list_folds)
+  self._cache.list_folds = list_folds
+
+  return self
+end
+
+return Store
