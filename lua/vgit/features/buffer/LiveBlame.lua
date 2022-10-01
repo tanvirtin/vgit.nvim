@@ -3,6 +3,7 @@ local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
 local GitBuffer = require('vgit.git.GitBuffer')
 local console = require('vgit.core.console')
+local event = require('vgit.core.event')
 local live_blame_setting = require('vgit.settings.live_blame')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local Feature = require('vgit.Feature')
@@ -17,6 +18,22 @@ function LiveBlame:constructor()
     last_lnum = nil,
     namespace = Namespace(),
   }
+end
+
+function LiveBlame:register_events()
+  event.on('BufEnter', function()
+    self:desync_all()
+  end).on('WinEnter', function()
+    self:desync_all()
+  end).on('CursorHold', function()
+    self:sync()
+  end).on('CursorMoved', function()
+    self:desync()
+  end).on('InsertEnter', function()
+    self:desync()
+  end)
+
+  return self
 end
 
 function LiveBlame:display(lnum, buffer, config, blame)

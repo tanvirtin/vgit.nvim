@@ -68,12 +68,6 @@ function HistoryScreen:hunk_down()
   return self
 end
 
-function HistoryScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function HistoryScreen:show()
   console.log('Processing history')
 
@@ -96,7 +90,6 @@ function HistoryScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      vgit_key = 'keys.enter',
       handler = loop.async(function()
         loop.await_fast_event()
         local row = self.table_view:get_current_row()
@@ -116,7 +109,6 @@ function HistoryScreen:show()
     {
       mode = 'n',
       key = 'j',
-      vgit_key = 'keys.j',
       handler = loop.async(function()
         query:set_index(self.table_view:move('down'))
         self.code_view:render_debounced(function()
@@ -127,7 +119,6 @@ function HistoryScreen:show()
     {
       mode = 'n',
       key = 'k',
-      vgit_key = 'keys.k',
       handler = loop.async(function()
         query:set_index(self.table_view:move('up'))
         self.code_view:render_debounced(function()

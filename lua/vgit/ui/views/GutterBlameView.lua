@@ -45,7 +45,7 @@ function GutterBlameView:set_keymap(configs)
   utils.list.each(configs, function(config)
     self.scene
       :get('gutter_blame')
-      :set_keymap(config.mode, config.key, config.vgit_key, config.handler)
+      :set_keymap(config.mode, config.key, config.handler)
   end)
   return self
 end
