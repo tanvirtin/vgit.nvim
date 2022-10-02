@@ -22,9 +22,7 @@ end
 
 function FoldableListView:set_keymap(configs)
   utils.list.each(configs, function(config)
-    self.scene
-      :get('list')
-      :set_keymap(config.mode, config.key, config.vgit_key, config.handler)
+    self.scene:get('list'):set_keymap(config.mode, config.key, config.handler)
   end)
 
   return self

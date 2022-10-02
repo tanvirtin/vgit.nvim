@@ -3,6 +3,7 @@ local loop = require('vgit.core.loop')
 local sign = require('vgit.core.sign')
 local Git = require('vgit.git.cli.Git')
 local Command = require('vgit.Command')
+local event = require('vgit.core.event')
 local keymap = require('vgit.core.keymap')
 local autocmd = require('vgit.core.autocmd')
 local console = require('vgit.core.console')
@@ -20,7 +21,7 @@ local versioning = require('vgit.core.versioning')
 local Hunks = require('vgit.features.buffer.Hunks')
 local scene_setting = require('vgit.settings.scene')
 local signs_setting = require('vgit.settings.signs')
-local active_screen = require('vgit.ui.active_screen')
+local screen_manager = require('vgit.ui.screen_manager')
 local symbols_setting = require('vgit.settings.symbols')
 local diff_preview = require('vgit.settings.diff_preview')
 local LiveBlame = require('vgit.features.buffer.LiveBlame')
@@ -39,210 +40,6 @@ local live_gutter = LiveGutter()
 local authorship_code_lens = AuthorshipCodeLens()
 local project_hunks_quickfix = ProjectHunksQuickfix()
 
-local keys = {
-  tab = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress('<tab>')
-    end
-  end),
-  enter = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress('<enter>')
-    end
-  end),
-  j = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress('j')
-    end
-  end),
-  k = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress('k')
-    end
-  end),
-  [diff_preview:get('keymaps').reset] = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress(diff_preview:get('keymaps').reset)
-    end
-  end),
-  [diff_preview:get('keymaps').toggle_view] = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress(diff_preview:get('keymaps').toggle_view)
-    end
-  end),
-  [diff_preview:get('keymaps').buffer_stage] = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress(diff_preview:get('keymaps').buffer_stage)
-    end
-  end),
-  [diff_preview:get('keymaps').buffer_unstage] = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress(diff_preview:get('keymaps').buffer_unstage)
-    end
-  end),
-  [diff_preview:get('keymaps').buffer_hunk_stage] = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress(
-        diff_preview:get('keymaps').buffer_hunk_stage
-      )
-    end
-  end),
-  [diff_preview:get('keymaps').buffer_hunk_unstage] = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.keypress(
-        diff_preview:get('keymaps').buffer_hunk_unstage
-      )
-    end
-  end),
-  [project_diff_preview_setting:get('keymaps').buffer_reset] = loop.async(
-    function()
-      if active_screen.exists() then
-        return active_screen.keypress(
-          project_diff_preview_setting:get('keymaps').buffer_reset
-        )
-      end
-    end
-  ),
-  [project_diff_preview_setting:get('keymaps').buffer_stage] = loop.async(
-    function()
-      if active_screen.exists() then
-        return active_screen.keypress(
-          project_diff_preview_setting:get('keymaps').buffer_stage
-        )
-      end
-    end
-  ),
-  [project_diff_preview_setting:get('keymaps').buffer_unstage] = loop.async(
-    function()
-      if active_screen.exists() then
-        return active_screen.keypress(
-          project_diff_preview_setting:get('keymaps').buffer_unstage
-        )
-      end
-    end
-  ),
-  [project_diff_preview_setting:get('keymaps').buffer_hunk_stage] = loop.async(
-    function()
-      if active_screen.exists() then
-        return active_screen.keypress(
-          project_diff_preview_setting:get('keymaps').buffer_hunk_stage
-        )
-      end
-    end
-  ),
-  [project_diff_preview_setting:get('keymaps').buffer_hunk_unstage] = loop.async(
-    function()
-      if active_screen.exists() then
-        return active_screen.keypress(
-          project_diff_preview_setting:get('keymaps').buffer_hunk_unstage
-        )
-      end
-    end
-  ),
-  [project_diff_preview_setting:get('keymaps').stage_all] = loop.async(
-    function()
-      if active_screen.exists() then
-        return active_screen.keypress(
-          project_diff_preview_setting:get('keymaps').stage_all
-        )
-      end
-    end
-  ),
-  [project_diff_preview_setting:get('keymaps').unstage_all] = loop.async(
-    function()
-      if active_screen.exists() then
-        return active_screen.keypress(
-          project_diff_preview_setting:get('keymaps').unstage_all
-        )
-      end
-    end
-  ),
-  [project_diff_preview_setting:get('keymaps').reset_all] = loop.async(
-    function()
-      if active_screen.exists() then
-        return active_screen.keypress(
-          project_diff_preview_setting:get('keymaps').reset_all
-        )
-      end
-    end
-  ),
-  prevent_default = function() end,
-}
-
-local events = {
-  win_enter = loop.async(function()
-    if not active_screen.exists() then
-      live_blame:desync_all()
-    end
-  end),
-
-  buf_enter = loop.async(function()
-    live_gutter:resync()
-  end),
-
-  buf_read = loop.async(function()
-    live_gutter:attach()
-    authorship_code_lens:sync()
-  end),
-
-  buf_new_file = loop.async(function()
-    live_gutter:attach()
-  end),
-
-  buf_write_post = loop.async(function()
-    live_gutter:attach()
-  end),
-
-  buf_win_enter = loop.async(function()
-    if active_screen.exists() then
-      return active_screen.destroy()
-    end
-  end),
-
-  buf_win_leave = loop.async(function()
-    loop.await_fast_event()
-    if active_screen.exists() then
-      return active_screen.destroy()
-    end
-  end),
-
-  cursor_hold = loop.async(function()
-    live_blame:sync()
-  end),
-
-  cursor_moved = loop.async(function()
-    live_blame:desync()
-  end),
-
-  insert_enter = loop.async(function()
-    live_blame:desync(true)
-  end),
-
-  colorscheme = loop.async(function()
-    hls_setting:for_each(function(hl, color)
-      highlight.define(hl, color)
-    end)
-  end),
-}
-
-local controls = {
-  hunk_up = loop.async(function()
-    hunks:move_up()
-
-    if active_screen.exists() then
-      return active_screen.action('hunk_up')
-    end
-  end),
-
-  hunk_down = loop.async(function()
-    hunks:move_down()
-
-    if active_screen.exists() then
-      return active_screen.action('hunk_down')
-    end
-  end),
-}
-
 local settings = {
   screen = scene_setting,
   hls = hls_setting,
@@ -250,6 +47,24 @@ local settings = {
   signs = signs_setting,
   git = git_setting,
   live_blame = live_blame_setting,
+}
+
+local controls = {
+  hunk_up = loop.async(function()
+    hunks:move_up()
+
+    if screen_manager.exists() then
+      return screen_manager.dispatch_action('hunk_up')
+    end
+  end),
+
+  hunk_down = loop.async(function()
+    hunks:move_down()
+
+    if screen_manager.exists() then
+      return screen_manager.dispatch_action('hunk_down')
+    end
+  end),
 }
 
 local buffer = {
@@ -274,35 +89,35 @@ local buffer = {
   end),
 
   hunk_preview = loop.async(function()
-    active_screen.activate('diff_hunk_screen')
+    screen_manager.activate('diff_hunk_screen')
   end),
 
   hunk_staged_preview = loop.async(function()
-    active_screen.activate('diff_hunk_screen', {
+    screen_manager.activate('diff_hunk_screen', {
       is_staged = true,
     })
   end),
 
   diff_preview = loop.async(function()
-    active_screen.activate('diff_screen')
+    screen_manager.activate('diff_screen')
   end),
 
   diff_staged_preview = loop.async(function()
-    active_screen.activate('diff_screen', {
+    screen_manager.activate('diff_screen', {
       is_staged = true,
     })
   end),
 
   history_preview = loop.async(function()
-    active_screen.activate('history_screen')
+    screen_manager.activate('history_screen')
   end),
 
   blame_preview = loop.async(function()
-    active_screen.activate('line_blame_screen')
+    screen_manager.activate('line_blame_screen')
   end),
 
   gutter_blame_preview = loop.async(function()
-    active_screen.activate('gutter_blame_screen')
+    screen_manager.activate('gutter_blame_screen')
   end),
 }
 
@@ -328,27 +143,27 @@ local project = {
   end),
 
   diff_preview = loop.async(function()
-    active_screen.activate('project_diff_screen')
+    screen_manager.activate('project_diff_screen')
   end),
 
   logs_preview = loop.async(function(...)
-    active_screen.activate('project_logs_screen', ...)
+    screen_manager.activate('project_logs_screen', ...)
   end),
 
   stash_preview = loop.async(function(...)
-    active_screen.activate('project_stash_screen', ...)
+    screen_manager.activate('project_stash_screen', ...)
   end),
 
   commits_preview = loop.async(function(...)
-    active_screen.activate('project_commits_screen', ...)
+    screen_manager.activate('project_commits_screen', ...)
   end),
 
   hunks_preview = loop.async(function()
-    active_screen.activate('project_hunks_screen')
+    screen_manager.activate('project_hunks_screen')
   end),
 
   hunks_staged_preview = loop.async(function()
-    active_screen.activate('project_hunks_screen', {
+    screen_manager.activate('project_hunks_screen', {
       is_staged = true,
     })
   end),
@@ -358,7 +173,7 @@ local project = {
   end),
 
   debug_preview = loop.async(function(...)
-    active_screen.activate('debug_screen', ...)
+    screen_manager.activate('debug_screen', ...)
   end),
 }
 
@@ -371,7 +186,7 @@ local checkout = loop.async(function(...)
 end)
 
 local toggle_diff_preference = loop.async(function()
-  active_screen.toggle_diff_preference()
+  screen_manager.toggle_diff_preference()
 end)
 
 local toggle_live_blame = loop.async(function()
@@ -441,18 +256,21 @@ local function register_modules()
   renderer.register_module()
 end
 
-local function register_autocmds()
-  autocmd.on('BufEnter', 'events.buf_enter()')
-  autocmd.on('BufRead', 'events.buf_read()')
-  autocmd.on('BufNewFile', 'events.buf_new_file()')
-  autocmd.on('BufWritePost', 'events.buf_write_post()')
-  autocmd.on('WinEnter', 'events.win_enter()')
-  autocmd.on('BufWinEnter', 'events.buf_win_enter()')
-  autocmd.on('BufWinLeave', 'events.buf_win_leave()')
-  autocmd.on('CursorHold', 'events.cursor_hold()')
-  autocmd.on('CursorMoved', 'events.cursor_moved()')
-  autocmd.on('InsertEnter', 'events.insert_enter()')
-  autocmd.on('ColorScheme', 'events.colorscheme()')
+local function register_events()
+  screen_manager.register_events()
+  live_blame:register_events()
+  live_gutter:register_events()
+  authorship_code_lens:register_events()
+
+  event.on('ColorScheme', function()
+    hls_setting:for_each(function(hl, color)
+      highlight.define(hl, color)
+    end)
+  end).on('ColorScheme', function()
+    hls_setting:for_each(function(hl, color)
+      highlight.define(hl, color)
+    end)
+  end)
 end
 
 local function configure_settings(config)
@@ -485,7 +303,7 @@ local setup = function(config)
   configure_settings(config)
   setup_commands()
   register_modules()
-  register_autocmds()
+  register_events()
   initialize_necessary_features()
 end
 
@@ -497,8 +315,6 @@ return {
   command_list = command_list,
   execute_command = execute_command,
 
-  keys = keys,
-  events = events,
   settings = settings,
 
   toggle_tracing = toggle_tracing,

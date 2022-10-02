@@ -10,7 +10,7 @@
   </table>
   
   [![Lua](https://img.shields.io/badge/Lua-blue.svg?style=for-the-badge&logo=lua)](http://www.lua.org)
-  [![Neovim](https://img.shields.io/badge/Neovim%200.5+-green.svg?style=for-the-badge&logo=neovim)](https://neovim.io)
+  [![Neovim](https://img.shields.io/badge/Neovim%200.8+-green.svg?style=for-the-badge&logo=neovim)](https://neovim.io)
   
   <a href="https://github.com/tanvirtin/vgit.nvim/actions?query=workflow%3ACI">
       <img src="https://github.com/tanvirtin/vgit.nvim/workflows/CI/badge.svg?branch=main" alt="CI" />
@@ -54,7 +54,7 @@
 
 **Requirements**
 ---
-- Neovim `0.5+`
+- Neovim `0.8+`
 - Git `2.18.0+`
 - Supported Operating Systems:
     - `linux-gnu*`
@@ -109,21 +109,21 @@ Highlights, signs, keymappings are few examples of what can be configured in VGi
 ```lua
 require('vgit').setup({
   keymaps = {
-    ['n <C-k>'] = 'hunk_up',
-    ['n <C-j>'] = 'hunk_down',
-    ['n <leader>gs'] = 'buffer_hunk_stage',
-    ['n <leader>gr'] = 'buffer_hunk_reset',
-    ['n <leader>gp'] = 'buffer_hunk_preview',
-    ['n <leader>gb'] = 'buffer_blame_preview',
-    ['n <leader>gf'] = 'buffer_diff_preview',
-    ['n <leader>gh'] = 'buffer_history_preview',
-    ['n <leader>gu'] = 'buffer_reset',
-    ['n <leader>gg'] = 'buffer_gutter_blame_preview',
-    ['n <leader>glu'] = 'project_hunks_preview',
-    ['n <leader>gls'] = 'project_hunks_staged_preview',
-    ['n <leader>gd'] = 'project_diff_preview',
-    ['n <leader>gq'] = 'project_hunks_qf',
-    ['n <leader>gx'] = 'toggle_diff_preference',
+    ['n <C-k>'] = function() require('vgit').hunk_up() end,
+    ['n <C-j>'] = function() require('vgit').hunk_down() end,
+    ['n <leader>gs'] = function() require('vgit').buffer_hunk_stage() end,
+    ['n <leader>gr'] = function() require('vgit').buffer_hunk_reset() end,
+    ['n <leader>gp'] = function() require('vgit').buffer_hunk_preview() end,
+    ['n <leader>gb'] = function() require('vgit').buffer_blame_preview() end,
+    ['n <leader>gf'] = function() require('vgit').buffer_diff_preview() end,
+    ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
+    ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
+    ['n <leader>gg'] = function() require('vgit').buffer_gutter_blame_preview() end,
+    ['n <leader>glu'] = function() require('vgit').buffer_hunks_preview() end,
+    ['n <leader>gls'] = function() require('vgit').project_hunks_staged_preview() end,
+    ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
+    ['n <leader>gq'] = function() require('vgit').project_hunks_qf() end,
+    ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
   },
   settings = {
     git = {

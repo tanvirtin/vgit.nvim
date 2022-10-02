@@ -74,12 +74,6 @@ function DiffScreen:hunk_down()
   return self
 end
 
-function DiffScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function DiffScreen:make_footer_lines()
   local text = ''
   local keymaps = diff_preview_setting:get('keymaps')
@@ -145,10 +139,6 @@ function DiffScreen:show(opts)
       {
         mode = 'n',
         key = diff_preview_setting:get('keymaps').reset,
-        vgit_key = string.format(
-          'keys.%s',
-          diff_preview_setting:get('keymaps').reset
-        ),
         handler = loop.debounced_async(function()
           loop.await_fast_event()
           local decision = console.input(
@@ -187,10 +177,6 @@ function DiffScreen:show(opts)
       {
         mode = 'n',
         key = diff_preview_setting:get('keymaps').buffer_stage,
-        vgit_key = string.format(
-          'keys.%s',
-          diff_preview_setting:get('keymaps').buffer_stage
-        ),
         handler = loop.debounced_async(function()
           loop.await_fast_event()
           local _, filename = self.query:get_filename()
@@ -220,10 +206,6 @@ function DiffScreen:show(opts)
       {
         mode = 'n',
         key = diff_preview_setting:get('keymaps').buffer_unstage,
-        vgit_key = string.format(
-          'keys.%s',
-          diff_preview_setting:get('keymaps').buffer_unstage
-        ),
         handler = loop.debounced_async(function()
           loop.await_fast_event()
           local _, filename = self.query:get_filename()
@@ -253,10 +235,6 @@ function DiffScreen:show(opts)
       {
         mode = 'n',
         key = diff_preview_setting:get('keymaps').buffer_hunk_stage,
-        vgit_key = string.format(
-          'keys.%s',
-          diff_preview_setting:get('keymaps').buffer_hunk_stage
-        ),
         handler = loop.debounced_async(function()
           if self.is_staged then
             return
@@ -294,10 +272,6 @@ function DiffScreen:show(opts)
       {
         mode = 'n',
         key = diff_preview_setting:get('keymaps').buffer_hunk_unstage,
-        vgit_key = string.format(
-          'keys.%s',
-          diff_preview_setting:get('keymaps').buffer_hunk_unstage
-        ),
         handler = loop.debounced_async(function()
           if not self.is_staged then
             return
@@ -339,7 +313,6 @@ function DiffScreen:show(opts)
       {
         mode = 'n',
         key = '<enter>',
-        vgit_key = 'keys.enter',
         handler = loop.debounced_async(function()
           loop.await_fast_event()
           local mark = self.code_view:get_current_mark_under_cursor()
@@ -369,10 +342,6 @@ function DiffScreen:show(opts)
       {
         mode = 'n',
         key = diff_preview_setting:get('keymaps').toggle_view,
-        vgit_key = string.format(
-          'keys.%s',
-          diff_preview_setting:get('keymaps').toggle_view
-        ),
         handler = loop.debounced_async(function()
           local is_staged = self.is_staged
 

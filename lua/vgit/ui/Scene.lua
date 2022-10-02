@@ -21,12 +21,6 @@ function Scene:get(key)
   return self.components[key]
 end
 
-function Scene:trigger_keypress(key, ...)
-  for _, component in pairs(self.components) do
-    component:trigger_keypress(key, ...)
-  end
-end
-
 function Scene:destroy()
   for _, component in pairs(self.components) do
     component:unmount()
