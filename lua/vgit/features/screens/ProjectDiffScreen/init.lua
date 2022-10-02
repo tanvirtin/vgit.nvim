@@ -324,12 +324,6 @@ ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
   return self:render()
 end, 15)
 
-function ProjectDiffScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function ProjectDiffScreen:render()
   loop.await_fast_event()
   self.query:fetch(self.layout_type)
@@ -404,10 +398,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_hunk_stage,
-      vgit_key = string.format(
-        'keys.%s',
-        project_diff_preview_setting:get('keymaps').buffer_hunk_stage
-      ),
       handler = loop.async(function()
         self:stage_hunk()
       end),
@@ -415,10 +405,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_hunk_unstage,
-      vgit_key = string.format(
-        'keys.%s',
-        project_diff_preview_setting:get('keymaps').buffer_hunk_unstage
-      ),
       handler = loop.async(function()
         self:unstage_hunk()
       end),
@@ -426,7 +412,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      vgit_key = 'keys.enter',
       handler = loop.async(function()
         local mark, _ = self.code_view:get_current_mark_under_cursor()
 
@@ -453,10 +438,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_reset,
-      vgit_key = string.format(
-        'keys.%s',
-        project_diff_preview_setting:get('keymaps').buffer_reset
-      ),
       handler = loop.async(function()
         self:reset_file()
       end),
@@ -464,10 +445,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_stage,
-      vgit_key = string.format(
-        'keys.%s',
-        project_diff_preview_setting:get('keymaps').buffer_stage
-      ),
       handler = loop.async(function()
         self:stage_file()
       end),
@@ -475,10 +452,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_unstage,
-      vgit_key = string.format(
-        'keys.%s',
-        project_diff_preview_setting:get('keymaps').buffer_unstage
-      ),
       handler = loop.async(function()
         self:unstage_file()
       end),
@@ -486,10 +459,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').stage_all,
-      vgit_key = string.format(
-        'keys.%s',
-        project_diff_preview_setting:get('keymaps').stage_all
-      ),
       handler = loop.async(function()
         self:stage_all()
       end),
@@ -497,10 +466,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').unstage_all,
-      vgit_key = string.format(
-        'keys.%s',
-        project_diff_preview_setting:get('keymaps').unstage_all
-      ),
       handler = loop.async(function()
         self:unstage_all()
       end),
@@ -508,10 +473,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').reset_all,
-      vgit_key = string.format(
-        'keys.%s',
-        project_diff_preview_setting:get('keymaps').reset_all
-      ),
       handler = loop.async(function()
         self:reset_all()
       end),
@@ -519,7 +480,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = 'j',
-      vgit_key = 'keys.j',
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('down')
 
@@ -532,7 +492,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = 'k',
-      vgit_key = 'keys.k',
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('up')
 
@@ -545,7 +504,6 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      vgit_key = 'keys.enter',
       handler = loop.async(function()
         local _, filename = self.query:get_filename()
 

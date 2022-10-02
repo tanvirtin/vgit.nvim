@@ -91,12 +91,6 @@ function ProjectHunksScreen:hunk_down()
   return self
 end
 
-function ProjectHunksScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function ProjectHunksScreen:show(opts)
   opts = opts or {}
 
@@ -121,7 +115,6 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = '<enter>',
-      vgit_key = 'keys.enter',
       handler = loop.async(function()
         local mark = self.code_view:get_current_mark_under_cursor()
 
@@ -148,7 +141,6 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = 'j',
-      vgit_key = 'keys.j',
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('down')
 
@@ -169,7 +161,6 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = 'k',
-      vgit_key = 'keys.k',
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('up')
 
@@ -190,7 +181,6 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = '<enter>',
-      vgit_key = 'keys.enter',
       handler = loop.async(function()
         local _, filename = self.query:get_filename()
 

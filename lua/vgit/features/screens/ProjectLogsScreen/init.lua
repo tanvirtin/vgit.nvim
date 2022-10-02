@@ -20,12 +20,6 @@ function ProjectLogsScreen:constructor()
   }
 end
 
-function ProjectLogsScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function ProjectLogsScreen:show(options)
   console.log('Processing logs')
 
@@ -44,7 +38,6 @@ function ProjectLogsScreen:show(options)
     {
       mode = 'n',
       key = '<tab>',
-      vgit_key = 'keys.tab',
       handler = loop.async(function()
         loop.await_fast_event()
 
@@ -54,7 +47,6 @@ function ProjectLogsScreen:show(options)
     {
       mode = 'n',
       key = '<enter>',
-      vgit_key = 'keys.enter',
       handler = loop.async(function()
         local view = self.view
 

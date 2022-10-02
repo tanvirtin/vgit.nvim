@@ -45,7 +45,7 @@ function SimpleView:set_keymap(configs)
   utils.list.each(configs, function(config)
     self.scene
       :get('simple_view')
-      :set_keymap(config.mode, config.key, config.vgit_key, config.handler)
+      :set_keymap(config.mode, config.key, config.handler)
   end)
   return self
 end

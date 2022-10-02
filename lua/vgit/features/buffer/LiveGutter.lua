@@ -1,5 +1,6 @@
 local live_gutter_setting = require('vgit.settings.live_gutter')
 local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Buffer = require('vgit.core.Buffer')
 local GitBuffer = require('vgit.git.GitBuffer')
 local console = require('vgit.core.console')
@@ -12,6 +13,14 @@ function LiveGutter:constructor()
   return {
     name = 'Live Gutter',
   }
+end
+
+function LiveGutter:register_events()
+  event.on('BufRead', function()
+    self:attach()
+  end)
+
+  return self
 end
 
 LiveGutter.clear = loop.async(function(_, buffer)

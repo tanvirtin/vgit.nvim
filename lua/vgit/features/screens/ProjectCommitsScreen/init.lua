@@ -74,12 +74,6 @@ function ProjectCommitsScreen:hunk_down()
   return self
 end
 
-function ProjectCommitsScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function ProjectCommitsScreen:show(commits)
   console.log('Processing project commits')
 
@@ -102,7 +96,6 @@ function ProjectCommitsScreen:show(commits)
     {
       mode = 'n',
       key = 'j',
-      vgit_key = 'keys.j',
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('down')
 
@@ -119,7 +112,6 @@ function ProjectCommitsScreen:show(commits)
     {
       mode = 'n',
       key = 'k',
-      vgit_key = 'keys.k',
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('up')
 
@@ -136,7 +128,6 @@ function ProjectCommitsScreen:show(commits)
     {
       mode = 'n',
       key = '<enter>',
-      vgit_key = 'keys.enter',
       handler = loop.async(function()
         self.foldable_list_view:toggle_current_list_item():render()
       end),

@@ -13,8 +13,6 @@ function Component:constructor()
     component_plot = nil,
     mounted = false,
     elements = {},
-    -- Stores keypress callbacks
-    keys = {},
     state = {},
     -- The properties that can be used to align components with each other.
     config = {
@@ -159,24 +157,8 @@ function Component:transpose_virtual_line(texts, col, pos)
   return self
 end
 
-function Component:trigger_keypress(key, ...)
-  local callback = self.keys[key]
-
-  loop.await_fast_event()
-  if type(callback) == 'function' and self:is_focused() then
-    callback(...)
-  end
-
-  return self
-end
-
-function Component:set_keymap(mode, key, action, callback)
-  -- Storing the callback within this scope.
-  if callback then
-    self.keys[key] = callback
-  end
-
-  self.buffer:set_keymap(mode, key, action)
+function Component:set_keymap(mode, key, callback)
+  self.buffer:set_keymap(mode, key, callback)
 
   return self
 end

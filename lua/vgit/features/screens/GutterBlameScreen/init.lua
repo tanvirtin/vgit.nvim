@@ -37,12 +37,6 @@ function GutterBlameScreen:constructor()
   }
 end
 
-function GutterBlameScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function GutterBlameScreen:open_commit()
   loop.await_fast_event()
   local lnum = Window(0):get_lnum()
@@ -87,7 +81,6 @@ function GutterBlameScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      vgit_key = 'keys.enter',
       handler = loop.async(function()
         self:open_commit()
       end),
@@ -97,7 +90,6 @@ function GutterBlameScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      vgit_key = 'keys.enter',
       handler = loop.async(function()
         self:open_commit()
       end),

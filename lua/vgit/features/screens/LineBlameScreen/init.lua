@@ -28,12 +28,6 @@ function LineBlameScreen:constructor()
   }
 end
 
-function LineBlameScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function LineBlameScreen:show()
   console.log('Processing line blame')
 

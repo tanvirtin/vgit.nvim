@@ -1,6 +1,6 @@
 *vgit.nvim*
 
-Supported Neovim Versions: >= 0.5.0
+Supported Neovim Versions: >= 0.8.0
 
 Supported Git Versions >= 2.18.0
 
@@ -25,20 +25,21 @@ More advanced configuration:
 >
     require('vgit').setup({
       keymaps = {
-        ['n <C-k>'] = 'hunk_up',
-        ['n <C-j>'] = 'hunk_down',
-        ['n <leader>gs'] = 'buffer_hunk_stage',
-        ['n <leader>gr'] = 'buffer_hunk_reset',
-        ['n <leader>gp'] = 'buffer_hunk_preview',
-        ['n <leader>gb'] = 'buffer_blame_preview',
-        ['n <leader>gf'] = 'buffer_diff_preview',
-        ['n <leader>gh'] = 'buffer_history_preview',
-        ['n <leader>gu'] = 'buffer_reset',
-        ['n <leader>gg'] = 'buffer_gutter_blame_preview',
-        ['n <leader>gl'] = 'project_hunks_preview',
-        ['n <leader>gd'] = 'project_diff_preview',
-        ['n <leader>gq'] = 'project_hunks_qf',
-        ['n <leader>gx'] = 'toggle_diff_preference',
+        ['n <C-k>'] = function() require('vgit').hunk_up() end,
+        ['n <C-j>'] = function() require('vgit').hunk_down() end,
+        ['n <leader>gs'] = function() require('vgit').buffer_hunk_stage() end,
+        ['n <leader>gr'] = function() require('vgit').buffer_hunk_reset() end,
+        ['n <leader>gp'] = function() require('vgit').buffer_hunk_preview() end,
+        ['n <leader>gb'] = function() require('vgit').buffer_blame_preview() end,
+        ['n <leader>gf'] = function() require('vgit').buffer_diff_preview() end,
+        ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
+        ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
+        ['n <leader>gg'] = function() require('vgit').buffer_gutter_blame_preview() end,
+        ['n <leader>glu'] = function() require('vgit').buffer_hunks_preview() end,
+        ['n <leader>gls'] = function() require('vgit').project_hunks_staged_preview() end,
+        ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
+        ['n <leader>gq'] = function() require('vgit').project_hunks_qf() end,
+        ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
       },
       settings = {
         git = {

@@ -3,6 +3,7 @@ local Feature = require('vgit.Feature')
 local Buffer = require('vgit.core.Buffer')
 local GitBuffer = require('vgit.git.GitBuffer')
 local console = require('vgit.core.console')
+local event = require('vgit.core.event')
 local authorship_code_lens_setting = require(
   'vgit.settings.authorship_code_lens'
 )
@@ -21,6 +22,14 @@ function AuthorshipCodeLens:constructor()
       patch = 0,
     },
   }
+end
+
+function AuthorshipCodeLens:register_events()
+  event.on('BufEnter', function()
+    self:resync()
+  end)
+
+  return self
 end
 
 function AuthorshipCodeLens:display(lnum, buffer, text)

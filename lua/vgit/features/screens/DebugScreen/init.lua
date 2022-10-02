@@ -19,12 +19,6 @@ function DebugScreen:constructor()
   }
 end
 
-function DebugScreen:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function DebugScreen:show(source)
   console.log(string.format('Processing %s', source))
 

@@ -326,8 +326,8 @@ function Buffer:list()
   return buffers
 end
 
-function Buffer:set_keymap(mode, key, action)
-  keymap.buffer_set(self, mode, key, action)
+function Buffer:set_keymap(mode, key, callback)
+  keymap.buffer_set(self, mode, key, callback)
 
   return self
 end

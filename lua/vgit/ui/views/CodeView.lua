@@ -108,12 +108,6 @@ function CodeView:define()
   return self
 end
 
-function CodeView:trigger_keypress(key, ...)
-  self.scene:trigger_keypress(key, ...)
-
-  return self
-end
-
 function CodeView:set_title(title)
   if not title then
     return self
@@ -129,14 +123,14 @@ function CodeView:set_keymap(configs)
     utils.list.each(configs, function(config)
       self.scene
         :get('previous')
-        :set_keymap(config.mode, config.key, config.vgit_key, config.handler)
+        :set_keymap(config.mode, config.key, config.handler)
     end)
   end
 
   utils.list.each(configs, function(config)
     self.scene
       :get('current')
-      :set_keymap(config.mode, config.key, config.vgit_key, config.handler)
+      :set_keymap(config.mode, config.key, config.handler)
   end)
 
   return self
