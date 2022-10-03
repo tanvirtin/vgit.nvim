@@ -1,7 +1,7 @@
 local fs = require('vgit.core.fs')
-local Diff = require('vgit.git.Diff')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
+local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
 
@@ -71,7 +71,7 @@ function Store:get_diff_dto()
     return nil, self._cache.diff_dto
   end
 
-  self._cache.diff_dto = Diff(self.data):call(self._cache.lines, self.shape)
+  self._cache.diff_dto = diff_service:generate(self.data, self._cache.lines, self.shape)
 
   return nil, self._cache.diff_dto
 end

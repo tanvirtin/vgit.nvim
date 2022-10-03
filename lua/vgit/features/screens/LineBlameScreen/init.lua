@@ -35,7 +35,7 @@ function LineBlameScreen:show()
   local buffer = Buffer(0)
   local window = Window(0)
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.store:fetch(buffer.filename, window:get_lnum(), { hydrate = self.hydrate })
 
   if err then
@@ -43,7 +43,7 @@ function LineBlameScreen:show()
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.line_blame_view:show({ winline = vim.fn.winline() + 1 })
 
   return true

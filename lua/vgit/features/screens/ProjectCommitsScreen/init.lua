@@ -76,7 +76,7 @@ end
 function ProjectCommitsScreen:show(commits)
   console.log('Processing project commits')
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.store:fetch(self.layout_type, commits, { hydrate = self.hydrate })
 
   if err then
@@ -84,7 +84,7 @@ function ProjectCommitsScreen:show(commits)
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.code_view:show(self.layout_type)
   self.foldable_list_view:set_title(self:get_list_title(commits)):show()
 

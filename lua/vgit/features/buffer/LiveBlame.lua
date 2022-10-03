@@ -36,7 +36,7 @@ function LiveBlame:display(lnum, buffer, config, blame)
     local virt_text = live_blame_setting:get('format')(blame, config)
 
     if type(virt_text) == 'string' then
-      loop.await_fast_event()
+      loop.await()
       self.namespace:transpose_virtual_text(buffer, virt_text, 'GitComment', lnum - 1, 0, 'eol')
     end
   end
@@ -53,16 +53,16 @@ LiveBlame.sync = loop.debounced_async(function(self)
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   local window = Window(0)
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
   local git_buffer = GitBuffer(buffer)
 
   if not buffer then
     return
   end
-  loop.await_fast_event()
+  loop.await()
 
   if buffer:editing() then
     console.debug.warning(string.format('Buffer %s is being edited right now', buffer.bufnr))
@@ -77,22 +77,22 @@ LiveBlame.sync = loop.debounced_async(function(self)
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   local lnum = window:get_lnum()
 
   if self.last_lnum and self.last_lnum == lnum then
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   local blame_err, blame = buffer.git_object:blame_line(lnum)
 
-  loop.await_fast_event()
+  loop.await()
   if not buffer:is_valid() then
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   local new_lnum = window:get_lnum()
 
   if lnum ~= new_lnum then
@@ -104,7 +104,7 @@ LiveBlame.sync = loop.debounced_async(function(self)
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   local config_err, config = buffer.git_object:config()
 
   if config_err then
@@ -116,14 +116,14 @@ LiveBlame.sync = loop.debounced_async(function(self)
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   self:clear(buffer)
   self:display(lnum, buffer, config, blame)
   self.last_lnum = lnum
 end, 20)
 
 function LiveBlame:desync(force)
-  loop.await_fast_event()
+  loop.await()
   local window = Window(0)
   local buffer = git_buffer_store.current()
 
@@ -131,9 +131,9 @@ function LiveBlame:desync(force)
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   buffer = git_buffer_store.get(buffer)
-  loop.await_fast_event()
+  loop.await()
 
   local lnum = window:get_lnum()
 

@@ -39,9 +39,9 @@ function GutterBlameScreen:constructor()
 end
 
 function GutterBlameScreen:open_commit()
-  loop.await_fast_event()
+  loop.await()
   local lnum = Window(0):get_lnum()
-  loop.await_fast_event()
+  loop.await()
   local err_blames, blames = self.store:get_blames()
 
   if err_blames then
@@ -56,7 +56,7 @@ function GutterBlameScreen:open_commit()
 
   vim.cmd('quit')
 
-  loop.await_fast_event()
+  loop.await()
   vim.cmd(string.format('VGit project_commits_preview %s', blame.commit_hash))
 
   return self
@@ -67,7 +67,7 @@ function GutterBlameScreen:show()
 
   local buffer = Buffer(0)
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.store:fetch(buffer.filename, { hydrate = self.hydrate })
 
   if err then
@@ -75,7 +75,7 @@ function GutterBlameScreen:show()
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.gutter_blame_view:show():set_keymap({
     {
       mode = 'n',

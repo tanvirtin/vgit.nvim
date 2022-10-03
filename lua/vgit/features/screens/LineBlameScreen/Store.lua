@@ -31,9 +31,9 @@ function Store:fetch(filename, lnum, opts)
 
   self.git_object = GitObject(filename)
 
-  loop.await_fast_event()
+  loop.await()
   self.err, self.data = self.git_object:blame_line(lnum)
-  loop.await_fast_event()
+  loop.await()
 
   return self.err, self.data
 end

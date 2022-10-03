@@ -1,8 +1,8 @@
-local Diff = require('vgit.git.Diff')
 local loop = require('vgit.core.loop')
 local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
 
@@ -64,7 +64,7 @@ function Store:fetch(shape, commits, opts)
     local commit = commits[i]
     -- Get the log associated with the commit
     local log_err, log = self.git:log(commit)
-    loop.await_fast_event()
+    loop.await()
 
     if log_err then
       return log_err
@@ -73,7 +73,7 @@ function Store:fetch(shape, commits, opts)
     -- We will use the parent_hash and the commit_hash inside
     -- the log object to list all the files associated with the log.
     local err, files = self.git:ls_log(log)
-    loop.await_fast_event()
+    loop.await()
 
     if err then
       return err
@@ -148,14 +148,14 @@ function Store:get_diff_dto()
   local lines_err, lines
   local is_deleted = false
 
-  loop.await_fast_event()
+  loop.await()
   if not self.git:is_in_remote(filename, commit_hash) then
     is_deleted = true
     lines_err, lines = self.git:show(filename, parent_hash)
   else
     lines_err, lines = self.git:show(filename, commit_hash)
   end
-  loop.await_fast_event()
+  loop.await()
 
   if lines_err then
     return lines_err
@@ -167,18 +167,15 @@ function Store:get_diff_dto()
   else
     hunks_err, hunks = self.git:remote_hunks(filename, parent_hash, commit_hash)
   end
-  loop.await_fast_event()
+  loop.await()
 
   if hunks_err then
     return hunks_err
   end
 
-  local diff
-  if is_deleted then
-    diff = Diff(hunks):call_deleted(lines, self.shape)
-  else
-    diff = Diff(hunks):call(lines, self.shape)
-  end
+  local diff = diff_service:generate(hunks, lines, self.shape, {
+    is_deleted = is_deleted,
+  })
 
   self._cache.commits[id] = diff
 

@@ -49,7 +49,7 @@ function Hunks:move_down()
 end
 
 function Hunks:cursor_hunk()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then
@@ -77,7 +77,7 @@ function Hunks:cursor_hunk()
 end
 
 function Hunks:stage_all()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then
@@ -86,7 +86,7 @@ function Hunks:stage_all()
 
   local err = buffer.git_object:stage()
 
-  loop.await_fast_event()
+  loop.await()
   if err then
     console.debug.error(err)
     return
@@ -96,7 +96,7 @@ function Hunks:stage_all()
 end
 
 function Hunks:cursor_stage()
-  loop.await_fast_event()
+  loop.await()
 
   local buffer = git_buffer_store.current()
   if not buffer then
@@ -112,7 +112,7 @@ function Hunks:cursor_stage()
   if not git_object:is_tracked() then
     local err = git_object:stage()
 
-    loop.await_fast_event()
+    loop.await()
     if err then
       console.debug.error(err)
       return
@@ -140,7 +140,7 @@ function Hunks:cursor_stage()
 end
 
 function Hunks:unstage_all()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then
@@ -149,7 +149,7 @@ function Hunks:unstage_all()
 
   local err = buffer.git_object:unstage()
 
-  loop.await_fast_event()
+  loop.await()
   if err then
     console.debug.error(err)
     return
@@ -159,7 +159,7 @@ function Hunks:unstage_all()
 end
 
 function Hunks:reset_all()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then
@@ -174,7 +174,7 @@ function Hunks:reset_all()
 
   local err, lines = buffer.git_object:lines()
 
-  loop.await_fast_event()
+  loop.await()
   if err then
     return console.debug.error(err)
   end
@@ -184,7 +184,7 @@ function Hunks:reset_all()
 end
 
 function Hunks:cursor_reset()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then

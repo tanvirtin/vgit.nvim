@@ -1,36 +1,12 @@
-local Object = require('vgit.core.Object')
-local DiffDTO = require('vgit.git.DiffDTO')
 local dmp = require('vgit.vendor.dmp')
+local Object = require('vgit.core.Object')
+local DiffDTO = require('vgit.services.diff.DiffDTO')
 
 local Diff = Object:extend()
 
-function Diff:constructor(hunks)
-  return {
-    hunks = hunks,
-    max_lines = 4,
-  }
-end
+function Diff:constructor() return { max_lines = 4 } end
 
-function Diff:call(lines, shape)
-  local choices = {
-    unified = function() return self:unified(lines) end,
-    split = function() return self:split(lines) end,
-  }
-
-  return choices[shape]()
-end
-
-function Diff:call_deleted(lines, shape)
-  local choices = {
-    unified = function() return self:deleted_unified(lines) end,
-    split = function() return self:deleted_split(lines) end,
-  }
-
-  return choices[shape]()
-end
-
-function Diff:deleted_unified(lines)
-  local hunks = self.hunks
+function Diff:generate_unified_deleted(hunks, lines)
   local hunk = hunks[1]
   local type = hunk.type
   local diff = hunk.diff
@@ -63,8 +39,7 @@ function Diff:deleted_unified(lines)
   })
 end
 
-function Diff:deleted_split(lines)
-  local hunks = self.hunks
+function Diff:generate_split_deleted(hunks, lines)
   local hunk = hunks[1]
   local type = hunk.type
   local diff = hunk.diff
@@ -105,9 +80,7 @@ function Diff:deleted_split(lines)
   })
 end
 
-function Diff:unified(lines)
-  local hunks = self.hunks
-
+function Diff:generate_unified(hunks, lines)
   if #hunks == 0 then
     return DiffDTO({
       lines = lines,
@@ -239,6 +212,7 @@ function Diff:unified(lines)
       marks[#marks] = marks[#marks]
     end
   end
+
   return DiffDTO({
     lines = new_lines,
     lnum_changes = lnum_changes,
@@ -248,9 +222,7 @@ function Diff:unified(lines)
   })
 end
 
-function Diff:split(lines)
-  local hunks = self.hunks
-
+function Diff:generate_split(hunks, lines)
   if #hunks == 0 then
     return DiffDTO({
       current_lines = lines,
@@ -450,6 +422,26 @@ function Diff:split(lines)
     marks = marks,
     stat = stat,
   })
+end
+
+function Diff:generate(hunks, lines, shape, opts)
+  opts = opts or { is_deleted = false }
+
+  if opts.is_deleted then
+    local choices = {
+      unified = function() return self:generate_unified_deleted(hunks, lines) end,
+      split = function() return self:generate_split_deleted(hunks, lines) end,
+    }
+
+    return choices[shape]()
+  end
+
+  local choices = {
+    unified = function() return self:generate_unified(hunks, lines) end,
+    split = function() return self:generate_split(hunks, lines) end,
+  }
+
+  return choices[shape]()
 end
 
 return Diff

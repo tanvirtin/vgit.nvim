@@ -135,7 +135,7 @@ function Buffer:watch_file(callback)
         return
       end
 
-      loop.await_fast_event()
+      loop.await()
       if self and self:is_valid() and callback then
         callback()
       end

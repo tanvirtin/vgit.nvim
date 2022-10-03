@@ -1,10 +1,10 @@
 local Hunk = require('vgit.git.cli.models.Hunk')
-local Diff = require('vgit.git.Diff')
+local diff_service = require('vgit.services.diff')
 
 local build_hunk = function(hunk) return setmetatable(hunk, Hunk) end
 
-describe('Diff:', function()
-  describe('call', function()
+describe('diff_service:', function()
+  describe('generate', function()
     describe('unified', function()
       local layout_type = 'unified'
 
@@ -22,7 +22,7 @@ describe('Diff:', function()
             },
           }),
         }
-        local diff_dto = Diff(hunks):call(pre_diff_lines, layout_type)
+        local diff_dto = diff_service:generate(hunks, pre_diff_lines, layout_type)
 
         assert.are.same(diff_dto.lines, pre_diff_lines)
         assert.are.same(diff_dto.current_lines, {})
@@ -107,7 +107,7 @@ describe('Diff:', function()
             type = 'change',
           }),
         }
-        local diff_dto = Diff(hunks):call(pre_diff_lines, layout_type)
+        local diff_dto = diff_service:generate(hunks, pre_diff_lines, layout_type)
 
         assert.are.same(diff_dto.lines, {
           'a',
@@ -202,7 +202,7 @@ describe('Diff:', function()
             },
           }),
         }
-        local diff_dto = Diff(hunks):call(pre_diff_lines, layout_type)
+        local diff_dto = diff_service:generate(hunks, pre_diff_lines, layout_type)
 
         assert.are.same(diff_dto.lines, {})
         assert.are.same(diff_dto.current_lines, pre_diff_lines)
@@ -312,7 +312,7 @@ describe('Diff:', function()
             type = 'change',
           }),
         }
-        local diff_dto = Diff(hunks):call(pre_diff_lines, layout_type)
+        local diff_dto = diff_service:generate(hunks, pre_diff_lines, layout_type)
 
         assert.are.same(diff_dto.lines, {})
         assert.are.same(diff_dto.current_lines, { '', 'a', 'a', 'k', 'd', 'l' })
@@ -414,10 +414,8 @@ describe('Diff:', function()
     end)
 
     describe('unified', function()
-      local layout_type = 'unified'
-
       it('should return correct code dto', function()
-        local diff_dto = Diff(hunks):call_deleted(pre_diff_lines, layout_type)
+        local diff_dto = diff_service:generate_unified_deleted(hunks, pre_diff_lines)
 
         assert.are.same(diff_dto.lines, pre_diff_lines)
         assert.are.same(diff_dto.current_lines, {})
@@ -465,10 +463,8 @@ describe('Diff:', function()
     end)
 
     describe('split', function()
-      local layout_type = 'split'
-
       it('should return correct code dto', function()
-        local diff_dto = Diff(hunks):call_deleted(pre_diff_lines, layout_type)
+        local diff_dto = diff_service:generate_split_deleted(hunks, pre_diff_lines)
 
         assert.are.same(diff_dto.lines, {})
         assert.are.same(diff_dto.current_lines, { '', '', '', '', '' })

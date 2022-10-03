@@ -81,7 +81,7 @@ function ProjectDiffScreen:hunk_down()
 end
 
 function ProjectDiffScreen:is_current_list_item_staged()
-  loop.await_fast_event()
+  loop.await()
   local current_list_item = self.foldable_list_view:get_current_list_item()
   local metadata = current_list_item.metadata
 
@@ -93,7 +93,7 @@ function ProjectDiffScreen:is_current_list_item_staged()
 end
 
 function ProjectDiffScreen:is_current_list_item_unstaged()
-  loop.await_fast_event()
+  loop.await()
   local current_list_item = self.foldable_list_view:get_current_list_item()
   local metadata = current_list_item.metadata
 
@@ -131,7 +131,7 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   local hunk, index = self.code_view:get_current_hunk_under_cursor()
 
   if not hunk then
@@ -145,9 +145,9 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.store:fetch(self.layout_type, { partial_hydrate = true })
-  loop.await_fast_event()
+  loop.await()
 
   self.foldable_list_view:evict_cache():render()
 
@@ -171,7 +171,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   local hunk, index = self.code_view:get_current_hunk_under_cursor()
 
   if not hunk then
@@ -185,9 +185,9 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.store:fetch(self.layout_type, { partial_hydrate = true })
-  loop.await_fast_event()
+  loop.await()
 
   local list_item = self.foldable_list_view:evict_cache():render():query_list_item(function(list_item)
     if list_item.items then
@@ -283,7 +283,7 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   local decision =
     console.input(string.format('Are you sure you want to discard changes in %s? (y/N) ', filename)):lower()
 
@@ -291,9 +291,9 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.mutation:reset_file(filename)
-  loop.await_fast_event()
+  loop.await()
 
   if err then
     console.debug.error(err)
@@ -306,16 +306,16 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
 end, 15)
 
 ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
-  loop.await_fast_event()
+  loop.await()
   local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) '):lower()
 
   if decision ~= 'yes' and decision ~= 'y' then
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.mutation:reset_all()
-  loop.await_fast_event()
+  loop.await()
 
   if err then
     console.debug.error(err)
@@ -328,9 +328,9 @@ ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
 end, 15)
 
 function ProjectDiffScreen:render()
-  loop.await_fast_event()
+  loop.await()
   self.store:fetch(self.layout_type, { hydrate = self.hydrate })
-  loop.await_fast_event()
+  loop.await()
 
   local list_item = self.foldable_list_view:render():get_current_list_item()
 
@@ -378,7 +378,7 @@ end
 function ProjectDiffScreen:show()
   console.log('Processing project diff')
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.store:fetch(self.layout_type, { hydrate = self.hydrate })
 
   if err then
@@ -386,7 +386,7 @@ function ProjectDiffScreen:show()
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.app_bar_view:show()
   self.code_view:show(self.layout_type)
   self.foldable_list_view:show()

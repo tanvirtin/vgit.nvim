@@ -76,7 +76,7 @@ function FoldableListComponent:query_list_item(callback)
 end
 
 function FoldableListComponent:generate_lines()
-  local spacing = 2
+  local spacing = 3
   local current_lnum = 0
   local foldable_list_shadow = {}
   local hls = {}
@@ -209,9 +209,9 @@ end
 function FoldableListComponent:sync()
   self.buffer:clear_namespace():set_lines(self:generate_lines())
 
-  loop.await_fast_event()
+  loop.await()
   self:paint()
-  loop.await_fast_event()
+  loop.await()
 
   return self
 end

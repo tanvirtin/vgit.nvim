@@ -4,6 +4,7 @@ local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local GitBuffer = require('vgit.git.GitBuffer')
+local event_type = require('vgit.core.event_type')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local live_gutter_setting = require('vgit.settings.live_gutter')
 
@@ -16,13 +17,13 @@ function LiveGutter:constructor()
 end
 
 function LiveGutter:register_events()
-  event.on('BufRead', function() self:attach() end)
+  event.on(event_type.BufRead, function() self:attach() end)
 
   return self
 end
 
 LiveGutter.clear = loop.async(function(_, buffer)
-  loop.await_fast_event()
+  loop.await()
   if buffer:is_rendering() then
     return
   end
@@ -31,22 +32,22 @@ LiveGutter.clear = loop.async(function(_, buffer)
 end)
 
 LiveGutter.sync = loop.debounced_async(function(self, buffer)
-  loop.await_fast_event()
+  loop.await()
   if not buffer:is_valid() then
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   local live_signs = buffer:get_cached_live_signs()
 
-  loop.await_fast_event()
+  loop.await()
   buffer:clear_cached_live_signs()
 
-  loop.await_fast_event()
+  loop.await()
   local err = buffer.git_object:live_hunks(buffer:get_lines())
 
   if err then
-    loop.await_fast_event()
+    loop.await()
     buffer:set_cached_live_signs(live_signs)
     console.debug.error(err)
 
@@ -56,28 +57,28 @@ LiveGutter.sync = loop.debounced_async(function(self, buffer)
   local hunks = buffer.git_object.hunks
 
   if not hunks then
-    loop.await_fast_event()
+    loop.await()
     buffer:set_cached_live_signs(live_signs)
 
     return
   else
     local diff_status = buffer.git_object:generate_diff_status()
 
-    loop.await_fast_event()
+    loop.await()
     buffer:set_var('vgit_status', diff_status)
   end
 
-  loop.await_fast_event()
+  loop.await()
   self:clear(buffer)
 
   for i = 1, #hunks do
-    loop.await_fast_event()
+    loop.await()
     buffer:cache_live_sign(hunks[i])
   end
 end, 20)
 
 LiveGutter.resync = loop.async(function(self, buffer)
-  loop.await_fast_event()
+  loop.await()
   buffer = buffer or git_buffer_store.current()
 
   if buffer then
@@ -114,42 +115,42 @@ function LiveGutter:render(buffer, top, bot)
 end
 
 function LiveGutter:attach()
-  loop.await_fast_event()
+  loop.await()
   local buffer = Buffer(0)
   local git_buffer = GitBuffer(buffer)
 
-  loop.await_fast_event()
+  loop.await()
   if git_buffer:is_in_store() then
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   buffer:sync_git()
 
-  loop.await_fast_event()
+  loop.await()
   if not git_buffer:is_inside_git_dir() then
     self:resync(buffer)
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   if not buffer:is_valid() then
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   if not buffer:is_in_disk() then
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   if git_buffer:is_ignored() then
     return
   end
 
-  loop.await_fast_event()
+  loop.await()
   git_buffer_store.add(buffer)
-  loop.await_fast_event()
+  loop.await()
 
   buffer
     :attach_to_changes({
@@ -158,12 +159,12 @@ function LiveGutter:attach()
           return
         end
 
-        loop.await_fast_event()
+        loop.await()
         self:sync(buffer)
       end),
 
       on_reload = loop.async(function()
-        loop.await_fast_event()
+        loop.await()
         self:sync(buffer)
       end),
 

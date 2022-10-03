@@ -1,8 +1,8 @@
-local Diff = require('vgit.git.Diff')
 local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
+local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
 
@@ -68,7 +68,7 @@ end
 
 function Store:get_diff_dto(index)
   local log_err, log = self:get(index)
-  loop.await_fast_event()
+  loop.await()
 
   if log_err then
     return log_err
@@ -83,25 +83,20 @@ function Store:get_diff_dto(index)
   end
 
   local hunks_err, hunks = self.git_object:remote_hunks(parent_hash, commit_hash)
-  loop.await_fast_event()
+  loop.await()
 
   if hunks_err then
     return hunks_err
   end
 
   local lines_err, lines = self.git_object:lines(commit_hash)
-  loop.await_fast_event()
+  loop.await()
 
   if lines_err then
     return lines_err
   end
 
-  local diff
-  if self.shape == 'unified' then
-    diff = Diff(hunks):unified(lines)
-  else
-    diff = Diff(hunks):split(lines)
-  end
+  local diff = diff_service:generate(hunks, lines, self.shape)
 
   self._cache[id] = diff
 

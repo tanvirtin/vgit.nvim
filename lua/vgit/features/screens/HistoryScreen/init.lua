@@ -28,7 +28,6 @@ function HistoryScreen:constructor()
         footer = false,
       },
       column_labels = {
-        'Revision',
         'Author Name',
         'Commit',
         'Date',
@@ -38,7 +37,6 @@ function HistoryScreen:constructor()
         local timestamp = log.timestamp
 
         return {
-          log.revision,
           log.author_name or '',
           log.commit_hash:sub(1, 8) or '',
           utils.date.format(timestamp),
@@ -90,7 +88,7 @@ function HistoryScreen:show()
       mode = 'n',
       key = '<enter>',
       handler = loop.async(function()
-        loop.await_fast_event()
+        loop.await()
         local row = self.table_view:get_current_row()
 
         if not row then
@@ -99,7 +97,7 @@ function HistoryScreen:show()
 
         vim.cmd('quit')
 
-        loop.await_fast_event()
+        loop.await()
         vim.cmd(string.format('VGit project_commits_preview %s', row.commit_hash))
       end),
     },

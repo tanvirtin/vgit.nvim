@@ -24,7 +24,7 @@ end
 function ProjectStashScreen:show(options)
   console.log('Processing logs')
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.store:fetch(options, { hydrate = self.hydrate })
 
   if err then
@@ -32,13 +32,13 @@ function ProjectStashScreen:show(options)
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.view:show():set_keymap({
     {
       mode = 'n',
       key = '<tab>',
       handler = loop.async(function()
-        loop.await_fast_event()
+        loop.await()
 
         self.view:select()
       end),
@@ -55,7 +55,7 @@ function ProjectStashScreen:show(options)
 
         vim.cmd('quit')
 
-        loop.await_fast_event()
+        loop.await()
         vim.cmd(
           utils.list.reduce(
             view:get_selected(),

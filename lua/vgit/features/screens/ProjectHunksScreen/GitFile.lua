@@ -1,7 +1,7 @@
 local fs = require('vgit.core.fs')
-local Diff = require('vgit.git.Diff')
 local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
+local diff_service = require('vgit.services.diff')
 
 local GitFile = Object:extend()
 
@@ -113,13 +113,9 @@ function GitFile:get_diff_dto()
 
   local file = self.file
   local status = file.status
-  local diff_dto
-
-  if status and status:has_either('DD') then
-    diff_dto = Diff(hunks):call_deleted(lines, self.shape)
-  else
-    diff_dto = Diff(hunks):call(lines, self.shape)
-  end
+  local diff_dto = diff_service:generate(hunks, lines, self.shape, {
+    is_deleted = status and status:has_either('DD'),
+  })
 
   self._cache['diff_dto'] = diff_dto
 

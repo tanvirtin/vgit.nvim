@@ -44,7 +44,7 @@ end
 
 loop.scheduler = loop.promisify(vim.schedule, 1)
 
-function loop.await_fast_event(times)
+function loop.await(times)
   for _ = 1, times or 1 do
     loop.scheduler()
   end

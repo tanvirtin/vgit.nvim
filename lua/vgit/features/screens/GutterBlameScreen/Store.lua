@@ -1,6 +1,6 @@
 local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
-local DiffDTO = require('vgit.git.DiffDTO')
+local DiffDTO = require('vgit.services.diff.DiffDTO')
 local GitObject = require('vgit.git.GitObject')
 
 local Store = Object:extend()
@@ -33,9 +33,9 @@ function Store:fetch(filename, opts)
 
   self.git_object = GitObject(filename)
 
-  loop.await_fast_event()
+  loop.await()
   self.err, self.data = self.git_object:blames()
-  loop.await_fast_event()
+  loop.await()
 
   return self.err, self.data
 end
@@ -47,9 +47,9 @@ function Store:get_diff_dto()
     return nil, self._cache
   end
 
-  loop.await_fast_event()
+  loop.await()
   local err, lines = self.git_object:lines()
-  loop.await_fast_event()
+  loop.await()
 
   if err then
     return err

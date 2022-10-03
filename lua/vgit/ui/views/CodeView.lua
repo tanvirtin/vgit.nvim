@@ -774,9 +774,9 @@ end
 function CodeView:render()
   local ok, msg = pcall(function()
     -- NOTE: important to clear the namespace first.
-    loop.await_fast_event(5)
+    loop.await(5)
     self:clear_namespace()
-    loop.await_fast_event(5)
+    loop.await(5)
 
     local err, _ = self.store:get_diff_dto()
 
@@ -801,11 +801,14 @@ function CodeView:render()
 end
 
 CodeView.render_debounced = loop.debounced_async(function(self, callback)
+  loop.await()
+
   self:render()
+
   if callback then
     callback()
   end
-end, 100)
+end, 300)
 
 function CodeView:mount(opts)
   if self.layout_type == 'split' then

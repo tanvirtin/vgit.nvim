@@ -30,7 +30,7 @@ function DebugScreen:show(source)
 
   console.log(string.format('Processing %s', source))
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.store:fetch(source, { hydrate = self.hydrate })
 
   if err then
@@ -38,7 +38,7 @@ function DebugScreen:show(source)
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.view:show()
 
   return true

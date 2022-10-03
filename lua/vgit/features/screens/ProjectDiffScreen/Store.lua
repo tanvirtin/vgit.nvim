@@ -1,9 +1,9 @@
 local fs = require('vgit.core.fs')
-local Diff = require('vgit.git.Diff')
 local loop = require('vgit.core.loop')
 local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
 
@@ -39,7 +39,7 @@ function Store:partition_status(status_files)
       self._cache.list_entries[id] = data
       changed_files[#changed_files + 1] = data
     else
-      if file:is_unstaged() then
+      if not file:has_conflict() and file:is_unstaged() then
         local id = utils.math.uuid()
         local data = {
           id = id,
@@ -50,7 +50,7 @@ function Store:partition_status(status_files)
         self._cache.list_entries[id] = data
         changed_files[#changed_files + 1] = data
       end
-      if file:is_staged() then
+      if not file:has_conflict() and file:is_staged() then
         local id = utils.math.uuid()
         local data = {
           id = id,
@@ -79,7 +79,7 @@ function Store:get_file_lines(file, status)
   else
     lines_err, lines = fs.read_file(filename)
   end
-  loop.await_fast_event()
+  loop.await()
 
   return lines_err, lines
 end
@@ -99,21 +99,17 @@ function Store:get_file_hunks(file, status, lines)
     hunks_err, hunks = self.git:index_hunks(filename)
   end
 
-  loop.await_fast_event()
+  loop.await()
 
   return hunks_err, hunks
 end
 
 function Store:get_file_diff(file, lines, hunks)
-  local shape = self.shape
   local status = file.status
-  local diff
 
-  if status:has_either('DD') then
-    diff = shape == 'unified' and Diff(hunks):deleted_unified(lines) or Diff(hunks):deleted_split(lines)
-  else
-    diff = shape == 'unified' and Diff(hunks):unified(lines) or Diff(hunks):split(lines)
-  end
+  local diff = diff_service:generate(hunks, lines, self.shape, {
+    is_deleted = status:has_either('DD'),
+  })
 
   return diff
 end
@@ -153,7 +149,7 @@ function Store:fetch(shape, opts)
   end
 
   local status_files_err, status_files = self.git:status()
-  loop.await_fast_event()
+  loop.await()
 
   if status_files_err then
     return status_files_err, nil

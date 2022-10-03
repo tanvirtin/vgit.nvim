@@ -99,7 +99,7 @@ function ProjectHunksScreen:show(opts)
 
   console.log('Processing project hunks')
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.store:fetch(self.layout_type, opts)
 
   if err then
@@ -107,7 +107,7 @@ function ProjectHunksScreen:show(opts)
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.code_view:show(self.layout_type)
   self.foldable_list_view:show()
 

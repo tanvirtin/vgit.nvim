@@ -35,7 +35,7 @@ function console.format(msg)
 end
 
 console.log = loop.async(function(msg, hi)
-  loop.await_fast_event()
+  loop.await()
   vim.api.nvim_echo({ { console.format(msg), hi } }, false, {})
 
   return console
@@ -54,14 +54,14 @@ console.warn = loop.async(function(msg)
 end)
 
 console.clear = loop.async(function()
-  loop.await_fast_event()
+  loop.await()
   vim.cmd('echo ""')
 
   return console
 end)
 
 console.info = loop.async(function(msg)
-  loop.await_fast_event()
+  loop.await()
   vim.notify(msg, 'info')
 
   return console

@@ -116,7 +116,7 @@ function DiffScreen:show(opts)
   local buffer = Buffer(0)
   local window = Window(0)
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.store:fetch(self.layout_type, buffer.filename, opts)
 
   if err then
@@ -124,7 +124,7 @@ function DiffScreen:show(opts)
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
 
   if self.app_bar_view then
     self.app_bar_view:show()
@@ -141,35 +141,35 @@ function DiffScreen:show(opts)
         mode = 'n',
         key = diff_preview_setting:get('keymaps').reset,
         handler = loop.debounced_async(function()
-          loop.await_fast_event()
+          loop.await()
           local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) '):lower()
 
           if decision ~= 'yes' and decision ~= 'y' then
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           local _, filename = self.store:get_filename()
-          loop.await_fast_event()
+          loop.await()
 
           if not filename then
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           self.mutation:reset_file(filename)
-          loop.await_fast_event()
+          loop.await()
 
-          loop.await_fast_event()
+          loop.await()
           local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
-          loop.await_fast_event()
+          loop.await()
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           self.code_view:render()
         end, 100),
       },
@@ -177,28 +177,28 @@ function DiffScreen:show(opts)
         mode = 'n',
         key = diff_preview_setting:get('keymaps').buffer_stage,
         handler = loop.debounced_async(function()
-          loop.await_fast_event()
+          loop.await()
           local _, filename = self.store:get_filename()
-          loop.await_fast_event()
+          loop.await()
 
           if not filename then
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           self.mutation:stage_file(filename)
-          loop.await_fast_event()
+          loop.await()
 
-          loop.await_fast_event()
+          loop.await()
           local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
-          loop.await_fast_event()
+          loop.await()
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           self.code_view:render()
         end, 100),
       },
@@ -206,28 +206,28 @@ function DiffScreen:show(opts)
         mode = 'n',
         key = diff_preview_setting:get('keymaps').buffer_unstage,
         handler = loop.debounced_async(function()
-          loop.await_fast_event()
+          loop.await()
           local _, filename = self.store:get_filename()
-          loop.await_fast_event()
+          loop.await()
 
           if not filename then
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           self.mutation:unstage_file(filename)
-          loop.await_fast_event()
+          loop.await()
 
-          loop.await_fast_event()
+          loop.await()
           local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
-          loop.await_fast_event()
+          loop.await()
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           self.code_view:render()
         end, 100),
       },
@@ -239,17 +239,17 @@ function DiffScreen:show(opts)
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           local _, filename = self.store:get_filename()
-          loop.await_fast_event()
+          loop.await()
 
           if not filename then
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           local hunk, index = self.code_view:get_current_hunk_under_cursor()
-          loop.await_fast_event()
+          loop.await()
 
           if not hunk then
             return
@@ -257,7 +257,7 @@ function DiffScreen:show(opts)
 
           self.mutation:stage_hunk(filename, hunk)
 
-          loop.await_fast_event()
+          loop.await()
           local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
 
           if refetch_err then
@@ -276,36 +276,36 @@ function DiffScreen:show(opts)
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           local _, filename = self.store:get_filename()
-          loop.await_fast_event()
+          loop.await()
 
           if not filename then
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           local hunk, index = self.code_view:get_current_hunk_under_cursor()
-          loop.await_fast_event()
+          loop.await()
 
           if not hunk then
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           self.mutation:unstage_hunk(filename, hunk)
-          loop.await_fast_event()
+          loop.await()
 
-          loop.await_fast_event()
+          loop.await()
           local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
-          loop.await_fast_event()
+          loop.await()
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           self.code_view:render():navigate_to_mark(index, 'center')
         end, 100),
       },
@@ -313,28 +313,28 @@ function DiffScreen:show(opts)
         mode = 'n',
         key = '<enter>',
         handler = loop.debounced_async(function()
-          loop.await_fast_event()
+          loop.await()
           local mark = self.code_view:get_current_mark_under_cursor()
-          loop.await_fast_event()
+          loop.await()
 
           if not mark then
             return
           end
 
-          loop.await_fast_event()
+          loop.await()
           local _, filename = self.store:get_filename()
-          loop.await_fast_event()
+          loop.await()
 
           if not filename then
             return
           end
 
           self:destroy()
-          loop.await_fast_event()
+          loop.await()
 
           fs.open(filename)
 
-          loop.await_fast_event()
+          loop.await()
           Window(0):set_lnum(mark.top_relative):position_cursor('center')
         end, 100),
       },
@@ -350,16 +350,16 @@ function DiffScreen:show(opts)
             self.is_staged = false
             opts.is_staged = self.is_staged
 
-            loop.await_fast_event()
+            loop.await()
             local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
-            loop.await_fast_event()
+            loop.await()
 
             if refetch_err then
               console.debug.error(refetch_err).error(refetch_err)
               return
             end
 
-            loop.await_fast_event()
+            loop.await()
             self.code_view:render():navigate_to_mark(1, 'center')
           elseif not is_staged then
             self.code_view:set_title('Staged Diff')
@@ -367,16 +367,16 @@ function DiffScreen:show(opts)
             self.is_staged = true
             opts.is_staged = self.is_staged
 
-            loop.await_fast_event()
+            loop.await()
             local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
-            loop.await_fast_event()
+            loop.await()
 
             if refetch_err then
               console.debug.error(refetch_err).error(refetch_err)
               return
             end
 
-            loop.await_fast_event()
+            loop.await()
             self.code_view:render():navigate_to_mark(1, 'center')
           end
         end, 100),

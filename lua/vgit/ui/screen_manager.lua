@@ -1,6 +1,7 @@
 local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
 local keymap = require('vgit.core.keymap')
+local event_type = require('vgit.core.event_type')
 local scene_setting = require('vgit.settings.scene')
 local DiffScreen = require('vgit.features.screens.DiffScreen')
 local DebugScreen = require('vgit.features.screens.DebugScreen')
@@ -35,14 +36,14 @@ function screen_manager.handle_buf_win_enter()
 end
 
 function screen_manager.handle_buf_win_leave()
-  loop.await_fast_event()
+  loop.await()
   if not screen_manager.is_minimized and screen_manager.has_active_screen() then
     return screen_manager.destroy_active_screen()
   end
 end
 
 function screen_manager.handle_win_enter()
-  loop.await_fast_event()
+  loop.await()
   if not screen_manager.is_minimized and screen_manager.has_active_screen() then
     return screen_manager.minimize_screen()
   end
@@ -52,9 +53,9 @@ function screen_manager.handle_win_enter()
 end
 
 function screen_manager.register_events()
-  event.on('BufWinEnter', screen_manager.handle_buf_win_enter)
-  event.on('WinEnter', screen_manager.handle_win_enter)
-  event.on('BufWinLeave', screen_manager.handle_buf_win_leave)
+  event.on(event_type.WinEnter, screen_manager.handle_win_enter)
+  event.on(event_type.BufWinEnter, screen_manager.handle_buf_win_enter)
+  event.on(event_type.BufWinLeave, screen_manager.handle_buf_win_leave)
 end
 
 function screen_manager.register_keymaps()

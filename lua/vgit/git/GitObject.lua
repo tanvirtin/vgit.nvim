@@ -51,12 +51,12 @@ function GitObject:stage_hunk_from_patch(patch)
 
   fs.write_file(patch_filename, patch)
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.git:stage_hunk_from_patch(patch_filename)
 
-  loop.await_fast_event()
+  loop.await()
   fs.remove_file(patch_filename)
-  loop.await_fast_event()
+  loop.await()
 
   return err
 end
@@ -66,12 +66,12 @@ function GitObject:unstage_hunk_from_patch(patch)
 
   fs.write_file(patch_filename, patch)
 
-  loop.await_fast_event()
+  loop.await()
   local err = self.git:unstage_hunk_from_patch(patch_filename)
 
-  loop.await_fast_event()
+  loop.await()
   fs.remove_file(patch_filename)
-  loop.await_fast_event()
+  loop.await()
 
   return err
 end
@@ -140,7 +140,7 @@ function GitObject:native_hunks(filename, current_lines)
 
   local original_lines_err, original_lines = self:lines()
 
-  loop.await_fast_event()
+  loop.await()
   if original_lines_err then
     return original_lines_err
   end
@@ -200,23 +200,23 @@ function GitObject:piped_hunks(filename, current_lines)
   local temp_filename_a = fs.tmpname()
   local original_lines_err, original_lines = self:lines()
 
-  loop.await_fast_event()
+  loop.await()
   if original_lines_err then
     return original_lines_err
   end
 
   fs.write_file(temp_filename_a, original_lines)
-  loop.await_fast_event()
+  loop.await()
   fs.write_file(temp_filename_b, current_lines)
-  loop.await_fast_event()
+  loop.await()
 
   local hunks_err, hunks = self.git:file_hunks(temp_filename_a, temp_filename_b, { is_background = true })
 
-  loop.await_fast_event()
+  loop.await()
   fs.remove_file(temp_filename_a)
-  loop.await_fast_event()
+  loop.await()
   fs.remove_file(temp_filename_b)
-  loop.await_fast_event()
+  loop.await()
 
   if not hunks_err then
     self.hunks = hunks
@@ -226,7 +226,7 @@ function GitObject:piped_hunks(filename, current_lines)
 end
 
 function GitObject:live_hunks(current_lines)
-  loop.await_fast_event()
+  loop.await()
   local filename = self:tracked_filename()
   local inexpensive_lines_limit = 5000
 

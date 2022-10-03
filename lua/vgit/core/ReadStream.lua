@@ -16,7 +16,7 @@ function ReadStream:parse_result(output, callback)
 
   for i = 1, #output do
     if self:is_background() and i % 100 == 0 then
-      loop.await_fast_event()
+      loop.await()
     end
 
     local char = output:sub(i, i)
