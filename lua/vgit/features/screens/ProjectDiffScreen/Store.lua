@@ -110,11 +110,9 @@ function Store:get_file_diff(file, lines, hunks)
   local diff
 
   if status:has_either('DD') then
-    diff = shape == 'unified' and Diff(hunks):deleted_unified(lines)
-      or Diff(hunks):deleted_split(lines)
+    diff = shape == 'unified' and Diff(hunks):deleted_unified(lines) or Diff(hunks):deleted_split(lines)
   else
-    diff = shape == 'unified' and Diff(hunks):unified(lines)
-      or Diff(hunks):split(lines)
+    diff = shape == 'unified' and Diff(hunks):unified(lines) or Diff(hunks):split(lines)
   end
 
   return diff
@@ -174,9 +172,7 @@ function Store:fetch(shape, opts)
   return nil, self.data
 end
 
-function Store:get_all()
-  return self.err, self.data
-end
+function Store:get_all() return self.err, self.data end
 
 function Store:set_id(id)
   self.id = id
@@ -256,9 +252,7 @@ function Store:get_filetype()
   return nil, datum.file.filetype
 end
 
-function Store:get_lnum()
-  return nil, self._cache.lnum
-end
+function Store:get_lnum() return nil, self._cache.lnum end
 
 function Store:set_lnum(lnum)
   self._cache.lnum = lnum
@@ -266,9 +260,7 @@ function Store:set_lnum(lnum)
   return self
 end
 
-function Store:get_list_folds()
-  return nil, self._cache.list_folds
-end
+function Store:get_list_folds() return nil, self._cache.list_folds end
 
 function Store:set_list_folds(list_folds)
   self._cache.list_folds = list_folds

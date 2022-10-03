@@ -34,9 +34,7 @@ function MinimizedView:set_lines(lines)
   return self
 end
 
-function MinimizedView:is_focused()
-  return self.scene:get('minimized_view'):is_focused()
-end
+function MinimizedView:is_focused() return self.scene:get('minimized_view'):is_focused() end
 
 function MinimizedView:is_mounted()
   local component = self.scene:get('minimized_view')

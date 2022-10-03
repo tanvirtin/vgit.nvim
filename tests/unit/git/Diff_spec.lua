@@ -1,9 +1,7 @@
 local Hunk = require('vgit.git.cli.models.Hunk')
 local Diff = require('vgit.git.Diff')
 
-local build_hunk = function(hunk)
-  return setmetatable(hunk, Hunk)
-end
+local build_hunk = function(hunk) return setmetatable(hunk, Hunk) end
 
 describe('Diff:', function()
   describe('call', function()
@@ -318,10 +316,7 @@ describe('Diff:', function()
 
         assert.are.same(diff_dto.lines, {})
         assert.are.same(diff_dto.current_lines, { '', 'a', 'a', 'k', 'd', 'l' })
-        assert.are.same(
-          diff_dto.previous_lines,
-          { 'a', 'a', 'c', '', 'd', 'e' }
-        )
+        assert.are.same(diff_dto.previous_lines, { 'a', 'a', 'c', '', 'd', 'e' })
         assert.are.same(diff_dto.hunks, hunks)
         assert.are.same(diff_dto.lnum_changes, {
           {

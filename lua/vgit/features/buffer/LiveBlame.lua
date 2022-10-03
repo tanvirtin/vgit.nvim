@@ -1,13 +1,13 @@
-local Namespace = require('vgit.core.Namespace')
+local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
+local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
-local GitBuffer = require('vgit.git.GitBuffer')
 local console = require('vgit.core.console')
-local event = require('vgit.core.event')
+local GitBuffer = require('vgit.git.GitBuffer')
+local Namespace = require('vgit.core.Namespace')
 local live_blame_setting = require('vgit.settings.live_blame')
 local git_buffer_store = require('vgit.git.git_buffer_store')
-local Object = require('vgit.core.Object')
-local loop = require('vgit.core.loop')
 
 local LiveBlame = Object:extend()
 
@@ -21,17 +21,12 @@ function LiveBlame:constructor()
 end
 
 function LiveBlame:register_events()
-  event.on('BufEnter', function()
-    self:desync_all()
-  end).on('WinEnter', function()
-    self:desync_all()
-  end).on('CursorHold', function()
-    self:sync()
-  end).on('CursorMoved', function()
-    self:desync()
-  end).on('InsertEnter', function()
-    self:desync()
-  end)
+  event
+    .on('BufEnter', function() self:desync_all() end)
+    .on('WinEnter', function() self:desync_all() end)
+    .on('CursorHold', function() self:sync() end)
+    .on('CursorMoved', function() self:desync() end)
+    .on('InsertEnter', function() self:desync() end)
 
   return self
 end
@@ -42,14 +37,7 @@ function LiveBlame:display(lnum, buffer, config, blame)
 
     if type(virt_text) == 'string' then
       loop.await_fast_event()
-      self.namespace:transpose_virtual_text(
-        buffer,
-        virt_text,
-        'GitComment',
-        lnum - 1,
-        0,
-        'eol'
-      )
+      self.namespace:transpose_virtual_text(buffer, virt_text, 'GitComment', lnum - 1, 0, 'eol')
     end
   end
 end
@@ -77,9 +65,7 @@ LiveBlame.sync = loop.debounced_async(function(self)
   loop.await_fast_event()
 
   if buffer:editing() then
-    console.debug.warning(
-      string.format('Buffer %s is being edited right now', buffer.bufnr)
-    )
+    console.debug.warning(string.format('Buffer %s is being edited right now', buffer.bufnr))
     return
   end
 

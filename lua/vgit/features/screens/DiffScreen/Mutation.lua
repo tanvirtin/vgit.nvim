@@ -30,13 +30,9 @@ function Mutation:unstage_hunk(filename, hunk)
   return git_object:unstage_hunk(hunk)
 end
 
-function Mutation:stage_file(filename)
-  return self.git:stage_file(filename)
-end
+function Mutation:stage_file(filename) return self.git:stage_file(filename) end
 
-function Mutation:unstage_file(filename)
-  return self.git:unstage_file(filename)
-end
+function Mutation:unstage_file(filename) return self.git:unstage_file(filename) end
 
 function Mutation:reset_file(filename)
   if self.git:is_in_remote(filename) then

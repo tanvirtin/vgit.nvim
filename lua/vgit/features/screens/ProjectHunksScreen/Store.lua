@@ -126,9 +126,7 @@ function Store:get(id)
   return nil, datum
 end
 
-function Store:get_all()
-  return self.err, self.data
-end
+function Store:get_all() return self.err, self.data end
 
 function Store:get_diff_dto()
   local data_err, data = self:get()
@@ -190,9 +188,7 @@ function Store:get_hunk()
   return nil, hunk
 end
 
-function Store:get_lnum()
-  return nil, self._cache.lnum
-end
+function Store:get_lnum() return nil, self._cache.lnum end
 
 function Store:set_lnum(lnum)
   self._cache.lnum = lnum
@@ -200,9 +196,7 @@ function Store:set_lnum(lnum)
   return self
 end
 
-function Store:get_list_folds()
-  return nil, self._cache.list_folds
-end
+function Store:get_list_folds() return nil, self._cache.list_folds end
 
 function Store:set_list_folds(list_folds)
   self._cache.list_folds = list_folds

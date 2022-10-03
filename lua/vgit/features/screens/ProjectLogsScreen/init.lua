@@ -1,7 +1,7 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Object = require('vgit.core.Object')
 local utils = require('vgit.core.utils')
+local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local GitLogsView = require('vgit.ui.views.GitLogsView')
 local Store = require('vgit.features.screens.ProjectLogsScreen.Store')
@@ -60,9 +60,7 @@ function ProjectLogsScreen:show(options)
           utils.list.reduce(
             view:get_selected(),
             'VGit project_commits_preview',
-            function(cmd, log)
-              return cmd .. ' ' .. log.commit_hash
-            end
+            function(cmd, log) return cmd .. ' ' .. log.commit_hash end
           )
         )
       end),

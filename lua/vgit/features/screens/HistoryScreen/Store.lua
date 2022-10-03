@@ -1,6 +1,6 @@
 local Diff = require('vgit.git.Diff')
-local utils = require('vgit.core.utils')
 local loop = require('vgit.core.loop')
+local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
 
@@ -46,9 +46,7 @@ function Store:fetch(shape, filename, opts)
   return self.err, self.data
 end
 
-function Store:get_all()
-  return self.err, self.data
-end
+function Store:get_all() return self.err, self.data end
 
 function Store:set_index(index)
   self.index = index
@@ -84,10 +82,7 @@ function Store:get_diff_dto(index)
     return nil, self._cache[id]
   end
 
-  local hunks_err, hunks = self.git_object:remote_hunks(
-    parent_hash,
-    commit_hash
-  )
+  local hunks_err, hunks = self.git_object:remote_hunks(parent_hash, commit_hash)
   loop.await_fast_event()
 
   if hunks_err then
@@ -113,17 +108,11 @@ function Store:get_diff_dto(index)
   return nil, diff
 end
 
-function Store:get_filename()
-  return nil, self.git_object:get_filename()
-end
+function Store:get_filename() return nil, self.git_object:get_filename() end
 
-function Store:get_filetype()
-  return nil, self.git_object:get_filetype()
-end
+function Store:get_filetype() return nil, self.git_object:get_filetype() end
 
-function Store:get_lnum()
-  return nil, self._cache.lnum
-end
+function Store:get_lnum() return nil, self._cache.lnum end
 
 function Store:set_lnum(lnum)
   self._cache.lnum = lnum

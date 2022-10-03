@@ -44,8 +44,7 @@ function ComponentPlot:configure_bounds()
 
   if win_plot.row + win_plot.height > global_height then
     if self.is_at_cursor then
-      win_plot.row = win_plot.row
-        - (win_plot.row + win_plot.height - global_height)
+      win_plot.row = win_plot.row - (win_plot.row + win_plot.height - global_height)
 
       if has_footer then
         win_plot.row = win_plot.row - footer_height
@@ -184,8 +183,7 @@ function ComponentPlot:build()
   self.header_win_plot = utils.object.clone(win_plot)
   self.footer_win_plot = utils.object.clone(win_plot)
 
-  self:configure_bounds():configure_height():configure_width():configure_row():configure_col().is_built =
-    true
+  self:configure_bounds():configure_height():configure_width():configure_row():configure_col().is_built = true
 
   return self
 end

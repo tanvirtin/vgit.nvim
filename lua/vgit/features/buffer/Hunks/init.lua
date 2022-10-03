@@ -1,12 +1,10 @@
-local console = require('vgit.core.console')
-local Window = require('vgit.core.Window')
 local loop = require('vgit.core.loop')
+local Window = require('vgit.core.Window')
 local Object = require('vgit.core.Object')
+local console = require('vgit.core.console')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local navigation = require('vgit.features.buffer.Hunks.navigation')
-local NavigationVirtualText = require(
-  'vgit.features.buffer.Hunks.NavigationVirtualText'
-)
+local NavigationVirtualText = require('vgit.features.buffer.Hunks.NavigationVirtualText')
 
 local Hunks = Object:extend()
 
@@ -30,11 +28,7 @@ function Hunks:move_up()
     local window = Window(0)
     local selected = navigation.hunk_up(window, hunks)
 
-    self.navigation_virtual_text:place(
-      buffer,
-      window,
-      string.format('%s/%s Changes', selected, #hunks)
-    )
+    self.navigation_virtual_text:place(buffer, window, string.format('%s/%s Changes', selected, #hunks))
   end
 end
 
@@ -50,11 +44,7 @@ function Hunks:move_down()
   if hunks and #hunks ~= 0 then
     local window = Window(0)
     local selected = navigation.hunk_down(window, hunks)
-    self.navigation_virtual_text:place(
-      buffer,
-      window,
-      string.format('%s/%s Changes', selected, #hunks)
-    )
+    self.navigation_virtual_text:place(buffer, window, string.format('%s/%s Changes', selected, #hunks))
   end
 end
 
@@ -233,12 +223,7 @@ function Hunks:cursor_reset()
     local hunk = hunks[i]
     if
       (lnum >= hunk.top and lnum <= hunk.bot)
-      or (
-        hunk.top == 0
-        and hunk.bot == 0
-        and lnum - 1 == hunk.top
-        and lnum - 1 == hunk.bot
-      )
+      or (hunk.top == 0 and hunk.bot == 0 and lnum - 1 == hunk.top and lnum - 1 == hunk.bot)
     then
       selected_hunk = hunk
       selected_hunk_index = i

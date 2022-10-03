@@ -2,9 +2,7 @@ local Object = {}
 
 Object.__index = Object
 
-function Object:constructor()
-  return {}
-end
+function Object:constructor() return {} end
 
 function Object:extend()
   local cls = {}
@@ -34,8 +32,6 @@ function Object:is(T)
   return false
 end
 
-function Object:__call(...)
-  return setmetatable(self:constructor(...) or self, self)
-end
+function Object:__call(...) return setmetatable(self:constructor(...) or self, self) end
 
 return Object

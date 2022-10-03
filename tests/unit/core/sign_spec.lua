@@ -3,13 +3,9 @@ local mock = require('luassert.mock')
 local spy = require('luassert.spy')
 
 describe('sign:', function()
-  before_each(function()
-    vim.fn.sign_define = mock(vim.fn.sign_define, true)
-  end)
+  before_each(function() vim.fn.sign_define = mock(vim.fn.sign_define, true) end)
 
-  after_each(function()
-    mock.revert(vim.fn.sign_define)
-  end)
+  after_each(function() mock.revert(vim.fn.sign_define) end)
 
   describe('define', function()
     it('defines a sign by calling vim api', function()

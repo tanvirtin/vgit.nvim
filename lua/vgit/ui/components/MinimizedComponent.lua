@@ -26,9 +26,7 @@ function MinimizedComponent:call(callback)
   return self
 end
 
-function MinimizedComponent:get_height()
-  return 1
-end
+function MinimizedComponent:get_height() return 1 end
 
 function MinimizedComponent:set_default_win_plot(win_plot)
   win_plot.focusable = true
@@ -54,18 +52,13 @@ function MinimizedComponent:mount(opts)
 
   self:set_default_win_plot(win_plot)
 
-  local plot = ComponentPlot(
-    config.win_plot,
-    utils.object.merge(elements_config, opts)
-  ):build()
+  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
 
   plot.win_plot.width = width
   plot.win_plot.col = math.floor(dimensions.global_width()) - width
 
   self.buffer = Buffer():create():assign_options(config.buf_options)
-  self.window = Window
-    :open(self.buffer, plot.win_plot)
-    :assign_options(win_options)
+  self.window = Window:open(self.buffer, plot.win_plot):assign_options(win_options)
   self.mounted = true
   self.plot = plot
 

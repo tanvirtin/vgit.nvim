@@ -20,13 +20,9 @@ function MinimizedScreen:show(_)
   return true
 end
 
-function MinimizedScreen:is_focused()
-  return self.view:is_focused()
-end
+function MinimizedScreen:is_focused() return self.view:is_focused() end
 
-function MinimizedScreen:is_mounted()
-  return self.view:is_mounted()
-end
+function MinimizedScreen:is_mounted() return self.view:is_mounted() end
 
 function MinimizedScreen:destroy()
   self.scene:destroy()

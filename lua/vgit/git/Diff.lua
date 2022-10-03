@@ -13,12 +13,8 @@ end
 
 function Diff:call(lines, shape)
   local choices = {
-    unified = function()
-      return self:unified(lines)
-    end,
-    split = function()
-      return self:split(lines)
-    end,
+    unified = function() return self:unified(lines) end,
+    split = function() return self:split(lines) end,
   }
 
   return choices[shape]()
@@ -26,12 +22,8 @@ end
 
 function Diff:call_deleted(lines, shape)
   local choices = {
-    unified = function()
-      return self:deleted_unified(lines)
-    end,
-    split = function()
-      return self:deleted_split(lines)
-    end,
+    unified = function() return self:deleted_unified(lines) end,
+    split = function() return self:deleted_split(lines) end,
   }
 
   return choices[shape]()
@@ -212,14 +204,8 @@ function Diff:unified(lines)
           new_lines_added = new_lines_added + 1
           table.insert(new_lines, s, cleaned_line)
 
-          if
-            #removed_lines == #added_lines
-            and #added_lines < self.max_lines
-          then
-            local d = dmp.diff_main(
-              cleaned_line,
-              diff[#removed_lines + j]:sub(2, #diff[#removed_lines + j])
-            )
+          if #removed_lines == #added_lines and #added_lines < self.max_lines then
+            local d = dmp.diff_main(cleaned_line, diff[#removed_lines + j]:sub(2, #diff[#removed_lines + j]))
             dmp.diff_cleanupSemantic(d)
             word_diff = d
           end
@@ -232,14 +218,8 @@ function Diff:unified(lines)
         elseif line_type == '+' then
           local word_diff = nil
 
-          if
-            #removed_lines == #added_lines
-            and #added_lines < self.max_lines
-          then
-            local d = dmp.diff_main(
-              cleaned_line,
-              diff[j - #removed_lines]:sub(2, #diff[j - #removed_lines])
-            )
+          if #removed_lines == #added_lines and #added_lines < self.max_lines then
+            local d = dmp.diff_main(cleaned_line, diff[j - #removed_lines]:sub(2, #diff[j - #removed_lines]))
             dmp.diff_cleanupSemantic(d)
             word_diff = d
           end
@@ -401,14 +381,8 @@ function Diff:split(lines)
         if removed_line then
           local word_diff = nil
 
-          if
-            #removed_lines == #added_lines
-            and #added_lines < self.max_lines
-          then
-            local d = dmp.diff_main(
-              removed_line,
-              added_lines[recalculated_index]
-            )
+          if #removed_lines == #added_lines and #added_lines < self.max_lines then
+            local d = dmp.diff_main(removed_line, added_lines[recalculated_index])
             dmp.diff_cleanupSemantic(d)
             word_diff = d
           end
@@ -424,14 +398,8 @@ function Diff:split(lines)
         if added_line then
           local word_diff = nil
 
-          if
-            #removed_lines == #added_lines
-            and #added_lines < self.max_lines
-          then
-            local d = dmp.diff_main(
-              added_line,
-              removed_lines[recalculated_index]
-            )
+          if #removed_lines == #added_lines and #added_lines < self.max_lines then
+            local d = dmp.diff_main(added_line, removed_lines[recalculated_index])
             dmp.diff_cleanupSemantic(d)
             word_diff = d
           end

@@ -24,11 +24,7 @@ end
 function DebugScreen:show(source)
   local allowed_sources = { 'infos', 'warnings', 'errors' }
 
-  if
-    not utils.list.find(allowed_sources, function(s)
-      return s == source
-    end)
-  then
+  if not utils.list.find(allowed_sources, function(s) return s == source end) then
     return
   end
 

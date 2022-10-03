@@ -71,12 +71,7 @@ function TableGenerator:generate_row(items, hls, r)
       end
     end
 
-    row = string.format(
-      '%s%s%s',
-      row,
-      value,
-      string.rep(' ', paddings[j] - utils.str.length(value))
-    )
+    row = string.format('%s%s%s', row, value, string.rep(' ', paddings[j] - utils.str.length(value)))
   end
 
   return row, hls
@@ -113,12 +108,7 @@ function TableGenerator:generate_labels()
   for j = 1, #labels do
     local item = labels[j]
     local value = utils.str.shorten(item, max_len)
-    row = string.format(
-      '%s%s%s',
-      row,
-      value,
-      string.rep(' ', paddings[j] - utils.str.length(value))
-    )
+    row = string.format('%s%s%s', row, value, string.rep(' ', paddings[j] - utils.str.length(value)))
   end
 
   return { row }
@@ -135,10 +125,7 @@ function TableGenerator:generate_paddings()
   for i = 1, #rows do
     local items = rows[i]
 
-    assert(
-      #labels == #items,
-      'number of columns should be the same as number of column_labels'
-    )
+    assert(#labels == #items, 'number of columns should be the same as number of column_labels')
 
     for j = 1, #items do
       local value = nil

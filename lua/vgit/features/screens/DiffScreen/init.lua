@@ -6,9 +6,9 @@ local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
-local diff_preview_setting = require('vgit.settings.diff_preview')
 local AppBarView = require('vgit.ui.views.AppBarView')
 local Store = require('vgit.features.screens.DiffScreen.Store')
+local diff_preview_setting = require('vgit.settings.diff_preview')
 local Mutation = require('vgit.features.screens.DiffScreen.Mutation')
 
 local DiffScreen = Object:extend()
@@ -142,9 +142,7 @@ function DiffScreen:show(opts)
         key = diff_preview_setting:get('keymaps').reset,
         handler = loop.debounced_async(function()
           loop.await_fast_event()
-          local decision = console.input(
-            'Are you sure you want to discard all unstaged changes? (y/N) '
-          ):lower()
+          local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) '):lower()
 
           if decision ~= 'yes' and decision ~= 'y' then
             return
@@ -163,11 +161,7 @@ function DiffScreen:show(opts)
           loop.await_fast_event()
 
           loop.await_fast_event()
-          local refetch_err = self.store:fetch(
-            self.layout_type,
-            buffer.filename,
-            opts
-          )
+          local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
           loop.await_fast_event()
 
           if refetch_err then
@@ -196,11 +190,7 @@ function DiffScreen:show(opts)
           loop.await_fast_event()
 
           loop.await_fast_event()
-          local refetch_err = self.store:fetch(
-            self.layout_type,
-            buffer.filename,
-            opts
-          )
+          local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
           loop.await_fast_event()
 
           if refetch_err then
@@ -229,11 +219,7 @@ function DiffScreen:show(opts)
           loop.await_fast_event()
 
           loop.await_fast_event()
-          local refetch_err = self.store:fetch(
-            self.layout_type,
-            buffer.filename,
-            opts
-          )
+          local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
           loop.await_fast_event()
 
           if refetch_err then
@@ -272,11 +258,7 @@ function DiffScreen:show(opts)
           self.mutation:stage_hunk(filename, hunk)
 
           loop.await_fast_event()
-          local refetch_err = self.store:fetch(
-            self.layout_type,
-            buffer.filename,
-            opts
-          )
+          local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
@@ -315,11 +297,7 @@ function DiffScreen:show(opts)
           loop.await_fast_event()
 
           loop.await_fast_event()
-          local refetch_err = self.store:fetch(
-            self.layout_type,
-            buffer.filename,
-            opts
-          )
+          local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
           loop.await_fast_event()
 
           if refetch_err then
@@ -373,11 +351,7 @@ function DiffScreen:show(opts)
             opts.is_staged = self.is_staged
 
             loop.await_fast_event()
-            local refetch_err = self.store:fetch(
-              self.layout_type,
-              buffer.filename,
-              opts
-            )
+            local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
             loop.await_fast_event()
 
             if refetch_err then
@@ -394,11 +368,7 @@ function DiffScreen:show(opts)
             opts.is_staged = self.is_staged
 
             loop.await_fast_event()
-            local refetch_err = self.store:fetch(
-              self.layout_type,
-              buffer.filename,
-              opts
-            )
+            local refetch_err = self.store:fetch(self.layout_type, buffer.filename, opts)
             loop.await_fast_event()
 
             if refetch_err then

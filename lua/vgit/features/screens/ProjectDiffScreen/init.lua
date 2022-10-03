@@ -1,18 +1,16 @@
 local fs = require('vgit.core.fs')
-local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
+local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
-local project_diff_preview_setting = require(
-  'vgit.settings.project_diff_preview'
-)
 local CodeView = require('vgit.ui.views.CodeView')
+local AppBarView = require('vgit.ui.views.AppBarView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
-local AppBarView = require('vgit.ui.views.AppBarView')
 local Store = require('vgit.features.screens.ProjectDiffScreen.Store')
 local Mutation = require('vgit.features.screens.ProjectDiffScreen.Mutation')
+local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
 
 local ProjectDiffScreen = Object:extend()
 
@@ -116,13 +114,10 @@ function ProjectDiffScreen:get_list_item(filename)
     local path = list_item.path
     local file = path.file
 
-    return metadata.category == 'changes'
-      and filename == file.filename
-      and file:is_unstaged()
+    return metadata.category == 'changes' and filename == file.filename and file:is_unstaged()
   end
 
-  return self.foldable_list_view:query_list_item(query_fn)
-    or self.foldable_list_view:get_current_list_item()
+  return self.foldable_list_view:query_list_item(query_fn) or self.foldable_list_view:get_current_list_item()
 end
 
 ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
@@ -194,22 +189,17 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
   self.store:fetch(self.layout_type, { partial_hydrate = true })
   loop.await_fast_event()
 
-  local list_item = self.foldable_list_view
-    :evict_cache()
-    :render()
-    :query_list_item(function(list_item)
-      if list_item.items then
-        return false
-      end
+  local list_item = self.foldable_list_view:evict_cache():render():query_list_item(function(list_item)
+    if list_item.items then
+      return false
+    end
 
-      local metadata = list_item.metadata
-      local path = list_item.path
-      local file = path.file
+    local metadata = list_item.metadata
+    local path = list_item.path
+    local file = path.file
 
-      return metadata.category == 'staged'
-        and filename == file.filename
-        and file:is_unstaged()
-    end) or self.foldable_list_view:get_current_list_item()
+    return metadata.category == 'staged' and filename == file.filename and file:is_unstaged()
+  end) or self.foldable_list_view:get_current_list_item()
 
   self.store:set_id(list_item.id)
 
@@ -294,12 +284,8 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
   end
 
   loop.await_fast_event()
-  local decision = console.input(
-    string.format(
-      'Are you sure you want to discard changes in %s? (y/N) ',
-      filename
-    )
-  ):lower()
+  local decision =
+    console.input(string.format('Are you sure you want to discard changes in %s? (y/N) ', filename)):lower()
 
   if decision ~= 'yes' and decision ~= 'y' then
     return self
@@ -321,9 +307,7 @@ end, 15)
 
 ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
   loop.await_fast_event()
-  local decision = console.input(
-    'Are you sure you want to discard all unstaged changes? (y/N) '
-  ):lower()
+  local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) '):lower()
 
   if decision ~= 'yes' and decision ~= 'y' then
     return self
@@ -411,16 +395,12 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_hunk_stage,
-      handler = loop.async(function()
-        self:stage_hunk()
-      end),
+      handler = loop.async(function() self:stage_hunk() end),
     },
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_hunk_unstage,
-      handler = loop.async(function()
-        self:unstage_hunk()
-      end),
+      handler = loop.async(function() self:unstage_hunk() end),
     },
     {
       mode = 'n',
@@ -451,44 +431,32 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_reset,
-      handler = loop.async(function()
-        self:reset_file()
-      end),
+      handler = loop.async(function() self:reset_file() end),
     },
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_stage,
-      handler = loop.async(function()
-        self:stage_file()
-      end),
+      handler = loop.async(function() self:stage_file() end),
     },
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_unstage,
-      handler = loop.async(function()
-        self:unstage_file()
-      end),
+      handler = loop.async(function() self:unstage_file() end),
     },
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').stage_all,
-      handler = loop.async(function()
-        self:stage_all()
-      end),
+      handler = loop.async(function() self:stage_all() end),
     },
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').unstage_all,
-      handler = loop.async(function()
-        self:unstage_all()
-      end),
+      handler = loop.async(function() self:unstage_all() end),
     },
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').reset_all,
-      handler = loop.async(function()
-        self:reset_all()
-      end),
+      handler = loop.async(function() self:reset_all() end),
     },
     {
       mode = 'n',
@@ -497,9 +465,7 @@ function ProjectDiffScreen:show()
         local list_item = self.foldable_list_view:move('down')
 
         self.store:set_id(list_item.id)
-        self.code_view:render_debounced(function()
-          self.code_view:navigate_to_mark(1)
-        end)
+        self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
       end),
     },
     {
@@ -509,9 +475,7 @@ function ProjectDiffScreen:show()
         local list_item = self.foldable_list_view:move('up')
 
         self.store:set_id(list_item.id)
-        self.code_view:render_debounced(function()
-          self.code_view:navigate_to_mark(1)
-        end)
+        self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
       end),
     },
     {
@@ -536,9 +500,7 @@ function ProjectDiffScreen:show()
           return
         end
 
-        Window(0)
-          :set_lnum(diff_dto.marks[1].top_relative)
-          :position_cursor('center')
+        Window(0):set_lnum(diff_dto.marks[1].top_relative):position_cursor('center')
       end),
     },
   })

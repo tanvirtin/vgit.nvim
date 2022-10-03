@@ -80,18 +80,14 @@ function GutterBlameScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function()
-        self:open_commit()
-      end),
+      handler = loop.async(function() self:open_commit() end),
     },
   })
   self.code_view:show(self.layout_type):set_keymap({
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function()
-        self:open_commit()
-      end),
+      handler = loop.async(function() self:open_commit() end),
     },
   })
 

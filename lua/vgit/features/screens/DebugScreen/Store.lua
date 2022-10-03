@@ -42,12 +42,8 @@ function Store:fetch(source, opts)
   return self.err, self.data
 end
 
-function Store:get_lines()
-  return self.err, self.data
-end
+function Store:get_lines() return self.err, self.data end
 
-function Store:get_title()
-  return nil, string.format('%s', self.source):gsub('^%l', string.upper)
-end
+function Store:get_title() return nil, string.format('%s', self.source):gsub('^%l', string.upper) end
 
 return Store

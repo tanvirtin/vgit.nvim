@@ -6,11 +6,7 @@ local Object = require('vgit.core.Object')
 
 local ProjectHunksQuickfix = Object:extend()
 
-function ProjectHunksQuickfix:constructor()
-  return {
-    name = 'Project Hunks List',
-  }
-end
+function ProjectHunksQuickfix:constructor() return { name = 'Project Hunks List' } end
 
 function ProjectHunksQuickfix:fetch()
   local entries = {}

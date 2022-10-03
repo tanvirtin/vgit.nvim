@@ -1,44 +1,55 @@
-local scheduler = require('plenary.async.util').scheduler
-local async = require('plenary.async.async')
-
 local loop = {}
 
-loop.async = async.void
+loop.main_coroutine = coroutine.running()
 
-loop.promisify = async.wrap
+function loop.async(func)
+  return function(...)
+    if coroutine.running() ~= loop.main_coroutine then
+      return func(...)
+    end
+
+    local co = coroutine.create(func)
+
+    local function step(...)
+      local ret = { coroutine.resume(co, ...) }
+      local stat, fn, nargs = unpack(ret)
+
+      if not stat then
+        error(string.format('coroutine failed :: %s\n%s', fn, debug.traceback(co)))
+      end
+
+      if coroutine.status(co) == 'dead' then
+        return
+      end
+
+      local args = { select(4, unpack(ret)) }
+      args[nargs] = step
+
+      fn(unpack(args, 1, nargs))
+    end
+
+    step(...)
+  end
+end
+
+function loop.promisify(func, argc)
+  return function(...)
+    if coroutine.running() == loop.main_coroutine then
+      return func(...)
+    end
+
+    return coroutine.yield(func, argc, ...)
+  end
+end
+
+loop.scheduler = loop.promisify(vim.schedule, 1)
 
 function loop.await_fast_event(times)
   for _ = 1, times or 1 do
-    scheduler()
+    loop.scheduler()
   end
 
   return loop
-end
-
--- Dynamic debounce, apply some breaks if we go too fast.
-function loop.brakecheck(fn, opts)
-  opts = opts or {}
-
-  local timer = vim.loop.new_timer()
-  local initial_ms = opts.initial_ms or 0
-  local step_ms = opts.step_ms or 5
-  local cutoff_ms = opts.cutoff_ms or 100
-  local ms = initial_ms
-
-  return function(...)
-    local argv = { ... }
-    local argc = select('#', ...)
-
-    if ms >= cutoff_ms then
-      ms = initial_ms
-    end
-
-    timer:start(ms, 0, function()
-      fn(unpack(argv, 1, argc))
-    end)
-
-    ms = ms + step_ms
-  end
 end
 
 function loop.debounce(fn, ms)
@@ -48,15 +59,11 @@ function loop.debounce(fn, ms)
     local argv = { ... }
     local argc = select('#', ...)
 
-    timer:start(ms, 0, function()
-      fn(unpack(argv, 1, argc))
-    end)
+    timer:start(ms, 0, function() fn(unpack(argv, 1, argc)) end)
   end
 end
 
-function loop.debounced_async(fn, ms)
-  return loop.debounce(loop.async(fn), ms)
-end
+function loop.debounced_async(fn, ms) return loop.debounce(loop.async(fn), ms) end
 
 function loop.watch(filepath, callback)
   local watcher = vim.loop.new_fs_event()

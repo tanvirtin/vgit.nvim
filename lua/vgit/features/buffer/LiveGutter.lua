@@ -1,11 +1,11 @@
-local live_gutter_setting = require('vgit.settings.live_gutter')
 local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
-local Buffer = require('vgit.core.Buffer')
-local GitBuffer = require('vgit.git.GitBuffer')
-local console = require('vgit.core.console')
-local git_buffer_store = require('vgit.git.git_buffer_store')
 local Object = require('vgit.core.Object')
+local Buffer = require('vgit.core.Buffer')
+local console = require('vgit.core.console')
+local GitBuffer = require('vgit.git.GitBuffer')
+local git_buffer_store = require('vgit.git.git_buffer_store')
+local live_gutter_setting = require('vgit.settings.live_gutter')
 
 local LiveGutter = Object:extend()
 
@@ -16,9 +16,7 @@ function LiveGutter:constructor()
 end
 
 function LiveGutter:register_events()
-  event.on('BufRead', function()
-    self:attach()
-  end)
+  event.on('BufRead', function() self:attach() end)
 
   return self
 end
@@ -169,22 +167,16 @@ function LiveGutter:attach()
         self:sync(buffer)
       end),
 
-      on_detach = loop.async(function()
-        self:detach(buffer)
-      end),
+      on_detach = loop.async(function() self:detach(buffer) end),
     })
-    :attach_to_renderer(function(top, bot)
-      self:render(buffer, top, bot)
-    end)
+    :attach_to_renderer(function(top, bot) self:render(buffer, top, bot) end)
 
   self:sync(buffer)
   self:watch(buffer)
 end
 
 function LiveGutter:detach(buffer)
-  git_buffer_store.remove(buffer, function()
-    buffer:unwatch_file():detach_from_renderer()
-  end)
+  git_buffer_store.remove(buffer, function() buffer:unwatch_file():detach_from_renderer() end)
 
   return self
 end

@@ -12,9 +12,7 @@ local ProjectHunksScreen = require('vgit.features.screens.ProjectHunksScreen')
 local GutterBlameScreen = require('vgit.features.screens.GutterBlameScreen')
 local ProjectLogsScreen = require('vgit.features.screens.ProjectLogsScreen')
 local ProjectStashScreen = require('vgit.features.screens.ProjectStashScreen')
-local ProjectCommitsScreen = require(
-  'vgit.features.screens.ProjectCommitsScreen'
-)
+local ProjectCommitsScreen = require('vgit.features.screens.ProjectCommitsScreen')
 
 local minimized_screen = MinimizedScreen()
 
@@ -60,11 +58,7 @@ function screen_manager.register_events()
 end
 
 function screen_manager.register_keymaps()
-  keymap.set(
-    'n',
-    scene_setting:get('keymaps').quit,
-    screen_manager.handle_on_quit_keypress
-  )
+  keymap.set('n', scene_setting:get('keymaps').quit, screen_manager.handle_on_quit_keypress)
 end
 
 function screen_manager.dispatch_action(action_name, ...)
@@ -162,17 +156,11 @@ function screen_manager.screens.line_blame_screen()
   return line_blame_screen:show(), line_blame_screen
 end
 
-function screen_manager.is_screen_registered(screen_name)
-  return type(screen_manager.screens[screen_name]) == 'function'
-end
+function screen_manager.is_screen_registered(screen_name) return type(screen_manager.screens[screen_name]) == 'function' end
 
-function screen_manager.has_action(action)
-  return type(screen_manager.active_screen[action]) == 'function'
-end
+function screen_manager.has_action(action) return type(screen_manager.active_screen[action]) == 'function' end
 
-function screen_manager.has_active_screen()
-  return screen_manager.active_screen ~= nil
-end
+function screen_manager.has_active_screen() return screen_manager.active_screen ~= nil end
 
 function screen_manager.minimize_screen()
   local screen = screen_manager.active_screen

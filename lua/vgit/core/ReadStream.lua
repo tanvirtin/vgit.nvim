@@ -1,15 +1,11 @@
-local Object = require('vgit.core.Object')
 local loop = require('vgit.core.loop')
+local Object = require('vgit.core.Object')
 
 local ReadStream = Object:extend()
 
-function ReadStream:constructor(spec)
-  return { spec = spec }
-end
+function ReadStream:constructor(spec) return { spec = spec } end
 
-function ReadStream:is_background()
-  return self.spec.is_background == true
-end
+function ReadStream:is_background() return self.spec.is_background == true end
 
 function ReadStream:parse_result(output, callback)
   if not callback then

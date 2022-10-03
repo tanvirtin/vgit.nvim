@@ -24,16 +24,13 @@ describe('Set:', function()
       assert(set:has('z'))
     end)
 
-    it(
-      'should replace existing key with new key if they are the same',
-      function()
-        local set = Set({ 'a', 'b', 'c', 'c' })
+    it('should replace existing key with new key if they are the same', function()
+      local set = Set({ 'a', 'b', 'c', 'c' })
 
-        set:add('c')
+      set:add('c')
 
-        assert(set:has('c'))
-      end
-    )
+      assert(set:has('c'))
+    end)
   end)
 
   describe('delete', function()

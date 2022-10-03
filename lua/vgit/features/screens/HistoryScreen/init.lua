@@ -1,8 +1,8 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Object = require('vgit.core.Object')
 local utils = require('vgit.core.utils')
 local Buffer = require('vgit.core.Buffer')
+local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
 local TableView = require('vgit.ui.views.TableView')
@@ -73,11 +73,7 @@ function HistoryScreen:show()
   console.log('Processing history')
 
   local buffer = Buffer(0)
-  local err = self.store:fetch(
-    self.layout_type,
-    buffer.filename,
-    { hydrate = self.hydrate }
-  )
+  local err = self.store:fetch(self.layout_type, buffer.filename, { hydrate = self.hydrate })
 
   if err then
     console.debug.error(err).error(err)
@@ -104,9 +100,7 @@ function HistoryScreen:show()
         vim.cmd('quit')
 
         loop.await_fast_event()
-        vim.cmd(
-          string.format('VGit project_commits_preview %s', row.commit_hash)
-        )
+        vim.cmd(string.format('VGit project_commits_preview %s', row.commit_hash))
       end),
     },
     {
@@ -114,9 +108,7 @@ function HistoryScreen:show()
       key = 'j',
       handler = loop.async(function()
         self.store:set_index(self.table_view:move('down'))
-        self.code_view:render_debounced(function()
-          self.code_view:navigate_to_mark(1)
-        end)
+        self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
       end),
     },
     {
@@ -124,9 +116,7 @@ function HistoryScreen:show()
       key = 'k',
       handler = loop.async(function()
         self.store:set_index(self.table_view:move('up'))
-        self.code_view:render_debounced(function()
-          self.code_view:navigate_to_mark(1)
-        end)
+        self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
       end),
     },
   })

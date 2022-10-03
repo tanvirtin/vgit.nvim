@@ -14,9 +14,7 @@ function Set:constructor(list)
   }
 end
 
-function Set:has(key)
-  return self.set[key] ~= nil
-end
+function Set:has(key) return self.set[key] ~= nil end
 
 function Set:add(key)
   self.set[key] = true

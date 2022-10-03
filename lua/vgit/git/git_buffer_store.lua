@@ -8,9 +8,7 @@ git_buffer_store.add = function(buffer)
   return git_buffer_store
 end
 
-git_buffer_store.contains = function(buffer)
-  return buffers[buffer.bufnr] ~= nil
-end
+git_buffer_store.contains = function(buffer) return buffers[buffer.bufnr] ~= nil end
 
 git_buffer_store.remove = function(buffer, callback)
   if not buffer then
@@ -32,9 +30,7 @@ git_buffer_store.remove = function(buffer, callback)
   return buffer
 end
 
-git_buffer_store.get = function(buffer)
-  return buffers[buffer.bufnr]
-end
+git_buffer_store.get = function(buffer) return buffers[buffer.bufnr] end
 
 function git_buffer_store.current()
   local bufnr = vim.api.nvim_get_current_buf()
@@ -52,8 +48,6 @@ git_buffer_store.size = function()
   return count
 end
 
-git_buffer_store.is_empty = function()
-  return git_buffer_store.size() == 0
-end
+git_buffer_store.is_empty = function() return git_buffer_store.size() == 0 end
 
 return git_buffer_store

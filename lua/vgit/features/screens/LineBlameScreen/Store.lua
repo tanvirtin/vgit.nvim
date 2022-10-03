@@ -38,8 +38,6 @@ function Store:fetch(filename, lnum, opts)
   return self.err, self.data
 end
 
-function Store:get_blame()
-  return self.err, self.data
-end
+function Store:get_blame() return self.err, self.data end
 
 return Store

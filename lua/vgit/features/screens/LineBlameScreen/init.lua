@@ -36,11 +36,7 @@ function LineBlameScreen:show()
   local window = Window(0)
 
   loop.await_fast_event()
-  local err = self.store:fetch(
-    buffer.filename,
-    window:get_lnum(),
-    { hydrate = self.hydrate }
-  )
+  local err = self.store:fetch(buffer.filename, window:get_lnum(), { hydrate = self.hydrate })
 
   if err then
     console.debug.error(err).error(err)

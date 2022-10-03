@@ -120,18 +120,16 @@ end
 
 function CodeView:set_keymap(configs)
   if self.layout_type == 'split' then
-    utils.list.each(configs, function(config)
-      self.scene
-        :get('previous')
-        :set_keymap(config.mode, config.key, config.handler)
-    end)
+    utils.list.each(
+      configs,
+      function(config) self.scene:get('previous'):set_keymap(config.mode, config.key, config.handler) end
+    )
   end
 
-  utils.list.each(configs, function(config)
-    self.scene
-      :get('current')
-      :set_keymap(config.mode, config.key, config.handler)
-  end)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('current'):set_keymap(config.mode, config.key, config.handler) end
+  )
 
   return self
 end
@@ -187,11 +185,7 @@ function CodeView:paint_line(component_type, line_changes, lnum)
   local component = self.scene:get(component_type)
 
   if not lnum_change then
-    component:transpose_virtual_line_number(
-      line_number,
-      line_number_hl,
-      lnum - 1
-    )
+    component:transpose_virtual_line_number(line_number, line_number_hl, lnum - 1)
     return self
   end
 
@@ -226,9 +220,7 @@ function CodeView:paint_line(component_type, line_changes, lnum)
 end
 
 function CodeView:apply_paint_instructions(component_type, line_changes, lnum)
-  return self
-    :paint_line(component_type, line_changes, lnum)
-    :paint_word(component_type, line_changes, lnum)
+  return self:paint_line(component_type, line_changes, lnum):paint_word(component_type, line_changes, lnum)
 end
 
 function CodeView:apply_brush(top, bot)
@@ -236,11 +228,7 @@ function CodeView:apply_brush(top, bot)
   local previous_lines_changes = self.state.previous_lines_changes
 
   for i = top, bot do
-    if
-      self.layout_type == 'split'
-      and previous_lines_changes
-      and previous_lines_changes[i]
-    then
+    if self.layout_type == 'split' and previous_lines_changes and previous_lines_changes[i] then
       self:apply_paint_instructions('previous', previous_lines_changes[i], i)
     end
 
@@ -253,16 +241,12 @@ function CodeView:apply_brush(top, bot)
 end
 
 function CodeView:paint_partially()
-  self.scene:get('current'):attach_to_renderer(function(top, bot)
-    self:apply_brush(top, bot)
-  end)
+  self.scene:get('current'):attach_to_renderer(function(top, bot) self:apply_brush(top, bot) end)
 
   return self
 end
 
-function CodeView:paint_full()
-  return self:apply_brush(1, #self.state.current_lines_changes)
-end
+function CodeView:paint_full() return self:apply_brush(1, #self.state.current_lines_changes) end
 
 function CodeView:reset_cursor()
   if self.layout_type == 'split' then
@@ -404,10 +388,7 @@ function CodeView:make_filetype()
   return self
 end
 
-function CodeView:make_split_current_line_numbers(
-  diff_dto,
-  current_lnum_change_map
-)
+function CodeView:make_split_current_line_numbers(diff_dto, current_lnum_change_map)
   local current_lines_changes = {}
   local current_lines = {}
   local current_line_count = 1
@@ -417,14 +398,8 @@ function CodeView:make_split_current_line_numbers(
     local line
     local lnum_change = current_lnum_change_map[i]
 
-    if
-      lnum_change
-      and (lnum_change.type == 'remove' or lnum_change.type == 'void')
-    then
-      line = string.rep(
-        symbols_setting:get('void'),
-        LineNumberElement:get_width()
-      )
+    if lnum_change and (lnum_change.type == 'remove' or lnum_change.type == 'void') then
+      line = string.rep(symbols_setting:get('void'), LineNumberElement:get_width())
       current_lines[#current_lines + 1] = line
     else
       line = string.format('%s ', current_line_count)
@@ -445,10 +420,7 @@ function CodeView:make_split_current_line_numbers(
   return self
 end
 
-function CodeView:make_split_previous_line_numbers(
-  diff_dto,
-  previous_lnum_change_map
-)
+function CodeView:make_split_previous_line_numbers(diff_dto, previous_lnum_change_map)
   local previous_lines = {}
   local previous_lines_changes = {}
   local previous_lines_count = 1
@@ -458,14 +430,8 @@ function CodeView:make_split_previous_line_numbers(
     local line
     local lnum_change = previous_lnum_change_map[i]
 
-    if
-      lnum_change
-      and (lnum_change.type == 'add' or lnum_change.type == 'void')
-    then
-      line = string.rep(
-        symbols_setting:get('void'),
-        LineNumberElement:get_width()
-      )
+    if lnum_change and (lnum_change.type == 'add' or lnum_change.type == 'void') then
+      line = string.rep(symbols_setting:get('void'), LineNumberElement:get_width())
       previous_lines[#previous_lines + 1] = line
     else
       line = string.format('%s ', previous_lines_count)
@@ -579,14 +545,8 @@ function CodeView:make_lines()
   if self.layout_type == 'unified' then
     self.scene:get('current'):set_lines(diff_dto.lines):enable_cursorline()
   else
-    self.scene
-      :get('previous')
-      :set_lines(diff_dto.previous_lines)
-      :enable_cursorline()
-    self.scene
-      :get('current')
-      :set_lines(diff_dto.current_lines)
-      :enable_cursorline()
+    self.scene:get('previous'):set_lines(diff_dto.previous_lines):enable_cursorline()
+    self.scene:get('current'):set_lines(diff_dto.current_lines):enable_cursorline()
   end
 
   return self
@@ -806,9 +766,9 @@ function CodeView:navigate_to_mark(mark_index, pos)
     mark_index = 1
   end
 
-  return self:select_mark(marks, mark_index, pos):notify(
-    string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks)
-  )
+  return self
+    :select_mark(marks, mark_index, pos)
+    :notify(string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks))
 end
 
 function CodeView:render()
@@ -825,22 +785,12 @@ function CodeView:render()
 
       self.state = CodeView:get_initial_state()
 
-      return self
-        :clear_title()
-        :clear_lines()
-        :clear_notification()
-        :reset_cursor()
+      return self:clear_title():clear_lines():clear_notification():reset_cursor()
     end
 
     -- NOTE: It is super important to reset the cursor or else
     -- you will randomly see line numbers not aligning with the current view.
-    return self
-      :reset_cursor()
-      :make_title()
-      :make_filetype()
-      :make_lines()
-      :make_line_numbers()
-      :paint()
+    return self:reset_cursor():make_title():make_filetype():make_lines():make_line_numbers():paint()
   end)
 
   if not ok then
@@ -872,11 +822,7 @@ function CodeView:show(layout_type, pos, opts)
   self.layout_type = layout_type
   self.state = CodeView:get_initial_state()
 
-  self
-    :define()
-    :mount(opts)
-    :render()
-    :navigate_to_mark(self:get_relative_mark_index(opts.lnum or 1), pos)
+  self:define():mount(opts):render():navigate_to_mark(self:get_relative_mark_index(opts.lnum or 1), pos)
 
   return self
 end

@@ -17,9 +17,7 @@ function Scene:set(key, component)
   return self
 end
 
-function Scene:get(key)
-  return self.components[key]
-end
+function Scene:get(key) return self.components[key] end
 
 function Scene:is_focused()
   local focused = false

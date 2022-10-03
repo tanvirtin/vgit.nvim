@@ -21,16 +21,10 @@ function File:constructor(filename, status, log)
   }
 end
 
-function File:is_untracked()
-  return self.status:has('??')
-end
+function File:is_untracked() return self.status:has('??') end
 
-function File:is_staged()
-  return self.status:has('* ')
-end
+function File:is_staged() return self.status:has('* ') end
 
-function File:is_unstaged()
-  return self.status:has(' *')
-end
+function File:is_unstaged() return self.status:has(' *') end
 
 return File

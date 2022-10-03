@@ -3,9 +3,7 @@ local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local dimensions = require('vgit.ui.dimensions')
-local FoldableListComponent = require(
-  'vgit.ui.components.FoldableListComponent'
-)
+local FoldableListComponent = require('vgit.ui.components.FoldableListComponent')
 
 local FoldableListView = Object:extend()
 
@@ -20,9 +18,10 @@ function FoldableListView:constructor(scene, store, plot, config)
 end
 
 function FoldableListView:set_keymap(configs)
-  utils.list.each(configs, function(config)
-    self.scene:get('list'):set_keymap(config.mode, config.key, config.handler)
-  end)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('list'):set_keymap(config.mode, config.key, config.handler) end
+  )
 
   return self
 end
@@ -83,17 +82,11 @@ function FoldableListView:get_list()
   return list
 end
 
-function FoldableListView:get_list_item(lnum)
-  return self.scene:get('list'):get_list_item(lnum)
-end
+function FoldableListView:get_list_item(lnum) return self.scene:get('list'):get_list_item(lnum) end
 
-function FoldableListView:get_current_list_item()
-  return self:get_list_item(self.scene:get('list'):get_lnum())
-end
+function FoldableListView:get_current_list_item() return self:get_list_item(self.scene:get('list'):get_lnum()) end
 
-function FoldableListView:query_list_item(callback)
-  return self.scene:get('list'):query_list_item(callback)
-end
+function FoldableListView:query_list_item(callback) return self.scene:get('list'):query_list_item(callback) end
 
 function FoldableListView:toggle_current_list_item()
   local item = self:get_list_item(self.scene:get('list'):get_lnum())
@@ -139,13 +132,7 @@ function FoldableListView:render()
   local parsed_list = self:get_list()
   loop.await_fast_event()
 
-  list
-    :unlock()
-    :set_title(self.title)
-    :set_list(parsed_list)
-    :sync()
-    :set_lnum(lnum)
-    :lock()
+  list:unlock():set_title(self.title):set_list(parsed_list):sync():set_lnum(lnum):lock()
   loop.await_fast_event()
 
   return self

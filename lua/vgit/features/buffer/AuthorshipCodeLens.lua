@@ -1,14 +1,12 @@
 local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
-local GitBuffer = require('vgit.git.GitBuffer')
 local console = require('vgit.core.console')
-local event = require('vgit.core.event')
-local authorship_code_lens_setting = require(
-  'vgit.settings.authorship_code_lens'
-)
+local GitBuffer = require('vgit.git.GitBuffer')
 local Namespace = require('vgit.core.Namespace')
 local git_buffer_store = require('vgit.git.git_buffer_store')
+local authorship_code_lens_setting = require('vgit.settings.authorship_code_lens')
 
 local AuthorshipCodeLens = Object:extend()
 
@@ -20,9 +18,7 @@ function AuthorshipCodeLens:constructor()
 end
 
 function AuthorshipCodeLens:register_events()
-  event.on('BufEnter', function()
-    self:resync()
-  end)
+  event.on('BufEnter', function() self:resync() end)
 
   return self
 end
@@ -207,17 +203,11 @@ function AuthorshipCodeLens:sync()
     return self
   end
 
-  self:clear(buffer):display(
-    buffer:get_line_count(),
-    buffer,
-    self:generate_authorship(config, blames)
-  )
+  self:clear(buffer):display(buffer:get_line_count(), buffer, self:generate_authorship(config, blames))
 
   return self
 end
 
-function AuthorshipCodeLens:resync()
-  return self:clear_all():sync()
-end
+function AuthorshipCodeLens:resync() return self:clear_all():sync() end
 
 return AuthorshipCodeLens

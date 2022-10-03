@@ -1,7 +1,7 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Object = require('vgit.core.Object')
 local utils = require('vgit.core.utils')
+local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
@@ -58,9 +58,7 @@ function ProjectCommitsScreen:constructor()
 end
 
 function ProjectCommitsScreen:get_list_title(commits)
-  return utils.object.size(commits) == 1
-      and utils.object.first(commits):sub(1, 8)
-    or 'Project commits'
+  return utils.object.size(commits) == 1 and utils.object.first(commits):sub(1, 8) or 'Project commits'
 end
 
 function ProjectCommitsScreen:hunk_up()
@@ -79,11 +77,7 @@ function ProjectCommitsScreen:show(commits)
   console.log('Processing project commits')
 
   loop.await_fast_event()
-  local err = self.store:fetch(
-    self.layout_type,
-    commits,
-    { hydrate = self.hydrate }
-  )
+  local err = self.store:fetch(self.layout_type, commits, { hydrate = self.hydrate })
 
   if err then
     console.debug.error(err).error(err)
@@ -106,9 +100,7 @@ function ProjectCommitsScreen:show(commits)
         end
 
         self.store:set_id(list_item.id)
-        self.code_view:render_debounced(loop.async(function()
-          self.code_view:navigate_to_mark(1)
-        end))
+        self.code_view:render_debounced(loop.async(function() self.code_view:navigate_to_mark(1) end))
       end),
     },
     {
@@ -122,17 +114,13 @@ function ProjectCommitsScreen:show(commits)
         end
 
         self.store:set_id(list_item.id)
-        self.code_view:render_debounced(function()
-          self.code_view:navigate_to_mark(1)
-        end)
+        self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
       end),
     },
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function()
-        self.foldable_list_view:toggle_current_list_item():render()
-      end),
+      handler = loop.async(function() self.foldable_list_view:toggle_current_list_item():render() end),
     },
   })
   return true

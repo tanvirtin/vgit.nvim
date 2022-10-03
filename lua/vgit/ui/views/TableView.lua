@@ -16,9 +16,10 @@ function TableView:constructor(scene, store, plot, config)
 end
 
 function TableView:set_keymap(configs)
-  utils.list.each(configs, function(config)
-    self.scene:get('table'):set_keymap(config.mode, config.key, config.handler)
-  end)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('table'):set_keymap(config.mode, config.key, config.handler) end
+  )
   return self
 end
 
@@ -84,13 +85,7 @@ function TableView:render()
     return self
   end
 
-  self.scene
-    :get('table')
-    :unlock()
-    :make_rows(entries, self.config.get_row)
-    :focus()
-    :set_lnum(lnum)
-    :lock()
+  self.scene:get('table'):unlock():make_rows(entries, self.config.get_row):focus():set_lnum(lnum):lock()
 
   return self
 end

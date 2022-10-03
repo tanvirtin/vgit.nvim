@@ -1,5 +1,5 @@
-local assertion = require('vgit.core.assertion')
 local Object = require('vgit.core.Object')
+local assertion = require('vgit.core.assertion')
 
 local Window = Object:extend()
 
@@ -23,11 +23,7 @@ function Window:open(buffer, opts)
     opts.focus = nil
   end
 
-  local win_id = vim.api.nvim_open_win(
-    buffer.bufnr,
-    focus ~= nil and focus or false,
-    opts
-  )
+  local win_id = vim.api.nvim_open_win(buffer.bufnr, focus ~= nil and focus or false, opts)
 
   return setmetatable({
     win_id = win_id,
@@ -44,26 +40,16 @@ function Window:get_cursor()
   return cursor
 end
 
-function Window:get_lnum()
-  return self:get_cursor()[1]
-end
+function Window:get_lnum() return self:get_cursor()[1] end
 
-function Window:get_position()
-  return vim.api.nvim_win_get_position(self.win_id)
-end
+function Window:get_position() return vim.api.nvim_win_get_position(self.win_id) end
 
-function Window:get_height()
-  return vim.api.nvim_win_get_height(self.win_id)
-end
+function Window:get_height() return vim.api.nvim_win_get_height(self.win_id) end
 
-function Window:get_width()
-  return vim.api.nvim_win_get_width(self.win_id)
-end
+function Window:get_width() return vim.api.nvim_win_get_width(self.win_id) end
 
 function Window:set_cursor(cursor)
-  return self:call(function()
-    pcall(vim.api.nvim_win_set_cursor, self.win_id, cursor)
-  end)
+  return self:call(function() pcall(vim.api.nvim_win_set_cursor, self.win_id, cursor) end)
 end
 
 function Window:set_lnum(lnum)
@@ -100,9 +86,7 @@ function Window:set_win_plot(win_plot)
   return self
 end
 
-function Window:get_win_plot()
-  return vim.api.nvim_win_get_config(self.win_id)
-end
+function Window:get_win_plot() return vim.api.nvim_win_get_config(self.win_id) end
 
 function Window:assign_options(options)
   for key, value in pairs(options) do
@@ -112,9 +96,7 @@ function Window:assign_options(options)
   return self
 end
 
-function Window:is_valid()
-  return vim.api.nvim_win_is_valid(self.win_id)
-end
+function Window:is_valid() return vim.api.nvim_win_is_valid(self.win_id) end
 
 function Window:close()
   pcall(vim.api.nvim_win_hide, self.win_id)
@@ -122,9 +104,7 @@ function Window:close()
   return self
 end
 
-function Window:is_focused()
-  return self.win_id == vim.api.nvim_get_current_win()
-end
+function Window:is_focused() return self.win_id == vim.api.nvim_get_current_win() end
 
 function Window:focus()
   vim.api.nvim_set_current_win(self.win_id)
@@ -132,21 +112,13 @@ function Window:focus()
   return self
 end
 
-function Window:is_same(window)
-  return self.win_id == window.win_id
-end
+function Window:is_same(window) return self.win_id == window.win_id end
 
 function Window:position_cursor(placement)
   local placement_map = {
-    top = function()
-      vim.cmd('norm! zt')
-    end,
-    center = function()
-      vim.cmd('norm! zz')
-    end,
-    bottom = function()
-      vim.cmd('norm! zb')
-    end,
+    top = function() vim.cmd('norm! zt') end,
+    center = function() vim.cmd('norm! zz') end,
+    bottom = function() vim.cmd('norm! zb') end,
   }
 
   placement = placement or 'center'

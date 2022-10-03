@@ -38,10 +38,7 @@ function HeaderTitle:set(source, title, opts)
   if stat then
     local more_added = stat.added > stat.removed
     local more_removed = stat.removed > stat.added
-    local new_text, hl_range = utils.str.concat(
-      text,
-      more_added and '++' or '+'
-    )
+    local new_text, hl_range = utils.str.concat(text, more_added and '++' or '+')
     text = new_text
     hl_range_infos[#hl_range_infos + 1] = {
       hl = 'GitSignsAdd',

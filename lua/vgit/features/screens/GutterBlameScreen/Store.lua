@@ -40,9 +40,7 @@ function Store:fetch(filename, opts)
   return self.err, self.data
 end
 
-function Store:get_blames()
-  return self.err, self.data
-end
+function Store:get_blames() return self.err, self.data end
 
 function Store:get_diff_dto()
   if self._cache then
@@ -64,12 +62,8 @@ function Store:get_diff_dto()
   return nil, self._cache
 end
 
-function Store:get_filename()
-  return nil, self.git_object:get_filename()
-end
+function Store:get_filename() return nil, self.git_object:get_filename() end
 
-function Store:get_filetype()
-  return nil, self.git_object:get_filetype()
-end
+function Store:get_filetype() return nil, self.git_object:get_filetype() end
 
 return Store

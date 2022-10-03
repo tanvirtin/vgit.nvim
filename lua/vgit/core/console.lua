@@ -1,6 +1,6 @@
-local utils = require('vgit.core.utils')
-local loop = require('vgit.core.loop')
 local env = require('vgit.core.env')
+local loop = require('vgit.core.loop')
+local utils = require('vgit.core.utils')
 
 local console = {
   debug = {
@@ -13,13 +13,9 @@ local console = {
 }
 
 function console.format(msg)
-  local function add_vgit_prefix(line)
-    return string.format('[VGit] %s', line)
-  end
+  local function add_vgit_prefix(line) return string.format('[VGit] %s', line) end
 
-  local function add_indentiation(line)
-    return string.format('       %s', line)
-  end
+  local function add_indentiation(line) return string.format('       %s', line) end
 
   if type(msg) ~= 'table' then
     return add_vgit_prefix(msg)
@@ -117,12 +113,8 @@ end
 
 console.debug.info = console.debug.get_source_logger(console.debug.source.infos)
 
-console.debug.error = console.debug.get_source_logger(
-  console.debug.source.errors
-)
+console.debug.error = console.debug.get_source_logger(console.debug.source.errors)
 
-console.debug.warning = console.debug.get_source_logger(
-  console.debug.source.warnings
-)
+console.debug.warning = console.debug.get_source_logger(console.debug.source.warnings)
 
 return console

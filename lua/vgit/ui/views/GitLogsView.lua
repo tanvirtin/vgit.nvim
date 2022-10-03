@@ -3,9 +3,7 @@ local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local Namespace = require('vgit.core.Namespace')
 local dimensions = require('vgit.ui.dimensions')
-local PresentationalComponent = require(
-  'vgit.ui.components.PresentationalComponent'
-)
+local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 local TableGenerator = require('vgit.ui.TableGenerator')
 
 local GitLogsView = Object:extend()
@@ -48,11 +46,10 @@ function GitLogsView:define()
 end
 
 function GitLogsView:set_keymap(configs)
-  utils.list.each(configs, function(config)
-    self.scene
-      :get('selectable_view')
-      :set_keymap(config.mode, config.key, config.handler)
-  end)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('selectable_view'):set_keymap(config.mode, config.key, config.handler) end
+  )
   return self
 end
 
@@ -80,9 +77,7 @@ function GitLogsView:select()
   return self
 end
 
-function GitLogsView:has_selection()
-  return not utils.object.is_empty(self.state.selected)
-end
+function GitLogsView:has_selection() return not utils.object.is_empty(self.state.selected) end
 
 function GitLogsView:get_selected()
   local err, data = self.store:get_data()
@@ -92,9 +87,7 @@ function GitLogsView:get_selected()
     return {}
   end
 
-  return utils.list.filter(data, function(_, index)
-    return self.state.selected[index] == true
-  end)
+  return utils.list.filter(data, function(_, index) return self.state.selected[index] == true end)
 end
 
 function GitLogsView:paint()

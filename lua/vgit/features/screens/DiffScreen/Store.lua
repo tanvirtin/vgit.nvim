@@ -1,5 +1,5 @@
-local Diff = require('vgit.git.Diff')
 local fs = require('vgit.core.fs')
+local Diff = require('vgit.git.Diff')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
 
@@ -76,12 +76,8 @@ function Store:get_diff_dto()
   return nil, self._cache.diff_dto
 end
 
-function Store:get_filename()
-  return nil, self.git_object:get_filename()
-end
+function Store:get_filename() return nil, self.git_object:get_filename() end
 
-function Store:get_filetype()
-  return nil, self.git_object:get_filetype()
-end
+function Store:get_filetype() return nil, self.git_object:get_filetype() end
 
 return Store

@@ -2,9 +2,7 @@ local utils = require('vgit.core.utils')
 local dimensions = require('vgit.ui.dimensions')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local PresentationalComponent = require(
-  'vgit.ui.components.PresentationalComponent'
-)
+local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 
 local SimpleView = Object:extend()
 
@@ -42,11 +40,10 @@ function SimpleView:define()
 end
 
 function SimpleView:set_keymap(configs)
-  utils.list.each(configs, function(config)
-    self.scene
-      :get('simple_view')
-      :set_keymap(config.mode, config.key, config.handler)
-  end)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('simple_view'):set_keymap(config.mode, config.key, config.handler) end
+  )
   return self
 end
 
