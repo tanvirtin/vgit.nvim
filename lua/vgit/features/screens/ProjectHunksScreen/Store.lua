@@ -3,30 +3,40 @@ local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local GitFile = require('vgit.features.screens.ProjectHunksScreen.GitFile')
 
-local Query = Object:extend()
+local Store = Object:extend()
 
-function Query:constructor()
+function Store:constructor()
   return {
     id = nil,
     err = nil,
     data = nil,
     shape = nil,
     git = Git(),
-    _list_entry_cache = {},
+    _cache = {
+      lnum = 1,
+      list_entry_cache = {},
+    },
   }
 end
 
-function Query:reset()
+function Store:reset()
   self.id = nil
   self.err = nil
   self.data = nil
-  self._list_entry_cache = {}
+  self._cache = {
+    lnum = 1,
+    list_entry_cache = {},
+  }
 
   return self
 end
 
-function Query:fetch(shape, opts)
+function Store:fetch(shape, opts)
   opts = opts or {}
+
+  if self.data and opts.hydrate then
+    return nil, self.data
+  end
 
   self:reset()
 
@@ -81,7 +91,7 @@ function Query:fetch(shape, opts)
           file = git_file.file,
         }
 
-        self._list_entry_cache[id] = datum
+        self._cache.list_entry_cache[id] = datum
         entry[#entry + 1] = datum
       end)
     end
@@ -96,18 +106,18 @@ function Query:fetch(shape, opts)
   return self.err, self.data
 end
 
-function Query:set_id(id)
+function Store:set_id(id)
   self.id = id
 
   return self
 end
 
-function Query:get(id)
+function Store:get(id)
   if id then
     self.id = id
   end
 
-  local datum = self._list_entry_cache[self.id]
+  local datum = self._cache.list_entry_cache[self.id]
 
   if not datum then
     return { 'Item not found' }, nil
@@ -116,11 +126,9 @@ function Query:get(id)
   return nil, datum
 end
 
-function Query:get_all()
-  return self.err, self.data
-end
+function Store:get_all() return self.err, self.data end
 
-function Query:get_diff_dto()
+function Store:get_diff_dto()
   local data_err, data = self:get()
 
   if data_err then
@@ -136,7 +144,7 @@ function Query:get_diff_dto()
   return data.git_file:get_diff_dto()
 end
 
-function Query:get_filename()
+function Store:get_filename()
   local data_err, data = self:get()
 
   if data_err then
@@ -149,7 +157,7 @@ function Query:get_filename()
   return nil, filename
 end
 
-function Query:get_filetype()
+function Store:get_filetype()
   local data_err, data = self:get()
 
   if data_err then
@@ -162,7 +170,7 @@ function Query:get_filetype()
   return nil, filetype
 end
 
-function Query:get_hunk()
+function Store:get_hunk()
   local data_err, data = self:get()
 
   if data_err then
@@ -180,4 +188,20 @@ function Query:get_hunk()
   return nil, hunk
 end
 
-return Query
+function Store:get_lnum() return nil, self._cache.lnum end
+
+function Store:set_lnum(lnum)
+  self._cache.lnum = lnum
+
+  return self
+end
+
+function Store:get_list_folds() return nil, self._cache.list_folds end
+
+function Store:set_list_folds(list_folds)
+  self._cache.list_folds = list_folds
+
+  return self
+end
+
+return Store

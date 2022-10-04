@@ -3,9 +3,7 @@ local Object = require('vgit.core.Object')
 
 local Blame = Object:extend()
 
-local function split_by_whitespace(str)
-  return vim.split(str, ' ')
-end
+local function split_by_whitespace(str) return vim.split(str, ' ') end
 
 function Blame:constructor(info)
   -- TODO this is badly done crashes randomly please fix this parsing.
@@ -63,8 +61,6 @@ function Blame:constructor(info)
   }
 end
 
-function Blame:age()
-  return utils.date.age(self.author_time)
-end
+function Blame:age() return utils.date.age(self.author_time) end
 
 return Blame

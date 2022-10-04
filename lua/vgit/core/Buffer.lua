@@ -1,18 +1,19 @@
-local renderer = require('vgit.core.renderer')
+local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
+local Object = require('vgit.core.Object')
+local keymap = require('vgit.core.keymap')
 local console = require('vgit.core.console')
+local renderer = require('vgit.core.renderer')
+local GitObject = require('vgit.git.GitObject')
 local Namespace = require('vgit.core.Namespace')
 local signs_setting = require('vgit.settings.signs')
-local keymap = require('vgit.core.keymap')
-local GitObject = require('vgit.git.GitObject')
-local fs = require('vgit.core.fs')
-local Object = require('vgit.core.Object')
 
 local Buffer = Object:extend()
 
 function Buffer:constructor(bufnr)
   local filename = nil
 
+  -- 0 represents the current buffer.
   if bufnr == 0 then
     bufnr = vim.api.nvim_get_current_buf()
     local bufname = vim.api.nvim_buf_get_name(bufnr)
@@ -73,9 +74,7 @@ function Buffer:on_render(top, bot)
   return self
 end
 
-function Buffer:is_rendering()
-  return self.rendering
-end
+function Buffer:is_rendering() return self.rendering end
 
 function Buffer:is_in_disk()
   local filename = self.filename
@@ -83,7 +82,6 @@ function Buffer:is_in_disk()
   if not filename or filename == '' then
     return false
   end
-
   if not fs.exists(filename) then
     return false
   end
@@ -97,9 +95,7 @@ function Buffer:set_cached_live_signs(live_signs)
   return self
 end
 
-function Buffer:get_cached_live_signs()
-  return self.state.live_signs
-end
+function Buffer:get_cached_live_signs() return self.state.live_signs end
 
 function Buffer:clear_cached_live_signs()
   self.state.live_signs = {}
@@ -135,13 +131,11 @@ function Buffer:watch_file(callback)
     self.filename,
     loop.async(function(err)
       if err then
-        console.debug.error(
-          string.format('Error encountered while watching %s', self.filename)
-        )
+        console.debug.error(string.format('Error encountered while watching %s', self.filename))
         return
       end
 
-      loop.await_fast_event()
+      loop.await()
       if self and self:is_valid() and callback then
         callback()
       end
@@ -157,9 +151,7 @@ function Buffer:unwatch_file()
   return self
 end
 
-function Buffer:get_name()
-  return vim.api.nvim_buf_get_name(self.bufnr)
-end
+function Buffer:get_name() return vim.api.nvim_buf_get_name(self.bufnr) end
 
 function Buffer:add_highlight(hl, row, col_top, col_end)
   self.namespace:add_highlight(self, hl, row, col_top, col_end)
@@ -231,9 +223,7 @@ function Buffer:create(listed, scratch)
   return self
 end
 
-function Buffer:is_current()
-  return self.bufnr == vim.api.nvim_get_current_buf()
-end
+function Buffer:is_current() return self.bufnr == vim.api.nvim_get_current_buf() end
 
 function Buffer:is_valid()
   local bufnr = self.bufnr
@@ -256,9 +246,7 @@ function Buffer:get_lines(top, bot)
   return vim.api.nvim_buf_get_lines(self.bufnr, top, bot, false)
 end
 
-function Buffer:get_option(key)
-  return vim.api.nvim_buf_get_option(self.bufnr, key)
-end
+function Buffer:get_option(key) return vim.api.nvim_buf_get_option(self.bufnr, key) end
 
 function Buffer:set_lines(lines, top, bot)
   top = top or 0
@@ -294,9 +282,7 @@ function Buffer:assign_options(options)
   return self
 end
 
-function Buffer:get_line_count()
-  return vim.api.nvim_buf_line_count(self.bufnr)
-end
+function Buffer:get_line_count() return vim.api.nvim_buf_line_count(self.bufnr) end
 
 function Buffer:edit()
   return self:call(function()
@@ -307,13 +293,9 @@ function Buffer:edit()
   end)
 end
 
-function Buffer:editing()
-  return self:get_option('modified')
-end
+function Buffer:editing() return self:get_option('modified') end
 
-function Buffer:filetype()
-  return fs.detect_filetype(self.filename)
-end
+function Buffer:filetype() return fs.detect_filetype(self.filename) end
 
 function Buffer:list()
   local bufnrs = vim.api.nvim_list_bufs()

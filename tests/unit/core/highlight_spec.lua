@@ -21,10 +21,9 @@ describe('highlight:', function()
         bg = '#3b4261',
       })
 
-      assert.stub(vim.api.nvim_exec).was.called_with(
-        'highlight VGitTestDefine gui = NONE guifg = #bb9af7 guibg = #3b4261 ',
-        false
-      )
+      assert
+        .stub(vim.api.nvim_exec).was
+        .called_with('highlight VGitTestDefine gui = NONE guifg = #bb9af7 guibg = #3b4261 ', false)
     end)
   end)
 

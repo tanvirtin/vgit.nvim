@@ -1,27 +1,28 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Feature = require('vgit.Feature')
 local icons = require('vgit.core.icons')
 local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
+local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local CodeView = require('vgit.ui.views.CodeView')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
-local Query = require('vgit.features.screens.ProjectHunksScreen.Query')
+local Store = require('vgit.features.screens.ProjectHunksScreen.Store')
 
-local ProjectHunksScreen = Feature:extend()
+local ProjectHunksScreen = Object:extend()
 
 function ProjectHunksScreen:constructor()
   local scene = Scene()
-  local query = Query()
+  local store = Store()
 
   return {
     name = 'Project Hunks Screen',
     scene = scene,
-    query = query,
+    store = store,
+    hydrate = false,
     layout_type = nil,
-    foldable_list_view = FoldableListView(scene, query, {
+    foldable_list_view = FoldableListView(scene, store, {
       height = '30vh',
     }, {
       elements = {
@@ -68,7 +69,7 @@ function ProjectHunksScreen:constructor()
         return foldable_list
       end,
     }),
-    code_view = CodeView(scene, query, {
+    code_view = CodeView(scene, store, {
       row = '30vh',
     }, {
       elements = {
@@ -92,23 +93,22 @@ function ProjectHunksScreen:hunk_down()
 end
 
 function ProjectHunksScreen:show(opts)
-  opts = opts or {}
+  opts = opts or {
+    hydrate = self.hydrate,
+  }
 
   console.log('Processing project hunks')
 
-  local query = self.query
-  local layout_type = self.layout_type
-
-  loop.await_fast_event()
-  local err = query:fetch(layout_type, opts)
+  loop.await()
+  local err = self.store:fetch(self.layout_type, opts)
 
   if err then
     console.debug.error(err).error(err)
     return false
   end
 
-  loop.await_fast_event()
-  self.code_view:show(layout_type)
+  loop.await()
+  self.code_view:show(self.layout_type)
   self.foldable_list_view:show()
 
   self.code_view:set_keymap({
@@ -122,7 +122,7 @@ function ProjectHunksScreen:show(opts)
           return
         end
 
-        local _, filename = self.query:get_filename()
+        local _, filename = self.store:get_filename()
 
         if not filename then
           return
@@ -148,9 +148,9 @@ function ProjectHunksScreen:show(opts)
           return
         end
 
-        query:set_id(list_item.id)
+        self.store:set_id(list_item.id)
         self.code_view:render_debounced(loop.async(function()
-          local _, data = query:get()
+          local _, data = self.store:get()
 
           if data then
             self.code_view:navigate_to_mark(data.mark_index)
@@ -168,9 +168,9 @@ function ProjectHunksScreen:show(opts)
           return
         end
 
-        query:set_id(list_item.id)
+        self.store:set_id(list_item.id)
         self.code_view:render_debounced(loop.async(function()
-          local _, data = query:get()
+          local _, data = self.store:get()
 
           if data then
             self.code_view:navigate_to_mark(data.mark_index)
@@ -182,7 +182,7 @@ function ProjectHunksScreen:show(opts)
       mode = 'n',
       key = '<enter>',
       handler = loop.async(function()
-        local _, filename = self.query:get_filename()
+        local _, filename = self.store:get_filename()
 
         if not filename then
           self.foldable_list_view:toggle_current_list_item():render()
@@ -190,7 +190,7 @@ function ProjectHunksScreen:show(opts)
           return
         end
 
-        local hunk_err, hunk = query:get_hunk()
+        local hunk_err, hunk = self.store:get_hunk()
 
         if hunk_err then
           console.error(hunk_err)

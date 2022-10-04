@@ -2,16 +2,14 @@ local utils = require('vgit.core.utils')
 local dimensions = require('vgit.ui.dimensions')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local PresentationalComponent = require(
-  'vgit.ui.components.PresentationalComponent'
-)
+local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 
 local SimpleView = Object:extend()
 
-function SimpleView:constructor(scene, query, plot, config)
+function SimpleView:constructor(scene, store, plot, config)
   return {
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
     config = config or {},
   }
@@ -42,16 +40,15 @@ function SimpleView:define()
 end
 
 function SimpleView:set_keymap(configs)
-  utils.list.each(configs, function(config)
-    self.scene
-      :get('simple_view')
-      :set_keymap(config.mode, config.key, config.handler)
-  end)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('simple_view'):set_keymap(config.mode, config.key, config.handler) end
+  )
   return self
 end
 
 function SimpleView:set_title()
-  local _, title = self.query:get_title()
+  local _, title = self.store:get_title()
 
   self.scene:get('simple_view'):set_title(title)
 
@@ -59,7 +56,7 @@ function SimpleView:set_title()
 end
 
 function SimpleView:render()
-  local err, lines = self.query:get_lines()
+  local err, lines = self.store:get_lines()
 
   if err then
     console.debug.error(err).error(err)
@@ -72,14 +69,14 @@ function SimpleView:render()
   return self
 end
 
-function SimpleView:mount_scene(mount_opts)
-  self.scene:get('simple_view'):mount(mount_opts)
+function SimpleView:mount(opts)
+  self.scene:get('simple_view'):mount(opts)
 
   return self
 end
 
-function SimpleView:show(mount_opts)
-  self:define():mount_scene(mount_opts):render()
+function SimpleView:show(opts)
+  self:define():mount(opts):render()
 
   return self
 end

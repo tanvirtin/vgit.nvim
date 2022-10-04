@@ -1,14 +1,12 @@
-local console = require('vgit.core.console')
-local Window = require('vgit.core.Window')
 local loop = require('vgit.core.loop')
-local Feature = require('vgit.Feature')
+local Window = require('vgit.core.Window')
+local Object = require('vgit.core.Object')
+local console = require('vgit.core.console')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local navigation = require('vgit.features.buffer.Hunks.navigation')
-local NavigationVirtualText = require(
-  'vgit.features.buffer.Hunks.NavigationVirtualText'
-)
+local NavigationVirtualText = require('vgit.features.buffer.Hunks.NavigationVirtualText')
 
-local Hunks = Feature:extend()
+local Hunks = Object:extend()
 
 function Hunks:constructor()
   return {
@@ -30,11 +28,7 @@ function Hunks:move_up()
     local window = Window(0)
     local selected = navigation.hunk_up(window, hunks)
 
-    self.navigation_virtual_text:place(
-      buffer,
-      window,
-      string.format('%s/%s Changes', selected, #hunks)
-    )
+    self.navigation_virtual_text:place(buffer, window, string.format('%s/%s Changes', selected, #hunks))
   end
 end
 
@@ -50,16 +44,12 @@ function Hunks:move_down()
   if hunks and #hunks ~= 0 then
     local window = Window(0)
     local selected = navigation.hunk_down(window, hunks)
-    self.navigation_virtual_text:place(
-      buffer,
-      window,
-      string.format('%s/%s Changes', selected, #hunks)
-    )
+    self.navigation_virtual_text:place(buffer, window, string.format('%s/%s Changes', selected, #hunks))
   end
 end
 
 function Hunks:cursor_hunk()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then
@@ -87,7 +77,7 @@ function Hunks:cursor_hunk()
 end
 
 function Hunks:stage_all()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then
@@ -96,7 +86,7 @@ function Hunks:stage_all()
 
   local err = buffer.git_object:stage()
 
-  loop.await_fast_event()
+  loop.await()
   if err then
     console.debug.error(err)
     return
@@ -106,7 +96,7 @@ function Hunks:stage_all()
 end
 
 function Hunks:cursor_stage()
-  loop.await_fast_event()
+  loop.await()
 
   local buffer = git_buffer_store.current()
   if not buffer then
@@ -122,7 +112,7 @@ function Hunks:cursor_stage()
   if not git_object:is_tracked() then
     local err = git_object:stage()
 
-    loop.await_fast_event()
+    loop.await()
     if err then
       console.debug.error(err)
       return
@@ -150,7 +140,7 @@ function Hunks:cursor_stage()
 end
 
 function Hunks:unstage_all()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then
@@ -159,7 +149,7 @@ function Hunks:unstage_all()
 
   local err = buffer.git_object:unstage()
 
-  loop.await_fast_event()
+  loop.await()
   if err then
     console.debug.error(err)
     return
@@ -169,7 +159,7 @@ function Hunks:unstage_all()
 end
 
 function Hunks:reset_all()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then
@@ -184,7 +174,7 @@ function Hunks:reset_all()
 
   local err, lines = buffer.git_object:lines()
 
-  loop.await_fast_event()
+  loop.await()
   if err then
     return console.debug.error(err)
   end
@@ -194,7 +184,7 @@ function Hunks:reset_all()
 end
 
 function Hunks:cursor_reset()
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
 
   if not buffer then
@@ -233,12 +223,7 @@ function Hunks:cursor_reset()
     local hunk = hunks[i]
     if
       (lnum >= hunk.top and lnum <= hunk.bot)
-      or (
-        hunk.top == 0
-        and hunk.bot == 0
-        and lnum - 1 == hunk.top
-        and lnum - 1 == hunk.bot
-      )
+      or (hunk.top == 0 and hunk.bot == 0 and lnum - 1 == hunk.top and lnum - 1 == hunk.bot)
     then
       selected_hunk = hunk
       selected_hunk_index = i

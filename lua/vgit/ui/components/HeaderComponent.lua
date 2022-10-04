@@ -27,9 +27,7 @@ function HeaderComponent:call(callback)
   return self
 end
 
-function HeaderComponent:get_height()
-  return 1
-end
+function HeaderComponent:get_height() return 1 end
 
 function HeaderComponent:set_default_win_plot(win_plot)
   win_plot.focusable = false
@@ -57,10 +55,7 @@ function HeaderComponent:mount(opts)
 
   self:set_default_win_plot(win_plot):set_default_win_options(win_options)
 
-  local plot = ComponentPlot(
-    config.win_plot,
-    utils.object.merge(elements_config, opts)
-  ):build()
+  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
 
   self.notification = Notification()
   self.header_title = HeaderTitle()
@@ -104,14 +99,7 @@ function HeaderComponent:clear_notification()
 end
 
 function HeaderComponent:trigger_notification(text)
-  self.namespace:transpose_virtual_text(
-    self.buffer,
-    text,
-    'GitComment',
-    0,
-    0,
-    'eol'
-  )
+  self.namespace:transpose_virtual_text(self.buffer, text, 'GitComment', 0, 0, 'eol')
 
   return self
 end

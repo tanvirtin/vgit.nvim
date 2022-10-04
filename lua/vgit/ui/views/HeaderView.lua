@@ -4,10 +4,10 @@ local HeaderComponent = require('vgit.ui.components.HeaderComponent')
 
 local HeaderView = Object:extend()
 
-function HeaderView:constructor(scene, query, plot)
+function HeaderView:constructor(scene, store, plot)
   return {
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
   }
 end
@@ -28,14 +28,14 @@ function HeaderView:define()
   return self
 end
 
-function HeaderView:mount_scene(mount_opts)
-  self.scene:get('header'):mount(mount_opts)
+function HeaderView:mount(opts)
+  self.scene:get('header'):mount(opts)
 
   return self
 end
 
-function HeaderView:show(mount_opts)
-  self:define():mount_scene(mount_opts)
+function HeaderView:show(opts)
+  self:define():mount(opts)
 
   return self
 end

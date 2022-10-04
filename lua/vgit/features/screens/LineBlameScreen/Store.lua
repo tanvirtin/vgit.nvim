@@ -2,9 +2,9 @@ local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
 
-local Query = Object:extend()
+local Store = Object:extend()
 
-function Query:constructor()
+function Store:constructor()
   return {
     err = nil,
     data = nil,
@@ -13,27 +13,31 @@ function Query:constructor()
   }
 end
 
-function Query:reset()
+function Store:reset()
   self.err = nil
   self.data = nil
 
   return self
 end
 
-function Query:fetch(filename, lnum)
+function Store:fetch(filename, lnum, opts)
+  opts = opts or {}
+
+  if self.data and opts.hydrate then
+    return nil, self.data
+  end
+
   self:reset()
 
   self.git_object = GitObject(filename)
 
-  loop.await_fast_event()
+  loop.await()
   self.err, self.data = self.git_object:blame_line(lnum)
-  loop.await_fast_event()
+  loop.await()
 
   return self.err, self.data
 end
 
-function Query:get_blame()
-  return self.err, self.data
-end
+function Store:get_blame() return self.err, self.data end
 
-return Query
+return Store

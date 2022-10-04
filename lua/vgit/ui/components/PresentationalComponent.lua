@@ -37,10 +37,7 @@ function PresentationalComponent:mount(opts)
 
   local win_plot = config.win_plot
 
-  local plot = ComponentPlot(
-    win_plot,
-    utils.object.merge(elements_config, opts)
-  ):build()
+  local plot = ComponentPlot(win_plot, utils.object.merge(elements_config, opts)):build()
 
   local buffer = Buffer():create():assign_options(config.buf_options)
   self.buffer = buffer

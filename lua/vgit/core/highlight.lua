@@ -1,13 +1,12 @@
+local event = require('vgit.core.event')
 local hls_setting = require('vgit.settings.hls')
+local event_type = require('vgit.core.event_type')
 
 local highlight = {}
 
 function highlight.define(group, color, force)
   if type(color) == 'string' then
-    vim.api.nvim_exec(
-      string.format('highlight link %s %s', group, color),
-      false
-    )
+    vim.api.nvim_exec(string.format('highlight link %s %s', group, color), false)
 
     return highlight
   end
@@ -28,24 +27,23 @@ function highlight.define(group, color, force)
   local bg = color.bg and 'guibg = ' .. color.bg or 'guibg = NONE'
   local sp = color.sp and 'guisp = ' .. color.sp or ''
 
-  vim.api.nvim_exec(
-    'highlight ' .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp,
-    false
-  )
+  vim.api.nvim_exec('highlight ' .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp, false)
 
   return highlight
 end
 
 function highlight.register_module(dependency)
-  hls_setting:for_each(function(hl, color)
-    highlight.define(hl, color)
-  end)
+  hls_setting:for_each(function(hl, color) highlight.define(hl, color) end)
 
   if dependency then
     dependency()
   end
 
   return highlight
+end
+
+function highlight.register_events()
+  event.on(event_type.ColorScheme, hls_setting:for_each(function(hl, color) highlight.define(hl, color) end))
 end
 
 return highlight

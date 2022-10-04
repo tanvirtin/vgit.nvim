@@ -1,29 +1,17 @@
 local utils = require('vgit.core.utils')
 local dimensions = {}
 
-function dimensions.global_width()
-  return vim.o.columns
-end
+function dimensions.global_width() return vim.o.columns end
 
-function dimensions.global_height()
-  return vim.o.lines - 1
-end
+function dimensions.global_height() return vim.o.lines - 1 end
 
-function dimensions.vh(value)
-  return string.format('%svh', value)
-end
+function dimensions.vh(value) return string.format('%svh', value) end
 
-function dimensions.vw(value)
-  return string.format('%svw', value)
-end
+function dimensions.vw(value) return string.format('%svw', value) end
 
-function dimensions.get_value(size)
-  return tonumber(size:sub(1, #size - 2))
-end
+function dimensions.get_value(size) return tonumber(size:sub(1, #size - 2)) end
 
-function dimensions.get_unit(size)
-  return size:sub(#size - 1, #size)
-end
+function dimensions.get_unit(size) return size:sub(#size - 1, #size) end
 
 function dimensions.relative_size(parent, child, op)
   if not child then
@@ -90,22 +78,14 @@ function dimensions.convert(value)
     local type = value:sub(#value - 1, #value)
 
     if type == 'vh' then
-      return utils.math.round(
-        (tonumber(number_value) / 100) * dimensions.global_height()
-      )
+      return utils.math.round((tonumber(number_value) / 100) * dimensions.global_height())
     end
 
     if type == 'vw' then
-      return utils.math.round(
-        (tonumber(number_value) / 100) * dimensions.global_width()
-      )
+      return utils.math.round((tonumber(number_value) / 100) * dimensions.global_width())
     end
 
-    error(
-      debug.traceback(
-        'error :: invalid dimension, should either be \'vh\' or \'vw\''
-      )
-    )
+    error(debug.traceback('error :: invalid dimension, should either be \'vh\' or \'vw\''))
   end
 
   return value

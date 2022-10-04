@@ -1,5 +1,9 @@
 local list = {}
 
+list.is_list = vim.tbl_islist
+
+list.is_empty = vim.tbl_isempty
+
 function list.pick(l, item)
   for i = 1, #l do
     if l[i] == item then
@@ -86,9 +90,5 @@ function list.find(l, callback)
     end
   end
 end
-
-list.is_list = vim.tbl_islist
-
-list.is_empty = vim.tbl_isempty
 
 return list

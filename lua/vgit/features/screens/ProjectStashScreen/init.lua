@@ -1,45 +1,44 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Feature = require('vgit.Feature')
 local utils = require('vgit.core.utils')
+local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local GitLogsView = require('vgit.ui.views.GitLogsView')
-local Query = require('vgit.features.screens.ProjectStashScreen.Query')
+local Store = require('vgit.features.screens.ProjectStashScreen.Store')
 
-local ProjectStashScreen = Feature:extend()
+local ProjectStashScreen = Object:extend()
 
 function ProjectStashScreen:constructor()
   local scene = Scene()
-  local query = Query()
+  local store = Store()
 
   return {
     name = 'Stash Screen',
+    hydrate = false,
     scene = scene,
-    query = query,
-    view = GitLogsView(scene, query),
+    store = store,
+    view = GitLogsView(scene, store),
   }
 end
 
 function ProjectStashScreen:show(options)
   console.log('Processing logs')
 
-  local query = self.query
-
-  loop.await_fast_event()
-  local err = query:fetch(options)
+  loop.await()
+  local err = self.store:fetch(options, { hydrate = self.hydrate })
 
   if err then
     console.debug.error(err).error(err)
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.view:show():set_keymap({
     {
       mode = 'n',
       key = '<tab>',
       handler = loop.async(function()
-        loop.await_fast_event()
+        loop.await()
 
         self.view:select()
       end),
@@ -56,14 +55,12 @@ function ProjectStashScreen:show(options)
 
         vim.cmd('quit')
 
-        loop.await_fast_event()
+        loop.await()
         vim.cmd(
           utils.list.reduce(
             view:get_selected(),
             'VGit project_commits_preview',
-            function(cmd, log)
-              return cmd .. ' ' .. log.commit_hash
-            end
+            function(cmd, log) return cmd .. ' ' .. log.commit_hash end
           )
         )
       end),

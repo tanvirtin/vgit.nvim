@@ -5,10 +5,7 @@ local state = {}
 local env = {}
 
 function env.set(key, value)
-  assertion.assert_string(key).assert_types(
-    value,
-    { 'string', 'number', 'boolean' }
-  )
+  assertion.assert_string(key).assert_types(value, { 'string', 'number', 'boolean' })
   state[key] = value
 
   return env

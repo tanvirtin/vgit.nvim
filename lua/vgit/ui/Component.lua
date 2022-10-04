@@ -1,4 +1,3 @@
-local loop = require('vgit.core.loop')
 local assertion = require('vgit.core.assertion')
 local Object = require('vgit.core.Object')
 
@@ -80,13 +79,9 @@ function Component:set_win_plot(win_plot)
   return self
 end
 
-function Component:is_focused()
-  return self.window:is_focused()
-end
+function Component:is_focused() return self.window:is_focused() end
 
-function Component:is_valid()
-  return self.buffer:is_valid() and self.window:is_valid()
-end
+function Component:is_valid() return self.buffer:is_valid() and self.window:is_valid() end
 
 function Component:make_border(config)
   if config.hl then
@@ -107,13 +102,9 @@ function Component:make_border(config)
   return config.chars
 end
 
-function Component:mount()
-  assertion.assert('Not yet implemented')
-end
+function Component:mount() assertion.assert('Not yet implemented') end
 
-function Component:unmount()
-  assertion.assert('Not yet implemented')
-end
+function Component:unmount() assertion.assert('Not yet implemented') end
 
 function Component:clear_namespace()
   self.buffer:clear_namespace()
@@ -197,21 +188,13 @@ function Component:disable_cursorline()
   return self
 end
 
-function Component:clear_lines()
-  return self.buffer:set_lines({})
-end
+function Component:clear_lines() return self.buffer:set_lines({}) end
 
-function Component:reset_cursor()
-  return self.window:set_cursor({ 1, 1 })
-end
+function Component:reset_cursor() return self.window:set_cursor({ 1, 1 }) end
 
-function Component:get_lnum()
-  return self.window:get_lnum()
-end
+function Component:get_lnum() return self.window:get_lnum() end
 
-function Component:get_line_count()
-  return self.buffer:get_line_count()
-end
+function Component:get_line_count() return self.buffer:get_line_count() end
 
 function Component:set_filetype(filetype)
   self.buffer:set_option('filetype', filetype)
@@ -221,9 +204,7 @@ function Component:set_filetype(filetype)
   return self
 end
 
-function Component:get_filetype()
-  return self.buffer:get_option('filetype')
-end
+function Component:get_filetype() return self.buffer:get_option('filetype') end
 
 function Component:set_lines(lines, force)
   if self.locked and not force or not self:is_valid() then
@@ -235,9 +216,7 @@ function Component:set_lines(lines, force)
   return self
 end
 
-function Component:is_own_window(window)
-  return self.window:is_same(window)
-end
+function Component:is_own_window(window) return self.window:is_same(window) end
 
 function Component:call(callback)
   self.window:call(callback)

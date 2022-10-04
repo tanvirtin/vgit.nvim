@@ -249,17 +249,13 @@ end
 local function make_bitop(t)
   local op1 = make_bitop_uncached(t, 2 ^ 1)
   local op2 = memoize(function(a)
-    return memoize(function(b)
-      return op1(a, b)
-    end)
+    return memoize(function(b) return op1(a, b) end)
   end)
   return make_bitop_uncached(op2, 2 ^ (t.n or 1))
 end
 
 -- ok?  probably not if running on a 32-bit int Lua number type platform
-function M.tobit(x)
-  return x % 2 ^ 32
-end
+function M.tobit(x) return x % 2 ^ 32 end
 
 M.bxor = make_bitop({
   [0] = { [0] = 0, [1] = 1 },
@@ -268,19 +264,13 @@ M.bxor = make_bitop({
 })
 local bxor = M.bxor
 
-function M.bnot(a)
-  return MODM - a
-end
+function M.bnot(a) return MODM - a end
 local bnot = M.bnot
 
-function M.band(a, b)
-  return ((a + b) - bxor(a, b)) / 2
-end
+function M.band(a, b) return ((a + b) - bxor(a, b)) / 2 end
 local band = M.band
 
-function M.bor(a, b)
-  return MODM - band(MODM - a, MODM - b)
-end
+function M.bor(a, b) return MODM - band(MODM - a, MODM - b) end
 local bor = M.bor
 
 local lshift, rshift -- forward declare
@@ -377,9 +367,7 @@ end
 
 M.bit32 = {} -- Lua 5.2 'bit32' compatibility
 
-local function bit32_bnot(x)
-  return (-1 - x) % MOD
-end
+local function bit32_bnot(x) return (-1 - x) % MOD end
 M.bit32.bnot = bit32_bnot
 
 local function bit32_bxor(a, b, c, ...)
@@ -436,17 +424,11 @@ local function bit32_bor(a, b, c, ...)
 end
 M.bit32.bor = bit32_bor
 
-function M.bit32.btest(...)
-  return bit32_band(...) ~= 0
-end
+function M.bit32.btest(...) return bit32_band(...) ~= 0 end
 
-function M.bit32.lrotate(x, disp)
-  return lrotate(x % MOD, disp)
-end
+function M.bit32.lrotate(x, disp) return lrotate(x % MOD, disp) end
 
-function M.bit32.rrotate(x, disp)
-  return rrotate(x % MOD, disp)
-end
+function M.bit32.rrotate(x, disp) return rrotate(x % MOD, disp) end
 
 function M.bit32.lshift(x, disp)
   if disp > 31 or disp < -31 then
@@ -513,13 +495,9 @@ function M.bit.tobit(x)
 end
 local bit_tobit = M.bit.tobit
 
-function M.bit.tohex(x, ...)
-  return tohex(x % MOD, ...)
-end
+function M.bit.tohex(x, ...) return tohex(x % MOD, ...) end
 
-function M.bit.bnot(x)
-  return bit_tobit(bnot(x % MOD))
-end
+function M.bit.bnot(x) return bit_tobit(bnot(x % MOD)) end
 
 local function bit_bor(a, b, c, ...)
   if c then
@@ -554,28 +532,16 @@ local function bit_bxor(a, b, c, ...)
 end
 M.bit.bxor = bit_bxor
 
-function M.bit.lshift(x, n)
-  return bit_tobit(lshift(x % MOD, n % 32))
-end
+function M.bit.lshift(x, n) return bit_tobit(lshift(x % MOD, n % 32)) end
 
-function M.bit.rshift(x, n)
-  return bit_tobit(rshift(x % MOD, n % 32))
-end
+function M.bit.rshift(x, n) return bit_tobit(rshift(x % MOD, n % 32)) end
 
-function M.bit.arshift(x, n)
-  return bit_tobit(arshift(x % MOD, n % 32))
-end
+function M.bit.arshift(x, n) return bit_tobit(arshift(x % MOD, n % 32)) end
 
-function M.bit.rol(x, n)
-  return bit_tobit(lrotate(x % MOD, n % 32))
-end
+function M.bit.rol(x, n) return bit_tobit(lrotate(x % MOD, n % 32)) end
 
-function M.bit.ror(x, n)
-  return bit_tobit(rrotate(x % MOD, n % 32))
-end
+function M.bit.ror(x, n) return bit_tobit(rrotate(x % MOD, n % 32)) end
 
-function M.bit.bswap(x)
-  return bit_tobit(bswap(x % MOD))
-end
+function M.bit.bswap(x) return bit_tobit(bswap(x % MOD)) end
 
 return M

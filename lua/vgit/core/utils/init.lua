@@ -1,11 +1,11 @@
 -- Standard utility functions used throughout the app.
 
 local utils = {
-  object = require('vgit.core.utils.object'),
+  str = require('vgit.core.utils.str'),
   list = require('vgit.core.utils.list'),
   date = require('vgit.core.utils.date'),
   math = require('vgit.core.utils.math'),
-  str = require('vgit.core.utils.str'),
+  object = require('vgit.core.utils.object'),
 }
 
 return utils

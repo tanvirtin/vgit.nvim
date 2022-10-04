@@ -1,38 +1,44 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
+local utils = require('vgit.core.utils')
+local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local SimpleView = require('vgit.ui.views.SimpleView')
-local Feature = require('vgit.Feature')
-local Query = require('vgit.features.screens.DebugScreen.Query')
+local Store = require('vgit.features.screens.DebugScreen.Store')
 
-local DebugScreen = Feature:extend()
+local DebugScreen = Object:extend()
 
 function DebugScreen:constructor()
   local scene = Scene()
-  local query = Query()
+  local store = Store()
 
   return {
     name = 'Debug Screen',
+    hydrate = false,
     scene = scene,
-    query = query,
-    view = SimpleView(scene, query),
+    store = store,
+    view = SimpleView(scene, store),
   }
 end
 
 function DebugScreen:show(source)
+  local allowed_sources = { 'infos', 'warnings', 'errors' }
+
+  if not utils.list.find(allowed_sources, function(s) return s == source end) then
+    return
+  end
+
   console.log(string.format('Processing %s', source))
 
-  local query = self.query
-
-  loop.await_fast_event()
-  local err = query:fetch(source)
+  loop.await()
+  local err = self.store:fetch(source, { hydrate = self.hydrate })
 
   if err then
     console.debug.error(err).error(err)
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.view:show()
 
   return true

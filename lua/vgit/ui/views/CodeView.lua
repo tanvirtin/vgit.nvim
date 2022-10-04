@@ -18,11 +18,11 @@ function CodeView:get_initial_state()
   }
 end
 
-function CodeView:constructor(scene, query, plot, config)
+function CodeView:constructor(scene, store, plot, config)
   return {
     title = 'Diff',
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
     layout_type = nil,
     config = config or {},
@@ -120,18 +120,16 @@ end
 
 function CodeView:set_keymap(configs)
   if self.layout_type == 'split' then
-    utils.list.each(configs, function(config)
-      self.scene
-        :get('previous')
-        :set_keymap(config.mode, config.key, config.handler)
-    end)
+    utils.list.each(
+      configs,
+      function(config) self.scene:get('previous'):set_keymap(config.mode, config.key, config.handler) end
+    )
   end
 
-  utils.list.each(configs, function(config)
-    self.scene
-      :get('current')
-      :set_keymap(config.mode, config.key, config.handler)
-  end)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('current'):set_keymap(config.mode, config.key, config.handler) end
+  )
 
   return self
 end
@@ -187,11 +185,7 @@ function CodeView:paint_line(component_type, line_changes, lnum)
   local component = self.scene:get(component_type)
 
   if not lnum_change then
-    component:transpose_virtual_line_number(
-      line_number,
-      line_number_hl,
-      lnum - 1
-    )
+    component:transpose_virtual_line_number(line_number, line_number_hl, lnum - 1)
     return self
   end
 
@@ -226,9 +220,7 @@ function CodeView:paint_line(component_type, line_changes, lnum)
 end
 
 function CodeView:apply_paint_instructions(component_type, line_changes, lnum)
-  return self
-    :paint_line(component_type, line_changes, lnum)
-    :paint_word(component_type, line_changes, lnum)
+  return self:paint_line(component_type, line_changes, lnum):paint_word(component_type, line_changes, lnum)
 end
 
 function CodeView:apply_brush(top, bot)
@@ -236,11 +228,7 @@ function CodeView:apply_brush(top, bot)
   local previous_lines_changes = self.state.previous_lines_changes
 
   for i = top, bot do
-    if
-      self.layout_type == 'split'
-      and previous_lines_changes
-      and previous_lines_changes[i]
-    then
+    if self.layout_type == 'split' and previous_lines_changes and previous_lines_changes[i] then
       self:apply_paint_instructions('previous', previous_lines_changes[i], i)
     end
 
@@ -253,16 +241,12 @@ function CodeView:apply_brush(top, bot)
 end
 
 function CodeView:paint_partially()
-  self.scene:get('current'):attach_to_renderer(function(top, bot)
-    self:apply_brush(top, bot)
-  end)
+  self.scene:get('current'):attach_to_renderer(function(top, bot) self:apply_brush(top, bot) end)
 
   return self
 end
 
-function CodeView:paint_full()
-  return self:apply_brush(1, #self.state.current_lines_changes)
-end
+function CodeView:paint_full() return self:apply_brush(1, #self.state.current_lines_changes) end
 
 function CodeView:reset_cursor()
   if self.layout_type == 'split' then
@@ -337,21 +321,21 @@ function CodeView:clear_notification()
 end
 
 function CodeView:make_title()
-  local filename_err, filename = self.query:get_filename()
+  local filename_err, filename = self.store:get_filename()
 
   if filename_err then
     console.debug.error(filename_err)
     return self
   end
 
-  local filetype_err, filetype = self.query:get_filetype()
+  local filetype_err, filetype = self.store:get_filetype()
 
   if filetype_err then
     console.debug.error(filetype_err)
     return self
   end
 
-  local diff_dto_err, diff_dto = self.query:get_diff_dto()
+  local diff_dto_err, diff_dto = self.store:get_diff_dto()
 
   if diff_dto_err then
     console.debug.error(diff_dto_err)
@@ -382,7 +366,7 @@ function CodeView:make_title()
 end
 
 function CodeView:make_filetype()
-  local err, filetype = self.query:get_filetype()
+  local err, filetype = self.store:get_filetype()
 
   if err then
     console.debug.error(err)
@@ -404,10 +388,7 @@ function CodeView:make_filetype()
   return self
 end
 
-function CodeView:make_split_current_line_numbers(
-  diff_dto,
-  current_lnum_change_map
-)
+function CodeView:make_split_current_line_numbers(diff_dto, current_lnum_change_map)
   local current_lines_changes = {}
   local current_lines = {}
   local current_line_count = 1
@@ -417,14 +398,8 @@ function CodeView:make_split_current_line_numbers(
     local line
     local lnum_change = current_lnum_change_map[i]
 
-    if
-      lnum_change
-      and (lnum_change.type == 'remove' or lnum_change.type == 'void')
-    then
-      line = string.rep(
-        symbols_setting:get('void'),
-        LineNumberElement:get_width()
-      )
+    if lnum_change and (lnum_change.type == 'remove' or lnum_change.type == 'void') then
+      line = string.rep(symbols_setting:get('void'), LineNumberElement:get_width())
       current_lines[#current_lines + 1] = line
     else
       line = string.format('%s ', current_line_count)
@@ -445,10 +420,7 @@ function CodeView:make_split_current_line_numbers(
   return self
 end
 
-function CodeView:make_split_previous_line_numbers(
-  diff_dto,
-  previous_lnum_change_map
-)
+function CodeView:make_split_previous_line_numbers(diff_dto, previous_lnum_change_map)
   local previous_lines = {}
   local previous_lines_changes = {}
   local previous_lines_count = 1
@@ -458,14 +430,8 @@ function CodeView:make_split_previous_line_numbers(
     local line
     local lnum_change = previous_lnum_change_map[i]
 
-    if
-      lnum_change
-      and (lnum_change.type == 'add' or lnum_change.type == 'void')
-    then
-      line = string.rep(
-        symbols_setting:get('void'),
-        LineNumberElement:get_width()
-      )
+    if lnum_change and (lnum_change.type == 'add' or lnum_change.type == 'void') then
+      line = string.rep(symbols_setting:get('void'), LineNumberElement:get_width())
       previous_lines[#previous_lines + 1] = line
     else
       line = string.format('%s ', previous_lines_count)
@@ -486,7 +452,7 @@ function CodeView:make_split_previous_line_numbers(
 end
 
 function CodeView:make_split_line_numbers()
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -513,7 +479,7 @@ function CodeView:make_split_line_numbers()
 end
 
 function CodeView:make_unified_line_numbers()
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -570,7 +536,7 @@ function CodeView:make_line_numbers()
 end
 
 function CodeView:make_lines()
-  local diff_dto_err, diff_dto = self.query:get_diff_dto()
+  local diff_dto_err, diff_dto = self.store:get_diff_dto()
   if diff_dto_err then
     console.debug.error(diff_dto_err)
     return self
@@ -579,14 +545,8 @@ function CodeView:make_lines()
   if self.layout_type == 'unified' then
     self.scene:get('current'):set_lines(diff_dto.lines):enable_cursorline()
   else
-    self.scene
-      :get('previous')
-      :set_lines(diff_dto.previous_lines)
-      :enable_cursorline()
-    self.scene
-      :get('current')
-      :set_lines(diff_dto.current_lines)
-      :enable_cursorline()
+    self.scene:get('previous'):set_lines(diff_dto.previous_lines):enable_cursorline()
+    self.scene:get('current'):set_lines(diff_dto.current_lines):enable_cursorline()
   end
 
   return self
@@ -621,7 +581,7 @@ function CodeView:notify(msg)
 end
 
 function CodeView:get_current_mark_under_cursor()
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -643,7 +603,7 @@ function CodeView:get_current_mark_under_cursor()
 end
 
 function CodeView:get_current_hunk_under_cursor()
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -700,7 +660,7 @@ function CodeView:select_mark(marks, mark_index, position)
 end
 
 function CodeView:prev(pos)
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -727,7 +687,7 @@ function CodeView:prev(pos)
 end
 
 function CodeView:next(pos)
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -755,7 +715,7 @@ function CodeView:next(pos)
 end
 
 function CodeView:get_relative_mark_index(lnum)
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -786,7 +746,7 @@ function CodeView:navigate_to_mark(mark_index, pos)
     mark_index = 1
   end
 
-  local err, diff_dto = self.query:get_diff_dto()
+  local err, diff_dto = self.store:get_diff_dto()
 
   if err then
     console.debug.error(err)
@@ -806,41 +766,31 @@ function CodeView:navigate_to_mark(mark_index, pos)
     mark_index = 1
   end
 
-  return self:select_mark(marks, mark_index, pos):notify(
-    string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks)
-  )
+  return self
+    :select_mark(marks, mark_index, pos)
+    :notify(string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks))
 end
 
 function CodeView:render()
   local ok, msg = pcall(function()
     -- NOTE: important to clear the namespace first.
-    loop.await_fast_event(5)
+    loop.await(5)
     self:clear_namespace()
-    loop.await_fast_event(5)
+    loop.await(5)
 
-    local err, _ = self.query:get_diff_dto()
+    local err, _ = self.store:get_diff_dto()
 
     if err then
       console.debug.error(err)
 
       self.state = CodeView:get_initial_state()
 
-      return self
-        :clear_title()
-        :clear_lines()
-        :clear_notification()
-        :reset_cursor()
+      return self:clear_title():clear_lines():clear_notification():reset_cursor()
     end
 
     -- NOTE: It is super important to reset the cursor or else
     -- you will randomly see line numbers not aligning with the current view.
-    return self
-      :reset_cursor()
-      :make_title()
-      :make_filetype()
-      :make_lines()
-      :make_line_numbers()
-      :paint()
+    return self:reset_cursor():make_title():make_filetype():make_lines():make_line_numbers():paint()
   end)
 
   if not ok then
@@ -851,32 +801,31 @@ function CodeView:render()
 end
 
 CodeView.render_debounced = loop.debounced_async(function(self, callback)
+  loop.await()
+
   self:render()
+
   if callback then
     callback()
   end
-end, 100)
+end, 300)
 
-function CodeView:mount_scene(mount_opts)
+function CodeView:mount(opts)
   if self.layout_type == 'split' then
-    self.scene:get('previous'):mount(mount_opts)
+    self.scene:get('previous'):mount(opts)
   end
 
-  self.scene:get('current'):mount(mount_opts)
+  self.scene:get('current'):mount(opts)
 
   return self
 end
 
-function CodeView:show(layout_type, pos, mount_opts)
-  mount_opts = mount_opts or {}
+function CodeView:show(layout_type, pos, opts)
+  opts = opts or {}
   self.layout_type = layout_type
   self.state = CodeView:get_initial_state()
 
-  self
-    :define()
-    :mount_scene(mount_opts)
-    :render()
-    :navigate_to_mark(self:get_relative_mark_index(mount_opts.lnum or 1), pos)
+  self:define():mount(opts):render():navigate_to_mark(self:get_relative_mark_index(opts.lnum or 1), pos)
 
   return self
 end
