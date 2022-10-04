@@ -11,13 +11,7 @@ function Patch:constructor(filename, hunk)
     --       @@ -3, 0, +4, 5 @@ means in the previous file changes start at line 3 and
     --       there are 0 additions. In the current file changes start at line 4 with 5
     --       new line additions.
-    header = string.format(
-      '@@ -%s,%s +%s,%s @@',
-      previous[1],
-      previous[2],
-      previous[1] + 1,
-      #hunk.diff
-    )
+    header = string.format('@@ -%s,%s +%s,%s @@', previous[1], previous[2], previous[1] + 1, #hunk.diff)
   end
 
   local patch = {

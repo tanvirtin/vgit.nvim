@@ -72,11 +72,7 @@ function CodeComponent:sign_place_line_number(lnum, sign_name)
 end
 
 function CodeComponent:transpose_virtual_line_number(text, hl, row)
-  self.elements.line_number:transpose_virtual_line(
-    { { text, hl } },
-    row,
-    'right_align'
-  )
+  self.elements.line_number:transpose_virtual_line({ { text, hl } }, row, 'right_align')
 
   return self
 end
@@ -97,10 +93,7 @@ function CodeComponent:mount(opts)
   local elements_config = config.elements
   opts = opts or {}
 
-  local plot = ComponentPlot(
-    config.win_plot,
-    utils.object.merge(elements_config, opts)
-  ):build()
+  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
 
   self.notification = Notification()
   self.header_title = HeaderTitle()
@@ -108,9 +101,7 @@ function CodeComponent:mount(opts)
 
   local buffer = self.buffer
 
-  self.elements.line_number = LineNumberElement():mount(
-    plot.line_number_win_plot
-  )
+  self.elements.line_number = LineNumberElement():mount(plot.line_number_win_plot)
 
   if elements_config.header then
     self.elements.header = HeaderElement():mount(plot.header_win_plot)
@@ -120,9 +111,7 @@ function CodeComponent:mount(opts)
     self.elements.footer = FooterElement():mount(plot.footer_win_plot)
   end
 
-  self.window = Window
-    :open(buffer, plot.win_plot)
-    :assign_options(config.win_options)
+  self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
 
   self.mounted = true
   self.plot = plot

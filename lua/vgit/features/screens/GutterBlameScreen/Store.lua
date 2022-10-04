@@ -1,11 +1,11 @@
 local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
-local DiffDTO = require('vgit.git.DiffDTO')
+local DiffDTO = require('vgit.services.diff.DiffDTO')
 local GitObject = require('vgit.git.GitObject')
 
-local Query = Object:extend()
+local Store = Object:extend()
 
-function Query:constructor()
+function Store:constructor()
   return {
     err = nil,
     data = nil,
@@ -14,7 +14,7 @@ function Query:constructor()
   }
 end
 
-function Query:reset()
+function Store:reset()
   self.err = nil
   self.data = nil
   self._cache = nil
@@ -22,30 +22,34 @@ function Query:reset()
   return self
 end
 
-function Query:fetch(filename)
+function Store:fetch(filename, opts)
+  opts = opts or {}
+
+  if self.data and opts.hydrate then
+    return nil, self.data
+  end
+
   self:reset()
 
   self.git_object = GitObject(filename)
 
-  loop.await_fast_event()
+  loop.await()
   self.err, self.data = self.git_object:blames()
-  loop.await_fast_event()
+  loop.await()
 
   return self.err, self.data
 end
 
-function Query:get_blames()
-  return self.err, self.data
-end
+function Store:get_blames() return self.err, self.data end
 
-function Query:get_diff_dto()
+function Store:get_diff_dto()
   if self._cache then
     return nil, self._cache
   end
 
-  loop.await_fast_event()
+  loop.await()
   local err, lines = self.git_object:lines()
-  loop.await_fast_event()
+  loop.await()
 
   if err then
     return err
@@ -58,12 +62,8 @@ function Query:get_diff_dto()
   return nil, self._cache
 end
 
-function Query:get_filename()
-  return nil, self.git_object:get_filename()
-end
+function Store:get_filename() return nil, self.git_object:get_filename() end
 
-function Query:get_filetype()
-  return nil, self.git_object:get_filetype()
-end
+function Store:get_filetype() return nil, self.git_object:get_filetype() end
 
-return Query
+return Store

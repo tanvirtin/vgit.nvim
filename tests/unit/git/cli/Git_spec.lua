@@ -9,14 +9,10 @@ local eq = assert.are.same
 a.describe('Git:', function()
   local git
 
-  local function use_invalid_directory()
-    git:set_cwd('..')
-  end
+  local function use_invalid_directory() git:set_cwd('..') end
 
   -- If path is tests/mock then git will top looking from tests/mock directory for fixtures/ignoreme
-  local function use_mock_repository()
-    git:set_cwd('tests/mock')
-  end
+  local function use_mock_repository() git:set_cwd('tests/mock') end
 
   before_each(function()
     git = Git()
@@ -24,9 +20,7 @@ a.describe('Git:', function()
     os.execute('mv tests/mock/.git_keep tests/mock/.git')
   end)
 
-  after_each(function()
-    os.execute('mv tests/mock/.git tests/mock/.git_keep')
-  end)
+  after_each(function() os.execute('mv tests/mock/.git tests/mock/.git_keep') end)
 
   a.describe('config', function()
     a.it('should return the user defined config git object', function()
@@ -38,14 +32,11 @@ a.describe('Git:', function()
   end)
 
   a.describe('is_inside_git_dir', function()
-    a.it(
-      'should return true if we are currently inside a git repository',
-      function()
-        local result = git:is_inside_git_dir()
+    a.it('should return true if we are currently inside a git repository', function()
+      local result = git:is_inside_git_dir()
 
-        assert(result)
-      end
-    )
+      assert(result)
+    end)
 
     a.it('should return false if we are not inside a git repository', function()
       use_invalid_directory()
@@ -179,17 +170,14 @@ a.describe('Git:', function()
   end)
 
   a.describe('tracked_filename', function()
-    a.it(
-      'should return the git tracked name for a given file in disk',
-      function()
-        use_mock_repository()
+    a.it('should return the git tracked name for a given file in disk', function()
+      use_mock_repository()
 
-        local filename = 'fixtures/file1'
-        local tracked_filename = git:tracked_filename(filename)
+      local filename = 'fixtures/file1'
+      local tracked_filename = git:tracked_filename(filename)
 
-        eq(filename, tracked_filename)
-      end
-    )
+      eq(filename, tracked_filename)
+    end)
 
     a.it('should return nil for a file not in git', function()
       local filename = 'lua/tinman.lua'
@@ -200,40 +188,34 @@ a.describe('Git:', function()
   end)
 
   a.describe('show', function()
-    a.it(
-      'should retrieve the current lines in git for a given filename when the base is HEAD',
-      function()
-        use_mock_repository()
+    a.it('should retrieve the current lines in git for a given filename when the base is HEAD', function()
+      use_mock_repository()
 
-        local filename = 'fixtures/file1'
-        local err, lines = git:show(filename, 'HEAD')
+      local filename = 'fixtures/file1'
+      local err, lines = git:show(filename, 'HEAD')
 
-        assert(not err)
-        assert(lines)
-        eq(lines, {
-          'file1-1',
-          'file1-2',
-          'file1-3',
-          'file1-4',
-          'file1-5',
-        })
-      end
-    )
-    a.it(
-      'should retrieve the lines in git for a given file for a particular commit',
-      function()
-        use_mock_repository()
+      assert(not err)
+      assert(lines)
+      eq(lines, {
+        'file1-1',
+        'file1-2',
+        'file1-3',
+        'file1-4',
+        'file1-5',
+      })
+    end)
+    a.it('should retrieve the lines in git for a given file for a particular commit', function()
+      use_mock_repository()
 
-        local filename = 'fixtures/file3'
-        local commit_hash = 'b3689ca8bc643725d18c231f6d8799e512443024'
-        local err, lines = git:show(filename, commit_hash)
+      local filename = 'fixtures/file3'
+      local commit_hash = 'b3689ca8bc643725d18c231f6d8799e512443024'
+      local err, lines = git:show(filename, commit_hash)
 
-        assert(not err)
-        assert(lines)
-        eq(lines, {
-          'file3-1',
-        })
-      end
-    )
+      assert(not err)
+      assert(lines)
+      eq(lines, {
+        'file3-1',
+      })
+    end)
   end)
 end)

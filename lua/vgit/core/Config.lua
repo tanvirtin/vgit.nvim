@@ -4,10 +4,7 @@ local Object = require('vgit.core.Object')
 local Config = Object:extend()
 
 function Config:constructor(state)
-  assert(
-    type(state) == 'nil' or type(state) == 'table',
-    'type error :: expected table or nil'
-  )
+  assert(type(state) == 'nil' or type(state) == 'table', 'type error :: expected table or nil')
 
   return { data = type(state) == 'table' and state or {} }
 end
@@ -21,10 +18,7 @@ end
 
 function Config:set(key, value)
   assert(self.data[key] ~= nil, string.format('key "%s" does not exist', key))
-  assert(
-    type(self.data[key]) == type(value),
-    string.format('type error :: expected %s', key)
-  )
+  assert(type(self.data[key]) == type(value), string.format('type error :: expected %s', key))
 
   self.data[key] = value
 

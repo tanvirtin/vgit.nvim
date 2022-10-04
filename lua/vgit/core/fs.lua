@@ -22,9 +22,7 @@ function fs.cwd_filename(filepath)
   return filepath:sub(1, end_index)
 end
 
-function fs.relative_filename(filepath)
-  return Path:new(filepath):make_relative(vim.loop.cwd())
-end
+function fs.relative_filename(filepath) return Path:new(filepath):make_relative(vim.loop.cwd()) end
 
 function fs.short_filename(filepath)
   local filename = ''
@@ -40,9 +38,7 @@ function fs.short_filename(filepath)
   return filename
 end
 
-function fs.filetype(buffer)
-  return buffer:get_option('filetype')
-end
+function fs.filetype(buffer) return buffer:get_option('filetype') end
 
 function fs.tmpname()
   local length = 6
@@ -107,21 +103,13 @@ function fs.write_file(filepath, lines)
   return fs
 end
 
-function fs.remove_file(filepath)
-  return os.remove(filepath)
-end
+function fs.remove_file(filepath) return os.remove(filepath) end
 
-function fs.exists(filepath)
-  return (vim.loop.fs_stat(filepath) and true) or false
-end
+function fs.exists(filepath) return (vim.loop.fs_stat(filepath) and true) or false end
 
-function fs.dirname(filepath)
-  return filepath:match('(.*[/\\])') or ''
-end
+function fs.dirname(filepath) return filepath:match('(.*[/\\])') or '' end
 
-function fs.is_dir(filepath)
-  return Path:new(filepath):is_dir()
-end
+function fs.is_dir(filepath) return Path:new(filepath):is_dir() end
 
 function fs.open(filepath)
   vim.cmd(string.format('e %s', filepath))
@@ -129,8 +117,6 @@ function fs.open(filepath)
   return fs
 end
 
-function fs.make_relative(filepath, cwd)
-  return not cwd and filepath or Path:new(filepath):make_relative(cwd)
-end
+function fs.make_relative(filepath, cwd) return not cwd and filepath or Path:new(filepath):make_relative(cwd) end
 
 return fs

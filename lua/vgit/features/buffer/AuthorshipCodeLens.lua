@@ -1,33 +1,25 @@
 local loop = require('vgit.core.loop')
-local Feature = require('vgit.Feature')
-local Buffer = require('vgit.core.Buffer')
-local GitBuffer = require('vgit.git.GitBuffer')
-local console = require('vgit.core.console')
 local event = require('vgit.core.event')
-local authorship_code_lens_setting = require(
-  'vgit.settings.authorship_code_lens'
-)
+local Object = require('vgit.core.Object')
+local Buffer = require('vgit.core.Buffer')
+local console = require('vgit.core.console')
+local GitBuffer = require('vgit.git.GitBuffer')
 local Namespace = require('vgit.core.Namespace')
+local event_type = require('vgit.core.event_type')
 local git_buffer_store = require('vgit.git.git_buffer_store')
+local authorship_code_lens_setting = require('vgit.settings.authorship_code_lens')
 
-local AuthorshipCodeLens = Feature:extend()
+local AuthorshipCodeLens = Object:extend()
 
 function AuthorshipCodeLens:constructor()
   return {
     name = 'Authorship Code Lens',
     namespace = Namespace(),
-    requires_neovim_version = {
-      major = 0,
-      minor = 6,
-      patch = 0,
-    },
   }
 end
 
 function AuthorshipCodeLens:register_events()
-  event.on('BufEnter', function()
-    self:resync()
-  end)
+  event.on(event_type.BufEnter, function() self:resync() end)
 
   return self
 end
@@ -41,7 +33,7 @@ function AuthorshipCodeLens:display(lnum, buffer, text)
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.namespace:insert_virtual_lines(buffer, {
     { {
       text,
@@ -110,7 +102,7 @@ function AuthorshipCodeLens:generate_blame_statistics(blames)
   local num_authors = 0
 
   for i = 1, #blames do
-    loop.await_fast_event()
+    loop.await()
 
     local blame = blames[i]
 
@@ -175,11 +167,7 @@ function AuthorshipCodeLens:sync()
     return self
   end
 
-  if not self:guard() then
-    return self
-  end
-
-  loop.await_fast_event()
+  loop.await()
   local buffer = git_buffer_store.current()
   local git_buffer = GitBuffer(buffer)
 
@@ -195,20 +183,20 @@ function AuthorshipCodeLens:sync()
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   local blames_err, blames = buffer.git_object:blames()
 
   if not buffer:is_valid() then
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   if blames_err then
     console.debug.error(blames_err)
     return self
   end
 
-  loop.await_fast_event()
+  loop.await()
   local config_err, config = buffer.git_object:config()
 
   if config_err then
@@ -216,17 +204,11 @@ function AuthorshipCodeLens:sync()
     return self
   end
 
-  self:clear(buffer):display(
-    buffer:get_line_count(),
-    buffer,
-    self:generate_authorship(config, blames)
-  )
+  self:clear(buffer):display(buffer:get_line_count(), buffer, self:generate_authorship(config, blames))
 
   return self
 end
 
-function AuthorshipCodeLens:resync()
-  return self:clear_all():sync()
-end
+function AuthorshipCodeLens:resync() return self:clear_all():sync() end
 
 return AuthorshipCodeLens

@@ -42,19 +42,14 @@ function PopupComponent:mount(opts)
   local config = self.config
   local elements_config = config.elements
 
-  local plot = ComponentPlot(
-    config.win_plot,
-    utils.object.merge(elements_config, opts)
-  ):build()
+  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
   local win_plot = plot.win_plot
 
   self:set_default_win_plot(win_plot)
 
   self.buffer = Buffer():create():assign_options(config.buf_options)
 
-  self.window = Window
-    :open(self.buffer, win_plot)
-    :assign_options(config.win_options)
+  self.window = Window:open(self.buffer, win_plot):assign_options(config.win_options)
 
   self.mounted = true
   self.plot = plot

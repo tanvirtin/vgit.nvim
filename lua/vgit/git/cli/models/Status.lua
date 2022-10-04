@@ -14,9 +14,7 @@ function Status:constructor(value)
   }
 end
 
-function Status:parse(status)
-  return status:sub(1, 1), status:sub(2, 2)
-end
+function Status:parse(status) return status:sub(1, 1), status:sub(2, 2) end
 
 function Status:has(status)
   local first, second = self:parse(status)
@@ -56,12 +54,8 @@ function Status:has_both(status)
   return first == self.first and second == self.second
 end
 
-function Status:to_string()
-  return self.value
-end
+function Status:to_string() return self.value end
 
-function Status:is_unchanged()
-  return self.value == '--'
-end
+function Status:is_unchanged() return self.value == '--' end
 
 return Status

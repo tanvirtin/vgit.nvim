@@ -1,5 +1,3 @@
 local Config = require('vgit.core.Config')
 
-return Config({
-  enabled = true,
-})
+return Config({ enabled = true })

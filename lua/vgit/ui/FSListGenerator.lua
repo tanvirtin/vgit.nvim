@@ -46,17 +46,9 @@ function FSListGenerator:normalize_filename(filename, id, file)
   -- Loop over each segment and create paths by concanating 1..i items in
   -- the segmented folder, storing all the necessary metadata in the process.
   for i = 1, #segmented_folders do
-    local parent_folder_name, depth = self:get_parent_folder(
-      segmented_folders,
-      i
-    )
+    local parent_folder_name, depth = self:get_parent_folder(segmented_folders, i)
     local current_folder_name = segmented_folders[i]
-    local path = string.format(
-      '%s%s%s',
-      parent_folder_name,
-      self.seperator,
-      current_folder_name
-    )
+    local path = string.format('%s%s%s', parent_folder_name, self.seperator, current_folder_name)
     -- normalized_paths will never contain duplicate entries, since a path will always be unique!
     -- When we split the path by seperator, the number of seperators for
     -- a given position (i) is the depth of the path in the file tree.

@@ -4,13 +4,9 @@ local Window = require('vgit.core.Window')
 
 local LineNumberElement = Component:extend()
 
-function LineNumberElement:constructor(...)
-  return Component.constructor(self, ...)
-end
+function LineNumberElement:constructor(...) return Component.constructor(self, ...) end
 
-function LineNumberElement:get_width()
-  return 6
-end
+function LineNumberElement:get_width() return 6 end
 
 function LineNumberElement:make_lines(lines)
   local num_lines = #lines
@@ -38,22 +34,20 @@ function LineNumberElement:mount(opts)
     buflisted = false,
   })
 
-  self.window = Window
-    :open(buffer, {
-      style = 'minimal',
-      focusable = false,
-      relative = 'editor',
-      row = opts.row,
-      col = opts.col,
-      height = opts.height,
-      width = LineNumberElement:get_width(),
-      zindex = 50,
-    })
-    :assign_options({
-      cursorbind = true,
-      scrollbind = true,
-      winhl = 'Normal:GitBackground',
-    })
+  self.window = Window:open(buffer, {
+    style = 'minimal',
+    focusable = false,
+    relative = 'editor',
+    row = opts.row,
+    col = opts.col,
+    height = opts.height,
+    width = LineNumberElement:get_width(),
+    zindex = 50,
+  }):assign_options({
+    cursorbind = true,
+    scrollbind = true,
+    winhl = 'Normal:GitBackground',
+  })
 
   return self
 end

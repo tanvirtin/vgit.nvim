@@ -18,13 +18,7 @@ end
 
 function NavigationVirtualText:place(buffer, window, text)
   self:unplace(buffer)
-  buffer:transpose_virtual_text(
-    text,
-    'GitComment',
-    window:get_lnum() - 1,
-    0,
-    'right_align'
-  )
+  buffer:transpose_virtual_text(text, 'GitComment', window:get_lnum() - 1, 0, 'right_align')
   self.timer_id = vim.fn.timer_start(self.epoch, function()
     if buffer:is_valid() then
       buffer:clear_namespace()

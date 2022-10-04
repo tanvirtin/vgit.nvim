@@ -1,5 +1,7 @@
 local str = {}
 
+str.split = vim.split
+
 function str.length(s)
   local _, count = string.gsub(s, '[^\128-\193]', '')
 
@@ -59,7 +61,5 @@ function str.strip(given_string, substring)
 
   return rc_s
 end
-
-str.split = vim.split
 
 return str

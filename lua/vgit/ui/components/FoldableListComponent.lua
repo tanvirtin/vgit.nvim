@@ -59,13 +59,9 @@ function FoldableListComponent:toggle_list_item(item)
   return self
 end
 
-function FoldableListComponent:is_fold(item)
-  return item and item.items and #item.items > 0
-end
+function FoldableListComponent:is_fold(item) return item and item.items and #item.items > 0 end
 
-function FoldableListComponent:get_list_item(lnum)
-  return self._cache[lnum]
-end
+function FoldableListComponent:get_list_item(lnum) return self._cache[lnum] end
 
 function FoldableListComponent:query_list_item(callback)
   for _, list_item in ipairs(self._cache) do
@@ -80,7 +76,7 @@ function FoldableListComponent:query_list_item(callback)
 end
 
 function FoldableListComponent:generate_lines()
-  local spacing = 2
+  local spacing = 1
   local current_lnum = 0
   local foldable_list_shadow = {}
   local hls = {}
@@ -101,6 +97,11 @@ function FoldableListComponent:generate_lines()
       local icon_before = item.icon_before
       local icon_after = item.icon_after
       local icon_hl_range_offset = 0
+
+      if items then
+        spacing = 2
+      end
+
       local indentation_count = spacing * depth
       local indentation = string.rep(' ', indentation_count)
 
@@ -119,10 +120,7 @@ function FoldableListComponent:generate_lines()
           lnum = current_lnum,
           range = {
             top = indentation_count + icon_hl_range_offset + 2,
-            bot = indentation_count
-              + icon_hl_range_offset
-              + #icon_before.icon
-              + 1,
+            bot = indentation_count + icon_hl_range_offset + #icon_before.icon + 1,
           },
         }
       elseif icon_after then
@@ -135,24 +133,15 @@ function FoldableListComponent:generate_lines()
           hl = icon_after.hl,
           lnum = current_lnum,
           range = {
-            top = indentation_count + icon_hl_range_offset + utils.str.length(
-              value
-            ),
-            bot = indentation_count + icon_hl_range_offset + utils.str.length(
-              value
-            ) + #icon_after.icon,
+            top = indentation_count + icon_hl_range_offset + utils.str.length(value),
+            bot = indentation_count + icon_hl_range_offset + utils.str.length(value) + #icon_after.icon,
           },
         }
       end
 
       if items then
         local fold_symbol = symbols_setting:get(item.open and 'open' or 'close')
-        local fold_header = string.format(
-          '%s%s %s',
-          indentation,
-          fold_symbol,
-          value
-        )
+        local fold_header = string.format('%s%s %s', indentation, fold_symbol, value)
         local show_count = item.show_count
 
         if show_count ~= false then
@@ -194,11 +183,7 @@ function FoldableListComponent:generate_lines()
           generate_lines(items, depth + 1)
         end
       else
-        foldable_list_shadow[#foldable_list_shadow + 1] = string.format(
-          '%s%s',
-          indentation,
-          value
-        )
+        foldable_list_shadow[#foldable_list_shadow + 1] = string.format('%s%s', indentation, value)
       end
     end
   end
@@ -229,9 +214,9 @@ end
 function FoldableListComponent:sync()
   self.buffer:clear_namespace():set_lines(self:generate_lines())
 
-  loop.await_fast_event()
+  loop.await()
   self:paint()
-  loop.await_fast_event()
+  loop.await()
 
   return self
 end
@@ -245,17 +230,12 @@ function FoldableListComponent:mount(opts)
   local config = self.config
   local elements_config = config.elements
 
-  local plot = ComponentPlot(
-    config.win_plot,
-    utils.object.merge(elements_config, opts)
-  ):build()
+  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
 
   self.buffer = Buffer():create():assign_options(config.buf_options)
   local buffer = self.buffer
 
-  self.window = Window
-    :open(buffer, plot.win_plot)
-    :assign_options(config.win_options)
+  self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
 
   if elements_config.header then
     self.elements.header = HeaderElement():mount(plot.header_win_plot)

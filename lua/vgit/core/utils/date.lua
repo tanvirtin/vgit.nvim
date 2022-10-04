@@ -39,8 +39,7 @@ function date.age(current_time)
   end
 
   local unit = math.round(time)
-  local how_long = unit <= 1 and time_postfix:sub(1, #time_postfix - 1)
-    or time_postfix
+  local how_long = unit <= 1 and time_postfix:sub(1, #time_postfix - 1) or time_postfix
 
   return {
     unit = unit,

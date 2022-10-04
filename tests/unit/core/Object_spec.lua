@@ -2,21 +2,18 @@ local Object = require('vgit.core.Object')
 
 describe('Object:', function()
   describe('is', function()
-    it(
-      'should return true if a child object instance is of type parent object',
-      function()
-        local Animal = Object:extend()
-        local Bird = Animal:extend()
+    it('should return true if a child object instance is of type parent object', function()
+      local Animal = Object:extend()
+      local Bird = Animal:extend()
 
-        local bird = Bird()
-        local animal = Animal()
+      local bird = Bird()
+      local animal = Animal()
 
-        assert(bird:is(Animal))
-        assert(bird:is(Object))
-        assert(animal:is(Animal))
-        assert(animal:is(Object))
-      end
-    )
+      assert(bird:is(Animal))
+      assert(bird:is(Object))
+      assert(animal:is(Animal))
+      assert(animal:is(Object))
+    end)
   end)
 
   describe('extend', function()
@@ -56,42 +53,36 @@ describe('Object:', function()
   end)
 
   describe('__call', function()
-    it(
-      'returns a table of newly extended type when constructor does not return a table',
-      function()
-        local TestObject = Object:extend()
+    it('returns a table of newly extended type when constructor does not return a table', function()
+      local TestObject = Object:extend()
 
-        function TestObject:constructor()
-          self.x = 3
-          self.y = 4
-        end
-
-        local test = TestObject()
-
-        assert(getmetatable(test) == TestObject)
-        assert.are.same(test.x, 3)
-        assert.are.same(test.y, 4)
+      function TestObject:constructor()
+        self.x = 3
+        self.y = 4
       end
-    )
 
-    it(
-      'returns a table of newly extended type when constructor returns a table',
-      function()
-        local TestObject = Object:extend()
+      local test = TestObject()
 
-        function TestObject:constructor()
-          return {
-            x = 3,
-            y = 4,
-          }
-        end
+      assert(getmetatable(test) == TestObject)
+      assert.are.same(test.x, 3)
+      assert.are.same(test.y, 4)
+    end)
 
-        local test = TestObject()
+    it('returns a table of newly extended type when constructor returns a table', function()
+      local TestObject = Object:extend()
 
-        assert(getmetatable(test) == TestObject)
-        assert.are.same(test.x, 3)
-        assert.are.same(test.y, 4)
+      function TestObject:constructor()
+        return {
+          x = 3,
+          y = 4,
+        }
       end
-    )
+
+      local test = TestObject()
+
+      assert(getmetatable(test) == TestObject)
+      assert.are.same(test.x, 3)
+      assert.are.same(test.y, 4)
+    end)
   end)
 end)

@@ -3,13 +3,7 @@ local Object = require('vgit.core.Object')
 local Hunk = Object:extend()
 
 function Hunk:generate_header(previous, current)
-  return string.format(
-    '@@ -%s,%s +%s,%s @@',
-    previous[1],
-    previous[2],
-    current[1],
-    current[2]
-  )
+  return string.format('@@ -%s,%s +%s,%s @@', previous[1], previous[2], current[1], current[2])
 end
 
 function Hunk:parse_header(header)
@@ -19,10 +13,7 @@ function Hunk:parse_header(header)
   local parsed_header = {}
 
   for i = 1, #parsed_diffkey do
-    parsed_header[#parsed_header + 1] = vim.split(
-      string.sub(parsed_diffkey[i], 2),
-      ','
-    )
+    parsed_header[#parsed_header + 1] = vim.split(string.sub(parsed_diffkey[i], 2), ',')
   end
 
   local previous, current = parsed_header[1], parsed_header[2]

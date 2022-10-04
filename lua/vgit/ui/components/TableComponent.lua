@@ -51,12 +51,8 @@ function TableComponent:set_lines(lines, force)
   local header = self.elements.header
   local buffer = self.buffer
 
-  local labels, rows, hls = TableGenerator(
-    self.config.column_labels,
-    lines,
-    self.column_spacing,
-    self.column_len
-  ):generate()
+  local labels, rows, hls =
+    TableGenerator(self.config.column_labels, lines, self.column_spacing, self.column_len):generate()
 
   header:set_lines(labels)
   buffer:set_lines(rows)
@@ -85,16 +81,11 @@ function TableComponent:mount(opts)
   local config = self.config
   local elements_config = config.elements
 
-  local plot = ComponentPlot(
-    config.win_plot,
-    utils.object.merge(elements_config, opts)
-  ):build()
+  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
 
   local buffer = Buffer():create():assign_options(config.buf_options)
   self.buffer = buffer
-  self.window = Window
-    :open(buffer, plot.win_plot)
-    :assign_options(config.win_options)
+  self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
   self.elements.header = HeaderElement():mount(plot.header_win_plot)
 
   if elements_config.footer then

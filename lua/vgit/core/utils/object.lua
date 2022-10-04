@@ -1,5 +1,7 @@
 local object = {}
 
+object.is_empty = vim.tbl_isempty
+
 function object.first(o)
   o = o or {}
 
@@ -84,13 +86,9 @@ function object.values(o)
   return values
 end
 
-function object.clone_deep(config_object)
-  return vim.tbl_deep_extend('force', {}, config_object)
-end
+function object.clone_deep(config_object) return vim.tbl_deep_extend('force', {}, config_object) end
 
-function object.clone(config_object)
-  return vim.tbl_extend('force', {}, config_object)
-end
+function object.clone(config_object) return vim.tbl_extend('force', {}, config_object) end
 
 function object.each(o, callback)
   for key, value in pairs(o) do
@@ -101,7 +99,5 @@ function object.each(o, callback)
     end
   end
 end
-
-object.is_empty = vim.tbl_isempty
 
 return object

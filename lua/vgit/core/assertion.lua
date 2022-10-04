@@ -9,10 +9,7 @@ function assertion.assert(cond, msg)
 end
 
 function assertion.assert_type(value, t)
-  assertion.assert(
-    type(value) == t,
-    string.format('type error :: expected %s', t)
-  )
+  assertion.assert(type(value) == t, string.format('type error :: expected %s', t))
 
   return assertion
 end
@@ -28,10 +25,7 @@ function assertion.assert_types(value, types)
     end
   end
 
-  assertion.assert(
-    passed,
-    string.format('type error :: expected %s', vim.inspect(types))
-  )
+  assertion.assert(passed, string.format('type error :: expected %s', vim.inspect(types)))
 
   return assertion
 end

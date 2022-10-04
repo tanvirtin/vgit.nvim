@@ -19,37 +19,26 @@ a.describe('Window:', function()
   end)
 
   a.describe('new', function()
-    a.it(
-      'should throw an error no win_id is provided to construct the window',
-      function()
-        assert.has_error(function()
-          Window()
-        end)
-      end
-    )
-    a.it(
-      'should create an instance of the window object binding the win_id',
-      function()
-        local win_id = vim.api.nvim_open_win(
-          vim.api.nvim_create_buf(false, false),
-          false,
-          { relative = 'win', row = 3, col = 3, width = 12, height = 3 }
-        )
-        local window = Window(win_id)
+    a.it('should throw an error no win_id is provided to construct the window', function()
+      assert.has_error(function() Window() end)
+    end)
+    a.it('should create an instance of the window object binding the win_id', function()
+      local win_id = vim.api.nvim_open_win(
+        vim.api.nvim_create_buf(false, false),
+        false,
+        { relative = 'win', row = 3, col = 3, width = 12, height = 3 }
+      )
+      local window = Window(win_id)
 
-        eq(window:is(Window), true)
-      end
-    )
-    a.it(
-      'should create a window object binding the current win_id if the win_id is 0',
-      function()
-        local win_id = vim.api.nvim_get_current_win()
-        local window = Window(0)
+      eq(window:is(Window), true)
+    end)
+    a.it('should create a window object binding the current win_id if the win_id is 0', function()
+      local win_id = vim.api.nvim_get_current_win()
+      local window = Window(0)
 
-        eq(window:is(Window), true)
-        eq(window.win_id, win_id)
-      end
-    )
+      eq(window:is(Window), true)
+      eq(window.win_id, win_id)
+    end)
   end)
 
   describe('set_cursor', function()
@@ -100,10 +89,7 @@ a.describe('Window:', function()
     a.it('should set the current lnum', function()
       window:set_lnum(111)
 
-      assert.stub(vim.api.nvim_win_set_cursor).was_called_with(
-        win_id,
-        { 111, cursor[2] }
-      )
+      assert.stub(vim.api.nvim_win_set_cursor).was_called_with(win_id, { 111, cursor[2] })
     end)
   end)
 end)

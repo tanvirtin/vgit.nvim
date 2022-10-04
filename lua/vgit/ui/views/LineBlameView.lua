@@ -2,16 +2,14 @@ local utils = require('vgit.core.utils')
 local dimensions = require('vgit.ui.dimensions')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local PresentationalComponent = require(
-  'vgit.ui.components.PresentationalComponent'
-)
+local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 
 local LineBlameView = Object:extend()
 
-function LineBlameView:constructor(scene, query, plot, config)
+function LineBlameView:constructor(scene, store, plot, config)
   return {
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
     config = config or {},
   }
@@ -37,11 +35,10 @@ function LineBlameView:define()
 end
 
 function LineBlameView:set_keymap(configs)
-  utils.list.each(configs, function(config)
-    self.scene
-      :get('current')
-      :set_keymap(config.mode, config.key, config.handler)
-  end)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('current'):set_keymap(config.mode, config.key, config.handler) end
+  )
   return self
 end
 
@@ -62,18 +59,14 @@ function LineBlameView:create_committed_lines(blame)
   end
   return {
     string.format('%s (%s)', blame.author, blame.author_mail),
-    string.format(
-      '%s (%s)',
-      blame:age().display,
-      os.date('%c', blame.author_time)
-    ),
+    string.format('%s (%s)', blame:age().display, os.date('%c', blame.author_time)),
     string.format('%s', commit_message),
     string.format('%s -> %s', blame.parent_hash, blame.commit_hash),
   }
 end
 
 function LineBlameView:render()
-  local err, blame = self.query:get_blame()
+  local err, blame = self.store:get_blame()
 
   if err then
     console.debug.error(err).error(err)
@@ -83,24 +76,21 @@ function LineBlameView:render()
   self.scene
     :get('current')
     :unlock()
-    :set_lines(
-      blame.committed and self:create_committed_lines(blame)
-        or self:create_uncommitted_lines(blame)
-    )
+    :set_lines(blame.committed and self:create_committed_lines(blame) or self:create_uncommitted_lines(blame))
     :focus()
     :lock()
 
   return self
 end
 
-function LineBlameView:mount_scene(mount_opts)
-  self.scene:get('current'):mount(mount_opts)
+function LineBlameView:mount(opts)
+  self.scene:get('current'):mount(opts)
 
   return self
 end
 
-function LineBlameView:show(mount_opts)
-  self:define():mount_scene(mount_opts):render()
+function LineBlameView:show(opts)
+  self:define():mount(opts):render()
 
   return self
 end

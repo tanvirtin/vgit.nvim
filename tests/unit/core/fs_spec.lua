@@ -7,9 +7,7 @@ local eq = assert.are.same
 describe('fs:', function()
   local filename = '/tmp/foo_vgit'
 
-  after_each(function()
-    os.remove(filename)
-  end)
+  after_each(function() os.remove(filename) end)
 
   describe('relative_filename', function()
     it('should convert an absolute path to a relative path', function()
@@ -48,41 +46,29 @@ describe('fs:', function()
       eq(fs.filetype(buffer), 'bar')
     end)
 
-    a.it(
-      'should retrieve empty string for a buffer with no filetype',
-      function()
-        local bufnr = vim.api.nvim_create_buf(true, true)
-        local buffer = Buffer(bufnr)
+    a.it('should retrieve empty string for a buffer with no filetype', function()
+      local bufnr = vim.api.nvim_create_buf(true, true)
+      local buffer = Buffer(bufnr)
 
-        eq(fs.filetype(buffer), '')
-      end
-    )
+      eq(fs.filetype(buffer), '')
+    end)
   end)
 
   describe('read_file', function()
-    it(
-      'should retrieve an err_result for a given file path that does not exist',
-      function()
-        local err, data = fs.read_file('IDONTEXIST.md')
+    it('should retrieve an err_result for a given file path that does not exist', function()
+      local err, data = fs.read_file('IDONTEXIST.md')
 
-        assert.are_not.same(err, nil)
-        eq(data, nil)
-      end
-    )
+      assert.are_not.same(err, nil)
+      eq(data, nil)
+    end)
   end)
 
   describe('tmpname', function()
-    it('should generate a string', function()
-      eq(type(fs.tmpname()), 'string')
-    end)
+    it('should generate a string', function() eq(type(fs.tmpname()), 'string') end)
 
-    it('should be 16 character long', function()
-      eq(#fs.tmpname(), 16)
-    end)
+    it('should be 16 character long', function() eq(#fs.tmpname(), 16) end)
 
-    it('should start with /tmp/', function()
-      eq(vim.startswith(fs.tmpname(), '/tmp/'), true)
-    end)
+    it('should start with /tmp/', function() eq(vim.startswith(fs.tmpname(), '/tmp/'), true) end)
 
     it('should end with _vgit', function()
       local name = fs.tmpname()
@@ -91,13 +77,9 @@ describe('fs:', function()
   end)
 
   describe('detect', function()
-    it('should work for md', function()
-      eq('markdown', fs.detect_filetype('Readme.md'))
-    end)
+    it('should work for md', function() eq('markdown', fs.detect_filetype('Readme.md')) end)
 
-    it('should work for CMakeList.txt', function()
-      eq('cmake', fs.detect_filetype('CMakeLists.txt'))
-    end)
+    it('should work for CMakeList.txt', function() eq('cmake', fs.detect_filetype('CMakeLists.txt')) end)
 
     it('should work with extensions with dot', function()
       eq('rst', fs.detect_filetype('example.rst.txt'))
@@ -129,67 +111,52 @@ describe('fs:', function()
       eq('make', fs.detect_filetype('makefile'))
     end)
 
-    it('should work for CMakeList.txt', function()
-      eq('cmake', fs.detect_filetype('CMakeLists.txt'))
-    end)
+    it('should work for CMakeList.txt', function() eq('cmake', fs.detect_filetype('CMakeLists.txt')) end)
 
-    it('should work for common filetypes, like python', function()
-      eq('python', fs.detect_filetype('__init__.py'))
-    end)
+    it('should work for common filetypes, like python', function() eq('python', fs.detect_filetype('__init__.py')) end)
 
     it('should work for common filenames, like makefile', function()
       eq('make', fs.detect_filetype('Makefile'))
       eq('make', fs.detect_filetype('makefile'))
     end)
 
-    it('should work for CMakeList.txt', function()
-      eq('cmake', fs.detect_filetype('CMakeLists.txt'))
-    end)
+    it('should work for CMakeList.txt', function() eq('cmake', fs.detect_filetype('CMakeLists.txt')) end)
 
-    it('should work for common files, even with .s, like .bashrc', function()
-      eq('sh', fs.detect_filetype('.bashrc'))
-    end)
+    it(
+      'should work for common files, even with .s, like .bashrc',
+      function() eq('sh', fs.detect_filetype('.bashrc')) end
+    )
 
-    it('should work fo custom filetypes, like fennel', function()
-      eq('fennel', fs.detect_filetype('init.fnl'))
-    end)
+    it('should work fo custom filetypes, like fennel', function() eq('fennel', fs.detect_filetype('init.fnl')) end)
 
-    it('should work for custom filenames, like Cakefile', function()
-      eq('coffee', fs.detect_filetype('Cakefile'))
-    end)
+    it('should work for custom filenames, like Cakefile', function() eq('coffee', fs.detect_filetype('Cakefile')) end)
   end)
 
   a.describe('write_file', function()
-    a.it(
-      'should create a new file and append the contents inside it',
-      function()
-        local lines = { 'foo', 'bar' }
+    a.it('should create a new file and append the contents inside it', function()
+      local lines = { 'foo', 'bar' }
 
-        fs.write_file(filename, lines)
+      fs.write_file(filename, lines)
 
-        local err, data = fs.read_file(filename)
+      local err, data = fs.read_file(filename)
 
-        eq(err, nil)
-        eq(data, { 'foo', 'bar' })
-      end
-    )
+      eq(err, nil)
+      eq(data, { 'foo', 'bar' })
+    end)
 
-    a.it(
-      'should replace contents in an existing file with new contents',
-      function()
-        local lines = { 'foo', 'baz' }
-        local file = io.open(filename, 'w')
+    a.it('should replace contents in an existing file with new contents', function()
+      local lines = { 'foo', 'baz' }
+      local file = io.open(filename, 'w')
 
-        file:write('hello world')
-        file:close()
-        fs.write_file(filename, lines)
+      file:write('hello world')
+      file:close()
+      fs.write_file(filename, lines)
 
-        local err, data = fs.read_file(filename)
+      local err, data = fs.read_file(filename)
 
-        eq(err, nil)
-        eq(data, { 'foo', 'baz' })
-      end
-    )
+      eq(err, nil)
+      eq(data, { 'foo', 'baz' })
+    end)
   end)
 
   a.describe('remove_file', function()
@@ -230,9 +197,7 @@ describe('fs:', function()
   end)
 
   describe('exists', function()
-    it('should return true if file exists', function()
-      eq(fs.exists('lua/vgit.lua'), true)
-    end)
+    it('should return true if file exists', function() eq(fs.exists('lua/vgit.lua'), true) end)
 
     it('should return false if file does not exists', function()
       eq(fs.exists('lua/vgit/doesnotexist1.lua'), false)

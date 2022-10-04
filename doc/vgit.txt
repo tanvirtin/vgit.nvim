@@ -157,6 +157,9 @@ More advanced configuration:
         },
         scene = {
           diff_preference = 'unified',
+          keymaps = {
+            quit = 'q'
+          }
         },
        diff_preview = {
           keymaps = {

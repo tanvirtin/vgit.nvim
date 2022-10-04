@@ -1,23 +1,24 @@
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local Feature = require('vgit.Feature')
+local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local LineBlameView = require('vgit.ui.views.LineBlameView')
-local Query = require('vgit.features.screens.LineBlameScreen.Query')
+local Store = require('vgit.features.screens.LineBlameScreen.Store')
 
-local LineBlameScreen = Feature:extend()
+local LineBlameScreen = Object:extend()
 
 function LineBlameScreen:constructor()
   local scene = Scene()
-  local query = Query()
+  local store = Store()
 
   return {
     name = 'Line Blame Screen',
+    hydrate = false,
     scene = scene,
-    query = query,
-    line_blame_view = LineBlameView(scene, query, {
+    store = store,
+    line_blame_view = LineBlameView(scene, store, {
       relative = 'cursor',
       height = 6,
     }, {
@@ -31,19 +32,18 @@ end
 function LineBlameScreen:show()
   console.log('Processing line blame')
 
-  local query = self.query
   local buffer = Buffer(0)
   local window = Window(0)
 
-  loop.await_fast_event()
-  local err = query:fetch(buffer.filename, window:get_lnum())
+  loop.await()
+  local err = self.store:fetch(buffer.filename, window:get_lnum(), { hydrate = self.hydrate })
 
   if err then
     console.debug.error(err).error(err)
     return false
   end
 
-  loop.await_fast_event()
+  loop.await()
   self.line_blame_view:show({ winline = vim.fn.winline() + 1 })
 
   return true

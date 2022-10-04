@@ -14,15 +14,10 @@ end
 
 function keymap.set(mode, key, callback)
   if type(callback) == 'string' then
-    vim.api.nvim_set_keymap(
-      mode,
-      key,
-      string.format('<Cmd>lua require("vgit").%s()<CR>', callback),
-      {
-        noremap = true,
-        silent = true,
-      }
-    )
+    vim.api.nvim_set_keymap(mode, key, string.format('<Cmd>lua require("vgit").%s()<CR>', callback), {
+      noremap = true,
+      silent = true,
+    })
 
     return keymap
   end
@@ -33,12 +28,7 @@ function keymap.set(mode, key, callback)
 end
 
 function keymap.buffer_set(buffer, mode, key, callback)
-  vim.keymap.set(
-    mode,
-    key,
-    callback,
-    { buffer = buffer.bufnr, silent = true, noremap = true }
-  )
+  vim.keymap.set(mode, key, callback, { buffer = buffer.bufnr, silent = true, noremap = true })
 
   return keymap
 end

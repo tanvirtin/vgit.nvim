@@ -2,16 +2,14 @@ local utils = require('vgit.core.utils')
 local dimensions = require('vgit.ui.dimensions')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local PresentationalComponent = require(
-  'vgit.ui.components.PresentationalComponent'
-)
+local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 
 local GutterBlameView = Object:extend()
 
-function GutterBlameView:constructor(scene, query, plot, config)
+function GutterBlameView:constructor(scene, store, plot, config)
   return {
     scene = scene,
-    query = query,
+    store = store,
     plot = plot,
     config = config or {},
   }
@@ -42,16 +40,15 @@ function GutterBlameView:define()
 end
 
 function GutterBlameView:set_keymap(configs)
-  utils.list.each(configs, function(config)
-    self.scene
-      :get('gutter_blame')
-      :set_keymap(config.mode, config.key, config.handler)
-  end)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('gutter_blame'):set_keymap(config.mode, config.key, config.handler) end
+  )
   return self
 end
 
 function GutterBlameView:render()
-  local err, blames = self.query:get_blames()
+  local err, blames = self.store:get_blames()
 
   if err then
     console.debug.error(err).error(err)
@@ -79,14 +76,14 @@ function GutterBlameView:render()
   return self
 end
 
-function GutterBlameView:mount_scene(mount_opts)
-  self.scene:get('gutter_blame'):mount(mount_opts)
+function GutterBlameView:mount(opts)
+  self.scene:get('gutter_blame'):mount(opts)
 
   return self
 end
 
-function GutterBlameView:show(mount_opts)
-  self:define():mount_scene(mount_opts):render()
+function GutterBlameView:show(opts)
+  self:define():mount(opts):render()
 
   return self
 end
