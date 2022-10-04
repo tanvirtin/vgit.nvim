@@ -76,7 +76,7 @@ function FoldableListComponent:query_list_item(callback)
 end
 
 function FoldableListComponent:generate_lines()
-  local spacing = 3
+  local spacing = 1
   local current_lnum = 0
   local foldable_list_shadow = {}
   local hls = {}
@@ -97,6 +97,11 @@ function FoldableListComponent:generate_lines()
       local icon_before = item.icon_before
       local icon_after = item.icon_after
       local icon_hl_range_offset = 0
+
+      if items then
+        spacing = 2
+      end
+
       local indentation_count = spacing * depth
       local indentation = string.rep(' ', indentation_count)
 
