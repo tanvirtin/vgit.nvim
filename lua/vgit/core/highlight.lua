@@ -43,7 +43,9 @@ function highlight.register_module(dependency)
 end
 
 function highlight.register_events()
-  event.on(event_type.ColorScheme, hls_setting:for_each(function(hl, color) highlight.define(hl, color) end))
+  event.on(event_type.ColorScheme, function()
+    hls_setting:for_each(function(hl, color) highlight.define(hl, color) end)
+  end)
 end
 
 return highlight
