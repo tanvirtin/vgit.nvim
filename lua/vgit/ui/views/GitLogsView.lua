@@ -119,7 +119,7 @@ function GitLogsView:render()
     utils.list.map(logs, function(log)
       local time = utils.date.format(log.timestamp)
 
-      return { log.commit_hash, time, log.author_name, log.summary }
+      return { log.commit_hash, log.author_name, time, log.summary }
     end),
     1,
     80
