@@ -50,18 +50,10 @@ function ProjectHunksScreen:constructor()
             value = key,
             icon_before = icon_before,
             items = utils.list.map(entries, function(entry)
-              local id = entry.id
-              local mark_index = entry.mark_index
-              local git_file = entry.git_file
-              local _, hunks = git_file:get_hunks()
-              local hunk = hunks[mark_index]
-
-              local list_entry = {
-                id = id,
-                value = hunk.header,
+              return {
+                id = entry.id,
+                value = entry.hunk.header,
               }
-
-              return list_entry
             end),
           }
         end
@@ -150,7 +142,7 @@ function ProjectHunksScreen:show(opts)
 
         self.store:set_id(list_item.id)
         self.code_view:render_debounced(loop.async(function()
-          local _, data = self.store:get()
+          local _, data = self.store:get_data()
 
           if data then
             self.code_view:navigate_to_mark(data.mark_index)
@@ -170,7 +162,7 @@ function ProjectHunksScreen:show(opts)
 
         self.store:set_id(list_item.id)
         self.code_view:render_debounced(loop.async(function()
-          local _, data = self.store:get()
+          local _, data = self.store:get_data()
 
           if data then
             self.code_view:navigate_to_mark(data.mark_index)
@@ -186,14 +178,13 @@ function ProjectHunksScreen:show(opts)
 
         if not filename then
           self.foldable_list_view:toggle_current_list_item():render()
-
           return
         end
 
-        local hunk_err, hunk = self.store:get_hunk()
+        local data_err, data = self.store:get_data()
 
-        if hunk_err then
-          console.error(hunk_err)
+        if data_err then
+          console.error(data_err)
           return
         end
 
@@ -201,7 +192,7 @@ function ProjectHunksScreen:show(opts)
 
         fs.open(filename)
 
-        Window(0):set_lnum(hunk.top):position_cursor('center')
+        Window(0):set_lnum(data.hunk.top):position_cursor('center')
       end),
     },
   })
