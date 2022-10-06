@@ -1,7 +1,8 @@
+local fs = require('vgit.core.fs')
 local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local GitFile = require('vgit.features.screens.ProjectHunksScreen.GitFile')
+local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
 
@@ -44,10 +45,10 @@ function Store:fetch(shape, opts)
     return { 'Project has no .git folder' }, nil
   end
 
-  local status_err, files = self.git:status()
+  local files_err, files = self.git:status()
 
-  if status_err then
-    return status_err
+  if files_err then
+    return files_err
   end
 
   if #files == 0 then
@@ -59,14 +60,15 @@ function Store:fetch(shape, opts)
 
   for i = 1, #files do
     local file = files[i]
-    local git_file = GitFile(file, shape)
-    local hunks_err, hunks
+    local status = file.status
 
-    if opts.is_staged then
-      hunks_err, hunks = git_file:get_staged_hunks()
-    else
-      hunks_err, hunks = git_file:get_hunks()
+    local lines_err, lines = self:get_lines(file)
+
+    if lines_err then
+      return lines_err, nil
     end
+
+    local hunks_err, hunks = self:get_hunks(file, lines, opts.is_staged)
 
     if hunks_err then
       return hunks_err
@@ -74,25 +76,26 @@ function Store:fetch(shape, opts)
 
     if hunks and #hunks > 0 then
       is_empty = false
-      local entry = data[file.filename]
 
-      if not entry then
-        entry = {}
-        data[file.filename] = entry
-      end
+      local entry = data[file.filename] or {}
+      data[file.filename] = entry
+
+      local diff_dto = diff_service:generate(hunks, lines, shape, {
+        is_deleted = status and status:has_either('DD'),
+      })
 
       utils.list.each(hunks, function(hunk, index)
         local id = utils.math.uuid()
-        local datum = {
+        local data = {
           id = id,
           hunk = hunk,
+          file = file,
           mark_index = index,
-          git_file = git_file,
-          file = git_file.file,
+          diff_dto = diff_dto,
         }
 
-        self._cache.list_entry_cache[id] = datum
-        entry[#entry + 1] = datum
+        self._cache.list_entry_cache[id] = data
+        entry[#entry + 1] = data
       end)
     end
   end
@@ -112,40 +115,38 @@ function Store:set_id(id)
   return self
 end
 
-function Store:get(id)
+function Store:get_data(id)
   if id then
     self.id = id
   end
 
-  local datum = self._cache.list_entry_cache[self.id]
+  local data = self._cache.list_entry_cache[self.id]
 
-  if not datum then
+  if not data then
     return { 'Item not found' }, nil
   end
 
-  return nil, datum
+  return nil, data
 end
 
 function Store:get_all() return self.err, self.data end
 
 function Store:get_diff_dto()
-  local data_err, data = self:get()
+  local data_err, data = self:get_data()
 
   if data_err then
     return data_err
   end
 
-  if not data.git_file then
-    return {
-      'No git file found to get code dto from',
-    }, nil
+  if not data.diff_dto then
+    return { 'No git file found to get code dto from' }, nil
   end
 
-  return data.git_file:get_diff_dto()
+  return nil, data.diff_dto
 end
 
 function Store:get_filename()
-  local data_err, data = self:get()
+  local data_err, data = self:get_data()
 
   if data_err then
     return data_err
@@ -158,7 +159,7 @@ function Store:get_filename()
 end
 
 function Store:get_filetype()
-  local data_err, data = self:get()
+  local data_err, data = self:get_data()
 
   if data_err then
     return data_err
@@ -170,22 +171,56 @@ function Store:get_filetype()
   return nil, filetype
 end
 
-function Store:get_hunk()
-  local data_err, data = self:get()
+function Store:get_lines(file)
+  local filename = file.filename
+  local status = file.status
 
-  if data_err then
-    return data_err
+  local lines_err, lines
+
+  if status then
+    if status:has('D ') then
+      lines_err, lines = self.git:show(filename, 'HEAD')
+    elseif status:has(' D') then
+      lines_err, lines = self.git:show(self.git:tracked_filename(filename))
+    else
+      lines_err, lines = fs.read_file(filename)
+    end
+  else
+    lines_err, lines = fs.read_file(filename)
   end
 
-  local hunk = data.hunk
+  return lines_err, lines
+end
 
-  if not hunk then
-    return {
-      'No hunk found',
-    }, nil
+function Store:get_hunks(file, lines, is_staged)
+  local filename = file.filename
+  local status = file.status
+  local log = file.log
+  local hunks_err, hunks
+
+  if is_staged then
+    if file:is_staged() then
+      return self.git:staged_hunks(filename)
+    end
+
+    return nil, nil
   end
 
-  return nil, hunk
+  if status then
+    if status:has_both('??') then
+      hunks = self.git:untracked_hunks(lines)
+    elseif status:has_either('DD') then
+      hunks = self.git:deleted_hunks(lines)
+    else
+      return self.git:index_hunks(filename)
+    end
+  elseif log then
+    hunks_err, hunks = self.git:remote_hunks(filename, log.parent_hash, log.commit_hash)
+  else
+    hunks_err, hunks = self.git:index_hunks(filename)
+  end
+
+  return hunks_err, hunks
 end
 
 function Store:get_lnum() return nil, self._cache.lnum end
