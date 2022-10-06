@@ -73,13 +73,13 @@ local project = {
   stage_all = loop.async(function() Git():stage() end),
   unstage_all = loop.async(function() Git():unstage() end),
   hunks_qf = loop.async(function() project_hunks_quickfix:show() end),
+  debug_preview = loop.async(function(...) screen_manager.show('debug_screen', ...) end),
   hunks_preview = loop.async(function() screen_manager.show('project_hunks_screen') end),
   diff_preview = loop.async(function() screen_manager.show('project_diff_screen') end),
   logs_preview = loop.async(function(...) screen_manager.show('project_logs_screen', ...) end),
   stash_preview = loop.async(function(...) screen_manager.show('project_stash_screen', ...) end),
   commits_preview = loop.async(function(...) screen_manager.show('project_commits_screen', ...) end),
   hunks_staged_preview = loop.async(function() screen_manager.show('project_hunks_screen', { is_staged = true }) end),
-  debug_preview = loop.async(function(...) screen_manager.show('debug_screen', ...) end),
   reset_all = loop.async(function()
     local decision = console.input('Are you sure you want to discard all tracked changes? (y/N) '):lower()
 
