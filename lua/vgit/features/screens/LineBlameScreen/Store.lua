@@ -1,6 +1,6 @@
 local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
-local GitObject = require('vgit.git.GitObject')
+local git_service = require('vgit.services.git')
 
 local Store = Object:extend()
 
@@ -8,7 +8,7 @@ function Store:constructor()
   return {
     err = nil,
     data = nil,
-    git_object = nil,
+    git_blob = nil,
     _diff_dto_cache = nil,
   }
 end
@@ -29,10 +29,10 @@ function Store:fetch(filename, lnum, opts)
 
   self:reset()
 
-  self.git_object = GitObject(filename)
+  self.git_blob = git_service:get_blob(filename)
 
   loop.await()
-  self.err, self.data = self.git_object:blame_line(lnum)
+  self.err, self.data = self.git_blob:blame_line(lnum)
   loop.await()
 
   return self.err, self.data

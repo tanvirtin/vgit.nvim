@@ -1,8 +1,8 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
-local console = require('vgit.core.console')
 local Object = require('vgit.core.Object')
+local console = require('vgit.core.console')
+local git_service = require('vgit.services.git')
 
 local ProjectHunksQuickfix = Object:extend()
 
@@ -10,8 +10,8 @@ function ProjectHunksQuickfix:constructor() return { name = 'Project Hunks List'
 
 function ProjectHunksQuickfix:fetch()
   local entries = {}
-  local git = Git()
-  local status_files_err, status_files = git:status()
+  local git_repository = git_service:get_repository()
+  local status_files_err, status_files = git_repository:status()
 
   loop.await()
   if status_files_err then
@@ -31,12 +31,12 @@ function ProjectHunksQuickfix:fetch()
     if status:has_both('??') then
       local show_err, lines = fs.read_file(filename)
       if not show_err then
-        hunks = git:untracked_hunks(lines)
+        hunks = git_repository:untracked_hunks(lines)
       else
         console.debug.error(show_err)
       end
     else
-      hunks_err, hunks = git:index_hunks(filename)
+      hunks_err, hunks = git_repository:index_hunks(filename)
     end
 
     loop.await()

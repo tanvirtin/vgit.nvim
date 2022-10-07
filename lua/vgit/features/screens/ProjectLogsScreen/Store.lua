@@ -1,5 +1,5 @@
-local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
+local git_service = require('vgit.services.git')
 
 local Store = Object:extend()
 
@@ -26,7 +26,7 @@ function Store:fetch(options, opts)
 
   self:reset()
 
-  local err, logs = Git():logs(options, { is_background = true })
+  local err, logs = git_service:get_repository():logs(options, { is_background = true })
 
   if err then
     return err, nil

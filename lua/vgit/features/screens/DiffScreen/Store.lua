@@ -1,6 +1,6 @@
 local fs = require('vgit.core.fs')
 local Object = require('vgit.core.Object')
-local GitObject = require('vgit.git.GitObject')
+local git_service = require('vgit.services.git')
 local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
@@ -10,7 +10,7 @@ function Store:constructor()
     err = nil,
     data = nil,
     shape = nil,
-    git_object = nil,
+    git_blob = nil,
     _cache = {
       lines = nil,
       diff_dto = nil,
@@ -39,12 +39,12 @@ function Store:fetch(shape, filename, opts)
   self:reset()
 
   self.shape = shape
-  self.git_object = GitObject(filename)
+  self.git_blob = git_service:get_blob(filename)
 
   local lines_err, lines
 
   if opts.is_staged then
-    lines_err, lines = self.git_object:lines()
+    lines_err, lines = self.git_blob:get_lines()
   else
     lines_err, lines = fs.read_file(filename)
   end
@@ -58,9 +58,9 @@ function Store:fetch(shape, filename, opts)
   self._cache.lines = lines
 
   if opts.is_staged then
-    self.err, self.data = self.git_object:staged_hunks(lines)
+    self.err, self.data = self.git_blob:staged_hunks(lines)
   else
-    self.err, self.data = self.git_object:live_hunks(lines)
+    self.err, self.data = self.git_blob:live_hunks(lines)
   end
 
   return self.err, self.data
@@ -76,8 +76,8 @@ function Store:get_diff_dto()
   return nil, self._cache.diff_dto
 end
 
-function Store:get_filename() return nil, self.git_object:get_filename() end
+function Store:get_filename() return nil, self.git_blob:get_filename() end
 
-function Store:get_filetype() return nil, self.git_object:get_filetype() end
+function Store:get_filetype() return nil, self.git_blob:get_filetype() end
 
 return Store

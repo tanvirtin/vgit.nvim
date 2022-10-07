@@ -1,7 +1,7 @@
 local fs = require('vgit.core.fs')
-local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local git_service = require('vgit.services.git')
 local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
@@ -12,7 +12,7 @@ function Store:constructor()
     err = nil,
     data = nil,
     shape = nil,
-    git = Git(),
+    git_repository = git_service:get_repository(),
     _cache = {
       lnum = 1,
       list_entry_cache = {},
@@ -41,11 +41,11 @@ function Store:fetch(shape, opts)
 
   self:reset()
 
-  if not self.git:is_inside_git_dir() then
+  if not self.git_repository:is_inside_git_dir() then
     return { 'Project has no .git folder' }, nil
   end
 
-  local files_err, files = self.git:status()
+  local files_err, files = self.git_repository:status()
 
   if files_err then
     return files_err
@@ -179,9 +179,9 @@ function Store:get_lines(file)
 
   if status then
     if status:has('D ') then
-      lines_err, lines = self.git:show(filename, 'HEAD')
+      lines_err, lines = self.git_repository:show(filename, 'HEAD')
     elseif status:has(' D') then
-      lines_err, lines = self.git:show(self.git:tracked_filename(filename))
+      lines_err, lines = self.git_repository:show(self.git_repository:tracked_filename(filename))
     else
       lines_err, lines = fs.read_file(filename)
     end
@@ -200,7 +200,7 @@ function Store:get_hunks(file, lines, is_staged)
 
   if is_staged then
     if file:is_staged() then
-      return self.git:staged_hunks(filename)
+      return self.git_repository:staged_hunks(filename)
     end
 
     return nil, nil
@@ -208,16 +208,16 @@ function Store:get_hunks(file, lines, is_staged)
 
   if status then
     if status:has_both('??') then
-      hunks = self.git:untracked_hunks(lines)
+      hunks = self.git_repository:untracked_hunks(lines)
     elseif status:has_either('DD') then
-      hunks = self.git:deleted_hunks(lines)
+      hunks = self.git_repository:deleted_hunks(lines)
     else
-      return self.git:index_hunks(filename)
+      return self.git_repository:index_hunks(filename)
     end
   elseif log then
-    hunks_err, hunks = self.git:remote_hunks(filename, log.parent_hash, log.commit_hash)
+    hunks_err, hunks = self.git_repository:remote_hunks(filename, log.parent_hash, log.commit_hash)
   else
-    hunks_err, hunks = self.git:index_hunks(filename)
+    hunks_err, hunks = self.git_repository:index_hunks(filename)
   end
 
   return hunks_err, hunks

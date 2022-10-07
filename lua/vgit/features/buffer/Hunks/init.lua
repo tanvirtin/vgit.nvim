@@ -2,7 +2,7 @@ local loop = require('vgit.core.loop')
 local Window = require('vgit.core.Window')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local git_buffer_store = require('vgit.git.git_buffer_store')
+local git_service = require('vgit.services.git')
 local navigation = require('vgit.features.buffer.Hunks.navigation')
 local NavigationVirtualText = require('vgit.features.buffer.Hunks.NavigationVirtualText')
 
@@ -16,13 +16,13 @@ function Hunks:constructor()
 end
 
 function Hunks:move_up()
-  local buffer = git_buffer_store.current()
+  local buffer = git_service.store.current()
 
   if not buffer then
     return
   end
 
-  local hunks = buffer.git_object.hunks
+  local hunks = buffer.git_blob.hunks
 
   if hunks and #hunks ~= 0 then
     local window = Window(0)
@@ -33,13 +33,13 @@ function Hunks:move_up()
 end
 
 function Hunks:move_down()
-  local buffer = git_buffer_store.current()
+  local buffer = git_service.store.current()
 
   if not buffer then
     return
   end
 
-  local hunks = buffer.git_object.hunks
+  local hunks = buffer.git_blob.hunks
 
   if hunks and #hunks ~= 0 then
     local window = Window(0)
@@ -50,7 +50,7 @@ end
 
 function Hunks:cursor_hunk()
   loop.await()
-  local buffer = git_buffer_store.current()
+  local buffer = git_service.store.current()
 
   if not buffer then
     return
@@ -58,7 +58,7 @@ function Hunks:cursor_hunk()
 
   local window = Window(0)
   local lnum = window:get_lnum()
-  local hunks = buffer.git_object.hunks
+  local hunks = buffer.git_blob.hunks
 
   if not hunks then
     return
@@ -78,13 +78,13 @@ end
 
 function Hunks:stage_all()
   loop.await()
-  local buffer = git_buffer_store.current()
+  local buffer = git_service.store.current()
 
   if not buffer then
     return
   end
 
-  local err = buffer.git_object:stage()
+  local err = buffer.git_blob:stage()
 
   loop.await()
   if err then
@@ -98,7 +98,7 @@ end
 function Hunks:cursor_stage()
   loop.await()
 
-  local buffer = git_buffer_store.current()
+  local buffer = git_service.store.current()
   if not buffer then
     return
   end
@@ -107,10 +107,10 @@ function Hunks:cursor_stage()
     return
   end
 
-  local git_object = buffer.git_object
+  local git_blob = buffer.git_blob
 
-  if not git_object:is_tracked() then
-    local err = git_object:stage()
+  if not git_blob:is_tracked() then
+    local err = git_blob:stage()
 
     loop.await()
     if err then
@@ -129,7 +129,7 @@ function Hunks:cursor_stage()
     return
   end
 
-  local err = git_object:stage_hunk(hunk)
+  local err = git_blob:stage_hunk(hunk)
 
   if err then
     console.debug.error(err)
@@ -141,13 +141,13 @@ end
 
 function Hunks:unstage_all()
   loop.await()
-  local buffer = git_buffer_store.current()
+  local buffer = git_service.store.current()
 
   if not buffer then
     return
   end
 
-  local err = buffer.git_object:unstage()
+  local err = buffer.git_blob:unstage()
 
   loop.await()
   if err then
@@ -160,19 +160,19 @@ end
 
 function Hunks:reset_all()
   loop.await()
-  local buffer = git_buffer_store.current()
+  local buffer = git_service.store.current()
 
   if not buffer then
     return
   end
 
-  local hunks = buffer.git_object.hunks
+  local hunks = buffer.git_blob.hunks
 
   if not hunks and #hunks == 0 then
     return
   end
 
-  local err, lines = buffer.git_object:lines()
+  local err, lines = buffer.git_blob:get_lines()
 
   loop.await()
   if err then
@@ -185,7 +185,7 @@ end
 
 function Hunks:cursor_reset()
   loop.await()
-  local buffer = git_buffer_store.current()
+  local buffer = git_service.store.current()
 
   if not buffer then
     return
@@ -193,7 +193,7 @@ function Hunks:cursor_reset()
 
   local window = Window(0)
   local lnum = window:get_lnum()
-  local hunks = buffer.git_object.hunks
+  local hunks = buffer.git_blob.hunks
 
   if not hunks then
     return

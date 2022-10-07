@@ -1,7 +1,6 @@
 local env = require('vgit.core.env')
 local loop = require('vgit.core.loop')
 local sign = require('vgit.core.sign')
-local Git = require('vgit.git.cli.Git')
 local Command = require('vgit.Command')
 local keymap = require('vgit.core.keymap')
 local console = require('vgit.core.console')
@@ -9,6 +8,7 @@ local renderer = require('vgit.core.renderer')
 local highlight = require('vgit.core.highlight')
 local hls_setting = require('vgit.settings.hls')
 local git_setting = require('vgit.settings.git')
+local git_service = require('vgit.services.git')
 local Hunks = require('vgit.features.buffer.Hunks')
 local scene_setting = require('vgit.settings.scene')
 local signs_setting = require('vgit.settings.signs')
@@ -70,8 +70,8 @@ local buffer = {
 }
 
 local project = {
-  stage_all = loop.async(function() Git():stage() end),
-  unstage_all = loop.async(function() Git():unstage() end),
+  stage_all = loop.async(function() git_service:get_repository():stage() end),
+  unstage_all = loop.async(function() git_service:get_repository():unstage() end),
   hunks_qf = loop.async(function() project_hunks_quickfix:show() end),
   debug_preview = loop.async(function(...) screen_manager.show('debug_screen', ...) end),
   hunks_preview = loop.async(function() screen_manager.show('project_hunks_screen') end),
@@ -87,12 +87,12 @@ local project = {
       return
     end
 
-    Git():reset_all()
+    git_service:get_repository():reset_all()
   end),
 }
 
 local checkout = loop.async(function(...)
-  local err = Git():checkout({ ... })
+  local err = git_service:get_repository():checkout({ ... })
 
   if err then
     console.debug.error(err).error(err)

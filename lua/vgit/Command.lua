@@ -51,8 +51,26 @@ function Command:constructor()
   }
 end
 
+function Command:palette()
+  local vgit = require('vgit')
+
+  vim.ui.select(self.commands:to_list(), {
+    prompt = 'VGit Commands:',
+    format_item = function(item) return item end,
+  }, function(command)
+    if command then
+      vgit[command]()
+    end
+  end)
+end
+
 function Command:execute(command, ...)
   local vgit = require('vgit')
+
+  if command == nil then
+    self:palette()
+    return
+  end
 
   if not self.commands:has(command) and not self.deprecated[command] then
     local err = 'Invalid command'

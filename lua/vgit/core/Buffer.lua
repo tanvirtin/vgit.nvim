@@ -4,7 +4,7 @@ local Object = require('vgit.core.Object')
 local keymap = require('vgit.core.keymap')
 local console = require('vgit.core.console')
 local renderer = require('vgit.core.renderer')
-local GitObject = require('vgit.git.GitObject')
+local git_service = require('vgit.services.git')
 local Namespace = require('vgit.core.Namespace')
 local signs_setting = require('vgit.settings.signs')
 
@@ -25,7 +25,7 @@ function Buffer:constructor(bufnr)
     filename = filename,
     rendering = false,
     file_watcher = nil,
-    git_object = nil,
+    git_blob = nil,
     namespace = Namespace(),
     state = {
       is_attached_to_screen = false,
@@ -204,13 +204,13 @@ end
 function Buffer:sync()
   local bufname = vim.api.nvim_buf_get_name(self.bufnr)
   self.filename = fs.relative_filename(bufname)
-  self.git_object = GitObject(self.filename)
+  self.git_blob = git_service:get_blob(self.filename)
 
   return self
 end
 
 function Buffer:sync_git()
-  self.git_object = GitObject(self.filename)
+  self.git_blob = git_service:get_blob(self.filename)
 
   return self
 end

@@ -1,7 +1,7 @@
 local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local GitObject = require('vgit.git.GitObject')
+local git_service = require('vgit.services.git')
 local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
@@ -9,7 +9,7 @@ local Store = Object:extend()
 function Store:constructor()
   return {
     shape = nil,
-    git_object = nil,
+    git_blob = nil,
     index = 1,
     err = nil,
     data = nil,
@@ -36,8 +36,8 @@ function Store:fetch(shape, filename, opts)
   self:reset()
 
   self.shape = shape
-  self.git_object = GitObject(filename)
-  self.err, self.data = self.git_object:logs()
+  self.git_blob = git_service:get_blob(filename)
+  self.err, self.data = self.git_blob:get_logs()
 
   if self.data and utils.list.is_empty(self.data) then
     return { 'There is no history associated with this buffer' }, nil
@@ -82,14 +82,14 @@ function Store:get_diff_dto(index)
     return nil, self._cache[id]
   end
 
-  local hunks_err, hunks = self.git_object:remote_hunks(parent_hash, commit_hash)
+  local hunks_err, hunks = self.git_blob:remote_hunks(parent_hash, commit_hash)
   loop.await()
 
   if hunks_err then
     return hunks_err
   end
 
-  local lines_err, lines = self.git_object:lines(commit_hash)
+  local lines_err, lines = self.git_blob:get_lines(commit_hash)
   loop.await()
 
   if lines_err then
@@ -103,9 +103,9 @@ function Store:get_diff_dto(index)
   return nil, diff
 end
 
-function Store:get_filename() return nil, self.git_object:get_filename() end
+function Store:get_filename() return nil, self.git_blob:get_filename() end
 
-function Store:get_filetype() return nil, self.git_object:get_filetype() end
+function Store:get_filetype() return nil, self.git_blob:get_filetype() end
 
 function Store:get_lnum() return nil, self._cache.lnum end
 

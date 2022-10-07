@@ -4,10 +4,10 @@ local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
-local GitBuffer = require('vgit.git.GitBuffer')
+local git_service = require('vgit.services.git')
 local Namespace = require('vgit.core.Namespace')
+local event_type = require('vgit.core.event_type')
 local live_blame_setting = require('vgit.settings.live_blame')
-local git_buffer_store = require('vgit.git.git_buffer_store')
 
 local LiveBlame = Object:extend()
 
@@ -22,11 +22,11 @@ end
 
 function LiveBlame:register_events()
   event
-    .on('BufEnter', function() self:desync_all() end)
-    .on('WinEnter', function() self:desync_all() end)
-    .on('CursorHold', function() self:sync() end)
-    .on('CursorMoved', function() self:desync() end)
-    .on('InsertEnter', function() self:desync() end)
+    .on(event_type.BufEnter, function() self:desync_all() end)
+    .on(event_type.WinEnter, function() self:desync_all() end)
+    .on(event_type.CursorHold, function() self:sync() end)
+    .on(event_type.CursorMoved, function() self:desync() end)
+    .on(event_type.InsertEnter, function() self:desync() end)
 
   return self
 end
@@ -56,8 +56,7 @@ LiveBlame.sync = loop.debounced_async(function(self)
   loop.await()
   local window = Window(0)
   loop.await()
-  local buffer = git_buffer_store.current()
-  local git_buffer = GitBuffer(buffer)
+  local buffer = git_service.store.current()
 
   if not buffer then
     return
@@ -73,7 +72,7 @@ LiveBlame.sync = loop.debounced_async(function(self)
     return
   end
 
-  if not git_buffer:is_tracked() then
+  if not buffer.git_blob:is_tracked() then
     return
   end
 
@@ -85,7 +84,7 @@ LiveBlame.sync = loop.debounced_async(function(self)
   end
 
   loop.await()
-  local blame_err, blame = buffer.git_object:blame_line(lnum)
+  local blame_err, blame = buffer.git_blob:blame_line(lnum)
 
   loop.await()
   if not buffer:is_valid() then
@@ -105,7 +104,7 @@ LiveBlame.sync = loop.debounced_async(function(self)
   end
 
   loop.await()
-  local config_err, config = buffer.git_object:config()
+  local config_err, config = buffer.git_blob:get_config()
 
   if config_err then
     console.debug.error(config_err)
@@ -125,14 +124,14 @@ end, 20)
 function LiveBlame:desync(force)
   loop.await()
   local window = Window(0)
-  local buffer = git_buffer_store.current()
+  local buffer = git_service.store.current()
 
   if not buffer then
     return
   end
 
   loop.await()
-  buffer = git_buffer_store.get(buffer)
+  buffer = git_service.store.get(buffer)
   loop.await()
 
   local lnum = window:get_lnum()

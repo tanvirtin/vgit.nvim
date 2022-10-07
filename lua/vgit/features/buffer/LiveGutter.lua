@@ -3,9 +3,8 @@ local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
-local GitBuffer = require('vgit.git.GitBuffer')
+local git_service = require('vgit.services.git')
 local event_type = require('vgit.core.event_type')
-local git_buffer_store = require('vgit.git.git_buffer_store')
 local live_gutter_setting = require('vgit.settings.live_gutter')
 
 local LiveGutter = Object:extend()
@@ -17,7 +16,7 @@ function LiveGutter:constructor()
 end
 
 function LiveGutter:register_events()
-  event.on(event_type.BufRead, function() self:attach() end)
+  event.on(event_type.BufAdd, function() self:attach() end)
 
   return self
 end
@@ -44,7 +43,7 @@ LiveGutter.sync = loop.debounced_async(function(self, buffer)
   buffer:clear_cached_live_signs()
 
   loop.await()
-  local err = buffer.git_object:live_hunks(buffer:get_lines())
+  local err = buffer.git_blob:live_hunks(buffer:get_lines())
 
   if err then
     loop.await()
@@ -54,7 +53,7 @@ LiveGutter.sync = loop.debounced_async(function(self, buffer)
     return
   end
 
-  local hunks = buffer.git_object.hunks
+  local hunks = buffer.git_blob.hunks
 
   if not hunks then
     loop.await()
@@ -62,7 +61,7 @@ LiveGutter.sync = loop.debounced_async(function(self, buffer)
 
     return
   else
-    local diff_status = buffer.git_object:generate_diff_status()
+    local diff_status = buffer.git_blob:generate_diff_status()
 
     loop.await()
     buffer:set_var('vgit_status', diff_status)
@@ -79,7 +78,7 @@ end, 20)
 
 LiveGutter.resync = loop.async(function(self, buffer)
   loop.await()
-  buffer = buffer or git_buffer_store.current()
+  buffer = buffer or git_service.store.current()
 
   if buffer then
     self:sync(buffer)
@@ -98,7 +97,7 @@ function LiveGutter:render(buffer, top, bot)
     return
   end
 
-  local hunks = buffer.git_object.hunks
+  local hunks = buffer.git_blob.hunks
 
   if not hunks then
     return
@@ -117,18 +116,19 @@ end
 function LiveGutter:attach()
   loop.await()
   local buffer = Buffer(0)
-  local git_buffer = GitBuffer(buffer)
 
   loop.await()
-  if git_buffer:is_in_store() then
+  if git_service.store.contains(buffer) then
     return
   end
 
   loop.await()
   buffer:sync_git()
 
+  local _, is_inside_git_dir = buffer.git_blob:is_inside_git_dir()
   loop.await()
-  if not git_buffer:is_inside_git_dir() then
+
+  if not is_inside_git_dir then
     self:resync(buffer)
     return
   end
@@ -144,12 +144,14 @@ function LiveGutter:attach()
   end
 
   loop.await()
-  if git_buffer:is_ignored() then
+  local _, is_ignored = buffer.git_blob:is_ignored()
+
+  if is_ignored then
     return
   end
 
   loop.await()
-  git_buffer_store.add(buffer)
+  git_service.store.add(buffer)
   loop.await()
 
   buffer
@@ -177,7 +179,7 @@ function LiveGutter:attach()
 end
 
 function LiveGutter:detach(buffer)
-  git_buffer_store.remove(buffer, function() buffer:unwatch_file():detach_from_renderer() end)
+  git_service.store.remove(buffer, function() buffer:unwatch_file():detach_from_renderer() end)
 
   return self
 end

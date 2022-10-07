@@ -1,7 +1,7 @@
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local git_service = require('vgit.services.git')
 local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
@@ -12,7 +12,7 @@ function Store:constructor()
     err = nil,
     data = nil,
     shape = nil,
-    git = Git(),
+    git_repository = git_service:get_repository(),
     _cache = {
       lnum = 1,
       list_entry_cache = {},
@@ -53,7 +53,7 @@ function Store:fetch(shape, commits, opts)
     commits = {},
   }
 
-  if not self.git:is_inside_git_dir() then
+  if not self.git_repository:is_inside_git_dir() then
     return { 'Project has no .git folder' }, nil
   end
 
@@ -63,7 +63,7 @@ function Store:fetch(shape, commits, opts)
   for i = 1, #commits do
     local commit = commits[i]
     -- Get the log associated with the commit
-    local log_err, log = self.git:log(commit)
+    local log_err, log = self.git_repository:log(commit)
     loop.await()
 
     if log_err then
@@ -72,7 +72,7 @@ function Store:fetch(shape, commits, opts)
 
     -- We will use the parent_hash and the commit_hash inside
     -- the log object to list all the files associated with the log.
-    local err, files = self.git:ls_log(log)
+    local err, files = self.git_repository:ls_log(log)
     loop.await()
 
     if err then
@@ -149,11 +149,11 @@ function Store:get_diff_dto()
   local is_deleted = false
 
   loop.await()
-  if not self.git:is_in_remote(filename, commit_hash) then
+  if not self.git_repository:is_in_remote(filename, commit_hash) then
     is_deleted = true
-    lines_err, lines = self.git:show(filename, parent_hash)
+    lines_err, lines = self.git_repository:show(filename, parent_hash)
   else
-    lines_err, lines = self.git:show(filename, commit_hash)
+    lines_err, lines = self.git_repository:show(filename, commit_hash)
   end
   loop.await()
 
@@ -163,9 +163,9 @@ function Store:get_diff_dto()
 
   local hunks_err, hunks
   if is_deleted then
-    hunks = self.git:deleted_hunks(lines)
+    hunks = self.git_repository:deleted_hunks(lines)
   else
-    hunks_err, hunks = self.git:remote_hunks(filename, parent_hash, commit_hash)
+    hunks_err, hunks = self.git_repository:remote_hunks(filename, parent_hash, commit_hash)
   end
   loop.await()
 

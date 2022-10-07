@@ -1,18 +1,18 @@
 local fs = require('vgit.core.fs')
-local Status = require('vgit.git.cli.models.Status')
-local utils = require('vgit.core.utils')
-local GitReadStream = require('vgit.git.GitReadStream')
 local loop = require('vgit.core.loop')
+local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local Hunk = require('vgit.git.cli.models.Hunk')
-local Log = require('vgit.git.cli.models.Log')
-local File = require('vgit.git.cli.models.File')
-local Blame = require('vgit.git.cli.models.Blame')
 local git_setting = require('vgit.settings.git')
+local Log = require('vgit.services.git.models.Log')
+local GitBlob = require('vgit.services.git.GitBlob')
+local Hunk = require('vgit.services.git.models.Hunk')
+local Blame = require('vgit.services.git.models.Blame')
+local Status = require('vgit.services.git.models.Status')
+local GitReadStream = require('vgit.services.git.GitReadStream')
 
-local Git = Object:extend()
+local GitClient = Object:extend()
 
-function Git:constructor(cwd)
+function GitClient:constructor(cwd)
   local newself = {
     cwd = cwd or '',
     cmd = git_setting:get('cmd'),
@@ -30,9 +30,9 @@ function Git:constructor(cwd)
   return newself
 end
 
-function Git:set_cwd(cwd) self.cwd = cwd end
+function GitClient:set_cwd(cwd) self.cwd = cwd end
 
-Git.is_commit_valid = loop.promisify(function(self, commit, spec, callback)
+GitClient.is_commit_valid = loop.promisify(function(self, commit, spec, callback)
   local result = {}
   local err = {}
 
@@ -64,7 +64,7 @@ Git.is_commit_valid = loop.promisify(function(self, commit, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.config = loop.promisify(function(self, spec, callback)
+GitClient.config = loop.promisify(function(self, spec, callback)
   if self.state.config then
     return callback(nil, self.state.config)
   end
@@ -97,7 +97,7 @@ Git.config = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
-Git.has_commits = loop.promisify(function(self, spec, callback)
+GitClient.has_commits = loop.promisify(function(self, spec, callback)
   local result = true
 
   GitReadStream(utils.object.defaults({
@@ -116,7 +116,7 @@ Git.has_commits = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
-Git.is_inside_git_dir = loop.promisify(function(self, spec, callback)
+GitClient.is_inside_git_dir = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -138,7 +138,7 @@ Git.is_inside_git_dir = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
-Git.blames = loop.promisify(function(self, filename, spec, callback)
+GitClient.blames = loop.promisify(function(self, filename, spec, callback)
   local err = {}
   local result = {}
   local blame_info = {}
@@ -177,7 +177,7 @@ Git.blames = loop.promisify(function(self, filename, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.blame_line = loop.promisify(function(self, filename, lnum, spec, callback)
+GitClient.blame_line = loop.promisify(function(self, filename, lnum, spec, callback)
   filename = fs.make_relative(filename, self.cwd)
   local err = {}
   local result = {}
@@ -206,10 +206,9 @@ Git.blame_line = loop.promisify(function(self, filename, lnum, spec, callback)
   }, spec)):start()
 end, 5)
 
-Git.log = loop.promisify(function(self, commit_hash, spec, callback)
+GitClient.log = loop.promisify(function(self, commit_hash, spec, callback)
   local err = {}
   local logs = {}
-  local revision_count = 0
 
   GitReadStream(utils.object.defaults({
     command = self.cmd,
@@ -223,8 +222,7 @@ Git.log = loop.promisify(function(self, commit_hash, spec, callback)
       '--no-patch',
     }),
     on_stdout = function(line)
-      revision_count = revision_count + 1
-      local log = Log(line, revision_count)
+      local log = Log(line)
 
       if log then
         logs[#logs + 1] = log
@@ -241,10 +239,9 @@ Git.log = loop.promisify(function(self, commit_hash, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.logs = loop.promisify(function(self, options, spec, callback)
+GitClient.logs = loop.promisify(function(self, options, spec, callback)
   local err = {}
   local logs = {}
-  local revision_count = 0
   GitReadStream(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
@@ -257,8 +254,7 @@ Git.logs = loop.promisify(function(self, options, spec, callback)
       '--all',
     }, options),
     on_stdout = function(line)
-      revision_count = revision_count + 1
-      local log = Log(line, revision_count)
+      local log = Log(line)
 
       if log then
         logs[#logs + 1] = log
@@ -275,10 +271,9 @@ Git.logs = loop.promisify(function(self, options, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.file_logs = loop.promisify(function(self, filename, spec, callback)
+GitClient.file_logs = loop.promisify(function(self, filename, spec, callback)
   local err = {}
   local logs = {}
-  local revision_count = 0
   GitReadStream(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
@@ -291,8 +286,7 @@ Git.file_logs = loop.promisify(function(self, filename, spec, callback)
       filename,
     }),
     on_stdout = function(line)
-      revision_count = revision_count + 1
-      local log = Log(line, revision_count)
+      local log = Log(line)
 
       if log then
         logs[#logs + 1] = log
@@ -309,7 +303,7 @@ Git.file_logs = loop.promisify(function(self, filename, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.file_hunks = loop.promisify(function(self, filename_a, filename_b, spec, callback)
+GitClient.file_hunks = loop.promisify(function(self, filename_a, filename_b, spec, callback)
   local result = {}
   local err = {}
   local args = utils.list.merge(self.fallback_args, {
@@ -358,7 +352,7 @@ Git.file_hunks = loop.promisify(function(self, filename_a, filename_b, spec, cal
   }, spec)):start()
 end, 5)
 
-Git.index_hunks = loop.promisify(function(self, filename, spec, callback)
+GitClient.index_hunks = loop.promisify(function(self, filename, spec, callback)
   local result = {}
   local err = {}
   local args = utils.list.merge(self.fallback_args, {
@@ -402,7 +396,7 @@ Git.index_hunks = loop.promisify(function(self, filename, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.remote_hunks = loop.promisify(function(self, filename, parent_hash, commit_hash, spec, callback)
+GitClient.remote_hunks = loop.promisify(function(self, filename, parent_hash, commit_hash, spec, callback)
   local result = {}
   local err = {}
   local args = utils.list.merge(self.fallback_args, {
@@ -464,7 +458,7 @@ Git.remote_hunks = loop.promisify(function(self, filename, parent_hash, commit_h
   }, spec)):start()
 end, 6)
 
-Git.staged_hunks = loop.promisify(function(self, filename, spec, callback)
+GitClient.staged_hunks = loop.promisify(function(self, filename, spec, callback)
   local result = {}
   local err = {}
   local args = utils.list.merge(self.fallback_args, {
@@ -512,7 +506,7 @@ Git.staged_hunks = loop.promisify(function(self, filename, spec, callback)
   }, spec)):start()
 end, 4)
 
-function Git:untracked_hunks(lines)
+function GitClient:untracked_hunks(lines)
   local diff = {}
 
   for i = 1, #lines do
@@ -534,7 +528,7 @@ function Git:untracked_hunks(lines)
   return { hunk }
 end
 
-function Git:deleted_hunks(lines)
+function GitClient:deleted_hunks(lines)
   local diff = {}
 
   for i = 1, #lines do
@@ -556,7 +550,7 @@ function Git:deleted_hunks(lines)
   return { hunk }
 end
 
-Git.show = loop.promisify(function(self, tracked_filename, commit_hash, spec, callback)
+GitClient.show = loop.promisify(function(self, tracked_filename, commit_hash, spec, callback)
   local err = {}
   local result = {}
   commit_hash = commit_hash or ''
@@ -583,7 +577,7 @@ Git.show = loop.promisify(function(self, tracked_filename, commit_hash, spec, ca
   }, spec)):start()
 end, 5)
 
-Git.is_in_remote = loop.promisify(function(self, tracked_filename, commit_hash, spec, callback)
+GitClient.is_in_remote = loop.promisify(function(self, tracked_filename, commit_hash, spec, callback)
   commit_hash = commit_hash or 'HEAD'
   local err = false
 
@@ -606,7 +600,7 @@ Git.is_in_remote = loop.promisify(function(self, tracked_filename, commit_hash, 
   }, spec)):start()
 end, 5)
 
-Git.stage = loop.promisify(function(self, spec, callback)
+GitClient.stage = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -628,7 +622,7 @@ Git.stage = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
-Git.unstage = loop.promisify(function(self, spec, callback)
+GitClient.unstage = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -650,7 +644,7 @@ Git.unstage = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
-Git.stage_file = loop.promisify(function(self, filename, spec, callback)
+GitClient.stage_file = loop.promisify(function(self, filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -680,7 +674,7 @@ Git.stage_file = loop.promisify(function(self, filename, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.unstage_file = loop.promisify(function(self, filename, spec, callback)
+GitClient.unstage_file = loop.promisify(function(self, filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -711,7 +705,7 @@ Git.unstage_file = loop.promisify(function(self, filename, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.stage_hunk_from_patch = loop.promisify(function(self, patch_filename, spec, callback)
+GitClient.stage_hunk_from_patch = loop.promisify(function(self, patch_filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -737,7 +731,7 @@ Git.stage_hunk_from_patch = loop.promisify(function(self, patch_filename, spec, 
   }, spec)):start()
 end, 4)
 
-Git.unstage_hunk_from_patch = loop.promisify(function(self, patch_filename, spec, callback)
+GitClient.unstage_hunk_from_patch = loop.promisify(function(self, patch_filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -764,7 +758,7 @@ Git.unstage_hunk_from_patch = loop.promisify(function(self, patch_filename, spec
   }, spec)):start()
 end, 4)
 
-Git.is_ignored = loop.promisify(function(self, filename, spec, callback)
+GitClient.is_ignored = loop.promisify(function(self, filename, spec, callback)
   filename = fs.make_relative(filename, self.cwd)
   local err = {}
 
@@ -790,7 +784,7 @@ Git.is_ignored = loop.promisify(function(self, filename, spec, callback)
 end, 4)
 
 -- Only clears a tracked file.
-Git.reset = loop.promisify(function(self, filename, spec, callback)
+GitClient.reset = loop.promisify(function(self, filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -815,7 +809,7 @@ Git.reset = loop.promisify(function(self, filename, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.reset_all = loop.promisify(function(self, spec, callback)
+GitClient.reset_all = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -841,7 +835,7 @@ Git.reset_all = loop.promisify(function(self, spec, callback)
 end, 3)
 
 -- Only clears an untracked file.
-Git.clean = loop.promisify(function(self, filename, spec, callback)
+GitClient.clean = loop.promisify(function(self, filename, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -866,7 +860,7 @@ Git.clean = loop.promisify(function(self, filename, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.clean_all = loop.promisify(function(self, spec, callback)
+GitClient.clean_all = loop.promisify(function(self, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -889,7 +883,7 @@ Git.clean_all = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
-Git.current_branch = loop.promisify(function(self, spec, callback)
+GitClient.current_branch = loop.promisify(function(self, spec, callback)
   local err = {}
   local result = {}
 
@@ -914,7 +908,7 @@ Git.current_branch = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
-Git.tracked_filename = loop.promisify(function(self, filename, commit_hash, spec, callback)
+GitClient.tracked_filename = loop.promisify(function(self, filename, commit_hash, spec, callback)
   filename = fs.make_relative(filename, self.cwd)
   local result = {}
 
@@ -934,7 +928,7 @@ Git.tracked_filename = loop.promisify(function(self, filename, commit_hash, spec
   }, spec)):start()
 end, 5)
 
-Git.tracked_full_filename = loop.promisify(function(self, filename, spec, callback)
+GitClient.tracked_full_filename = loop.promisify(function(self, filename, spec, callback)
   filename = fs.make_relative(filename, self.cwd)
   local result = {}
 
@@ -954,9 +948,9 @@ Git.tracked_full_filename = loop.promisify(function(self, filename, spec, callba
   }, spec)):start()
 end, 4)
 
-Git.file_status = loop.promisify(function(self, tracked_filename, spec, callback)
+GitClient.file_status = loop.promisify(function(self, tracked_filename, spec, callback)
   local err = {}
-  local file = nil
+  local status = nil
 
   GitReadStream(utils.object.defaults({
     command = self.cmd,
@@ -979,20 +973,20 @@ Git.file_status = loop.promisify(function(self, tracked_filename, spec, callback
         return
       end
 
-      file = File(line:sub(4, #line), Status(line:sub(1, 2)))
+      status = Status(line:sub(1, 2))
     end,
     on_stderr = function(line) err[#err + 1] = line end,
     on_exit = function()
       if #err ~= 0 then
-        return callback(err, file)
+        return callback(err, status)
       end
 
-      callback(nil, file)
+      callback(nil, status)
     end,
   }, spec)):start()
 end, 4)
 
-Git.status = loop.promisify(function(self, spec, callback)
+GitClient.status = loop.promisify(function(self, spec, callback)
   local err = {}
   local result = {}
 
@@ -1015,7 +1009,7 @@ Git.status = loop.promisify(function(self, spec, callback)
         return
       end
 
-      result[#result + 1] = File(line:sub(4, #line), Status(line:sub(1, 2)))
+      result[#result + 1] = GitBlob(line:sub(4, #line), Status(line:sub(1, 2)))
     end,
     on_stderr = function(line) err[#err + 1] = line end,
     on_exit = function()
@@ -1028,7 +1022,7 @@ Git.status = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
-Git.ls_log = loop.promisify(function(self, log, spec, callback)
+GitClient.ls_log = loop.promisify(function(self, log, spec, callback)
   local err = {}
   local result = {}
 
@@ -1045,7 +1039,7 @@ Git.ls_log = loop.promisify(function(self, log, spec, callback)
       log.commit_hash,
       log.parent_hash == '' and self.empty_tree_hash or log.parent_hash,
     }),
-    on_stdout = function(line) result[#result + 1] = File(line, Status('--'), log) end,
+    on_stdout = function(line) result[#result + 1] = GitBlob(line, Status('--'), log) end,
     on_stderr = function(line) err[#err + 1] = line end,
     on_exit = function()
       if #err ~= 0 then
@@ -1057,10 +1051,9 @@ Git.ls_log = loop.promisify(function(self, log, spec, callback)
   }, spec)):start()
 end, 4)
 
-Git.ls_stash = loop.promisify(function(self, spec, callback)
+GitClient.ls_stash = loop.promisify(function(self, spec, callback)
   local err = {}
   local logs = {}
-  local revision_count = 0
   GitReadStream(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
@@ -1073,8 +1066,7 @@ Git.ls_stash = loop.promisify(function(self, spec, callback)
       '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
     }),
     on_stdout = function(line)
-      revision_count = revision_count + 1
-      local log = Log(line, revision_count)
+      local log = Log(line)
 
       if log then
         logs[#logs + 1] = log
@@ -1091,7 +1083,7 @@ Git.ls_stash = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
-Git.checkout = loop.promisify(function(self, options, spec, callback)
+GitClient.checkout = loop.promisify(function(self, options, spec, callback)
   local err = {}
 
   GitReadStream(utils.object.defaults({
@@ -1108,4 +1100,4 @@ Git.checkout = loop.promisify(function(self, options, spec, callback)
   }, spec)):start()
 end, 4)
 
-return Git
+return GitClient

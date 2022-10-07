@@ -29,8 +29,8 @@ function ProjectDiffScreen:constructor()
     app_bar_view = AppBarView(scene, store),
     code_view = CodeView(scene, store, {
       row = 1,
-      col = '23vw',
-      width = '77vw',
+      col = '20vw',
+      width = '80vw',
     }, {
       elements = {
         header = true,
@@ -39,7 +39,7 @@ function ProjectDiffScreen:constructor()
     }),
     foldable_list_view = FoldableListView(scene, store, {
       row = 1,
-      width = '23vw',
+      width = '20vw',
     }, {
       elements = {
         header = false,

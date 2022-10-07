@@ -3,10 +3,9 @@ local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
-local GitBuffer = require('vgit.git.GitBuffer')
+local git_service = require('vgit.services.git')
 local Namespace = require('vgit.core.Namespace')
 local event_type = require('vgit.core.event_type')
-local git_buffer_store = require('vgit.git.git_buffer_store')
 local authorship_code_lens_setting = require('vgit.settings.authorship_code_lens')
 
 local AuthorshipCodeLens = Object:extend()
@@ -168,8 +167,7 @@ function AuthorshipCodeLens:sync()
   end
 
   loop.await()
-  local buffer = git_buffer_store.current()
-  local git_buffer = GitBuffer(buffer)
+  local buffer = git_service.store.current()
 
   if not buffer then
     return self
@@ -179,12 +177,12 @@ function AuthorshipCodeLens:sync()
     return self
   end
 
-  if not git_buffer:is_tracked() then
+  if not buffer.git_blob:is_tracked() then
     return self
   end
 
   loop.await()
-  local blames_err, blames = buffer.git_object:blames()
+  local blames_err, blames = buffer.git_blob:blame_lines()
 
   if not buffer:is_valid() then
     return self
@@ -197,7 +195,7 @@ function AuthorshipCodeLens:sync()
   end
 
   loop.await()
-  local config_err, config = buffer.git_object:config()
+  local config_err, config = buffer.git_blob:get_config()
 
   if config_err then
     console.debug.error(config_err)
