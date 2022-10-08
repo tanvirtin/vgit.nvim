@@ -251,7 +251,6 @@ GitClient.logs = loop.promisify(function(self, options, spec, callback)
       'log',
       '--color=never',
       '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
-      '--all',
     }, options),
     on_stdout = function(line)
       local log = Log(line)
