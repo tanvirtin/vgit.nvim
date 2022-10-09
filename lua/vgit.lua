@@ -152,7 +152,6 @@ end
 
 local function register_events()
   git_service.store.register_events()
-  screen_manager.register_events()
   live_blame:register_events()
   live_gutter:register_events()
   authorship_code_lens:register_events()

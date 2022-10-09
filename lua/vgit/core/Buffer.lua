@@ -1,5 +1,6 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local keymap = require('vgit.core.keymap')
 local console = require('vgit.core.console')
@@ -69,6 +70,12 @@ end
 function Buffer:on_render(top, bot)
   -- We invoke the render function called on runtime.
   self.state.on_render(top, bot)
+
+  return self
+end
+
+function Buffer:on(event_type, callback)
+  event.buffer_on(self, event_type, callback)
 
   return self
 end

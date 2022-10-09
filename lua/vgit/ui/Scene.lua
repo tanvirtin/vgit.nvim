@@ -5,9 +5,7 @@ local Scene = Object:extend()
 function Scene:constructor()
   return {
     components = {},
-    state = {
-      default_global_opts = {},
-    },
+    state = { default_global_opts = {} },
   }
 end
 
@@ -34,6 +32,14 @@ end
 function Scene:destroy()
   for _, component in pairs(self.components) do
     component:unmount()
+  end
+
+  return self
+end
+
+function Scene:on(event_name, callback)
+  for _, component in pairs(self.components) do
+    component:on(event_name, callback)
   end
 
   return self

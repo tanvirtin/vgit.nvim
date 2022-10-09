@@ -10,6 +10,15 @@ function event.on(event_name, callback)
   return event
 end
 
+function event.buffer_on(buffer, event_name, callback)
+  vim.api.nvim_create_autocmd(event_name, {
+    buffer = buffer.bufnr,
+    callback = loop.async(callback),
+  })
+
+  return event
+end
+
 function event.custom_on(event_name, callback)
   vim.api.nvim_create_autocmd('User', {
     group = event.group,

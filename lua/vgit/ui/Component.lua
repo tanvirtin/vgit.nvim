@@ -1,5 +1,5 @@
-local assertion = require('vgit.core.assertion')
 local Object = require('vgit.core.Object')
+local assertion = require('vgit.core.assertion')
 
 local Component = Object:extend()
 
@@ -42,7 +42,7 @@ function Component:constructor()
         col = 0,
         focusable = true,
         focus = true,
-        zindex = 60,
+        zindex = 1,
       },
       locked = false,
     },
@@ -198,7 +198,6 @@ function Component:get_line_count() return self.buffer:get_line_count() end
 
 function Component:set_filetype(filetype)
   self.buffer:set_option('filetype', filetype)
-  self.buffer:set_option('ft', filetype)
   self.buffer:set_option('syntax', filetype)
 
   return self
@@ -217,6 +216,12 @@ function Component:set_lines(lines, force)
 end
 
 function Component:is_own_window(window) return self.window:is_same(window) end
+
+function Component:on(event_type, callback)
+  self.buffer:on(event_type, callback)
+
+  return self
+end
 
 function Component:call(callback)
   self.window:call(callback)

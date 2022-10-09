@@ -41,7 +41,7 @@ function HeaderElement:mount(opts)
     col = opts.col,
     width = opts.width,
     height = 1,
-    zindex = 100,
+    zindex = 3,
   }):assign_options({
     cursorbind = false,
     scrollbind = false,
