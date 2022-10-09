@@ -1,7 +1,6 @@
 local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
-local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local git_service = require('vgit.services.git')
 local Namespace = require('vgit.core.Namespace')
@@ -18,7 +17,7 @@ function AuthorshipCodeLens:constructor()
 end
 
 function AuthorshipCodeLens:register_events()
-  event.on(event_type.BufEnter, function() self:resync() end)
+  event.custom_on(event_type.VGitBufAttached, function() self:sync() end)
 
   return self
 end
@@ -46,16 +45,6 @@ end
 function AuthorshipCodeLens:clear(buffer)
   if buffer then
     self.namespace:clear(buffer)
-  end
-
-  return self
-end
-
-function AuthorshipCodeLens:clear_all()
-  local buffers = Buffer:list()
-
-  for i = 1, #buffers do
-    self:clear(buffers[i])
   end
 
   return self
@@ -169,21 +158,30 @@ function AuthorshipCodeLens:sync()
   loop.await()
   local buffer = git_service.store.current()
 
+  loop.await()
   if not buffer then
     return self
   end
 
+  loop.await()
   if not buffer:is_valid() then
     return self
   end
 
+  loop.await()
   if not buffer.git_blob:is_tracked() then
+    return self
+  end
+
+  loop.await()
+  if not buffer:is_valid() then
     return self
   end
 
   loop.await()
   local blames_err, blames = buffer.git_blob:blame_lines()
 
+  loop.await()
   if not buffer:is_valid() then
     return self
   end
@@ -202,11 +200,13 @@ function AuthorshipCodeLens:sync()
     return self
   end
 
+  if not buffer:is_valid() then
+    return
+  end
+
   self:clear(buffer):display(buffer:get_line_count(), buffer, self:generate_authorship(config, blames))
 
   return self
 end
-
-function AuthorshipCodeLens:resync() return self:clear_all():sync() end
 
 return AuthorshipCodeLens

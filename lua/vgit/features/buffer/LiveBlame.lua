@@ -22,11 +22,11 @@ end
 
 function LiveBlame:register_events()
   event
-    .on(event_type.BufEnter, function() self:desync_all() end)
-    .on(event_type.WinEnter, function() self:desync_all() end)
+    .on(event_type.BufEnter, function() self:clear_all() end)
+    .on(event_type.WinEnter, function() self:clear_all() end)
     .on(event_type.CursorHold, function() self:sync() end)
-    .on(event_type.CursorMoved, function() self:desync() end)
-    .on(event_type.InsertEnter, function() self:desync() end)
+    .on(event_type.CursorMoved, function() self:clear() end)
+    .on(event_type.InsertEnter, function() self:clear() end)
 
   return self
 end
@@ -39,12 +39,6 @@ function LiveBlame:display(lnum, buffer, config, blame)
       loop.await()
       self.namespace:transpose_virtual_text(buffer, virt_text, 'GitComment', lnum - 1, 0, 'eol')
     end
-  end
-end
-
-function LiveBlame:clear(buffer)
-  if buffer:is_valid() then
-    self.namespace:clear(buffer)
   end
 end
 
@@ -61,6 +55,7 @@ LiveBlame.sync = loop.debounced_async(function(self)
   if not buffer then
     return
   end
+
   loop.await()
 
   if buffer:editing() then
@@ -84,11 +79,22 @@ LiveBlame.sync = loop.debounced_async(function(self)
   end
 
   loop.await()
-  local blame_err, blame = buffer.git_blob:blame_line(lnum)
-
-  loop.await()
   if not buffer:is_valid() then
     return self
+  end
+
+  loop.await()
+  self:clear_all(true)
+
+  if not buffer:is_valid() then
+    return
+  end
+
+  loop.await()
+  local blame_err, blame = buffer.git_blob:blame_line(lnum)
+
+  if not buffer:is_valid() then
+    return
   end
 
   loop.await()
@@ -116,12 +122,12 @@ LiveBlame.sync = loop.debounced_async(function(self)
   end
 
   loop.await()
-  self:clear(buffer)
+  self.namespace:clear(buffer)
   self:display(lnum, buffer, config, blame)
   self.last_lnum = lnum
 end, 20)
 
-function LiveBlame:desync(force)
+function LiveBlame:clear(force)
   loop.await()
   local window = Window(0)
   local buffer = git_service.store.current()
@@ -144,10 +150,10 @@ function LiveBlame:desync(force)
     return
   end
 
-  self:clear(buffer)
+  self.namespace:clear(buffer)
 end
 
-function LiveBlame:desync_all(force)
+function LiveBlame:clear_all(force)
   if not live_blame_setting:get('enabled') and not force then
     return
   end
@@ -158,14 +164,9 @@ function LiveBlame:desync_all(force)
     local buffer = buffers[i]
 
     if buffer then
-      self:clear(buffer)
+      self.namespace:clear(buffer)
     end
   end
-end
-
-function LiveBlame:resync()
-  self:desync_all(true)
-  self:sync()
 end
 
 return LiveBlame

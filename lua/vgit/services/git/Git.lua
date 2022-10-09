@@ -1,4 +1,8 @@
+local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
+local Buffer = require('vgit.core.Buffer')
 local Object = require('vgit.core.Object')
+local event_type = require('vgit.core.event_type')
 local GitBlob = require('vgit.services.git.GitBlob')
 local GitRepository = require('vgit.services.git.GitRepository')
 
@@ -11,6 +15,64 @@ Git.store = {
 function Git:get_blob(filename, status, log) return GitBlob(filename, status, log) end
 
 function Git:get_repository(cwd) return GitRepository(cwd) end
+
+function Git.store.handle_buf_detach(buffer)
+  Git.store.remove(buffer, function() buffer:destroy() end)
+  event.emit(event_type.VGitBufDetached, buffer:serialize())
+end
+
+function Git.store.handle_buf_add()
+  loop.await()
+  local buffer = Buffer(0)
+
+  loop.await()
+  if Git.store.contains(buffer) then
+    return
+  end
+
+  loop.await()
+  buffer:sync_git(Git)
+
+  local _, is_inside_git_dir = buffer.git_blob:is_inside_git_dir()
+  loop.await()
+
+  if not is_inside_git_dir then
+    return
+  end
+
+  loop.await()
+  if not buffer:is_valid() then
+    return
+  end
+
+  loop.await()
+  if not buffer:is_in_disk() then
+    return
+  end
+
+  loop.await()
+  local _, is_ignored = buffer.git_blob:is_ignored()
+
+  if is_ignored then
+    return
+  end
+
+  loop.await()
+  Git.store.add(buffer)
+  loop.await()
+
+  event.emit(event_type.VGitBufAttached, buffer:serialize())
+
+  buffer:attach_to_changes({
+    on_detach = loop.async(function() Git.store.handle_buf_detach(buffer) end),
+  })
+end
+
+function Git.store.register_events()
+  event.create(event_type.VGitBufAttached)
+  event.create(event_type.VGitBufDetached)
+  event.on(event_type.BufRead, Git.store.handle_buf_add)
+end
 
 function Git.store.add(buffer)
   Git.store.buffers[buffer.bufnr] = buffer

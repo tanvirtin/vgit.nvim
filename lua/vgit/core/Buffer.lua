@@ -4,7 +4,6 @@ local Object = require('vgit.core.Object')
 local keymap = require('vgit.core.keymap')
 local console = require('vgit.core.console')
 local renderer = require('vgit.core.renderer')
-local git_service = require('vgit.services.git')
 local Namespace = require('vgit.core.Namespace')
 local signs_setting = require('vgit.settings.signs')
 
@@ -201,7 +200,7 @@ function Buffer:clear_namespace()
   return self
 end
 
-function Buffer:sync()
+function Buffer:sync(git_service)
   local bufname = vim.api.nvim_buf_get_name(self.bufnr)
   self.filename = fs.relative_filename(bufname)
   self.git_blob = git_service:get_blob(self.filename)
@@ -209,7 +208,7 @@ function Buffer:sync()
   return self
 end
 
-function Buffer:sync_git()
+function Buffer:sync_git(git_service)
   self.git_blob = git_service:get_blob(self.filename)
 
   return self
@@ -316,6 +315,25 @@ end
 
 function Buffer:set_var(name, value)
   vim.api.nvim_buf_set_var(self.bufnr, name, value)
+
+  return self
+end
+
+function Buffer:serialize()
+  return {
+    bufnr = self.bufnr,
+  }
+end
+
+function Buffer:destroy()
+  self:unwatch_file():detach_from_renderer()
+
+  self.filename = nil
+  self.rendering = nil
+  self.file_watcher = nil
+  self.git_blob = nil
+  self.namespace = nil
+  self.state = nil
 
   return self
 end

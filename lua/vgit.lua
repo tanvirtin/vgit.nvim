@@ -105,27 +105,26 @@ local toggle_live_blame = loop.async(function()
   local blames_enabled = live_blame_setting:get('enabled')
 
   live_blame_setting:set('enabled', not blames_enabled)
-  live_blame:resync()
+  live_blame:sync()
 end)
 
 local toggle_live_gutter = loop.async(function()
   local live_gutter_enabled = live_gutter_setting:get('enabled')
 
   live_gutter_setting:set('enabled', not live_gutter_enabled)
-  live_gutter:resync()
+  live_gutter:sync()
 end)
 
 local toggle_authorship_code_lens = loop.async(function()
   local authorship_code_lens_enabled = authorship_code_lens_setting:get('enabled')
 
   authorship_code_lens_setting:set('enabled', not authorship_code_lens_enabled)
-  authorship_code_lens:resync()
+  authorship_code_lens:sync()
 end)
 
 local toggle_tracing = loop.async(function() env.set('DEBUG', not env.get('DEBUG')) end)
 
 local initialize_vgit = loop.async(function()
-  live_gutter:attach()
   live_blame:sync()
   authorship_code_lens:sync()
 end)
@@ -152,6 +151,7 @@ local function register_modules()
 end
 
 local function register_events()
+  git_service.store.register_events()
   screen_manager.register_events()
   live_blame:register_events()
   live_gutter:register_events()
