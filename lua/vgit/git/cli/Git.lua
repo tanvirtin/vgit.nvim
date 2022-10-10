@@ -254,7 +254,6 @@ Git.logs = loop.promisify(function(self, options, spec, callback)
       'log',
       '--color=never',
       '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
-      '--all',
     }, options),
     on_stdout = function(line)
       revision_count = revision_count + 1
