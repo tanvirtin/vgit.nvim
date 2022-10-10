@@ -23,45 +23,6 @@ local screen_manager = {
   is_miminmized = false,
 }
 
-function screen_manager.handle_on_quit_keypress()
-  if not screen_manager.is_minimized and screen_manager.has_active_screen() then
-    return screen_manager.destroy_active_screen()
-  end
-end
-
-function screen_manager.handle_buf_win_enter()
-  if not screen_manager.is_minimized and screen_manager.has_active_screen() then
-    return screen_manager.destroy_active_screen()
-  end
-end
-
-function screen_manager.handle_buf_win_leave()
-  loop.await()
-  if not screen_manager.is_minimized and screen_manager.has_active_screen() then
-    return screen_manager.destroy_active_screen()
-  end
-end
-
-function screen_manager.handle_win_enter()
-  loop.await()
-  if not screen_manager.is_minimized and screen_manager.has_active_screen() then
-    return screen_manager.minimize_screen()
-  end
-  if screen_manager.is_minimized and screen_manager.has_active_screen() then
-    return screen_manager.restore_screen()
-  end
-end
-
-function screen_manager.register_events()
-  event.on(event_type.WinEnter, screen_manager.handle_win_enter)
-  event.on(event_type.BufWinEnter, screen_manager.handle_buf_win_enter)
-  event.on(event_type.BufWinLeave, screen_manager.handle_buf_win_leave)
-end
-
-function screen_manager.register_keymaps()
-  keymap.set('n', scene_setting:get('keymaps').quit, screen_manager.handle_on_quit_keypress)
-end
-
 function screen_manager.dispatch_action(action_name, ...)
   if
     not screen_manager.is_minimized
@@ -227,6 +188,41 @@ function screen_manager.destroy_active_screen()
   screen_manager.active_screen = nil
 
   return screen_manager
+end
+
+function screen_manager.handle_on_quit_keypress()
+  if not screen_manager.is_minimized and screen_manager.has_active_screen() then
+    return screen_manager.destroy_active_screen()
+  end
+end
+
+function screen_manager.toggle_minimize()
+  loop.await()
+  if not screen_manager.is_minimized and screen_manager.has_active_screen() then
+    return screen_manager.minimize_screen()
+  end
+  if screen_manager.is_minimized and screen_manager.has_active_screen() then
+    return screen_manager.restore_screen()
+  end
+end
+
+function screen_manager.register_keymaps()
+  keymap.set('n', scene_setting:get('keymaps').quit, screen_manager.handle_on_quit_keypress)
+end
+
+function screen_manager.register_events()
+  event.on(event_type.WinEnter, screen_manager.toggle_minimize)
+  event.on(event_type.BufWinEnter, function()
+    if not screen_manager.is_minimized and screen_manager.has_active_screen() then
+      return screen_manager.destroy_active_screen()
+    end
+  end)
+  event.on(event_type.BufWinLeave, function()
+    loop.await()
+    if not screen_manager.is_minimized and screen_manager.has_active_screen() then
+      return screen_manager.destroy_active_screen()
+    end
+  end)
 end
 
 return screen_manager

@@ -42,7 +42,7 @@ function LineNumberElement:mount(opts)
     col = opts.col,
     height = opts.height,
     width = LineNumberElement:get_width(),
-    zindex = 50,
+    zindex = 1,
   }):assign_options({
     cursorbind = true,
     scrollbind = true,
