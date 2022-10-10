@@ -31,7 +31,7 @@ function HeaderComponent:get_height() return 1 end
 
 function HeaderComponent:set_default_win_plot(win_plot)
   win_plot.focusable = false
-  win_plot.zindex = 100
+  win_plot.zindex = 3
   win_plot.height = 1
 
   return self

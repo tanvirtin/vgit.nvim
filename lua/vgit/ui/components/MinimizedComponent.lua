@@ -30,7 +30,7 @@ function MinimizedComponent:get_height() return 1 end
 
 function MinimizedComponent:set_default_win_plot(win_plot)
   win_plot.focusable = true
-  win_plot.zindex = 100
+  win_plot.zindex = 3
   win_plot.height = 1
   win_plot.row = dimensions.global_height() - 3
   win_plot.border = 'double'
