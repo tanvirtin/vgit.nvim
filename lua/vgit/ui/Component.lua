@@ -42,7 +42,7 @@ function Component:constructor()
         col = 0,
         focusable = true,
         focus = true,
-        zindex = 60,
+        zindex = 2,
       },
       locked = false,
     },
