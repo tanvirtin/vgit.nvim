@@ -79,6 +79,12 @@ function Component:set_win_plot(win_plot)
   return self
 end
 
+function Component:on(event_name, callback)
+  self.buffer:on(event_name, callback)
+
+  return self
+end
+
 function Component:is_focused() return self.window:is_focused() end
 
 function Component:is_valid() return self.buffer:is_valid() and self.window:is_valid() end

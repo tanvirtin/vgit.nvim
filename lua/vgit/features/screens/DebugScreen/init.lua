@@ -28,8 +28,6 @@ function DebugScreen:show(source)
     return
   end
 
-  console.log(string.format('Processing %s', source))
-
   loop.await()
   local err = self.store:fetch(source, { hydrate = self.hydrate })
 

@@ -49,12 +49,15 @@ function ProjectHunksScreen:constructor()
             open = true,
             value = key,
             icon_before = icon_before,
-            items = utils.list.map(entries, function(entry)
-              return {
-                id = entry.id,
-                value = entry.hunk.header,
-              }
-            end),
+            items = utils.list.map(
+              entries,
+              function(entry)
+                return {
+                  id = entry.id,
+                  value = entry.hunk.header,
+                }
+              end
+            ),
           }
         end
 
@@ -88,8 +91,6 @@ function ProjectHunksScreen:show(opts)
   opts = opts or {
     hydrate = self.hydrate,
   }
-
-  console.log('Processing project hunks')
 
   loop.await()
   local err = self.store:fetch(self.layout_type, opts)

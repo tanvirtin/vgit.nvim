@@ -110,8 +110,6 @@ function DiffScreen:show(opts)
     hydrate = self.hydrate,
   }
 
-  console.log('Processing diff')
-
   self.is_staged = opts.is_staged or false
   local buffer = Buffer(0)
   local window = Window(0)

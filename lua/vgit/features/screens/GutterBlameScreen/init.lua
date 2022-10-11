@@ -63,8 +63,6 @@ function GutterBlameScreen:open_commit()
 end
 
 function GutterBlameScreen:show()
-  console.log('Processing blames')
-
   local buffer = Buffer(0)
 
   loop.await()

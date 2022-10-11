@@ -30,8 +30,6 @@ function LineBlameScreen:constructor()
 end
 
 function LineBlameScreen:show()
-  console.log('Processing line blame')
-
   local buffer = Buffer(0)
   local window = Window(0)
 

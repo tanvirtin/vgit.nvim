@@ -22,8 +22,6 @@ function ProjectStashScreen:constructor()
 end
 
 function ProjectStashScreen:show(options)
-  console.log('Processing logs')
-
   loop.await()
   local err = self.store:fetch(options, { hydrate = self.hydrate })
 

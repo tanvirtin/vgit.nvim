@@ -1,5 +1,6 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local keymap = require('vgit.core.keymap')
 local console = require('vgit.core.console')
@@ -63,6 +64,12 @@ end
 
 function Buffer:detach_from_renderer()
   renderer.detach(self)
+
+  return self
+end
+
+function Buffer:on(event_type, callback)
+  event.buffer_on(self, event_type, callback)
 
   return self
 end
