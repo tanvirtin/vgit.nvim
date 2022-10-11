@@ -31,6 +31,16 @@ function Scene:is_focused()
   return focused
 end
 
+function Scene:on(event_name, callback)
+  local focused = false
+
+  for _, component in pairs(self.components) do
+    component:on(event_name, callback)
+  end
+
+  return focused
+end
+
 function Scene:destroy()
   for _, component in pairs(self.components) do
     component:unmount()

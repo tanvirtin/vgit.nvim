@@ -7,7 +7,6 @@ local DiffScreen = require('vgit.features.screens.DiffScreen')
 local DebugScreen = require('vgit.features.screens.DebugScreen')
 local HistoryScreen = require('vgit.features.screens.HistoryScreen')
 local LineBlameScreen = require('vgit.features.screens.LineBlameScreen')
-local MinimizedScreen = require('vgit.features.screens.MinimizedScreen')
 local ProjectDiffScreen = require('vgit.features.screens.ProjectDiffScreen')
 local ProjectHunksScreen = require('vgit.features.screens.ProjectHunksScreen')
 local GutterBlameScreen = require('vgit.features.screens.GutterBlameScreen')
@@ -15,20 +14,13 @@ local ProjectLogsScreen = require('vgit.features.screens.ProjectLogsScreen')
 local ProjectStashScreen = require('vgit.features.screens.ProjectStashScreen')
 local ProjectCommitsScreen = require('vgit.features.screens.ProjectCommitsScreen')
 
-local minimized_screen = MinimizedScreen()
-
 local screen_manager = {
   screens = {},
   active_screen = nil,
-  is_miminmized = false,
 }
 
 function screen_manager.dispatch_action(action_name, ...)
-  if
-    not screen_manager.is_minimized
-    and screen_manager.has_active_screen()
-    and screen_manager.has_action(action_name)
-  then
+  if screen_manager.has_active_screen() and screen_manager.has_action(action_name) then
     screen_manager.active_screen[action_name](screen_manager.active_screen, ...)
   end
 
@@ -124,32 +116,6 @@ function screen_manager.has_action(action) return type(screen_manager.active_scr
 
 function screen_manager.has_active_screen() return screen_manager.active_screen ~= nil end
 
-function screen_manager.minimize_screen()
-  local screen = screen_manager.active_screen
-  local is_focused = screen.scene:is_focused()
-
-  if not is_focused then
-    screen:destroy()
-    screen_manager.is_minimized = true
-    minimized_screen:show(screen.name)
-  end
-
-  return screen_manager
-end
-
-function screen_manager.restore_screen()
-  local is_focused = minimized_screen:is_focused()
-
-  if is_focused then
-    minimized_screen:destroy()
-    screen_manager.active_screen.hydrate = true
-    screen_manager.active_screen:show()
-    screen_manager.is_minimized = false
-  end
-
-  return screen_manager
-end
-
 function screen_manager.toggle_diff_preference()
   local diff_preference = scene_setting:get('diff_preference')
 
@@ -168,16 +134,18 @@ function screen_manager.show(screen_name, ...)
   end
 
   if screen_manager.has_active_screen() then
-    if minimized_screen:is_mounted() then
-      minimized_screen:destroy()
-      screen_manager.is_minimized = false
-    end
     screen_manager.destroy_active_screen()
   end
 
   local success, screen = screen_manager.screens[screen_name](...)
   if success then
     screen_manager.active_screen = screen
+    screen.scene:on(event_type.BufWinLeave, function()
+      loop.await()
+      if screen_manager.has_active_screen() then
+        return screen_manager.destroy_active_screen()
+      end
+    end)
   end
 
   return screen_manager
@@ -191,35 +159,19 @@ function screen_manager.destroy_active_screen()
 end
 
 function screen_manager.handle_on_quit_keypress()
-  if not screen_manager.is_minimized and screen_manager.has_active_screen() then
+  if screen_manager.has_active_screen() then
     return screen_manager.destroy_active_screen()
-  end
-end
-
-function screen_manager.toggle_minimize()
-  loop.await()
-  if not screen_manager.is_minimized and screen_manager.has_active_screen() then
-    return screen_manager.minimize_screen()
-  end
-  if screen_manager.is_minimized and screen_manager.has_active_screen() then
-    return screen_manager.restore_screen()
   end
 end
 
 function screen_manager.register_keymaps()
   keymap.set('n', scene_setting:get('keymaps').quit, screen_manager.handle_on_quit_keypress)
+  keymap.set('n', '<C-c>', screen_manager.handle_on_quit_keypress)
 end
 
 function screen_manager.register_events()
-  event.on(event_type.WinEnter, screen_manager.toggle_minimize)
-  event.on(event_type.BufWinEnter, function()
-    if not screen_manager.is_minimized and screen_manager.has_active_screen() then
-      return screen_manager.destroy_active_screen()
-    end
-  end)
-  event.on(event_type.BufWinLeave, function()
-    loop.await()
-    if not screen_manager.is_minimized and screen_manager.has_active_screen() then
+  event.on(event_type.QuitPre, function()
+    if screen_manager.has_active_screen() then
       return screen_manager.destroy_active_screen()
     end
   end)

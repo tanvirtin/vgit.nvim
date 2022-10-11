@@ -68,8 +68,6 @@ function HistoryScreen:hunk_down()
 end
 
 function HistoryScreen:show()
-  console.log('Processing history')
-
   local buffer = Buffer(0)
   local err = self.store:fetch(self.layout_type, buffer.filename, { hydrate = self.hydrate })
 
