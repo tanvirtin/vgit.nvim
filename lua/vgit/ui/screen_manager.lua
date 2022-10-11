@@ -1,5 +1,4 @@
 local loop = require('vgit.core.loop')
-local event = require('vgit.core.event')
 local keymap = require('vgit.core.keymap')
 local event_type = require('vgit.core.event_type')
 local scene_setting = require('vgit.settings.scene')
@@ -140,12 +139,18 @@ function screen_manager.show(screen_name, ...)
   local success, screen = screen_manager.screens[screen_name](...)
   if success then
     screen_manager.active_screen = screen
-    screen.scene:on(event_type.BufWinLeave, function()
-      loop.await()
-      if screen_manager.has_active_screen() then
-        return screen_manager.destroy_active_screen()
-      end
-    end)
+    screen.scene
+      :on(event_type.BufWinLeave, function()
+        loop.await()
+        if screen_manager.has_active_screen() then
+          return screen_manager.destroy_active_screen()
+        end
+      end)
+      :on(event_type.QuitPre, function()
+        if screen_manager.has_active_screen() then
+          return screen_manager.destroy_active_screen()
+        end
+      end)
   end
 
   return screen_manager
@@ -167,14 +172,6 @@ end
 function screen_manager.register_keymaps()
   keymap.set('n', scene_setting:get('keymaps').quit, screen_manager.handle_on_quit_keypress)
   keymap.set('n', '<C-c>', screen_manager.handle_on_quit_keypress)
-end
-
-function screen_manager.register_events()
-  event.on(event_type.QuitPre, function()
-    if screen_manager.has_active_screen() then
-      return screen_manager.destroy_active_screen()
-    end
-  end)
 end
 
 return screen_manager
