@@ -22,8 +22,6 @@ function ProjectLogsScreen:constructor()
 end
 
 function ProjectLogsScreen:show(options)
-  console.log('Processing logs')
-
   loop.await()
   local err = self.store:fetch(options, { hydrate = self.hydrate })
 

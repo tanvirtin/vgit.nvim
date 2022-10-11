@@ -376,8 +376,6 @@ function ProjectDiffScreen:make_footer_lines()
 end
 
 function ProjectDiffScreen:show()
-  console.log('Processing project diff')
-
   loop.await()
   local err = self.store:fetch(self.layout_type, { hydrate = self.hydrate })
 

@@ -74,8 +74,6 @@ function ProjectCommitsScreen:hunk_down()
 end
 
 function ProjectCommitsScreen:show(commits)
-  console.log('Processing project commits')
-
   loop.await()
   local err = self.store:fetch(self.layout_type, commits, { hydrate = self.hydrate })
 
