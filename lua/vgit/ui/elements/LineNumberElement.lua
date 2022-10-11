@@ -9,7 +9,7 @@ function LineNumberElement:constructor(...) return Component.constructor(self, .
 function LineNumberElement:get_width() return 6 end
 
 function LineNumberElement:make_lines(lines)
-  local num_lines = #lines
+  local num_lines = math.max(self.window:get_height(), #lines)
 
   local actual_lines = {}
 
