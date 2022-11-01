@@ -171,7 +171,6 @@ end
 
 function screen_manager.register_keymaps()
   keymap.set('n', scene_setting:get('keymaps').quit, screen_manager.handle_on_quit_keypress)
-  keymap.set('n', '<C-c>', screen_manager.handle_on_quit_keypress)
 end
 
 return screen_manager
