@@ -27,15 +27,13 @@ function screen_manager.dispatch_action(action_name, ...)
 end
 
 function screen_manager.screens.diff_screen(opts)
-  local diff_screen = DiffScreen()
-  diff_screen.layout_type = scene_setting:get('diff_preference')
+  local diff_screen = DiffScreen({ layout_type = scene_setting:get('diff_preference') })
 
   return diff_screen:show(opts), diff_screen
 end
 
 function screen_manager.screens.diff_hunk_screen(opts)
-  local diff_hunk_screen = DiffScreen({ is_hunk = true })
-  diff_hunk_screen.layout_type = scene_setting:get('diff_preference')
+  local diff_hunk_screen = DiffScreen({ is_hunk = true, layout_type = scene_setting:get('diff_preference') })
 
   return diff_hunk_screen:show(opts), diff_hunk_screen
 end
@@ -59,29 +57,25 @@ function screen_manager.screens.project_stash_screen(...)
 end
 
 function screen_manager.screens.project_diff_screen()
-  local project_diff_screen = ProjectDiffScreen()
-  project_diff_screen.layout_type = scene_setting:get('diff_preference')
+  local project_diff_screen = ProjectDiffScreen({ layout_type = scene_setting:get('diff_preference') })
 
   return project_diff_screen:show(), project_diff_screen
 end
 
 function screen_manager.screens.project_commits_screen(...)
-  local project_commits_screen = ProjectCommitsScreen()
-  project_commits_screen.layout_type = scene_setting:get('diff_preference')
+  local project_commits_screen = ProjectCommitsScreen({ layout_type = scene_setting:get('diff_preference') })
 
   return project_commits_screen:show({ ... }), project_commits_screen
 end
 
 function screen_manager.screens.project_hunks_screen(opts)
-  local project_hunks_screen = ProjectHunksScreen()
-  project_hunks_screen.layout_type = scene_setting:get('diff_preference')
+  local project_hunks_screen = ProjectHunksScreen({ layout_type = scene_setting:get('diff_preference') })
 
   return project_hunks_screen:show(opts), project_hunks_screen
 end
 
 function screen_manager.screens.history_screen()
-  local history_screen = HistoryScreen()
-  history_screen.layout_type = scene_setting:get('diff_preference')
+  local history_screen = HistoryScreen({ layout_type = scene_setting:get('diff_preference') })
 
   return history_screen:show(), history_screen
 end
@@ -93,7 +87,7 @@ function screen_manager.screens.debug_screen(...)
 end
 
 function screen_manager.screens.line_blame_screen()
-  local line_blame_screen = LineBlameScreen()
+  local line_blame_screen = LineBlameScreen({ layout_type = scene_setting:get('diff_preference') })
 
   return line_blame_screen:show(), line_blame_screen
 end
@@ -129,17 +123,17 @@ function screen_manager.show(screen_name, ...)
   if success then
     screen_manager.active_screen = screen
     screen.scene
-      :on(event_type.BufWinLeave, function()
-        loop.await()
-        if screen_manager.has_active_screen() then
-          return screen_manager.destroy_active_screen()
-        end
-      end)
-      :on(event_type.QuitPre, function()
-        if screen_manager.has_active_screen() then
-          return screen_manager.destroy_active_screen()
-        end
-      end)
+        :on(event_type.BufWinLeave, function()
+          loop.await()
+          if screen_manager.has_active_screen() then
+            return screen_manager.destroy_active_screen()
+          end
+        end)
+        :on(event_type.QuitPre, function()
+          if screen_manager.has_active_screen() then
+            return screen_manager.destroy_active_screen()
+          end
+        end)
   end
 
   return screen_manager

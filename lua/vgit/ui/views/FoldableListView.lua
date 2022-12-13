@@ -17,20 +17,7 @@ function FoldableListView:constructor(scene, store, plot, config)
   }
 end
 
-function FoldableListView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('list'):set_keymap(config.mode, config.key, config.handler) end
-  )
-
-  return self
-end
-
-function FoldableListView:set_title(text)
-  self.title = text
-
-  return self
-end
+function FoldableListView:get_components() return { self.scene:get('list') } end
 
 function FoldableListView:define()
   self.scene:set(
@@ -51,6 +38,21 @@ function FoldableListView:define()
       },
     })
   )
+
+  return self
+end
+
+function FoldableListView:set_keymap(configs)
+  utils.list.each(
+    configs,
+    function(config) self.scene:get('list'):set_keymap(config.mode, config.key, config.handler) end
+  )
+
+  return self
+end
+
+function FoldableListView:set_title(text)
+  self.title = text
 
   return self
 end
@@ -96,6 +98,20 @@ function FoldableListView:toggle_current_list_item()
   end
 
   return self
+end
+
+function FoldableListView:move_to(callback)
+  local list = self.scene:get('list')
+  local item, lnum = list:find_list_item(callback)
+
+  if item then
+    list:unlock():set_lnum(lnum):lock()
+    self.store:set_lnum(lnum)
+
+    return item
+  end
+
+  return nil
 end
 
 function FoldableListView:move(direction)
@@ -145,7 +161,7 @@ function FoldableListView:mount(opts)
 end
 
 function FoldableListView:show(opts)
-  self:define():mount(opts):render()
+  self:mount(opts):render()
 
   return self
 end

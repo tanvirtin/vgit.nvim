@@ -15,6 +15,8 @@ function TableView:constructor(scene, store, plot, config)
   }
 end
 
+function TableView:get_components() return { self.scene:get('table') } end
+
 function TableView:set_keymap(configs)
   utils.list.each(
     configs,
@@ -97,7 +99,7 @@ function TableView:mount(opts)
 end
 
 function TableView:show(opts)
-  self:define():mount(opts):render()
+  self:mount(opts):render()
 
   return self
 end

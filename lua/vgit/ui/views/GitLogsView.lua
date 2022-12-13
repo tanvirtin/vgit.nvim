@@ -21,6 +21,8 @@ function GitLogsView:constructor(scene, store, plot, config)
   }
 end
 
+function GitLogsView:get_components() return { self.scene:get('selectable_view') } end
+
 function GitLogsView:define()
   self.scene:set(
     'selectable_view',
@@ -139,7 +141,7 @@ function GitLogsView:mount(opts)
 end
 
 function GitLogsView:show(opts)
-  self:define():mount(opts):render()
+  self:mount(opts):render()
 
   return self
 end

@@ -28,6 +28,8 @@ function AppBarView:define()
   return self
 end
 
+function AppBarView:get_components() return { self.scene:get('footer') } end
+
 function AppBarView:set_lines(lines)
   self.scene:get('footer'):set_lines(lines)
 
@@ -41,7 +43,7 @@ function AppBarView:mount(opts)
 end
 
 function AppBarView:show(opts)
-  self:define():mount(opts)
+  self:mount(opts)
 
   return self
 end
