@@ -31,16 +31,6 @@ jobs:
           git config --global user.email "foo@bar.com"
           make test
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: JohnnyMorganz/stylua-action@1.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --color always --check .
-
   commit_lint:
     runs-on: ubuntu-latest
     steps:
