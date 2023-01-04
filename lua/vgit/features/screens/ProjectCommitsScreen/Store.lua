@@ -204,6 +204,26 @@ end
 
 function Store:get_lnum() return nil, self._cache.lnum end
 
+function Store:get_parent_commit()
+  local err, datum = self:get()
+
+  if err then
+    return err
+  end
+
+  local file = datum.file
+
+  if not file then
+    return { 'No file found in item' }, nil
+  end
+
+  local log = file.log
+
+  return nil, log.parent_hash
+end
+
+function Store:get_remote_lines(filename, commit_hash) return self.git:show(filename, commit_hash) end
+
 function Store:set_lnum(lnum)
   self._cache.lnum = lnum
 
