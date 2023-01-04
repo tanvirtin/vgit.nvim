@@ -6,7 +6,7 @@ local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
-local CodeView = require('vgit.ui.views.CodeView')
+local DiffView = require('vgit.ui.views.DiffView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
 local Store = require('vgit.features.screens.ProjectCommitsScreen.Store')
@@ -23,7 +23,7 @@ function ProjectCommitsScreen:constructor()
     store = store,
     hydrate = false,
     layout_type = nil,
-    code_view = CodeView(scene, store, {
+    diff_view = DiffView(scene, store, {
       col = '25vw',
       width = '75vw',
     }, {
@@ -64,9 +64,9 @@ function ProjectCommitsScreen:get_list_title(commits)
   return utils.object.size(commits) == 1 and utils.object.first(commits):sub(1, 8) or 'Project commits'
 end
 
-function ProjectCommitsScreen:hunk_up() self.code_view:prev() end
+function ProjectCommitsScreen:hunk_up() self.diff_view:prev() end
 
-function ProjectCommitsScreen:hunk_down() self.code_view:next() end
+function ProjectCommitsScreen:hunk_down() self.diff_view:next() end
 
 function ProjectCommitsScreen:handle_list_move_down()
   local list_item = self.foldable_list_view:move('down')
@@ -76,7 +76,7 @@ function ProjectCommitsScreen:handle_list_move_down()
   end
 
   self.store:set_id(list_item.id)
-  self.code_view:render_debounced(loop.async(function() self.code_view:navigate_to_mark(1) end))
+  self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
 end
 
 function ProjectCommitsScreen:handle_list_move_up()
@@ -87,7 +87,7 @@ function ProjectCommitsScreen:handle_list_move_up()
   end
 
   self.store:set_id(list_item.id)
-  self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
+  self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
 end
 
 function ProjectCommitsScreen:handle_on_enter()
@@ -153,7 +153,7 @@ function ProjectCommitsScreen:show(commits)
   end
 
   loop.await()
-  self.code_view:show(self.layout_type)
+  self.diff_view:show(self.layout_type)
   self.foldable_list_view:set_title(self:get_list_title(commits)):show()
   self.foldable_list_view:set_keymap({
     {

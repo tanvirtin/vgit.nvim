@@ -5,7 +5,7 @@ local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
-local CodeView = require('vgit.ui.views.CodeView')
+local DiffView = require('vgit.ui.views.DiffView')
 local AppBarView = require('vgit.ui.views.AppBarView')
 local Store = require('vgit.features.screens.DiffScreen.Store')
 local diff_preview_setting = require('vgit.settings.diff_preview')
@@ -13,9 +13,9 @@ local Mutation = require('vgit.features.screens.DiffScreen.Mutation')
 
 local DiffScreen = Object:extend()
 
-function DiffScreen:create_code_view(scene, store, opts)
+function DiffScreen:create_diff_view(scene, store, opts)
   if opts.is_hunk then
-    return CodeView(scene, store, {
+    return DiffView(scene, store, {
       relative = 'cursor',
       height = '35vh',
     }, {
@@ -26,7 +26,7 @@ function DiffScreen:create_code_view(scene, store, opts)
     })
   end
 
-  return CodeView(scene, store, {
+  return DiffView(scene, store, {
     row = 1,
   }, {
     elements = {
@@ -58,19 +58,19 @@ function DiffScreen:constructor(opts)
     hydrate = false,
     layout_type = nil,
     is_staged = nil,
-    code_view = DiffScreen:create_code_view(scene, store, opts),
+    diff_view = DiffScreen:create_diff_view(scene, store, opts),
     app_bar_view = DiffScreen:create_app_bar_view(scene, store, opts),
   }
 end
 
 function DiffScreen:hunk_up()
-  pcall(self.code_view.prev, self.code_view, 'center')
+  pcall(self.diff_view.prev, self.diff_view, 'center')
 
   return self
 end
 
 function DiffScreen:hunk_down()
-  pcall(self.code_view.next, self.code_view, 'center')
+  pcall(self.diff_view.next, self.diff_view, 'center')
 
   return self
 end
@@ -128,7 +128,7 @@ function DiffScreen:show(opts)
     self.app_bar_view:show()
   end
 
-  self.code_view
+  self.diff_view
     :set_title(self.is_staged and 'Staged Diff' or 'Diff')
     :show(self.layout_type, 'center', {
       lnum = window:get_lnum(),
@@ -168,7 +168,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await()
-          self.code_view:render()
+          self.diff_view:render()
         end, 100),
       },
       {
@@ -197,7 +197,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await()
-          self.code_view:render()
+          self.diff_view:render()
         end, 100),
       },
       {
@@ -226,7 +226,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await()
-          self.code_view:render()
+          self.diff_view:render()
         end, 100),
       },
       {
@@ -246,7 +246,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await()
-          local hunk, index = self.code_view:get_current_hunk_under_cursor()
+          local hunk, index = self.diff_view:get_current_hunk_under_cursor()
           loop.await()
 
           if not hunk then
@@ -263,7 +263,7 @@ function DiffScreen:show(opts)
             return
           end
 
-          self.code_view:render():navigate_to_mark(index, 'center')
+          self.diff_view:render():navigate_to_mark(index, 'center')
         end, 100),
       },
       {
@@ -283,7 +283,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await()
-          local hunk, index = self.code_view:get_current_hunk_under_cursor()
+          local hunk, index = self.diff_view:get_current_hunk_under_cursor()
           loop.await()
 
           if not hunk then
@@ -304,7 +304,7 @@ function DiffScreen:show(opts)
           end
 
           loop.await()
-          self.code_view:render():navigate_to_mark(index, 'center')
+          self.diff_view:render():navigate_to_mark(index, 'center')
         end, 100),
       },
       {
@@ -312,7 +312,7 @@ function DiffScreen:show(opts)
         key = '<enter>',
         handler = loop.debounced_async(function()
           loop.await()
-          local mark = self.code_view:get_current_mark_under_cursor()
+          local mark = self.diff_view:get_current_mark_under_cursor()
           loop.await()
 
           if not mark then
@@ -343,7 +343,7 @@ function DiffScreen:show(opts)
           local is_staged = self.is_staged
 
           if is_staged then
-            self.code_view:set_title('Diff')
+            self.diff_view:set_title('Diff')
 
             self.is_staged = false
             opts.is_staged = self.is_staged
@@ -358,9 +358,9 @@ function DiffScreen:show(opts)
             end
 
             loop.await()
-            self.code_view:render():navigate_to_mark(1, 'center')
+            self.diff_view:render():navigate_to_mark(1, 'center')
           elseif not is_staged then
-            self.code_view:set_title('Staged Diff')
+            self.diff_view:set_title('Staged Diff')
 
             self.is_staged = true
             opts.is_staged = self.is_staged
@@ -375,7 +375,7 @@ function DiffScreen:show(opts)
             end
 
             loop.await()
-            self.code_view:render():navigate_to_mark(1, 'center')
+            self.diff_view:render():navigate_to_mark(1, 'center')
           end
         end, 100),
       },
