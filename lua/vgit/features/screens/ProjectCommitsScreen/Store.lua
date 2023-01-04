@@ -37,10 +37,6 @@ end
 function Store:fetch(shape, commits, opts)
   opts = opts or {}
 
-  if self.data and opts.hydrate then
-    return nil, self.data
-  end
-
   self:reset()
 
   if not commits or #commits == 0 then

@@ -19,7 +19,6 @@ function GutterBlameScreen:constructor()
     scene = scene,
     store = store,
     layout_type = 'unified',
-    hydrate = false,
     gutter_blame_view = GutterBlameView(scene, store, {
       width = '40vw',
     }, {
@@ -66,7 +65,7 @@ function GutterBlameScreen:show()
   local buffer = Buffer(0)
 
   loop.await()
-  local err = self.store:fetch(buffer.filename, { hydrate = self.hydrate })
+  local err = self.store:fetch(buffer.filename)
 
   if err then
     console.debug.error(err).error(err)

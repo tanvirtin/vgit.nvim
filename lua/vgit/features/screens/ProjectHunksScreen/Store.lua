@@ -35,10 +35,6 @@ end
 function Store:fetch(shape, opts)
   opts = opts or {}
 
-  if self.data and opts.hydrate then
-    return nil, self.data
-  end
-
   self:reset()
 
   if not self.git:is_inside_git_dir() then

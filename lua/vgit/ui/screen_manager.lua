@@ -29,7 +29,6 @@ end
 function screen_manager.screens.diff_screen(opts)
   local diff_screen = DiffScreen()
   diff_screen.layout_type = scene_setting:get('diff_preference')
-  diff_screen.hydrate = false
 
   return diff_screen:show(opts), diff_screen
 end
@@ -37,28 +36,24 @@ end
 function screen_manager.screens.diff_hunk_screen(opts)
   local diff_hunk_screen = DiffScreen({ is_hunk = true })
   diff_hunk_screen.layout_type = scene_setting:get('diff_preference')
-  diff_hunk_screen.hydrate = false
 
   return diff_hunk_screen:show(opts), diff_hunk_screen
 end
 
 function screen_manager.screens.gutter_blame_screen()
   local gutter_blame_screen = GutterBlameScreen()
-  gutter_blame_screen.hydrate = false
 
   return gutter_blame_screen:show(), gutter_blame_screen
 end
 
 function screen_manager.screens.project_logs_screen(...)
   local project_logs_screen = ProjectLogsScreen()
-  project_logs_screen.hydrate = false
 
   return project_logs_screen:show({ ... }), project_logs_screen
 end
 
 function screen_manager.screens.project_stash_screen(...)
   local project_stash_screen = ProjectStashScreen()
-  project_stash_screen.hydrate = false
 
   return project_stash_screen:show({ ... }), project_stash_screen
 end
@@ -66,7 +61,6 @@ end
 function screen_manager.screens.project_diff_screen()
   local project_diff_screen = ProjectDiffScreen()
   project_diff_screen.layout_type = scene_setting:get('diff_preference')
-  project_diff_screen.hydrate = false
 
   return project_diff_screen:show(), project_diff_screen
 end
@@ -74,7 +68,6 @@ end
 function screen_manager.screens.project_commits_screen(...)
   local project_commits_screen = ProjectCommitsScreen()
   project_commits_screen.layout_type = scene_setting:get('diff_preference')
-  project_commits_screen.hydrate = false
 
   return project_commits_screen:show({ ... }), project_commits_screen
 end
@@ -82,7 +75,6 @@ end
 function screen_manager.screens.project_hunks_screen(opts)
   local project_hunks_screen = ProjectHunksScreen()
   project_hunks_screen.layout_type = scene_setting:get('diff_preference')
-  project_hunks_screen.hydrate = false
 
   return project_hunks_screen:show(opts), project_hunks_screen
 end
@@ -90,21 +82,18 @@ end
 function screen_manager.screens.history_screen()
   local history_screen = HistoryScreen()
   history_screen.layout_type = scene_setting:get('diff_preference')
-  history_screen.hydrate = false
 
   return history_screen:show(), history_screen
 end
 
 function screen_manager.screens.debug_screen(...)
   local debug_screen = DebugScreen()
-  debug_screen.hydrate = false
 
   return debug_screen:show(...), debug_screen
 end
 
 function screen_manager.screens.line_blame_screen()
   local line_blame_screen = LineBlameScreen()
-  line_blame_screen.hydrate = false
 
   return line_blame_screen:show(), line_blame_screen
 end

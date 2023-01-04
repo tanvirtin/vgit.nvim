@@ -20,10 +20,6 @@ end
 function Store:fetch(options, opts)
   opts = opts or {}
 
-  if self.data and opts.hydrate then
-    return nil, self.data
-  end
-
   self:reset()
 
   local err, logs = Git():logs(options, { is_background = true })

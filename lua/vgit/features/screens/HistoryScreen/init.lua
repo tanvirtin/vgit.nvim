@@ -18,7 +18,6 @@ function HistoryScreen:constructor()
     name = 'History Screen',
     scene = scene,
     store = store,
-    hydrate = false,
     layout_type = nil,
     table_view = TableView(scene, store, {
       height = '30vh',
@@ -69,7 +68,7 @@ end
 
 function HistoryScreen:show()
   local buffer = Buffer(0)
-  local err = self.store:fetch(self.layout_type, buffer.filename, { hydrate = self.hydrate })
+  local err = self.store:fetch(self.layout_type, buffer.filename)
 
   if err then
     console.debug.error(err).error(err)
