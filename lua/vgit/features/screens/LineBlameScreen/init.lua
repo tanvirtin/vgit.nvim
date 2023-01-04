@@ -15,7 +15,6 @@ function LineBlameScreen:constructor()
 
   return {
     name = 'Line Blame Screen',
-    hydrate = false,
     scene = scene,
     store = store,
     line_blame_view = LineBlameView(scene, store, {
@@ -34,7 +33,7 @@ function LineBlameScreen:show()
   local window = Window(0)
 
   loop.await()
-  local err = self.store:fetch(buffer.filename, window:get_lnum(), { hydrate = self.hydrate })
+  local err = self.store:fetch(buffer.filename, window:get_lnum())
 
   if err then
     console.debug.error(err).error(err)

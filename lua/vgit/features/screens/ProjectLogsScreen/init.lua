@@ -14,7 +14,6 @@ function ProjectLogsScreen:constructor()
 
   return {
     name = 'Logs Screen',
-    hydrate = false,
     scene = scene,
     store = store,
     view = GitLogsView(scene, store),
@@ -23,7 +22,7 @@ end
 
 function ProjectLogsScreen:show(options)
   loop.await()
-  local err = self.store:fetch(options, { hydrate = self.hydrate })
+  local err = self.store:fetch(options)
 
   if err then
     console.debug.error(err).error(err)

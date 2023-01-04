@@ -25,10 +25,6 @@ function Store:fetch(source, opts)
     return { 'No source provided' }, nil
   end
 
-  if self.data and opts.hydrate then
-    return nil, self.data
-  end
-
   self:reset()
 
   self.err = nil

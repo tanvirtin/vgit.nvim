@@ -29,10 +29,6 @@ end
 function Store:fetch(shape, filename, opts)
   opts = opts or {}
 
-  if self.data and opts.hydrate then
-    return
-  end
-
   self:reset()
 
   self.shape = shape

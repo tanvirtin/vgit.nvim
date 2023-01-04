@@ -24,7 +24,6 @@ function ProjectDiffScreen:constructor()
     scene = scene,
     store = store,
     mutation = mutation,
-    hydrate = false,
     layout_type = nil,
     app_bar_view = AppBarView(scene, store),
     diff_view = DiffView(scene, store, {
@@ -146,7 +145,7 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
   end
 
   loop.await()
-  self.store:fetch(self.layout_type, { partial_hydrate = true })
+  self.store:fetch(self.layout_type)
   loop.await()
 
   self.foldable_list_view:evict_cache():render()
@@ -186,7 +185,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
   end
 
   loop.await()
-  self.store:fetch(self.layout_type, { partial_hydrate = true })
+  self.store:fetch(self.layout_type)
   loop.await()
 
   local list_item = self.foldable_list_view:evict_cache():render():query_list_item(function(list_item)
@@ -222,8 +221,6 @@ ProjectDiffScreen.stage_file = loop.debounced_async(function(self)
     return self
   end
 
-  self.hydrate = false
-
   return self:render()
 end, 15)
 
@@ -241,8 +238,6 @@ ProjectDiffScreen.unstage_file = loop.debounced_async(function(self)
     return self
   end
 
-  self.hydrate = false
-
   return self:render()
 end, 15)
 
@@ -254,8 +249,6 @@ ProjectDiffScreen.stage_all = loop.debounced_async(function(self)
     return self
   end
 
-  self.hydrate = false
-
   return self:render()
 end, 15)
 
@@ -266,8 +259,6 @@ ProjectDiffScreen.unstage_all = loop.debounced_async(function(self)
     console.debug.error(err)
     return self
   end
-
-  self.hydrate = false
 
   return self:render()
 end, 15)
@@ -300,8 +291,6 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
     return self
   end
 
-  self.hydrate = false
-
   return self:render()
 end, 15)
 
@@ -322,14 +311,12 @@ ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
     return self
   end
 
-  self.hydrate = false
-
   return self:render()
 end, 15)
 
 function ProjectDiffScreen:render()
   loop.await()
-  self.store:fetch(self.layout_type, { hydrate = self.hydrate })
+  self.store:fetch(self.layout_type)
   loop.await()
 
   local list_item = self.foldable_list_view:render():get_current_list_item()
@@ -377,7 +364,7 @@ end
 
 function ProjectDiffScreen:show()
   loop.await()
-  local err = self.store:fetch(self.layout_type, { hydrate = self.hydrate })
+  local err = self.store:fetch(self.layout_type)
 
   if err then
     console.debug.error(err).error(err)

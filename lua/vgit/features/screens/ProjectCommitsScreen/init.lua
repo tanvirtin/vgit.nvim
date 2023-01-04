@@ -21,7 +21,6 @@ function ProjectCommitsScreen:constructor()
     name = 'Project Commits Screen',
     scene = scene,
     store = store,
-    hydrate = false,
     layout_type = nil,
     diff_view = DiffView(scene, store, {
       col = '25vw',
@@ -145,7 +144,7 @@ end
 
 function ProjectCommitsScreen:show(commits)
   loop.await()
-  local err = self.store:fetch(self.layout_type, commits, { hydrate = self.hydrate })
+  local err = self.store:fetch(self.layout_type, commits)
 
   if err then
     console.debug.error(err).error(err)

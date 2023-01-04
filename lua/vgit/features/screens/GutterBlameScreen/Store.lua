@@ -25,10 +25,6 @@ end
 function Store:fetch(filename, opts)
   opts = opts or {}
 
-  if self.data and opts.hydrate then
-    return nil, self.data
-  end
-
   self:reset()
 
   self.git_object = GitObject(filename)

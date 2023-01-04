@@ -32,10 +32,6 @@ end
 function Store:fetch(shape, filename, opts)
   opts = opts or {}
 
-  if self.data and opts.hydrate then
-    return nil, self.data
-  end
-
   self:reset()
 
   self.shape = shape
