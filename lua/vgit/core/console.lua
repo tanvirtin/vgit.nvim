@@ -14,16 +14,19 @@ local console = {
 
 function console.format(msg)
   local function add_vgit_prefix(line) return string.format('[VGit] %s', line) end
-
   local function add_indentiation(line) return string.format('       %s', line) end
 
   if type(msg) ~= 'table' then
     return add_vgit_prefix(msg)
   end
 
+  if #msg == 1 then
+    return add_vgit_prefix(msg[1])
+  end
+
   return utils.list.reduce(msg, '', function(acc, line, i)
     if i == 1 then
-      acc = string.format('%s%s\n', acc, add_vgit_prefix(line))
+      acc = string.format('%s\n', add_vgit_prefix(line))
     elseif i ~= #msg then
       acc = string.format('%s%s\n', acc, add_indentiation(line))
     else
@@ -34,15 +37,20 @@ function console.format(msg)
   end)
 end
 
-console.log = loop.async(function(msg, hi)
+console.log = loop.async(function(msg, hi, is_persisted)
+  if is_persisted == nil then
+    is_persisted = false
+  end
+
   loop.await()
-  vim.api.nvim_echo({ { console.format(msg), hi } }, false, {})
+
+  vim.api.nvim_echo({ { console.format(msg), hi } }, is_persisted, {})
 
   return console
 end)
 
 console.error = loop.async(function(msg)
-  console.log(msg, 'ErrorMsg')
+  vim.notify(console.format(msg), 'error')
 
   return console
 end)
