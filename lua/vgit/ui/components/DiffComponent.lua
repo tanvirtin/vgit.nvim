@@ -9,9 +9,9 @@ local HeaderElement = require('vgit.ui.elements.HeaderElement')
 local FooterElement = require('vgit.ui.elements.FooterElement')
 local LineNumberElement = require('vgit.ui.elements.LineNumberElement')
 
-local CodeComponent = Component:extend()
+local DiffComponent = Component:extend()
 
-function CodeComponent:constructor(props)
+function DiffComponent:constructor(props)
   return utils.object.assign(Component.constructor(self), {
     config = {
       elements = {
@@ -23,68 +23,68 @@ function CodeComponent:constructor(props)
   }, props)
 end
 
-function CodeComponent:set_cursor(cursor)
+function DiffComponent:set_cursor(cursor)
   self.elements.line_number:set_cursor(cursor)
   self.window:set_cursor(cursor)
 
   return self
 end
 
-function CodeComponent:set_lnum(lnum)
+function DiffComponent:set_lnum(lnum)
   self.elements.line_number:set_lnum(lnum)
   self.window:set_lnum(lnum)
 
   return self
 end
 
-function CodeComponent:call(callback)
+function DiffComponent:call(callback)
   self.elements.line_number:call(callback)
   self.window:call(callback)
 
   return self
 end
 
-function CodeComponent:reset_cursor()
+function DiffComponent:reset_cursor()
   self.elements.line_number:reset_cursor()
   Component.reset_cursor(self)
 
   return self
 end
 
-function CodeComponent:clear_lines()
+function DiffComponent:clear_lines()
   self.elements.line_number:clear_lines()
   Component.clear_lines(self)
 
   return self
 end
 
-function CodeComponent:sign_unplace()
+function DiffComponent:sign_unplace()
   self.elements.line_number:sign_unplace()
   self.buffer:sign_unplace()
 
   return self
 end
 
-function CodeComponent:sign_place_line_number(lnum, sign_name)
+function DiffComponent:sign_place_line_number(lnum, sign_name)
   self.elements.line_number:sign_place(lnum, sign_name)
 
   return self
 end
 
-function CodeComponent:transpose_virtual_line_number(text, hl, row)
+function DiffComponent:transpose_virtual_line_number(text, hl, row)
   self.elements.line_number:transpose_virtual_line({ { text, hl } }, row, 'right_align')
 
   return self
 end
 
-function CodeComponent:position_cursor(placement)
+function DiffComponent:position_cursor(placement)
   Component.position_cursor(self, placement)
   self.elements.line_number:position_cursor(placement)
 
   return self
 end
 
-function CodeComponent:mount(opts)
+function DiffComponent:mount(opts)
   if self.mounted then
     return self
   end
@@ -119,7 +119,7 @@ function CodeComponent:mount(opts)
   return self
 end
 
-function CodeComponent:unmount()
+function DiffComponent:unmount()
   if not self.mounted then
     return self
   end
@@ -144,7 +144,7 @@ function CodeComponent:unmount()
   return self
 end
 
-function CodeComponent:set_title(title, opts)
+function DiffComponent:set_title(title, opts)
   local header = self.elements.header
 
   if not header then
@@ -156,7 +156,7 @@ function CodeComponent:set_title(title, opts)
   return self
 end
 
-function CodeComponent:clear_title()
+function DiffComponent:clear_title()
   local header = self.elements.header
 
   if not header then
@@ -168,13 +168,13 @@ function CodeComponent:clear_title()
   return self
 end
 
-function CodeComponent:make_line_numbers(lines)
+function DiffComponent:make_line_numbers(lines)
   self.elements.line_number:make_lines(lines)
 
   return self
 end
 
-function CodeComponent:clear_namespace()
+function DiffComponent:clear_namespace()
   self.elements.line_number:clear_namespace()
   Component.clear_namespace(self)
 
@@ -187,7 +187,7 @@ function CodeComponent:clear_namespace()
   return self
 end
 
-function CodeComponent:clear_notification()
+function DiffComponent:clear_notification()
   local header = self.elements.header
 
   if not header then
@@ -199,7 +199,7 @@ function CodeComponent:clear_notification()
   return self
 end
 
-function CodeComponent:notify(text)
+function DiffComponent:notify(text)
   local header = self.elements.header
 
   if not header then
@@ -211,4 +211,4 @@ function CodeComponent:notify(text)
   return self
 end
 
-return CodeComponent
+return DiffComponent

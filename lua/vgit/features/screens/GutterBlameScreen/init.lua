@@ -4,7 +4,7 @@ local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
-local CodeView = require('vgit.ui.views.CodeView')
+local DiffView = require('vgit.ui.views.DiffView')
 local GutterBlameView = require('vgit.ui.views.GutterBlameView')
 local Store = require('vgit.features.screens.GutterBlameScreen.Store')
 
@@ -27,7 +27,7 @@ function GutterBlameScreen:constructor()
         header = false,
       },
     }),
-    code_view = CodeView(scene, store, {
+    diff_view = DiffView(scene, store, {
       width = '60vw',
       col = '40vw',
     }, {
@@ -81,7 +81,7 @@ function GutterBlameScreen:show()
       handler = loop.async(function() self:open_commit() end),
     },
   })
-  self.code_view:show(self.layout_type):set_keymap({
+  self.diff_view:show(self.layout_type):set_keymap({
     {
       mode = 'n',
       key = '<enter>',

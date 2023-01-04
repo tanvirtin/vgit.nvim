@@ -4,7 +4,7 @@ local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
-local CodeView = require('vgit.ui.views.CodeView')
+local DiffView = require('vgit.ui.views.DiffView')
 local AppBarView = require('vgit.ui.views.AppBarView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
@@ -27,7 +27,7 @@ function ProjectDiffScreen:constructor()
     hydrate = false,
     layout_type = nil,
     app_bar_view = AppBarView(scene, store),
-    code_view = CodeView(scene, store, {
+    diff_view = DiffView(scene, store, {
       row = 1,
       col = '23vw',
       width = '77vw',
@@ -69,13 +69,13 @@ function ProjectDiffScreen:constructor()
 end
 
 function ProjectDiffScreen:hunk_up()
-  self.code_view:prev()
+  self.diff_view:prev()
 
   return self
 end
 
 function ProjectDiffScreen:hunk_down()
-  self.code_view:next()
+  self.diff_view:next()
 
   return self
 end
@@ -132,7 +132,7 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
   end
 
   loop.await()
-  local hunk, index = self.code_view:get_current_hunk_under_cursor()
+  local hunk, index = self.diff_view:get_current_hunk_under_cursor()
 
   if not hunk then
     return self
@@ -155,7 +155,7 @@ ProjectDiffScreen.stage_hunk = loop.debounced_async(function(self)
 
   self.store:set_id(list_item.id)
 
-  self.code_view:render():navigate_to_mark(index)
+  self.diff_view:render():navigate_to_mark(index)
 
   return self
 end, 15)
@@ -172,7 +172,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
   end
 
   loop.await()
-  local hunk, index = self.code_view:get_current_hunk_under_cursor()
+  local hunk, index = self.diff_view:get_current_hunk_under_cursor()
 
   if not hunk then
     return self
@@ -203,7 +203,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounced_async(function(self)
 
   self.store:set_id(list_item.id)
 
-  self.code_view:render():navigate_to_mark(index)
+  self.diff_view:render():navigate_to_mark(index)
 
   return self
 end, 15)
@@ -336,7 +336,7 @@ function ProjectDiffScreen:render()
 
   self.store:set_id(list_item.id)
 
-  self.code_view:render():navigate_to_mark(1)
+  self.diff_view:render():navigate_to_mark(1)
 
   return self
 end
@@ -386,10 +386,10 @@ function ProjectDiffScreen:show()
 
   loop.await()
   self.app_bar_view:show()
-  self.code_view:show(self.layout_type)
+  self.diff_view:show(self.layout_type)
   self.foldable_list_view:show()
 
-  self.code_view:set_keymap({
+  self.diff_view:set_keymap({
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_hunk_stage,
@@ -404,7 +404,7 @@ function ProjectDiffScreen:show()
       mode = 'n',
       key = '<enter>',
       handler = loop.async(function()
-        local mark, _ = self.code_view:get_current_mark_under_cursor()
+        local mark, _ = self.diff_view:get_current_mark_under_cursor()
 
         if not mark then
           return
@@ -463,7 +463,7 @@ function ProjectDiffScreen:show()
         local list_item = self.foldable_list_view:move('down')
 
         self.store:set_id(list_item.id)
-        self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
+        self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
       end),
     },
     {
@@ -473,7 +473,7 @@ function ProjectDiffScreen:show()
         local list_item = self.foldable_list_view:move('up')
 
         self.store:set_id(list_item.id)
-        self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
+        self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
       end),
     },
     {

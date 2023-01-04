@@ -4,7 +4,7 @@ local utils = require('vgit.core.utils')
 local Buffer = require('vgit.core.Buffer')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local CodeView = require('vgit.ui.views.CodeView')
+local DiffView = require('vgit.ui.views.DiffView')
 local TableView = require('vgit.ui.views.TableView')
 local Store = require('vgit.features.screens.HistoryScreen.Store')
 
@@ -44,7 +44,7 @@ function HistoryScreen:constructor()
         }
       end,
     }),
-    code_view = CodeView(scene, store, {
+    diff_view = DiffView(scene, store, {
       row = '30vh',
     }, {
       elements = {
@@ -56,13 +56,13 @@ function HistoryScreen:constructor()
 end
 
 function HistoryScreen:hunk_up()
-  self.code_view:prev()
+  self.diff_view:prev()
 
   return self
 end
 
 function HistoryScreen:hunk_down()
-  self.code_view:next()
+  self.diff_view:next()
 
   return self
 end
@@ -77,7 +77,7 @@ function HistoryScreen:show()
   end
 
   -- Show and bind data (data will have all the necessary shape required)
-  self.code_view:show(self.layout_type)
+  self.diff_view:show(self.layout_type)
   self.table_view:show()
 
   -- Set keymap
@@ -104,7 +104,7 @@ function HistoryScreen:show()
       key = 'j',
       handler = loop.async(function()
         self.store:set_index(self.table_view:move('down'))
-        self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
+        self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
       end),
     },
     {
@@ -112,7 +112,7 @@ function HistoryScreen:show()
       key = 'k',
       handler = loop.async(function()
         self.store:set_index(self.table_view:move('up'))
-        self.code_view:render_debounced(function() self.code_view:navigate_to_mark(1) end)
+        self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
       end),
     },
   })
