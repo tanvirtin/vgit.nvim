@@ -55,7 +55,6 @@ function DiffScreen:constructor(opts)
     scene = scene,
     store = store,
     mutation = mutation,
-    hydrate = false,
     layout_type = nil,
     is_staged = nil,
     diff_view = DiffScreen:create_diff_view(scene, store, opts),
@@ -106,9 +105,7 @@ function DiffScreen:make_footer_lines()
 end
 
 function DiffScreen:show(opts)
-  opts = opts or {
-    hydrate = self.hydrate,
-  }
+  opts = opts or {}
 
   self.is_staged = opts.is_staged or false
   local buffer = Buffer(0)

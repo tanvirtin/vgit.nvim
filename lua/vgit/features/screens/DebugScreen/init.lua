@@ -14,7 +14,6 @@ function DebugScreen:constructor()
 
   return {
     name = 'Debug Screen',
-    hydrate = false,
     scene = scene,
     store = store,
     view = SimpleView(scene, store),
@@ -29,7 +28,7 @@ function DebugScreen:show(source)
   end
 
   loop.await()
-  local err = self.store:fetch(source, { hydrate = self.hydrate })
+  local err = self.store:fetch(source)
 
   if err then
     console.debug.error(err).error(err)

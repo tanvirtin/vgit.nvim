@@ -20,7 +20,6 @@ function ProjectHunksScreen:constructor()
     name = 'Project Hunks Screen',
     scene = scene,
     store = store,
-    hydrate = false,
     layout_type = nil,
     foldable_list_view = FoldableListView(scene, store, {
       height = '30vh',
@@ -88,9 +87,7 @@ function ProjectHunksScreen:hunk_down()
 end
 
 function ProjectHunksScreen:show(opts)
-  opts = opts or {
-    hydrate = self.hydrate,
-  }
+  opts = opts or {}
 
   loop.await()
   local err = self.store:fetch(self.layout_type, opts)

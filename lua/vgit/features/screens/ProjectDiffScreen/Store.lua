@@ -119,10 +119,8 @@ function Store:reset()
   self.err = nil
   self.data = nil
   self._cache = {
-    list_folds = {},
     list_entries = {},
     diff_dtos = {},
-    lnum = 1,
   }
 
   return self
@@ -131,18 +129,7 @@ end
 function Store:fetch(shape, opts)
   opts = opts or {}
 
-  if self.data and opts.hydrate and not opts.partial_hydrate then
-    return nil, self.data
-  end
-
   self:reset()
-
-  if not opts.partial_hydrate then
-    self._cache = {
-      list_entries = {},
-      diff_dtos = {},
-    }
-  end
 
   if not self.git:is_inside_git_dir() then
     return { 'Project has no .git folder' }, nil
