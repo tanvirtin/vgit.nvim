@@ -6,7 +6,7 @@ local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local CodeView = require('vgit.ui.views.CodeView')
+local DiffView = require('vgit.ui.views.DiffView')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
 local Store = require('vgit.features.screens.ProjectHunksScreen.Store')
 
@@ -64,7 +64,7 @@ function ProjectHunksScreen:constructor()
         return foldable_list
       end,
     }),
-    code_view = CodeView(scene, store, {
+    diff_view = DiffView(scene, store, {
       row = '30vh',
     }, {
       elements = {
@@ -76,13 +76,13 @@ function ProjectHunksScreen:constructor()
 end
 
 function ProjectHunksScreen:hunk_up()
-  self.code_view:prev()
+  self.diff_view:prev()
 
   return self
 end
 
 function ProjectHunksScreen:hunk_down()
-  self.code_view:next()
+  self.diff_view:next()
 
   return self
 end
@@ -101,15 +101,15 @@ function ProjectHunksScreen:show(opts)
   end
 
   loop.await()
-  self.code_view:show(self.layout_type)
+  self.diff_view:show(self.layout_type)
   self.foldable_list_view:show()
 
-  self.code_view:set_keymap({
+  self.diff_view:set_keymap({
     {
       mode = 'n',
       key = '<enter>',
       handler = loop.async(function()
-        local mark = self.code_view:get_current_mark_under_cursor()
+        local mark = self.diff_view:get_current_mark_under_cursor()
 
         if not mark then
           return
@@ -142,11 +142,11 @@ function ProjectHunksScreen:show(opts)
         end
 
         self.store:set_id(list_item.id)
-        self.code_view:render_debounced(loop.async(function()
+        self.diff_view:render_debounced(loop.async(function()
           local _, data = self.store:get_data()
 
           if data then
-            self.code_view:navigate_to_mark(data.mark_index)
+            self.diff_view:navigate_to_mark(data.mark_index)
           end
         end))
       end),
@@ -162,11 +162,11 @@ function ProjectHunksScreen:show(opts)
         end
 
         self.store:set_id(list_item.id)
-        self.code_view:render_debounced(loop.async(function()
+        self.diff_view:render_debounced(loop.async(function()
           local _, data = self.store:get_data()
 
           if data then
-            self.code_view:navigate_to_mark(data.mark_index)
+            self.diff_view:navigate_to_mark(data.mark_index)
           end
         end))
       end),
