@@ -1,6 +1,7 @@
 local fs = require('vgit.core.fs')
 local Scene = require('vgit.ui.Scene')
 local loop = require('vgit.core.loop')
+local Buffer = require('vgit.core.Buffer')
 local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
@@ -14,17 +15,19 @@ local project_diff_preview_setting = require('vgit.settings.project_diff_preview
 
 local ProjectDiffScreen = Object:extend()
 
-function ProjectDiffScreen:constructor()
+function ProjectDiffScreen:constructor(opts)
+  opts = opts or {}
   local scene = Scene()
   local store = Store()
   local mutation = Mutation()
+  local layout_type = opts.layout_type or 'unified'
 
   return {
     name = 'Project Diff Screen',
     scene = scene,
     store = store,
     mutation = mutation,
-    layout_type = nil,
+    layout_type = layout_type,
     app_bar_view = AppBarView(scene, store),
     diff_view = DiffView(scene, store, {
       row = 1,
@@ -35,7 +38,7 @@ function ProjectDiffScreen:constructor()
         header = true,
         footer = false,
       },
-    }),
+    }, layout_type),
     foldable_list_view = FoldableListView(scene, store, {
       row = 1,
       width = '23vw',
@@ -276,7 +279,7 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
 
   loop.await()
   local decision =
-    console.input(string.format('Are you sure you want to discard changes in %s? (y/N) ', filename)):lower()
+  console.input(string.format('Are you sure you want to discard changes in %s? (y/N) ', filename)):lower()
 
   if decision ~= 'yes' and decision ~= 'y' then
     return self
@@ -354,7 +357,7 @@ function ProjectDiffScreen:make_footer_lines()
 
   for i = 1, #keys do
     text = i == 1 and string.format('%s: (%s)', translations[i], keymaps[keys[i]])
-      or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
+        or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
   end
 
   self.app_bar_view:set_lines({ text })
@@ -363,6 +366,9 @@ function ProjectDiffScreen:make_footer_lines()
 end
 
 function ProjectDiffScreen:show()
+  local buffer = Buffer(0)
+  local filename_to_focus = buffer.filename
+
   loop.await()
   local err = self.store:fetch(self.layout_type)
 
@@ -371,9 +377,12 @@ function ProjectDiffScreen:show()
     return false
   end
 
-  loop.await()
+  self.app_bar_view:define()
+  self.diff_view:define()
+  self.foldable_list_view:define()
+
   self.app_bar_view:show()
-  self.diff_view:show(self.layout_type)
+  self.diff_view:show()
   self.foldable_list_view:show()
 
   self.diff_view:set_keymap({
@@ -491,6 +500,19 @@ function ProjectDiffScreen:show()
   })
 
   self:make_footer_lines()
+
+  if filename_to_focus then
+    local list_item = self.foldable_list_view:move_to(function(node)
+      -- TODO: This needs a refactor, FSListGenerator
+      local persistedFilename = node.path and node.path.file and node.path.file.filename or nil
+      return persistedFilename == filename_to_focus
+    end)
+
+    if list_item then
+      self.store:set_id(list_item.id)
+      self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
+    end
+  end
 
   return true
 end

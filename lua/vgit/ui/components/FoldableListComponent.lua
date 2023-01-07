@@ -3,7 +3,6 @@ local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local Component = require('vgit.ui.Component')
-local ComponentPlot = require('vgit.ui.ComponentPlot')
 local symbols_setting = require('vgit.settings.symbols')
 local HeaderElement = require('vgit.ui.elements.HeaderElement')
 local FooterElement = require('vgit.ui.elements.FooterElement')
@@ -11,7 +10,7 @@ local FooterElement = require('vgit.ui.elements.FooterElement')
 local FoldableListComponent = Component:extend()
 
 function FoldableListComponent:constructor(props)
-  return utils.object.assign(Component.constructor(self), {
+  props = utils.object.assign({
     _cache = {},
     state = {
       list = {},
@@ -29,6 +28,7 @@ function FoldableListComponent:constructor(props)
       footer = nil,
     },
   }, props)
+  return Component.constructor(self, props)
 end
 
 function FoldableListComponent:call(callback)
@@ -62,6 +62,16 @@ end
 function FoldableListComponent:is_fold(item) return item and item.items and #item.items > 0 end
 
 function FoldableListComponent:get_list_item(lnum) return self._cache[lnum] end
+
+function FoldableListComponent:find_list_item(callback)
+  for lnum, item in pairs(self._cache) do
+    if callback(item) then
+      return item, lnum
+    end
+  end
+
+  return nil
+end
 
 function FoldableListComponent:query_list_item(callback)
   for _, list_item in ipairs(self._cache) do
@@ -221,32 +231,28 @@ function FoldableListComponent:sync()
   return self
 end
 
-function FoldableListComponent:mount(opts)
+function FoldableListComponent:mount()
   if self.mounted then
     return self
   end
 
-  opts = opts or {}
   local config = self.config
-  local elements_config = config.elements
-
-  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
 
   self.buffer = Buffer():create():assign_options(config.buf_options)
   local buffer = self.buffer
+  local plot = self.plot
 
   self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
 
-  if elements_config.header then
+  if config.elements.header then
     self.elements.header = HeaderElement():mount(plot.header_win_plot)
   end
 
-  if elements_config.footer then
+  if config.elements.footer then
     self.elements.footer = FooterElement():mount(plot.footer_win_plot)
   end
 
   self.mounted = true
-  self.plot = plot
 
   return self
 end

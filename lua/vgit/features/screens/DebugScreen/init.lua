@@ -8,7 +8,8 @@ local Store = require('vgit.features.screens.DebugScreen.Store')
 
 local DebugScreen = Object:extend()
 
-function DebugScreen:constructor()
+function DebugScreen:constructor(opts)
+  opts = opts or {}
   local scene = Scene()
   local store = Store()
 
@@ -35,7 +36,7 @@ function DebugScreen:show(source)
     return false
   end
 
-  loop.await()
+  self.view:define()
   self.view:show()
 
   return true

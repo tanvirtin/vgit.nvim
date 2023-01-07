@@ -17,37 +17,31 @@ end
 
 function LineBlameView:define()
   self.scene:set(
-    'current',
+    'line_blame',
     PresentationalComponent({
       config = {
-        elements = {
-          header = true,
-          footer = true,
-        },
-        win_plot = dimensions.relative_win_plot(self.plot, {
-          height = '100vh',
-          width = '100vw',
-        }),
+        elements = { header = true, footer = false },
+        win_plot = dimensions.relative_win_plot(self.plot, { height = '100vh', width = '100vw' }),
       },
     })
   )
   return self
 end
 
+function LineBlameView:get_components() return { self.scene:get('line_blame') } end
+
 function LineBlameView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('current'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  local component = self.scene:get('line_blame')
+  utils.list.each(configs, function(config) component:set_keymap(config.mode, config.key, config.handler) end)
   return self
 end
 
 function LineBlameView:create_uncommitted_lines(blame)
   return {
+    blame.commit_hash,
     string.format('%s', 'Uncommitted changes'),
     '',
     '',
-    string.format('%s -> %s', blame.parent_hash, blame.commit_hash),
   }
 end
 
@@ -58,10 +52,10 @@ function LineBlameView:create_committed_lines(blame)
     commit_message = commit_message:sub(1, max_line_length) .. '...'
   end
   return {
+    blame.commit_hash,
     string.format('%s (%s)', blame.author, blame.author_mail),
     string.format('%s (%s)', blame:age().display, os.date('%c', blame.author_time)),
     string.format('%s', commit_message),
-    string.format('%s -> %s', blame.parent_hash, blame.commit_hash),
   }
 end
 
@@ -73,8 +67,9 @@ function LineBlameView:render()
     return self
   end
 
-  self.scene
-    :get('current')
+  local component = self.scene:get('line_blame')
+
+  component
     :unlock()
     :set_lines(blame.committed and self:create_committed_lines(blame) or self:create_uncommitted_lines(blame))
     :focus()
@@ -84,13 +79,14 @@ function LineBlameView:render()
 end
 
 function LineBlameView:mount(opts)
-  self.scene:get('current'):mount(opts)
+  local component = self.scene:get('line_blame')
+  component:mount(opts)
 
   return self
 end
 
 function LineBlameView:show(opts)
-  self:define():mount(opts):render()
+  self:mount(opts):render()
 
   return self
 end

@@ -2,17 +2,16 @@ local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local Component = require('vgit.ui.Component')
-local ComponentPlot = require('vgit.ui.ComponentPlot')
 local HeaderTitle = require('vgit.ui.decorations.HeaderTitle')
-local Notification = require('vgit.ui.decorations.Notification')
 local HeaderElement = require('vgit.ui.elements.HeaderElement')
 local FooterElement = require('vgit.ui.elements.FooterElement')
+local Notification = require('vgit.ui.decorations.Notification')
 local LineNumberElement = require('vgit.ui.elements.LineNumberElement')
 
 local DiffComponent = Component:extend()
 
 function DiffComponent:constructor(props)
-  return utils.object.assign(Component.constructor(self), {
+  props = utils.object.assign({
     config = {
       elements = {
         header = true,
@@ -21,17 +20,16 @@ function DiffComponent:constructor(props)
       },
     },
   }, props)
+  return Component.constructor(self, props)
 end
 
 function DiffComponent:set_cursor(cursor)
-  self.elements.line_number:set_cursor(cursor)
   self.window:set_cursor(cursor)
 
   return self
 end
 
 function DiffComponent:set_lnum(lnum)
-  self.elements.line_number:set_lnum(lnum)
   self.window:set_lnum(lnum)
 
   return self
@@ -90,31 +88,28 @@ function DiffComponent:mount(opts)
   end
 
   local config = self.config
-  local elements_config = config.elements
   opts = opts or {}
-
-  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
 
   self.notification = Notification()
   self.header_title = HeaderTitle()
   self.buffer = Buffer():create():assign_options(config.buf_options)
 
   local buffer = self.buffer
+  local plot = self.plot
 
   self.elements.line_number = LineNumberElement():mount(plot.line_number_win_plot)
 
-  if elements_config.header then
+  if config.elements.header then
     self.elements.header = HeaderElement():mount(plot.header_win_plot)
   end
 
-  if elements_config.footer then
+  if config.elements.footer then
     self.elements.footer = FooterElement():mount(plot.footer_win_plot)
   end
 
   self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
 
   self.mounted = true
-  self.plot = plot
 
   return self
 end

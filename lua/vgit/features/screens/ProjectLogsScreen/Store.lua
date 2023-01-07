@@ -17,12 +17,12 @@ function Store:reset()
   return self
 end
 
-function Store:fetch(options, opts)
+function Store:fetch(args, opts)
   opts = opts or {}
 
   self:reset()
 
-  local err, logs = Git():logs(options, { is_background = true })
+  local err, logs = Git():logs(args, { is_background = true })
 
   if err then
     return err, nil

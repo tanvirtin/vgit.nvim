@@ -10,18 +10,18 @@ local Store = require('vgit.features.screens.HistoryScreen.Store')
 
 local HistoryScreen = Object:extend()
 
-function HistoryScreen:constructor()
+function HistoryScreen:constructor(opts)
+  opts = opts or {}
   local scene = Scene()
   local store = Store()
+  local layout_type = opts.layout_type or 'unified'
 
   return {
     name = 'History Screen',
     scene = scene,
     store = store,
-    layout_type = nil,
-    table_view = TableView(scene, store, {
-      height = '30vh',
-    }, {
+    layout_type = layout_type,
+    table_view = TableView(scene, store, { height = '30vh' }, {
       elements = {
         header = true,
         footer = false,
@@ -37,20 +37,18 @@ function HistoryScreen:constructor()
 
         return {
           log.author_name or '',
-          log.commit_hash:sub(1, 8) or '',
+          log.commit_hash or '',
           utils.date.format(timestamp),
           log.summary or '',
         }
       end,
     }),
-    diff_view = DiffView(scene, store, {
-      row = '30vh',
-    }, {
+    diff_view = DiffView(scene, store, { row = '30vh' }, {
       elements = {
         header = true,
         footer = false,
       },
-    }),
+    }, layout_type),
   }
 end
 
@@ -76,7 +74,10 @@ function HistoryScreen:show()
   end
 
   -- Show and bind data (data will have all the necessary shape required)
-  self.diff_view:show(self.layout_type)
+  self.diff_view:define()
+  self.table_view:define()
+
+  self.diff_view:show()
   self.table_view:show()
 
   -- Set keymap
@@ -95,7 +96,7 @@ function HistoryScreen:show()
         vim.cmd('quit')
 
         loop.await()
-        vim.cmd(string.format('VGit project_commits_preview %s', row.commit_hash))
+        vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', buffer.filename, row.commit_hash))
       end),
     },
     {
