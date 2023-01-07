@@ -86,17 +86,17 @@ function DiffScreen:make_footer_lines()
     'toggle_view',
   }
   local translations = {
-    'stage',
-    'unstage',
-    'stage hunk',
-    'unstage hunk',
-    'reset',
-    'toggle view',
+    'Stage',
+    'Unstage',
+    'Stage hunk',
+    'Unstage hunk',
+    'Reset',
+    'Toggle view',
   }
 
   for i = 1, #keys do
-    text = i == 1 and string.format('%s: %s', translations[i], keymaps[keys[i]])
-      or string.format('%s | %s: %s', text, translations[i], keymaps[keys[i]])
+    text = i == 1 and string.format('%s: (%s)', translations[i], keymaps[keys[i]])
+      or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
   end
 
   self.app_bar_view:set_lines({ text })
