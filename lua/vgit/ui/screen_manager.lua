@@ -11,6 +11,7 @@ local ProjectHunksScreen = require('vgit.features.screens.ProjectHunksScreen')
 local GutterBlameScreen = require('vgit.features.screens.GutterBlameScreen')
 local ProjectLogsScreen = require('vgit.features.screens.ProjectLogsScreen')
 local ProjectStashScreen = require('vgit.features.screens.ProjectStashScreen')
+local ProjectCommitScreen = require('vgit.features.screens.ProjectCommitScreen')
 local ProjectCommitsScreen = require('vgit.features.screens.ProjectCommitsScreen')
 
 local screen_manager = {
@@ -86,6 +87,12 @@ function screen_manager.screens.debug_screen(...)
   return debug_screen:show(...), debug_screen
 end
 
+function screen_manager.screens.commit_screen(...)
+  local commit_screen = ProjectCommitScreen()
+
+  return commit_screen:show(...), commit_screen
+end
+
 function screen_manager.screens.line_blame_screen()
   local line_blame_screen = LineBlameScreen({ layout_type = scene_setting:get('diff_preference') })
 
@@ -123,17 +130,17 @@ function screen_manager.show(screen_name, ...)
   if success then
     screen_manager.active_screen = screen
     screen.scene
-        :on(event_type.BufWinLeave, function()
-          loop.await()
-          if screen_manager.has_active_screen() then
-            return screen_manager.destroy_active_screen()
-          end
-        end)
-        :on(event_type.QuitPre, function()
-          if screen_manager.has_active_screen() then
-            return screen_manager.destroy_active_screen()
-          end
-        end)
+      :on(event_type.BufWinLeave, function()
+        loop.await()
+        if screen_manager.has_active_screen() then
+          return screen_manager.destroy_active_screen()
+        end
+      end)
+      :on(event_type.QuitPre, function()
+        if screen_manager.has_active_screen() then
+          return screen_manager.destroy_active_screen()
+        end
+      end)
   end
 
   return screen_manager

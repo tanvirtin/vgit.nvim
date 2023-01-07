@@ -266,6 +266,11 @@ ProjectDiffScreen.unstage_all = loop.debounced_async(function(self)
   return self:render()
 end, 15)
 
+function ProjectDiffScreen:commit()
+  self:destroy()
+  vim.cmd('VGit project_commit_preview')
+end
+
 ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
   if self:is_current_list_item_staged() then
     return self
@@ -279,7 +284,7 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
 
   loop.await()
   local decision =
-  console.input(string.format('Are you sure you want to discard changes in %s? (y/N) ', filename)):lower()
+    console.input(string.format('Are you sure you want to discard changes in %s? (y/N) ', filename)):lower()
 
   if decision ~= 'yes' and decision ~= 'y' then
     return self
@@ -331,7 +336,7 @@ function ProjectDiffScreen:render()
   return self
 end
 
-function ProjectDiffScreen:make_footer_lines()
+function ProjectDiffScreen:make_help_bar()
   local text = ''
   local keymaps = project_diff_preview_setting:get('keymaps')
   local keys = {
@@ -343,6 +348,7 @@ function ProjectDiffScreen:make_footer_lines()
     'stage_all',
     'unstage_all',
     'reset_all',
+    'commit',
   }
   local translations = {
     'Stage',
@@ -353,11 +359,12 @@ function ProjectDiffScreen:make_footer_lines()
     'Stage all',
     'Unstage all',
     'Reset all',
+    'Commit',
   }
 
   for i = 1, #keys do
     text = i == 1 and string.format('%s: (%s)', translations[i], keymaps[keys[i]])
-        or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
+      or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
   end
 
   self.app_bar_view:set_lines({ text })
@@ -422,6 +429,11 @@ function ProjectDiffScreen:show()
   })
 
   self.foldable_list_view:set_keymap({
+    {
+      mode = 'n',
+      key = project_diff_preview_setting:get('keymaps').commit,
+      handler = loop.async(function() self:commit() end),
+    },
     {
       mode = 'n',
       key = project_diff_preview_setting:get('keymaps').buffer_reset,
@@ -499,7 +511,7 @@ function ProjectDiffScreen:show()
     },
   })
 
-  self:make_footer_lines()
+  self:make_help_bar()
 
   if filename_to_focus then
     local list_item = self.foldable_list_view:move_to(function(node)

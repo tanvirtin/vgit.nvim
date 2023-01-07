@@ -22,10 +22,8 @@ function SimpleView:define()
     'simple_view',
     PresentationalComponent({
       config = {
-        elements = utils.object.assign({
-          header = true,
-          footer = false,
-        }, self.config.elements),
+        elements = utils.object.assign({ header = true, footer = false }, self.config.elements),
+        buf_options = utils.object.assign({ modifiable = true }, self.config.buf_options),
         win_options = {
           cursorbind = true,
           scrollbind = true,
@@ -50,12 +48,18 @@ function SimpleView:set_keymap(configs)
 end
 
 function SimpleView:set_title()
+  if not self.config.elements.header then
+    return self
+  end
+
   local _, title = self.store:get_title()
 
   self.scene:get('simple_view'):set_title(title)
 
   return self
 end
+
+function SimpleView:get_lines() return self.scene:get('simple_view'):get_lines() end
 
 function SimpleView:render()
   local err, lines = self.store:get_lines()
