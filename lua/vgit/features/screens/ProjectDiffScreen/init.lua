@@ -342,19 +342,19 @@ function ProjectDiffScreen:make_footer_lines()
     'reset_all',
   }
   local translations = {
-    'stage',
-    'unstage',
-    'stage hunk',
-    'unstage hunk',
-    'reset',
-    'stage all',
-    'unstage all',
-    'reset all',
+    'Stage',
+    'Unstage',
+    'Stage hunk',
+    'Unstage hunk',
+    'Reset',
+    'Stage all',
+    'Unstage all',
+    'Reset all',
   }
 
   for i = 1, #keys do
-    text = i == 1 and string.format('%s: %s', translations[i], keymaps[keys[i]])
-      or string.format('%s | %s: %s', text, translations[i], keymaps[keys[i]])
+    text = i == 1 and string.format('%s: (%s)', translations[i], keymaps[keys[i]])
+      or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
   end
 
   self.app_bar_view:set_lines({ text })
