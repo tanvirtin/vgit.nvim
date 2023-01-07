@@ -29,6 +29,10 @@ end
 function Store:fetch(shape, filename, opts)
   opts = opts or {}
 
+  if not filename or filename == '' then
+    return { 'Buffer has no history associated with it' }, nil
+  end
+
   self:reset()
 
   self.shape = shape
