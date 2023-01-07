@@ -1,20 +1,24 @@
-local assertion = require('vgit.core.assertion')
+local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local assertion = require('vgit.core.assertion')
+local ComponentPlot = require('vgit.ui.ComponentPlot')
 
 local Component = Object:extend()
 
-function Component:constructor()
-  return {
+-- create plot in runtime.
+function Component:constructor(props)
+  props = utils.object.assign({
     buffer = nil,
     window = nil,
     notification = nil,
     namespace = nil,
-    component_plot = nil,
+    plot = nil,
     mounted = false,
     elements = {},
     state = {},
     -- The properties that can be used to align components with each other.
     config = {
+      elements = {},
       border = {
         hl = 'GitBorder',
         chars = { '', '', '', '', '', '', '', '' },
@@ -46,7 +50,11 @@ function Component:constructor()
       },
       locked = false,
     },
-  }
+  }, props)
+
+  props.plot = ComponentPlot(props.config.win_plot, props.config.elements):build()
+
+  return props
 end
 
 function Component:attach_to_renderer(on_render)
@@ -197,6 +205,8 @@ end
 function Component:clear_lines() return self.buffer:set_lines({}) end
 
 function Component:reset_cursor() return self.window:set_cursor({ 1, 1 }) end
+
+function Component:get_plot() return self.plot end
 
 function Component:get_lnum() return self.window:get_lnum() end
 

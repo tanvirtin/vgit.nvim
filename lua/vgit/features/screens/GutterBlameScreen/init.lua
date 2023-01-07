@@ -10,7 +10,8 @@ local Store = require('vgit.features.screens.GutterBlameScreen.Store')
 
 local GutterBlameScreen = Object:extend()
 
-function GutterBlameScreen:constructor()
+function GutterBlameScreen:constructor(opts)
+  opts = opts or {}
   local scene = Scene()
   local store = Store()
 
@@ -19,21 +20,8 @@ function GutterBlameScreen:constructor()
     scene = scene,
     store = store,
     layout_type = 'unified',
-    gutter_blame_view = GutterBlameView(scene, store, {
-      width = '40vw',
-    }, {
-      elements = {
-        header = false,
-      },
-    }),
-    diff_view = DiffView(scene, store, {
-      width = '60vw',
-      col = '40vw',
-    }, {
-      elements = {
-        header = false,
-      },
-    }),
+    gutter_blame_view = GutterBlameView(scene, store, { width = '40vw' }, { elements = { header = false } }),
+    diff_view = DiffView(scene, store, { width = '60vw', col = '40vw' }, { elements = { header = false } }, 'unified'),
   }
 end
 
@@ -65,22 +53,26 @@ function GutterBlameScreen:show()
   local buffer = Buffer(0)
 
   loop.await()
-  local err = self.store:fetch(buffer.filename)
+  local err = self.store:fetch(buffer.filename, buffer:get_lines())
 
   if err then
     console.debug.error(err).error(err)
     return false
   end
 
-  loop.await()
-  self.gutter_blame_view:show():set_keymap({
+  self.gutter_blame_view:define()
+  self.diff_view:define()
+
+  self.gutter_blame_view:show()
+  self.gutter_blame_view:set_keymap({
     {
       mode = 'n',
       key = '<enter>',
       handler = loop.async(function() self:open_commit() end),
     },
   })
-  self.diff_view:show(self.layout_type):set_keymap({
+  self.diff_view:show()
+  self.diff_view:set_keymap({
     {
       mode = 'n',
       key = '<enter>',

@@ -1,7 +1,7 @@
 local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
-local DiffDTO = require('vgit.services.diff.DiffDTO')
 local GitObject = require('vgit.git.GitObject')
+local DiffDTO = require('vgit.services.diff.DiffDTO')
 
 local Store = Object:extend()
 
@@ -10,21 +10,25 @@ function Store:constructor()
     err = nil,
     data = nil,
     git_object = nil,
-    _cache = nil,
+    _cache = {
+      lines = nil,
+      diff_dto = nil,
+    },
   }
 end
 
 function Store:reset()
   self.err = nil
   self.data = nil
-  self._cache = nil
+  self._cache = {
+    lines = nil,
+    diff_dto = nil,
+  }
 
   return self
 end
 
-function Store:fetch(filename, opts)
-  opts = opts or {}
-
+function Store:fetch(filename, lines)
   self:reset()
 
   self.git_object = GitObject(filename)
@@ -33,29 +37,21 @@ function Store:fetch(filename, opts)
   self.err, self.data = self.git_object:blames()
   loop.await()
 
+  self._cache.lines = lines
+
   return self.err, self.data
 end
 
 function Store:get_blames() return self.err, self.data end
 
 function Store:get_diff_dto()
-  if self._cache then
-    return nil, self._cache
+  if self._cache.diff_dto then
+    return nil, self._cache.diff_dto
   end
 
-  loop.await()
-  local err, lines = self.git_object:lines()
-  loop.await()
+  self._cache.diff_dto = DiffDTO({ lines = self._cache.lines })
 
-  if err then
-    return err
-  end
-
-  self._cache = DiffDTO({
-    lines = lines,
-  })
-
-  return nil, self._cache
+  return nil, self._cache.diff_dto
 end
 
 function Store:get_filename() return nil, self.git_object:get_filename() end

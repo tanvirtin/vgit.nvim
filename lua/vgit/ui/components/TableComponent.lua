@@ -1,4 +1,3 @@
-local ComponentPlot = require('vgit.ui.ComponentPlot')
 local utils = require('vgit.core.utils')
 local Component = require('vgit.ui.Component')
 local FooterElement = require('vgit.ui.elements.FooterElement')
@@ -10,7 +9,7 @@ local TableGenerator = require('vgit.ui.TableGenerator')
 local TableComponent = Component:extend()
 
 function TableComponent:constructor(props)
-  return utils.object.assign(Component.constructor(self), {
+  props = utils.object.assign({
     column_len = 80,
     column_spacing = 3,
     elements = {
@@ -29,6 +28,7 @@ function TableComponent:constructor(props)
       },
     },
   }, props)
+  return Component.constructor(self, props)
 end
 
 function TableComponent:paint(hls)
@@ -73,27 +73,24 @@ function TableComponent:make_rows(rows, format)
   return self
 end
 
-function TableComponent:mount(opts)
+function TableComponent:mount()
   if self.mounted then
     return self
   end
 
   local config = self.config
-  local elements_config = config.elements
-
-  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
+  local plot = self.plot
 
   local buffer = Buffer():create():assign_options(config.buf_options)
   self.buffer = buffer
   self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
   self.elements.header = HeaderElement():mount(plot.header_win_plot)
 
-  if elements_config.footer then
+  if config.elements.footer then
     self.elements.footer = FooterElement():mount(plot.footer_win_plot)
   end
 
   self.mounted = true
-  self.plot = plot
 
   return self
 end

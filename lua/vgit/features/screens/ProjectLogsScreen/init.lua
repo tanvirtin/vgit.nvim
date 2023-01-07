@@ -8,7 +8,8 @@ local Store = require('vgit.features.screens.ProjectLogsScreen.Store')
 
 local ProjectLogsScreen = Object:extend()
 
-function ProjectLogsScreen:constructor()
+function ProjectLogsScreen:constructor(opts)
+  opts = opts or {}
   local scene = Scene()
   local store = Store()
 
@@ -20,17 +21,18 @@ function ProjectLogsScreen:constructor()
   }
 end
 
-function ProjectLogsScreen:show(options)
+function ProjectLogsScreen:show(opts)
   loop.await()
-  local err = self.store:fetch(options)
+  local err = self.store:fetch(opts)
 
   if err then
     console.debug.error(err).error(err)
     return false
   end
 
-  loop.await()
-  self.view:show():set_keymap({
+  self.view:define()
+  self.view:show()
+  self.view:set_keymap({
     {
       mode = 'n',
       key = '<tab>',

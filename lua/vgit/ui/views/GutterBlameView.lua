@@ -15,6 +15,8 @@ function GutterBlameView:constructor(scene, store, plot, config)
   }
 end
 
+function GutterBlameView:get_components() return { self.scene:get('gutter_blame') } end
+
 function GutterBlameView:define()
   self.scene:set(
     'gutter_blame',
@@ -62,7 +64,7 @@ function GutterBlameView:render()
       if blame.committed then
         return string.format(
           '%s %s (%s) %s',
-          blame.commit_hash:sub(1, 8),
+          blame.commit_hash,
           blame.author,
           blame:age().display,
           blame.committed and blame.commit_message or 'Uncommitted changes'
@@ -83,7 +85,7 @@ function GutterBlameView:mount(opts)
 end
 
 function GutterBlameView:show(opts)
-  self:define():mount(opts):render()
+  self:mount(opts):render()
 
   return self
 end

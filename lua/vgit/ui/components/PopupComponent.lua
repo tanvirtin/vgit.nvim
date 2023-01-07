@@ -1,13 +1,12 @@
 local utils = require('vgit.core.utils')
-local ComponentPlot = require('vgit.ui.ComponentPlot')
-local Component = require('vgit.ui.Component')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
+local Component = require('vgit.ui.Component')
 
 local PopupComponent = Component:extend()
 
 function PopupComponent:constructor(props)
-  return utils.object.assign(Component.constructor(self), {
+  props = utils.object.assign({
     config = {
       elements = {
         header = false,
@@ -16,6 +15,7 @@ function PopupComponent:constructor(props)
       },
     },
   }, props)
+  return Component.constructor(self, props)
 end
 
 function PopupComponent:call(callback)
@@ -34,16 +34,14 @@ function PopupComponent:set_default_win_plot(win_plot)
   return self
 end
 
-function PopupComponent:mount(opts)
+function PopupComponent:mount()
   if self.mounted then
     return self
   end
 
   local config = self.config
-  local elements_config = config.elements
 
-  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
-  local win_plot = plot.win_plot
+  local win_plot = self.plot.win_plot
 
   self:set_default_win_plot(win_plot)
 
@@ -52,7 +50,6 @@ function PopupComponent:mount(opts)
   self.window = Window:open(self.buffer, win_plot):assign_options(config.win_options)
 
   self.mounted = true
-  self.plot = plot
 
   return self
 end

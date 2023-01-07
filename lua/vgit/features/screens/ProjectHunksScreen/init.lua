@@ -12,18 +12,18 @@ local Store = require('vgit.features.screens.ProjectHunksScreen.Store')
 
 local ProjectHunksScreen = Object:extend()
 
-function ProjectHunksScreen:constructor()
+function ProjectHunksScreen:constructor(opts)
+  opts = opts or {}
   local scene = Scene()
   local store = Store()
+  local layout_type = opts.layout_type or 'unified'
 
   return {
     name = 'Project Hunks Screen',
     scene = scene,
     store = store,
-    layout_type = nil,
-    foldable_list_view = FoldableListView(scene, store, {
-      height = '30vh',
-    }, {
+    layout_type = layout_type,
+    foldable_list_view = FoldableListView(scene, store, { height = '30vh' }, {
       elements = {
         header = true,
         footer = false,
@@ -63,14 +63,12 @@ function ProjectHunksScreen:constructor()
         return foldable_list
       end,
     }),
-    diff_view = DiffView(scene, store, {
-      row = '30vh',
-    }, {
+    diff_view = DiffView(scene, store, { row = '30vh' }, {
       elements = {
         header = true,
         footer = false,
       },
-    }),
+    }, layout_type),
   }
 end
 
@@ -98,7 +96,11 @@ function ProjectHunksScreen:show(opts)
   end
 
   loop.await()
-  self.diff_view:show(self.layout_type)
+
+  self.diff_view:define()
+  self.foldable_list_view:define()
+
+  self.diff_view:show()
   self.foldable_list_view:show()
 
   self.diff_view:set_keymap({

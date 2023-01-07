@@ -1,5 +1,4 @@
 local utils = require('vgit.core.utils')
-local ComponentPlot = require('vgit.ui.ComponentPlot')
 local Window = require('vgit.core.Window')
 local Namespace = require('vgit.core.Namespace')
 local Notification = require('vgit.ui.decorations.Notification')
@@ -9,7 +8,7 @@ local Component = require('vgit.ui.Component')
 local AppBarComponent = Component:extend()
 
 function AppBarComponent:constructor(props)
-  return utils.object.assign(Component.constructor(self), {
+  props = utils.object.assign({
     config = {
       elements = {
         header = false,
@@ -18,6 +17,7 @@ function AppBarComponent:constructor(props)
       },
     },
   }, props)
+  return Component.constructor(self, props)
 end
 
 function AppBarComponent:call(callback)
@@ -42,7 +42,7 @@ function AppBarComponent:set_default_win_options(win_options)
   return self
 end
 
-function AppBarComponent:mount(opts)
+function AppBarComponent:mount()
   if self.mounted then
     return self
   end
@@ -50,11 +50,8 @@ function AppBarComponent:mount(opts)
   local config = self.config
   local win_plot = config.win_plot
   local win_options = config.win_options
-  local elements_config = config.elements
 
   self:set_default_win_plot(win_plot):set_default_win_options(win_options)
-
-  local plot = ComponentPlot(config.win_plot, utils.object.merge(elements_config, opts)):build()
 
   self.notification = Notification()
   self.namespace = Namespace()
@@ -62,10 +59,9 @@ function AppBarComponent:mount(opts)
 
   local buffer = self.buffer
 
-  self.window = Window:open(buffer, plot.win_plot):assign_options(win_options)
+  self.window = Window:open(buffer, self.plot.win_plot):assign_options(win_options)
 
   self.mounted = true
-  self.plot = plot
 
   return self
 end

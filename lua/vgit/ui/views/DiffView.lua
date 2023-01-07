@@ -18,94 +18,101 @@ function DiffView:get_initial_state()
   }
 end
 
-function DiffView:constructor(scene, store, plot, config)
+function DiffView:constructor(scene, store, plot, config, layout_type)
   return {
     title = 'Diff',
     scene = scene,
     store = store,
     plot = plot,
-    layout_type = nil,
     config = config or {},
+    layout_type = layout_type,
     state = DiffView:get_initial_state(),
   }
 end
 
 function DiffView:define()
-  ({
-    unified = function()
-      self.scene:set(
-        'current',
-        DiffComponent({
-          config = {
-            elements = utils.object.assign({
-              header = true,
-              footer = false,
-              line_number = true,
-            }, self.config.elements),
-            win_options = {
-              cursorbind = true,
-              scrollbind = true,
-              cursorline = true,
-            },
-            win_plot = dimensions.relative_win_plot(self.plot, {
-              height = '100vh',
-              width = '100vw',
-            }),
+  if self.layout_type == 'unified' then
+    self.scene:set(
+      'current',
+      DiffComponent({
+        config = {
+          elements = utils.object.assign({
+            header = true,
+            footer = false,
+            line_number = true,
+          }, self.config.elements),
+          win_options = {
+            cursorbind = true,
+            scrollbind = true,
+            cursorline = true,
           },
-        })
-      )
-    end,
-    split = function()
-      self.scene:set(
-        'previous',
-        DiffComponent({
-          config = {
-            elements = utils.object.assign({
-              header = true,
-              footer = false,
-              line_number = true,
-            }, self.config.elements),
-            win_options = {
-              cursorbind = true,
-              scrollbind = true,
-              cursorline = true,
-            },
-            win_plot = dimensions.relative_win_plot(self.plot, {
-              height = '100vh',
-              -- 49 and not 50 because nvim cannot have height or width be a non integer.
-              -- This ensures that the other window never overflows.
-              width = '49vw',
-            }),
+          win_plot = dimensions.relative_win_plot(self.plot, {
+            height = '100vh',
+            width = '100vw',
+          }),
+        },
+      })
+    )
+  end
+
+  if self.layout_type == 'split' then
+    self.scene:set(
+      'previous',
+      DiffComponent({
+        config = {
+          elements = utils.object.assign({
+            header = true,
+            footer = false,
+            line_number = true,
+          }, self.config.elements),
+          win_options = {
+            cursorbind = true,
+            scrollbind = true,
+            cursorline = true,
           },
-        })
-      )
-      self.scene:set(
-        'current',
-        DiffComponent({
-          config = {
-            elements = utils.object.assign({
-              header = true,
-              footer = false,
-              line_number = true,
-            }, self.config.elements),
-            win_options = {
-              cursorbind = true,
-              scrollbind = true,
-              cursorline = true,
-            },
-            win_plot = dimensions.relative_win_plot(self.plot, {
-              height = '100vh',
-              width = '51vw',
-              row = '0vh',
-              col = '49vw',
-            }),
+          win_plot = dimensions.relative_win_plot(self.plot, {
+            height = '100vh',
+            -- 49 and not 50 because nvim cannot have height or width be a non integer.
+            -- This ensures that the other window never overflows.
+            width = '49vw',
+          }),
+        },
+      })
+    )
+    self.scene:set(
+      'current',
+      DiffComponent({
+        config = {
+          elements = utils.object.assign({
+            header = true,
+            footer = false,
+            line_number = true,
+          }, self.config.elements),
+          win_options = {
+            cursorbind = true,
+            scrollbind = true,
+            cursorline = true,
           },
-        })
-      )
-    end,
-  })[self.layout_type]()
+          win_plot = dimensions.relative_win_plot(self.plot, {
+            height = '100vh',
+            width = '51vw',
+            row = '0vh',
+            col = '49vw',
+          }),
+        },
+      })
+    )
+  end
 
   return self
+end
+
+function DiffView:get_components()
+  if self.layout_type == 'split' then
+    return { self.scene:get('previous'), self.scene:get('current') }
+  end
+
+  return { self.scene:get('current') }
 end
 
 function DiffView:set_title(title)
@@ -631,6 +638,40 @@ function DiffView:get_current_hunk_under_cursor()
   return nil, nil
 end
 
+function DiffView:set_lnum(lnum, position)
+  if self.layout_type == 'split' then
+    self.scene:get('previous'):set_lnum(lnum):position_cursor(position)
+  end
+
+  -- NOTE: Current must always be set after previous.
+  self.scene:get('current'):set_lnum(lnum):position_cursor(position)
+
+  return self
+end
+
+function DiffView:set_relative_lnum(lnum, position)
+  local err, diff_dto = self.store:get_diff_dto()
+
+  if err then
+    return self
+  end
+
+  for i = 1, #diff_dto.lnum_changes do
+    local lnum_change = diff_dto.lnum_changes[i]
+    local l = lnum_change.lnum
+    local type = lnum_change.type
+    local buftype = lnum_change.buftype
+
+    if buftype == 'current' and (type == 'void' or type == 'remove') and lnum >= l then
+      lnum = lnum + 1
+    end
+  end
+
+  self:set_lnum(lnum, position)
+
+  return self
+end
+
 function DiffView:select_mark(marks, mark_index, position)
   local lnum = nil
   local mark = marks[mark_index]
@@ -649,12 +690,7 @@ function DiffView:select_mark(marks, mark_index, position)
     end
   end
 
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):set_lnum(lnum):position_cursor(position)
-  end
-
-  -- NOTE: Current must always be set after previous.
-  self.scene:get('current'):set_lnum(lnum):position_cursor(position)
+  self:set_lnum(lnum, position)
 
   return self
 end
@@ -810,22 +846,23 @@ DiffView.render_debounced = loop.debounced_async(function(self, callback)
   end
 end, 300)
 
-function DiffView:mount(opts)
+function DiffView:mount()
   if self.layout_type == 'split' then
-    self.scene:get('previous'):mount(opts)
+    self.scene:get('previous'):mount()
   end
 
-  self.scene:get('current'):mount(opts)
+  self.scene:get('current'):mount()
 
   return self
 end
 
-function DiffView:show(layout_type, pos, opts)
-  opts = opts or {}
-  self.layout_type = layout_type
+function DiffView:show(pos, lnum)
+  lnum = lnum or 1
+
   self.state = DiffView:get_initial_state()
 
-  self:define():mount(opts):render():navigate_to_mark(self:get_relative_mark_index(opts.lnum or 1), pos)
+  local mark_index = self:get_relative_mark_index(lnum)
+  self:mount():render():navigate_to_mark(mark_index, pos)
 
   return self
 end

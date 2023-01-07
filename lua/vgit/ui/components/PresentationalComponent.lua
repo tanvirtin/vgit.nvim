@@ -1,15 +1,14 @@
-local ComponentPlot = require('vgit.ui.ComponentPlot')
 local utils = require('vgit.core.utils')
-local HeaderElement = require('vgit.ui.elements.HeaderElement')
-local FooterElement = require('vgit.ui.elements.FooterElement')
-local Component = require('vgit.ui.Component')
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
+local Component = require('vgit.ui.Component')
+local HeaderElement = require('vgit.ui.elements.HeaderElement')
+local FooterElement = require('vgit.ui.elements.FooterElement')
 
 local PresentationalComponent = Component:extend()
 
 function PresentationalComponent:constructor(props)
-  return utils.object.assign(Component.constructor(self), {
+  props = utils.object.assign({
     config = {
       elements = {
         header = true,
@@ -18,6 +17,7 @@ function PresentationalComponent:constructor(props)
       },
     },
   }, props)
+  return Component.constructor(self, props)
 end
 
 function PresentationalComponent:call(callback)
@@ -33,27 +33,24 @@ function PresentationalComponent:mount(opts)
 
   opts = opts or {}
   local config = self.config
-  local elements_config = config.elements
 
   local win_plot = config.win_plot
-
-  local plot = ComponentPlot(win_plot, utils.object.merge(elements_config, opts)):build()
+  local plot = self.plot
 
   local buffer = Buffer():create():assign_options(config.buf_options)
   self.buffer = buffer
 
   self.window = Window:open(buffer, win_plot):assign_options(config.win_options)
 
-  if elements_config.header then
+  if config.elements.header then
     self.elements.header = HeaderElement():mount(plot.header_win_plot)
   end
 
-  if elements_config.footer then
+  if config.elements.footer then
     self.elements.footer = FooterElement():mount(plot.footer_win_plot)
   end
 
   self.mounted = true
-  self.plot = plot
 
   return self
 end

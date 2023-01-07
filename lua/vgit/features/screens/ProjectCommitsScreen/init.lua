@@ -13,15 +13,17 @@ local Store = require('vgit.features.screens.ProjectCommitsScreen.Store')
 
 local ProjectCommitsScreen = Object:extend()
 
-function ProjectCommitsScreen:constructor()
+function ProjectCommitsScreen:constructor(opts)
+  opts = opts or {}
   local scene = Scene()
   local store = Store()
+  local layout_type = opts.layout_type or 'unified'
 
   return {
     name = 'Project Commits Screen',
     scene = scene,
     store = store,
-    layout_type = nil,
+    layout_type = layout_type,
     diff_view = DiffView(scene, store, {
       col = '25vw',
       width = '75vw',
@@ -30,10 +32,8 @@ function ProjectCommitsScreen:constructor()
         header = true,
         footer = false,
       },
-    }),
-    foldable_list_view = FoldableListView(scene, store, {
-      width = '25vw',
-    }, {
+    }, layout_type),
+    foldable_list_view = FoldableListView(scene, store, { width = '25vw' }, {
       elements = {
         header = true,
         footer = false,
@@ -48,7 +48,7 @@ function ProjectCommitsScreen:constructor()
         for commit_hash, files in pairs(commits) do
           foldable_list[#foldable_list + 1] = {
             open = true,
-            value = commit_hash:sub(1, 8),
+            value = commit_hash,
             items = FSListGenerator(files):generate(),
           }
         end
@@ -60,7 +60,7 @@ function ProjectCommitsScreen:constructor()
 end
 
 function ProjectCommitsScreen:get_list_title(commits)
-  return utils.object.size(commits) == 1 and utils.object.first(commits):sub(1, 8) or 'Project commits'
+  return utils.object.size(commits) == 1 and utils.object.first(commits) or 'Project commits'
 end
 
 function ProjectCommitsScreen:hunk_up() self.diff_view:prev() end
@@ -139,10 +139,32 @@ function ProjectCommitsScreen:handle_on_enter()
     return
   end
 
-  Window(0):set_lnum(diff_dto.marks[1].top_relative):position_cursor('center')
+  local window = Window(0)
+
+  window:set_lnum(diff_dto.marks[1].top_relative):position_cursor('center')
 end
 
-function ProjectCommitsScreen:show(commits)
+function ProjectCommitsScreen:show(args)
+  local commits = {}
+  local buffer = Buffer(0)
+  local filename_to_focus = buffer.filename
+
+  -- TODO: Need to add an arg parser in core that takes you can
+  --       somehow define and then parse the input using definition.
+  for i = 1, #args do
+    local arg = args[i]
+
+    if vim.startswith(arg, '--filename') then
+      filename_to_focus = arg:sub(#'--filename=' + 1, #arg)
+
+      if filename_to_focus == '' then
+        filename_to_focus = nil
+      end
+    else
+      commits[#commits + 1] = arg
+    end
+  end
+
   loop.await()
   local err = self.store:fetch(self.layout_type, commits)
 
@@ -152,8 +174,12 @@ function ProjectCommitsScreen:show(commits)
   end
 
   loop.await()
-  self.diff_view:show(self.layout_type)
-  self.foldable_list_view:set_title(self:get_list_title(commits)):show()
+  self.diff_view:define()
+  self.foldable_list_view:set_title(self:get_list_title(commits))
+  self.foldable_list_view:define()
+
+  self.diff_view:show()
+  self.foldable_list_view:show()
   self.foldable_list_view:set_keymap({
     {
       mode = 'n',
@@ -171,6 +197,20 @@ function ProjectCommitsScreen:show(commits)
       handler = loop.async(function() self:handle_on_enter() end),
     },
   })
+
+  if filename_to_focus then
+    local list_item = self.foldable_list_view:move_to(function(node)
+      -- TODO: This needs a refactor, FSListGenerator
+      local persistedFilename = node.path and node.path.file and node.path.file.filename or nil
+      return persistedFilename == filename_to_focus
+    end)
+
+    if list_item then
+      self.store:set_id(list_item.id)
+      self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
+    end
+  end
+
   return true
 end
 

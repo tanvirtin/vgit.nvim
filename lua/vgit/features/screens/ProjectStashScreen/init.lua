@@ -20,17 +20,18 @@ function ProjectStashScreen:constructor()
   }
 end
 
-function ProjectStashScreen:show(options)
+function ProjectStashScreen:show(opts)
   loop.await()
-  local err = self.store:fetch(options)
+  local err = self.store:fetch(opts)
 
   if err then
     console.debug.error(err).error(err)
     return false
   end
 
-  loop.await()
-  self.view:show():set_keymap({
+  self.view:define()
+  self.view:show()
+  self.view:set_keymap({
     {
       mode = 'n',
       key = '<tab>',

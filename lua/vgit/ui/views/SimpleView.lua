@@ -15,6 +15,8 @@ function SimpleView:constructor(scene, store, plot, config)
   }
 end
 
+function SimpleView:get_components() return { self.scene:get('simple_view') } end
+
 function SimpleView:define()
   self.scene:set(
     'simple_view',
@@ -76,7 +78,7 @@ function SimpleView:mount(opts)
 end
 
 function SimpleView:show(opts)
-  self:define():mount(opts):render()
+  self:mount(opts):render()
 
   return self
 end
