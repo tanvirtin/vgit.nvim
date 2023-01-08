@@ -4,6 +4,7 @@ local utils = require('vgit.core.utils')
 local Buffer = require('vgit.core.Buffer')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
+local RowLayout = require('vgit.ui.RowLayout')
 local DiffView = require('vgit.ui.views.DiffView')
 local TableView = require('vgit.ui.views.TableView')
 local Store = require('vgit.features.screens.HistoryScreen.Store')
@@ -21,7 +22,7 @@ function HistoryScreen:constructor(opts)
     scene = scene,
     store = store,
     layout_type = layout_type,
-    table_view = TableView(scene, store, { height = '30vh' }, {
+    table_view = TableView(scene, store, { height = '20vh' }, {
       elements = {
         header = true,
         footer = false,
@@ -43,7 +44,7 @@ function HistoryScreen:constructor(opts)
         }
       end,
     }),
-    diff_view = DiffView(scene, store, { row = '30vh' }, {
+    diff_view = DiffView(scene, store, { height = '80vh' }, {
       elements = {
         header = true,
         footer = false,
@@ -76,6 +77,8 @@ function HistoryScreen:show()
   -- Show and bind data (data will have all the necessary shape required)
   self.diff_view:define()
   self.table_view:define()
+
+  RowLayout(self.diff_view, self.table_view):build()
 
   self.diff_view:show()
   self.table_view:show()

@@ -363,12 +363,13 @@ function ProjectDiffScreen:make_help_bar()
   }
 
   for i = 1, #keys do
-    text = i == 1 and string.format('%s: (%s)', translations[i], keymaps[keys[i]])
+    text = i == 1 and string.format('%s (%s)', translations[i], keymaps[keys[i]])
       or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
   end
 
   self.app_bar_view:set_lines({ text })
   self.app_bar_view:add_highlight('%((%a+)%)', 'Keyword')
+  self.app_bar_view:add_highlight('|', 'Number')
 
   return self
 end
