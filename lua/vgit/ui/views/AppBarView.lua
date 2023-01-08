@@ -14,7 +14,7 @@ end
 
 function AppBarView:define()
   self.scene:set(
-    'footer',
+    'app_bar',
     AppBarComponent({
       config = {
         win_plot = dimensions.relative_win_plot(self.plot, {
@@ -28,16 +28,22 @@ function AppBarView:define()
   return self
 end
 
-function AppBarView:get_components() return { self.scene:get('footer') } end
+function AppBarView:get_components() return { self.scene:get('app_bar') } end
 
 function AppBarView:set_lines(lines)
-  self.scene:get('footer'):set_lines(lines)
+  self.scene:get('app_bar'):set_lines(lines)
+
+  return self
+end
+
+function AppBarView:add_highlight(pattern, hl)
+  self.scene:get('app_bar'):add_regex_highlight(pattern, hl)
 
   return self
 end
 
 function AppBarView:mount(opts)
-  self.scene:get('footer'):mount(opts)
+  self.scene:get('app_bar'):mount(opts)
 
   return self
 end

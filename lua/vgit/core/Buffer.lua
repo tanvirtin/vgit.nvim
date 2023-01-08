@@ -166,6 +166,12 @@ function Buffer:add_highlight(hl, row, col_top, col_end)
   return self
 end
 
+function Buffer:add_regex_highlight(pattern, hl)
+  self.namespace:add_regex_highlight(self, pattern, hl)
+
+  return self
+end
+
 function Buffer:clear_highlight(row_start, row_end)
   self.namespace:clear(self, row_start, row_end)
 
