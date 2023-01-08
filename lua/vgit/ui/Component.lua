@@ -222,6 +222,8 @@ end
 
 function Component:get_filetype() return self.buffer:get_option('filetype') end
 
+function Component:get_lines() return self.buffer:get_lines() end
+
 function Component:set_lines(lines, force)
   if self.locked and not force or not self:is_valid() then
     return self

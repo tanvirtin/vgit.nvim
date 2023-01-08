@@ -48,6 +48,7 @@
 - Project staged hunks preview
 - Project logs preview
 - Project stash preview
+- Project commit preview
 - Project commits preview
 - Send all project hunks to quickfix list
 - Hunk navigations in all buffers with a diff
@@ -266,6 +267,11 @@ require('vgit').setup({
         reset_all = 'R',
       },
     },
+    project_commit_preview = {
+      keymaps = {
+        save = 'S',
+      },
+    },
     signs = {
       priority = 10,
       definitions = {
@@ -362,6 +368,7 @@ set statusline+=%{get(b:,'vgit_status','')}
 | buffer_reset | Removes all current changes in the buffer and resets it to the version in HEAD. |
 | project_diff_preview | Opens a diff preview along with a list of all the files that have been changed, enabling users to see all the files that were changed in the current project |
 | project_logs_preview [args] | Opens a preview listing all the logs in the current working branch. Users can filter the list by passing options to this list. Pressing the "tab" key on a list item will keep the item selected. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected commits |
+| project_commit_preview | Opens a preview through which staged changes can be committed |
 | project_commits_preview [args] | Opens a diff preview along with a list of all your commits |
 | project_stash_preview | Opens a preview listing all stashes. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected stashes |
 | project_hunks_preview | Opens a diff preview along with a foldable list of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |

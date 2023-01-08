@@ -1107,4 +1107,61 @@ Git.checkout = loop.promisify(function(self, options, spec, callback)
   }, spec)):start()
 end, 4)
 
+Git.commit = loop.promisify(function(self, msg, spec, callback)
+  local err = {}
+  local is_uncommitted = false
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      'commit',
+      '-m',
+      msg,
+    }),
+    on_stderr = function(line) err[#err + 1] = line end,
+    on_stdout = function(line)
+      if vim.startswith(line, 'no changes added to commit') then
+        is_uncommitted = true
+      end
+    end,
+    on_exit = function()
+      if is_uncommitted then
+        return callback({ 'No changes added to commit (use "git add" and/or "git commit -a")' }, nil)
+      end
+
+      if #err ~= 0 then
+        return callback(err, nil)
+      end
+
+      callback()
+    end,
+  }, spec)):start()
+end, 4)
+
+Git.get_commit = loop.promisify(function(self, spec, callback)
+  local err = {}
+  local lines = {}
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      'commit',
+      '--dry-run',
+    }),
+    on_stdout = function(line) lines[#lines + 1] = line end,
+    on_stderr = function(line) err[#err + 1] = line end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err, nil)
+      end
+
+      callback(nil, lines)
+    end,
+  }, spec)):start()
+end, 3)
+
 return Git

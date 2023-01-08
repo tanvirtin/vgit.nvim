@@ -71,7 +71,7 @@ function DiffScreen:hunk_down()
   return self
 end
 
-function DiffScreen:make_footer_lines()
+function DiffScreen:make_help_bar()
   local text = ''
   local keymaps = diff_preview_setting:get('keymaps')
   local keys = {
@@ -93,7 +93,7 @@ function DiffScreen:make_footer_lines()
 
   for i = 1, #keys do
     text = i == 1 and string.format('%s: (%s)', translations[i], keymaps[keys[i]])
-        or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
+      or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
   end
 
   self.app_bar_view:set_lines({ text })
@@ -377,7 +377,7 @@ function DiffScreen:show(opts)
   })
 
   if self.app_bar_view then
-    self:make_footer_lines()
+    self:make_help_bar()
   end
 
   return true

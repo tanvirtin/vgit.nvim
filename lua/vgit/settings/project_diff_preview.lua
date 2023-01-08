@@ -2,6 +2,7 @@ local Config = require('vgit.core.Config')
 
 return Config({
   keymaps = {
+    commit = 'C',
     buffer_stage = 's',
     buffer_unstage = 'u',
     buffer_hunk_stage = 'gs',

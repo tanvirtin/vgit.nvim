@@ -182,6 +182,11 @@ More advanced configuration:
             reset_all = 'R',
           },
         },
+        project_commit_preview = {
+          keymaps = {
+            save = 'S',
+          },
+        },
         signs = {
           priority = 10,
           definitions = {
@@ -348,6 +353,9 @@ project_logs_preview(opt1, opt2, ...)                 *vgit.project_logs_preview
                 selected. Pressing the "enter" key on the preview will send the
                 selected commits to "project_commits_preview".
 
+project_commit_preview()                             *vgit.project_commit_preview()*
+                Opens a preview through which staged changes can be committed.
+
 project_commits_preview(commit1, commit2, ...)      *vgit.project_commits_preview()*
                 Opens a preview listing all the logs in the current working
                 branch. Users can filter the list by passing options when
@@ -355,7 +363,6 @@ project_commits_preview(commit1, commit2, ...)      *vgit.project_commits_previe
                 will select it. Pressing the "enter" key on the preview will
                 close the current preview and open "project_commits_preview"
                 with the commits that were selected.
-
 
 project_stash_preview()                 *vgit.project_stash_preview()*
                 Opens a preview listing all stashes. Pressing the "tab" key on

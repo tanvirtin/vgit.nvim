@@ -23,6 +23,7 @@ local AuthorshipCodeLens = require('vgit.features.buffer.AuthorshipCodeLens')
 local authorship_code_lens_setting = require('vgit.settings.authorship_code_lens')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
 local ProjectHunksQuickfix = require('vgit.features.quickfix.ProjectHunksQuickfix')
+local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
 
 local hunks = Hunks()
 local command = Command()
@@ -74,6 +75,7 @@ local project = {
   unstage_all = loop.async(function() Git():unstage() end),
   hunks_qf = loop.async(function() project_hunks_quickfix:show() end),
   debug_preview = loop.async(function(...) screen_manager.show('debug_screen', ...) end),
+  commit_preview = loop.async(function(...) screen_manager.show('commit_screen', ...) end),
   hunks_preview = loop.async(function() screen_manager.show('project_hunks_screen') end),
   diff_preview = loop.async(function() screen_manager.show('project_diff_screen') end),
   logs_preview = loop.async(function(...) screen_manager.show('project_logs_screen', ...) end),
@@ -178,6 +180,7 @@ local function configure_settings(config)
   live_gutter_setting:assign(config_settings.live_gutter)
   authorship_code_lens_setting:assign(config_settings.authorship_code_lens)
   project_diff_preview_setting:assign(config_settings.project_diff_preview)
+  project_commit_preview_setting:assign(config_settings.project_commit_preview)
 end
 
 local setup = function(config)
@@ -233,6 +236,7 @@ return {
   project_stash_preview = project.stash_preview,
   project_hunks_preview = project.hunks_preview,
   project_debug_preview = project.debug_preview,
+  project_commit_preview = project.commit_preview,
   project_commits_preview = project.commits_preview,
   project_hunks_staged_preview = project.hunks_staged_preview,
 }
