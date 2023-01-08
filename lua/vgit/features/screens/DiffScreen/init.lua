@@ -97,6 +97,7 @@ function DiffScreen:make_help_bar()
   end
 
   self.app_bar_view:set_lines({ text })
+  self.app_bar_view:add_highlight('%((%a+)%)', 'Keyword')
 
   return self
 end

@@ -17,6 +17,30 @@ function Namespace:add_highlight(buffer, hl, row, col_start, col_end)
   return self
 end
 
+function Namespace:add_regex_highlight(buffer, pattern, hl)
+  local lines = buffer:get_lines()
+
+  for i = 1, #lines do
+    local line = lines[i]
+
+    local j = 0
+
+    while true do
+      local from, to = line:find(pattern, j + 1)
+
+      j = from
+
+      if from == nil then
+        break
+      end
+
+      self:add_highlight(buffer, hl, i - 1, from - 1, to)
+    end
+  end
+
+  return self
+end
+
 function Namespace:transpose_virtual_text(buffer, text, hl, row, col, pos, priority)
   local id = row + 1 + col
 
