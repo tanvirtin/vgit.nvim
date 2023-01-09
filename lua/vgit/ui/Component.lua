@@ -132,8 +132,8 @@ function Component:add_highlight(hl, row, col_top, col_end)
   return self
 end
 
-function Component:add_regex_highlight(pattern, hl)
-  self.buffer:add_regex_highlight(pattern, hl)
+function Component:add_pattern_highlight(pattern, hl)
+  self.buffer:add_pattern_highlight(pattern, hl)
 
   return self
 end

@@ -36,8 +36,8 @@ function AppBarView:set_lines(lines)
   return self
 end
 
-function AppBarView:add_highlight(pattern, hl)
-  self.scene:get('app_bar'):add_regex_highlight(pattern, hl)
+function AppBarView:add_pattern_highlight(pattern, hl)
+  self.scene:get('app_bar'):add_pattern_highlight(pattern, hl)
 
   return self
 end
