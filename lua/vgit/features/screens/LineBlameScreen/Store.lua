@@ -30,11 +30,11 @@ function Store:reset()
 end
 
 function Store:fetch(shape, filename, lnum, opts)
+  opts = opts or {}
+
   if not filename or filename == '' then
     return { 'Buffer has no blame associated with it' }, nil
   end
-
-  opts = opts or {}
 
   self:reset()
 

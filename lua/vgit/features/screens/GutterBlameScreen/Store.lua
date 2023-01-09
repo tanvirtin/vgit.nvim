@@ -29,6 +29,10 @@ function Store:reset()
 end
 
 function Store:fetch(filename, lines)
+  if not filename or filename == '' then
+    return { 'Buffer has no blame associated with it' }, nil
+  end
+
   self:reset()
 
   self.git_object = GitObject(filename)
