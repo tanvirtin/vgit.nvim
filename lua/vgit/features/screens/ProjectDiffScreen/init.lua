@@ -57,10 +57,9 @@ function ProjectDiffScreen:constructor(opts)
         for key in pairs(list) do
           foldable_list[#foldable_list + 1] = {
             open = true,
+            show_count = false,
             value = key,
-            items = FSListGenerator(list[key]):generate({
-              category = key,
-            }),
+            items = FSListGenerator(list[key]):generate({ category = key }),
           }
         end
 
