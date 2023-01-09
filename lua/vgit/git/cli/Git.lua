@@ -1184,7 +1184,7 @@ Git.commit = loop.promisify(function(self, msg, spec, callback)
       end
 
       if #err ~= 0 then
-        return callback(err, nil)
+        return callback(err)
       end
 
       callback()
@@ -1209,6 +1209,129 @@ Git.get_commit = loop.promisify(function(self, spec, callback)
     on_exit = function()
       if #err ~= 0 then
         return callback(err, nil)
+      end
+
+      callback(nil, lines)
+    end,
+  }, spec)):start()
+end, 3)
+
+Git.stash = loop.promisify(function(self, spec, callback)
+  local err = {}
+  local lines = {}
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      'stash',
+    }),
+    on_stdout = function(line) lines[#lines + 1] = line end,
+    on_stderr = function(line) err[#err + 1] = line end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err)
+      end
+
+      callback(nil, lines)
+    end,
+  }, spec)):start()
+end, 3)
+
+Git.stash_apply = loop.promisify(function(self, index, spec, callback)
+  local err = {}
+  local lines = {}
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      'stash',
+      'apply',
+      '--index',
+      index,
+    }),
+    on_stdout = function(line) lines[#lines + 1] = line end,
+    on_stderr = function(line) err[#err + 1] = line end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err)
+      end
+
+      callback(nil, lines)
+    end,
+  }, spec)):start()
+end, 4)
+
+Git.stash_drop = loop.promisify(function(self, index, spec, callback)
+  local err = {}
+  local lines = {}
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      'stash',
+      'drop',
+      index,
+    }),
+    on_stdout = function(line) lines[#lines + 1] = line end,
+    on_stderr = function(line) err[#err + 1] = line end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err)
+      end
+
+      callback(nil, lines)
+    end,
+  }, spec)):start()
+end, 4)
+
+Git.stash_pop = loop.promisify(function(self, index, spec, callback)
+  local err = {}
+  local lines = {}
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      'stash',
+      'pop',
+      index,
+    }),
+    on_stdout = function(line) lines[#lines + 1] = line end,
+    on_stderr = function(line) err[#err + 1] = line end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err)
+      end
+
+      callback(nil, lines)
+    end,
+  }, spec)):start()
+end, 4)
+
+Git.stash_clear = loop.promisify(function(self, spec, callback)
+  local err = {}
+  local lines = {}
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      'stash',
+      'clear',
+    }),
+    on_stdout = function(line) lines[#lines + 1] = line end,
+    on_stderr = function(line) err[#err + 1] = line end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err)
       end
 
       callback(nil, lines)

@@ -22,6 +22,7 @@ local live_gutter_setting = require('vgit.settings.live_gutter')
 local AuthorshipCodeLens = require('vgit.features.buffer.AuthorshipCodeLens')
 local authorship_code_lens_setting = require('vgit.settings.authorship_code_lens')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
+local project_stash_preview_setting = require('vgit.settings.project_stash_preview')
 local ProjectHunksQuickfix = require('vgit.features.quickfix.ProjectHunksQuickfix')
 local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
 
@@ -180,6 +181,7 @@ local function configure_settings(config)
   live_gutter_setting:assign(config_settings.live_gutter)
   authorship_code_lens_setting:assign(config_settings.authorship_code_lens)
   project_diff_preview_setting:assign(config_settings.project_diff_preview)
+  project_stash_preview_setting:assign(config_settings.project_stash_preview)
   project_commit_preview_setting:assign(config_settings.project_commit_preview)
 end
 

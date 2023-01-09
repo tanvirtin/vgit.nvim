@@ -3,6 +3,7 @@ local Scene = require('vgit.ui.Scene')
 local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
 local DiffView = require('vgit.ui.views.DiffView')
@@ -301,6 +302,26 @@ ProjectDiffScreen.reset_file = loop.debounced_async(function(self)
   return self:render()
 end, 15)
 
+ProjectDiffScreen.stash = loop.debounced_async(function(self)
+  loop.await()
+  local decision = console.input('Are you sure you want to stash all changes? (y/N) '):lower()
+
+  if decision ~= 'yes' and decision ~= 'y' then
+    return self
+  end
+
+  loop.await()
+  local err = self.mutation:stash()
+  loop.await()
+
+  if err then
+    console.debug.error(err)
+    return self
+  end
+
+  return self:render()
+end, 15)
+
 ProjectDiffScreen.reset_all = loop.debounced_async(function(self)
   loop.await()
   local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) '):lower()
@@ -354,6 +375,7 @@ function ProjectDiffScreen:make_help_bar()
     'unstage_all',
     'reset_all',
     'commit',
+    'stash',
   }
   local translations = {
     'Stage',
@@ -365,6 +387,7 @@ function ProjectDiffScreen:make_help_bar()
     'Unstage all',
     'Reset all',
     'Commit',
+    'Stash',
   }
 
   for i = 1, #keys do
@@ -380,6 +403,8 @@ function ProjectDiffScreen:make_help_bar()
 end
 
 function ProjectDiffScreen:show()
+  local buffer = Buffer(0)
+
   loop.await()
   local err, data = self.store:fetch(self.layout_type)
 
@@ -477,6 +502,11 @@ function ProjectDiffScreen:show()
     },
     {
       mode = 'n',
+      key = project_diff_preview_setting:get('keymaps').stash,
+      handler = loop.async(function() self:stash() end),
+    },
+    {
+      mode = 'n',
       key = 'j',
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('down')
@@ -532,10 +562,19 @@ function ProjectDiffScreen:show()
 
   self:make_help_bar()
 
+  local target_filename = buffer.filename
+
   local list_item = self.foldable_list_view:move_to(function(node)
     local filename = node.path and node.path.file and node.path.file.filename or nil
-    return filename ~= nil
+    return filename == target_filename
   end)
+
+  if not list_item then
+    list_item = self.foldable_list_view:move_to(function(node)
+      local filename = node.path and node.path.file and node.path.file.filename or nil
+      return filename ~= nil
+    end)
+  end
 
   if list_item then
     self.store:set_id(list_item.id)

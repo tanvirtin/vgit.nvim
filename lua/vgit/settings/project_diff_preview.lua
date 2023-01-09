@@ -11,5 +11,6 @@ return Config({
     stage_all = 'S',
     unstage_all = 'U',
     reset_all = 'R',
+    stash = 'x',
   },
 })

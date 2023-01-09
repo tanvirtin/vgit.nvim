@@ -28,6 +28,12 @@ function Store:fetch(opts)
     return err, nil
   end
 
+  if #logs == 0 then
+    self.err = { 'No stashes found' }
+
+    return self.err
+  end
+
   self.err = nil
 
   self.data = logs

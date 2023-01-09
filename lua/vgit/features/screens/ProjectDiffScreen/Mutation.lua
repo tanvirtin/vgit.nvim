@@ -89,4 +89,6 @@ function Mutation:reset_all()
   return nil, nil
 end
 
+function Mutation:stash() return self.git:stash() end
+
 return Mutation
