@@ -513,26 +513,14 @@ function ProjectDiffScreen:show()
 
   self:make_help_bar()
 
-  local target_filename = buffer.filename
+  local list_item = self.foldable_list_view:move_to(function(node)
+    local filename = node.path and node.path.file and node.path.file.filename or nil
+    return filename ~= nil
+  end)
 
-  if target_filename then
-    local list_item = self.foldable_list_view:move_to(function(node)
-      -- TODO: This needs a refactor, FSListGenerator
-      local filename = node.path and node.path.file and node.path.file.filename or nil
-      return filename == target_filename
-    end)
-
-    if not list_item then
-      list_item = self.foldable_list_view:move_to(function(node)
-        local filename = node.path and node.path.file and node.path.file.filename or nil
-        return filename ~= nil
-      end)
-    end
-
-    if list_item then
-      self.store:set_id(list_item.id)
-      self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
-    end
+  if list_item then
+    self.store:set_id(list_item.id)
+    self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
   end
 
   return true
