@@ -1,7 +1,6 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
-local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
@@ -39,15 +38,12 @@ function ProjectCommitsScreen:constructor(opts)
         footer = false,
       },
       get_list = function(commits)
-        if utils.object.size(commits) == 1 then
-          return FSListGenerator(utils.object.first(commits)):generate()
-        end
-
         local foldable_list = {}
 
         for commit_hash, files in pairs(commits) do
           foldable_list[#foldable_list + 1] = {
             open = true,
+            show_count = false,
             value = commit_hash,
             items = FSListGenerator(files):generate(),
           }
@@ -57,10 +53,6 @@ function ProjectCommitsScreen:constructor(opts)
       end,
     }),
   }
-end
-
-function ProjectCommitsScreen:get_list_title(commits)
-  return utils.object.size(commits) == 1 and utils.object.first(commits) or 'Project commits'
 end
 
 function ProjectCommitsScreen:hunk_up() self.diff_view:prev() end
@@ -147,7 +139,7 @@ end
 function ProjectCommitsScreen:show(args)
   local commits = {}
   local buffer = Buffer(0)
-  local filename_to_focus = buffer.filename
+  local target_filename = buffer.filename
 
   -- TODO: Need to add an arg parser in core that takes you can
   --       somehow define and then parse the input using definition.
@@ -155,10 +147,10 @@ function ProjectCommitsScreen:show(args)
     local arg = args[i]
 
     if vim.startswith(arg, '--filename') then
-      filename_to_focus = arg:sub(#'--filename=' + 1, #arg)
+      target_filename = arg:sub(#'--filename=' + 1, #arg)
 
-      if filename_to_focus == '' then
-        filename_to_focus = nil
+      if target_filename == '' then
+        target_filename = nil
       end
     else
       commits[#commits + 1] = arg
@@ -175,7 +167,7 @@ function ProjectCommitsScreen:show(args)
 
   loop.await()
   self.diff_view:define()
-  self.foldable_list_view:set_title(self:get_list_title(commits))
+  self.foldable_list_view:set_title('Project commits')
   self.foldable_list_view:define()
 
   self.diff_view:show()
@@ -198,17 +190,21 @@ function ProjectCommitsScreen:show(args)
     },
   })
 
-  if filename_to_focus then
-    local list_item = self.foldable_list_view:move_to(function(node)
-      -- TODO: This needs a refactor, FSListGenerator
-      local persistedFilename = node.path and node.path.file and node.path.file.filename or nil
-      return persistedFilename == filename_to_focus
-    end)
+  local list_item = self.foldable_list_view:move_to(function(node)
+    local filename = node.path and node.path.file and node.path.file.filename or nil
+    return filename == target_filename
+  end)
 
-    if list_item then
-      self.store:set_id(list_item.id)
-      self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
-    end
+  if not list_item then
+    list_item = self.foldable_list_view:move_to(function(node)
+      local filename = node.path and node.path.file and node.path.file.filename or nil
+      return filename ~= nil
+    end)
+  end
+
+  if list_item then
+    self.store:set_id(list_item.id)
+    self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
   end
 
   return true
