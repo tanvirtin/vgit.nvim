@@ -17,7 +17,7 @@ function Namespace:add_highlight(buffer, hl, row, col_start, col_end)
   return self
 end
 
-function Namespace:add_regex_highlight(buffer, pattern, hl)
+function Namespace:add_pattern_highlight(buffer, pattern, hl)
   local lines = buffer:get_lines()
 
   for i = 1, #lines do
