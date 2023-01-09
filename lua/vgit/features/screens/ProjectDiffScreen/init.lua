@@ -529,8 +529,10 @@ function ProjectDiffScreen:show()
       end)
     end
 
-    self.store:set_id(list_item.id)
-    self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
+    if list_item then
+      self.store:set_id(list_item.id)
+      self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
+    end
   end
 
   return true
