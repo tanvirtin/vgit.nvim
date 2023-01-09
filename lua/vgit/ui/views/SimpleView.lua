@@ -39,6 +39,12 @@ function SimpleView:define()
   return self
 end
 
+function SimpleView:set_filetype(filetype)
+  self.scene:get('simple_view'):set_filetype(filetype)
+
+  return self
+end
+
 function SimpleView:set_keymap(configs)
   utils.list.each(
     configs,
