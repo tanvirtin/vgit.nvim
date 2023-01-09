@@ -42,7 +42,7 @@ function Blame:constructor(info)
     lnum = blame.lnum,
     filename = blame.filename,
     commit_hash = blame.commit,
-    parent_hash = blame.parent,
+    parent_hash = blame.previous,
     author = blame.author,
     author_mail = self:parse_author_mail(blame['author-mail']),
     author_time = tonumber(blame['author-time']),
