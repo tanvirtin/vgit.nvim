@@ -36,23 +36,22 @@ function LineBlameView:set_keymap(configs)
   return self
 end
 
-function LineBlameView:create_uncommitted_lines(blame)
-  return {
-    blame.commit_hash,
-    string.format('%s', 'Uncommitted changes'),
-    '',
-    '',
-  }
-end
-
 function LineBlameView:create_committed_lines(blame)
   local max_line_length = 88
   local commit_message = blame.commit_message
+
   if #commit_message > max_line_length then
     commit_message = commit_message:sub(1, max_line_length) .. '...'
   end
+
+  local commit_details = blame.commit_hash
+
+  if blame.parent_hash then
+    commit_details = string.format('%s -> %s', blame.parent_hash, blame.commit_hash)
+  end
+
   return {
-    blame.commit_hash,
+    commit_details,
     string.format('%s (%s)', blame.author, blame.author_mail),
     string.format('%s (%s)', blame:age().display, os.date('%c', blame.author_time)),
     string.format('%s', commit_message),
@@ -68,12 +67,9 @@ function LineBlameView:render()
   end
 
   local component = self.scene:get('line_blame')
+  local lines = self:create_committed_lines(blame)
 
-  component
-    :unlock()
-    :set_lines(blame.committed and self:create_committed_lines(blame) or self:create_uncommitted_lines(blame))
-    :focus()
-    :lock()
+  component:unlock():set_lines(lines):focus():lock()
 
   return self
 end
