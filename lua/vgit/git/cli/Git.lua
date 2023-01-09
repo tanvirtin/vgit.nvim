@@ -1110,6 +1110,7 @@ end, 4)
 Git.commit = loop.promisify(function(self, msg, spec, callback)
   local err = {}
   local is_uncommitted = false
+  local has_no_changes = false
 
   GitReadStream(utils.object.defaults({
     command = self.cmd,
@@ -1125,8 +1126,15 @@ Git.commit = loop.promisify(function(self, msg, spec, callback)
       if vim.startswith(line, 'no changes added to commit') then
         is_uncommitted = true
       end
+      if vim.startswith(line, 'nothing to commit, working tree clean') then
+        has_no_changes = true
+      end
     end,
     on_exit = function()
+      if has_no_changes then
+        return callback({ 'Nothing to commit, working tree clean' }, nil)
+      end
+
       if is_uncommitted then
         return callback({ 'No changes added to commit (use "git add" and/or "git commit -a")' }, nil)
       end
