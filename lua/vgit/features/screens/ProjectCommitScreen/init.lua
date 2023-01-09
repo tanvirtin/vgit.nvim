@@ -87,6 +87,7 @@ function ProjectCommitScreen:show()
       end),
     },
   })
+  self.view:set_filetype('gitcommit')
 
   return true
 end
