@@ -463,6 +463,50 @@ Git.remote_hunks = loop.promisify(function(self, filename, parent_hash, commit_h
   }, spec)):start()
 end, 6)
 
+Git.unmerged_hunks = loop.promisify(function(self, filename, spec, callback)
+  local result = {}
+  local err = {}
+  local args = utils.list.merge(self.fallback_args, {
+    '-C',
+    self.cwd,
+    '--no-pager',
+    '-c',
+    'core.safecrlf=false',
+    'diff',
+    '--color=never',
+    string.format('--diff-algorithm=%s', self.diff_algorithm),
+    '--patch-with-raw',
+    '--unified=0',
+    string.format(':3:%s', filename),
+    string.format(':1:%s', filename),
+  })
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = args,
+    on_stdout = function(line) result[#result + 1] = line end,
+    on_stderr = function(line) err[#err + 1] = line end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err, nil)
+      end
+      local hunks = {}
+      for i = 1, #result do
+        local line = result[i]
+        if vim.startswith(line, '@@') then
+          hunks[#hunks + 1] = Hunk(line)
+        else
+          if #hunks > 0 then
+            local hunk = hunks[#hunks]
+            hunk:push(line)
+          end
+        end
+      end
+      return callback(nil, hunks)
+    end,
+  }, spec)):start()
+end, 4)
+
 Git.staged_hunks = loop.promisify(function(self, filename, spec, callback)
   local result = {}
   local err = {}
