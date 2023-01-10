@@ -144,10 +144,15 @@ function Store:fetch(shape, opts)
 
   local changed_files, staged_files = self:partition_status(status_files)
 
-  local data = {
-    changes = changed_files,
-    staged = staged_files,
-  }
+  local data = {}
+
+  if #changed_files ~= 0 then
+    data['Changes'] = changed_files
+  end
+
+  if #staged_files ~= 0 then
+    data['Staged Changes'] = staged_files
+  end
 
   self.shape = shape
   self.data = data
