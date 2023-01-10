@@ -26,7 +26,7 @@ end
 function Store:partition_status(status_files)
   local changed_files = {}
   local staged_files = {}
-  local merge_files = {}
+  local unmerged_files = {}
 
   utils.list.each(status_files, function(file)
     if file:is_untracked() then
@@ -39,16 +39,16 @@ function Store:partition_status(status_files)
 
       self._cache.list_entries[id] = data
       changed_files[#changed_files + 1] = data
-    elseif file:has_conflict() then
+    elseif file:is_unmerged() then
       local id = utils.math.uuid()
       local data = {
         id = id,
         file = file,
-        status = 'conflict',
+        status = 'unmerged',
       }
 
       self._cache.list_entries[id] = data
-      merge_files[#merge_files + 1] = data
+      unmerged_files[#unmerged_files + 1] = data
     else
       if file:is_unstaged() then
         local id = utils.math.uuid()
@@ -75,24 +75,26 @@ function Store:partition_status(status_files)
     end
   end)
 
-  return changed_files, staged_files, merge_files
+  return changed_files, staged_files, unmerged_files
 end
 
 function Store:get_file_lines(file, status)
   local filename = file.filename
   local file_status = file.status
-  local lines_err, lines
+  local err, lines
 
-  if file_status:has('D ') then
-    lines_err, lines = self.git:show(filename, 'HEAD')
+  if file_status:has_both('DU') then
+    err, lines = self.git:show(filename, ':3')
+  elseif file_status:has('D ') then
+    err, lines = self.git:show(filename, 'HEAD')
   elseif status == 'staged' or file_status:has(' D') then
-    lines_err, lines = self.git:show(self.git:tracked_filename(filename))
+    err, lines = self.git:show(self.git:tracked_filename(filename))
   else
-    lines_err, lines = fs.read_file(filename)
+    err, lines = fs.read_file(filename)
   end
   loop.await()
 
-  return lines_err, lines
+  return err, lines
 end
 
 function Store:get_file_hunks(file, status, lines)
@@ -100,7 +102,9 @@ function Store:get_file_hunks(file, status, lines)
   local file_status = file.status
   local hunks_err, hunks
 
-  if file_status:has_both('??') then
+  if file_status:has_both('DU') then
+    hunks_err, hunks = self.git:unmerged_hunks(filename)
+  elseif file_status:has_both('??') then
     hunks = self.git:untracked_hunks(lines)
   elseif file_status:has_either('DD') then
     hunks = self.git:deleted_hunks(lines)
@@ -108,7 +112,7 @@ function Store:get_file_hunks(file, status, lines)
     hunks_err, hunks = self.git:staged_hunks(filename)
   elseif status == 'unstaged' then
     hunks_err, hunks = self.git:index_hunks(filename)
-  elseif status == 'conflict' then
+  elseif status == 'unmerged' then
     hunks_err = nil
     hunks = {}
   end
@@ -116,16 +120,6 @@ function Store:get_file_hunks(file, status, lines)
   loop.await()
 
   return hunks_err, hunks
-end
-
-function Store:get_file_diff(file, lines, hunks)
-  local status = file.status
-
-  local diff = diff_service:generate(hunks, lines, self.shape, {
-    is_deleted = status:has_either('DD'),
-  })
-
-  return diff
 end
 
 function Store:reset()
@@ -156,7 +150,7 @@ function Store:fetch(shape, opts)
     return status_files_err, nil
   end
 
-  local changed_files, staged_files, merge_files = self:partition_status(status_files)
+  local changed_files, staged_files, unmerged_files = self:partition_status(status_files)
 
   local data = {}
 
@@ -168,8 +162,8 @@ function Store:fetch(shape, opts)
     data['Staged Changes'] = staged_files
   end
 
-  if #merge_files ~= 0 then
-    data['Merge Changes'] = merge_files
+  if #unmerged_files ~= 0 then
+    data['Merge Changes'] = unmerged_files
   end
 
   self.shape = shape
@@ -233,7 +227,11 @@ function Store:get_diff_dto()
     return hunks_err
   end
 
-  self._cache.diff_dtos[cache_key] = self:get_file_diff(file, lines, hunks)
+  local file_status = file.status
+  local is_deleted = not file_status:has_both('DU') and file_status:has_either('DD')
+  local diff_dto = diff_service:generate(hunks, lines, self.shape, { is_deleted = is_deleted })
+
+  self._cache.diff_dtos[cache_key] = diff_dto
 
   return nil, self._cache.diff_dtos[cache_key]
 end

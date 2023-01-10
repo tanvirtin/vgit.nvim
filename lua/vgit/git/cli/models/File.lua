@@ -29,8 +29,8 @@ function File:is_staged() return self.status:has('* ') end
 
 function File:is_unstaged() return self.status:has(' *') end
 
-function File:has_conflict() return self.status:has('UU') end
-
 function File:is_untracked() return self.status:has('??') end
+
+function File:is_unmerged() return self.status:has_either('UU') end
 
 return File

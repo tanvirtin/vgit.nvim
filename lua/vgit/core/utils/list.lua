@@ -4,6 +4,16 @@ list.is_list = vim.tbl_islist
 
 list.is_empty = vim.tbl_isempty
 
+function list.join(l, with)
+  local result = ''
+
+  for i = 1, #l do
+    result = result .. l[i] .. with
+  end
+
+  return result
+end
+
 function list.pick(l, item)
   for i = 1, #l do
     if l[i] == item then
