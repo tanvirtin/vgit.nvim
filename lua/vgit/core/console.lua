@@ -70,7 +70,7 @@ end)
 
 console.info = loop.async(function(msg)
   loop.await()
-  vim.notify(msg, 'info')
+  vim.notify(console.format(msg), 'info')
 
   return console
 end)
