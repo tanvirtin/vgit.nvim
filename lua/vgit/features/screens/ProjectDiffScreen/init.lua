@@ -1,7 +1,7 @@
 local fs = require('vgit.core.fs')
 local Scene = require('vgit.ui.Scene')
 local loop = require('vgit.core.loop')
-local Buffer = require('vgit.core.Buffer')
+local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
@@ -323,8 +323,14 @@ end, 15)
 
 function ProjectDiffScreen:render()
   loop.await()
-  self.store:fetch(self.layout_type)
+  local _, data = self.store:fetch(self.layout_type)
   loop.await()
+
+  if utils.object.is_empty(data) then
+    self:destroy()
+
+    return self
+  end
 
   local list_item = self.foldable_list_view:render():get_current_list_item()
 
@@ -374,13 +380,18 @@ function ProjectDiffScreen:make_help_bar()
 end
 
 function ProjectDiffScreen:show()
-  local buffer = Buffer(0)
-
   loop.await()
-  local err = self.store:fetch(self.layout_type)
+  local err, data = self.store:fetch(self.layout_type)
 
   if err then
     console.debug.error(err).error(err)
+
+    return false
+  end
+
+  if utils.object.is_empty(data) then
+    console.info('No changes found')
+
     return false
   end
 
@@ -470,6 +481,10 @@ function ProjectDiffScreen:show()
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('down')
 
+        if not list_item then
+          return
+        end
+
         self.store:set_id(list_item.id)
         self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
       end),
@@ -479,6 +494,10 @@ function ProjectDiffScreen:show()
       key = 'k',
       handler = loop.async(function()
         local list_item = self.foldable_list_view:move('up')
+
+        if not list_item then
+          return
+        end
 
         self.store:set_id(list_item.id)
         self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
