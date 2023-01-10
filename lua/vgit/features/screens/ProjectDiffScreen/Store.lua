@@ -26,6 +26,7 @@ end
 function Store:partition_status(status_files)
   local changed_files = {}
   local staged_files = {}
+  local merge_files = {}
 
   utils.list.each(status_files, function(file)
     if file:is_untracked() then
@@ -38,8 +39,18 @@ function Store:partition_status(status_files)
 
       self._cache.list_entries[id] = data
       changed_files[#changed_files + 1] = data
+    elseif file:has_conflict() then
+      local id = utils.math.uuid()
+      local data = {
+        id = id,
+        file = file,
+        status = 'conflict',
+      }
+
+      self._cache.list_entries[id] = data
+      merge_files[#merge_files + 1] = data
     else
-      if not file:has_conflict() and file:is_unstaged() then
+      if file:is_unstaged() then
         local id = utils.math.uuid()
         local data = {
           id = id,
@@ -50,7 +61,7 @@ function Store:partition_status(status_files)
         self._cache.list_entries[id] = data
         changed_files[#changed_files + 1] = data
       end
-      if not file:has_conflict() and file:is_staged() then
+      if file:is_staged() then
         local id = utils.math.uuid()
         local data = {
           id = id,
@@ -64,7 +75,7 @@ function Store:partition_status(status_files)
     end
   end)
 
-  return changed_files, staged_files
+  return changed_files, staged_files, merge_files
 end
 
 function Store:get_file_lines(file, status)
@@ -97,6 +108,9 @@ function Store:get_file_hunks(file, status, lines)
     hunks_err, hunks = self.git:staged_hunks(filename)
   elseif status == 'unstaged' then
     hunks_err, hunks = self.git:index_hunks(filename)
+  elseif status == 'conflict' then
+    hunks_err = nil
+    hunks = {}
   end
 
   loop.await()
@@ -142,7 +156,7 @@ function Store:fetch(shape, opts)
     return status_files_err, nil
   end
 
-  local changed_files, staged_files = self:partition_status(status_files)
+  local changed_files, staged_files, merge_files = self:partition_status(status_files)
 
   local data = {}
 
@@ -152,6 +166,10 @@ function Store:fetch(shape, opts)
 
   if #staged_files ~= 0 then
     data['Staged Changes'] = staged_files
+  end
+
+  if #merge_files ~= 0 then
+    data['Merge Changes'] = merge_files
   end
 
   self.shape = shape
