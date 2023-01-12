@@ -463,7 +463,7 @@ Git.remote_hunks = loop.promisify(function(self, filename, parent_hash, commit_h
   }, spec)):start()
 end, 6)
 
-Git.unmerged_hunks = loop.promisify(function(self, filename, spec, callback)
+Git.unmerged_hunks = loop.promisify(function(self, filename, stage_a, stage_b, spec, callback)
   local result = {}
   local err = {}
   local args = utils.list.merge(self.fallback_args, {
@@ -477,8 +477,8 @@ Git.unmerged_hunks = loop.promisify(function(self, filename, spec, callback)
     string.format('--diff-algorithm=%s', self.diff_algorithm),
     '--patch-with-raw',
     '--unified=0',
-    string.format(':3:%s', filename),
-    string.format(':1:%s', filename),
+    string.format('%s:%s', stage_a, filename),
+    string.format('%s:%s', stage_b, filename),
   })
 
   GitReadStream(utils.object.defaults({
@@ -505,7 +505,7 @@ Git.unmerged_hunks = loop.promisify(function(self, filename, spec, callback)
       return callback(nil, hunks)
     end,
   }, spec)):start()
-end, 4)
+end, 6)
 
 Git.staged_hunks = loop.promisify(function(self, filename, spec, callback)
   local result = {}
