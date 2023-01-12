@@ -85,6 +85,8 @@ function Store:get_file_lines(file, status)
 
   if file_status:has_both('DU') then
     err, lines = self.git:show(filename, ':3')
+  elseif file_status:has_both('UD') then
+    err, lines = self.git:show(filename, ':2')
   elseif file_status:has('D ') then
     err, lines = self.git:show(filename, 'HEAD')
   elseif status == 'staged' or file_status:has(' D') then
@@ -103,7 +105,9 @@ function Store:get_file_hunks(file, status, lines)
   local hunks_err, hunks
 
   if file_status:has_both('DU') then
-    hunks_err, hunks = self.git:unmerged_hunks(filename)
+    hunks_err, hunks = self.git:unmerged_hunks(filename, ':3', ':1')
+  elseif file_status:has_both('UD') then
+    hunks_err, hunks = self.git:unmerged_hunks(filename, ':1', ':2')
   elseif file_status:has_both('??') then
     hunks = self.git:untracked_hunks(lines)
   elseif file_status:has_either('DD') then
@@ -228,7 +232,7 @@ function Store:get_diff_dto()
   end
 
   local file_status = file.status
-  local is_deleted = not file_status:has_both('DU') and file_status:has_either('DD')
+  local is_deleted = not (file_status:has_both('DU') or file_status:has_both('UD')) and file_status:has_either('DD')
   local diff_dto = diff_service:generate(hunks, lines, self.shape, { is_deleted = is_deleted })
 
   self._cache.diff_dtos[cache_key] = diff_dto
