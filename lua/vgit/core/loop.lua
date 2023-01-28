@@ -65,22 +65,4 @@ end
 
 function loop.debounced_async(fn, ms) return loop.debounce(loop.async(fn), ms) end
 
-function loop.watch(filepath, callback)
-  local watcher = vim.loop.new_fs_event()
-
-  vim.loop.fs_event_start(watcher, filepath, {
-    watch_entry = false,
-    stat = false,
-    recursive = false,
-  }, callback)
-
-  return watcher
-end
-
-function loop.unwatch(watcher)
-  vim.loop.fs_event_stop(watcher)
-
-  return loop
-end
-
 return loop

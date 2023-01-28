@@ -16,6 +16,7 @@ local screen_manager = require('vgit.ui.screen_manager')
 local symbols_setting = require('vgit.settings.symbols')
 local diff_preview = require('vgit.settings.diff_preview')
 local LiveBlame = require('vgit.features.buffer.LiveBlame')
+local git_buffer_store = require('vgit.git.git_buffer_store')
 local LiveGutter = require('vgit.features.buffer.LiveGutter')
 local live_blame_setting = require('vgit.settings.live_blame')
 local live_gutter_setting = require('vgit.settings.live_gutter')
@@ -107,30 +108,24 @@ local toggle_live_blame = loop.async(function()
   local blames_enabled = live_blame_setting:get('enabled')
 
   live_blame_setting:set('enabled', not blames_enabled)
-  live_blame:resync()
+  live_blame:reset()
 end)
 
 local toggle_live_gutter = loop.async(function()
   local live_gutter_enabled = live_gutter_setting:get('enabled')
 
   live_gutter_setting:set('enabled', not live_gutter_enabled)
-  live_gutter:resync()
+  live_gutter:reset()
 end)
 
 local toggle_authorship_code_lens = loop.async(function()
   local authorship_code_lens_enabled = authorship_code_lens_setting:get('enabled')
 
   authorship_code_lens_setting:set('enabled', not authorship_code_lens_enabled)
-  authorship_code_lens:resync()
+  authorship_code_lens:reset()
 end)
 
 local toggle_tracing = loop.async(function() env.set('DEBUG', not env.get('DEBUG')) end)
-
-local initialize_vgit = loop.async(function()
-  live_gutter:attach()
-  live_blame:sync()
-  authorship_code_lens:sync()
-end)
 
 local function command_list(...) return command:list(...) end
 
@@ -158,6 +153,7 @@ local function register_events()
   live_gutter:register_events()
   authorship_code_lens:register_events()
   highlight.register_events()
+  git_buffer_store.register_events()
 end
 
 local function register_keymaps(config)
@@ -190,8 +186,6 @@ local setup = function(config)
   register_modules()
   register_events()
   register_keymaps(config)
-
-  initialize_vgit()
 end
 
 return {

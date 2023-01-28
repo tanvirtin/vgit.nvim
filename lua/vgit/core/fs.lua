@@ -40,16 +40,7 @@ end
 
 function fs.filetype(buffer) return buffer:get_option('filetype') end
 
-function fs.tmpname()
-  local length = 6
-  local res = ''
-
-  for _ = 1, length do
-    res = res .. string.char(math.random(97, 122))
-  end
-
-  return string.format('/tmp/%s_vgit', res)
-end
+function fs.tmpname() return os.tmpname() end
 
 function fs.read_file(filepath)
   local fd = vim.loop.fs_open(filepath, 'r', 438)

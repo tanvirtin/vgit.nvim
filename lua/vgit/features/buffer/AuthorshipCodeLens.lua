@@ -1,11 +1,8 @@
 local loop = require('vgit.core.loop')
-local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
-local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local GitBuffer = require('vgit.git.GitBuffer')
 local Namespace = require('vgit.core.Namespace')
-local event_type = require('vgit.core.event_type')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local authorship_code_lens_setting = require('vgit.settings.authorship_code_lens')
 
@@ -16,12 +13,6 @@ function AuthorshipCodeLens:constructor()
     name = 'Authorship Code Lens',
     namespace = Namespace(),
   }
-end
-
-function AuthorshipCodeLens:register_events()
-  event.on(event_type.BufEnter, function() self:resync() end)
-
-  return self
 end
 
 function AuthorshipCodeLens:display(lnum, buffer, text)
@@ -52,8 +43,8 @@ function AuthorshipCodeLens:clear(buffer)
   return self
 end
 
-function AuthorshipCodeLens:clear_all()
-  local buffers = Buffer:list()
+function AuthorshipCodeLens:reset()
+  local buffers = GitBuffer:list()
 
   for i = 1, #buffers do
     self:clear(buffers[i])
@@ -162,53 +153,65 @@ function AuthorshipCodeLens:generate_authorship(config, blames)
   )
 end
 
-function AuthorshipCodeLens:sync()
+function AuthorshipCodeLens:render(git_buffer, bot)
   if not authorship_code_lens_setting:get('enabled') then
     return self
   end
 
+  if git_buffer.state.is_showing_lens then
+    git_buffer.state.is_processing = false
+
+    return
+  end
+
+  if git_buffer.state.is_processing then
+    return
+  end
+
+  local line_count = git_buffer:get_line_count()
+
+  if line_count > bot then
+    git_buffer.state.is_processing = false
+
+    return
+  end
+
+  git_buffer.state.is_processing = true
+
   loop.await()
-  local buffer = git_buffer_store.current()
-  local git_buffer = GitBuffer(buffer)
-
-  if not buffer then
-    return self
-  end
-
-  if not buffer:is_valid() then
-    return self
-  end
-
-  if not git_buffer:is_tracked() then
-    return self
-  end
-
-  loop.await()
-  local blames_err, blames = buffer.git_object:blames()
-
-  if not buffer:is_valid() then
-    return self
-  end
+  local blames_err, blames = git_buffer.git_object:blames()
 
   loop.await()
   if blames_err then
+    git_buffer.state.is_processing = false
+
     console.debug.error(blames_err)
     return self
   end
 
   loop.await()
-  local config_err, config = buffer.git_object:config()
+  local config_err, config = git_buffer.git_object:config()
 
   if config_err then
+    git_buffer.state.is_processing = false
+
     console.debug.error(config_err)
     return self
   end
 
-  self:clear(buffer):display(buffer:get_line_count(), buffer, self:generate_authorship(config, blames))
+  local authorship = self:generate_authorship(config, blames)
+
+  self:clear(git_buffer)
+  self:display(line_count, git_buffer, authorship)
+
+  git_buffer.state.is_processing = false
+  git_buffer.state.is_showing_lens = true
+end
+
+function AuthorshipCodeLens:register_events()
+  git_buffer_store.attach('render', function(git_buffer, _, bot) self:render(git_buffer, bot) end)
 
   return self
 end
-
-function AuthorshipCodeLens:resync() return self:clear_all():sync() end
 
 return AuthorshipCodeLens
