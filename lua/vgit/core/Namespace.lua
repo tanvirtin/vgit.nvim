@@ -1,11 +1,14 @@
+local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local signs_setting = require('vgit.settings.signs')
 
 local Namespace = Object:extend()
 
 function Namespace:constructor(name)
+  name = name or utils.math.uuid()
+
   return {
-    ns_id = vim.api.nvim_create_namespace(name or ''),
+    ns_id = vim.api.nvim_create_namespace(name),
   }
 end
 

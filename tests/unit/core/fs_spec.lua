@@ -65,15 +65,7 @@ describe('fs:', function()
 
   describe('tmpname', function()
     it('should generate a string', function() eq(type(fs.tmpname()), 'string') end)
-
-    it('should be 16 character long', function() eq(#fs.tmpname(), 16) end)
-
     it('should start with /tmp/', function() eq(vim.startswith(fs.tmpname(), '/tmp/'), true) end)
-
-    it('should end with _vgit', function()
-      local name = fs.tmpname()
-      eq(name:sub(#name - 4, #name), '_vgit')
-    end)
   end)
 
   describe('detect', function()

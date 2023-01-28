@@ -116,6 +116,30 @@ Git.has_commits = loop.promisify(function(self, spec, callback)
   }, spec)):start()
 end, 3)
 
+Git.get_git_dir = loop.promisify(function(self, spec, callback)
+  local err = {}
+  local lines = {}
+
+  GitReadStream(utils.object.defaults({
+    command = self.cmd,
+    args = utils.list.merge(self.fallback_args, {
+      '-C',
+      self.cwd,
+      'rev-parse',
+      '--absolute-git-dir',
+    }),
+    on_stderr = function(line) err[#err + 1] = line end,
+    on_stdout = function(line) lines[#lines + 1] = line end,
+    on_exit = function()
+      if #err ~= 0 then
+        return callback(err)
+      end
+
+      callback(nil, lines[1])
+    end,
+  }, spec)):start()
+end, 3)
+
 Git.is_inside_git_dir = loop.promisify(function(self, spec, callback)
   local err = {}
 

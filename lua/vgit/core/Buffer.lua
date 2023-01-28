@@ -3,11 +3,10 @@ local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local keymap = require('vgit.core.keymap')
+local Watcher = require('vgit.core.Watcher')
 local console = require('vgit.core.console')
 local renderer = require('vgit.core.renderer')
-local GitObject = require('vgit.git.GitObject')
 local Namespace = require('vgit.core.Namespace')
-local signs_setting = require('vgit.settings.signs')
 
 local Buffer = Object:extend()
 
@@ -25,13 +24,12 @@ function Buffer:constructor(bufnr)
     bufnr = bufnr,
     filename = filename,
     rendering = false,
-    file_watcher = nil,
-    git_object = nil,
     namespace = Namespace(),
+    watcher = Watcher(),
     state = {
+      is_processing = false,
       is_attached_to_screen = false,
       on_render = function() end,
-      live_signs = {},
     },
   }
 end
@@ -96,45 +94,8 @@ function Buffer:is_in_disk()
   return true
 end
 
-function Buffer:set_cached_live_signs(live_signs)
-  self.state.live_signs = live_signs
-
-  return self
-end
-
-function Buffer:get_cached_live_signs() return self.state.live_signs end
-
-function Buffer:clear_cached_live_signs()
-  self.state.live_signs = {}
-
-  return self
-end
-
-function Buffer:cache_live_sign(hunk)
-  local bufnr = self.bufnr
-  local live_signs = self:get_cached_live_signs()
-  local sign_priority = signs_setting:get('priority')
-  local sign_group = self.namespace:get_sign_ns_id(self)
-  local sign_types = signs_setting:get('usage').main
-
-  for j = hunk.top, hunk.bot do
-    local lnum = (hunk.type == 'remove' and j == 0) and 1 or j
-
-    live_signs[lnum] = {
-      id = lnum,
-      lnum = lnum,
-      buffer = bufnr,
-      group = sign_group,
-      name = sign_types[hunk.type],
-      priority = sign_priority,
-    }
-  end
-
-  return self
-end
-
-function Buffer:watch_file(callback)
-  self.file_watcher = loop.watch(
+function Buffer:watch(callback)
+  self.watcher:watch_file(
     self.filename,
     loop.async(function(err)
       if err then
@@ -152,8 +113,8 @@ function Buffer:watch_file(callback)
   return self
 end
 
-function Buffer:unwatch_file()
-  loop.unwatch(self.file_watcher)
+function Buffer:unwatch()
+  self.watcher:unwatch()
 
   return self
 end
@@ -217,13 +178,6 @@ end
 function Buffer:sync()
   local bufname = vim.api.nvim_buf_get_name(self.bufnr)
   self.filename = fs.relative_filename(bufname)
-  self.git_object = GitObject(self.filename)
-
-  return self
-end
-
-function Buffer:sync_git()
-  self.git_object = GitObject(self.filename)
 
   return self
 end
