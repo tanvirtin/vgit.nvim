@@ -1,27 +1,61 @@
 local loop = require('vgit.core.loop')
-local Object = require('vgit.core.Object')
-local git_buffer_store = require('vgit.git.git_buffer_store')
+local Buffer = require('vgit.core.Buffer')
+local GitObject = require('vgit.git.GitObject')
+local signs_setting = require('vgit.settings.signs')
 
-local GitBuffer = Object:extend()
+local GitBuffer = Buffer:extend()
 
-function GitBuffer:constructor(buffer)
-  return {
-    buffer = buffer,
-  }
+function GitBuffer:sync()
+  Buffer.sync(self)
+
+  self.git_object = GitObject(self.filename)
+  self.live_signs = {}
+  self.is_processing = false
+  self.is_showing_lens = false
+
+  return self
 end
 
-function GitBuffer:is_in_store()
-  loop.await()
-  if not git_buffer_store.contains(self.buffer) then
-    return false
+function GitBuffer:set_cached_live_signs(live_signs)
+  self.state.live_signs = live_signs
+
+  return self
+end
+
+function GitBuffer:get_cached_live_signs() return self.state.live_signs end
+
+function GitBuffer:clear_cached_live_signs()
+  self.state.live_signs = {}
+
+  return self
+end
+
+function GitBuffer:cache_live_sign(hunk)
+  local bufnr = self.bufnr
+  local live_signs = self:get_cached_live_signs()
+  local sign_priority = signs_setting:get('priority')
+  local sign_group = self.namespace:get_sign_ns_id(self)
+  local sign_types = signs_setting:get('usage').main
+
+  for j = hunk.top, hunk.bot do
+    local lnum = (hunk.type == 'remove' and j == 0) and 1 or j
+
+    live_signs[lnum] = {
+      id = lnum,
+      lnum = lnum,
+      buffer = bufnr,
+      group = sign_group,
+      name = sign_types[hunk.type],
+      priority = sign_priority,
+    }
   end
 
-  return true
+  return self
 end
 
 function GitBuffer:is_inside_git_dir()
   loop.await()
-  local is_inside_git_dir = self.buffer.git_object:is_inside_git_dir()
+  local is_inside_git_dir = self.git_object:is_inside_git_dir()
   loop.await()
 
   if not is_inside_git_dir then
@@ -33,7 +67,7 @@ end
 
 function GitBuffer:is_ignored()
   loop.await()
-  local is_ignored = self.buffer.git_object:is_ignored()
+  local is_ignored = self.git_object:is_ignored()
   loop.await()
 
   if is_ignored then
@@ -45,7 +79,7 @@ end
 
 function GitBuffer:is_tracked()
   loop.await()
-  local tracked_filename = self.buffer.git_object:tracked_filename()
+  local tracked_filename = self.git_object:tracked_filename()
   loop.await()
 
   if tracked_filename == '' then
