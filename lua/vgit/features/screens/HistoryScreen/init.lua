@@ -88,8 +88,8 @@ function HistoryScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function()
-        loop.await()
+      handler = loop.coroutine(function()
+        loop.free_textlock()
         local row = self.table_view:get_current_row()
 
         if not row then
@@ -98,14 +98,14 @@ function HistoryScreen:show()
 
         vim.cmd('quit')
 
-        loop.await()
+        loop.free_textlock()
         vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', buffer.filename, row.commit_hash))
       end),
     },
     {
       mode = 'n',
       key = 'j',
-      handler = loop.async(function()
+      handler = loop.coroutine(function()
         self.store:set_index(self.table_view:move('down'))
         self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
       end),
@@ -113,7 +113,7 @@ function HistoryScreen:show()
     {
       mode = 'n',
       key = 'k',
-      handler = loop.async(function()
+      handler = loop.coroutine(function()
         self.store:set_index(self.table_view:move('up'))
         self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
       end),

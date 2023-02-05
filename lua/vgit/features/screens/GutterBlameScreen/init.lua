@@ -26,9 +26,9 @@ function GutterBlameScreen:constructor(opts)
 end
 
 function GutterBlameScreen:open_commit()
-  loop.await()
+  loop.free_textlock()
   local lnum = Window(0):get_lnum()
-  loop.await()
+  loop.free_textlock()
   local err_blames, blames = self.store:get_blames()
 
   if err_blames then
@@ -43,7 +43,7 @@ function GutterBlameScreen:open_commit()
 
   vim.cmd('quit')
 
-  loop.await()
+  loop.free_textlock()
   vim.cmd(string.format('VGit project_commits_preview %s', blame.commit_hash))
 
   return self
@@ -52,7 +52,7 @@ end
 function GutterBlameScreen:show()
   local buffer = Buffer(0)
 
-  loop.await()
+  loop.free_textlock()
   local err = self.store:fetch(buffer.filename, buffer:get_lines())
 
   if err then
@@ -68,7 +68,7 @@ function GutterBlameScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function() self:open_commit() end),
+      handler = loop.coroutine(function() self:open_commit() end),
     },
   })
   self.diff_view:show()
@@ -76,7 +76,7 @@ function GutterBlameScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function() self:open_commit() end),
+      handler = loop.coroutine(function() self:open_commit() end),
     },
   })
 

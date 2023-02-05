@@ -24,7 +24,7 @@ function AuthorshipCodeLens:display(lnum, buffer, text)
     return self
   end
 
-  loop.await()
+  loop.free_textlock()
   self.namespace:insert_virtual_lines(buffer, {
     { {
       text,
@@ -93,7 +93,7 @@ function AuthorshipCodeLens:generate_blame_statistics(blames)
   local num_authors = 0
 
   for i = 1, #blames do
-    loop.await()
+    loop.free_textlock()
 
     local blame = blames[i]
 
@@ -178,10 +178,10 @@ function AuthorshipCodeLens:render(git_buffer, bot)
 
   git_buffer.state.is_processing = true
 
-  loop.await()
+  loop.free_textlock()
   local blames_err, blames = git_buffer.git_object:blames()
 
-  loop.await()
+  loop.free_textlock()
   if blames_err then
     git_buffer.state.is_processing = false
 
@@ -189,7 +189,7 @@ function AuthorshipCodeLens:render(git_buffer, bot)
     return self
   end
 
-  loop.await()
+  loop.free_textlock()
   local config_err, config = git_buffer.git_object:config()
 
   if config_err then

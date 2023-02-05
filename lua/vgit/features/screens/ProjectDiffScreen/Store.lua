@@ -94,7 +94,7 @@ function Store:get_file_lines(file, status)
   else
     err, lines = fs.read_file(filename)
   end
-  loop.await()
+  loop.free_textlock()
 
   return err, lines
 end
@@ -121,7 +121,7 @@ function Store:get_file_hunks(file, status, lines)
     hunks = {}
   end
 
-  loop.await()
+  loop.free_textlock()
 
   return hunks_err, hunks
 end
@@ -148,7 +148,7 @@ function Store:fetch(shape, opts)
   end
 
   local status_files_err, status_files = self.git:status()
-  loop.await()
+  loop.free_textlock()
 
   if status_files_err then
     return status_files_err, nil

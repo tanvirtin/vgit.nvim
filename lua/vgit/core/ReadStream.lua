@@ -16,7 +16,7 @@ function ReadStream:parse_result(output, callback)
 
   for i = 1, #output do
     if self:is_background() and i % 100 == 0 then
-      loop.await()
+      loop.free_textlock()
     end
 
     local char = output:sub(i, i)
@@ -60,7 +60,7 @@ function ReadStream:start()
     end
   end
 
-  local on_exit = loop.async(function(code, signal)
+  local on_exit = loop.coroutine(function(code, signal)
     stdout:read_stop()
     stderr:read_stop()
 

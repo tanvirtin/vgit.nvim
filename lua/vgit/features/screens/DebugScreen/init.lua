@@ -28,7 +28,7 @@ function DebugScreen:show(source)
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   local err = self.store:fetch(source)
 
   if err then

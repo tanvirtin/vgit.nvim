@@ -1,52 +1,54 @@
 local loop = {}
 
-loop.main_coroutine = coroutine.running()
+-- Given a function with a callback and the total number of arguments,
+-- creates a closure which passes this data by yielding it in the coroutine
+-- where this closure will be invoked.
+-- @param fn the function with the callback.
+-- @param argc the number of arguments of the function with the callback.
+-- @returns a closure which yields the function, the args and additional
+--          arguments which are passed as results from previous similar
+--          coroutine yields.
+function loop.suspend(fn, argc)
+  return function(...) return coroutine.yield(fn, argc, ...) end
+end
 
-function loop.async(func)
+-- Given a function that contains computation to be ran as a coroutine,
+-- recursively yields all closures created using loop.suspend within it.
+-- The function with the callback is retrieved from the yield invoked by
+-- resuming the coroutine. This function is then called with the callback
+-- being resume_context to yield any remaining functions with callbacks.
+-- @param fn the function that will be ran as a coroutine.
+function loop.coroutine(fn)
   return function(...)
-    if coroutine.running() ~= loop.main_coroutine then
-      return func(...)
-    end
+    local thread = coroutine.create(fn)
 
-    local co = coroutine.create(func)
+    local function resume_coroutine(...)
+      local result = { coroutine.resume(thread, ...) }
+      local ok, fn_with_callback, argc = unpack(result)
 
-    local function step(...)
-      local ret = { coroutine.resume(co, ...) }
-      local stat, fn, nargs = unpack(ret)
-
-      if not stat then
-        error(string.format('coroutine failed :: %s\n%s', fn, debug.traceback(co)))
+      if not ok then
+        return error(string.format('coroutine failed :: %s\n%s', fn, debug.traceback(thread)))
       end
 
-      if coroutine.status(co) == 'dead' then
+      if coroutine.status(thread) == 'dead' then
         return
       end
 
-      local args = { select(4, unpack(ret)) }
-      args[nargs] = step
+      local args = { select(4, unpack(result)) }
+      args[argc] = resume_coroutine
 
-      fn(unpack(args, 1, nargs))
+      fn_with_callback(unpack(args, 1, argc))
     end
 
-    step(...)
+    resume_coroutine(...)
   end
 end
 
-function loop.promisify(func, argc)
-  return function(...)
-    if coroutine.running() == loop.main_coroutine then
-      return func(...)
-    end
+loop.suspend_textlock = loop.suspend(vim.schedule, 1)
 
-    return coroutine.yield(func, argc, ...)
-  end
-end
-
-loop.scheduler = loop.promisify(vim.schedule, 1)
-
-function loop.await(times)
+function loop.free_textlock(times)
   for _ = 1, times or 1 do
-    loop.scheduler()
+    loop.suspend_textlock()
   end
 
   return loop
@@ -63,6 +65,6 @@ function loop.debounce(fn, ms)
   end
 end
 
-function loop.debounced_async(fn, ms) return loop.debounce(loop.async(fn), ms) end
+function loop.debounce_coroutine(fn, ms) return loop.debounce(loop.coroutine(fn), ms) end
 
 return loop

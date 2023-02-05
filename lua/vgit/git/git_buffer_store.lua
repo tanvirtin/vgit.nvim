@@ -22,7 +22,7 @@ local is_registerd = false
 
 local git_buffer_store = {}
 
-git_buffer_store.register_events = loop.async(function()
+git_buffer_store.register_events = loop.coroutine(function()
   if is_registerd then
     return
   end
@@ -32,18 +32,18 @@ git_buffer_store.register_events = loop.async(function()
   event.on(event_type.BufRead, function() git_buffer_store.collect() end)
 
   for _, handler in pairs(event_handlers.register) do
-    loop.await()
+    loop.free_textlock()
     handler()
   end
 
   local git = Git()
 
-  loop.await()
+  loop.free_textlock()
   if not git:is_inside_git_dir() then
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   local err, git_dir = git:get_git_dir()
 
   if err then
@@ -54,12 +54,12 @@ git_buffer_store.register_events = loop.async(function()
     local git_buffers = utils.object.values(buffers)
 
     for i = 1, #git_buffers do
-      loop.await()
+      loop.free_textlock()
       git_buffers[i]:sync()
     end
 
     for _, handler in pairs(event_handlers.git_watch) do
-      loop.await()
+      loop.free_textlock()
       handler(git_buffers)
     end
   end)
@@ -127,44 +127,44 @@ end
 git_buffer_store.is_empty = function() return git_buffer_store.size() == 0 end
 
 git_buffer_store.collect = function()
-  loop.await()
+  loop.free_textlock()
   local git_buffer = GitBuffer(0)
 
-  loop.await()
+  loop.free_textlock()
   if git_buffer_store.contains(git_buffer) then
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   git_buffer:sync()
 
-  loop.await()
+  loop.free_textlock()
   if not git_buffer:is_inside_git_dir() then
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   if not git_buffer:is_valid() then
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   if not git_buffer:is_in_disk() then
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   if git_buffer:is_ignored() then
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   git_buffer_store.add(git_buffer)
-  loop.await()
+  loop.free_textlock()
 
   git_buffer
     :attach_to_changes({
-      on_lines = loop.async(function(_, _, _, _, p_lnum, n_lnum, byte_count)
+      on_lines = loop.coroutine(function(_, _, _, _, p_lnum, n_lnum, byte_count)
         if p_lnum == n_lnum and byte_count == 0 then
           return
         end
@@ -174,15 +174,15 @@ git_buffer_store.collect = function()
         end
       end),
 
-      on_reload = loop.async(function()
+      on_reload = loop.coroutine(function()
         for _, handler in pairs(event_handlers.reload) do
           handler(git_buffer)
         end
       end),
 
-      on_detach = loop.async(function()
+      on_detach = loop.coroutine(function()
         for _, handler in pairs(event_handlers.detach) do
-          loop.await()
+          loop.free_textlock()
           handler(git_buffer)
         end
 
@@ -190,13 +190,13 @@ git_buffer_store.collect = function()
         git_buffer_store.remove(git_buffer)
       end),
     })
-    :attach_to_renderer(loop.async(function(top, bot)
+    :attach_to_renderer(loop.coroutine(function(top, bot)
       for _, handler in pairs(event_handlers.render) do
         handler(git_buffer, top, bot)
       end
     end))
 
-  git_buffer:watch(loop.async(function()
+  git_buffer:watch(loop.coroutine(function()
     for _, handler in pairs(event_handlers.watch) do
       handler(git_buffer)
     end

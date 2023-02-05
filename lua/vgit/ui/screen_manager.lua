@@ -131,7 +131,7 @@ function screen_manager.show(screen_name, ...)
     screen_manager.active_screen = screen
     screen.scene
       :on(event_type.BufWinLeave, function()
-        loop.await()
+        loop.free_textlock()
         if screen_manager.has_active_screen() then
           return screen_manager.destroy_active_screen()
         end

@@ -5,7 +5,7 @@ local event = {
 }
 
 function event.on(event_name, callback)
-  vim.api.nvim_create_autocmd(event_name, { callback = loop.async(callback) })
+  vim.api.nvim_create_autocmd(event_name, { callback = loop.coroutine(callback) })
 
   return event
 end
@@ -13,7 +13,7 @@ end
 function event.buffer_on(buffer, event_name, callback)
   vim.api.nvim_create_autocmd(event_name, {
     buffer = buffer.bufnr,
-    callback = loop.async(callback),
+    callback = loop.coroutine(callback),
   })
 
   return event
@@ -23,7 +23,7 @@ function event.custom_on(event_name, callback)
   vim.api.nvim_create_autocmd('User', {
     group = event.group,
     pattern = event_name,
-    callback = loop.async(callback),
+    callback = loop.coroutine(callback),
   })
 
   return event

@@ -60,7 +60,7 @@ function Store:fetch(shape, commits, opts)
     local commit = commits[i]
     -- Get the log associated with the commit
     local log_err, log = self.git:log(commit)
-    loop.await()
+    loop.free_textlock()
 
     if log_err then
       return log_err
@@ -69,7 +69,7 @@ function Store:fetch(shape, commits, opts)
     -- We will use the parent_hash and the commit_hash inside
     -- the log object to list all the files associated with the log.
     local err, files = self.git:ls_log(log)
-    loop.await()
+    loop.free_textlock()
 
     if err then
       return err
@@ -144,14 +144,14 @@ function Store:get_diff_dto()
   local lines_err, lines
   local is_deleted = false
 
-  loop.await()
+  loop.free_textlock()
   if not self.git:is_in_remote(filename, commit_hash) then
     is_deleted = true
     lines_err, lines = self.git:show(filename, parent_hash)
   else
     lines_err, lines = self.git:show(filename, commit_hash)
   end
-  loop.await()
+  loop.free_textlock()
 
   if lines_err then
     return lines_err
@@ -163,7 +163,7 @@ function Store:get_diff_dto()
   else
     hunks_err, hunks = self.git:remote_hunks(filename, parent_hash, commit_hash)
   end
-  loop.await()
+  loop.free_textlock()
 
   if hunks_err then
     return hunks_err

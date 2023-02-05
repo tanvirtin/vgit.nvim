@@ -810,9 +810,9 @@ end
 function DiffView:render()
   local ok, msg = pcall(function()
     -- NOTE: important to clear the namespace first.
-    loop.await(5)
+    loop.free_textlock(5)
     self:clear_namespace()
-    loop.await(5)
+    loop.free_textlock(5)
 
     local err, _ = self.store:get_diff_dto()
 
@@ -836,8 +836,8 @@ function DiffView:render()
   return self
 end
 
-DiffView.render_debounced = loop.debounced_async(function(self, callback)
-  loop.await()
+DiffView.render_debounced = loop.debounce_coroutine(function(self, callback)
+  loop.free_textlock()
 
   self:render()
 

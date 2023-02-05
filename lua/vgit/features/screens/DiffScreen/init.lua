@@ -113,16 +113,16 @@ function DiffScreen:show(opts)
   local layout_type = self.layout_type
   local title = self.is_staged and 'Staged Diff' or 'Diff'
 
-  loop.await()
+  loop.free_textlock()
   local err = self.store:fetch(layout_type, buffer.filename, opts)
 
   if err then
-    loop.await()
+    loop.free_textlock()
     console.debug.error(err).error(err)
     return false
   end
 
-  loop.await()
+  loop.free_textlock()
 
   if self.app_bar_view then
     self.app_bar_view:define()
@@ -136,116 +136,116 @@ function DiffScreen:show(opts)
     {
       mode = 'n',
       key = diff_preview_setting:get('keymaps').reset,
-      handler = loop.debounced_async(function()
-        loop.await()
+      handler = loop.debounce_coroutine(function()
+        loop.free_textlock()
         local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) '):lower()
 
         if decision ~= 'yes' and decision ~= 'y' then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         local _, filename = self.store:get_filename()
-        loop.await()
+        loop.free_textlock()
 
         if not filename then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         self.mutation:reset_file(filename)
-        loop.await()
+        loop.free_textlock()
 
-        loop.await()
+        loop.free_textlock()
         local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
-        loop.await()
+        loop.free_textlock()
 
         if refetch_err then
           console.debug.error(refetch_err).error(refetch_err)
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         self.diff_view:render()
       end, 100),
     },
     {
       mode = 'n',
       key = diff_preview_setting:get('keymaps').buffer_stage,
-      handler = loop.debounced_async(function()
-        loop.await()
+      handler = loop.debounce_coroutine(function()
+        loop.free_textlock()
         local _, filename = self.store:get_filename()
-        loop.await()
+        loop.free_textlock()
 
         if not filename then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         self.mutation:stage_file(filename)
-        loop.await()
+        loop.free_textlock()
 
-        loop.await()
+        loop.free_textlock()
         local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
-        loop.await()
+        loop.free_textlock()
 
         if refetch_err then
           console.debug.error(refetch_err).error(refetch_err)
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         self.diff_view:render()
       end, 100),
     },
     {
       mode = 'n',
       key = diff_preview_setting:get('keymaps').buffer_unstage,
-      handler = loop.debounced_async(function()
-        loop.await()
+      handler = loop.debounce_coroutine(function()
+        loop.free_textlock()
         local _, filename = self.store:get_filename()
-        loop.await()
+        loop.free_textlock()
 
         if not filename then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         self.mutation:unstage_file(filename)
-        loop.await()
+        loop.free_textlock()
 
-        loop.await()
+        loop.free_textlock()
         local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
-        loop.await()
+        loop.free_textlock()
 
         if refetch_err then
           console.debug.error(refetch_err).error(refetch_err)
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         self.diff_view:render()
       end, 100),
     },
     {
       mode = 'n',
       key = diff_preview_setting:get('keymaps').buffer_hunk_stage,
-      handler = loop.debounced_async(function()
+      handler = loop.debounce_coroutine(function()
         if self.is_staged then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         local _, filename = self.store:get_filename()
-        loop.await()
+        loop.free_textlock()
 
         if not filename then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         local hunk, index = self.diff_view:get_current_hunk_under_cursor()
-        loop.await()
+        loop.free_textlock()
 
         if not hunk then
           return
@@ -253,7 +253,7 @@ function DiffScreen:show(opts)
 
         self.mutation:stage_hunk(filename, hunk)
 
-        loop.await()
+        loop.free_textlock()
         local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
 
         if refetch_err then
@@ -267,77 +267,77 @@ function DiffScreen:show(opts)
     {
       mode = 'n',
       key = diff_preview_setting:get('keymaps').buffer_hunk_unstage,
-      handler = loop.debounced_async(function()
+      handler = loop.debounce_coroutine(function()
         if not self.is_staged then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         local _, filename = self.store:get_filename()
-        loop.await()
+        loop.free_textlock()
 
         if not filename then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         local hunk, index = self.diff_view:get_current_hunk_under_cursor()
-        loop.await()
+        loop.free_textlock()
 
         if not hunk then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         self.mutation:unstage_hunk(filename, hunk)
-        loop.await()
+        loop.free_textlock()
 
-        loop.await()
+        loop.free_textlock()
         local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
-        loop.await()
+        loop.free_textlock()
 
         if refetch_err then
           console.debug.error(refetch_err).error(refetch_err)
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         self.diff_view:render():navigate_to_mark(index, 'center')
       end, 100),
     },
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.debounced_async(function()
-        loop.await()
+      handler = loop.debounce_coroutine(function()
+        loop.free_textlock()
         local mark = self.diff_view:get_current_mark_under_cursor()
-        loop.await()
+        loop.free_textlock()
 
         if not mark then
           return
         end
 
-        loop.await()
+        loop.free_textlock()
         local _, filename = self.store:get_filename()
-        loop.await()
+        loop.free_textlock()
 
         if not filename then
           return
         end
 
         self:destroy()
-        loop.await()
+        loop.free_textlock()
 
         fs.open(filename)
 
-        loop.await()
+        loop.free_textlock()
         Window(0):set_lnum(mark.top_relative):position_cursor('center')
       end, 100),
     },
     {
       mode = 'n',
       key = diff_preview_setting:get('keymaps').toggle_view,
-      handler = loop.debounced_async(function()
+      handler = loop.debounce_coroutine(function()
         local is_staged = self.is_staged
 
         if is_staged then
@@ -346,16 +346,16 @@ function DiffScreen:show(opts)
           self.is_staged = false
           opts.is_staged = self.is_staged
 
-          loop.await()
+          loop.free_textlock()
           local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
-          loop.await()
+          loop.free_textlock()
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
             return
           end
 
-          loop.await()
+          loop.free_textlock()
           self.diff_view:render():navigate_to_mark(1, 'center')
         elseif not is_staged then
           self.diff_view:set_title('Staged Diff')
@@ -363,16 +363,16 @@ function DiffScreen:show(opts)
           self.is_staged = true
           opts.is_staged = self.is_staged
 
-          loop.await()
+          loop.free_textlock()
           local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
-          loop.await()
+          loop.free_textlock()
 
           if refetch_err then
             console.debug.error(refetch_err).error(refetch_err)
             return
           end
 
-          loop.await()
+          loop.free_textlock()
           self.diff_view:render():navigate_to_mark(1, 'center')
         end
       end, 100),

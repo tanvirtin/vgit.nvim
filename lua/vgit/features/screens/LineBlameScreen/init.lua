@@ -53,7 +53,7 @@ end
 function LineBlameScreen:handle_on_enter(buffer, blame)
   vim.cmd('quit')
 
-  loop.await()
+  loop.free_textlock()
   vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', buffer.filename, blame.commit_hash))
 end
 
@@ -61,7 +61,7 @@ function LineBlameScreen:show()
   local buffer = Buffer(0)
   local window = Window(0)
 
-  loop.await()
+  loop.free_textlock()
   local lnum = window:get_lnum()
   local filename = buffer.filename
   local layout_type = self.layout_type
@@ -91,14 +91,14 @@ function LineBlameScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function() self:handle_on_enter(buffer, blame) end),
+      handler = loop.coroutine(function() self:handle_on_enter(buffer, blame) end),
     },
   })
   self.line_blame_view:set_keymap({
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function() self:handle_on_enter(buffer, blame) end),
+      handler = loop.coroutine(function() self:handle_on_enter(buffer, blame) end),
     },
   })
 
