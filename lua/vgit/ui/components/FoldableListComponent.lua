@@ -224,9 +224,9 @@ end
 function FoldableListComponent:sync()
   self.buffer:clear_namespace():set_lines(self:generate_lines())
 
-  loop.await()
+  loop.free_textlock()
   self:paint()
-  loop.await()
+  loop.free_textlock()
 
   return self
 end

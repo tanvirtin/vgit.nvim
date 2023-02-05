@@ -43,13 +43,13 @@ local settings = {
 }
 
 local controls = {
-  hunk_up = loop.async(function()
+  hunk_up = loop.coroutine(function()
     hunks:move_up()
 
     return screen_manager.dispatch_action('hunk_up')
   end),
 
-  hunk_down = loop.async(function()
+  hunk_down = loop.coroutine(function()
     hunks:move_down()
 
     return screen_manager.dispatch_action('hunk_down')
@@ -57,33 +57,33 @@ local controls = {
 }
 
 local buffer = {
-  reset = loop.async(function() hunks:reset_all() end),
-  stage = loop.async(function() hunks:stage_all() end),
-  unstage = loop.async(function() hunks:unstage_all() end),
-  hunk_stage = loop.async(function() hunks:cursor_stage() end),
-  hunk_reset = loop.async(function() hunks:cursor_reset() end),
-  diff_preview = loop.async(function() screen_manager.show('diff_screen') end),
-  hunk_preview = loop.async(function() screen_manager.show('diff_hunk_screen') end),
-  history_preview = loop.async(function() screen_manager.show('history_screen') end),
-  blame_preview = loop.async(function() screen_manager.show('line_blame_screen') end),
-  gutter_blame_preview = loop.async(function() screen_manager.show('gutter_blame_screen') end),
-  diff_staged_preview = loop.async(function() screen_manager.show('diff_screen', { is_staged = true }) end),
-  hunk_staged_preview = loop.async(function() screen_manager.show('diff_hunk_screen', { is_staged = true }) end),
+  reset = loop.coroutine(function() hunks:reset_all() end),
+  stage = loop.coroutine(function() hunks:stage_all() end),
+  unstage = loop.coroutine(function() hunks:unstage_all() end),
+  hunk_stage = loop.coroutine(function() hunks:cursor_stage() end),
+  hunk_reset = loop.coroutine(function() hunks:cursor_reset() end),
+  diff_preview = loop.coroutine(function() screen_manager.show('diff_screen') end),
+  hunk_preview = loop.coroutine(function() screen_manager.show('diff_hunk_screen') end),
+  history_preview = loop.coroutine(function() screen_manager.show('history_screen') end),
+  blame_preview = loop.coroutine(function() screen_manager.show('line_blame_screen') end),
+  gutter_blame_preview = loop.coroutine(function() screen_manager.show('gutter_blame_screen') end),
+  diff_staged_preview = loop.coroutine(function() screen_manager.show('diff_screen', { is_staged = true }) end),
+  hunk_staged_preview = loop.coroutine(function() screen_manager.show('diff_hunk_screen', { is_staged = true }) end),
 }
 
 local project = {
-  stage_all = loop.async(function() Git():stage() end),
-  unstage_all = loop.async(function() Git():unstage() end),
-  hunks_qf = loop.async(function() project_hunks_quickfix:show() end),
-  debug_preview = loop.async(function(...) screen_manager.show('debug_screen', ...) end),
-  commit_preview = loop.async(function(...) screen_manager.show('commit_screen', ...) end),
-  hunks_preview = loop.async(function() screen_manager.show('project_hunks_screen') end),
-  diff_preview = loop.async(function() screen_manager.show('project_diff_screen') end),
-  logs_preview = loop.async(function(...) screen_manager.show('project_logs_screen', ...) end),
-  stash_preview = loop.async(function(...) screen_manager.show('project_stash_screen', ...) end),
-  commits_preview = loop.async(function(...) screen_manager.show('project_commits_screen', ...) end),
-  hunks_staged_preview = loop.async(function() screen_manager.show('project_hunks_screen', { is_staged = true }) end),
-  reset_all = loop.async(function()
+  stage_all = loop.coroutine(function() Git():stage() end),
+  unstage_all = loop.coroutine(function() Git():unstage() end),
+  hunks_qf = loop.coroutine(function() project_hunks_quickfix:show() end),
+  debug_preview = loop.coroutine(function(...) screen_manager.show('debug_screen', ...) end),
+  commit_preview = loop.coroutine(function(...) screen_manager.show('commit_screen', ...) end),
+  hunks_preview = loop.coroutine(function() screen_manager.show('project_hunks_screen') end),
+  diff_preview = loop.coroutine(function() screen_manager.show('project_diff_screen') end),
+  logs_preview = loop.coroutine(function(...) screen_manager.show('project_logs_screen', ...) end),
+  stash_preview = loop.coroutine(function(...) screen_manager.show('project_stash_screen', ...) end),
+  commits_preview = loop.coroutine(function(...) screen_manager.show('project_commits_screen', ...) end),
+  hunks_staged_preview = loop.coroutine(function() screen_manager.show('project_hunks_screen', { is_staged = true }) end),
+  reset_all = loop.coroutine(function()
     local decision = console.input('Are you sure you want to discard all tracked changes? (y/N) '):lower()
 
     if decision ~= 'yes' and decision ~= 'y' then
@@ -94,7 +94,7 @@ local project = {
   end),
 }
 
-local checkout = loop.async(function(...)
+local checkout = loop.coroutine(function(...)
   local err = Git():checkout({ ... })
 
   if err then
@@ -102,30 +102,30 @@ local checkout = loop.async(function(...)
   end
 end)
 
-local toggle_diff_preference = loop.async(function() screen_manager.toggle_diff_preference() end)
+local toggle_diff_preference = loop.coroutine(function() screen_manager.toggle_diff_preference() end)
 
-local toggle_live_blame = loop.async(function()
+local toggle_live_blame = loop.coroutine(function()
   local blames_enabled = live_blame_setting:get('enabled')
 
   live_blame_setting:set('enabled', not blames_enabled)
   live_blame:reset()
 end)
 
-local toggle_live_gutter = loop.async(function()
+local toggle_live_gutter = loop.coroutine(function()
   local live_gutter_enabled = live_gutter_setting:get('enabled')
 
   live_gutter_setting:set('enabled', not live_gutter_enabled)
   live_gutter:reset()
 end)
 
-local toggle_authorship_code_lens = loop.async(function()
+local toggle_authorship_code_lens = loop.coroutine(function()
   local authorship_code_lens_enabled = authorship_code_lens_setting:get('enabled')
 
   authorship_code_lens_setting:set('enabled', not authorship_code_lens_enabled)
   authorship_code_lens:reset()
 end)
 
-local toggle_tracing = loop.async(function() env.set('DEBUG', not env.get('DEBUG')) end)
+local toggle_tracing = loop.coroutine(function() env.set('DEBUG', not env.get('DEBUG')) end)
 
 local function command_list(...) return command:list(...) end
 

@@ -32,7 +32,7 @@ function Notification:notify(source, text)
   source:trigger_notification(text)
   self.timer_id = vim.fn.timer_start(
     epoch,
-    loop.async(function()
+    loop.coroutine(function()
       source:clear_notification()
       self:clear_timer()
     end)

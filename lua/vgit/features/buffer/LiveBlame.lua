@@ -25,7 +25,7 @@ function LiveBlame:display(lnum, buffer, config, blame)
     local virt_text = live_blame_setting:get('format')(blame, config)
 
     if type(virt_text) == 'string' then
-      loop.await()
+      loop.free_textlock()
       self.namespace:transpose_virtual_text(buffer, virt_text, 'GitComment', lnum - 1, 0, 'eol')
     end
   end
@@ -52,7 +52,7 @@ function LiveBlame:render(git_buffer)
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   local config_err, config = self.git:config()
 
   if config_err then
@@ -60,19 +60,19 @@ function LiveBlame:render(git_buffer)
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   local window = Window(0)
-  loop.await()
+  loop.free_textlock()
   local lnum = window:get_lnum()
 
   if self.last_lnum == lnum then
     return
   end
 
-  loop.await()
+  loop.free_textlock()
   local blame_err, blame = git_buffer.git_object:blame_line(lnum)
 
-  loop.await()
+  loop.free_textlock()
   local new_lnum = window:get_lnum()
 
   if lnum ~= new_lnum then
@@ -84,7 +84,7 @@ function LiveBlame:render(git_buffer)
     return
   end
 
-  loop.await()
+  loop.free_textlock()
 
   self:clear(git_buffer)
   self:display(lnum, git_buffer, config, blame)

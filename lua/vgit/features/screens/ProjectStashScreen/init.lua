@@ -21,7 +21,7 @@ function ProjectStashScreen:constructor()
 end
 
 function ProjectStashScreen:show(opts)
-  loop.await()
+  loop.free_textlock()
   local err = self.store:fetch(opts)
 
   if err then
@@ -35,8 +35,8 @@ function ProjectStashScreen:show(opts)
     {
       mode = 'n',
       key = '<tab>',
-      handler = loop.async(function()
-        loop.await()
+      handler = loop.coroutine(function()
+        loop.free_textlock()
 
         self.view:select()
       end),
@@ -44,7 +44,7 @@ function ProjectStashScreen:show(opts)
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function()
+      handler = loop.coroutine(function()
         local view = self.view
 
         if not view:has_selection() then
@@ -53,7 +53,7 @@ function ProjectStashScreen:show(opts)
 
         vim.cmd('quit')
 
-        loop.await()
+        loop.free_textlock()
         vim.cmd(
           utils.list.reduce(
             view:get_selected(),

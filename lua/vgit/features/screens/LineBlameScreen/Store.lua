@@ -41,9 +41,9 @@ function Store:fetch(shape, filename, lnum, opts)
   self.shape = shape
   self.git_object = GitObject(filename)
 
-  loop.await()
+  loop.free_textlock()
   self.err, self._cache.blame = self.git_object:blame_line(lnum)
-  loop.await()
+  loop.free_textlock()
 
   if self.err then
     return self.err
@@ -71,7 +71,7 @@ function Store:fetch(shape, filename, lnum, opts)
   -- this is why we should use blame.filename filename passed as args.
   filename = blame.filename
 
-  loop.await()
+  loop.free_textlock()
   if not self.git:is_in_remote(filename, commit_hash) then
     is_deleted = true
     lines_err, lines = self.git:show(filename, parent_hash)
@@ -89,7 +89,7 @@ function Store:fetch(shape, filename, lnum, opts)
   else
     hunks_err, hunks = self.git:remote_hunks(filename, parent_hash, commit_hash)
   end
-  loop.await()
+  loop.free_textlock()
 
   if hunks_err then
     return hunks_err

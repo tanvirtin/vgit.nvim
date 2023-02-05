@@ -68,7 +68,7 @@ end
 
 function Store:get_diff_dto(index)
   local log_err, log = self:get(index)
-  loop.await()
+  loop.free_textlock()
 
   if log_err then
     return log_err
@@ -83,14 +83,14 @@ function Store:get_diff_dto(index)
   end
 
   local hunks_err, hunks = self.git_object:remote_hunks(parent_hash, commit_hash)
-  loop.await()
+  loop.free_textlock()
 
   if hunks_err then
     return hunks_err
   end
 
   local lines_err, lines = self.git_object:lines(commit_hash)
-  loop.await()
+  loop.free_textlock()
 
   if lines_err then
     return lines_err
