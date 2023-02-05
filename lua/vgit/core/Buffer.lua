@@ -97,13 +97,13 @@ end
 function Buffer:watch(callback)
   self.watcher:watch_file(
     self.filename,
-    loop.async(function(err)
+    loop.coroutine(function(err)
       if err then
         console.debug.error(string.format('Error encountered while watching %s', self.filename))
         return
       end
 
-      loop.await()
+      loop.free_textlock()
       if self and self:is_valid() and callback then
         callback()
       end

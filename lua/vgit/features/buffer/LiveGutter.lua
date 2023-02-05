@@ -13,8 +13,8 @@ function LiveGutter:constructor()
   }
 end
 
-LiveGutter.clear = loop.async(function(self, buffer)
-  loop.await()
+LiveGutter.clear = loop.coroutine(function(self, buffer)
+  loop.free_textlock()
 
   if buffer:is_rendering() then
     return self
@@ -37,23 +37,23 @@ function LiveGutter:reset()
   end
 end
 
-LiveGutter.fetch = loop.debounced_async(function(self, buffer)
-  loop.await()
+LiveGutter.fetch = loop.debounce_coroutine(function(self, buffer)
+  loop.free_textlock()
   if not buffer:is_valid() then
     return self
   end
 
-  loop.await()
+  loop.free_textlock()
   local live_signs = buffer:get_cached_live_signs()
 
-  loop.await()
+  loop.free_textlock()
   buffer:clear_cached_live_signs()
 
-  loop.await()
+  loop.free_textlock()
   local err = buffer.git_object:live_hunks(buffer:get_lines())
 
   if err then
-    loop.await()
+    loop.free_textlock()
     buffer:set_cached_live_signs(live_signs)
     console.debug.error(err)
 
@@ -63,22 +63,22 @@ LiveGutter.fetch = loop.debounced_async(function(self, buffer)
   local hunks = buffer.git_object.hunks
 
   if not hunks then
-    loop.await()
+    loop.free_textlock()
     buffer:set_cached_live_signs(live_signs)
 
     return self
   else
     local diff_status = buffer.git_object:generate_diff_status()
 
-    loop.await()
+    loop.free_textlock()
     buffer:set_var('vgit_status', diff_status)
   end
 
-  loop.await()
+  loop.free_textlock()
   self:clear(buffer)
 
   for i = 1, #hunks do
-    loop.await()
+    loop.free_textlock()
     buffer:cache_live_sign(hunks[i])
   end
 
@@ -110,14 +110,14 @@ function LiveGutter:register_events()
   git_buffer_store
     .attach('attach', function(git_buffer) self:fetch(git_buffer) end)
     .attach('reload', function(git_buffer)
-      loop.await()
+      loop.free_textlock()
       self:fetch(git_buffer)
     end)
     .attach('change', function(git_buffer, p_lnum, n_lnum, byte_count)
       if p_lnum == n_lnum and byte_count == 0 then
         return
       end
-      loop.await()
+      loop.free_textlock()
       self:fetch(git_buffer)
     end)
     .attach('watch', function(git_buffer)

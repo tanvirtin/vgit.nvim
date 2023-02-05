@@ -87,7 +87,7 @@ end
 function ProjectHunksScreen:show(opts)
   opts = opts or {}
 
-  loop.await()
+  loop.free_textlock()
   local err = self.store:fetch(self.layout_type, opts)
 
   if err then
@@ -95,7 +95,7 @@ function ProjectHunksScreen:show(opts)
     return false
   end
 
-  loop.await()
+  loop.free_textlock()
 
   self.diff_view:define()
   self.foldable_list_view:define()
@@ -107,7 +107,7 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function()
+      handler = loop.coroutine(function()
         local mark = self.diff_view:get_current_mark_under_cursor()
 
         if not mark then
@@ -133,7 +133,7 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = 'j',
-      handler = loop.async(function()
+      handler = loop.coroutine(function()
         local list_item = self.foldable_list_view:move('down')
 
         if not list_item then
@@ -141,7 +141,7 @@ function ProjectHunksScreen:show(opts)
         end
 
         self.store:set_id(list_item.id)
-        self.diff_view:render_debounced(loop.async(function()
+        self.diff_view:render_debounced(loop.coroutine(function()
           local _, data = self.store:get_data()
 
           if data then
@@ -153,7 +153,7 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = 'k',
-      handler = loop.async(function()
+      handler = loop.coroutine(function()
         local list_item = self.foldable_list_view:move('up')
 
         if not list_item then
@@ -161,7 +161,7 @@ function ProjectHunksScreen:show(opts)
         end
 
         self.store:set_id(list_item.id)
-        self.diff_view:render_debounced(loop.async(function()
+        self.diff_view:render_debounced(loop.coroutine(function()
           local _, data = self.store:get_data()
 
           if data then
@@ -173,7 +173,7 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function()
+      handler = loop.coroutine(function()
         local _, filename = self.store:get_filename()
 
         if not filename then

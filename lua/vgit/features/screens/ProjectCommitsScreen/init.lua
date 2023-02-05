@@ -67,7 +67,7 @@ function ProjectCommitsScreen:handle_list_move_down()
   end
 
   self.store:set_id(list_item.id)
-  self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
+  self.diff_view:render_debounced(loop.coroutine(function() self.diff_view:navigate_to_mark(1) end))
 end
 
 function ProjectCommitsScreen:handle_list_move_up()
@@ -100,7 +100,7 @@ function ProjectCommitsScreen:handle_on_enter()
     end
 
     local lines_err, lines = self.store:get_remote_lines(filename, commit_hash)
-    loop.await()
+    loop.free_textlock()
 
     if lines_err then
       console.debug.error(lines_err).error(lines_err)
@@ -157,7 +157,7 @@ function ProjectCommitsScreen:show(args)
     end
   end
 
-  loop.await()
+  loop.free_textlock()
   local err = self.store:fetch(self.layout_type, commits)
 
   if err then
@@ -165,7 +165,7 @@ function ProjectCommitsScreen:show(args)
     return false
   end
 
-  loop.await()
+  loop.free_textlock()
   self.diff_view:define()
   self.foldable_list_view:set_title('Project commits')
   self.foldable_list_view:define()
@@ -176,17 +176,17 @@ function ProjectCommitsScreen:show(args)
     {
       mode = 'n',
       key = 'j',
-      handler = loop.async(function() self:handle_list_move_down() end),
+      handler = loop.coroutine(function() self:handle_list_move_down() end),
     },
     {
       mode = 'n',
       key = 'k',
-      handler = loop.async(function() self:handle_list_move_up() end),
+      handler = loop.coroutine(function() self:handle_list_move_up() end),
     },
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.async(function() self:handle_on_enter() end),
+      handler = loop.coroutine(function() self:handle_on_enter() end),
     },
   })
 
@@ -204,7 +204,7 @@ function ProjectCommitsScreen:show(args)
 
   if list_item then
     self.store:set_id(list_item.id)
-    self.diff_view:render_debounced(loop.async(function() self.diff_view:navigate_to_mark(1) end))
+    self.diff_view:render_debounced(loop.coroutine(function() self.diff_view:navigate_to_mark(1) end))
   end
 
   return true

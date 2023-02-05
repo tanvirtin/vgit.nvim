@@ -54,9 +54,9 @@ function GitBuffer:cache_live_sign(hunk)
 end
 
 function GitBuffer:is_inside_git_dir()
-  loop.await()
+  loop.free_textlock()
   local is_inside_git_dir = self.git_object:is_inside_git_dir()
-  loop.await()
+  loop.free_textlock()
 
   if not is_inside_git_dir then
     return false
@@ -66,9 +66,9 @@ function GitBuffer:is_inside_git_dir()
 end
 
 function GitBuffer:is_ignored()
-  loop.await()
+  loop.free_textlock()
   local is_ignored = self.git_object:is_ignored()
-  loop.await()
+  loop.free_textlock()
 
   if is_ignored then
     return true
@@ -78,9 +78,9 @@ function GitBuffer:is_ignored()
 end
 
 function GitBuffer:is_tracked()
-  loop.await()
+  loop.free_textlock()
   local tracked_filename = self.git_object:tracked_filename()
-  loop.await()
+  loop.free_textlock()
 
   if tracked_filename == '' then
     return false

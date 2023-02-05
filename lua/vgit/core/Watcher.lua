@@ -35,7 +35,7 @@ function Watcher:watch_dir(path, handler)
 
   self.watcher = vim.loop.new_fs_poll()
 
-  self.watcher:start(path, self.interval, loop.async(handler))
+  self.watcher:start(path, self.interval, loop.coroutine(handler))
 
   return self
 end

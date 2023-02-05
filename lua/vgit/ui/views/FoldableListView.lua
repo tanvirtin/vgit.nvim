@@ -144,12 +144,12 @@ function FoldableListView:render()
   local _, lnum = self.store:get_lnum()
   local list = self.scene:get('list')
 
-  loop.await()
+  loop.free_textlock()
   local parsed_list = self:get_list()
-  loop.await()
+  loop.free_textlock()
 
   list:unlock():set_title(self.title):set_list(parsed_list):sync():set_lnum(lnum):lock()
-  loop.await()
+  loop.free_textlock()
 
   return self
 end

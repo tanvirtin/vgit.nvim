@@ -13,7 +13,7 @@ function ProjectHunksQuickfix:fetch()
   local git = Git()
   local status_files_err, status_files = git:status()
 
-  loop.await()
+  loop.free_textlock()
   if status_files_err then
     return console.debug.error(status_files_err)
   end
@@ -39,7 +39,7 @@ function ProjectHunksQuickfix:fetch()
       hunks_err, hunks = git:index_hunks(filename)
     end
 
-    loop.await()
+    loop.free_textlock()
     if not hunks_err then
       for j = 1, #hunks do
         local hunk = hunks[j]

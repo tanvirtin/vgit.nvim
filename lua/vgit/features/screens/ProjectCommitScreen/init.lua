@@ -53,7 +53,7 @@ function ProjectCommitScreen:make_help_bar()
 end
 
 function ProjectCommitScreen:show()
-  loop.await()
+  loop.free_textlock()
   local err = self.store:fetch()
 
   if err then
@@ -61,7 +61,7 @@ function ProjectCommitScreen:show()
     return false
   end
 
-  loop.await()
+  loop.free_textlock()
   self.view:define()
   self.app_bar_view:define()
 
@@ -73,9 +73,9 @@ function ProjectCommitScreen:show()
     {
       mode = 'n',
       key = project_commit_preview_setting:get('keymaps').save,
-      handler = loop.async(function()
+      handler = loop.coroutine(function()
         local commit_err = self.mutation:commit(self.view:get_lines())
-        loop.await()
+        loop.free_textlock()
 
         if commit_err then
           return console.debug.error(commit_err).error(commit_err)

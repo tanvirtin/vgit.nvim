@@ -37,39 +37,39 @@ function console.format(msg)
   end)
 end
 
-console.log = loop.async(function(msg, hi, is_persisted)
+console.log = loop.coroutine(function(msg, hi, is_persisted)
   if is_persisted == nil then
     is_persisted = false
   end
 
-  loop.await()
+  loop.free_textlock()
 
   vim.api.nvim_echo({ { console.format(msg), hi } }, is_persisted, {})
 
   return console
 end)
 
-console.error = loop.async(function(msg)
+console.error = loop.coroutine(function(msg)
   vim.notify(console.format(msg), 'error')
 
   return console
 end)
 
-console.warn = loop.async(function(msg)
+console.warn = loop.coroutine(function(msg)
   console.log(msg, 'WarningMsg')
 
   return console
 end)
 
-console.clear = loop.async(function()
-  loop.await()
+console.clear = loop.coroutine(function()
+  loop.free_textlock()
   vim.cmd('echo ""')
 
   return console
 end)
 
-console.info = loop.async(function(msg)
-  loop.await()
+console.info = loop.coroutine(function(msg)
+  loop.free_textlock()
   vim.notify(console.format(msg), 'info')
 
   return console
