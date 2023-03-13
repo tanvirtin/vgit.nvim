@@ -54,7 +54,7 @@ function SimpleView:set_keymap(configs)
 end
 
 function SimpleView:set_title()
-  if not self.config.elements.header then
+  if self.config.elements and not self.config.elements.header then
     return self
   end
 
