@@ -634,9 +634,7 @@ Git.show = loop.suspend(function(self, tracked_filename, commit_hash, spec, call
       '-C',
       self.cwd,
       'show',
-      -- git will attach self.cwd to the command which means we are going to search
-      -- from the current relative path "./" basically just means "${self.cwd}/".
-      string.format('%s:./%s', commit_hash, tracked_filename),
+      string.format('%s:%s', commit_hash, tracked_filename),
     }),
     on_stdout = function(line) result[#result + 1] = line end,
     on_stderr = function(line) err[#err + 1] = line end,
@@ -660,9 +658,7 @@ Git.is_in_remote = loop.suspend(function(self, tracked_filename, commit_hash, sp
       '-C',
       self.cwd,
       'show',
-      -- git will attach self.cwd to the command which means we are going to search
-      -- from the current relative path "./" basically just means "${self.cwd}/".
-      string.format('%s:./%s', commit_hash, tracked_filename),
+      string.format('%s:%s', commit_hash, tracked_filename),
     }),
     on_stderr = function(line)
       if line then
