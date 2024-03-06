@@ -12,24 +12,10 @@ function ReadStream:parse_result(output, callback)
     return
   end
 
-  local line = ''
+  local lines = table.concat(output)
+      :gmatch("[^\n]+")
 
-  for i = 1, #output do
-    if self:is_background() and i % 100 == 0 then
-      loop.free_textlock()
-    end
-
-    local char = output:sub(i, i)
-
-    if char == '\n' then
-      callback(line)
-      line = ''
-    else
-      line = line .. char
-    end
-  end
-
-  if #line ~= 0 then
+  for line in lines do
     callback(line)
   end
 end
@@ -43,20 +29,20 @@ function ReadStream:wrap_callback(callback)
 end
 
 function ReadStream:start()
-  local stdout_result = ''
-  local stderr_result = ''
+  local stdout_result = {}
+  local stderr_result = {}
   local stdout = vim.loop.new_pipe(false)
   local stderr = vim.loop.new_pipe(false)
 
   local on_stdout = function(_, chunk)
     if chunk then
-      stdout_result = stdout_result .. chunk
+      stdout_result[#stdout_result + 1] = chunk
     end
   end
 
   local on_stderr = function(_, chunk)
     if chunk then
-      stderr_result = stderr_result .. chunk
+      stderr_result[#stderr_result + 1] = chunk
     end
   end
 
