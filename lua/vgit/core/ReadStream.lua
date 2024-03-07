@@ -12,11 +12,18 @@ function ReadStream:parse_result(output, callback)
     return
   end
 
-  local lines = table.concat(output)
-      :gmatch("[^\n]+")
+  local line = {}
+  output = table.concat(output)
 
-  for line in lines do
-    callback(line)
+  for i = 1, #output do
+    local char = output:sub(i, i)
+
+    if char == '\n' then
+      callback(table.concat(line))
+      line = {}
+    else
+      line[#line + 1] = char
+    end
   end
 end
 
