@@ -75,6 +75,7 @@ function HistoryScreen:show()
   end
 
   -- Show and bind data (data will have all the necessary shape required)
+  loop.free_textlock()
   self.diff_view:define()
   self.table_view:define()
 

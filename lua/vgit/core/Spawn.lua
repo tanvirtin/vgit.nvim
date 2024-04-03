@@ -1,13 +1,11 @@
 local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
 
-local ReadStream = Object:extend()
+local Spawn = Object:extend()
 
-function ReadStream:constructor(spec) return { spec = spec } end
+function Spawn:constructor(spec) return { spec = spec } end
 
-function ReadStream:is_background() return self.spec.is_background == true end
-
-function ReadStream:parse_result(output, callback)
+function Spawn:parse_result(output, callback)
   if not callback then
     return
   end
@@ -25,17 +23,13 @@ function ReadStream:parse_result(output, callback)
       line[#line + 1] = char
     end
   end
-end
 
-function ReadStream:wrap_callback(callback)
-  if self:is_background() then
-    return vim.schedule_wrap(callback)
+  if #line > 0 then
+    callback(table.concat(line))
   end
-
-  return callback
 end
 
-function ReadStream:start()
+function Spawn:start()
   local stdout_result = {}
   local stderr_result = {}
   local stdout = vim.loop.new_pipe(false)
@@ -60,7 +54,6 @@ function ReadStream:start()
     if not stdout:is_closing() then
       stdout:close()
     end
-
     if not stderr:is_closing() then
       stderr:close()
     end
@@ -77,12 +70,12 @@ function ReadStream:start()
     args = self.spec.args,
     stdio = { nil, stdout, stderr },
     cwd = self.spec.cwd,
-  }, self:wrap_callback(on_exit))
+  }, on_exit)
 
-  stdout:read_start(self:wrap_callback(on_stdout))
-  stderr:read_start(self:wrap_callback(on_stderr))
+  stdout:read_start(on_stdout)
+  stderr:read_start(on_stderr)
 
   return self
 end
 
-return ReadStream
+return Spawn
