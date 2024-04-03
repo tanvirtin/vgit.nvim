@@ -1,14 +1,14 @@
 local fs = require('vgit.core.fs')
-local Status = require('vgit.git.cli.models.Status')
-local utils = require('vgit.core.utils')
-local GitReadStream = require('vgit.git.GitReadStream')
 local loop = require('vgit.core.loop')
+local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local Hunk = require('vgit.git.cli.models.Hunk')
 local Log = require('vgit.git.cli.models.Log')
+local git_setting = require('vgit.settings.git')
+local Hunk = require('vgit.git.cli.models.Hunk')
 local File = require('vgit.git.cli.models.File')
 local Blame = require('vgit.git.cli.models.Blame')
-local git_setting = require('vgit.settings.git')
+local Spawn = require('vgit.core.Spawn')
+local Status = require('vgit.git.cli.models.Status')
 
 local Git = Object:extend()
 
@@ -36,7 +36,7 @@ Git.is_commit_valid = loop.suspend(function(self, commit, spec, callback)
   local result = {}
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -72,7 +72,7 @@ Git.config = loop.suspend(function(self, spec, callback)
   local err = {}
   local result = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -100,7 +100,7 @@ end, 3)
 Git.has_commits = loop.suspend(function(self, spec, callback)
   local result = true
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -120,7 +120,7 @@ Git.get_git_dir = loop.suspend(function(self, spec, callback)
   local err = {}
   local lines = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -143,7 +143,7 @@ end, 3)
 Git.is_inside_git_dir = loop.suspend(function(self, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -167,7 +167,7 @@ Git.blames = loop.suspend(function(self, filename, spec, callback)
   local result = {}
   local blame_info = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -206,7 +206,7 @@ Git.blame_line = loop.suspend(function(self, filename, lnum, spec, callback)
   local err = {}
   local result = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -235,7 +235,7 @@ Git.log = loop.suspend(function(self, commit_hash, spec, callback)
   local logs = {}
   local revision_count = 0
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -269,7 +269,7 @@ Git.logs = loop.suspend(function(self, options, spec, callback)
   local err = {}
   local logs = {}
   local revision_count = 0
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -302,7 +302,7 @@ Git.file_logs = loop.suspend(function(self, filename, spec, callback)
   local err = {}
   local logs = {}
   local revision_count = 0
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -351,7 +351,7 @@ Git.file_hunks = loop.suspend(function(self, filename_a, filename_b, spec, callb
     filename_b,
   })
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = args,
     on_stdout = function(line) result[#result + 1] = line end,
@@ -399,7 +399,7 @@ Git.index_hunks = loop.suspend(function(self, filename, spec, callback)
     filename,
   })
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = args,
     on_stdout = function(line) result[#result + 1] = line end,
@@ -461,7 +461,7 @@ Git.remote_hunks = loop.suspend(function(self, filename, parent_hash, commit_has
     })
   end
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = args,
     on_stdout = function(line) result[#result + 1] = line end,
@@ -505,7 +505,7 @@ Git.unmerged_hunks = loop.suspend(function(self, filename, stage_a, stage_b, spe
     string.format('%s:%s', stage_b, filename),
   })
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = args,
     on_stdout = function(line) result[#result + 1] = line end,
@@ -550,7 +550,7 @@ Git.staged_hunks = loop.suspend(function(self, filename, spec, callback)
     filename,
   })
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = args,
     on_stdout = function(line) result[#result + 1] = line end,
@@ -628,7 +628,7 @@ Git.show = loop.suspend(function(self, tracked_filename, commit_hash, spec, call
   local result = {}
   commit_hash = commit_hash or ''
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -652,7 +652,7 @@ Git.is_in_remote = loop.suspend(function(self, tracked_filename, commit_hash, sp
   commit_hash = commit_hash or 'HEAD'
   local err = false
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -672,7 +672,7 @@ end, 5)
 Git.stage = loop.suspend(function(self, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -694,7 +694,7 @@ end, 3)
 Git.unstage = loop.suspend(function(self, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -716,7 +716,7 @@ end, 3)
 Git.stage_file = loop.suspend(function(self, filename, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -746,7 +746,7 @@ end, 4)
 Git.unstage_file = loop.suspend(function(self, filename, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -777,7 +777,7 @@ end, 4)
 Git.stage_hunk_from_patch = loop.suspend(function(self, patch_filename, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -803,7 +803,7 @@ end, 4)
 Git.unstage_hunk_from_patch = loop.suspend(function(self, patch_filename, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -831,7 +831,7 @@ Git.is_ignored = loop.suspend(function(self, filename, spec, callback)
   filename = fs.make_relative(filename, self.cwd)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -856,7 +856,7 @@ end, 4)
 Git.reset = loop.suspend(function(self, filename, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -881,7 +881,7 @@ end, 4)
 Git.reset_all = loop.suspend(function(self, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -907,7 +907,7 @@ end, 3)
 Git.clean = loop.suspend(function(self, filename, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -932,7 +932,7 @@ end, 4)
 Git.clean_all = loop.suspend(function(self, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -956,7 +956,7 @@ Git.current_branch = loop.suspend(function(self, spec, callback)
   local err = {}
   local result = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -981,7 +981,7 @@ Git.tracked_filename = loop.suspend(function(self, filename, commit_hash, spec, 
   filename = fs.make_relative(filename, self.cwd)
   local result = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -1001,7 +1001,7 @@ Git.tracked_full_filename = loop.suspend(function(self, filename, spec, callback
   filename = fs.make_relative(filename, self.cwd)
   local result = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -1021,7 +1021,7 @@ Git.file_status = loop.suspend(function(self, tracked_filename, spec, callback)
   local err = {}
   local file = nil
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -1059,7 +1059,7 @@ Git.status = loop.suspend(function(self, spec, callback)
   local err = {}
   local result = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -1095,7 +1095,7 @@ Git.ls_log = loop.suspend(function(self, log, spec, callback)
   local err = {}
   local result = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -1124,7 +1124,7 @@ Git.ls_stash = loop.suspend(function(self, spec, callback)
   local err = {}
   local logs = {}
   local revision_count = 0
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -1157,7 +1157,7 @@ end, 3)
 Git.checkout = loop.suspend(function(self, options, spec, callback)
   local err = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -1176,7 +1176,7 @@ Git.commit = loop.suspend(function(self, msg, spec, callback)
   local is_uncommitted = false
   local has_no_changes = false
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
@@ -1216,7 +1216,7 @@ Git.get_commit = loop.suspend(function(self, spec, callback)
   local err = {}
   local lines = {}
 
-  GitReadStream(utils.object.defaults({
+  Spawn(utils.object.defaults({
     command = self.cmd,
     args = utils.list.merge(self.fallback_args, {
       '-C',
