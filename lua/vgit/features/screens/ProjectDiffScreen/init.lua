@@ -383,6 +383,7 @@ function ProjectDiffScreen:show()
   loop.free_textlock()
   local err, data = self.store:fetch(self.layout_type)
 
+  loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
 

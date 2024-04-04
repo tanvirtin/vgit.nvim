@@ -69,13 +69,13 @@ function HistoryScreen:show()
   local buffer = Buffer(0)
   local err = self.store:fetch(self.layout_type, buffer.filename)
 
+  loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
     return false
   end
 
   -- Show and bind data (data will have all the necessary shape required)
-  loop.free_textlock()
   self.diff_view:define()
   self.table_view:define()
 
