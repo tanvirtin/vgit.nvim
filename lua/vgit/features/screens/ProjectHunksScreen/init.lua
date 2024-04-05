@@ -84,6 +84,23 @@ function ProjectHunksScreen:hunk_down()
   return self
 end
 
+function ProjectHunksScreen:handle_list_move(direction)
+  local list_item = self.foldable_list_view:move(direction)
+
+  if not list_item then
+    return
+  end
+
+  self.store:set_id(list_item.id)
+  self.diff_view:render_debounced(loop.coroutine(function()
+    local _, data = self.store:get_data()
+
+    if data then
+      self.diff_view:navigate_to_mark(data.mark_index)
+          end
+  end))
+end
+
 function ProjectHunksScreen:show(opts)
   opts = opts or {}
 
@@ -133,42 +150,12 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = 'j',
-      handler = loop.coroutine(function()
-        local list_item = self.foldable_list_view:move('down')
-
-        if not list_item then
-          return
-        end
-
-        self.store:set_id(list_item.id)
-        self.diff_view:render_debounced(loop.coroutine(function()
-          local _, data = self.store:get_data()
-
-          if data then
-            self.diff_view:navigate_to_mark(data.mark_index)
-          end
-        end))
-      end),
+      handler = loop.coroutine(function() self:handle_list_move('down') end),
     },
     {
       mode = 'n',
       key = 'k',
-      handler = loop.coroutine(function()
-        local list_item = self.foldable_list_view:move('up')
-
-        if not list_item then
-          return
-        end
-
-        self.store:set_id(list_item.id)
-        self.diff_view:render_debounced(loop.coroutine(function()
-          local _, data = self.store:get_data()
-
-          if data then
-            self.diff_view:navigate_to_mark(data.mark_index)
-          end
-        end))
-      end),
+      handler = loop.coroutine(function() self:handle_list_move('up') end),
     },
     {
       mode = 'n',
@@ -196,6 +183,9 @@ function ProjectHunksScreen:show(opts)
       end),
     },
   })
+
+  self.foldable_list_view.scene:get('list').buffer:on('CursorMoved', loop.coroutine(function() self:handle_list_move() end))
+
   return true
 end
 
