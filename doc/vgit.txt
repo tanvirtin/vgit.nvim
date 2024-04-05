@@ -417,9 +417,8 @@ toggle_tracing()                                          *vgit.toggle_tracing()
                 suppressed logs visible.
 
 ==============================================================================
-COMMAND                                                        *vgit-navigation*
+NAVIGATION                                                     *vgit-navigation*
 
-                                                                         *:VGit*
 Any VGit preview that contains changes with highlights is navigatable,
 enhancing your git workflow drastically. Please refer to |hunk_up| and
 |hunk_down| mapping these functions to "<C-j>" and "<C-k>" is a personal
@@ -427,9 +426,8 @@ recommendation. Executing these commands while being on a table associated
 with a diff will also enable hunk navigations.
 
 ==============================================================================
-COMMAND                                                   *vgit-diff-preference*
+PREFERENCE                                                *vgit-diff-preference*
 
-                                                                         *:VGit*
 Any VGit preview with a diff can be seen visually in two different ways,
 unified and split. Users can switch between these two styles anytime using
 |toggle_diff_preference|.
