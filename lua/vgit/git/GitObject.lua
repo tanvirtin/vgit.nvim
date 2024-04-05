@@ -1,10 +1,10 @@
-local utils = require('vgit.core.utils')
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
+local Git = require('vgit.git.cli.Git')
+local utils = require('vgit.core.utils')
+local Object = require('vgit.core.Object')
 local Hunk = require('vgit.git.cli.models.Hunk')
 local Patch = require('vgit.git.cli.models.Patch')
-local Git = require('vgit.git.cli.Git')
-local Object = require('vgit.core.Object')
 
 local GitObject = Object:extend()
 
@@ -26,13 +26,33 @@ function GitObject:constructor(filename)
   }
 end
 
-function GitObject:get_filename() return self.filename.native end
+function GitObject:is_inside_git_dir()
+  return self.git:is_inside_git_dir()
+end
 
-function GitObject:get_filetype() return self.filetype end
+function GitObject:is_ignored()
+  return self.git:is_ignored(self.filename.native)
+end
 
-function GitObject:is_tracked() return self:tracked_filename() ~= '' end
+function GitObject:get_filename()
+  return self.filename.native
+end
 
-function GitObject:is_in_remote() return self.git:is_in_remote(self:tracked_filename()) end
+function GitObject:get_filetype()
+  return self.filetype
+end
+
+function GitObject:is_tracked()
+  return self:tracked_filename() ~= ''
+end
+
+function GitObject:is_in_remote()
+  return self.git:is_in_remote(self:tracked_filename())
+end
+
+function GitObject:config()
+  return self.git:config({ is_background = true })
+end
 
 function GitObject:tracked_filename()
   if self.filename.tracked == nil then
@@ -44,11 +64,13 @@ function GitObject:tracked_filename()
   return self.filename.tracked
 end
 
-function GitObject:patch_hunk(hunk) return Patch(self.git:tracked_full_filename(self.filename.native), hunk) end
+function GitObject:patch_hunk(hunk)
+  return Patch(self.git:tracked_full_filename(self.filename.native), hunk)
+end
 
 function GitObject:stage_hunk_from_patch(patch)
   local patch_filename = fs.tmpname()
-
+  loop.free_textlock()
   fs.write_file(patch_filename, patch)
 
   loop.free_textlock()
@@ -56,14 +78,13 @@ function GitObject:stage_hunk_from_patch(patch)
 
   loop.free_textlock()
   fs.remove_file(patch_filename)
-  loop.free_textlock()
 
   return err
 end
 
 function GitObject:unstage_hunk_from_patch(patch)
   local patch_filename = fs.tmpname()
-
+  loop.free_textlock()
   fs.write_file(patch_filename, patch)
 
   loop.free_textlock()
@@ -71,14 +92,17 @@ function GitObject:unstage_hunk_from_patch(patch)
 
   loop.free_textlock()
   fs.remove_file(patch_filename)
-  loop.free_textlock()
 
   return err
 end
 
-function GitObject:stage_hunk(hunk) return self:stage_hunk_from_patch(self:patch_hunk(hunk)) end
+function GitObject:stage_hunk(hunk)
+  return self:stage_hunk_from_patch(self:patch_hunk(hunk))
+end
 
-function GitObject:unstage_hunk(hunk) return self:unstage_hunk_from_patch(self:patch_hunk(hunk)) end
+function GitObject:unstage_hunk(hunk)
+  return self:unstage_hunk_from_patch(self:patch_hunk(hunk))
+end
 
 function GitObject:stage()
   local filename = self:tracked_filename()
@@ -90,26 +114,18 @@ function GitObject:stage()
   return self.git:stage_file(filename)
 end
 
-function GitObject:unstage() return self.git:unstage_file(self:tracked_filename()) end
-
-function GitObject:is_inside_git_dir() return self.git:is_inside_git_dir() end
-
-function GitObject:lines(commit_hash)
-  commit_hash = commit_hash or ''
-
-  return self.git:show(self:tracked_filename(), commit_hash, { is_background = true })
+function GitObject:unstage()
+  return self.git:unstage_file(self:tracked_filename())
 end
 
-function GitObject:is_ignored() return self.git:is_ignored(self.filename.native) end
+function GitObject:lines(commit_hash)
+  return self.git:show(self:tracked_filename(), commit_hash or '', { is_background = true })
+end
 
 function GitObject:blame_line(lnum)
-  if self._cache.line_blames[lnum] then
-    return nil, self._cache.line_blames[lnum]
-  end
+  if self._cache.line_blames[lnum] then return nil, self._cache.line_blames[lnum] end
 
-  local err, blame = self.git:blame_line(self:tracked_filename(), lnum, {
-    is_background = true,
-  })
+  local err, blame = self.git:blame_line(self:tracked_filename(), lnum, { is_background = true })
 
   if blame then
     self._cache.line_blames[lnum] = blame
@@ -119,31 +135,23 @@ function GitObject:blame_line(lnum)
 end
 
 function GitObject:blames()
-  return self.git:blames(self:tracked_filename(), {
-    is_background = true,
-  })
+  return self.git:blames(self:tracked_filename(), { is_background = true })
 end
 
-function GitObject:config()
-  return self.git:config({
-    is_background = true,
-  })
-end
+function GitObject:live_hunks(current_lines)
+  loop.free_textlock()
+  local filename = self:tracked_filename()
 
-function GitObject:native_hunks(filename, current_lines)
   if filename == '' then
+    loop.free_textlock()
     local hunks = self.git:untracked_hunks(current_lines)
-
     self.hunks = hunks
     return nil, hunks
   end
 
-  local original_lines_err, original_lines = self:lines()
-
   loop.free_textlock()
-  if original_lines_err then
-    return original_lines_err
-  end
+  local original_lines_err, original_lines = self:lines()
+  if original_lines_err then return original_lines_err end
 
   local o_lines_str = ''
   local c_lines_str = ''
@@ -164,6 +172,7 @@ function GitObject:native_hunks(filename, current_lines)
   self.hunks = {}
   local hunks = self.hunks
 
+  loop.free_textlock()
   vim.diff(o_lines_str, c_lines_str, {
     on_hunk = function(start_o, count_o, start_c, count_c)
       local hunk = Hunk({ { start_o, count_o }, { start_c, count_c } })
@@ -186,86 +195,37 @@ function GitObject:native_hunks(filename, current_lines)
     end,
     algorithm = 'myers',
   })
+
   return nil, hunks
 end
 
-function GitObject:piped_hunks(filename, current_lines)
-  if filename == '' then
-    local hunks = self.git:untracked_hunks(current_lines)
-    self.hunks = hunks
-    return nil, hunks
-  end
-
-  local temp_filename_b = fs.tmpname()
-  local temp_filename_a = fs.tmpname()
-  local original_lines_err, original_lines = self:lines()
-
-  loop.free_textlock()
-  if original_lines_err then
-    return original_lines_err
-  end
-
-  fs.write_file(temp_filename_a, original_lines)
-  loop.free_textlock()
-  fs.write_file(temp_filename_b, current_lines)
-  loop.free_textlock()
-
-  local hunks_err, hunks = self.git:file_hunks(temp_filename_a, temp_filename_b, { is_background = true })
-
-  loop.free_textlock()
-  fs.remove_file(temp_filename_a)
-  loop.free_textlock()
-  fs.remove_file(temp_filename_b)
-  loop.free_textlock()
-
-  if not hunks_err then
-    self.hunks = hunks
-  end
-
-  return hunks_err, hunks
+function GitObject:staged_hunks()
+  return self.git:staged_hunks(self:tracked_filename(), { is_background = true })
 end
-
-function GitObject:live_hunks(current_lines)
-  loop.free_textlock()
-  local filename = self:tracked_filename()
-  local inexpensive_lines_limit = 5000
-
-  if #current_lines > inexpensive_lines_limit then
-    return self:piped_hunks(filename, current_lines)
-  end
-
-  return self:native_hunks(filename, current_lines)
-end
-
-function GitObject:staged_hunks() return self.git:staged_hunks(self:tracked_filename(), { is_background = true }) end
 
 function GitObject:remote_hunks(parent_hash, commit_hash)
   return self.git:remote_hunks(self:tracked_filename(), parent_hash, commit_hash, { is_background = true })
 end
 
 function GitObject:logs()
-  return self.git:file_logs(self:tracked_filename(), {
-    is_background = true,
-  })
+  return self.git:file_logs(self:tracked_filename(), { is_background = true })
 end
 
-function GitObject:status() return self.git:file_status(self:tracked_filename()) end
+function GitObject:status()
+  return self.git:file_status(self:tracked_filename())
+end
 
-function GitObject:generate_diff_status()
+function GitObject:generate_status()
   local hunks = self.hunks or {}
-  local stats_dict = {
-    added = 0,
-    changed = 0,
-    removed = 0,
-  }
+  local stats_dict = { added = 0, changed = 0, removed = 0 }
+
   for _, h in ipairs(hunks) do
-    -- hunk stats only contain added/removed, lines that
-    -- are both added and removed are considered "changed"
     local changed = math.min(h.stat.added, h.stat.removed)
     stats_dict.added = stats_dict.added + math.abs(h.stat.added - changed)
     stats_dict.removed = stats_dict.removed + math.abs(h.stat.removed - changed)
     stats_dict.changed = stats_dict.changed + changed
   end
+
   return stats_dict
 end
 

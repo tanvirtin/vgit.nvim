@@ -8,22 +8,43 @@ local live_gutter_setting = require('vgit.settings.live_gutter')
 local LiveGutter = Object:extend()
 
 function LiveGutter:constructor()
-  return {
-    name = 'Live Gutter',
-  }
+  return { name = 'Live Gutter' }
 end
 
-LiveGutter.clear = loop.coroutine(function(self, buffer)
+LiveGutter.fetch = loop.debounce_coroutine(function(self, buffer)
   loop.free_textlock()
+  if not buffer:is_valid() then return self end
 
-  if buffer:is_rendering() then
+  loop.free_textlock()
+  local err = buffer:live_hunks()
+
+  loop.free_textlock()
+  if err then
+    console.debug.error(err)
     return self
   end
 
   buffer:sign_unplace()
+  buffer:generate_status()
 
   return self
-end)
+end, 10)
+
+function LiveGutter:render(buffer, top, bot)
+  if not live_gutter_setting:get('enabled') then return self end
+
+  local hunks = buffer.git_object.hunks
+  if not hunks then return self end
+
+  local signs = {}
+  for i = top, bot do
+    signs[#signs + 1] = buffer.signs[i]
+  end
+
+  buffer:sign_placelist(signs)
+
+  return self
+end
 
 function LiveGutter:reset()
   local buffers = GitBuffer:list()
@@ -32,104 +53,37 @@ function LiveGutter:reset()
     local buffer = buffers[i]
 
     if buffer then
-      self:clear(buffer)
+      buffer:sign_unplace()
     end
-  end
-end
-
-LiveGutter.fetch = loop.debounce_coroutine(function(self, buffer)
-  loop.free_textlock()
-  if not buffer:is_valid() then
-    return self
-  end
-
-  loop.free_textlock()
-  local live_signs = buffer:get_cached_live_signs()
-
-  loop.free_textlock()
-  buffer:clear_cached_live_signs()
-
-  loop.free_textlock()
-  local err = buffer.git_object:live_hunks(buffer:get_lines())
-
-  if err then
-    loop.free_textlock()
-    buffer:set_cached_live_signs(live_signs)
-    console.debug.error(err)
-
-    return self
-  end
-
-  local hunks = buffer.git_object.hunks
-
-  if not hunks then
-    loop.free_textlock()
-    buffer:set_cached_live_signs(live_signs)
-
-    return self
-  else
-    local diff_status = buffer.git_object:generate_diff_status()
-
-    loop.free_textlock()
-    buffer:set_var('vgit_status', diff_status)
-  end
-
-  loop.free_textlock()
-  self:clear(buffer)
-
-  for i = 1, #hunks do
-    loop.free_textlock()
-    buffer:cache_live_sign(hunks[i])
   end
 
   return self
-end, 50)
-
-function LiveGutter:render(buffer, top, bot)
-  if not live_gutter_setting:get('enabled') then
-    return self
-  end
-
-  local hunks = buffer.git_object.hunks
-
-  if not hunks then
-    return self
-  end
-
-  local cached_live_signs = buffer:get_cached_live_signs()
-  local gutter_signs = {}
-
-  for i = top, bot do
-    gutter_signs[#gutter_signs + 1] = cached_live_signs[i]
-  end
-
-  buffer:sign_placelist(gutter_signs)
 end
 
 function LiveGutter:register_events()
   git_buffer_store
-    .attach('attach', function(git_buffer) self:fetch(git_buffer) end)
-    .attach('reload', function(git_buffer)
-      loop.free_textlock()
-      self:fetch(git_buffer)
+    .attach('attach', function(buffer)
+      self:fetch(buffer)
     end)
-    .attach('change', function(git_buffer, p_lnum, n_lnum, byte_count)
-      if p_lnum == n_lnum and byte_count == 0 then
-        return
-      end
-      loop.free_textlock()
-      self:fetch(git_buffer)
+    .attach('reload', function(buffer)
+      self:fetch(buffer)
     end)
-    .attach('watch', function(git_buffer)
-      git_buffer:sync()
-      self:fetch(git_buffer)
+    .attach('change', function(buffer)
+      self:fetch(buffer)
     end)
-    .attach('git_watch', function(git_buffers)
-      for i = 1, #git_buffers do
-        self:fetch(git_buffers[i])
+    .attach('watch', function(buffer)
+      buffer:sync()
+      self:fetch(buffer)
+    end)
+    .attach('git_watch', function(buffers)
+      for i = 1, #buffers do
+        local buffer = buffers[i]
+        self:fetch(buffer)
       end
     end)
-    .attach('render', function(git_buffer, top, bot) self:render(git_buffer, top, bot) end)
+    .attach('render', function(buffer, top, bot)
+      self:render(buffer, top, bot)
+    end)
 
   return self
 end
