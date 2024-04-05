@@ -59,8 +59,8 @@ function ProjectCommitsScreen:hunk_up() self.diff_view:prev() end
 
 function ProjectCommitsScreen:hunk_down() self.diff_view:next() end
 
-function ProjectCommitsScreen:handle_list_move_down()
-  local list_item = self.foldable_list_view:move('down')
+function ProjectCommitsScreen:handle_list_move(direction)
+  local list_item = self.foldable_list_view:move(direction)
 
   if not list_item then
     return
@@ -68,17 +68,6 @@ function ProjectCommitsScreen:handle_list_move_down()
 
   self.store:set_id(list_item.id)
   self.diff_view:render_debounced(loop.coroutine(function() self.diff_view:navigate_to_mark(1) end))
-end
-
-function ProjectCommitsScreen:handle_list_move_up()
-  local list_item = self.foldable_list_view:move('up')
-
-  if not list_item then
-    return
-  end
-
-  self.store:set_id(list_item.id)
-  self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
 end
 
 function ProjectCommitsScreen:handle_on_enter()
@@ -176,12 +165,12 @@ function ProjectCommitsScreen:show(args)
     {
       mode = 'n',
       key = 'j',
-      handler = loop.coroutine(function() self:handle_list_move_down() end),
+      handler = loop.coroutine(function() self:handle_list_move('down') end),
     },
     {
       mode = 'n',
       key = 'k',
-      handler = loop.coroutine(function() self:handle_list_move_up() end),
+      handler = loop.coroutine(function() self:handle_list_move('up') end),
     },
     {
       mode = 'n',
@@ -189,6 +178,8 @@ function ProjectCommitsScreen:show(args)
       handler = loop.coroutine(function() self:handle_on_enter() end),
     },
   })
+
+  self.foldable_list_view.scene:get('list').buffer:on('CursorMoved', loop.coroutine(function() self:handle_list_move() end))
 
   local list_item = self.foldable_list_view:move_to(function(node)
     local filename = node.path and node.path.file and node.path.file.filename or nil

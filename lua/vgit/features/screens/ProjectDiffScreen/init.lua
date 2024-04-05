@@ -379,11 +379,21 @@ function ProjectDiffScreen:make_help_bar()
   return self
 end
 
+function ProjectDiffScreen:handle_list_move(direction)
+  local list_item = self.foldable_list_view:move(direction)
+
+  if not list_item then
+    return
+  end
+
+  self.store:set_id(list_item.id)
+  self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
+end
+
 function ProjectDiffScreen:show()
   loop.free_textlock()
   local err, data = self.store:fetch(self.layout_type)
 
-  loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
 
@@ -479,30 +489,12 @@ function ProjectDiffScreen:show()
     {
       mode = 'n',
       key = 'j',
-      handler = loop.coroutine(function()
-        local list_item = self.foldable_list_view:move('down')
-
-        if not list_item then
-          return
-        end
-
-        self.store:set_id(list_item.id)
-        self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
-      end),
+      handler = loop.coroutine(function() self:handle_list_move('down') end),
     },
     {
       mode = 'n',
       key = 'k',
-      handler = loop.coroutine(function()
-        local list_item = self.foldable_list_view:move('up')
-
-        if not list_item then
-          return
-        end
-
-        self.store:set_id(list_item.id)
-        self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
-      end),
+      handler = loop.coroutine(function() self:handle_list_move('up') end),
     },
     {
       mode = 'n',
@@ -530,6 +522,8 @@ function ProjectDiffScreen:show()
       end),
     },
   })
+
+  self.foldable_list_view.scene:get('list').buffer:on('CursorMoved', loop.coroutine(function() self:handle_list_move() end))
 
   self:make_help_bar()
 
