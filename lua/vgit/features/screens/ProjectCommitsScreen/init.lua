@@ -5,6 +5,8 @@ local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
+local git_repo = require('vgit.git.git2.repo')
+local git_show = require('vgit.git.git2.show')
 local DiffView = require('vgit.ui.views.DiffView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
@@ -88,7 +90,8 @@ function ProjectCommitsScreen:handle_on_enter()
       return
     end
 
-    local lines_err, lines = self.store:get_remote_lines(filename, commit_hash)
+    local reponame = git_repo.discover()
+    local lines, lines_err = git_show.lines(reponame, filename, commit_hash)
     loop.free_textlock()
 
     if lines_err then
@@ -128,7 +131,7 @@ end
 function ProjectCommitsScreen:show(args)
   local commits = {}
   local buffer = Buffer(0)
-  local target_filename = buffer.filename
+  local filename = buffer:get_name()
 
   -- TODO: Need to add an arg parser in core that takes you can
   --       somehow define and then parse the input using definition.
@@ -136,10 +139,10 @@ function ProjectCommitsScreen:show(args)
     local arg = args[i]
 
     if vim.startswith(arg, '--filename') then
-      target_filename = arg:sub(#'--filename=' + 1, #arg)
+      filename = arg:sub(#'--filename=' + 1, #arg)
 
-      if target_filename == '' then
-        target_filename = nil
+      if filename == '' then
+        filename = nil
       end
     else
       commits[#commits + 1] = arg

@@ -1,5 +1,6 @@
-local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
+local git_log = require('vgit.git.git2.log')
+local git_repo = require('vgit.git.git2.repo')
 
 local Store = Object:extend()
 
@@ -17,19 +18,14 @@ function Store:reset()
   return self
 end
 
-function Store:fetch(args, opts)
-  opts = opts or {}
-
+function Store:fetch()
   self:reset()
 
-  local err, logs = Git():logs(args, { is_background = true })
-
-  if err then
-    return err, nil
-  end
+  local reponame = git_repo.discover()
+  local logs, err = git_log.list(reponame)
+  if err then return err, nil end
 
   self.err = nil
-
   self.data = logs
 
   return self.err, self.data

@@ -1,6 +1,9 @@
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
+local git_log = require('vgit.git.git2.log')
+local git_show = require('vgit.git.git2.show')
+local git_repo = require('vgit.git.git2.repo')
+local git_hunks = require('vgit.git.git2.hunks')
 local GitObject = require('vgit.git.GitObject')
 local diff_service = require('vgit.services.diff')
 
@@ -10,7 +13,6 @@ function Store:constructor()
   return {
     err = nil,
     shape = nil,
-    git = Git(),
     git_object = nil,
     _cache = {
       blame = nil,
@@ -32,9 +34,7 @@ end
 function Store:fetch(shape, filename, lnum, opts)
   opts = opts or {}
 
-  if not filename or filename == '' then
-    return { 'Buffer has no blame associated with it' }, nil
-  end
+  if not filename or filename == '' then return { 'Buffer has no blame associated with it' }, nil end
 
   self:reset()
 
@@ -42,24 +42,18 @@ function Store:fetch(shape, filename, lnum, opts)
   self.git_object = GitObject(filename)
 
   loop.free_textlock()
-  self.err, self._cache.blame = self.git_object:blame_line(lnum)
-  loop.free_textlock()
-
-  if self.err then
-    return self.err
-  end
+  self._cache.blame, self.err = self.git_object:blame(lnum)
+  if self.err then return self.err, nil end
 
   local blame = self._cache.blame
 
-  if blame:is_uncommitted() then
-    return { 'Line is uncommitted' }
-  end
+  if not blame then return { 'no blame found' }, nil end
+  if blame:is_uncommitted() then return { 'Line is uncommitted' } end
 
-  local log_err, log = self.git:log(blame.commit_hash)
-
-  if log_err then
-    return log_err
-  end
+  loop.free_textlock()
+  local reponame = git_repo.discover()
+  local log, log_err = git_log.get(reponame, blame.commit_hash)
+  if log_err then return log_err end
 
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
@@ -71,29 +65,27 @@ function Store:fetch(shape, filename, lnum, opts)
   -- this is why we should use blame.filename filename passed as args.
   filename = blame.filename
 
-  loop.free_textlock()
-  if not self.git:is_in_remote(filename, commit_hash) then
+  if not git_repo.has(reponame, filename, commit_hash) then
     is_deleted = true
-    lines_err, lines = self.git:show(filename, parent_hash)
+    lines, lines_err = git_show.lines(reponame, filename, parent_hash)
   else
-    lines_err, lines = self.git:show(filename, commit_hash)
+    lines, lines_err = git_show.lines(reponame, filename, commit_hash)
   end
 
-  if lines_err then
-    return lines_err
-  end
+  if lines_err then return lines_err end
 
   local hunks_err, hunks
   if is_deleted then
-    hunks = self.git:deleted_hunks(lines)
+    hunks = git_hunks.custom(lines, { deleted = true })
   else
-    hunks_err, hunks = self.git:remote_hunks(filename, parent_hash, commit_hash)
+    hunks, hunks_err = git_hunks.list(reponame, filename, {
+      parent = parent_hash,
+      current = commit_hash
+    })
   end
   loop.free_textlock()
 
-  if hunks_err then
-    return hunks_err
-  end
+  if hunks_err then return hunks_err end
 
   self._cache.diff_dto = diff_service:generate(hunks, lines, self.shape, { is_deleted = is_deleted })
 

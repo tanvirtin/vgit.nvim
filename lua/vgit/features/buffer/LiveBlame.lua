@@ -1,8 +1,8 @@
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
+local git_repo = require('vgit.git.git2.repo')
 local Namespace = require('vgit.core.Namespace')
 local event_type = require('vgit.core.event_type')
 local git_buffer_store = require('vgit.git.git_buffer_store')
@@ -16,7 +16,6 @@ function LiveBlame:constructor()
     name = 'Live Blame',
     namespace = Namespace(),
     last_lnum = nil,
-    git = Git(),
   }
 end
 
@@ -53,7 +52,7 @@ function LiveBlame:render(git_buffer)
   end
 
   loop.free_textlock()
-  local config_err, config = self.git:config()
+  local config, config_err = git_repo.config()
 
   if config_err then
     console.debug.error(config_err)
@@ -70,7 +69,7 @@ function LiveBlame:render(git_buffer)
   end
 
   loop.free_textlock()
-  local blame_err, blame = git_buffer.git_object:blame_line(lnum)
+  local blame, blame_err = git_buffer:blame(lnum)
 
   loop.free_textlock()
   local new_lnum = window:get_lnum()

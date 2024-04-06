@@ -24,6 +24,7 @@ function ProjectStashScreen:show(opts)
   loop.free_textlock()
   local err = self.store:fetch(opts)
 
+  loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
     return false

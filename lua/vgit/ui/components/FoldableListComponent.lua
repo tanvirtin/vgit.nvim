@@ -20,7 +20,6 @@ function FoldableListComponent:constructor(props)
       elements = {
         header = true,
         footer = true,
-        line_number = false,
       },
     },
     elements = {

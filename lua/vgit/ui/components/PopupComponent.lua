@@ -10,7 +10,6 @@ function PopupComponent:constructor(props)
     config = {
       elements = {
         header = false,
-        line_number = false,
         footer = false,
       },
     },

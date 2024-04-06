@@ -1,7 +1,10 @@
 local fs = require('vgit.core.fs')
-local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local git_repo = require('vgit.git.git2.repo')
+local git_show = require('vgit.git.git2.show')
+local git_hunks = require('vgit.git.git2.hunks')
+local git_status = require('vgit.git.git2.status')
 local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
@@ -12,7 +15,6 @@ function Store:constructor()
     err = nil,
     data = nil,
     shape = nil,
-    git = Git(),
     _cache = {
       lnum = 1,
       list_entry_cache = {},
@@ -37,19 +39,13 @@ function Store:fetch(shape, opts)
 
   self:reset()
 
-  if not self.git:is_inside_git_dir() then
-    return { 'Project has no .git folder' }, nil
-  end
+  if not git_repo.exists() then return nil, { 'Project has no .git folder' } end
 
-  local files_err, files = self.git:status()
+  local reponame = git_repo.discover()
+  local files, files_err = git_status.ls(reponame)
 
-  if files_err then
-    return files_err
-  end
-
-  if #files == 0 then
-    return { 'No files found' }, nil
-  end
+  if files_err then return nil, files_err end
+  if #files == 0 then return nil, { 'No files found' } end
 
   local data = {}
   local is_empty = true
@@ -59,16 +55,10 @@ function Store:fetch(shape, opts)
     local status = file.status
 
     local lines_err, lines = self:get_lines(file)
-
-    if lines_err then
-      return lines_err, nil
-    end
+    if lines_err then return nil, lines_err end
 
     local hunks_err, hunks = self:get_hunks(file, lines, opts.is_staged)
-
-    if hunks_err then
-      return hunks_err
-    end
+    if hunks_err then return nil, hunks_err end
 
     if hunks and #hunks > 0 then
       is_empty = false
@@ -76,9 +66,8 @@ function Store:fetch(shape, opts)
       local entry = data[file.filename] or {}
       data[file.filename] = entry
 
-      local diff_dto = diff_service:generate(hunks, lines, shape, {
-        is_deleted = status and status:has_either('DD'),
-      })
+      local is_deleted = status and status:has_either('DD')
+      local diff_dto = diff_service:generate(hunks, lines, shape, { is_deleted = is_deleted })
 
       utils.list.each(hunks, function(hunk, index)
         local id = utils.math.uuid()
@@ -96,13 +85,11 @@ function Store:fetch(shape, opts)
     end
   end
 
-  if is_empty then
-    return { 'No files found' }, nil
-  end
+  if is_empty then return nil, { 'No files found' } end
 
   self.data = data
 
-  return self.err, self.data
+  return self.data, self.err
 end
 
 function Store:set_id(id)
@@ -168,52 +155,60 @@ function Store:get_filetype()
 end
 
 function Store:get_lines(file)
-  local filename = file.filename
   local status = file.status
+  local filename = file.filename
 
   local lines_err, lines
 
   if status then
     if status:has('D ') then
-      lines_err, lines = self.git:show(filename, 'HEAD')
+      local reponame = git_repo.discover()
+      lines, lines_err = git_show.lines(reponame, filename, 'HEAD')
     elseif status:has(' D') then
-      lines_err, lines = self.git:show(self.git:tracked_filename(filename))
+      local reponame = git_repo.discover()
+      lines, lines_err = git_show.lines(reponame, filename)
     else
-      lines_err, lines = fs.read_file(filename)
+      lines, lines_err = fs.read_file(filename)
     end
   else
-    lines_err, lines = fs.read_file(filename)
+    lines, lines_err = fs.read_file(filename)
   end
 
   return lines_err, lines
 end
 
 function Store:get_hunks(file, lines, is_staged)
-  local filename = file.filename
-  local status = file.status
   local log = file.log
-  local hunks_err, hunks
+  local status = file.status
+  local filename = file.filename
 
   if is_staged then
     if file:is_staged() then
-      return self.git:staged_hunks(filename)
+      local reponame = git_repo.discover()
+      local hunks, hunks_err = git_hunks.list(reponame, filename)
+      return hunks_err, hunks
     end
-
     return nil, nil
   end
 
+  local hunks_err, hunks
+  local reponame = git_repo.discover()
   if status then
     if status:has_both('??') then
-      hunks = self.git:untracked_hunks(lines)
+      hunks = git_hunks.custom(lines, { untracked = true })
     elseif status:has_either('DD') then
-      hunks = self.git:deleted_hunks(lines)
+      hunks = git_hunks.custom(lines, { deleted = true })
     else
-      return self.git:index_hunks(filename)
+      hunks, hunks_err = git_hunks.list(reponame, filename)
+      return hunks_err, hunks
     end
   elseif log then
-    hunks_err, hunks = self.git:remote_hunks(filename, log.parent_hash, log.commit_hash)
+    hunks, hunks_err = git_hunks.list(filename, {
+      parent = log.parent_hash,
+      current = log.commit_hash
+    })
   else
-    hunks_err, hunks = self.git:index_hunks(filename)
+    hunks, hunks_err = git_hunks.list(reponame, filename)
   end
 
   return hunks_err, hunks

@@ -84,7 +84,7 @@ function Hunks:stage_all()
     return
   end
 
-  local err = buffer.git_object:stage()
+  local _, err = buffer.git_object:stage()
 
   loop.free_textlock()
   if err then
@@ -108,7 +108,6 @@ function Hunks:cursor_stage()
   end
 
   local git_object = buffer.git_object
-
   if not git_object:is_tracked() then
     local err = git_object:stage()
 
@@ -129,8 +128,9 @@ function Hunks:cursor_stage()
     return
   end
 
-  local err = git_object:stage_hunk(hunk)
+  local _, err = git_object:stage_hunk(hunk)
 
+  loop.free_textlock()
   if err then
     console.debug.error(err)
     return
@@ -147,7 +147,7 @@ function Hunks:unstage_all()
     return
   end
 
-  local err = buffer.git_object:unstage()
+  local _, err = buffer.git_object:unstage()
 
   loop.free_textlock()
   if err then
@@ -172,7 +172,7 @@ function Hunks:reset_all()
     return
   end
 
-  local err, lines = buffer.git_object:lines()
+  local lines, err = buffer.git_object:lines()
 
   loop.free_textlock()
   if err then

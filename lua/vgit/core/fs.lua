@@ -46,19 +46,19 @@ function fs.read_file(filepath)
   local fd = vim.loop.fs_open(filepath, 'r', 438)
 
   if fd == nil then
-    return { 'File not found' }, nil
+    return nil, { 'File not found' }
   end
 
   local stat = vim.loop.fs_fstat(fd)
 
   if stat.type ~= 'file' then
-    return { 'File not found' }, nil
+    return nil, { 'File not found' }
   end
 
   local data = vim.loop.fs_read(fd, stat.size, 0)
 
   if not vim.loop.fs_close(fd) then
-    return { 'Failed to close file' }, nil
+    return nil, { 'Failed to close file' }
   end
 
   local split_data = {}
@@ -78,7 +78,7 @@ function fs.read_file(filepath)
     split_data[#split_data + 1] = line
   end
 
-  return nil, split_data
+  return split_data, nil
 end
 
 function fs.write_file(filepath, lines)
@@ -107,7 +107,5 @@ function fs.open(filepath)
 
   return fs
 end
-
-function fs.make_relative(filepath, cwd) return not cwd and filepath or Path:new(filepath):make_relative(cwd) end
 
 return fs

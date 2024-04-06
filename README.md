@@ -127,16 +127,6 @@ require('vgit').setup({
     ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
   },
   settings = {
-    git = {
-      cmd = 'git', -- optional setting, not really required
-      fallback_cwd = vim.fn.expand("$HOME"),
-      fallback_args = {
-        "--git-dir",
-        vim.fn.expand("$HOME/dots/yadm-repo"),
-        "--work-tree",
-        vim.fn.expand("$HOME"),
-      },
-    },
     hls = {
       GitBackground = 'Normal',
       GitHeader = 'NormalFloat',

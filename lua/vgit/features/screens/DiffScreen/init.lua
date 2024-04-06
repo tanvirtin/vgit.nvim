@@ -114,7 +114,7 @@ function DiffScreen:show(opts)
   local title = self.is_staged and 'Staged Diff' or 'Diff'
 
   loop.free_textlock()
-  local err = self.store:fetch(layout_type, buffer.filename, opts)
+  local err = self.store:fetch(layout_type, buffer:get_name(), opts)
 
   if err then
     loop.free_textlock()
@@ -157,7 +157,7 @@ function DiffScreen:show(opts)
         loop.free_textlock()
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
         loop.free_textlock()
 
         if refetch_err then
@@ -186,7 +186,7 @@ function DiffScreen:show(opts)
         loop.free_textlock()
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
         loop.free_textlock()
 
         if refetch_err then
@@ -215,7 +215,7 @@ function DiffScreen:show(opts)
         loop.free_textlock()
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
         loop.free_textlock()
 
         if refetch_err then
@@ -254,7 +254,7 @@ function DiffScreen:show(opts)
         self.mutation:stage_hunk(filename, hunk)
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
 
         if refetch_err then
           console.debug.error(refetch_err).error(refetch_err)
@@ -293,7 +293,7 @@ function DiffScreen:show(opts)
         loop.free_textlock()
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
         loop.free_textlock()
 
         if refetch_err then
@@ -347,7 +347,7 @@ function DiffScreen:show(opts)
           opts.is_staged = self.is_staged
 
           loop.free_textlock()
-          local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+          local refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
           loop.free_textlock()
 
           if refetch_err then
@@ -364,7 +364,7 @@ function DiffScreen:show(opts)
           opts.is_staged = self.is_staged
 
           loop.free_textlock()
-          local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+          local refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
           loop.free_textlock()
 
           if refetch_err then

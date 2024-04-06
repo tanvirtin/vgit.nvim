@@ -11,18 +11,12 @@ local Namespace = require('vgit.core.Namespace')
 local Buffer = Object:extend()
 
 function Buffer:constructor(bufnr)
-  local filename = nil
-
-  -- 0 represents the current buffer.
   if bufnr == 0 then
     bufnr = vim.api.nvim_get_current_buf()
-    local bufname = vim.api.nvim_buf_get_name(bufnr)
-    filename = fs.relative_filename(bufname)
   end
 
   return {
     bufnr = bufnr,
-    filename = filename,
     rendering = false,
     namespace = Namespace(),
     watcher = Watcher(),
@@ -73,7 +67,6 @@ function Buffer:on(event_type, callback)
 end
 
 function Buffer:on_render(top, bot)
-  -- We invoke the render function called on runtime.
   self.state.on_render(top, bot)
 
   return self
@@ -82,33 +75,27 @@ end
 function Buffer:is_rendering() return self.rendering end
 
 function Buffer:is_in_disk()
-  local filename = self.filename
+  return fs.exists(self:get_name())
+end
 
-  if not filename or filename == '' then
-    return false
-  end
-  if not fs.exists(filename) then
-    return false
-  end
-
-  return true
+function Buffer:sync()
+  return self
 end
 
 function Buffer:watch(callback)
-  self.watcher:watch_file(
-    self.filename,
-    loop.coroutine(function(err)
-      if err then
-        console.debug.error(string.format('Error encountered while watching %s', self.filename))
-        return
-      end
+  local name = self:get_name()
 
-      loop.free_textlock()
-      if self and self:is_valid() and callback then
-        callback()
-      end
-    end)
-  )
+  self.watcher:watch_file(self:get_name(), loop.coroutine(function(err)
+    if err then
+      console.debug.error(string.format('Error encountered while watching %s', name))
+      return
+    end
+
+    loop.free_textlock()
+    if self and self:is_valid() and callback then
+      callback()
+    end
+  end))
 
   return self
 end
@@ -119,7 +106,9 @@ function Buffer:unwatch()
   return self
 end
 
-function Buffer:get_name() return vim.api.nvim_buf_get_name(self.bufnr) end
+function Buffer:get_name()
+  return vim.api.nvim_buf_get_name(self.bufnr)
+end
 
 function Buffer:add_highlight(hl, row, col_top, col_end)
   self.namespace:add_highlight(self, hl, row, col_top, col_end)
@@ -171,13 +160,6 @@ end
 
 function Buffer:clear_namespace()
   self.namespace:clear(self)
-
-  return self
-end
-
-function Buffer:sync()
-  local bufname = vim.api.nvim_buf_get_name(self.bufnr)
-  self.filename = fs.relative_filename(bufname)
 
   return self
 end
@@ -260,9 +242,13 @@ function Buffer:edit()
   end)
 end
 
-function Buffer:editing() return self:get_option('modified') end
+function Buffer:editing()
+  return self:get_option('modified')
+end
 
-function Buffer:filetype() return fs.detect_filetype(self.filename) end
+function Buffer:filetype()
+  return fs.detect_filetype(self:get_name())
+end
 
 function Buffer:list()
   local bufnrs = vim.api.nvim_list_bufs()

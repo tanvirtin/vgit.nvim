@@ -1,10 +1,10 @@
 local env = require('vgit.core.env')
 local loop = require('vgit.core.loop')
 local sign = require('vgit.core.sign')
-local Git = require('vgit.git.cli.Git')
 local Command = require('vgit.Command')
 local keymap = require('vgit.core.keymap')
 local console = require('vgit.core.console')
+local git_repo = require('vgit.git.git2.repo')
 local renderer = require('vgit.core.renderer')
 local highlight = require('vgit.core.highlight')
 local hls_setting = require('vgit.settings.hls')
@@ -85,20 +85,20 @@ local project = {
   hunks_staged_preview = loop.coroutine(function() screen_manager.show('project_hunks_screen', { is_staged = true }) end),
   reset_all = loop.coroutine(function()
     local decision = console.input('Are you sure you want to discard all tracked changes? (y/N) '):lower()
+    if decision ~= 'yes' and decision ~= 'y' then return end
 
-    if decision ~= 'yes' and decision ~= 'y' then
-      return
-    end
-
-    Git():reset_all()
+    local reponame = git_repo.discover()
+    git_repo.reset(reponame)
   end),
 }
 
 local checkout = loop.coroutine(function(...)
-  local err = Git():checkout({ ... })
+  local reponame = git_repo.discover()
+  local _, err = git_repo.checkout(reponame, ...)
 
   if err then
-    console.debug.error(err).error(err)
+    loop.free_textlock()
+    console.error(err)
   end
 end)
 

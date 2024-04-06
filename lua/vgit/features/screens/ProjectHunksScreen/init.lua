@@ -105,8 +105,9 @@ function ProjectHunksScreen:show(opts)
   opts = opts or {}
 
   loop.free_textlock()
-  local err = self.store:fetch(self.layout_type, opts)
+  local _, err = self.store:fetch(self.layout_type, opts)
 
+  loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
     return false
@@ -191,7 +192,6 @@ end
 
 function ProjectHunksScreen:destroy()
   self.scene:destroy()
-
   return self
 end
 
