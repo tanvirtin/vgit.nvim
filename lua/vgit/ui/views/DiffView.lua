@@ -248,7 +248,7 @@ function DiffView:apply_brush(top, bot)
 end
 
 function DiffView:paint_partially()
-  self.scene:get('current'):attach_to_renderer(function(top, bot) self:apply_brush(top, bot) end)
+  self.scene:get('current'):attach_to_renderer(function(top, bot) self:apply_brush(top, bot + 1) end)
 
   return self
 end
