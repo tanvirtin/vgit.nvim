@@ -53,7 +53,7 @@ function GutterBlameScreen:show()
   local buffer = Buffer(0)
 
   loop.free_textlock()
-  local err = self.store:fetch(buffer.filename, buffer:get_lines())
+  local err = self.store:fetch(buffer:get_name(), buffer:get_lines())
 
   if err then
     console.debug.error(err).error(err)

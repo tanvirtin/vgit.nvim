@@ -31,8 +31,8 @@ function ProjectDiffScreen:constructor(opts)
     app_bar_view = AppBarView(scene, store),
     diff_view = DiffView(scene, store, {
       row = 1,
-      col = '23vw',
-      width = '77vw',
+      col = '20vw',
+      width = '80vw',
     }, {
       elements = {
         header = true,
@@ -41,7 +41,7 @@ function ProjectDiffScreen:constructor(opts)
     }, layout_type),
     foldable_list_view = FoldableListView(scene, store, {
       row = 1,
-      width = '23vw',
+      width = '20vw',
     }, {
       elements = {
         header = false,
@@ -148,7 +148,6 @@ ProjectDiffScreen.stage_hunk = loop.debounce_coroutine(function(self)
 
   loop.free_textlock()
   self.store:fetch(self.layout_type)
-  loop.free_textlock()
 
   self.foldable_list_view:evict_cache():render()
 
@@ -188,7 +187,6 @@ ProjectDiffScreen.unstage_hunk = loop.debounce_coroutine(function(self)
 
   loop.free_textlock()
   self.store:fetch(self.layout_type)
-  loop.free_textlock()
 
   local list_item = self.foldable_list_view:evict_cache():render():query_list_item(function(list_item)
     if list_item.items then
@@ -216,7 +214,8 @@ ProjectDiffScreen.stage_file = loop.debounce_coroutine(function(self)
     return self
   end
 
-  local err = self.mutation:stage_file(filename)
+  loop.free_textlock()
+  local _, err = self.mutation:stage_file(filename)
 
   if err then
     console.debug.error(err)
@@ -233,7 +232,8 @@ ProjectDiffScreen.unstage_file = loop.debounce_coroutine(function(self)
     return self
   end
 
-  local err = self.mutation:unstage_file(filename)
+  loop.free_textlock()
+  local _, err = self.mutation:unstage_file(filename)
 
   if err then
     console.debug.error(err)
@@ -244,7 +244,7 @@ ProjectDiffScreen.unstage_file = loop.debounce_coroutine(function(self)
 end, 15)
 
 ProjectDiffScreen.stage_all = loop.debounce_coroutine(function(self)
-  local err = self.mutation:stage_all()
+  local _, err = self.mutation:stage_all()
 
   if err then
     console.debug.error(err)
@@ -255,7 +255,7 @@ ProjectDiffScreen.stage_all = loop.debounce_coroutine(function(self)
 end, 15)
 
 ProjectDiffScreen.unstage_all = loop.debounce_coroutine(function(self)
-  local err = self.mutation:unstage_all()
+  local _, err = self.mutation:unstage_all()
 
   if err then
     console.debug.error(err)
@@ -290,7 +290,7 @@ ProjectDiffScreen.reset_file = loop.debounce_coroutine(function(self)
   end
 
   loop.free_textlock()
-  local err = self.mutation:reset_file(filename)
+  local _, err = self.mutation:reset_file(filename)
   loop.free_textlock()
 
   if err then
@@ -310,7 +310,7 @@ ProjectDiffScreen.reset_all = loop.debounce_coroutine(function(self)
   end
 
   loop.free_textlock()
-  local err = self.mutation:reset_all()
+  local _, err = self.mutation:reset_all()
   loop.free_textlock()
 
   if err then
@@ -323,19 +323,19 @@ end, 15)
 
 function ProjectDiffScreen:render()
   loop.free_textlock()
-  local _, data = self.store:fetch(self.layout_type)
-  loop.free_textlock()
+  local data, _ = self.store:fetch(self.layout_type)
 
   if utils.object.is_empty(data) then
     self:destroy()
-
     return self
   end
 
+  loop.free_textlock()
   local list_item = self.foldable_list_view:render():get_current_list_item()
 
   self.store:set_id(list_item.id)
 
+  loop.free_textlock()
   self.diff_view:render():navigate_to_mark(1)
 
   return self
@@ -392,8 +392,9 @@ end
 
 function ProjectDiffScreen:show()
   loop.free_textlock()
-  local err, data = self.store:fetch(self.layout_type)
+  local data, err = self.store:fetch(self.layout_type)
 
+  loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
 

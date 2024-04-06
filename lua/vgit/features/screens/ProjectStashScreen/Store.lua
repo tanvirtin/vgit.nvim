@@ -1,5 +1,6 @@
-local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
+local git_log = require('vgit.git.git2.log')
+local git_repo = require('vgit.git.git2.repo')
 
 local Store = Object:extend()
 
@@ -22,14 +23,11 @@ function Store:fetch(opts)
 
   self:reset()
 
-  local err, logs = Git():ls_stash({ is_background = true })
-
-  if err then
-    return err, nil
-  end
+  local reponame = git_repo.discover()
+  local logs, err = git_log.list_stash(reponame)
+  if err then return err, nil end
 
   self.err = nil
-
   self.data = logs
 
   return self.err, self.data

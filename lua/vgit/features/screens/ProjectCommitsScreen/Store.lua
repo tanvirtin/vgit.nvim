@@ -1,7 +1,11 @@
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local git_log = require('vgit.git.git2.log')
+local git_repo = require('vgit.git.git2.repo')
+local git_show = require('vgit.git.git2.show')
+local git_hunks = require('vgit.git.git2.hunks')
+local git_status = require('vgit.git.git2.status')
 local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
@@ -12,7 +16,6 @@ function Store:constructor()
     err = nil,
     data = nil,
     shape = nil,
-    git = Git(),
     _cache = {
       lnum = 1,
       list_entry_cache = {},
@@ -49,7 +52,7 @@ function Store:fetch(shape, commits, opts)
     commits = {},
   }
 
-  if not self.git:is_inside_git_dir() then
+  if not git_repo.exists() then
     return { 'Project has no .git folder' }, nil
   end
 
@@ -58,9 +61,9 @@ function Store:fetch(shape, commits, opts)
 
   for i = 1, #commits do
     local commit = commits[i]
-    -- Get the log associated with the commit
-    local log_err, log = self.git:log(commit)
     loop.free_textlock()
+    local reponame = git_repo.discover()
+    local log, log_err = git_log.get(reponame, commit)
 
     if log_err then
       return log_err
@@ -68,12 +71,12 @@ function Store:fetch(shape, commits, opts)
 
     -- We will use the parent_hash and the commit_hash inside
     -- the log object to list all the files associated with the log.
-    local err, files = self.git:ls_log(log)
     loop.free_textlock()
-
-    if err then
-      return err
-    end
+    local files, err = git_status.tree(reponame, {
+      commit_hash = log.commit_hash,
+      parent_hash = log.parent_hash
+    })
+    if err then return err end
 
     data[commit] = utils.list.map(files, function(file)
       -- Log contains the metadata about parent_hash and commit_hash
@@ -126,14 +129,13 @@ function Store:get_diff_dto()
   end
 
   local file = datum.file
+  if not file then return { 'No file found in item' }, nil end
 
-  if not file then
-    return { 'No file found in item' }, nil
-  end
+  local log = datum.log
+  if not log then return { 'No log found in item' }, nil end
 
   local id = file.id
   local filename = file.filename
-  local log = file.log
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
@@ -145,11 +147,12 @@ function Store:get_diff_dto()
   local is_deleted = false
 
   loop.free_textlock()
-  if not self.git:is_in_remote(filename, commit_hash) then
+  local reponame = git_repo.discover()
+  if not git_repo.has(reponame, filename, commit_hash) then
     is_deleted = true
-    lines_err, lines = self.git:show(filename, parent_hash)
+    lines, lines_err = git_show.lines(reponame, filename, parent_hash)
   else
-    lines_err, lines = self.git:show(filename, commit_hash)
+    lines, lines_err = git_show.lines(reponame, filename, commit_hash)
   end
   loop.free_textlock()
 
@@ -159,9 +162,12 @@ function Store:get_diff_dto()
 
   local hunks_err, hunks
   if is_deleted then
-    hunks = self.git:deleted_hunks(lines)
+    hunks = git_hunks.custom(lines, { deleted = true })
   else
-    hunks_err, hunks = self.git:remote_hunks(filename, parent_hash, commit_hash)
+    hunks, hunks_err = git_hunks.list(reponame, filename, {
+      parent = parent_hash,
+      current = commit_hash
+    })
   end
   loop.free_textlock()
 
@@ -202,23 +208,16 @@ function Store:get_lnum() return nil, self._cache.lnum end
 
 function Store:get_parent_commit()
   local err, datum = self:get()
-
-  if err then
-    return err
-  end
+  if err then return err end
 
   local file = datum.file
+  if not file then return { 'No file found in item' }, nil end
 
-  if not file then
-    return { 'No file found in item' }, nil
-  end
-
-  local log = file.log
+  local log = datum.log
+  if not log then return { 'No log found in item' }, nil end
 
   return nil, log.parent_hash
 end
-
-function Store:get_remote_lines(filename, commit_hash) return self.git:show(filename, commit_hash) end
 
 function Store:set_lnum(lnum)
   self._cache.lnum = lnum

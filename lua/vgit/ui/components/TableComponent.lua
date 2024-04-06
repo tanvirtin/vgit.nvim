@@ -21,7 +21,6 @@ function TableComponent:constructor(props)
       elements = {
         header = true,
         footer = true,
-        line_number = false,
       },
       win_options = {
         cursorline = true,

@@ -72,7 +72,7 @@ end
 
 function HistoryScreen:show()
   local buffer = Buffer(0)
-  local err = self.store:fetch(self.layout_type, buffer.filename)
+  local err = self.store:fetch(self.layout_type, buffer:get_name())
 
   loop.free_textlock()
   if err then
@@ -105,7 +105,7 @@ function HistoryScreen:show()
         vim.cmd('quit')
 
         loop.free_textlock()
-        vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', buffer.filename, row.commit_hash))
+        vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', buffer:get_name(), row.commit_hash))
       end),
     },
     {

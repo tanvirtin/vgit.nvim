@@ -1,8 +1,11 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local git_show = require('vgit.git.git2.show')
+local git_repo = require('vgit.git.git2.repo')
+local git_hunks = require('vgit.git.git2.hunks')
+local git_status = require('vgit.git.git2.status')
 local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
@@ -13,7 +16,6 @@ function Store:constructor()
     err = nil,
     data = nil,
     shape = nil,
-    git = Git(),
     _cache = {
       list_folds = {},
       list_entries = {},
@@ -83,16 +85,17 @@ function Store:get_file_lines(file, status)
   local file_status = file.status
   local err, lines
 
+  local reponame = git_repo.discover()
   if file_status:has_both('DU') then
-    err, lines = self.git:show(filename, ':3')
+    lines, err = git_show.lines(reponame, filename, ':3')
   elseif file_status:has_both('UD') then
-    err, lines = self.git:show(filename, ':2')
+    lines, err = git_show.lines(reponame, filename, ':2')
   elseif file_status:has('D ') then
-    err, lines = self.git:show(filename, 'HEAD')
+    lines, err = git_show.lines(reponame, filename, 'HEAD')
   elseif status == 'staged' or file_status:has(' D') then
-    err, lines = self.git:show(self.git:tracked_filename(filename))
+    lines, err = git_show.lines(reponame, filename)
   else
-    err, lines = fs.read_file(filename)
+    lines, err = fs.read_file(filename)
   end
   loop.free_textlock()
 
@@ -104,18 +107,27 @@ function Store:get_file_hunks(file, status, lines)
   local file_status = file.status
   local hunks_err, hunks
 
+  local reponame = git_repo.discover()
   if file_status:has_both('DU') then
-    hunks_err, hunks = self.git:unmerged_hunks(filename, ':3', ':1')
+    hunks, hunks_err = git_hunks.list(reponame, filename, {
+      previous = ':3',
+      current = ':1',
+      unmerged = true
+    })
   elseif file_status:has_both('UD') then
-    hunks_err, hunks = self.git:unmerged_hunks(filename, ':1', ':2')
+    hunks, hunks_err = git_hunks.list(reponame, filename, {
+      previous = ':1',
+      current = ':2',
+      unmerged = true
+    })
   elseif file_status:has_both('??') then
-    hunks = self.git:untracked_hunks(lines)
+    hunks = git_hunks.custom(lines, { untracked = true })
   elseif file_status:has_either('DD') then
-    hunks = self.git:deleted_hunks(lines)
+    hunks = git_hunks.custom(lines, { deleted = true })
   elseif status == 'staged' then
-    hunks_err, hunks = self.git:staged_hunks(filename)
+    hunks, hunks_err = git_hunks.list(reponame, filename, { staged = true })
   elseif status == 'unstaged' then
-    hunks_err, hunks = self.git:index_hunks(filename)
+    hunks, hunks_err = git_hunks.list(reponame, filename)
   elseif status == 'unmerged' then
     hunks_err = nil
     hunks = {}
@@ -143,16 +155,14 @@ function Store:fetch(shape, opts)
 
   self:reset()
 
-  if not self.git:is_inside_git_dir() then
+  if not git_repo.exists() then
     return { 'Project has no .git folder' }, nil
   end
 
-  local status_files_err, status_files = self.git:status()
   loop.free_textlock()
-
-  if status_files_err then
-    return status_files_err, nil
-  end
+  local reponame = git_repo.discover()
+  local status_files, status_files_err = git_status.ls(reponame)
+  if status_files_err then return status_files_err end
 
   local changed_files, staged_files, unmerged_files = self:partition_status(status_files)
 
@@ -173,7 +183,7 @@ function Store:fetch(shape, opts)
   self.shape = shape
   self.data = data
 
-  return nil, self.data
+  return self.data, nil
 end
 
 function Store:get_all() return self.err, self.data end

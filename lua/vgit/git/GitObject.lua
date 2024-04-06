@@ -1,156 +1,81 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
-local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local Hunk = require('vgit.git.cli.models.Hunk')
-local Patch = require('vgit.git.cli.models.Patch')
+local git_log = require('vgit.git.git2.log')
+local git_show = require('vgit.git.git2.show')
+local git_repo = require('vgit.git.git2.repo')
+local git_hunks = require('vgit.git.git2.hunks')
+local git_blame = require('vgit.git.git2.blame')
+local git_status = require('vgit.git.git2.status')
+local git_stager = require('vgit.git.git2.stager')
 
 local GitObject = Object:extend()
 
-function GitObject:constructor(filename)
-  local dirname = fs.dirname(filename)
+function GitObject:constructor(filepath)
+  local reponame = git_repo.discover(filepath)
+  local filename = fs.relative_filename(filepath)
+  local filetype = fs.detect_filetype(filename)
 
   return {
-    git = Git(dirname),
     hunks = nil,
-    dirname = dirname,
-    filename = {
-      native = filename,
-      tracked = nil,
-    },
-    filetype = fs.detect_filetype(filename),
-    _cache = {
-      line_blames = {},
-    },
+    reponame = reponame,
+    filepath = filepath,
+    filename = filename,
+    filetype = filetype,
   }
 end
 
-function GitObject:is_inside_git_dir()
-  return self.git:is_inside_git_dir()
-end
-
-function GitObject:is_ignored()
-  return self.git:is_ignored(self.filename.native)
+function GitObject:config()
+  return git_repo.config()
 end
 
 function GitObject:get_filename()
-  return self.filename.native
+  return self.filename
 end
 
 function GitObject:get_filetype()
   return self.filetype
 end
 
+function GitObject:is_ignored()
+  return git_repo.ignores(self.reponame, self.filename)
+end
+
 function GitObject:is_tracked()
-  return self:tracked_filename() ~= ''
-end
-
-function GitObject:is_in_remote()
-  return self.git:is_in_remote(self:tracked_filename())
-end
-
-function GitObject:config()
-  return self.git:config({ is_background = true })
-end
-
-function GitObject:tracked_filename()
-  if self.filename.tracked == nil then
-    -- NOTE: git.tracked_filename will return nil if the file does not exist in the git repo.
-    self.filename.tracked = self.git:tracked_filename(self.filename.native) or ''
-    return self.filename.tracked
-  end
-
-  return self.filename.tracked
-end
-
-function GitObject:patch_hunk(hunk)
-  return Patch(self.git:tracked_full_filename(self.filename.native), hunk)
-end
-
-function GitObject:stage_hunk_from_patch(patch)
-  local patch_filename = fs.tmpname()
-  loop.free_textlock()
-  fs.write_file(patch_filename, patch)
-
-  loop.free_textlock()
-  local err = self.git:stage_hunk_from_patch(patch_filename)
-
-  loop.free_textlock()
-  fs.remove_file(patch_filename)
-
-  return err
-end
-
-function GitObject:unstage_hunk_from_patch(patch)
-  local patch_filename = fs.tmpname()
-  loop.free_textlock()
-  fs.write_file(patch_filename, patch)
-
-  loop.free_textlock()
-  local err = self.git:unstage_hunk_from_patch(patch_filename)
-
-  loop.free_textlock()
-  fs.remove_file(patch_filename)
-
-  return err
+  return git_repo.has(self.reponame, self.filename)
 end
 
 function GitObject:stage_hunk(hunk)
-  return self:stage_hunk_from_patch(self:patch_hunk(hunk))
+  return git_stager.stage_hunk(self.reponame, self.filename, hunk)
 end
 
 function GitObject:unstage_hunk(hunk)
-  return self:unstage_hunk_from_patch(self:patch_hunk(hunk))
+  return git_stager.unstage_hunk(self.reponame, self.filename, hunk)
 end
 
 function GitObject:stage()
-  local filename = self:tracked_filename()
-
-  if not self:is_tracked() then
-    filename = utils.str.strip(self.filename.native, self.dirname)
-  end
-
-  return self.git:stage_file(filename)
+  return git_stager.stage(self.reponame, self.filename)
 end
 
 function GitObject:unstage()
-  return self.git:unstage_file(self:tracked_filename())
+  return git_stager.unstage(self.reponame, self.filename)
 end
 
 function GitObject:lines(commit_hash)
-  return self.git:show(self:tracked_filename(), commit_hash or '', { is_background = true })
+  return git_show.lines(self.reponame, self.filename, commit_hash)
 end
 
-function GitObject:blame_line(lnum)
-  if self._cache.line_blames[lnum] then return nil, self._cache.line_blames[lnum] end
-
-  local err, blame = self.git:blame_line(self:tracked_filename(), lnum, { is_background = true })
-
-  if blame then
-    self._cache.line_blames[lnum] = blame
-  end
-
-  return err, blame
+function GitObject:blame(lnum)
+  return git_blame.get(self.reponame, self.filename, lnum)
 end
 
 function GitObject:blames()
-  return self.git:blames(self:tracked_filename(), { is_background = true })
+  return git_blame.list(self.reponame, self.filename)
 end
 
 function GitObject:live_hunks(current_lines)
-  loop.free_textlock()
-  local filename = self:tracked_filename()
-
-  if filename == '' then
-    loop.free_textlock()
-    local hunks = self.git:untracked_hunks(current_lines)
-    self.hunks = hunks
-    return nil, hunks
-  end
-
-  loop.free_textlock()
-  local original_lines_err, original_lines = self:lines()
+  local original_lines, original_lines_err = self:lines()
   if original_lines_err then return original_lines_err end
 
   local o_lines_str = ''
@@ -169,8 +94,7 @@ function GitObject:live_hunks(current_lines)
     end
   end
 
-  self.hunks = {}
-  local hunks = self.hunks
+  local hunks = {}
 
   loop.free_textlock()
   vim.diff(o_lines_str, c_lines_str, {
@@ -196,23 +120,28 @@ function GitObject:live_hunks(current_lines)
     algorithm = 'myers',
   })
 
+  self.hunks = hunks
+
   return nil, hunks
 end
 
 function GitObject:staged_hunks()
-  return self.git:staged_hunks(self:tracked_filename(), { is_background = true })
+  return git_hunks.list(self.reponame, self.filename, { staged = true })
 end
 
-function GitObject:remote_hunks(parent_hash, commit_hash)
-  return self.git:remote_hunks(self:tracked_filename(), parent_hash, commit_hash, { is_background = true })
+function GitObject:list_hunks(parent_hash, commit_hash)
+  return git_hunks.list(self.reponame, self.filename, {
+    parent = parent_hash,
+    current = commit_hash
+  })
 end
 
 function GitObject:logs()
-  return self.git:file_logs(self:tracked_filename(), { is_background = true })
+  return git_log.list(self.reponame, self.filename)
 end
 
 function GitObject:status()
-  return self.git:file_status(self:tracked_filename())
+  return git_status.ls(self.reponame, self.filename)
 end
 
 function GitObject:generate_status()

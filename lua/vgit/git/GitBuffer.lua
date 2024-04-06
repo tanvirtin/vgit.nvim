@@ -1,3 +1,4 @@
+local git_repo = require('vgit.git.git2.repo')
 local Buffer = require('vgit.core.Buffer')
 local GitObject = require('vgit.git.GitObject')
 local signs_setting = require('vgit.settings.signs')
@@ -10,9 +11,13 @@ function GitBuffer:sync()
   self.signs = {}
   self.is_processing = false
   self.is_showing_lens = false
-  self.git_object = GitObject(self.filename)
+  self.git_object = GitObject(self:get_name())
 
   return self
+end
+
+function GitBuffer:config()
+  return self.git_object:config()
 end
 
 function GitBuffer:is_ignored()
@@ -20,15 +25,23 @@ function GitBuffer:is_ignored()
 end
 
 function GitBuffer:is_tracked()
-  return self.git_object:tracked_filename() ~= ''
+  return self.git_object:is_tracked()
 end
 
 function GitBuffer:is_inside_git_dir()
-  return self.git_object:is_inside_git_dir()
+  return git_repo.exists(self:get_name())
 end
 
 function GitBuffer:generate_status()
   return self:set_var('vgit_status', self.git_object:generate_status())
+end
+
+function GitBuffer:blame(lnum)
+  return self.git_object:blame(lnum)
+end
+
+function GitBuffer:blames()
+  return self.git_object:blames()
 end
 
 function GitBuffer:live_hunks()

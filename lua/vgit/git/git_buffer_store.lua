@@ -1,7 +1,7 @@
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
 local event = require('vgit.core.event')
 local utils = require('vgit.core.utils')
+local git_repo = require('vgit.git.git2.repo')
 local Watcher = require('vgit.core.Watcher')
 local GitBuffer = require('vgit.git.GitBuffer')
 local event_type = require('vgit.core.event_type')
@@ -36,19 +36,12 @@ git_buffer_store.register_events = loop.coroutine(function()
     handler()
   end
 
-  local git = Git()
+  loop.free_textlock()
+  if not git_repo.exists() then return end
 
   loop.free_textlock()
-  if not git:is_inside_git_dir() then
-    return
-  end
-
-  loop.free_textlock()
-  local err, git_dir = git:get_git_dir()
-
-  if err then
-    return
-  end
+  local git_dir = git_repo.discover()
+  if not git_dir then return end
 
   dir_watcher:watch_dir(git_dir, function()
     local git_buffers = utils.object.values(buffers)

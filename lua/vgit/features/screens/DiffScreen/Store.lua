@@ -40,9 +40,9 @@ function Store:fetch(shape, filename, opts)
   local lines_err, lines
 
   if opts.is_staged then
-    lines_err, lines = self.git_object:lines()
+    lines, lines_err = self.git_object:lines()
   else
-    lines_err, lines = fs.read_file(filename)
+    lines, lines_err = fs.read_file(filename)
   end
 
   if lines_err then
@@ -54,7 +54,7 @@ function Store:fetch(shape, filename, opts)
   self._cache.lines = lines
 
   if opts.is_staged then
-    self.err, self.data = self.git_object:staged_hunks(lines)
+    self.data, self.err = self.git_object:staged_hunks()
   else
     self.err, self.data = self.git_object:live_hunks(lines)
   end

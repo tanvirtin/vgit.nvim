@@ -6,7 +6,6 @@ local HeaderTitle = require('vgit.ui.decorations.HeaderTitle')
 local HeaderElement = require('vgit.ui.elements.HeaderElement')
 local FooterElement = require('vgit.ui.elements.FooterElement')
 local Notification = require('vgit.ui.decorations.Notification')
-local LineNumberElement = require('vgit.ui.elements.LineNumberElement')
 
 local DiffComponent = Component:extend()
 
@@ -15,7 +14,6 @@ function DiffComponent:constructor(props)
     config = {
       elements = {
         header = true,
-        line_number = true,
         footer = true,
       },
     },
@@ -36,48 +34,31 @@ function DiffComponent:set_lnum(lnum)
 end
 
 function DiffComponent:call(callback)
-  self.elements.line_number:call(callback)
   self.window:call(callback)
 
   return self
 end
 
 function DiffComponent:reset_cursor()
-  self.elements.line_number:reset_cursor()
   Component.reset_cursor(self)
 
   return self
 end
 
 function DiffComponent:clear_lines()
-  self.elements.line_number:clear_lines()
   Component.clear_lines(self)
 
   return self
 end
 
 function DiffComponent:sign_unplace()
-  self.elements.line_number:sign_unplace()
   self.buffer:sign_unplace()
-
-  return self
-end
-
-function DiffComponent:sign_place_line_number(lnum, sign_name)
-  self.elements.line_number:sign_place(lnum, sign_name)
-
-  return self
-end
-
-function DiffComponent:transpose_virtual_line_number(text, hl, row)
-  self.elements.line_number:transpose_virtual_line({ { text, hl } }, row, 'right_align')
 
   return self
 end
 
 function DiffComponent:position_cursor(placement)
   Component.position_cursor(self, placement)
-  self.elements.line_number:position_cursor(placement)
 
   return self
 end
@@ -96,8 +77,6 @@ function DiffComponent:mount(opts)
 
   local buffer = self.buffer
   local plot = self.plot
-
-  self.elements.line_number = LineNumberElement():mount(plot.line_number_win_plot)
 
   if config.elements.header then
     self.elements.header = HeaderElement():mount(plot.header_win_plot)
@@ -120,16 +99,11 @@ function DiffComponent:unmount()
   end
 
   local header = self.elements.header
-  local line_number = self.elements.line_number
   local footer = self.elements.footer
 
   self.window:close()
   if header then
     header:unmount()
-  end
-
-  if line_number then
-    line_number:unmount()
   end
 
   if footer then
@@ -164,13 +138,15 @@ function DiffComponent:clear_title()
 end
 
 function DiffComponent:make_line_numbers(lines)
-  self.elements.line_number:make_lines(lines)
+  for i = 1, #lines do
+    local row = i - 1
+    self:transpose_virtual_line({ { lines[i], nil } }, row, 'inline')
+  end
 
   return self
 end
 
 function DiffComponent:clear_namespace()
-  self.elements.line_number:clear_namespace()
   Component.clear_namespace(self)
 
   local header = self.elements.header

@@ -6,13 +6,11 @@ local dimensions = require('vgit.ui.dimensions')
 local signs_setting = require('vgit.settings.signs')
 local symbols_setting = require('vgit.settings.symbols')
 local DiffComponent = require('vgit.ui.components.DiffComponent')
-local LineNumberElement = require('vgit.ui.elements.LineNumberElement')
 
 local DiffView = Object:extend()
 
 function DiffView:get_initial_state()
   return {
-    is_painted = false,
     current_lines_changes = {},
     previous_lines_changes = {},
   }
@@ -39,7 +37,6 @@ function DiffView:define()
           elements = utils.object.assign({
             header = true,
             footer = false,
-            line_number = true,
           }, self.config.elements),
           win_options = {
             cursorbind = true,
@@ -63,7 +60,6 @@ function DiffView:define()
           elements = utils.object.assign({
             header = true,
             footer = false,
-            line_number = true,
           }, self.config.elements),
           win_options = {
             cursorbind = true,
@@ -72,9 +68,7 @@ function DiffView:define()
           },
           win_plot = dimensions.relative_win_plot(self.plot, {
             height = '100vh',
-            -- 49 and not 50 because nvim cannot have height or width be a non integer.
-            -- This ensures that the other window never overflows.
-            width = '49vw',
+            width = '50vw',
           }),
         },
       })
@@ -86,7 +80,6 @@ function DiffView:define()
           elements = utils.object.assign({
             header = true,
             footer = false,
-            line_number = true,
           }, self.config.elements),
           win_options = {
             cursorbind = true,
@@ -95,9 +88,9 @@ function DiffView:define()
           },
           win_plot = dimensions.relative_win_plot(self.plot, {
             height = '100vh',
-            width = '51vw',
+            width = '50vw',
             row = '0vh',
-            col = '49vw',
+            col = '50vw',
           }),
         },
       })
@@ -185,14 +178,12 @@ end
 function DiffView:paint_line(component_type, line_changes, lnum)
   local line_number_hl = 'GitLineNr'
   local lnum_change = line_changes.lnum_change
-  local line_number = line_changes.line_number
   local signs_usage_setting = signs_setting:get('usage')
   local scene_signs = signs_usage_setting.scene
   local main_signs = signs_usage_setting.main
   local component = self.scene:get(component_type)
 
   if not lnum_change then
-    component:transpose_virtual_line_number(line_number, line_number_hl, lnum - 1)
     return self
   end
 
@@ -203,12 +194,6 @@ function DiffView:paint_line(component_type, line_changes, lnum)
   if change_type ~= 'void' then
     line_number_hl = main_signs[change_type]
   end
-
-  if sign_name then
-    component:sign_place_line_number(lnum, sign_name)
-  end
-
-  component:transpose_virtual_line_number(line_number, line_number_hl, lnum - 1)
 
   if sign_name then
     component:sign_place(lnum, sign_name)
@@ -247,13 +232,9 @@ function DiffView:apply_brush(top, bot)
   return self
 end
 
-function DiffView:paint_partially()
-  self.scene:get('current'):attach_to_renderer(function(top, bot) self:apply_brush(top, bot + 1) end)
-
-  return self
+function DiffView:paint()
+  return self:apply_brush(1, #self.state.current_lines_changes)
 end
-
-function DiffView:paint_full() return self:apply_brush(1, #self.state.current_lines_changes) end
 
 function DiffView:reset_cursor()
   if self.layout_type == 'split' then
@@ -406,7 +387,7 @@ function DiffView:make_split_current_line_numbers(diff_dto, current_lnum_change_
     local lnum_change = current_lnum_change_map[i]
 
     if lnum_change and (lnum_change.type == 'remove' or lnum_change.type == 'void') then
-      line = string.rep(symbols_setting:get('void'), LineNumberElement:get_width())
+      line = string.rep(symbols_setting:get('void'), 3)
       current_lines[#current_lines + 1] = line
     else
       line = string.format('%s ', current_line_count)
@@ -438,7 +419,7 @@ function DiffView:make_split_previous_line_numbers(diff_dto, previous_lnum_chang
     local lnum_change = previous_lnum_change_map[i]
 
     if lnum_change and (lnum_change.type == 'add' or lnum_change.type == 'void') then
-      line = string.rep(symbols_setting:get('void'), LineNumberElement:get_width())
+      line = string.rep(symbols_setting:get('void'), 3)
       previous_lines[#previous_lines + 1] = line
     else
       line = string.format('%s ', previous_lines_count)
@@ -510,6 +491,7 @@ function DiffView:make_unified_line_numbers()
     local lnum_change = lnum_change_map[i]
 
     if lnum_change and lnum_change.type == 'remove' then
+      line = string.format('%s ', string.rep(' ', #string.format('%s', line_count + 1)))
       lines[#lines + 1] = line
     else
       line = string.format('%s ', line_count)
@@ -557,16 +539,6 @@ function DiffView:make_lines()
   end
 
   return self
-end
-
-function DiffView:paint()
-  if not self.state.is_painted then
-    self.state.is_painted = true
-
-    return self:paint_full()
-  end
-
-  return self:paint_partially()
 end
 
 function DiffView:notify(msg)

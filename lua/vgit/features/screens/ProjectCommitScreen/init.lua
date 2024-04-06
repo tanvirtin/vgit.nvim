@@ -74,7 +74,7 @@ function ProjectCommitScreen:show()
       mode = 'n',
       key = project_commit_preview_setting:get('keymaps').save,
       handler = loop.coroutine(function()
-        local commit_err = self.mutation:commit(self.view:get_lines())
+        local _, commit_err = self.mutation:commit(self.view:get_lines())
         loop.free_textlock()
 
         if commit_err then

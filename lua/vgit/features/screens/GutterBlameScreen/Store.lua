@@ -38,7 +38,7 @@ function Store:fetch(filename, lines)
   self.git_object = GitObject(filename)
 
   loop.free_textlock()
-  self.err, self.data = self.git_object:blames()
+  self.data, self.err = self.git_object:blames()
   loop.free_textlock()
 
   self._cache.lines = lines

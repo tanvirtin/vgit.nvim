@@ -26,10 +26,6 @@ function RowLayout:build()
         plot.footer_win_plot.row = plot.footer_win_plot.row + row
       end
 
-      if plot.line_number_win_plot then
-        plot.line_number_win_plot.row = plot.line_number_win_plot.row + row
-      end
-
       last_component = component
     end
 
@@ -77,9 +73,6 @@ function RowLayout:build()
             plot.footer_win_plot.row = row + plot.win_plot.height
           end
 
-          if plot.line_number_win_plot then
-            plot.line_number_win_plot.row = row
-          end
         else
           plot.win_plot.row = row - plot.win_plot.height - 1
 
@@ -89,10 +82,6 @@ function RowLayout:build()
 
           if plot.footer_win_plot then
             plot.footer_win_plot.row = row - 1
-          end
-
-          if plot.line_number_win_plot then
-            plot.line_number_win_plot.row = row - plot.win_plot.height - 1
           end
         end
       end

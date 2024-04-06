@@ -54,7 +54,8 @@ function LineBlameScreen:handle_on_enter(buffer, blame)
   vim.cmd('quit')
 
   loop.free_textlock()
-  vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', buffer.filename, blame.commit_hash))
+  local filename = buffer:get_name()
+  vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', filename, blame.commit_hash))
 end
 
 function LineBlameScreen:show()
@@ -63,10 +64,11 @@ function LineBlameScreen:show()
 
   loop.free_textlock()
   local lnum = window:get_lnum()
-  local filename = buffer.filename
+  local filename = buffer:get_name()
   local layout_type = self.layout_type
   local err = self.store:fetch(layout_type, filename, lnum)
 
+  loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
     return false

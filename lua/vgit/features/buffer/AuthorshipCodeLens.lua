@@ -179,7 +179,7 @@ function AuthorshipCodeLens:render(git_buffer, bot)
   git_buffer.state.is_processing = true
 
   loop.free_textlock()
-  local blames_err, blames = git_buffer.git_object:blames()
+  local blames, blames_err = git_buffer:blames()
 
   loop.free_textlock()
   if blames_err then
@@ -190,7 +190,7 @@ function AuthorshipCodeLens:render(git_buffer, bot)
   end
 
   loop.free_textlock()
-  local config_err, config = git_buffer.git_object:config()
+  local config, config_err = git_buffer:config()
 
   if config_err then
     git_buffer.state.is_processing = false

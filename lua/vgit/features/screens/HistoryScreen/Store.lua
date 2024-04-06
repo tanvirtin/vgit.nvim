@@ -37,7 +37,7 @@ function Store:fetch(shape, filename, opts)
 
   self.shape = shape
   self.git_object = GitObject(filename)
-  self.err, self.data = self.git_object:logs()
+  self.data, self.err = self.git_object:logs()
 
   if self.data and utils.list.is_empty(self.data) then
     return { 'There is no history associated with this buffer' }, nil
@@ -70,31 +70,23 @@ function Store:get_diff_dto(index)
   local log_err, log = self:get(index)
   loop.free_textlock()
 
-  if log_err then
-    return log_err
-  end
+  if log_err then return log_err end
 
   local id = log.id
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self._cache[id] then
-    return nil, self._cache[id]
-  end
+  if self._cache[id] then return nil, self._cache[id] end
 
-  local hunks_err, hunks = self.git_object:remote_hunks(parent_hash, commit_hash)
+  local hunks, hunks_err = self.git_object:list_hunks(parent_hash, commit_hash)
   loop.free_textlock()
 
-  if hunks_err then
-    return hunks_err
-  end
+  if hunks_err then return hunks_err end
 
-  local lines_err, lines = self.git_object:lines(commit_hash)
+  local lines, lines_err = self.git_object:lines(commit_hash)
   loop.free_textlock()
 
-  if lines_err then
-    return lines_err
-  end
+  if lines_err then return lines_err end
 
   local diff = diff_service:generate(hunks, lines, self.shape)
 

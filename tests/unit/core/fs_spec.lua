@@ -56,7 +56,7 @@ describe('fs:', function()
 
   describe('read_file', function()
     it('should retrieve an err_result for a given file path that does not exist', function()
-      local err, data = fs.read_file('IDONTEXIST.md')
+      local data, err = fs.read_file('IDONTEXIST.md')
 
       assert.are_not.same(err, nil)
       eq(data, nil)
@@ -130,7 +130,7 @@ describe('fs:', function()
 
       fs.write_file(filename, lines)
 
-      local err, data = fs.read_file(filename)
+      local data, err = fs.read_file(filename)
 
       eq(err, nil)
       eq(data, { 'foo', 'bar' })
@@ -144,7 +144,7 @@ describe('fs:', function()
       file:close()
       fs.write_file(filename, lines)
 
-      local err, data = fs.read_file(filename)
+      local data, err = fs.read_file(filename)
 
       eq(err, nil)
       eq(data, { 'foo', 'baz' })

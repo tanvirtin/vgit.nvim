@@ -21,9 +21,9 @@ function ProjectLogsScreen:constructor(opts)
   }
 end
 
-function ProjectLogsScreen:show(opts)
+function ProjectLogsScreen:show()
   loop.free_textlock()
-  local err = self.store:fetch(opts)
+  local err = self.store:fetch()
 
   loop.free_textlock()
   if err then
