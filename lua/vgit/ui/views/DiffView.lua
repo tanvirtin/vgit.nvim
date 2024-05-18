@@ -68,7 +68,7 @@ function DiffView:define()
           },
           win_plot = dimensions.relative_win_plot(self.plot, {
             height = '100vh',
-            width = '50vw',
+            width = '49vw',
           }),
         },
       })
@@ -88,9 +88,8 @@ function DiffView:define()
           },
           win_plot = dimensions.relative_win_plot(self.plot, {
             height = '100vh',
-            width = '50vw',
-            row = '0vh',
-            col = '50vw',
+            width = '51vw',
+            col = '51vw',
           }),
         },
       })
@@ -308,7 +307,7 @@ function DiffView:clear_notification()
   return self
 end
 
-function DiffView:make_title()
+function DiffView:render_title()
   local filename_err, filename = self.store:get_filename()
 
   if filename_err then
@@ -353,7 +352,7 @@ function DiffView:make_title()
   return self
 end
 
-function DiffView:make_filetype()
+function DiffView:render_filetype()
   local err, filetype = self.store:get_filetype()
 
   if err then
@@ -376,70 +375,86 @@ function DiffView:make_filetype()
   return self
 end
 
-function DiffView:make_split_current_line_numbers(diff_dto, current_lnum_change_map)
-  local current_lines_changes = {}
-  local current_lines = {}
-  local current_line_count = 1
-  local num_current_lines = #diff_dto.current_lines
+function DiffView:render_split_current_line_numbers(diff_dto, lnum_change_map)
+  local lines = {}
+  local line_count = 1
+  local lines_changes = {}
+  local num_lines = #diff_dto.current_lines
 
-  for i = 1, num_current_lines do
+  for i = 1, num_lines do
     local line
-    local lnum_change = current_lnum_change_map[i]
+    local lnum_change = lnum_change_map[i]
 
-    if lnum_change and (lnum_change.type == 'remove' or lnum_change.type == 'void') then
+    if lnum_change and lnum_change.type == 'void' then
       line = string.rep(symbols_setting:get('void'), 3)
-      current_lines[#current_lines + 1] = line
+      lines[#lines + 1] = { line, 'GitLineNr' }
+    elseif lnum_change and lnum_change.type == 'add' then
+      line = string.format('%s ', line_count)
+      lines[#lines + 1] = { line, 'DiffAdd' }
+      line_count = line_count + 1
+    elseif lnum_change and lnum_change.type == 'remove' then
+      line = string.format('%s ', line_count)
+      lines[#lines + 1] = { line, 'DiffDelete' }
+      line_count = line_count + 1
     else
-      line = string.format('%s ', current_line_count)
-      current_lines[#current_lines + 1] = line
-      current_line_count = current_line_count + 1
+      line = string.format('%s ', line_count)
+      lines[#lines + 1] = { line, 'GitLineNr' }
+      line_count = line_count + 1
     end
 
-    current_lines_changes[#current_lines_changes + 1] = {
-      lnum_change = lnum_change,
+    lines_changes[#lines_changes + 1] = {
       line_number = line,
+      lnum_change = lnum_change,
     }
   end
 
-  self.state.current_lines_changes = current_lines_changes
+  self.state.current_lines_changes = lines_changes
 
-  self.scene:get('current'):make_line_numbers(current_lines)
+  self.scene:get('current'):render_line_numbers(lines)
 
   return self
 end
 
-function DiffView:make_split_previous_line_numbers(diff_dto, previous_lnum_change_map)
-  local previous_lines = {}
-  local previous_lines_changes = {}
-  local previous_lines_count = 1
-  local num_previous_lines = #diff_dto.previous_lines
+function DiffView:render_split_previous_line_numbers(diff_dto, lnum_change_map)
+  local lines = {}
+  local line_count = 1
+  local lines_changes = {}
+  local num_lines = #diff_dto.previous_lines
 
-  for i = 1, num_previous_lines do
+  for i = 1, num_lines do
     local line
-    local lnum_change = previous_lnum_change_map[i]
+    local lnum_change = lnum_change_map[i]
 
-    if lnum_change and (lnum_change.type == 'add' or lnum_change.type == 'void') then
+    if lnum_change and lnum_change.type == 'void' then
       line = string.rep(symbols_setting:get('void'), 3)
-      previous_lines[#previous_lines + 1] = line
+      lines[#lines + 1] = { line, 'GitLineNr' }
+    elseif lnum_change and lnum_change.type == 'add' then
+      line = string.format('%s ', line_count)
+      lines[#lines + 1] = { line, 'DiffAdd' }
+      line_count = line_count + 1
+    elseif lnum_change and lnum_change.type == 'remove' then
+      line = string.format('%s ', line_count)
+      lines[#lines + 1] = { line, 'DiffDelete' }
+      line_count = line_count + 1
     else
-      line = string.format('%s ', previous_lines_count)
-      previous_lines[#previous_lines + 1] = line
-      previous_lines_count = previous_lines_count + 1
+      line = string.format('%s ', line_count)
+      lines[#lines + 1] = { line, 'GitLineNr' }
+      line_count = line_count + 1
     end
 
-    previous_lines_changes[#previous_lines_changes + 1] = {
-      lnum_change = lnum_change,
+    lines_changes[#lines_changes + 1] = {
       line_number = line,
+      lnum_change = lnum_change,
     }
   end
 
-  self.state.previous_lines_changes = previous_lines_changes
-  self.scene:get('previous'):make_line_numbers(previous_lines)
+  self.state.previous_lines_changes = lines_changes
+  self.scene:get('previous'):render_line_numbers(lines)
 
   return self
 end
 
-function DiffView:make_split_line_numbers()
+function DiffView:render_split_line_numbers()
   local err, diff_dto = self.store:get_diff_dto()
 
   if err then
@@ -462,11 +477,11 @@ function DiffView:make_split_line_numbers()
   end
 
   return self
-    :make_split_current_line_numbers(diff_dto, current_lnum_change_map)
-    :make_split_previous_line_numbers(diff_dto, previous_lnum_change_map)
+      :render_split_previous_line_numbers(diff_dto, previous_lnum_change_map)
+      :render_split_current_line_numbers(diff_dto, current_lnum_change_map)
 end
 
-function DiffView:make_unified_line_numbers()
+function DiffView:render_unified_line_numbers()
   local err, diff_dto = self.store:get_diff_dto()
 
   if err then
@@ -491,40 +506,44 @@ function DiffView:make_unified_line_numbers()
     local lnum_change = lnum_change_map[i]
 
     if lnum_change and lnum_change.type == 'remove' then
-      line = string.format('%s ', string.rep(' ', #string.format('%s', line_count + 1)))
-      lines[#lines + 1] = line
+      line = string.format('%s ', string.rep(' ', #string.format('%s', line_count)))
+      lines[#lines + 1] = { line, 'DiffDelete' }
+    elseif lnum_change and lnum_change.type == 'add' then
+      line = string.format('%s ', line_count)
+      lines[#lines + 1] = { line, 'DiffAdd' }
+      line_count = line_count + 1
     else
       line = string.format('%s ', line_count)
-      lines[#lines + 1] = line
+      lines[#lines + 1] = { line, 'GitLineNr' }
       line_count = line_count + 1
     end
 
     lines_changes[#lines_changes + 1] = {
-      lnum_change = lnum_change,
       line_number = line,
+      lnum_change = lnum_change,
     }
   end
 
-  self.scene:get('current'):make_line_numbers(lines)
+  self.scene:get('current'):render_line_numbers(lines)
 
   self.state.current_lines_changes = lines_changes
 
   return self
 end
 
-function DiffView:make_line_numbers()
+function DiffView:render_line_numbers()
   local layout_type = self.layout_type
 
   if layout_type == 'split' then
-    self:make_split_line_numbers()
+    self:render_split_line_numbers()
   elseif layout_type == 'unified' then
-    self:make_unified_line_numbers()
+    self:render_unified_line_numbers()
   end
 
   return self
 end
 
-function DiffView:make_lines()
+function DiffView:render_lines()
   local diff_dto_err, diff_dto = self.store:get_diff_dto()
   if diff_dto_err then
     console.debug.error(diff_dto_err)
@@ -775,16 +794,15 @@ function DiffView:navigate_to_mark(mark_index, pos)
   end
 
   return self
-    :select_mark(marks, mark_index, pos)
-    :notify(string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks))
+      :select_mark(marks, mark_index, pos)
+      :notify(string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks))
 end
 
 function DiffView:render()
   local ok, msg = pcall(function()
-    -- NOTE: important to clear the namespace first.
-    loop.free_textlock(5)
+    loop.free_textlock()
     self:clear_namespace()
-    loop.free_textlock(5)
+    loop.free_textlock()
 
     local err, _ = self.store:get_diff_dto()
 
@@ -793,24 +811,25 @@ function DiffView:render()
 
       self.state = DiffView:get_initial_state()
 
-      return self:clear_title():clear_lines():clear_notification():reset_cursor()
+      return self:clear_title()
+          :clear_lines()
+          :clear_notification()
+          :reset_cursor()
     end
 
-    -- NOTE: It is super important to reset the cursor or else
-    -- you will randomly see line numbers not aligning with the current view.
-    return self:reset_cursor():make_title():make_filetype():make_lines():make_line_numbers():paint()
+    return self:reset_cursor()
+        :render_title()
+        :render_filetype()
+        :render_lines()
+        :render_line_numbers()
+        :paint()
   end)
 
-  if not ok then
-    console.debug.error(msg)
-  end
-
+  if not ok then console.debug.error(msg) end
   return self
 end
 
 DiffView.render_debounced = loop.debounce_coroutine(function(self, callback)
-  loop.free_textlock()
-
   self:render()
 
   if callback then

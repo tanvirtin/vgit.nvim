@@ -25,7 +25,7 @@ end
 
 function PopupComponent:set_default_win_plot(win_plot)
   win_plot.relative = 'cursor'
-  win_plot.border = self:make_border({
+  win_plot.border = self:render_border({
     hl = 'GitBorder',
     chars = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
   })

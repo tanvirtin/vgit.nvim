@@ -146,6 +146,12 @@ function Buffer:sign_unplace()
   return self
 end
 
+function Buffer:transpose_virtual_line_numbers(texts, row)
+  self.namespace:transpose_virtual_line_numbers(self, texts, row)
+
+  return self
+end
+
 function Buffer:transpose_virtual_text(text, hl, row, col, pos, priority)
   self.namespace:transpose_virtual_text(self, text, hl, row, col, pos, priority)
 

@@ -71,7 +71,7 @@ function DiffScreen:hunk_down()
   return self
 end
 
-function DiffScreen:make_help_bar()
+function DiffScreen:render_help_bar()
   local text = ''
   local keymaps = diff_preview_setting:get('keymaps')
   local keys = {
@@ -380,7 +380,7 @@ function DiffScreen:show(opts)
   })
 
   if self.app_bar_view then
-    self:make_help_bar()
+    self:render_help_bar()
   end
 
   return true
