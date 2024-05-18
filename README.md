@@ -30,7 +30,6 @@
 ---
 - Gutter changes
 - Current line blame
-- Authorship code lens 
 - Current line blame preview
 - Gutter blame preview
 - File history preview
@@ -227,9 +226,6 @@ require('vgit').setup({
       enabled = true,
       edge_navigation = true, -- This allows users to navigate within a hunk
     },
-    authorship_code_lens = {
-      enabled = true,
-    },
     scene = {
       diff_preference = 'unified', -- unified or split
       keymaps = {
@@ -371,7 +367,6 @@ set statusline+=%{get(b:,'vgit_status','')}
 | toggle_diff_preference | Used to switch between "split" and "unified" diff. |
 | toggle_live_gutter | Enables/disables git gutter signs. |
 | toggle_live_blame | Used to switch between "split" and "unified" diff. |
-| toggle_authorship_code_lens | Enables/disables authorship code lens that can be found on top of the file |
 | toggle_tracing | Enables/disables debug logs that are used internally by VGit to make suppressed logs visible. |
 
 <details>

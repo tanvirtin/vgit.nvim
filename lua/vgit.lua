@@ -20,8 +20,6 @@ local git_buffer_store = require('vgit.git.git_buffer_store')
 local LiveGutter = require('vgit.features.buffer.LiveGutter')
 local live_blame_setting = require('vgit.settings.live_blame')
 local live_gutter_setting = require('vgit.settings.live_gutter')
-local AuthorshipCodeLens = require('vgit.features.buffer.AuthorshipCodeLens')
-local authorship_code_lens_setting = require('vgit.settings.authorship_code_lens')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
 local ProjectHunksQuickfix = require('vgit.features.quickfix.ProjectHunksQuickfix')
 local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
@@ -30,7 +28,6 @@ local hunks = Hunks()
 local command = Command()
 local live_blame = LiveBlame()
 local live_gutter = LiveGutter()
-local authorship_code_lens = AuthorshipCodeLens()
 local project_hunks_quickfix = ProjectHunksQuickfix()
 
 local settings = {
@@ -118,13 +115,6 @@ local toggle_live_gutter = loop.coroutine(function()
   live_gutter:reset()
 end)
 
-local toggle_authorship_code_lens = loop.coroutine(function()
-  local authorship_code_lens_enabled = authorship_code_lens_setting:get('enabled')
-
-  authorship_code_lens_setting:set('enabled', not authorship_code_lens_enabled)
-  authorship_code_lens:reset()
-end)
-
 local toggle_tracing = loop.coroutine(function() env.set('DEBUG', not env.get('DEBUG')) end)
 
 local function command_list(...) return command:list(...) end
@@ -151,7 +141,6 @@ end
 local function register_events()
   live_blame:register_events()
   live_gutter:register_events()
-  authorship_code_lens:register_events()
   highlight.register_events()
   git_buffer_store.register_events()
 end
@@ -174,7 +163,6 @@ local function configure_settings(config)
   diff_preview:assign(config_settings.diff_preview)
   live_blame_setting:assign(config_settings.live_blame)
   live_gutter_setting:assign(config_settings.live_gutter)
-  authorship_code_lens_setting:assign(config_settings.authorship_code_lens)
   project_diff_preview_setting:assign(config_settings.project_diff_preview)
   project_commit_preview_setting:assign(config_settings.project_commit_preview)
 end
@@ -201,7 +189,6 @@ return {
   toggle_live_blame = toggle_live_blame,
   toggle_live_gutter = toggle_live_gutter,
   toggle_diff_preference = toggle_diff_preference,
-  toggle_authorship_code_lens = toggle_authorship_code_lens,
 
   hunk_up = controls.hunk_up,
   hunk_down = controls.hunk_down,
