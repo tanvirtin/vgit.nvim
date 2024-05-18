@@ -44,7 +44,6 @@ function Command:constructor()
       'toggle_diff_preference',
       'toggle_live_gutter',
       'toggle_live_blame',
-      'toggle_authorship_code_lens',
 
       'h',
       'help',

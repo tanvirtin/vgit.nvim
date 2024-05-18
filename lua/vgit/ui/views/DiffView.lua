@@ -386,7 +386,7 @@ function DiffView:render_split_current_line_numbers(diff_dto, lnum_change_map)
     local lnum_change = lnum_change_map[i]
 
     if lnum_change and lnum_change.type == 'void' then
-      line = string.rep(symbols_setting:get('void'), 3)
+      line = string.rep(symbols_setting:get('void'), string.len(tostring(num_lines)))
       lines[#lines + 1] = { line, 'GitLineNr' }
     elseif lnum_change and lnum_change.type == 'add' then
       line = string.format('%s ', line_count)
@@ -426,7 +426,7 @@ function DiffView:render_split_previous_line_numbers(diff_dto, lnum_change_map)
     local lnum_change = lnum_change_map[i]
 
     if lnum_change and lnum_change.type == 'void' then
-      line = string.rep(symbols_setting:get('void'), 3)
+      line = string.rep(symbols_setting:get('void'), string.len(tostring(num_lines)))
       lines[#lines + 1] = { line, 'GitLineNr' }
     elseif lnum_change and lnum_change.type == 'add' then
       line = string.format('%s ', line_count)
@@ -506,7 +506,7 @@ function DiffView:render_unified_line_numbers()
     local lnum_change = lnum_change_map[i]
 
     if lnum_change and lnum_change.type == 'remove' then
-      line = string.format('%s ', string.rep(' ', #string.format('%s', line_count)))
+      line = string.rep(' ', string.len(tostring(num_lines)))
       lines[#lines + 1] = { line, 'DiffDelete' }
     elseif lnum_change and lnum_change.type == 'add' then
       line = string.format('%s ', line_count)

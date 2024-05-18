@@ -156,8 +156,8 @@ function Component:sign_unplace()
   return self
 end
 
-function Component:transpose_virtual_line_numbers(texts, row)
-  self.buffer:transpose_virtual_line_numbers(texts, row)
+function Component:transpose_virtual_line_number(text, row)
+  self.buffer:transpose_virtual_line_number(text, row)
 
   return self
 end

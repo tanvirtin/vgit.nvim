@@ -142,9 +142,6 @@ More advanced configuration:
           enabled = true,
           edge_navigation = true,  -- This allows users to navigate within a hunk
         },
-        authorship_code_lens = {
-          enabled = true,
-        },
         scene = {
           diff_preference = 'unified',
           keymaps = {
@@ -397,10 +394,6 @@ toggle_live_gutter()                                  *vgit.toggle_live_gutter()
 toggle_live_blame()                                    *vgit.toggle_live_blame()*
                 Enables/disables current line blame functionality that is seen
                 in the form of virtual texts.
-
-toggle_authorship_code_lens()                *vgit.toggle_authorship_code_lens()*
-                Enables/disables authorship code lens that can be found on top
-                of the file.
 
 toggle_tracing()                                          *vgit.toggle_tracing()*
                 Enables/disables debug logs that are used internally by VGit to make

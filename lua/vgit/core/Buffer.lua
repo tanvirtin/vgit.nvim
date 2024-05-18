@@ -23,7 +23,8 @@ function Buffer:constructor(bufnr)
     state = {
       is_processing = false,
       is_attached_to_screen = false,
-      on_render = function() end,
+      on_render = function()
+      end,
     },
   }
 end
@@ -146,8 +147,8 @@ function Buffer:sign_unplace()
   return self
 end
 
-function Buffer:transpose_virtual_line_numbers(texts, row)
-  self.namespace:transpose_virtual_line_numbers(self, texts, row)
+function Buffer:transpose_virtual_line_number(text, row)
+  self.namespace:transpose_virtual_line_number(self, text, row)
 
   return self
 end

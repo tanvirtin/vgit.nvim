@@ -138,9 +138,15 @@ function DiffComponent:clear_title()
 end
 
 function DiffComponent:render_line_numbers(lines)
+  local max_digits = string.len(tostring(#lines))
+
   for i = 1, #lines do
-    local row = i - 1
-    self:transpose_virtual_line_numbers({ lines[i] }, row)
+    local linenr = lines[i][1]
+    local linenr_len = string.len(linenr)
+    if linenr_len < max_digits then
+      lines[i][1] = string.format('%s%s', string.rep(' ', max_digits - linenr_len), linenr)
+    end
+    self:transpose_virtual_line_number(lines[i], i - 1)
   end
 
   return self

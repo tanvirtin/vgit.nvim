@@ -73,12 +73,12 @@ function Namespace:transpose_virtual_line(buffer, texts, row, pos, priority)
   return id
 end
 
-function Namespace:transpose_virtual_line_numbers(buffer, texts, row)
+function Namespace:transpose_virtual_line_number(buffer, text, row)
   local id = self.virtual_line_number_id + row + 1
 
   pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
     id = id,
-    virt_text = texts,
+    virt_text = { text },
     virt_text_pos = 'inline',
     hl_mode = 'combine',
   })
@@ -94,6 +94,7 @@ function Namespace:insert_virtual_lines(buffer, lines, row, priority)
     virt_lines = lines,
     virt_lines_above = true,
     priority = priority,
+    virt_text_repeat_linebreak = true,
   })
 
   return id
