@@ -59,7 +59,7 @@ function TableComponent:set_lines(lines, force)
   return self:paint(hls)
 end
 
-function TableComponent:make_rows(rows, format)
+function TableComponent:render_rows(rows, format)
   local formatted_row = {}
 
   for i = 1, #rows do

@@ -34,7 +34,7 @@ function ProjectCommitScreen:constructor(opts)
   }
 end
 
-function ProjectCommitScreen:make_help_bar()
+function ProjectCommitScreen:render_help_bar()
   local text = ''
   local keymaps = project_commit_preview_setting:get('keymaps')
   local keys = { 'save' }
@@ -66,7 +66,7 @@ function ProjectCommitScreen:show()
   self.app_bar_view:define()
 
   self.app_bar_view:show()
-  self:make_help_bar()
+  self:render_help_bar()
 
   self.view:show()
   self.view:set_keymap({

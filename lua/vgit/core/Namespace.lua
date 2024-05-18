@@ -8,6 +8,7 @@ function Namespace:constructor(name)
   name = name or utils.math.uuid()
 
   return {
+    virtual_line_number_id = math.pow(25, 5),
     ns_id = vim.api.nvim_create_namespace(name),
   }
 end
@@ -72,6 +73,19 @@ function Namespace:transpose_virtual_line(buffer, texts, row, pos, priority)
   return id
 end
 
+function Namespace:transpose_virtual_line_numbers(buffer, texts, row)
+  local id = self.virtual_line_number_id + row + 1
+
+  pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
+    id = id,
+    virt_text = texts,
+    virt_text_pos = 'inline',
+    hl_mode = 'combine',
+  })
+
+  return id
+end
+
 function Namespace:insert_virtual_lines(buffer, lines, row, priority)
   local id = row + 1
 
@@ -107,12 +121,6 @@ function Namespace:clear(buffer, row_start, row_end)
   row_end = row_end or -1
 
   pcall(vim.api.nvim_buf_clear_namespace, buffer.bufnr, self.ns_id, row_start, row_end)
-
-  return self
-end
-
-function Namespace:clear_extmark(buffer, id)
-  pcall(vim.api.nvim_buf_del_extmark, buffer.bufnr, self.ns_id, id)
 
   return self
 end

@@ -341,7 +341,7 @@ function ProjectDiffScreen:render()
   return self
 end
 
-function ProjectDiffScreen:make_help_bar()
+function ProjectDiffScreen:render_help_bar()
   local text = ''
   local keymaps = project_diff_preview_setting:get('keymaps')
   local keys = {
@@ -526,7 +526,7 @@ function ProjectDiffScreen:show()
 
   self.foldable_list_view.scene:get('list').buffer:on('CursorMoved', loop.coroutine(function() self:handle_list_move() end))
 
-  self:make_help_bar()
+  self:render_help_bar()
 
   local list_item = self.foldable_list_view:move_to(function(node)
     local filename = node.path and node.path.file and node.path.file.filename or nil

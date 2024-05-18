@@ -97,7 +97,7 @@ function Component:is_focused() return self.window:is_focused() end
 
 function Component:is_valid() return self.buffer:is_valid() and self.window:is_valid() end
 
-function Component:make_border(config)
+function Component:render_border(config)
   if config.hl then
     local new_border = {}
 
@@ -152,6 +152,12 @@ end
 
 function Component:sign_unplace()
   self.buffer:sign_unplace()
+
+  return self
+end
+
+function Component:transpose_virtual_line_numbers(texts, row)
+  self.buffer:transpose_virtual_line_numbers(texts, row)
 
   return self
 end

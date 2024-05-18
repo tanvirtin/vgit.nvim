@@ -137,10 +137,10 @@ function DiffComponent:clear_title()
   return self
 end
 
-function DiffComponent:make_line_numbers(lines)
+function DiffComponent:render_line_numbers(lines)
   for i = 1, #lines do
     local row = i - 1
-    self:transpose_virtual_line({ { lines[i], nil } }, row, 'inline')
+    self:transpose_virtual_line_numbers({ lines[i] }, row)
   end
 
   return self

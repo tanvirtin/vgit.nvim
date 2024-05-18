@@ -55,7 +55,7 @@ function GitLogsView:set_keymap(configs)
   return self
 end
 
-function GitLogsView:make_title(labels)
+function GitLogsView:render_title(labels)
   self.scene:get('selectable_view'):set_title(labels[1])
 
   return self
@@ -127,7 +127,7 @@ function GitLogsView:render()
     80
   ):generate()
 
-  self:make_title(labels)
+  self:render_title(labels)
 
   self.scene:get('selectable_view'):unlock():set_lines(rows):focus():lock()
 

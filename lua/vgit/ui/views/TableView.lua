@@ -87,7 +87,7 @@ function TableView:render()
     return self
   end
 
-  self.scene:get('table'):unlock():make_rows(entries, self.config.get_row):focus():set_lnum(lnum):lock()
+  self.scene:get('table'):unlock():render_rows(entries, self.config.get_row):focus():set_lnum(lnum):lock()
 
   return self
 end
