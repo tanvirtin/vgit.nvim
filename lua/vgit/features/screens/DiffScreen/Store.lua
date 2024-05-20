@@ -56,7 +56,7 @@ function Store:fetch(shape, filename, opts)
   if opts.is_staged then
     self.data, self.err = self.git_object:staged_hunks()
   else
-    self.err, self.data = self.git_object:live_hunks(lines)
+    self.data, self.err = self.git_object:live_hunks(lines)
   end
 
   return self.err, self.data

@@ -109,7 +109,7 @@ function Hunks:cursor_stage()
 
   local git_object = buffer.git_object
   if not git_object:is_tracked() then
-    local err = git_object:stage()
+    local _, err = git_object:stage()
 
     loop.free_textlock()
     if err then
@@ -180,7 +180,7 @@ function Hunks:reset_all()
   end
 
   buffer:set_lines(lines)
-  vim.cmd('update')
+  buffer:edit()
 end
 
 function Hunks:cursor_reset()

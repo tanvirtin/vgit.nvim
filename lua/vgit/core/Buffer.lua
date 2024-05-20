@@ -253,6 +253,10 @@ function Buffer:editing()
   return self:get_option('modified')
 end
 
+function Buffer:update()
+  return self:call(function() vim.cmd('update') end)
+end
+
 function Buffer:filetype()
   return fs.detect_filetype(self:get_name())
 end

@@ -121,8 +121,6 @@ function ComponentPlot:configure_col()
     return self
   end
 
-  local win_plot = self.win_plot
-
   return self
 end
 
@@ -136,7 +134,7 @@ function ComponentPlot:build()
 
   if is_at_cursor then
     win_plot.relative = 'editor'
-    win_plot.row = vim.fn.winline() + 1
+    win_plot.row = vim.fn.winline()
   end
 
   -- Element window props, these props will get modified below accordingly
