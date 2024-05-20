@@ -16,7 +16,7 @@ LiveGutter.fetch = loop.debounce_coroutine(function(self, buffer)
   if not buffer:is_valid() then return self end
 
   loop.free_textlock()
-  local err = buffer:live_hunks()
+  local _, err = buffer:live_hunks()
 
   loop.free_textlock()
   if err then

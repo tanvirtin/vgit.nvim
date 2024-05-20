@@ -48,9 +48,7 @@ function ProjectDiffScreen:constructor(opts)
         footer = false,
       },
       get_list = function(list)
-        if not list then
-          return nil
-        end
+        if not list then return nil end
 
         local foldable_list = {}
 

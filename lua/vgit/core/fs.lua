@@ -5,23 +5,6 @@ local fs = {}
 
 fs.detect_filetype = plenary_filetype.detect
 
-function fs.cwd_filename(filepath)
-  local end_index = nil
-
-  for i = #filepath, 1, -1 do
-    local letter = filepath:sub(i, i)
-    if letter == '/' then
-      end_index = i
-    end
-  end
-
-  if not end_index then
-    return ''
-  end
-
-  return filepath:sub(1, end_index)
-end
-
 function fs.relative_filename(filepath) return Path:new(filepath):make_relative(vim.loop.cwd()) end
 
 function fs.short_filename(filepath)
@@ -29,18 +12,16 @@ function fs.short_filename(filepath)
 
   for i = #filepath, 1, -1 do
     local letter = filepath:sub(i, i)
-    if letter == '/' then
-      break
-    end
+    if letter == '/' then break end
     filename = letter .. filename
   end
 
   return filename
 end
 
-function fs.filetype(buffer) return buffer:get_option('filetype') end
-
 function fs.tmpname() return os.tmpname() end
+
+function fs.filetype(buffer) return buffer:get_option('filetype') end
 
 function fs.read_file(filepath)
   local fd = vim.loop.fs_open(filepath, 'r', 438)

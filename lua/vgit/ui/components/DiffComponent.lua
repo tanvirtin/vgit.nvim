@@ -138,7 +138,8 @@ function DiffComponent:clear_title()
 end
 
 function DiffComponent:render_line_numbers(lines)
-  local max_digits = string.len(tostring(#lines))
+  local offset = 1
+  local max_digits = string.len(tostring(#lines)) + offset
 
   for i = 1, #lines do
     local linenr = lines[i][1]
