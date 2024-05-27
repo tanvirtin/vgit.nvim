@@ -50,7 +50,7 @@ console.log = loop.coroutine(function(msg, hi, is_persisted)
 end)
 
 console.error = loop.coroutine(function(msg)
-  vim.notify(console.format(msg), 'error')
+  vim.notify(console.format(msg), vim.log.levels.ERROR)
 
   return console
 end)
@@ -70,7 +70,7 @@ end)
 
 console.info = loop.coroutine(function(msg)
   loop.free_textlock()
-  vim.notify(console.format(msg), 'info')
+  vim.notify(console.format(msg), vim.log.levels.INFO)
 
   return console
 end)
