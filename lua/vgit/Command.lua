@@ -26,6 +26,10 @@ function Command:constructor()
       'buffer_stage',
       'buffer_unstage',
       'buffer_reset',
+      'buffer_conflict_accept_current_change',
+      'buffer_conflict_accept_incoming_change',
+      'buffer_conflict_accept_both_change',
+      'buffer_conflict_compare_changes',
 
       'project_hunks_qf',
       'project_reset_all',

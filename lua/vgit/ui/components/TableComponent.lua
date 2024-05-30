@@ -36,7 +36,14 @@ function TableComponent:paint(hls)
     local hl = hl_info.hl
     local range = hl_info.range
 
-    self.buffer:add_highlight(hl, hl_info.row - 1, range.top, range.bot)
+    self.buffer:add_highlight({
+      hl = hl,
+      row = hl_info.row - 1,
+      col_range = {
+        from = range.top,
+        to = range.bot
+      }
+    })
   end
 
   return self

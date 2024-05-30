@@ -7,6 +7,7 @@ local git_hunks = require('vgit.git.git2.hunks')
 local git_blame = require('vgit.git.git2.blame')
 local git_status = require('vgit.git.git2.status')
 local git_stager = require('vgit.git.git2.stager')
+local git_conflict = require('vgit.git.git2.conflict')
 
 local GitObject = Object:extend()
 
@@ -70,6 +71,14 @@ end
 
 function GitObject:blames()
   return git_blame.list(self.reponame, self.filename)
+end
+
+function GitObject:has_conflict()
+  return git_conflict.has_conflict(self.reponame, self.filename)
+end
+
+function GitObject:parse_conflicts(lines)
+  return git_conflict.parse(lines)
 end
 
 function GitObject:live_hunks(current_lines)

@@ -17,13 +17,9 @@ function ProjectHunksQuickfix:fetch()
   local status_files, status_files_err = git_status.ls(reponame)
 
   loop.free_textlock()
-  if status_files_err then
-    return console.debug.error(status_files_err)
-  end
+  if status_files_err then return console.debug.error(status_files_err) end
 
-  if #status_files == 0 then
-    return entries
-  end
+  if #status_files == 0 then return entries end
 
   for i = 1, #status_files do
     local file = status_files[i]
@@ -39,7 +35,7 @@ function ProjectHunksQuickfix:fetch()
         console.debug.error(show_err)
       end
     else
-      hunks, hunks_err = git_hunks.index(reponame, filename)
+      hunks, hunks_err = git_hunks.list(reponame, filename)
     end
 
     loop.free_textlock()
@@ -71,6 +67,7 @@ end
 function ProjectHunksQuickfix:show()
   local entries = self:fetch()
 
+  loop.free_textlock()
   if #entries == 0 then
     console.log('No changes found in working directory')
 

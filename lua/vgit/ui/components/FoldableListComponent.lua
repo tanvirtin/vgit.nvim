@@ -214,7 +214,14 @@ function FoldableListComponent:paint()
     local lnum = hl_info.lnum
     local range = hl_info.range
 
-    self.buffer:add_highlight(hl, lnum - 1, range.top, range.bot)
+    self.buffer:add_highlight({
+      hl = hl,
+      row = lnum - 1,
+      col_range = {
+        from = range.top,
+        to = range.bot
+      }
+    })
   end
 
   return self

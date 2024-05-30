@@ -94,7 +94,13 @@ function HeaderComponent:clear_notification()
 end
 
 function HeaderComponent:trigger_notification(text)
-  self.namespace:transpose_virtual_text(self.buffer, text, 'GitComment', 0, 0, 'eol')
+  self.namespace:transpose_virtual_text(self.buffer, {
+    text = text,
+    hl = 'GitComment',
+    row = 0, 
+    col = 0, 
+    pos = 'eol'
+  })
 
   return self
 end
