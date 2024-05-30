@@ -84,7 +84,7 @@ function LiveGutter:register_events()
       end
     end)
     .attach('render', function(buffer, top, bot)
-      self:render(buffer, top, bot)
+      self:render(buffer, top, bot + 1)
     end)
 
   return self

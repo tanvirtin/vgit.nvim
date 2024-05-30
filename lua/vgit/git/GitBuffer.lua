@@ -1,5 +1,7 @@
-local git_repo = require('vgit.git.git2.repo')
+local utils = require('vgit.core.utils')
+local keymap = require('vgit.core.keymap')
 local Buffer = require('vgit.core.Buffer')
+local git_repo = require('vgit.git.git2.repo')
 local GitObject = require('vgit.git.GitObject')
 local signs_setting = require('vgit.settings.signs')
 
@@ -9,6 +11,7 @@ function GitBuffer:sync()
   Buffer.sync(self)
 
   self.signs = {}
+  self.conflicts = {}
   self.is_processing = false
   self.is_showing_lens = false
   self.git_object = GitObject(self:get_name())
@@ -30,6 +33,120 @@ end
 
 function GitBuffer:is_inside_git_dir()
   return git_repo.exists(self:get_name())
+end
+
+function GitBuffer:has_conflict()
+  return self.git_object:has_conflict()
+end
+
+function GitBuffer:parse_conflicts()
+  self.conflicts = self.git_object:parse_conflicts(self:get_lines())
+  return self.conflicts
+end
+
+function GitBuffer:render_conflict_help_text(conflict)
+  local current = conflict.current
+
+  local help_text = ''
+
+  local accept_current_change_keymap = utils.list.find(keymap.find('conflict_accept_current_change'), function(binding)
+    return binding.mode == 'n'
+  end)
+  local accept_incoming_change_keymap = utils.list.find(keymap.find('conflict_accept_incoming_change'), function(binding)
+    return binding.mode == 'n'
+  end)
+  local accept_both_changes_keymap = utils.list.find(keymap.find('conflict_accept_both_changes'), function(binding)
+    return binding.mode == 'n'
+  end)
+  local compare_changes_keymap = utils.list.find(keymap.find('compare_changes'), function(binding)
+    return binding.mode == 'n'
+  end)
+
+  if accept_current_change_keymap then
+    if help_text ~= '' then help_text = help_text .. ' | ' end
+    help_text = help_text .. string.format('Accept Current Change (%s)', accept_current_change_keymap.lhs)
+  end
+  if accept_incoming_change_keymap then
+    if help_text ~= '' then help_text = help_text .. ' | ' end
+    help_text = help_text .. string.format('Accept Incoming Change (%s)', accept_incoming_change_keymap.lhs)
+  end
+  if accept_both_changes_keymap then
+    if help_text ~= '' then help_text = help_text .. ' | ' end
+    help_text = help_text .. string.format('Accept Both Changes (%s)', accept_both_changes_keymap.lhs)
+  end
+  if compare_changes_keymap then
+    if help_text ~= '' then help_text = help_text .. ' | ' end
+    help_text = help_text .. string.format('Compare Changes (%s)', compare_changes_keymap.lhs)
+  end
+
+  if help_text ~= '' then
+    self:insert_virtual_line({
+      text = help_text,
+      hl = 'GitComment',
+      row = current.top - 1,
+      col = 0,
+    })
+  end
+
+  return self
+end
+
+function GitBuffer:render_conflict(conflict)
+  local middle = conflict.middle
+  local current = conflict.current
+  local ancestor = conflict.ancestor
+  local incoming = conflict.incoming
+
+  self:sign_place(current.top, 'GitConflictCurrentMark')
+  self:transpose_virtual_text({
+    text = '(Current Change)',
+    hl = 'GitComment',
+    row = current.top - 1,
+    col = 0,
+    pos = 'eol'
+  })
+
+  for lnum = current.top + 1, current.bot do
+    self:sign_place(lnum, 'GitConflictCurrent')
+  end
+
+  for lnum = middle.top, middle.bot do
+    self:sign_place(lnum, 'GitConflictMiddle')
+  end
+
+  for lnum = incoming.top, incoming.bot - 1 do
+    self:sign_place(lnum, 'GitConflictIncoming')
+  end
+
+  self:sign_place(incoming.bot, 'GitConflictIncomingMark')
+  self:transpose_virtual_text({
+    text = '(Incoming Change)',
+    hl = 'GitComment',
+    row = incoming.bot - 1,
+    col = 0,
+    pos = 'eol'
+  })
+
+  if ancestor and not utils.list.is_empty(ancestor) then
+    self:sign_place(ancestor.top, 'GitConflictAncestorMark')
+    for lnum = ancestor.top + 1, ancestor.bot do
+      self:sign_place(lnum, 'GitConflictAncestor')
+    end
+  end
+
+  return self
+end
+
+function GitBuffer:render_conflicts()
+  self:sign_unplace()
+  self:clear_namespace()
+
+  for i = 1, #self.conflicts do
+    local conflict = self.conflicts[i]
+
+    self:render_conflict_help_text(conflict)
+    self:render_conflict(conflict)
+  end
 end
 
 function GitBuffer:generate_status()

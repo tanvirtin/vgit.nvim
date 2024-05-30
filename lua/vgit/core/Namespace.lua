@@ -8,15 +8,22 @@ function Namespace:constructor(name)
   name = name or utils.math.uuid()
 
   return {
-    virtual_line_number_id = math.pow(25, 5),
+    virtual_line_number_id = math.pow(24, 5),
+    inserted_virtual_line_id = math.pow(25, 5),
     ns_id = vim.api.nvim_create_namespace(name),
   }
 end
 
-function Namespace:get_sign_ns_id(buffer) return string.format('tanvirtin/vgit.nvim/hunk/signs/%s', buffer.bufnr) end
+function Namespace:get_sign_ns_id(buffer)
+  return string.format('tanvirtin/vgit.nvim/hunk/signs/%s', buffer.bufnr)
+end
 
-function Namespace:add_highlight(buffer, hl, row, col_start, col_end)
-  pcall(vim.api.nvim_buf_add_highlight, buffer.bufnr, self.ns_id, hl, row, col_start, col_end)
+function Namespace:add_highlight(buffer, opts)
+  local hl = opts.hl
+  local row = opts.row
+  local col_range = opts.col_range
+
+  pcall(vim.api.nvim_buf_add_highlight, buffer.bufnr, self.ns_id, hl, row, col_range.from, col_range.to)
 
   return self
 end
@@ -28,24 +35,33 @@ function Namespace:add_pattern_highlight(buffer, pattern, hl)
     local line = lines[i]
 
     local j = 0
-
     while true do
       local from, to = line:find(pattern, j + 1)
-
       j = from
 
-      if from == nil then
-        break
-      end
-
-      self:add_highlight(buffer, hl, i - 1, from - 1, to)
+      if from == nil then break end
+      self:add_highlight(buffer, {
+        hl = hl,
+        row = i - 1,
+        col_range = {
+          from = from - 1,
+          to = to
+        }
+      })
     end
   end
 
   return self
 end
 
-function Namespace:transpose_virtual_text(buffer, text, hl, row, col, pos, priority)
+function Namespace:transpose_virtual_text(buffer, opts)
+  local text = opts.text
+  local hl = opts.hl
+  local row = opts.row
+  local col = opts.col
+  local pos = opts.pos
+  local priority = opts.priority
+
   local id = row + 1 + col
 
   pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, col, {
@@ -59,7 +75,12 @@ function Namespace:transpose_virtual_text(buffer, text, hl, row, col, pos, prior
   return id
 end
 
-function Namespace:transpose_virtual_line(buffer, texts, row, pos, priority)
+function Namespace:transpose_virtual_line(buffer, opts)
+  local texts = opts.texts
+  local row = opts.row
+  local pos = opts.pos
+  local priority = opts.priority
+
   local id = row + 1
 
   pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
@@ -73,12 +94,15 @@ function Namespace:transpose_virtual_line(buffer, texts, row, pos, priority)
   return id
 end
 
-function Namespace:transpose_virtual_line_number(buffer, text, row)
+function Namespace:transpose_virtual_line_number(buffer, opts)
+  local row = opts.row
+  local hl = opts.hl
+  local text = opts.text
   local id = self.virtual_line_number_id + row + 1
 
   pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
     id = id,
-    virt_text = { text },
+    virt_text = { { text, hl } },
     virt_text_pos = 'inline',
     hl_mode = 'combine',
   })
@@ -86,15 +110,19 @@ function Namespace:transpose_virtual_line_number(buffer, text, row)
   return id
 end
 
-function Namespace:insert_virtual_lines(buffer, lines, row, priority)
-  local id = row + 1
+function Namespace:insert_virtual_line(buffer, opts)
+  local row = opts.row
+  local hl = opts.hl
+  local text = opts.text
+  local priority = opts.priority
+
+  local id = self.virtual_line_number_id + row + 1
 
   pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
     id = id,
-    virt_lines = lines,
+    virt_lines = { { { text, hl } } },
     virt_lines_above = true,
     priority = priority,
-    virt_text_repeat_linebreak = true,
   })
 
   return id
@@ -117,11 +145,12 @@ function Namespace:sign_unplace(buffer, lnum)
   return self
 end
 
-function Namespace:clear(buffer, row_start, row_end)
-  row_start = row_start or 0
-  row_end = row_end or -1
+function Namespace:clear(buffer, row_range)
+  row_range = row_range or {}
+  local row_from = row_range.from or 0
+  local row_to = row_range.to or -1
 
-  pcall(vim.api.nvim_buf_clear_namespace, buffer.bufnr, self.ns_id, row_start, row_end)
+  pcall(vim.api.nvim_buf_clear_namespace, buffer.bufnr, self.ns_id, row_from, row_to)
 
   return self
 end

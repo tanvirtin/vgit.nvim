@@ -69,13 +69,24 @@ function GitLogsView:select()
   if self.state.selected[lnum] then
     self.state.selected[lnum] = nil
 
-    self.namespace:clear(buffer, lnum - 1, lnum)
+    self.namespace:clear(buffer, {
+      from = lnum - 1,
+      to = lnum
+    })
+
     return self
   end
 
   self.state.selected[lnum] = true
 
-  self.namespace:add_highlight(buffer, 'GitSelected', lnum - 1, 1, 41)
+  self.namespace:add_highlight(buffer, {
+    hl = 'GitSelected',
+    row = lnum - 1,
+    col_range = {
+      from = 1,
+      to = 41
+    }
+  })
   return self
 end
 
@@ -97,7 +108,14 @@ function GitLogsView:paint()
   local num_lines = component:get_line_count()
 
   for i = 1, num_lines do
-    component:add_highlight('Constant', i - 1, 0, 41)
+    component:add_highlight({
+      hl = 'Constant',
+      row = i - 1,
+      col_range = {
+        from = 0,
+        to = 41
+      }
+    })
   end
 
   return self

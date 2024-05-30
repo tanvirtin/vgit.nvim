@@ -168,7 +168,10 @@ function DiffView:paint_word(component_type, line_changes, lnum)
       end
     end
 
-    component:transpose_virtual_line(texts, lnum - 1)
+    component:transpose_virtual_line({ 
+      texts = texts,
+      row = lnum - 1
+    })
   end
 
   return self
@@ -199,12 +202,12 @@ function DiffView:paint_line(component_type, line_changes, lnum)
   end
 
   if change_type == 'void' then
-    component:transpose_virtual_text(
-      string.rep(symbols_setting:get('void'), component.window:get_width()),
-      line_number_hl,
-      lnum - 1,
-      0
-    )
+    component:transpose_virtual_text({
+      text = string.rep(symbols_setting:get('void'), component.window:get_width()),
+      hl = line_number_hl,
+      row = lnum - 1,
+      col = 0
+    })
   end
 
   return self

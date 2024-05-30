@@ -500,24 +500,18 @@ function ProjectDiffScreen:show()
       key = '<enter>',
       handler = loop.coroutine(function()
         local _, filename = self.store:get_filename()
-
-        if not filename then
-          self.foldable_list_view:toggle_current_list_item():render()
-
-          return self
-        end
+        if not filename then self.foldable_list_view:toggle_current_list_item():render() end
 
         self:destroy()
-
         fs.open(filename)
 
         local diff_dto_err, diff_dto = self.store:get_diff_dto()
+        if diff_dto_err or not diff_dto then return end
 
-        if diff_dto_err or not diff_dto then
-          return
-        end
+        local mark = diff_dto.marks[1]
+        if not mark then return end
 
-        Window(0):set_lnum(diff_dto.marks[1].top_relative):position_cursor('center')
+        Window(0):set_lnum(mark.top_relative):position_cursor('center')
       end),
     },
   })

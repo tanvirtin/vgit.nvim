@@ -142,12 +142,17 @@ function DiffComponent:render_line_numbers(lines)
   local max_digits = string.len(tostring(#lines)) + offset
 
   for i = 1, #lines do
-    local linenr = lines[i][1]
-    local linenr_len = string.len(linenr)
-    if linenr_len < max_digits then
-      lines[i][1] = string.format('%s%s', string.rep(' ', max_digits - linenr_len), linenr)
+    local hl = lines[i][2]
+    local text = lines[i][1]
+    local text_len = string.len(text)
+    if text_len < max_digits then
+      text = string.format('%s%s', string.rep(' ', max_digits - text_len), text)
     end
-    self:transpose_virtual_line_number(lines[i], i - 1)
+    self:transpose_virtual_line_number({
+      row = i - 1,
+      hl = hl,
+      text = text,
+    })
   end
 
   return self

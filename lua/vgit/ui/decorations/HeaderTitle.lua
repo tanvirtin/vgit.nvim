@@ -60,7 +60,14 @@ function HeaderTitle:set(source, title, opts)
   for _, range_info in ipairs(hl_range_infos) do
     local hl = range_info.hl
     local range = range_info.range
-    source:add_highlight(hl, 0, range.top, range.bot)
+    source:add_highlight({
+      hl = hl,
+      row = 0,
+      col_range = {
+        from = range.top,
+        to = range.bot
+      }
+    })
   end
 
   return self

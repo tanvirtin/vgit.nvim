@@ -126,8 +126,15 @@ function Component:clear_namespace()
   return self
 end
 
-function Component:add_highlight(hl, row, col_top, col_end)
-  self.buffer:add_highlight(hl, row, col_top, col_end)
+function Component:add_highlight(opts)
+  self.buffer:add_highlight({
+    hl = opts.hl,
+    row = opts.row,
+    col_range = {
+      from = opts.col_range.from,
+      to = opts.col_range.to
+    }
+  })
 
   return self
 end
@@ -138,8 +145,8 @@ function Component:add_pattern_highlight(pattern, hl)
   return self
 end
 
-function Component:clear_highlight(row_start, row_end)
-  self.buffer:clear_highlight(row_start, row_end)
+function Component:clear_highlight(row_range)
+  self.buffer:clear_highlight(row_range)
 
   return self
 end
@@ -156,20 +163,34 @@ function Component:sign_unplace()
   return self
 end
 
-function Component:transpose_virtual_line_number(text, row)
-  self.buffer:transpose_virtual_line_number(text, row)
+function Component:transpose_virtual_line_number(opts)
+  self.buffer:transpose_virtual_line_number({
+    row = opts.row,
+    hl = opts.hl,
+    text = opts.text
+  })
 
   return self
 end
 
-function Component:transpose_virtual_text(text, hl, row, col, pos)
-  self.buffer:transpose_virtual_text(text, hl, row, col, pos)
+function Component:transpose_virtual_text(opts)
+  self.buffer:transpose_virtual_text({
+    text = opts.text,
+    hl = opts.hl,
+    row = opts.row,
+    col = opts.col,
+    pos = opts.pos
+  })
 
   return self
 end
 
-function Component:transpose_virtual_line(texts, col, pos)
-  self.buffer:transpose_virtual_line(texts, col, pos)
+function Component:transpose_virtual_line(opts)
+  self.buffer:transpose_virtual_line({
+    texts = opts.texts,
+    row = opts.row,
+    pos = opts.pos
+  })
 
   return self
 end

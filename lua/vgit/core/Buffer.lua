@@ -111,8 +111,15 @@ function Buffer:get_name()
   return vim.api.nvim_buf_get_name(self.bufnr)
 end
 
-function Buffer:add_highlight(hl, row, col_top, col_end)
-  self.namespace:add_highlight(self, hl, row, col_top, col_end)
+function Buffer:add_highlight(opts)
+  self.namespace:add_highlight(self, {
+    hl = opts.hl,
+    row = opts.row,
+    col_range = {
+      from = opts.col_range.from,
+      to = opts.col_range.to,
+    }
+  })
 
   return self
 end
@@ -123,8 +130,8 @@ function Buffer:add_pattern_highlight(pattern, hl)
   return self
 end
 
-function Buffer:clear_highlight(row_start, row_end)
-  self.namespace:clear(self, row_start, row_end)
+function Buffer:clear_highlight(row_range)
+  self.namespace:clear(self, row_range)
 
   return self
 end
@@ -147,20 +154,47 @@ function Buffer:sign_unplace()
   return self
 end
 
-function Buffer:transpose_virtual_line_number(text, row)
-  self.namespace:transpose_virtual_line_number(self, text, row)
+function Buffer:transpose_virtual_text(opts)
+  self.namespace:transpose_virtual_text(self, {
+    text = opts.text,
+    hl = opts.hl,
+    row = opts.row,
+    col = opts.col,
+    pos = opts.pos,
+    priority = opts.priority
+  })
 
   return self
 end
 
-function Buffer:transpose_virtual_text(text, hl, row, col, pos, priority)
-  self.namespace:transpose_virtual_text(self, text, hl, row, col, pos, priority)
+function Buffer:transpose_virtual_line(opts)
+  self.namespace:transpose_virtual_line(self, {
+    texts = opts.texts,
+    row = opts.row,
+    pos = opts.pos,
+    priority = opts.priority
+  })
 
   return self
 end
 
-function Buffer:transpose_virtual_line(texts, col, pos, priority)
-  self.namespace:transpose_virtual_line(self, texts, col, pos, priority)
+function Buffer:transpose_virtual_line_number(opts)
+  self.namespace:transpose_virtual_line_number(self, {
+    row = opts.row,
+    hl = opts.hl,
+    text = opts.text,
+  })
+
+  return self
+end
+
+function Buffer:insert_virtual_line(opts)
+  self.namespace:insert_virtual_line(self, {
+    text = opts.text,
+    hl = opts.hl,
+    row = opts.row,
+    priority = opts.priority
+  })
 
   return self
 end
@@ -238,7 +272,9 @@ function Buffer:assign_options(options)
   return self
 end
 
-function Buffer:get_line_count() return vim.api.nvim_buf_line_count(self.bufnr) end
+function Buffer:get_line_count()
+  return vim.api.nvim_buf_line_count(self.bufnr)
+end
 
 function Buffer:edit()
   return self:call(function()

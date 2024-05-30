@@ -20,6 +20,7 @@ local git_buffer_store = require('vgit.git.git_buffer_store')
 local LiveGutter = require('vgit.features.buffer.LiveGutter')
 local live_blame_setting = require('vgit.settings.live_blame')
 local live_gutter_setting = require('vgit.settings.live_gutter')
+local LiveConflict = require('vgit.features.buffer.LiveConflict')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
 local ProjectHunksQuickfix = require('vgit.features.quickfix.ProjectHunksQuickfix')
 local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
@@ -28,6 +29,7 @@ local hunks = Hunks()
 local command = Command()
 local live_blame = LiveBlame()
 local live_gutter = LiveGutter()
+local live_conflict = LiveConflict()
 local project_hunks_quickfix = ProjectHunksQuickfix()
 
 local settings = {
@@ -66,6 +68,10 @@ local buffer = {
   gutter_blame_preview = loop.coroutine(function() screen_manager.show('gutter_blame_screen') end),
   diff_staged_preview = loop.coroutine(function() screen_manager.show('diff_screen', { is_staged = true }) end),
   hunk_staged_preview = loop.coroutine(function() screen_manager.show('diff_hunk_screen', { is_staged = true }) end),
+  conflict_accept_current_change = loop.coroutine(function() end),
+  conflict_accept_incoming_change = loop.coroutine(function() end),
+  conflict_accept_both_change = loop.coroutine(function() end),
+  conflict_compare_changes = loop.coroutine(function() end),
 }
 
 local project = {
@@ -143,6 +149,7 @@ local function register_events()
   live_gutter:register_events()
   highlight.register_events()
   git_buffer_store.register_events()
+  live_conflict:register_events()
 end
 
 local function register_keymaps(config)
@@ -207,6 +214,11 @@ return {
   buffer_hunk_staged_preview = buffer.hunk_staged_preview,
   buffer_diff_staged_preview = buffer.diff_staged_preview,
   buffer_gutter_blame_preview = buffer.gutter_blame_preview,
+
+  buffer_conflict_accept_current_change = buffer.conflict_accept_current_change,
+  buffer_conflict_accept_incoming_change = buffer.conflict_accept_incoming_change,
+  buffer_conflict_accept_both_change = buffer.conflict_accept_both_changes,
+  buffer_conflict_compare_changes = buffer.conflict_compare_changes,
 
   project_hunks_qf = project.hunks_qf,
   project_stage_all = project.stage_all,

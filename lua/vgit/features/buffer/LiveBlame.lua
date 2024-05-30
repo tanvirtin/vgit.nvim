@@ -21,11 +21,17 @@ end
 
 function LiveBlame:display(lnum, buffer, config, blame)
   if buffer:is_valid() then
-    local virt_text = live_blame_setting:get('format')(blame, config)
+    local text = live_blame_setting:get('format')(blame, config)
 
-    if type(virt_text) == 'string' then
+    if type(text) == 'string' then
       loop.free_textlock()
-      self.namespace:transpose_virtual_text(buffer, virt_text, 'GitComment', lnum - 1, 0, 'eol')
+      self.namespace:transpose_virtual_text(buffer, {
+        text = text,
+        hl = 'GitComment',
+        row = lnum - 1,
+        col = 0,
+        pos = 'eol'
+      })
     end
   end
 end

@@ -42,4 +42,25 @@ function keymap.define(keymaps)
   return keymap
 end
 
+function keymap.find(command)
+  local keybindings = {}
+  local modes = { 'n', 'i', 'v', 'x', 's', 'o', 't', 'c' }
+
+  for _, mode in ipairs(modes) do
+    local keymaps = vim.api.nvim_get_keymap(mode)
+
+    for _, binding in ipairs(keymaps) do
+      if binding.rhs and string.find(binding.rhs, command) then
+        table.insert(keybindings, {
+          mode = mode,
+          lhs = binding.lhs,
+          rhs = binding.rhs
+        })
+      end
+    end
+  end
+
+  return keybindings
+end
+
 return keymap
