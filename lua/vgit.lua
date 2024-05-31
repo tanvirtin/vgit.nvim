@@ -75,8 +75,6 @@ local buffer = {
 }
 
 local project = {
-  stage_all = loop.coroutine(function() Git():stage() end),
-  unstage_all = loop.coroutine(function() Git():unstage() end),
   hunks_qf = loop.coroutine(function() project_hunks_quickfix:show() end),
   debug_preview = loop.coroutine(function(...) screen_manager.show('debug_screen', ...) end),
   commit_preview = loop.coroutine(function(...) screen_manager.show('commit_screen', ...) end),
@@ -94,16 +92,6 @@ local project = {
     git_repo.reset(reponame)
   end),
 }
-
-local checkout = loop.coroutine(function(...)
-  local reponame = git_repo.discover()
-  local _, err = git_repo.checkout(reponame, ...)
-
-  if err then
-    loop.free_textlock()
-    console.error(err)
-  end
-end)
 
 local toggle_diff_preference = loop.coroutine(function() screen_manager.toggle_diff_preference() end)
 
@@ -200,8 +188,6 @@ return {
   hunk_up = controls.hunk_up,
   hunk_down = controls.hunk_down,
 
-  checkout = checkout,
-
   buffer_reset = buffer.reset,
   buffer_stage = buffer.stage,
   buffer_unstage = buffer.unstage,
@@ -221,9 +207,6 @@ return {
   buffer_conflict_compare_changes = buffer.conflict_compare_changes,
 
   project_hunks_qf = project.hunks_qf,
-  project_stage_all = project.stage_all,
-  project_reset_all = project.reset_all,
-  project_unstage_all = project.unstage_all,
   project_diff_preview = project.diff_preview,
   project_logs_preview = project.logs_preview,
   project_stash_preview = project.stash_preview,

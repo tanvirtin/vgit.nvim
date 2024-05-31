@@ -339,7 +339,6 @@ set statusline+=%{get(b:,'vgit_status','')}
 | setup | Sets VGit up for you. This plugin cannot be used before this function has been called. |
 | hunk_up | Moves the cursor to the hunk above the current cursor position. |
 | hunk_down | Moves the cursor to the hunk below the current cursor position. |
-| checkout [args] | Wrapper command for `git checkout`. You can switch branches or restore working tree files |
 | buffer_hunk_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. This preview will open up in a smaller window relative to where your cursor is. |
 | buffer_diff_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. If the command is called while being on a hunk, the window will open focused on the diff of that hunk. |
 | buffer_history_preview | Opens a diff preview along with a table of logs, enabling users to see different iterations of the file through it's lifecycle in git. |
@@ -361,9 +360,6 @@ set statusline+=%{get(b:,'vgit_status','')}
 | project_hunks_staged_preview | Opens a diff preview along with a foldable list of all the current staged hunks in the project. Users can use this preview to cycle through all the hunks. |
 | project_debug_preview | Opens a VGit view showing logs of a pariticular kind traced within the application. |
 | project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
-| project_stage_all | Stages all file changes in your project. |
-| project_unstage_all | Unstages all file changes in your project. |
-| project_reset_all | Discards all file changes that are not staged. |
 | toggle_diff_preference | Used to switch between "split" and "unified" diff. |
 | toggle_live_gutter | Enables/disables git gutter signs. |
 | toggle_live_blame | Used to switch between "split" and "unified" diff. |
