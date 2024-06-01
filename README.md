@@ -358,7 +358,6 @@ set statusline+=%{get(b:,'vgit_status','')}
 | project_stash_preview | Opens a preview listing all stashes. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected stashes |
 | project_hunks_preview | Opens a diff preview along with a foldable list of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
 | project_hunks_staged_preview | Opens a diff preview along with a foldable list of all the current staged hunks in the project. Users can use this preview to cycle through all the hunks. |
-| project_debug_preview | Opens a VGit view showing logs of a pariticular kind traced within the application. |
 | project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
 | toggle_diff_preference | Used to switch between "split" and "unified" diff. |
 | toggle_live_gutter | Enables/disables git gutter signs. |
@@ -371,8 +370,4 @@ set statusline+=%{get(b:,'vgit_status','')}
 Start off by allowing VGit to trace your actions:
 - `:VGit toggle_tracing`
 
-Each category of logs can be previewed using the following commands:
-- `:VGit debug_preview infos`
-- `:VGit debug_preview warnings`
-- `:VGit debug_preview errors`
 </details>

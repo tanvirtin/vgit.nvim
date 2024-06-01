@@ -87,7 +87,6 @@ local buffer = {
 
 local project = {
   hunks_qf = loop.coroutine(function() project_hunks_quickfix:show() end),
-  debug_preview = loop.coroutine(function(...) screen_manager.show('debug_screen', ...) end),
   commit_preview = loop.coroutine(function(...) screen_manager.show('commit_screen', ...) end),
   hunks_preview = loop.coroutine(function() screen_manager.show('project_hunks_screen') end),
   diff_preview = loop.coroutine(function() screen_manager.show('project_diff_screen') end),
@@ -221,7 +220,6 @@ return {
   project_logs_preview = project.logs_preview,
   project_stash_preview = project.stash_preview,
   project_hunks_preview = project.hunks_preview,
-  project_debug_preview = project.debug_preview,
   project_commit_preview = project.commit_preview,
   project_commits_preview = project.commits_preview,
   project_hunks_staged_preview = project.hunks_staged_preview,
