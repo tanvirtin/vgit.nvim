@@ -101,4 +101,22 @@ function list.find(l, callback)
   end
 end
 
+function list.replace(l, startIndex, endIndex, replacementItems)
+  for i = endIndex, startIndex, -1 do
+      table.remove(l, i)
+  end
+  for i, item in ipairs(replacementItems) do
+      table.insert(l, startIndex + i - 1, item)
+  end
+  return l
+end
+
+function list.extract(l, startIndex, endIndex)
+  local extractedItems = {}
+  for i = startIndex, endIndex do
+      table.insert(extractedItems, l[i])
+  end
+  return extractedItems
+end
+
 return list
