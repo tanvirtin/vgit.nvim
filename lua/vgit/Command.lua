@@ -28,8 +28,7 @@ function Command:constructor()
       'buffer_reset',
       'buffer_conflict_accept_current_change',
       'buffer_conflict_accept_incoming_change',
-      'buffer_conflict_accept_both_change',
-      'buffer_conflict_compare_changes',
+      'buffer_conflict_accept_both_changes',
 
       'project_hunks_qf',
       'project_logs_preview',

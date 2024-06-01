@@ -58,9 +58,6 @@ function GitBuffer:render_conflict_help_text(conflict)
   local accept_both_changes_keymap = utils.list.find(keymap.find('conflict_accept_both_changes'), function(binding)
     return binding.mode == 'n'
   end)
-  local compare_changes_keymap = utils.list.find(keymap.find('compare_changes'), function(binding)
-    return binding.mode == 'n'
-  end)
 
   if accept_current_change_keymap then
     if help_text ~= '' then help_text = help_text .. ' | ' end
@@ -73,10 +70,6 @@ function GitBuffer:render_conflict_help_text(conflict)
   if accept_both_changes_keymap then
     if help_text ~= '' then help_text = help_text .. ' | ' end
     help_text = help_text .. string.format('Accept Both Changes (%s)', accept_both_changes_keymap.lhs)
-  end
-  if compare_changes_keymap then
-    if help_text ~= '' then help_text = help_text .. ' | ' end
-    help_text = help_text .. string.format('Compare Changes (%s)', compare_changes_keymap.lhs)
   end
 
   if help_text ~= '' then
@@ -147,10 +140,13 @@ function GitBuffer:render_conflicts()
     self:render_conflict_help_text(conflict)
     self:render_conflict(conflict)
   end
+
+  return self
 end
 
 function GitBuffer:generate_status()
-  return self:set_var('vgit_status', self.git_object:generate_status())
+  self:set_var('vgit_status', self.git_object:generate_status())
+  return self
 end
 
 function GitBuffer:blame(lnum)
@@ -221,6 +217,15 @@ function GitBuffer:live_hunks()
   end
 
   return hunks
+end
+
+function GitBuffer:get_conflict_under_hunk(cursor)
+  local lnum = cursor[1]
+  return utils.list.find(self.conflicts, function(conflict)
+    local top = conflict.current.top
+    local bot = conflict.incoming.bot
+    return lnum >= top and lnum <= bot
+  end)
 end
 
 return GitBuffer
