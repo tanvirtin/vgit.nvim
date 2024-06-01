@@ -351,10 +351,6 @@ project_staged_hunks_preview()           *vgit.project_hunks_staged_preview()*
                 preview to cycle through all the hunks. Pressing enter on a
                 hunk will open the file and focus on the hunk.
 
-project_debug_preview()                               *vgit.project_debug_preview()*
-                Opens a VGit view showing logs of a pariticular kind traced within
-                the application.
-
 project_hunks_qf()                                      *vgit.project_hunks_qf()*
                 Populate the quickfix list with hunks. Automatically opens the
                 quickfix window.

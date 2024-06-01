@@ -35,7 +35,6 @@ function Command:constructor()
       'project_stash_preview',
       'project_diff_preview',
       'project_hunks_preview',
-      'project_debug_preview',
       'project_commit_preview',
       'project_commits_preview',
       'project_hunks_staged_preview',

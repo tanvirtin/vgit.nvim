@@ -3,7 +3,6 @@ local keymap = require('vgit.core.keymap')
 local event_type = require('vgit.core.event_type')
 local scene_setting = require('vgit.settings.scene')
 local DiffScreen = require('vgit.features.screens.DiffScreen')
-local DebugScreen = require('vgit.features.screens.DebugScreen')
 local HistoryScreen = require('vgit.features.screens.HistoryScreen')
 local LineBlameScreen = require('vgit.features.screens.LineBlameScreen')
 local ProjectDiffScreen = require('vgit.features.screens.ProjectDiffScreen')
@@ -79,12 +78,6 @@ function screen_manager.screens.history_screen()
   local history_screen = HistoryScreen({ layout_type = scene_setting:get('diff_preference') })
 
   return history_screen:show(), history_screen
-end
-
-function screen_manager.screens.debug_screen(...)
-  local debug_screen = DebugScreen()
-
-  return debug_screen:show(...), debug_screen
 end
 
 function screen_manager.screens.commit_screen(...)
