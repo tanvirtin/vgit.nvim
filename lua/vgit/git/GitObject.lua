@@ -13,7 +13,7 @@ local GitObject = Object:extend()
 
 function GitObject:constructor(filepath)
   local reponame = git_repo.discover(filepath)
-  local filename = fs.relative_filename(filepath)
+  local filename = fs.make_relative(reponame, filepath)
   local filetype = fs.detect_filetype(filename)
 
   return {

@@ -47,7 +47,6 @@ local controls = {
 
     return screen_manager.dispatch_action('hunk_up')
   end),
-
   hunk_down = loop.coroutine(function()
     hunks:move_down()
 
@@ -68,7 +67,7 @@ local buffer = {
   gutter_blame_preview = loop.coroutine(function() screen_manager.show('gutter_blame_screen') end),
   diff_staged_preview = loop.coroutine(function() screen_manager.show('diff_screen', { is_staged = true }) end),
   hunk_staged_preview = loop.coroutine(function() screen_manager.show('diff_hunk_screen', { is_staged = true }) end),
-  conflict_accept_current_change = loop.coroutine(function() 
+  conflict_accept_current_change = loop.coroutine(function()
     local buffer = git_buffer_store:current()
     if not buffer then return end
     live_conflict:conflict_accept_current_change(buffer)
@@ -185,19 +184,15 @@ return {
   h = help,
   help = help,
   setup = setup,
+  settings = settings,
   command_list = command_list,
   execute_command = execute_command,
-
-  settings = settings,
-
   toggle_tracing = toggle_tracing,
   toggle_live_blame = toggle_live_blame,
   toggle_live_gutter = toggle_live_gutter,
   toggle_diff_preference = toggle_diff_preference,
-
   hunk_up = controls.hunk_up,
   hunk_down = controls.hunk_down,
-
   buffer_reset = buffer.reset,
   buffer_stage = buffer.stage,
   buffer_unstage = buffer.unstage,
@@ -210,11 +205,9 @@ return {
   buffer_hunk_staged_preview = buffer.hunk_staged_preview,
   buffer_diff_staged_preview = buffer.diff_staged_preview,
   buffer_gutter_blame_preview = buffer.gutter_blame_preview,
-
   buffer_conflict_accept_current_change = buffer.conflict_accept_current_change,
   buffer_conflict_accept_incoming_change = buffer.conflict_accept_incoming_change,
   buffer_conflict_accept_both_changes = buffer.conflict_accept_both_changes,
-
   project_hunks_qf = project.hunks_qf,
   project_diff_preview = project.diff_preview,
   project_logs_preview = project.logs_preview,
