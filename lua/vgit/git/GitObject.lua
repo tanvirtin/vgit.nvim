@@ -61,10 +61,6 @@ function GitObject:unstage()
   return git_stager.unstage(self.reponame, self.filename)
 end
 
-function GitObject:lines(commit_hash)
-  return git_show.lines(self.reponame, self.filename, commit_hash)
-end
-
 function GitObject:blame(lnum)
   return git_blame.get(self.reponame, self.filename, lnum)
 end
@@ -81,28 +77,8 @@ function GitObject:parse_conflicts(lines)
   return git_conflict.parse(lines)
 end
 
-function GitObject:live_hunks(current_lines)
-  if not git_repo.has(self.reponame, self.filename) then
-    self.hunks = git_hunks.custom(current_lines, { untracked = true })
-    return self.hunks
-  end
-
-  local original_lines, original_lines_err = self:lines()
-  if original_lines_err then return nil, original_lines_err end
-
-  self.hunks = git_hunks.live(original_lines, current_lines)
-  return self.hunks
-end
-
-function GitObject:staged_hunks()
-  return git_hunks.list(self.reponame, self.filename, { staged = true })
-end
-
-function GitObject:list_hunks(parent_hash, commit_hash)
-  return git_hunks.list(self.reponame, self.filename, {
-    parent = parent_hash,
-    current = commit_hash
-  })
+function GitObject:log(opts)
+  return git_log.get(self.reponame, opts.rev)
 end
 
 function GitObject:logs()
@@ -125,6 +101,27 @@ function GitObject:generate_status()
   end
 
   return stats_dict
+end
+
+function GitObject:lines(commit_hash)
+  return git_show.lines(self.reponame, self.filename, commit_hash)
+end
+
+function GitObject:live_hunks(current_lines)
+  if not git_repo.has(self.reponame, self.filename) then
+    self.hunks = git_hunks.custom(current_lines, { untracked = true })
+    return self.hunks
+  end
+
+  local original_lines, original_lines_err = self:lines()
+  if original_lines_err then return nil, original_lines_err end
+
+  self.hunks = git_hunks.live(original_lines, current_lines)
+  return self.hunks
+end
+
+function GitObject:list_hunks(opts)
+  return git_hunks.list(self.reponame, self.filename, opts)
 end
 
 return GitObject

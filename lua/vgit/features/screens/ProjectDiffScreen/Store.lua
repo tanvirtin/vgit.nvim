@@ -2,10 +2,12 @@ local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local git_log = require('vgit.git.git2.log')
 local git_show = require('vgit.git.git2.show')
 local git_repo = require('vgit.git.git2.repo')
 local git_hunks = require('vgit.git.git2.hunks')
 local git_status = require('vgit.git.git2.status')
+local git_conflict = require('vgit.git.git2.conflict')
 local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
@@ -94,6 +96,10 @@ function Store:get_file_lines(file, status)
     lines, err = git_show.lines(reponame, filename, 'HEAD')
   elseif status == 'staged' or file_status:has(' D') then
     lines, err = git_show.lines(reponame, filename)
+  elseif status == 'unmerged' and git_conflict.has_conflict(reponame, filename) then
+    local log, log_err = git_log.get(reponame, 'HEAD')
+    if log_err then return log_err end
+    lines, err = git_show.lines(reponame, filename, log.commit_hash)
   else
     lines, err = fs.read_file(filename)
   end
@@ -129,8 +135,16 @@ function Store:get_file_hunks(file, status, lines)
   elseif status == 'unstaged' then
     hunks, hunks_err = git_hunks.list(reponame, filename)
   elseif status == 'unmerged' then
-    hunks_err = nil
-    hunks = {}
+    if git_conflict.has_conflict(reponame, filename) then
+      local head_log, head_log_err = git_log.get(reponame, 'HEAD')
+      if head_log_err then return head_log_err end
+      local merge_log, merge_log_err = git_log.get(reponame, 'MERGE_HEAD')
+      if merge_log_err then return merge_log_err end
+      hunks, hunks_err = git_hunks.list(reponame, filename, { parent = head_log.commit_hash, current = merge_log.commit_hash })
+    else
+      hunks_err = nil
+      hunks = {}
+    end
   end
 
   loop.free_textlock()

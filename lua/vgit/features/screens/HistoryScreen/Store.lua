@@ -78,7 +78,10 @@ function Store:get_diff_dto(index)
 
   if self._cache[id] then return nil, self._cache[id] end
 
-  local hunks, hunks_err = self.git_object:list_hunks(parent_hash, commit_hash)
+  local hunks, hunks_err = self.git_object:list_hunks({
+    parent = parent_hash,
+    current = commit_hash
+  })
   loop.free_textlock()
 
   if hunks_err then return hunks_err end
