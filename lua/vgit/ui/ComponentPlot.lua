@@ -30,9 +30,7 @@ function ComponentPlot:sanitize_plot(plot)
 end
 
 function ComponentPlot:configure_bounds()
-  if self.is_built then
-    return self
-  end
+  if self.is_built then return self end
 
   local config = self.config
   local has_footer = config.footer
@@ -43,15 +41,11 @@ function ComponentPlot:configure_bounds()
     if self.is_at_cursor then
       win_plot.row = win_plot.row - (win_plot.row + win_plot.height - global_height)
 
-      if has_footer then
-        win_plot.row = win_plot.row - footer_element_height
-      end
+      if has_footer then win_plot.row = win_plot.row - footer_element_height end
     else
       local height = win_plot.height - win_plot.row
 
-      if height > 0 then
-        win_plot.height = height
-      end
+      if height > 0 then win_plot.height = height end
     end
   end
 
@@ -59,9 +53,7 @@ function ComponentPlot:configure_bounds()
 end
 
 function ComponentPlot:configure_height()
-  if self.is_built then
-    return self
-  end
+  if self.is_built then return self end
 
   local win_plot = self.win_plot
   local config = self.config
@@ -71,9 +63,7 @@ function ComponentPlot:configure_height()
   -- Height
   if has_header then
     self.header_win_plot.height = header_element_height
-    if win_plot.height - header_element_height > 1 then
-      win_plot.height = win_plot.height - header_element_height
-    end
+    if win_plot.height - header_element_height > 1 then win_plot.height = win_plot.height - header_element_height end
   end
 
   if has_footer then
@@ -85,17 +75,13 @@ function ComponentPlot:configure_height()
 end
 
 function ComponentPlot:configure_width()
-  if self.is_built then
-    return self
-  end
+  if self.is_built then return self end
 
   return self
 end
 
 function ComponentPlot:configure_row()
-  if self.is_built then
-    return self
-  end
+  if self.is_built then return self end
 
   local config = self.config
   local win_plot = self.win_plot
@@ -109,25 +95,19 @@ function ComponentPlot:configure_row()
     win_plot.row = win_plot.row + header_element_height
   end
 
-  if has_footer then
-    footer_win_plot.row = win_plot.row + win_plot.height
-  end
+  if has_footer then footer_win_plot.row = win_plot.row + win_plot.height end
 
   return self
 end
 
 function ComponentPlot:configure_col()
-  if self.is_built then
-    return self
-  end
+  if self.is_built then return self end
 
   return self
 end
 
 function ComponentPlot:build()
-  if self.is_built then
-    return self
-  end
+  if self.is_built then return self end
 
   local win_plot = self.win_plot
   local is_at_cursor = self.is_at_cursor
@@ -141,13 +121,9 @@ function ComponentPlot:build()
   local has_header = self.config.header
   local has_footer = self.config.footer
 
-  if has_header then
-    self.header_win_plot = utils.object.clone(win_plot)
-  end
+  if has_header then self.header_win_plot = utils.object.clone(win_plot) end
 
-  if has_footer then
-    self.footer_win_plot = utils.object.clone(win_plot)
-  end
+  if has_footer then self.footer_win_plot = utils.object.clone(win_plot) end
   self:configure_bounds():configure_height():configure_width():configure_row():configure_col()
 
   self.is_built = true

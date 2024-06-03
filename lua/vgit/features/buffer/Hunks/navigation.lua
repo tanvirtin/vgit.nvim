@@ -26,9 +26,7 @@ function navigation.hunk_up(window, hunks)
     end
   end
 
-  if new_lnum and new_lnum < 1 then
-    new_lnum = 1
-  end
+  if new_lnum and new_lnum < 1 then new_lnum = 1 end
 
   if new_lnum and lnum ~= new_lnum then
     window:set_lnum(new_lnum):position_cursor('center')
@@ -74,9 +72,7 @@ function navigation.hunk_down(window, hunks)
     end
   end
 
-  if new_lnum and new_lnum < 1 then
-    new_lnum = 1
-  end
+  if new_lnum and new_lnum < 1 then new_lnum = 1 end
 
   if new_lnum then
     window:set_lnum(new_lnum):position_cursor('center')

@@ -23,14 +23,24 @@ function File:constructor(filename, status, log)
   }
 end
 
-function File:is_ignored() return self.status:has('!!') end
+function File:is_ignored()
+  return self.status:has('!!')
+end
 
-function File:is_staged() return self.status:has('* ') end
+function File:is_staged()
+  return self.status:has('* ')
+end
 
-function File:is_unstaged() return self.status:has(' *') end
+function File:is_unstaged()
+  return self.status:has(' *')
+end
 
-function File:is_untracked() return self.status:has('??') end
+function File:is_untracked()
+  return self.status:has('??')
+end
 
-function File:is_unmerged() return self.status:has_either('UU') end
+function File:is_unmerged()
+  return self.status:has_either('UU')
+end
 
 return File

@@ -52,9 +52,7 @@ function LiveGutter:reset()
   for i = 1, #buffers do
     local buffer = buffers[i]
 
-    if buffer then
-      buffer:sign_unplace()
-    end
+    if buffer then buffer:sign_unplace() end
   end
 
   return self

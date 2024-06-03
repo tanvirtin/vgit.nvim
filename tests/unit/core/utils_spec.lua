@@ -5,9 +5,13 @@ local eq = assert.are.same
 
 describe('utils:', function()
   describe('age', function()
-    before_each(function() os.time = mock(os.time, true) end)
+    before_each(function()
+      os.time = mock(os.time, true)
+    end)
 
-    after_each(function() mock.revert(os.time) end)
+    after_each(function()
+      mock.revert(os.time)
+    end)
 
     it('should handle a single second', function()
       local current_time = 1609477202
@@ -153,36 +157,47 @@ describe('utils:', function()
   end)
 
   describe('round', function()
-    it('should round pi to 3', function() eq(utils.math.round(3.14159265359), 3) end)
+    it('should round pi to 3', function()
+      eq(utils.math.round(3.14159265359), 3)
+    end)
   end)
 
   describe('strip_substring', function()
-    it('should remove "/bar" from "foo/bar/baz"', function() eq(utils.str.strip('foo/bar/baz', '/bar'), 'foo/baz') end)
+    it('should remove "/bar" from "foo/bar/baz"', function()
+      eq(utils.str.strip('foo/bar/baz', '/bar'), 'foo/baz')
+    end)
 
-    it(
-      'should remove "foo/baz" from "foo/bar/baz"',
-      function() eq(utils.str.strip('foo/bar/baz', '/bar'), 'foo/baz') end
-    )
+    it('should remove "foo/baz" from "foo/bar/baz"', function()
+      eq(utils.str.strip('foo/bar/baz', '/bar'), 'foo/baz')
+    end)
 
-    it(
-      'should remove "helix-core/src" from "helix-core/src/comment.rs"',
-      function() eq(utils.str.strip('helix-core/src/comment.rs', 'helix-core/src'), '/comment.rs') end
-    )
+    it('should remove "helix-core/src" from "helix-core/src/comment.rs"', function()
+      eq(utils.str.strip('helix-core/src/comment.rs', 'helix-core/src'), '/comment.rs')
+    end)
 
-    it(
-      'should remove "helix-core/src/" from "helix-core/src/comment.rs"',
-      function() eq(utils.str.strip('helix-core/src/comment.rs', 'helix-core/src/'), 'comment.rs') end
-    )
+    it('should remove "helix-core/src/" from "helix-core/src/comment.rs"', function()
+      eq(utils.str.strip('helix-core/src/comment.rs', 'helix-core/src/'), 'comment.rs')
+    end)
 
-    it('should remove "x-c" from "helix-core"', function() eq(utils.str.strip('helix-core', 'x-c'), 'heliore') end)
+    it('should remove "x-c" from "helix-core"', function()
+      eq(utils.str.strip('helix-core', 'x-c'), 'heliore')
+    end)
 
-    it('should remove "ab" from "ababababa"', function() eq(utils.str.strip('ababababa', 'ab'), 'abababa') end)
+    it('should remove "ab" from "ababababa"', function()
+      eq(utils.str.strip('ababababa', 'ab'), 'abababa')
+    end)
 
-    it('should remove "ababababa" from "abababab"', function() eq(utils.str.strip('ababababa', 'abababab'), 'a') end)
+    it('should remove "ababababa" from "abababab"', function()
+      eq(utils.str.strip('ababababa', 'abababab'), 'a')
+    end)
 
-    it('should remove "ababababa" from "ababababa"', function() eq(utils.str.strip('ababababa', 'ababababa'), '') end)
+    it('should remove "ababababa" from "ababababa"', function()
+      eq(utils.str.strip('ababababa', 'ababababa'), '')
+    end)
 
-    it('should not remove "lua/" from "vgit.lua"', function() eq(utils.str.strip('vgit.lua', 'lua/'), 'vgit.lua') end)
+    it('should not remove "lua/" from "vgit.lua"', function()
+      eq(utils.str.strip('vgit.lua', 'lua/'), 'vgit.lua')
+    end)
   end)
 
   describe('object.assign', function()

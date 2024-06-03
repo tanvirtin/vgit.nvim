@@ -5,18 +5,16 @@ local eq = assert.are.same
 describe('Config:', function()
   local initial_state = {}
 
-  before_each(
-    function()
-      initial_state = {
+  before_each(function()
+    initial_state = {
+      foo = 'bar',
+      bar = 'foo',
+      baz = {
         foo = 'bar',
         bar = 'foo',
-        baz = {
-          foo = 'bar',
-          bar = 'foo',
-        },
-      }
-    end
-  )
+      },
+    }
+  end)
 
   describe('new', function()
     it('should bind the object provided into into the state object', function()
@@ -28,7 +26,9 @@ describe('Config:', function()
     end)
 
     it('should throw error if invalid data type is provided', function()
-      assert.has_error(function() Config(42) end)
+      assert.has_error(function()
+        Config(42)
+      end)
     end)
   end)
 
@@ -47,7 +47,9 @@ describe('Config:', function()
       local state = Config(initial_state)
       local copy_state = {}
 
-      state:for_each(function(key, value) copy_state[key] = value end)
+      state:for_each(function(key, value)
+        copy_state[key] = value
+      end)
       eq(copy_state, initial_state)
     end)
   end)
@@ -58,10 +60,18 @@ describe('Config:', function()
         foo = 'bar',
       })
 
-      assert.has_error(function() state:get(true) end)
-      assert.has_error(function() state:get({}) end)
-      assert.has_error(function() state:get(1) end)
-      assert.has_error(function() state:get(nil) end)
+      assert.has_error(function()
+        state:get(true)
+      end)
+      assert.has_error(function()
+        state:get({})
+      end)
+      assert.has_error(function()
+        state:get(1)
+      end)
+      assert.has_error(function()
+        state:get(nil)
+      end)
       assert.has_error(function()
         state:get(function() end)
       end)
@@ -81,7 +91,9 @@ describe('Config:', function()
     it('should throw an error if a state object does not have the given key', function()
       local state = Config(initial_state)
 
-      assert.has_error(function() eq(state:get('test'), nil) end)
+      assert.has_error(function()
+        eq(state:get('test'), nil)
+      end)
     end)
   end)
 
@@ -91,10 +103,18 @@ describe('Config:', function()
         foo = 'bar',
       })
 
-      assert.has_error(function() state:set('foo', true) end)
-      assert.has_error(function() state:set('foo', {}) end)
-      assert.has_error(function() state:set('foo', 1) end)
-      assert.has_error(function() state:set('foo', nil) end)
+      assert.has_error(function()
+        state:set('foo', true)
+      end)
+      assert.has_error(function()
+        state:set('foo', {})
+      end)
+      assert.has_error(function()
+        state:set('foo', 1)
+      end)
+      assert.has_error(function()
+        state:set('foo', nil)
+      end)
       assert.has_error(function()
         state:set('foo', function() end)
       end)
@@ -122,7 +142,9 @@ describe('Config:', function()
       local state = Config(initial_state)
 
       for i = 10, 1, -1 do
-        assert.has_error(function() state:set(i, i) end)
+        assert.has_error(function()
+          state:set(i, i)
+        end)
       end
 
       eq(state, {

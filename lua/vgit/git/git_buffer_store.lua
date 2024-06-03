@@ -23,13 +23,13 @@ local is_registerd = false
 local git_buffer_store = {}
 
 git_buffer_store.register_events = loop.coroutine(function()
-  if is_registerd then
-    return
-  end
+  if is_registerd then return end
 
   is_registerd = true
 
-  event.on(event_type.BufRead, function() git_buffer_store.collect() end)
+  event.on(event_type.BufRead, function()
+    git_buffer_store.collect()
+  end)
 
   for _, handler in pairs(event_handlers.register) do
     loop.free_textlock()
@@ -77,29 +77,27 @@ git_buffer_store.add = function(buffer)
   return git_buffer_store
 end
 
-git_buffer_store.contains = function(buffer) return buffers[buffer.bufnr] ~= nil end
+git_buffer_store.contains = function(buffer)
+  return buffers[buffer.bufnr] ~= nil
+end
 
 git_buffer_store.remove = function(buffer, callback)
-  if not buffer then
-    return buffer
-  end
+  if not buffer then return buffer end
 
   buffer = buffers[buffer.bufnr]
 
-  if not buffer then
-    return
-  end
+  if not buffer then return end
 
   buffers[buffer.bufnr] = nil
 
-  if callback then
-    callback(buffer)
-  end
+  if callback then callback(buffer) end
 
   return buffer
 end
 
-git_buffer_store.get = function(buffer) return buffers[buffer.bufnr] end
+git_buffer_store.get = function(buffer)
+  return buffers[buffer.bufnr]
+end
 
 function git_buffer_store.current()
   local bufnr = vim.api.nvim_get_current_buf()
@@ -117,39 +115,31 @@ git_buffer_store.size = function()
   return count
 end
 
-git_buffer_store.is_empty = function() return git_buffer_store.size() == 0 end
+git_buffer_store.is_empty = function()
+  return git_buffer_store.size() == 0
+end
 
 git_buffer_store.collect = function()
   loop.free_textlock()
   local git_buffer = GitBuffer(0)
 
   loop.free_textlock()
-  if git_buffer_store.contains(git_buffer) then
-    return
-  end
+  if git_buffer_store.contains(git_buffer) then return end
 
   loop.free_textlock()
   git_buffer:sync()
 
   loop.free_textlock()
-  if not git_buffer:is_inside_git_dir() then
-    return
-  end
+  if not git_buffer:is_inside_git_dir() then return end
 
   loop.free_textlock()
-  if not git_buffer:is_valid() then
-    return
-  end
+  if not git_buffer:is_valid() then return end
 
   loop.free_textlock()
-  if not git_buffer:is_in_disk() then
-    return
-  end
+  if not git_buffer:is_in_disk() then return end
 
   loop.free_textlock()
-  if git_buffer:is_ignored() then
-    return
-  end
+  if git_buffer:is_ignored() then return end
 
   loop.free_textlock()
   git_buffer_store.add(git_buffer)
@@ -158,9 +148,7 @@ git_buffer_store.collect = function()
   git_buffer
     :attach_to_changes({
       on_lines = loop.coroutine(function(_, _, _, _, p_lnum, n_lnum, byte_count)
-        if p_lnum == n_lnum and byte_count == 0 then
-          return
-        end
+        if p_lnum == n_lnum and byte_count == 0 then return end
 
         for _, handler in pairs(event_handlers.change) do
           handler(git_buffer, p_lnum, n_lnum, byte_count)

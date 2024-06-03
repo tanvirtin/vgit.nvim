@@ -9,7 +9,9 @@ local loop = {}
 --          arguments which are passed as results from previous similar
 --          coroutine yields.
 function loop.suspend(fn, argc)
-  return function(...) return coroutine.yield(fn, argc, ...) end
+  return function(...)
+    return coroutine.yield(fn, argc, ...)
+  end
 end
 
 -- Given a function that contains computation to be ran as a coroutine,
@@ -26,13 +28,9 @@ function loop.coroutine(fn)
       local result = { coroutine.resume(thread, ...) }
       local ok, fn_with_callback, argc = unpack(result)
 
-      if not ok then
-        return error(string.format('coroutine failed :: %s\n%s', fn, debug.traceback(thread)))
-      end
+      if not ok then return error(string.format('coroutine failed :: %s\n%s', fn, debug.traceback(thread))) end
 
-      if coroutine.status(thread) == 'dead' then
-        return
-      end
+      if coroutine.status(thread) == 'dead' then return end
 
       local args = { select(4, unpack(result)) }
       args[argc] = resume_coroutine
@@ -61,10 +59,14 @@ function loop.debounce(fn, ms)
     local argv = { ... }
     local argc = select('#', ...)
 
-    timer:start(ms, 0, function() fn(unpack(argv, 1, argc)) end)
+    timer:start(ms, 0, function()
+      fn(unpack(argv, 1, argc))
+    end)
   end
 end
 
-function loop.debounce_coroutine(fn, ms) return loop.debounce(loop.coroutine(fn), ms) end
+function loop.debounce_coroutine(fn, ms)
+  return loop.debounce(loop.coroutine(fn), ms)
+end
 
 return loop

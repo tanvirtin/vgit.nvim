@@ -42,9 +42,7 @@ function Store:fetch(shape, commits, opts)
 
   self:reset()
 
-  if not commits or #commits == 0 then
-    return { 'No commits specified' }, nil
-  end
+  if not commits or #commits == 0 then return { 'No commits specified' }, nil end
 
   self._cache = {
     lnum = 1,
@@ -52,9 +50,7 @@ function Store:fetch(shape, commits, opts)
     commits = {},
   }
 
-  if not git_repo.exists() then
-    return { 'Project has no .git folder' }, nil
-  end
+  if not git_repo.exists() then return { 'Project has no .git folder' }, nil end
 
   self.shape = shape
   local data = {}
@@ -65,16 +61,14 @@ function Store:fetch(shape, commits, opts)
     local reponame = git_repo.discover()
     local log, log_err = git_log.get(reponame, commit)
 
-    if log_err then
-      return log_err
-    end
+    if log_err then return log_err end
 
     -- We will use the parent_hash and the commit_hash inside
     -- the log object to list all the files associated with the log.
     loop.free_textlock()
     local files, err = git_status.tree(reponame, {
       commit_hash = log.commit_hash,
-      parent_hash = log.parent_hash
+      parent_hash = log.parent_hash,
     })
     if err then return err end
 
@@ -99,7 +93,9 @@ function Store:fetch(shape, commits, opts)
   return nil, self.data
 end
 
-function Store:get_all() return self.err, self.data end
+function Store:get_all()
+  return self.err, self.data
+end
 
 function Store:set_id(id)
   self.id = id
@@ -108,15 +104,11 @@ function Store:set_id(id)
 end
 
 function Store:get(id)
-  if id then
-    self.id = id
-  end
+  if id then self.id = id end
 
   local datum = self._cache.commits[self.id]
 
-  if not datum then
-    return { 'Item not found' }, nil
-  end
+  if not datum then return { 'Item not found' }, nil end
 
   return nil, datum
 end
@@ -124,9 +116,7 @@ end
 function Store:get_diff_dto()
   local err, datum = self:get()
 
-  if err then
-    return err
-  end
+  if err then return err end
 
   local file = datum.file
   if not file then return { 'No file found in item' }, nil end
@@ -139,9 +129,7 @@ function Store:get_diff_dto()
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self._cache.commits[id] then
-    return nil, self._cache.commits[id]
-  end
+  if self._cache.commits[id] then return nil, self._cache.commits[id] end
 
   local lines_err, lines
   local is_deleted = false
@@ -156,9 +144,7 @@ function Store:get_diff_dto()
   end
   loop.free_textlock()
 
-  if lines_err then
-    return lines_err
-  end
+  if lines_err then return lines_err end
 
   local hunks_err, hunks
   if is_deleted then
@@ -166,14 +152,12 @@ function Store:get_diff_dto()
   else
     hunks, hunks_err = git_hunks.list(reponame, filename, {
       parent = parent_hash,
-      current = commit_hash
+      current = commit_hash,
     })
   end
   loop.free_textlock()
 
-  if hunks_err then
-    return hunks_err
-  end
+  if hunks_err then return hunks_err end
 
   local diff = diff_service:generate(hunks, lines, self.shape, {
     is_deleted = is_deleted,
@@ -187,9 +171,7 @@ end
 function Store:get_filename()
   local err, datum = self:get()
 
-  if err then
-    return err
-  end
+  if err then return err end
 
   return nil, datum.file.filename
 end
@@ -197,14 +179,14 @@ end
 function Store:get_filetype()
   local err, datum = self:get()
 
-  if err then
-    return err
-  end
+  if err then return err end
 
   return nil, datum.file.filetype
 end
 
-function Store:get_lnum() return nil, self._cache.lnum end
+function Store:get_lnum()
+  return nil, self._cache.lnum
+end
 
 function Store:get_parent_commit()
   local err, datum = self:get()
@@ -225,7 +207,9 @@ function Store:set_lnum(lnum)
   return self
 end
 
-function Store:get_list_folds() return nil, self._cache.list_folds end
+function Store:get_list_folds()
+  return nil, self._cache.list_folds
+end
 
 function Store:set_list_folds(list_folds)
   self._cache.list_folds = list_folds

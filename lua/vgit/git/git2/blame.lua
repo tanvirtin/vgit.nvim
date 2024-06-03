@@ -20,9 +20,7 @@ function Blame:constructor(info)
 
   local committed = true
 
-  if blame.commit == Blame.empty_commit_hash then
-    committed = false
-  end
+  if blame.commit == Blame.empty_commit_hash then committed = false end
 
   local author_mail = blame['author-mail']
   if author_mail:sub(1, 1) == '<' and author_mail:sub(#author_mail, #author_mail) then

@@ -43,30 +43,28 @@ function FoldableListComponent:set_list(list)
 end
 
 function FoldableListComponent:set_title(text)
-  if self.elements.header then
-    self.elements.header:set_lines({ text })
-  end
+  if self.elements.header then self.elements.header:set_lines({ text }) end
 
   return self
 end
 
 function FoldableListComponent:toggle_list_item(item)
-  if item.items then
-    item.open = not item.open
-  end
+  if item.items then item.open = not item.open end
 
   return self
 end
 
-function FoldableListComponent:is_fold(item) return item and item.items and #item.items > 0 end
+function FoldableListComponent:is_fold(item)
+  return item and item.items and #item.items > 0
+end
 
-function FoldableListComponent:get_list_item(lnum) return self._cache[lnum] end
+function FoldableListComponent:get_list_item(lnum)
+  return self._cache[lnum]
+end
 
 function FoldableListComponent:find_list_item(callback)
   for lnum, item in pairs(self._cache) do
-    if callback(item) then
-      return item, lnum
-    end
+    if callback(item) then return item, lnum end
   end
 
   return nil
@@ -76,9 +74,7 @@ function FoldableListComponent:query_list_item(callback)
   for _, list_item in ipairs(self._cache) do
     local result = callback(list_item)
 
-    if result == true then
-      return list_item
-    end
+    if result == true then return list_item end
   end
 
   return nil
@@ -91,9 +87,7 @@ function FoldableListComponent:generate_lines()
   local hls = {}
 
   local function generate_lines(list, depth)
-    if not list then
-      return
-    end
+    if not list then return end
 
     for i = 1, #list do
       local item = list[i]
@@ -107,21 +101,15 @@ function FoldableListComponent:generate_lines()
       local icon_after = item.icon_after
       local icon_hl_range_offset = 0
 
-      if items then
-        spacing = 2
-      end
+      if items then spacing = 2 end
 
       local indentation_count = spacing * depth
       local indentation = string.rep(' ', indentation_count)
 
-      if items then
-        icon_hl_range_offset = 3
-      end
+      if items then icon_hl_range_offset = 3 end
 
       if icon_before then
-        if type(icon_before) == 'function' then
-          icon_before = icon_before(item)
-        end
+        if type(icon_before) == 'function' then icon_before = icon_before(item) end
 
         value = string.format('%s %s', icon_before.icon, value)
         hls[#hls + 1] = {
@@ -133,9 +121,7 @@ function FoldableListComponent:generate_lines()
           },
         }
       elseif icon_after then
-        if type(icon_after) == 'function' then
-          icon_after = icon_after(item)
-        end
+        if type(icon_after) == 'function' then icon_after = icon_after(item) end
 
         value = string.format('%s %s', value, icon_after.icon)
         hls[#hls + 1] = {
@@ -153,9 +139,7 @@ function FoldableListComponent:generate_lines()
         local fold_header = string.format('%s%s %s', indentation, fold_symbol, value)
         local show_count = item.show_count
 
-        if show_count ~= false then
-          show_count = true
-        end
+        if show_count ~= false then show_count = true end
 
         if show_count then
           local item_count = string.format('(%s)', #items)
@@ -188,9 +172,7 @@ function FoldableListComponent:generate_lines()
           },
         }
 
-        if item.open then
-          generate_lines(items, depth + 1)
-        end
+        if item.open then generate_lines(items, depth + 1) end
       else
         foldable_list_shadow[#foldable_list_shadow + 1] = string.format('%s%s', indentation, value)
       end
@@ -219,8 +201,8 @@ function FoldableListComponent:paint()
       row = lnum - 1,
       col_range = {
         from = range.top,
-        to = range.bot
-      }
+        to = range.bot,
+      },
     })
   end
 
@@ -238,9 +220,7 @@ function FoldableListComponent:sync()
 end
 
 function FoldableListComponent:mount()
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   local config = self.config
 
@@ -250,13 +230,9 @@ function FoldableListComponent:mount()
 
   self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
 
-  if config.elements.header then
-    self.elements.header = HeaderElement():mount(plot.header_win_plot)
-  end
+  if config.elements.header then self.elements.header = HeaderElement():mount(plot.header_win_plot) end
 
-  if config.elements.footer then
-    self.elements.footer = FooterElement():mount(plot.footer_win_plot)
-  end
+  if config.elements.footer then self.elements.footer = FooterElement():mount(plot.footer_win_plot) end
 
   self.mounted = true
 
@@ -268,13 +244,9 @@ function FoldableListComponent:unmount()
   local footer = self.elements.footer
 
   self.window:close()
-  if header then
-    header:unmount()
-  end
+  if header then header:unmount() end
 
-  if footer then
-    footer:unmount()
-  end
+  if footer then footer:unmount() end
 end
 
 return FoldableListComponent

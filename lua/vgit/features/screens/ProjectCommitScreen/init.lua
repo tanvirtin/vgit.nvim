@@ -77,9 +77,7 @@ function ProjectCommitScreen:show()
         local _, commit_err = self.mutation:commit(self.view:get_lines())
         loop.free_textlock()
 
-        if commit_err then
-          return console.debug.error(commit_err).error(commit_err)
-        end
+        if commit_err then return console.debug.error(commit_err).error(commit_err) end
 
         console.info('Successfully committed changes')
 

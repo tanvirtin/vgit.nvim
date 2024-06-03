@@ -20,7 +20,9 @@ a.describe('Window:', function()
 
   a.describe('new', function()
     a.it('should throw an error no win_id is provided to construct the window', function()
-      assert.has_error(function() Window() end)
+      assert.has_error(function()
+        Window()
+      end)
     end)
     a.it('should create an instance of the window object binding the win_id', function()
       local win_id = vim.api.nvim_open_win(

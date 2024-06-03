@@ -64,21 +64,13 @@ function Status:has(status)
   local actual_first, actual_second = self.first, self.second
 
   if actual_first ~= ' ' then
-    if first == '*' then
-      return true
-    end
-    if first == actual_first then
-      return true
-    end
+    if first == '*' then return true end
+    if first == actual_first then return true end
   end
 
   if actual_second ~= ' ' then
-    if second == '*' then
-      return true
-    end
-    if second == actual_second then
-      return true
-    end
+    if second == '*' then return true end
+    if second == actual_second then return true end
   end
 
   return status == '**' or status == actual_status

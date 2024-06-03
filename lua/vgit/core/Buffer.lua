@@ -11,9 +11,7 @@ local Namespace = require('vgit.core.Namespace')
 local Buffer = Object:extend()
 
 function Buffer:constructor(bufnr)
-  if bufnr == 0 then
-    bufnr = vim.api.nvim_get_current_buf()
-  end
+  if bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
 
   return {
     bufnr = bufnr,
@@ -23,8 +21,7 @@ function Buffer:constructor(bufnr)
     state = {
       is_processing = false,
       is_attached_to_screen = false,
-      on_render = function()
-      end,
+      on_render = function() end,
     },
   }
 end
@@ -73,7 +70,9 @@ function Buffer:on_render(top, bot)
   return self
 end
 
-function Buffer:is_rendering() return self.rendering end
+function Buffer:is_rendering()
+  return self.rendering
+end
 
 function Buffer:is_in_disk()
   return fs.exists(self:get_name())
@@ -86,17 +85,18 @@ end
 function Buffer:watch(callback)
   local name = self:get_name()
 
-  self.watcher:watch_file(self:get_name(), loop.coroutine(function(err)
-    if err then
-      console.debug.error(string.format('Error encountered while watching %s', name))
-      return
-    end
+  self.watcher:watch_file(
+    self:get_name(),
+    loop.coroutine(function(err)
+      if err then
+        console.debug.error(string.format('Error encountered while watching %s', name))
+        return
+      end
 
-    loop.free_textlock()
-    if self and self:is_valid() and callback then
-      callback()
-    end
-  end))
+      loop.free_textlock()
+      if self and self:is_valid() and callback then callback() end
+    end)
+  )
 
   return self
 end
@@ -118,7 +118,7 @@ function Buffer:add_highlight(opts)
     col_range = {
       from = opts.col_range.from,
       to = opts.col_range.to,
-    }
+    },
   })
 
   return self
@@ -161,7 +161,7 @@ function Buffer:transpose_virtual_text(opts)
     row = opts.row,
     col = opts.col,
     pos = opts.pos,
-    priority = opts.priority
+    priority = opts.priority,
   })
 
   return self
@@ -172,7 +172,7 @@ function Buffer:transpose_virtual_line(opts)
     texts = opts.texts,
     row = opts.row,
     pos = opts.pos,
-    priority = opts.priority
+    priority = opts.priority,
   })
 
   return self
@@ -193,7 +193,7 @@ function Buffer:insert_virtual_line(opts)
     text = opts.text,
     hl = opts.hl,
     row = opts.row,
-    priority = opts.priority
+    priority = opts.priority,
   })
 
   return self
@@ -213,7 +213,9 @@ function Buffer:create(listed, scratch)
   return self
 end
 
-function Buffer:is_current() return self.bufnr == vim.api.nvim_get_current_buf() end
+function Buffer:is_current()
+  return self.bufnr == vim.api.nvim_get_current_buf()
+end
 
 function Buffer:is_valid()
   local bufnr = self.bufnr
@@ -236,7 +238,9 @@ function Buffer:get_lines(top, bot)
   return vim.api.nvim_buf_get_lines(self.bufnr, top, bot, false)
 end
 
-function Buffer:get_option(key) return vim.api.nvim_buf_get_option(self.bufnr, key) end
+function Buffer:get_option(key)
+  return vim.api.nvim_buf_get_option(self.bufnr, key)
+end
 
 function Buffer:set_lines(lines, top, bot)
   top = top or 0
@@ -290,7 +294,9 @@ function Buffer:editing()
 end
 
 function Buffer:update()
-  return self:call(function() vim.cmd('update') end)
+  return self:call(function()
+    vim.cmd('update')
+  end)
 end
 
 function Buffer:filetype()

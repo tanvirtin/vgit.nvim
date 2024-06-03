@@ -8,7 +8,9 @@ local git_status = require('vgit.git.git2.status')
 
 local ProjectHunksQuickfix = Object:extend()
 
-function ProjectHunksQuickfix:constructor() return { name = 'Project Hunks List' } end
+function ProjectHunksQuickfix:constructor()
+  return { name = 'Project Hunks List' }
+end
 
 function ProjectHunksQuickfix:fetch()
   local entries = {}

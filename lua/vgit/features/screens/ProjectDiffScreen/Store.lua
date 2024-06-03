@@ -118,13 +118,13 @@ function Store:get_file_hunks(file, status, lines)
     hunks, hunks_err = git_hunks.list(reponame, filename, {
       previous = ':3',
       current = ':1',
-      unmerged = true
+      unmerged = true,
     })
   elseif file_status:has_both('UD') then
     hunks, hunks_err = git_hunks.list(reponame, filename, {
       previous = ':1',
       current = ':2',
-      unmerged = true
+      unmerged = true,
     })
   elseif file_status:has_both('??') then
     hunks = git_hunks.custom(lines, { untracked = true })
@@ -140,7 +140,8 @@ function Store:get_file_hunks(file, status, lines)
       if head_log_err then return head_log_err end
       local merge_log, merge_log_err = git_log.get(reponame, 'MERGE_HEAD')
       if merge_log_err then return merge_log_err end
-      hunks, hunks_err = git_hunks.list(reponame, filename, { parent = head_log.commit_hash, current = merge_log.commit_hash })
+      hunks, hunks_err =
+        git_hunks.list(reponame, filename, { parent = head_log.commit_hash, current = merge_log.commit_hash })
     else
       hunks_err = nil
       hunks = {}
@@ -169,9 +170,7 @@ function Store:fetch(shape, opts)
 
   self:reset()
 
-  if not git_repo.exists() then
-    return { 'Project has no .git folder' }, nil
-  end
+  if not git_repo.exists() then return { 'Project has no .git folder' }, nil end
 
   loop.free_textlock()
   local reponame = git_repo.discover()
@@ -182,17 +181,11 @@ function Store:fetch(shape, opts)
 
   local data = {}
 
-  if #changed_files ~= 0 then
-    data['Changes'] = changed_files
-  end
+  if #changed_files ~= 0 then data['Changes'] = changed_files end
 
-  if #staged_files ~= 0 then
-    data['Staged Changes'] = staged_files
-  end
+  if #staged_files ~= 0 then data['Staged Changes'] = staged_files end
 
-  if #unmerged_files ~= 0 then
-    data['Merge Changes'] = unmerged_files
-  end
+  if #unmerged_files ~= 0 then data['Merge Changes'] = unmerged_files end
 
   self.shape = shape
   self.data = data
@@ -200,7 +193,9 @@ function Store:fetch(shape, opts)
   return self.data, nil
 end
 
-function Store:get_all() return self.err, self.data end
+function Store:get_all()
+  return self.err, self.data
+end
 
 function Store:set_id(id)
   self.id = id
@@ -209,15 +204,11 @@ function Store:set_id(id)
 end
 
 function Store:get(id)
-  if id then
-    self.id = id
-  end
+  if id then self.id = id end
 
   local datum = self._cache.list_entries[self.id]
 
-  if not datum then
-    return { 'Item not found' }, nil
-  end
+  if not datum then return { 'Item not found' }, nil end
 
   return nil, datum
 end
@@ -225,35 +216,25 @@ end
 function Store:get_diff_dto()
   local err, datum = self:get()
 
-  if err then
-    return err
-  end
+  if err then return err end
 
   local id = datum.id
   local file = datum.file
   local status = datum.status
 
-  if not file then
-    return { 'No file found in item' }, nil
-  end
+  if not file then return { 'No file found in item' }, nil end
 
   local cache_key = string.format('%s-%s-%s', id, status, file.id)
 
-  if self._cache.diff_dtos[cache_key] then
-    return nil, self._cache.diff_dtos[cache_key]
-  end
+  if self._cache.diff_dtos[cache_key] then return nil, self._cache.diff_dtos[cache_key] end
 
   local lines_err, lines = self:get_file_lines(file, status)
 
-  if lines_err then
-    return lines_err, nil
-  end
+  if lines_err then return lines_err, nil end
 
   local hunks_err, hunks = self:get_file_hunks(file, status, lines)
 
-  if hunks_err then
-    return hunks_err
-  end
+  if hunks_err then return hunks_err end
 
   local file_status = file.status
   local is_deleted = not (file_status:has_both('DU') or file_status:has_both('UD')) and file_status:has_either('DD')
@@ -267,9 +248,7 @@ end
 function Store:get_filename()
   local err, datum = self:get()
 
-  if err then
-    return err
-  end
+  if err then return err end
 
   return nil, datum.file.filename
 end
@@ -277,14 +256,14 @@ end
 function Store:get_filetype()
   local err, datum = self:get()
 
-  if err then
-    return err
-  end
+  if err then return err end
 
   return nil, datum.file.filetype
 end
 
-function Store:get_lnum() return nil, self._cache.lnum end
+function Store:get_lnum()
+  return nil, self._cache.lnum
+end
 
 function Store:set_lnum(lnum)
   self._cache.lnum = lnum
@@ -292,7 +271,9 @@ function Store:set_lnum(lnum)
   return self
 end
 
-function Store:get_list_folds() return nil, self._cache.list_folds end
+function Store:get_list_folds()
+  return nil, self._cache.list_folds
+end
 
 function Store:set_list_folds(list_folds)
   self._cache.list_folds = list_folds

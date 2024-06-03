@@ -7,7 +7,9 @@ local eq = assert.are.same
 describe('fs:', function()
   local filename = '/tmp/foo_vgit'
 
-  after_each(function() os.remove(filename) end)
+  after_each(function()
+    os.remove(filename)
+  end)
 
   describe('relative_filename', function()
     it('should convert an absolute path to a relative path', function()
@@ -64,14 +66,22 @@ describe('fs:', function()
   end)
 
   describe('tmpname', function()
-    it('should generate a string', function() eq(type(fs.tmpname()), 'string') end)
-    it('should start with /tmp/', function() eq(vim.startswith(fs.tmpname(), '/tmp/'), true) end)
+    it('should generate a string', function()
+      eq(type(fs.tmpname()), 'string')
+    end)
+    it('should start with /tmp/', function()
+      eq(vim.startswith(fs.tmpname(), '/tmp/'), true)
+    end)
   end)
 
   describe('detect', function()
-    it('should work for md', function() eq('markdown', fs.detect_filetype('Readme.md')) end)
+    it('should work for md', function()
+      eq('markdown', fs.detect_filetype('Readme.md'))
+    end)
 
-    it('should work for CMakeList.txt', function() eq('cmake', fs.detect_filetype('CMakeLists.txt')) end)
+    it('should work for CMakeList.txt', function()
+      eq('cmake', fs.detect_filetype('CMakeLists.txt'))
+    end)
 
     it('should work with extensions with dot', function()
       eq('rst', fs.detect_filetype('example.rst.txt'))
@@ -103,25 +113,34 @@ describe('fs:', function()
       eq('make', fs.detect_filetype('makefile'))
     end)
 
-    it('should work for CMakeList.txt', function() eq('cmake', fs.detect_filetype('CMakeLists.txt')) end)
+    it('should work for CMakeList.txt', function()
+      eq('cmake', fs.detect_filetype('CMakeLists.txt'))
+    end)
 
-    it('should work for common filetypes, like python', function() eq('python', fs.detect_filetype('__init__.py')) end)
+    it('should work for common filetypes, like python', function()
+      eq('python', fs.detect_filetype('__init__.py'))
+    end)
 
     it('should work for common filenames, like makefile', function()
       eq('make', fs.detect_filetype('Makefile'))
       eq('make', fs.detect_filetype('makefile'))
     end)
 
-    it('should work for CMakeList.txt', function() eq('cmake', fs.detect_filetype('CMakeLists.txt')) end)
+    it('should work for CMakeList.txt', function()
+      eq('cmake', fs.detect_filetype('CMakeLists.txt'))
+    end)
 
-    it(
-      'should work for common files, even with .s, like .bashrc',
-      function() eq('sh', fs.detect_filetype('.bashrc')) end
-    )
+    it('should work for common files, even with .s, like .bashrc', function()
+      eq('sh', fs.detect_filetype('.bashrc'))
+    end)
 
-    it('should work fo custom filetypes, like fennel', function() eq('fennel', fs.detect_filetype('init.fnl')) end)
+    it('should work fo custom filetypes, like fennel', function()
+      eq('fennel', fs.detect_filetype('init.fnl'))
+    end)
 
-    it('should work for custom filenames, like Cakefile', function() eq('coffee', fs.detect_filetype('Cakefile')) end)
+    it('should work for custom filenames, like Cakefile', function()
+      eq('coffee', fs.detect_filetype('Cakefile'))
+    end)
   end)
 
   a.describe('write_file', function()
@@ -189,7 +208,9 @@ describe('fs:', function()
   end)
 
   describe('exists', function()
-    it('should return true if file exists', function() eq(fs.exists('lua/vgit.lua'), true) end)
+    it('should return true if file exists', function()
+      eq(fs.exists('lua/vgit.lua'), true)
+    end)
 
     it('should return false if file does not exists', function()
       eq(fs.exists('lua/vgit/doesnotexist1.lua'), false)

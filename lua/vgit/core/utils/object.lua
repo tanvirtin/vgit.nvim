@@ -86,17 +86,19 @@ function object.values(o)
   return values
 end
 
-function object.clone_deep(config_object) return vim.tbl_deep_extend('force', {}, config_object) end
+function object.clone_deep(config_object)
+  return vim.tbl_deep_extend('force', {}, config_object)
+end
 
-function object.clone(config_object) return vim.tbl_extend('force', {}, config_object) end
+function object.clone(config_object)
+  return vim.tbl_extend('force', {}, config_object)
+end
 
 function object.each(o, callback)
   for key, value in pairs(o) do
     local break_loop = callback(value, key)
 
-    if break_loop then
-      return
-    end
+    if break_loop then return end
   end
 end
 

@@ -67,7 +67,9 @@ end
 
 function HistoryScreen:handle_list_move(direction)
   self.store:set_index(self.table_view:move(direction))
-  self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
+  self.diff_view:render_debounced(function()
+    self.diff_view:navigate_to_mark(1)
+  end)
 end
 
 function HistoryScreen:show()
@@ -98,9 +100,7 @@ function HistoryScreen:show()
         loop.free_textlock()
         local row = self.table_view:get_current_row()
 
-        if not row then
-          return
-        end
+        if not row then return end
 
         vim.cmd('quit')
 
@@ -111,16 +111,25 @@ function HistoryScreen:show()
     {
       mode = 'n',
       key = 'j',
-      handler = loop.coroutine(function() self:handle_list_move('down') end),
+      handler = loop.coroutine(function()
+        self:handle_list_move('down')
+      end),
     },
     {
       mode = 'n',
       key = 'k',
-      handler = loop.coroutine(function() self:handle_list_move('up') end),
+      handler = loop.coroutine(function()
+        self:handle_list_move('up')
+      end),
     },
   })
 
-  self.table_view.scene:get('table').buffer:on('CursorMoved', loop.coroutine(function() self:handle_list_move() end))
+  self.table_view.scene:get('table').buffer:on(
+    'CursorMoved',
+    loop.coroutine(function()
+      self:handle_list_move()
+    end)
+  )
 
   return true
 end

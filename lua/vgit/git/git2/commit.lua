@@ -14,12 +14,8 @@ function commit.create(reponame, description)
   for i = 1, #lines do
     local line = lines[i]
 
-    if vim.startswith(line, 'no changes added to commit') then
-      is_uncommitted = true
-    end
-    if vim.startswith(line, 'nothing to commit, working tree clean') then
-      has_no_changes = true
-    end
+    if vim.startswith(line, 'no changes added to commit') then is_uncommitted = true end
+    if vim.startswith(line, 'nothing to commit, working tree clean') then has_no_changes = true end
   end
 
   if has_no_changes then return nil, { 'Nothing to commit, working tree clean' } end

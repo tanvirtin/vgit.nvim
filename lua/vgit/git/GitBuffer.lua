@@ -52,9 +52,12 @@ function GitBuffer:render_conflict_help_text(conflict)
   local accept_current_change_keymap = utils.list.find(keymap.find('conflict_accept_current_change'), function(binding)
     return binding.mode == 'n'
   end)
-  local accept_incoming_change_keymap = utils.list.find(keymap.find('conflict_accept_incoming_change'), function(binding)
-    return binding.mode == 'n'
-  end)
+  local accept_incoming_change_keymap = utils.list.find(
+    keymap.find('conflict_accept_incoming_change'),
+    function(binding)
+      return binding.mode == 'n'
+    end
+  )
   local accept_both_changes_keymap = utils.list.find(keymap.find('conflict_accept_both_changes'), function(binding)
     return binding.mode == 'n'
   end)
@@ -96,7 +99,7 @@ function GitBuffer:render_conflict(conflict)
     hl = 'GitComment',
     row = current.top - 1,
     col = 0,
-    pos = 'eol'
+    pos = 'eol',
   })
 
   for lnum = current.top + 1, current.bot do
@@ -117,7 +120,7 @@ function GitBuffer:render_conflict(conflict)
     hl = 'GitComment',
     row = incoming.bot - 1,
     col = 0,
-    pos = 'eol'
+    pos = 'eol',
   })
 
   if ancestor and not utils.list.is_empty(ancestor) then

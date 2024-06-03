@@ -57,9 +57,7 @@ function fs.read_file(filepath)
     end
   end
 
-  if not line == '' then
-    split_data[#split_data + 1] = line
-  end
+  if not line == '' then split_data[#split_data + 1] = line end
 
   return split_data, nil
 end
@@ -85,7 +83,7 @@ function fs.exists(filepath)
 end
 
 function fs.dirname(filepath)
-  return vim.fn.fnamemodify(filepath, ":h") or ''
+  return vim.fn.fnamemodify(filepath, ':h') or ''
 end
 
 function fs.is_dir(filepath)

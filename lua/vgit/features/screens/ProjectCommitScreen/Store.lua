@@ -31,11 +31,15 @@ function Store:fetch(opts)
 end
 
 function Store:get_lines()
-  if self.err then
-    return self.err
-  end
+  if self.err then return self.err end
 
-  return nil, utils.list.concat({ '' }, utils.list.map(self.data, function(line) return '# ' .. line end))
+  return nil,
+    utils.list.concat(
+      { '' },
+      utils.list.map(self.data, function(line)
+        return '# ' .. line
+      end)
+    )
 end
 
 return Store

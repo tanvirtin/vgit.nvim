@@ -21,7 +21,9 @@ function GitLogsView:constructor(scene, store, plot, config)
   }
 end
 
-function GitLogsView:get_components() return { self.scene:get('selectable_view') } end
+function GitLogsView:get_components()
+  return { self.scene:get('selectable_view') }
+end
 
 function GitLogsView:define()
   self.scene:set(
@@ -48,10 +50,9 @@ function GitLogsView:define()
 end
 
 function GitLogsView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('selectable_view'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  utils.list.each(configs, function(config)
+    self.scene:get('selectable_view'):set_keymap(config.mode, config.key, config.handler)
+  end)
   return self
 end
 
@@ -71,7 +72,7 @@ function GitLogsView:select()
 
     self.namespace:clear(buffer, {
       from = lnum - 1,
-      to = lnum
+      to = lnum,
     })
 
     return self
@@ -84,13 +85,15 @@ function GitLogsView:select()
     row = lnum - 1,
     col_range = {
       from = 1,
-      to = 41
-    }
+      to = 41,
+    },
   })
   return self
 end
 
-function GitLogsView:has_selection() return not utils.object.is_empty(self.state.selected) end
+function GitLogsView:has_selection()
+  return not utils.object.is_empty(self.state.selected)
+end
 
 function GitLogsView:get_selected()
   local err, data = self.store:get_data()
@@ -100,7 +103,9 @@ function GitLogsView:get_selected()
     return {}
   end
 
-  return utils.list.filter(data, function(_, index) return self.state.selected[index] == true end)
+  return utils.list.filter(data, function(_, index)
+    return self.state.selected[index] == true
+  end)
 end
 
 function GitLogsView:paint()
@@ -113,8 +118,8 @@ function GitLogsView:paint()
       row = i - 1,
       col_range = {
         from = 0,
-        to = 41
-      }
+        to = 41,
+      },
     })
   end
 

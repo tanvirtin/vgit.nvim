@@ -29,9 +29,7 @@ end
 function Store:fetch(shape, filename, opts)
   opts = opts or {}
 
-  if not filename or filename == '' then
-    return { 'Buffer has no history associated with it' }, nil
-  end
+  if not filename or filename == '' then return { 'Buffer has no history associated with it' }, nil end
 
   self:reset()
 
@@ -46,7 +44,9 @@ function Store:fetch(shape, filename, opts)
   return self.err, self.data
 end
 
-function Store:get_all() return self.err, self.data end
+function Store:get_all()
+  return self.err, self.data
+end
 
 function Store:set_index(index)
   self.index = index
@@ -55,9 +55,7 @@ function Store:set_index(index)
 end
 
 function Store:get(index)
-  if index then
-    self.index = index
-  end
+  if index then self.index = index end
 
   if not self.data or not self.data[self.index] then
     return { 'No data found, check how you are defining store data' }
@@ -80,7 +78,7 @@ function Store:get_diff_dto(index)
 
   local hunks, hunks_err = self.git_object:list_hunks({
     parent = parent_hash,
-    current = commit_hash
+    current = commit_hash,
   })
   loop.free_textlock()
 
@@ -98,11 +96,17 @@ function Store:get_diff_dto(index)
   return nil, diff
 end
 
-function Store:get_filename() return nil, self.git_object:get_filename() end
+function Store:get_filename()
+  return nil, self.git_object:get_filename()
+end
 
-function Store:get_filetype() return nil, self.git_object:get_filetype() end
+function Store:get_filetype()
+  return nil, self.git_object:get_filetype()
+end
 
-function Store:get_lnum() return nil, self._cache.lnum end
+function Store:get_lnum()
+  return nil, self._cache.lnum
+end
 
 function Store:set_lnum(lnum)
   self._cache.lnum = lnum

@@ -23,21 +23,17 @@ function NavigationVirtualText:place(buffer, window, text)
     hl = 'GitComment',
     row = window:get_lnum() - 1,
     col = 0,
-    pos = 'right_align'
+    pos = 'right_align',
   })
   self.timer_id = vim.fn.timer_start(self.epoch, function()
-    if buffer:is_valid() then
-      buffer:clear_namespace()
-    end
+    if buffer:is_valid() then buffer:clear_namespace() end
     self:clear_timer()
   end)
 end
 
 function NavigationVirtualText:unplace(buffer)
   self:clear_timer()
-  if buffer:is_valid() then
-    buffer:clear_namespace()
-  end
+  if buffer:is_valid() then buffer:clear_namespace() end
 end
 
 return NavigationVirtualText

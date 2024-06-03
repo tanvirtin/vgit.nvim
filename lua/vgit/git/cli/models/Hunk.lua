@@ -59,9 +59,7 @@ function Hunk:constructor(header)
     },
   }
 
-  if not header then
-    return hunk
-  end
+  if not header then return hunk end
 
   local previous, current
 

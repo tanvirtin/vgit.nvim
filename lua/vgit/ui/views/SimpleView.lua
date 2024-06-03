@@ -15,7 +15,9 @@ function SimpleView:constructor(scene, store, plot, config)
   }
 end
 
-function SimpleView:get_components() return { self.scene:get('simple_view') } end
+function SimpleView:get_components()
+  return { self.scene:get('simple_view') }
+end
 
 function SimpleView:define()
   self.scene:set(
@@ -46,17 +48,14 @@ function SimpleView:set_filetype(filetype)
 end
 
 function SimpleView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('simple_view'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  utils.list.each(configs, function(config)
+    self.scene:get('simple_view'):set_keymap(config.mode, config.key, config.handler)
+  end)
   return self
 end
 
 function SimpleView:set_title()
-  if self.config.elements and not self.config.elements.header then
-    return self
-  end
+  if self.config.elements and not self.config.elements.header then return self end
 
   local _, title = self.store:get_title()
 
@@ -65,7 +64,9 @@ function SimpleView:set_title()
   return self
 end
 
-function SimpleView:get_lines() return self.scene:get('simple_view'):get_lines() end
+function SimpleView:get_lines()
+  return self.scene:get('simple_view'):get_lines()
+end
 
 function SimpleView:render()
   local err, lines = self.store:get_lines()

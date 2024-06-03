@@ -3,7 +3,9 @@ local Object = require('vgit.core.Object')
 
 local Spawn = Object:extend()
 
-function Spawn:constructor(spec) return { spec = spec } end
+function Spawn:constructor(spec)
+  return { spec = spec }
+end
 
 function Spawn:parse_result(output, callback)
   if not callback then return end
@@ -31,15 +33,11 @@ function Spawn:start()
   local stderr = vim.loop.new_pipe(false)
 
   local on_stdout = function(_, chunk)
-    if chunk then
-      stdout_result[#stdout_result + 1] = chunk
-    end
+    if chunk then stdout_result[#stdout_result + 1] = chunk end
   end
 
   local on_stderr = function(_, chunk)
-    if chunk then
-      stderr_result[#stderr_result + 1] = chunk
-    end
+    if chunk then stderr_result[#stderr_result + 1] = chunk end
   end
 
   local on_exit = loop.coroutine(function(code, signal)

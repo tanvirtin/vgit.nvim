@@ -61,9 +61,7 @@ function Hunk:constructor(header)
     },
   }
 
-  if not header then
-    return hunk
-  end
+  if not header then return hunk end
 
   local previous, current
 
@@ -118,12 +116,8 @@ function hunks.live(original_lines, current_lines)
     local o_line = original_lines[i]
     local c_line = current_lines[i]
 
-    if o_line then
-      o_lines_str = o_lines_str .. original_lines[i] .. '\n'
-    end
-    if c_line then
-      c_lines_str = c_lines_str .. current_lines[i] .. '\n'
-    end
+    if o_line then o_lines_str = o_lines_str .. original_lines[i] .. '\n' end
+    if c_line then c_lines_str = c_lines_str .. current_lines[i] .. '\n' end
   end
 
   local live_hunks = {}
@@ -204,9 +198,7 @@ function hunks.list(reponame, filename, opts)
     '--unified=0',
   }
 
-  if staged == true then
-    utils.list.concat(args, { '--cached' })
-  end
+  if staged == true then utils.list.concat(args, { '--cached' }) end
 
   if unmerged == true then
     if not parent then return nil, { 'parent is required' } end

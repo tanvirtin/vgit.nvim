@@ -19,9 +19,7 @@ function sign.register_module(dependency)
     sign.define(name, config)
   end
 
-  if dependency then
-    dependency()
-  end
+  if dependency then dependency() end
 
   return sign
 end

@@ -92,11 +92,17 @@ function screen_manager.screens.line_blame_screen()
   return line_blame_screen:show(), line_blame_screen
 end
 
-function screen_manager.is_screen_registered(screen_name) return type(screen_manager.screens[screen_name]) == 'function' end
+function screen_manager.is_screen_registered(screen_name)
+  return type(screen_manager.screens[screen_name]) == 'function'
+end
 
-function screen_manager.has_action(action) return type(screen_manager.active_screen[action]) == 'function' end
+function screen_manager.has_action(action)
+  return type(screen_manager.active_screen[action]) == 'function'
+end
 
-function screen_manager.has_active_screen() return screen_manager.active_screen ~= nil end
+function screen_manager.has_active_screen()
+  return screen_manager.active_screen ~= nil
+end
 
 function screen_manager.toggle_diff_preference()
   local diff_preference = scene_setting:get('diff_preference')
@@ -111,13 +117,9 @@ function screen_manager.toggle_diff_preference()
 end
 
 function screen_manager.show(screen_name, ...)
-  if not screen_manager.is_screen_registered(screen_name) then
-    return screen_manager
-  end
+  if not screen_manager.is_screen_registered(screen_name) then return screen_manager end
 
-  if screen_manager.has_active_screen() then
-    screen_manager.destroy_active_screen()
-  end
+  if screen_manager.has_active_screen() then screen_manager.destroy_active_screen() end
 
   local success, screen = screen_manager.screens[screen_name](...)
   if success then
@@ -125,14 +127,10 @@ function screen_manager.show(screen_name, ...)
     screen.scene
       :on(event_type.BufWinLeave, function()
         loop.free_textlock()
-        if screen_manager.has_active_screen() then
-          return screen_manager.destroy_active_screen()
-        end
+        if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
       end)
       :on(event_type.QuitPre, function()
-        if screen_manager.has_active_screen() then
-          return screen_manager.destroy_active_screen()
-        end
+        if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
       end)
   end
 
@@ -147,9 +145,7 @@ function screen_manager.destroy_active_screen()
 end
 
 function screen_manager.handle_on_quit_keypress()
-  if screen_manager.has_active_screen() then
-    return screen_manager.destroy_active_screen()
-  end
+  if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
 end
 
 function screen_manager.register_keymaps()

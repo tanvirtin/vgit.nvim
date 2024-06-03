@@ -31,15 +31,11 @@ function GutterBlameScreen:open_commit()
   loop.free_textlock()
   local err_blames, blames = self.store:get_blames()
 
-  if err_blames then
-    return self
-  end
+  if err_blames then return self end
 
   local blame = blames[lnum]
 
-  if not blame.committed then
-    return self
-  end
+  if not blame.committed then return self end
 
   vim.cmd('quit')
 
@@ -68,7 +64,9 @@ function GutterBlameScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.coroutine(function() self:open_commit() end),
+      handler = loop.coroutine(function()
+        self:open_commit()
+      end),
     },
   })
   self.diff_view:show()
@@ -76,7 +74,9 @@ function GutterBlameScreen:show()
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.coroutine(function() self:open_commit() end),
+      handler = loop.coroutine(function()
+        self:open_commit()
+      end),
     },
   })
 

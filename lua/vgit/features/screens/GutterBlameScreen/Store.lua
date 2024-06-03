@@ -29,9 +29,7 @@ function Store:reset()
 end
 
 function Store:fetch(filename, lines)
-  if not filename or filename == '' then
-    return { 'Buffer has no blame associated with it' }, nil
-  end
+  if not filename or filename == '' then return { 'Buffer has no blame associated with it' }, nil end
 
   self:reset()
 
@@ -46,20 +44,24 @@ function Store:fetch(filename, lines)
   return self.err, self.data
 end
 
-function Store:get_blames() return self.err, self.data end
+function Store:get_blames()
+  return self.err, self.data
+end
 
 function Store:get_diff_dto()
-  if self._cache.diff_dto then
-    return nil, self._cache.diff_dto
-  end
+  if self._cache.diff_dto then return nil, self._cache.diff_dto end
 
   self._cache.diff_dto = DiffDTO({ lines = self._cache.lines })
 
   return nil, self._cache.diff_dto
 end
 
-function Store:get_filename() return nil, self.git_object:get_filename() end
+function Store:get_filename()
+  return nil, self.git_object:get_filename()
+end
 
-function Store:get_filetype() return nil, self.git_object:get_filetype() end
+function Store:get_filetype()
+  return nil, self.git_object:get_filetype()
+end
 
 return Store

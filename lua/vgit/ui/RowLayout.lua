@@ -3,7 +3,9 @@ local dimensions = require('vgit.ui.dimensions')
 
 local RowLayout = Object:extend()
 
-function RowLayout:constructor(...) return { views = { ... } } end
+function RowLayout:constructor(...)
+  return { views = { ... } }
+end
 
 function RowLayout:build()
   local row = 0
@@ -18,26 +20,18 @@ function RowLayout:build()
 
       plot.win_plot.row = plot.win_plot.row + row
 
-      if plot.header_win_plot then
-        plot.header_win_plot.row = plot.header_win_plot.row + row
-      end
+      if plot.header_win_plot then plot.header_win_plot.row = plot.header_win_plot.row + row end
 
-      if plot.footer_win_plot then
-        plot.footer_win_plot.row = plot.footer_win_plot.row + row
-      end
+      if plot.footer_win_plot then plot.footer_win_plot.row = plot.footer_win_plot.row + row end
 
       last_component = component
     end
 
     row = row + plot.win_plot.height
 
-    if plot.header_win_plot then
-      row = row + plot.header_win_plot.height
-    end
+    if plot.header_win_plot then row = row + plot.header_win_plot.height end
 
-    if plot.footer_win_plot then
-      row = row + plot.footer_win_plot.height
-    end
+    if plot.footer_win_plot then row = row + plot.footer_win_plot.height end
   end
 
   local last_plot = last_component:get_plot()
@@ -46,13 +40,9 @@ function RowLayout:build()
   if last_plot.win_plot.row + last_plot.win_plot.height > global_height then
     row = dimensions.global_height() - last_plot.win_plot.height + 1
 
-    if last_plot.header_win_plot then
-      row = row - last_plot.header_win_plot.height
-    end
+    if last_plot.header_win_plot then row = row - last_plot.header_win_plot.height end
 
-    if last_plot.footer_win_plot then
-      row = row - last_plot.footer_win_plot.height
-    end
+    if last_plot.footer_win_plot then row = row - last_plot.footer_win_plot.height end
 
     for i = #self.views, 1, -1 do
       local plot
@@ -65,24 +55,15 @@ function RowLayout:build()
         if i == #self.views then
           plot.win_plot.row = row
 
-          if plot.header_win_plot then
-            plot.header_win_plot.row = row
-          end
+          if plot.header_win_plot then plot.header_win_plot.row = row end
 
-          if plot.footer_win_plot then
-            plot.footer_win_plot.row = row + plot.win_plot.height
-          end
-
+          if plot.footer_win_plot then plot.footer_win_plot.row = row + plot.win_plot.height end
         else
           plot.win_plot.row = row - plot.win_plot.height - 1
 
-          if plot.header_win_plot then
-            plot.header_win_plot.row = row - plot.win_plot.height - 1
-          end
+          if plot.header_win_plot then plot.header_win_plot.row = row - plot.win_plot.height - 1 end
 
-          if plot.footer_win_plot then
-            plot.footer_win_plot.row = row - 1
-          end
+          if plot.footer_win_plot then plot.footer_win_plot.row = row - 1 end
         end
       end
 

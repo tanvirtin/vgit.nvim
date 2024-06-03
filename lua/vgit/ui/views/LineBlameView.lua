@@ -28,11 +28,15 @@ function LineBlameView:define()
   return self
 end
 
-function LineBlameView:get_components() return { self.scene:get('line_blame') } end
+function LineBlameView:get_components()
+  return { self.scene:get('line_blame') }
+end
 
 function LineBlameView:set_keymap(configs)
   local component = self.scene:get('line_blame')
-  utils.list.each(configs, function(config) component:set_keymap(config.mode, config.key, config.handler) end)
+  utils.list.each(configs, function(config)
+    component:set_keymap(config.mode, config.key, config.handler)
+  end)
   return self
 end
 
@@ -40,15 +44,11 @@ function LineBlameView:create_committed_lines(blame)
   local max_line_length = 88
   local commit_message = blame.commit_message
 
-  if #commit_message > max_line_length then
-    commit_message = commit_message:sub(1, max_line_length) .. '...'
-  end
+  if #commit_message > max_line_length then commit_message = commit_message:sub(1, max_line_length) .. '...' end
 
   local commit_details = blame.commit_hash
 
-  if blame.parent_hash then
-    commit_details = string.format('%s -> %s', blame.parent_hash, blame.commit_hash)
-  end
+  if blame.parent_hash then commit_details = string.format('%s -> %s', blame.parent_hash, blame.commit_hash) end
 
   return {
     commit_details,

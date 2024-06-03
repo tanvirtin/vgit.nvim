@@ -100,17 +100,13 @@ function DiffView:define()
 end
 
 function DiffView:get_components()
-  if self.layout_type == 'split' then
-    return { self.scene:get('previous'), self.scene:get('current') }
-  end
+  if self.layout_type == 'split' then return { self.scene:get('previous'), self.scene:get('current') } end
 
   return { self.scene:get('current') }
 end
 
 function DiffView:set_title(title)
-  if not title then
-    return self
-  end
+  if not title then return self end
 
   self.title = title
 
@@ -119,16 +115,14 @@ end
 
 function DiffView:set_keymap(configs)
   if self.layout_type == 'split' then
-    utils.list.each(
-      configs,
-      function(config) self.scene:get('previous'):set_keymap(config.mode, config.key, config.handler) end
-    )
+    utils.list.each(configs, function(config)
+      self.scene:get('previous'):set_keymap(config.mode, config.key, config.handler)
+    end)
   end
 
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('current'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  utils.list.each(configs, function(config)
+    self.scene:get('current'):set_keymap(config.mode, config.key, config.handler)
+  end)
 
   return self
 end
@@ -136,9 +130,7 @@ end
 function DiffView:paint_word(component_type, line_changes, lnum)
   local lnum_change = line_changes.lnum_change
 
-  if not lnum_change then
-    return self
-  end
+  if not lnum_change then return self end
 
   local texts = {}
   local change_type = lnum_change.type
@@ -163,14 +155,12 @@ function DiffView:paint_word(component_type, line_changes, lnum)
         }
       end
 
-      if operation == 0 or operation == -1 then
-        offset = offset + #fragment
-      end
+      if operation == 0 or operation == -1 then offset = offset + #fragment end
     end
 
-    component:transpose_virtual_line({ 
+    component:transpose_virtual_line({
       texts = texts,
-      row = lnum - 1
+      row = lnum - 1,
     })
   end
 
@@ -185,28 +175,22 @@ function DiffView:paint_line(component_type, line_changes, lnum)
   local main_signs = signs_usage_setting.main
   local component = self.scene:get(component_type)
 
-  if not lnum_change then
-    return self
-  end
+  if not lnum_change then return self end
 
   lnum = lnum_change.lnum
   local change_type = lnum_change.type
   local sign_name = scene_signs[change_type]
 
-  if change_type ~= 'void' then
-    line_number_hl = main_signs[change_type]
-  end
+  if change_type ~= 'void' then line_number_hl = main_signs[change_type] end
 
-  if sign_name then
-    component:sign_place(lnum, sign_name)
-  end
+  if sign_name then component:sign_place(lnum, sign_name) end
 
   if change_type == 'void' then
     component:transpose_virtual_text({
       text = string.rep(symbols_setting:get('void'), component.window:get_width()),
       hl = line_number_hl,
       row = lnum - 1,
-      col = 0
+      col = 0,
     })
   end
 
@@ -239,9 +223,7 @@ function DiffView:paint()
 end
 
 function DiffView:reset_cursor()
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):reset_cursor()
-  end
+  if self.layout_type == 'split' then self.scene:get('previous'):reset_cursor() end
 
   self.scene:get('current'):reset_cursor()
 
@@ -266,9 +248,7 @@ function DiffView:clear_title()
 end
 
 function DiffView:clear_namespace()
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):clear_namespace()
-  end
+  if self.layout_type == 'split' then self.scene:get('previous'):clear_namespace() end
 
   self.scene:get('current'):clear_namespace()
 
@@ -284,9 +264,7 @@ function DiffView:clear_namespace()
 end
 
 function DiffView:clear_lines()
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):clear_lines():disable_cursorline()
-  end
+  if self.layout_type == 'split' then self.scene:get('previous'):clear_lines():disable_cursorline() end
 
   self.scene:get('current'):clear_lines():disable_cursorline()
 
@@ -301,9 +279,7 @@ function DiffView:clear_notification()
     return self
   end
 
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):clear_notification()
-  end
+  if self.layout_type == 'split' then self.scene:get('previous'):clear_notification() end
 
   self.scene:get('current'):clear_notification()
 
@@ -365,13 +341,9 @@ function DiffView:render_filetype()
 
   local current_component = self.scene:get('current')
 
-  if current_component:get_filetype() == filetype then
-    return self
-  end
+  if current_component:get_filetype() == filetype then return self end
 
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):set_filetype(filetype)
-  end
+  if self.layout_type == 'split' then self.scene:get('previous'):set_filetype(filetype) end
 
   current_component:set_filetype(filetype)
 
@@ -480,8 +452,8 @@ function DiffView:render_split_line_numbers()
   end
 
   return self
-      :render_split_previous_line_numbers(diff_dto, previous_lnum_change_map)
-      :render_split_current_line_numbers(diff_dto, current_lnum_change_map)
+    :render_split_previous_line_numbers(diff_dto, previous_lnum_change_map)
+    :render_split_current_line_numbers(diff_dto, current_lnum_change_map)
 end
 
 function DiffView:render_unified_line_numbers()
@@ -595,9 +567,7 @@ function DiffView:get_current_mark_under_cursor()
   for i = 1, #marks do
     local mark = marks[i]
 
-    if lnum >= mark.top and lnum <= mark.bot then
-      return mark, i
-    end
+    if lnum >= mark.top and lnum <= mark.bot then return mark, i end
   end
 
   return nil, nil
@@ -625,17 +595,13 @@ function DiffView:get_current_hunk_under_cursor()
     end
   end
 
-  if selected then
-    return hunks[selected], selected
-  end
+  if selected then return hunks[selected], selected end
 
   return nil, nil
 end
 
 function DiffView:set_lnum(lnum, position)
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):set_lnum(lnum):position_cursor(position)
-  end
+  if self.layout_type == 'split' then self.scene:get('previous'):set_lnum(lnum):position_cursor(position) end
 
   -- NOTE: Current must always be set after previous.
   self.scene:get('current'):set_lnum(lnum):position_cursor(position)
@@ -646,9 +612,7 @@ end
 function DiffView:set_relative_lnum(lnum, position)
   local err, diff_dto = self.store:get_diff_dto()
 
-  if err then
-    return self
-  end
+  if err then return self end
 
   for i = 1, #diff_dto.lnum_changes do
     local lnum_change = diff_dto.lnum_changes[i]
@@ -656,9 +620,7 @@ function DiffView:set_relative_lnum(lnum, position)
     local type = lnum_change.type
     local buftype = lnum_change.buftype
 
-    if buftype == 'current' and (type == 'void' or type == 'remove') and lnum >= l then
-      lnum = lnum + 1
-    end
+    if buftype == 'current' and (type == 'void' or type == 'remove') and lnum >= l then lnum = lnum + 1 end
   end
 
   self:set_lnum(lnum, position)
@@ -670,9 +632,7 @@ function DiffView:select_mark(marks, mark_index, position)
   local lnum = nil
   local mark = marks[mark_index]
 
-  if mark then
-    lnum = mark.top
-  end
+  if mark then lnum = mark.top end
 
   if not lnum then
     if marks and marks[#marks] and marks[#marks].top then
@@ -768,13 +728,9 @@ function DiffView:get_relative_mark_index(lnum)
 end
 
 function DiffView:navigate_to_mark(mark_index, pos)
-  if not pos then
-    pos = 'top'
-  end
+  if not pos then pos = 'top' end
 
-  if not mark_index then
-    mark_index = 1
-  end
+  if not mark_index then mark_index = 1 end
 
   local err, diff_dto = self.store:get_diff_dto()
 
@@ -797,8 +753,8 @@ function DiffView:navigate_to_mark(mark_index, pos)
   end
 
   return self
-      :select_mark(marks, mark_index, pos)
-      :notify(string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks))
+    :select_mark(marks, mark_index, pos)
+    :notify(string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks))
 end
 
 function DiffView:render()
@@ -814,18 +770,10 @@ function DiffView:render()
 
       self.state = DiffView:get_initial_state()
 
-      return self:clear_title()
-          :clear_lines()
-          :clear_notification()
-          :reset_cursor()
+      return self:clear_title():clear_lines():clear_notification():reset_cursor()
     end
 
-    return self:reset_cursor()
-        :render_title()
-        :render_filetype()
-        :render_lines()
-        :render_line_numbers()
-        :paint()
+    return self:reset_cursor():render_title():render_filetype():render_lines():render_line_numbers():paint()
   end)
 
   if not ok then console.debug.error(msg) end
@@ -835,15 +783,11 @@ end
 DiffView.render_debounced = loop.debounce_coroutine(function(self, callback)
   self:render()
 
-  if callback then
-    callback()
-  end
+  if callback then callback() end
 end, 300)
 
 function DiffView:mount()
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):mount()
-  end
+  if self.layout_type == 'split' then self.scene:get('previous'):mount() end
 
   self.scene:get('current'):mount()
 
