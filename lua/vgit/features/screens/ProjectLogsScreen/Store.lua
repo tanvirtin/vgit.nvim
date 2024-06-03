@@ -31,6 +31,8 @@ function Store:fetch()
   return self.err, self.data
 end
 
-function Store:get_data() return self.err, self.data end
+function Store:get_data()
+  return self.err, self.data
+end
 
 return Store

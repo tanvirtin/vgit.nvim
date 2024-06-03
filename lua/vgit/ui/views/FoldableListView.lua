@@ -17,7 +17,9 @@ function FoldableListView:constructor(scene, store, plot, config)
   }
 end
 
-function FoldableListView:get_components() return { self.scene:get('list') } end
+function FoldableListView:get_components()
+  return { self.scene:get('list') }
+end
 
 function FoldableListView:define()
   self.scene:set(
@@ -43,10 +45,9 @@ function FoldableListView:define()
 end
 
 function FoldableListView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('list'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  utils.list.each(configs, function(config)
+    self.scene:get('list'):set_keymap(config.mode, config.key, config.handler)
+  end)
 
   return self
 end
@@ -66,9 +67,7 @@ end
 function FoldableListView:get_list()
   local _, list = self.store:get_list_folds()
 
-  if list then
-    return list
-  end
+  if list then return list end
 
   local err, data = self.store:get_all()
 
@@ -84,18 +83,22 @@ function FoldableListView:get_list()
   return list
 end
 
-function FoldableListView:get_list_item(lnum) return self.scene:get('list'):get_list_item(lnum) end
+function FoldableListView:get_list_item(lnum)
+  return self.scene:get('list'):get_list_item(lnum)
+end
 
-function FoldableListView:get_current_list_item() return self:get_list_item(self.scene:get('list'):get_lnum()) end
+function FoldableListView:get_current_list_item()
+  return self:get_list_item(self.scene:get('list'):get_lnum())
+end
 
-function FoldableListView:query_list_item(callback) return self.scene:get('list'):query_list_item(callback) end
+function FoldableListView:query_list_item(callback)
+  return self.scene:get('list'):query_list_item(callback)
+end
 
 function FoldableListView:toggle_current_list_item()
   local item = self:get_list_item(self.scene:get('list'):get_lnum())
 
-  if item and item.open ~= nil then
-    item.open = not item.open
-  end
+  if item and item.open ~= nil then item.open = not item.open end
 
   return self
 end
@@ -119,13 +122,9 @@ function FoldableListView:move(direction)
   local lnum = list:get_lnum()
   local count = list:get_line_count()
 
-  if direction == 'down' then
-    lnum = lnum + 1
-  end
+  if direction == 'down' then lnum = lnum + 1 end
 
-  if direction == 'up' then
-    lnum = lnum - 1
-  end
+  if direction == 'up' then lnum = lnum - 1 end
 
   if lnum < 1 then
     lnum = count

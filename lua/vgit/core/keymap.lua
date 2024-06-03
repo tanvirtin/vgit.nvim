@@ -54,7 +54,7 @@ function keymap.find(command)
         table.insert(keybindings, {
           mode = mode,
           lhs = binding.lhs,
-          rhs = binding.rhs
+          rhs = binding.rhs,
         })
       end
     end

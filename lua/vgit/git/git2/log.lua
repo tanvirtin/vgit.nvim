@@ -9,9 +9,7 @@ function Log:constructor(line, revision_count)
   local parents = vim.split(log[2], ' ')
   local revision = revision_count and string.format('HEAD~%s', revision_count)
 
-  if #parents > 1 then
-    log[2] = parents[1]
-  end
+  if #parents > 1 then log[2] = parents[1] end
 
   return {
     id = utils.math.uuid(),

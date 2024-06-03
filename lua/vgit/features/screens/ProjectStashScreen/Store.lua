@@ -33,12 +33,12 @@ function Store:fetch(opts)
   return self.err, self.data
 end
 
-function Store:get_data() return self.err, self.data end
+function Store:get_data()
+  return self.err, self.data
+end
 
 function Store:get_lines()
-  if self.err then
-    return self.err
-  end
+  if self.err then return self.err end
 
   local data = {}
 
@@ -51,6 +51,8 @@ function Store:get_lines()
   return nil, data
 end
 
-function Store:get_title() return nil, 'Git Stash' end
+function Store:get_title()
+  return nil, 'Git Stash'
+end
 
 return Store

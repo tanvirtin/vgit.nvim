@@ -84,23 +84,25 @@ function LineBlameScreen:show()
 
   local blame_err, blame = self.store:get_blame()
 
-  if blame_err then
-    return true
-  end
+  if blame_err then return true end
 
   self.diff_view:set_relative_lnum(blame.lnum)
   self.diff_view:set_keymap({
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.coroutine(function() self:handle_on_enter(buffer, blame) end),
+      handler = loop.coroutine(function()
+        self:handle_on_enter(buffer, blame)
+      end),
     },
   })
   self.line_blame_view:set_keymap({
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.coroutine(function() self:handle_on_enter(buffer, blame) end),
+      handler = loop.coroutine(function()
+        self:handle_on_enter(buffer, blame)
+      end),
     },
   })
 

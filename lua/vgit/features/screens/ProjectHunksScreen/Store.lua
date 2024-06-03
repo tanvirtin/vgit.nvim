@@ -99,31 +99,25 @@ function Store:set_id(id)
 end
 
 function Store:get_data(id)
-  if id then
-    self.id = id
-  end
+  if id then self.id = id end
 
   local data = self._cache.list_entry_cache[self.id]
 
-  if not data then
-    return { 'Item not found' }, nil
-  end
+  if not data then return { 'Item not found' }, nil end
 
   return nil, data
 end
 
-function Store:get_all() return self.err, self.data end
+function Store:get_all()
+  return self.err, self.data
+end
 
 function Store:get_diff_dto()
   local data_err, data = self:get_data()
 
-  if data_err then
-    return data_err
-  end
+  if data_err then return data_err end
 
-  if not data.diff_dto then
-    return { 'No git file found to get code dto from' }, nil
-  end
+  if not data.diff_dto then return { 'No git file found to get code dto from' }, nil end
 
   return nil, data.diff_dto
 end
@@ -131,9 +125,7 @@ end
 function Store:get_filename()
   local data_err, data = self:get_data()
 
-  if data_err then
-    return data_err
-  end
+  if data_err then return data_err end
 
   local file = data.file
   local filename = file.filename or ''
@@ -144,9 +136,7 @@ end
 function Store:get_filetype()
   local data_err, data = self:get_data()
 
-  if data_err then
-    return data_err
-  end
+  if data_err then return data_err end
 
   local file = data.file
   local filetype = file.filetype or ''
@@ -205,7 +195,7 @@ function Store:get_hunks(file, lines, is_staged)
   elseif log then
     hunks, hunks_err = git_hunks.list(filename, {
       parent = log.parent_hash,
-      current = log.commit_hash
+      current = log.commit_hash,
     })
   else
     hunks, hunks_err = git_hunks.list(reponame, filename)
@@ -214,7 +204,9 @@ function Store:get_hunks(file, lines, is_staged)
   return hunks_err, hunks
 end
 
-function Store:get_lnum() return nil, self._cache.lnum end
+function Store:get_lnum()
+  return nil, self._cache.lnum
+end
 
 function Store:set_lnum(lnum)
   self._cache.lnum = lnum
@@ -222,7 +214,9 @@ function Store:set_lnum(lnum)
   return self
 end
 
-function Store:get_list_folds() return nil, self._cache.list_folds end
+function Store:get_list_folds()
+  return nil, self._cache.list_folds
+end
 
 function Store:set_list_folds(list_folds)
   self._cache.list_folds = list_folds

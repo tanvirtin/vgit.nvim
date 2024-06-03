@@ -37,26 +37,21 @@ function ProjectHunksScreen:constructor(opts)
           local icon_before = nil
           local icon, icon_hl = icons.get(key)
 
-          if icon then
-            icon_before = {
-              icon = icon,
-              hl = icon_hl,
-            }
-          end
+          if icon then icon_before = {
+            icon = icon,
+            hl = icon_hl,
+          } end
 
           foldable_list[#foldable_list + 1] = {
             open = true,
             value = key,
             icon_before = icon_before,
-            items = utils.list.map(
-              entries,
-              function(entry)
-                return {
-                  id = entry.id,
-                  value = entry.hunk.header,
-                }
-              end
-            ),
+            items = utils.list.map(entries, function(entry)
+              return {
+                id = entry.id,
+                value = entry.hunk.header,
+              }
+            end),
           }
         end
 
@@ -87,17 +82,13 @@ end
 function ProjectHunksScreen:handle_list_move(direction)
   local list_item = self.foldable_list_view:move(direction)
 
-  if not list_item then
-    return
-  end
+  if not list_item then return end
 
   self.store:set_id(list_item.id)
   self.diff_view:render_debounced(loop.coroutine(function()
     local _, data = self.store:get_data()
 
-    if data then
-      self.diff_view:navigate_to_mark(data.mark_index)
-          end
+    if data then self.diff_view:navigate_to_mark(data.mark_index) end
   end))
 end
 
@@ -128,15 +119,11 @@ function ProjectHunksScreen:show(opts)
       handler = loop.coroutine(function()
         local mark = self.diff_view:get_current_mark_under_cursor()
 
-        if not mark then
-          return
-        end
+        if not mark then return end
 
         local _, filename = self.store:get_filename()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         self:destroy()
 
@@ -151,12 +138,16 @@ function ProjectHunksScreen:show(opts)
     {
       mode = 'n',
       key = 'j',
-      handler = loop.coroutine(function() self:handle_list_move('down') end),
+      handler = loop.coroutine(function()
+        self:handle_list_move('down')
+      end),
     },
     {
       mode = 'n',
       key = 'k',
-      handler = loop.coroutine(function() self:handle_list_move('up') end),
+      handler = loop.coroutine(function()
+        self:handle_list_move('up')
+      end),
     },
     {
       mode = 'n',
@@ -185,7 +176,12 @@ function ProjectHunksScreen:show(opts)
     },
   })
 
-  self.foldable_list_view.scene:get('list').buffer:on('CursorMoved', loop.coroutine(function() self:handle_list_move() end))
+  self.foldable_list_view.scene:get('list').buffer:on(
+    'CursorMoved',
+    loop.coroutine(function()
+      self:handle_list_move()
+    end)
+  )
 
   return true
 end

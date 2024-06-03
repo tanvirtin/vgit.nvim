@@ -30,32 +30,28 @@ function LiveBlame:display(lnum, buffer, config, blame)
         hl = 'GitComment',
         row = lnum - 1,
         col = 0,
-        pos = 'eol'
+        pos = 'eol',
       })
     end
   end
 end
 
 function LiveBlame:clear(buffer)
-  if buffer:is_valid() then
-    self.namespace:clear(buffer)
-  end
+  if buffer:is_valid() then self.namespace:clear(buffer) end
 end
 
 function LiveBlame:reset()
-  git_buffer_store.for_each(function(git_buffer) self:clear(git_buffer) end)
+  git_buffer_store.for_each(function(git_buffer)
+    self:clear(git_buffer)
+  end)
 end
 
 function LiveBlame:render(git_buffer)
-  if not live_blame_setting:get('enabled') then
-    return
-  end
+  if not live_blame_setting:get('enabled') then return end
 
   git_buffer = git_buffer or git_buffer_store.current()
 
-  if not git_buffer then
-    return
-  end
+  if not git_buffer then return end
 
   loop.free_textlock()
   local config, config_err = git_repo.config()
@@ -70,9 +66,7 @@ function LiveBlame:render(git_buffer)
   loop.free_textlock()
   local lnum = window:get_lnum()
 
-  if self.last_lnum == lnum then
-    return
-  end
+  if self.last_lnum == lnum then return end
 
   loop.free_textlock()
   local blame, blame_err = git_buffer:blame(lnum)
@@ -80,9 +74,7 @@ function LiveBlame:render(git_buffer)
   loop.free_textlock()
   local new_lnum = window:get_lnum()
 
-  if lnum ~= new_lnum then
-    return
-  end
+  if lnum ~= new_lnum then return end
 
   if blame_err then
     console.debug.error(blame_err)
@@ -99,11 +91,21 @@ end
 function LiveBlame:register_events()
   git_buffer_store.attach('attach', function(git_buffer)
     git_buffer
-      :on(event_type.BufEnter, function() self:reset() end)
-      :on(event_type.WinEnter, function() self:reset() end)
-      :on(event_type.CursorMoved, function() self:reset() end)
-      :on(event_type.InsertEnter, function() self:reset() end)
-      :on(event_type.CursorHold, function() self:render() end)
+      :on(event_type.BufEnter, function()
+        self:reset()
+      end)
+      :on(event_type.WinEnter, function()
+        self:reset()
+      end)
+      :on(event_type.CursorMoved, function()
+        self:reset()
+      end)
+      :on(event_type.InsertEnter, function()
+        self:reset()
+      end)
+      :on(event_type.CursorHold, function()
+        self:render()
+      end)
   end)
 
   return self

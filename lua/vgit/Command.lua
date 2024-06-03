@@ -79,9 +79,7 @@ function Command:list(arglead, line)
 
   if #vim.split(line, '%s+') == 2 then
     self.commands:for_each(function(command)
-      if vim.startswith(command, arglead) then
-        matches[#matches + 1] = command
-      end
+      if vim.startswith(command, arglead) then matches[#matches + 1] = command end
     end)
   end
 

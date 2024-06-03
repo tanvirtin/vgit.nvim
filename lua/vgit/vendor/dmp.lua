@@ -42,12 +42,12 @@ local clock = os.clock
 -- Utility functions.
 
 local percentEncode_pattern = '[^A-Za-z0-9%-=;\',./~!@#$%&*%(%)_%+ %?]'
-local function percentEncode_replace(v) return strformat('%%%02X', strbyte(v)) end
+local function percentEncode_replace(v)
+  return strformat('%%%02X', strbyte(v))
+end
 
 local function indexOf(a, b, start)
-  if #b == 0 then
-    return nil
-  end
+  if #b == 0 then return nil end
   return strfind(a, b, start, true)
 end
 
@@ -149,15 +149,11 @@ function diff_main(text1, text2, opt_checklines, opt_deadline)
   local deadline = opt_deadline
 
   -- Check for null inputs.
-  if text1 == nil or text1 == nil then
-    error('Null inputs. (diff_main)')
-  end
+  if text1 == nil or text1 == nil then error('Null inputs. (diff_main)') end
 
   -- Check for equality (speedup).
   if text1 == text2 then
-    if #text1 > 0 then
-      return { { DIFF_EQUAL, text1 } }
-    end
+    if #text1 > 0 then return { { DIFF_EQUAL, text1 } } end
     return {}
   end
 
@@ -187,12 +183,8 @@ function diff_main(text1, text2, opt_checklines, opt_deadline)
   local diffs = _diff_compute(text1, text2, checklines, deadline)
 
   -- Restore the prefix and suffix.
-  if commonprefix then
-    tinsert(diffs, 1, { DIFF_EQUAL, commonprefix })
-  end
-  if commonsuffix then
-    diffs[#diffs + 1] = { DIFF_EQUAL, commonsuffix }
-  end
+  if commonprefix then tinsert(diffs, 1, { DIFF_EQUAL, commonprefix }) end
+  if commonsuffix then diffs[#diffs + 1] = { DIFF_EQUAL, commonsuffix } end
 
   _diff_cleanupMerge(diffs)
   return diffs
@@ -257,9 +249,7 @@ function diff_cleanupSemantic(diffs)
   end
 
   -- Normalize the diff.
-  if changes then
-    _diff_cleanupMerge(diffs)
-  end
+  if changes then _diff_cleanupMerge(diffs) end
   _diff_cleanupSemanticLossless(diffs)
 
   -- Find any overlaps between deletions and insertions.
@@ -395,9 +385,7 @@ function diff_cleanupEfficiency(diffs)
     pointer = pointer + 1
   end
 
-  if changes then
-    _diff_cleanupMerge(diffs)
-  end
+  if changes then _diff_cleanupMerge(diffs) end
 end
 
 --[[
@@ -561,9 +549,7 @@ function _diff_bisect(text1, text2, deadline)
   local k2end = 0
   for d = 0, max_d - 1 do
     -- Bail out if deadline is reached.
-    if clock() > deadline then
-      break
-    end
+    if clock() > deadline then break end
 
     -- Walk the front path one step.
     for k1 = -d + k1start, d - k1end, 2 do
@@ -677,9 +663,7 @@ end
 --]]
 function _diff_commonPrefix(text1, text2)
   -- Quick check for common null cases.
-  if (#text1 == 0) or (#text2 == 0) or (strbyte(text1, 1) ~= strbyte(text2, 1)) then
-    return 0
-  end
+  if (#text1 == 0) or (#text2 == 0) or (strbyte(text1, 1) ~= strbyte(text2, 1)) then return 0 end
   -- Binary search.
   -- Performance analysis: https://neil.fraser.name/news/2007/10/09/
   local pointermin = 1
@@ -706,9 +690,7 @@ end
 --]]
 function _diff_commonSuffix(text1, text2)
   -- Quick check for common null cases.
-  if (#text1 == 0) or (#text2 == 0) or (strbyte(text1, -1) ~= strbyte(text2, -1)) then
-    return 0
-  end
+  if (#text1 == 0) or (#text2 == 0) or (strbyte(text1, -1) ~= strbyte(text2, -1)) then return 0 end
   -- Binary search.
   -- Performance analysis: https://neil.fraser.name/news/2007/10/09/
   local pointermin = 1
@@ -740,9 +722,7 @@ function _diff_commonOverlap(text1, text2)
   local text1_length = #text1
   local text2_length = #text2
   -- Eliminate the null case.
-  if text1_length == 0 or text2_length == 0 then
-    return 0
-  end
+  if text1_length == 0 or text2_length == 0 then return 0 end
   -- Truncate the longer string.
   if text1_length > text2_length then
     text1 = strsub(text1, text1_length - text2_length + 1)
@@ -751,9 +731,7 @@ function _diff_commonOverlap(text1, text2)
   end
   local text_length = min(text1_length, text2_length)
   -- Quick check for the worst case.
-  if text1 == text2 then
-    return text_length
-  end
+  if text1 == text2 then return text_length end
 
   -- Start by looking for a single character match
   -- and increase length until no match is found.
@@ -763,9 +741,7 @@ function _diff_commonOverlap(text1, text2)
   while true do
     local pattern = strsub(text1, text_length - length + 1)
     local found = strfind(text2, pattern, 1, true)
-    if found == nil then
-      return best
-    end
+    if found == nil then return best end
     length = length + found - 1
     if found == 1 or strsub(text1, text_length - length + 1) == strsub(text2, 1, length) then
       best = length
@@ -795,9 +771,7 @@ function _diff_halfMatchI(longtext, shorttext, i)
   local best_longtext_a, best_longtext_b, best_shorttext_a, best_shorttext_b
   while true do
     j = indexOf(shorttext, seed, j + 1)
-    if j == nil then
-      break
-    end
+    if j == nil then break end
     local prefixLength = _diff_commonPrefix(strsub(longtext, i), strsub(shorttext, j))
     local suffixLength = _diff_commonSuffix(strsub(longtext, 1, i - 1), strsub(shorttext, 1, j - 1))
     if #best_common < suffixLength + prefixLength then
@@ -1134,9 +1108,7 @@ function _diff_xIndex(diffs, loc)
     last_chars2 = chars2
   end
   -- Was the location deleted?
-  if diffs[x + 1] and (diffs[x][1] == DIFF_DELETE) then
-    return last_chars2
-  end
+  if diffs[x + 1] and (diffs[x][1] == DIFF_DELETE) then return last_chars2 end
   -- Add the remaining character length.
   return last_chars2 + (loc - last_chars1)
 end
@@ -1149,9 +1121,7 @@ end
 function _diff_text1(diffs)
   local text = {}
   for x, diff in ipairs(diffs) do
-    if diff[1] ~= DIFF_INSERT then
-      text[#text + 1] = diff[2]
-    end
+    if diff[1] ~= DIFF_INSERT then text[#text + 1] = diff[2] end
   end
   return tconcat(text)
 end
@@ -1164,9 +1134,7 @@ end
 function _diff_text2(diffs)
   local text = {}
   for x, diff in ipairs(diffs) do
-    if diff[1] ~= DIFF_DELETE then
-      text[#text + 1] = diff[2]
-    end
+    if diff[1] ~= DIFF_DELETE then text[#text + 1] = diff[2] end
   end
   return tconcat(text)
 end
@@ -1228,9 +1196,7 @@ function _diff_fromDelta(text1, delta)
       diffs[diffsLength] = { DIFF_INSERT, decoded }
     elseif (tokenchar == '-') or (tokenchar == '=') then
       local n = tonumber(param)
-      if (n == nil) or (n < 0) then
-        error('Invalid number in _diff_fromDelta: ' .. param)
-      end
+      if (n == nil) or (n < 0) then error('Invalid number in _diff_fromDelta: ' .. param) end
       local text = strsub(text1, pointer, pointer + n - 1)
       pointer = pointer + n
       if tokenchar == '=' then
@@ -1265,9 +1231,7 @@ local _match_bitap, _match_alphabet
 --]]
 function match_main(text, pattern, loc)
   -- Check for null inputs.
-  if text == nil or pattern == nil or loc == nil then
-    error('Null inputs. (match_main)')
-  end
+  if text == nil or pattern == nil or loc == nil then error('Null inputs. (match_main)') end
 
   if text == pattern then
     -- Shortcut (potentially not guaranteed by the algorithm)
@@ -1316,9 +1280,7 @@ end
 * @private
 --]]
 function _match_bitap(text, pattern, loc)
-  if #pattern > Match_MaxBits then
-    error('Pattern too long.')
-  end
+  if #pattern > Match_MaxBits then error('Pattern too long.') end
 
   -- Initialise the alphabet.
   local s = _match_alphabet(pattern)
@@ -1413,9 +1375,7 @@ function _match_bitap(text, pattern, loc)
       end
     end
     -- No hope for a (better) match at greater error levels.
-    if _match_bitapScore(d + 1, loc) > score_threshold then
-      break
-    end
+    if _match_bitapScore(d + 1, loc) > score_threshold then break end
     last_rd = rd
   end
   return best_loc
@@ -1536,12 +1496,8 @@ function patch_make(a, opt_b, opt_c)
     end
 
     -- Update the current character count.
-    if diff_type ~= DIFF_INSERT then
-      char_count1 = char_count1 + #diff_text
-    end
-    if diff_type ~= DIFF_DELETE then
-      char_count2 = char_count2 + #diff_text
-    end
+    if diff_type ~= DIFF_INSERT then char_count1 = char_count1 + #diff_text end
+    if diff_type ~= DIFF_DELETE then char_count2 = char_count2 + #diff_text end
   end
 
   -- Pick up the leftover patch if not empty.
@@ -1562,9 +1518,7 @@ end
 *     new text and an array of boolean values.
 --]]
 function patch_apply(patches, text)
-  if patches[1] == nil then
-    return text, {}
-  end
+  if patches[1] == nil then return text, {} end
 
   -- Deep copy the patches so that no changes are made to originals.
   patches = _patch_deepCopy(patches)
@@ -1628,18 +1582,14 @@ function patch_apply(patches, text)
           local index1 = 1
           local index2
           for y, mod in ipairs(patch.diffs) do
-            if mod[1] ~= DIFF_EQUAL then
-              index2 = _diff_xIndex(diffs, index1)
-            end
+            if mod[1] ~= DIFF_EQUAL then index2 = _diff_xIndex(diffs, index1) end
             if mod[1] == DIFF_INSERT then
               text = strsub(text, 1, start_loc + index2 - 2) .. mod[2] .. strsub(text, start_loc + index2 - 1)
             elseif mod[1] == DIFF_DELETE then
               text = strsub(text, 1, start_loc + index2 - 2)
                 .. strsub(text, start_loc + _diff_xIndex(diffs, index1 + #mod[2] - 1))
             end
-            if mod[1] ~= DIFF_DELETE then
-              index1 = index1 + #mod[2]
-            end
+            if mod[1] ~= DIFF_DELETE then index1 = index1 + #mod[2] end
           end
         end
       end
@@ -1671,9 +1621,7 @@ end
 --]]
 function patch_fromText(textline)
   local patches = {}
-  if #textline == 0 then
-    return patches
-  end
+  if #textline == 0 then return patches end
   local text = {}
   for line in gmatch(textline, '([^\n]*)') do
     text[#text + 1] = line
@@ -1681,25 +1629,19 @@ function patch_fromText(textline)
   local textPointer = 1
   while textPointer <= #text do
     local start1, length1, start2, length2 = strmatch(text[textPointer], '^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@$')
-    if start1 == nil then
-      error('Invalid patch string: "' .. text[textPointer] .. '"')
-    end
+    if start1 == nil then error('Invalid patch string: "' .. text[textPointer] .. '"') end
     local patch = _new_patch_obj()
     patches[#patches + 1] = patch
 
     start1 = tonumber(start1)
     length1 = tonumber(length1) or 1
-    if length1 == 0 then
-      start1 = start1 + 1
-    end
+    if length1 == 0 then start1 = start1 + 1 end
     patch.start1 = start1
     patch.length1 = length1
 
     start2 = tonumber(start2)
     length2 = tonumber(length2) or 1
-    if length2 == 0 then
-      start2 = start2 + 1
-    end
+    if length2 == 0 then start2 = start2 + 1 end
     patch.start2 = start2
     patch.length2 = length2
 
@@ -1707,9 +1649,7 @@ function patch_fromText(textline)
 
     while true do
       local line = text[textPointer]
-      if line == nil then
-        break
-      end
+      if line == nil then break end
       local sign
       sign, line = strsub(line, 1, 1), strsub(line, 2)
 
@@ -1792,9 +1732,7 @@ end
 * @private
 --]]
 function _patch_addContext(patch, text)
-  if #text == 0 then
-    return
-  end
+  if #text == 0 then return end
   local pattern = strsub(text, patch.start2, patch.start2 + patch.length1 - 1)
   local padding = 0
 
@@ -1804,9 +1742,7 @@ function _patch_addContext(patch, text)
   -- increase the pattern length.
   local firstMatch = indexOf(text, pattern)
   local secondMatch = nil
-  if firstMatch ~= nil then
-    secondMatch = indexOf(text, pattern, firstMatch + 1)
-  end
+  if firstMatch ~= nil then secondMatch = indexOf(text, pattern, firstMatch + 1) end
   while (#pattern == 0 or secondMatch ~= nil) and (#pattern < Match_MaxBits - Patch_Margin - Patch_Margin) do
     padding = padding + Patch_Margin
     pattern = strsub(text, max(1, patch.start2 - padding), patch.start2 + patch.length1 - 1 + padding)
@@ -1822,14 +1758,10 @@ function _patch_addContext(patch, text)
 
   -- Add the prefix.
   local prefix = strsub(text, max(1, patch.start2 - padding), patch.start2 - 1)
-  if #prefix > 0 then
-    tinsert(patch.diffs, 1, { DIFF_EQUAL, prefix })
-  end
+  if #prefix > 0 then tinsert(patch.diffs, 1, { DIFF_EQUAL, prefix }) end
   -- Add the suffix.
   local suffix = strsub(text, patch.start2 + patch.length1, patch.start2 + patch.length1 - 1 + padding)
-  if #suffix > 0 then
-    patch.diffs[#patch.diffs + 1] = { DIFF_EQUAL, suffix }
-  end
+  if #suffix > 0 then patch.diffs[#patch.diffs + 1] = { DIFF_EQUAL, suffix } end
 
   -- Roll back the start points.
   patch.start1 = patch.start1 - #prefix
@@ -1933,9 +1865,7 @@ function _patch_splitMax(patches)
   local x = 1
   while true do
     local patch = patches[x]
-    if patch == nil then
-      return
-    end
+    if patch == nil then return end
     if patch.length1 > patch_size then
       local bigpatch = patch
       -- Remove the big old patch.

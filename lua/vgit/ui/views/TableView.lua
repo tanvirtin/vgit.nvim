@@ -15,13 +15,14 @@ function TableView:constructor(scene, store, plot, config)
   }
 end
 
-function TableView:get_components() return { self.scene:get('table') } end
+function TableView:get_components()
+  return { self.scene:get('table') }
+end
 
 function TableView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('table'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  utils.list.each(configs, function(config)
+    self.scene:get('table'):set_keymap(config.mode, config.key, config.handler)
+  end)
   return self
 end
 
@@ -50,12 +51,8 @@ function TableView:move(direction)
   local lnum = component:get_lnum()
   local count = component:get_line_count()
 
-  if direction == 'down' then
-    lnum = lnum + 1
-  end
-  if direction == 'up' then
-    lnum = lnum - 1
-  end
+  if direction == 'down' then lnum = lnum + 1 end
+  if direction == 'up' then lnum = lnum - 1 end
   if lnum < 1 then
     lnum = count
   elseif lnum > count then
@@ -71,9 +68,7 @@ end
 function TableView:get_current_row()
   local _, entries = self.store:get_all()
 
-  if not entries then
-    return nil
-  end
+  if not entries then return nil end
 
   return entries[self.scene:get('table'):get_lnum()]
 end

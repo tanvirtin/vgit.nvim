@@ -4,7 +4,9 @@ local DiffDTO = require('vgit.services.diff.DiffDTO')
 
 local Diff = Object:extend()
 
-function Diff:constructor() return { max_lines = 4 } end
+function Diff:constructor()
+  return { max_lines = 4 }
+end
 
 function Diff:generate_unified_deleted(hunks, lines)
   local hunk = hunks[1]
@@ -81,12 +83,10 @@ function Diff:generate_split_deleted(hunks, lines)
 end
 
 function Diff:generate_unified(hunks, lines)
-  if #hunks == 0 then
-    return DiffDTO({
-      lines = lines,
-      hunks = hunks,
-    })
-  end
+  if #hunks == 0 then return DiffDTO({
+    lines = lines,
+    hunks = hunks,
+  }) end
 
   local new_lines = {}
   local lnum_changes = {}
@@ -429,16 +429,24 @@ function Diff:generate(hunks, lines, shape, opts)
 
   if opts.is_deleted then
     local choices = {
-      unified = function() return self:generate_unified_deleted(hunks, lines) end,
-      split = function() return self:generate_split_deleted(hunks, lines) end,
+      unified = function()
+        return self:generate_unified_deleted(hunks, lines)
+      end,
+      split = function()
+        return self:generate_split_deleted(hunks, lines)
+      end,
     }
 
     return choices[shape]()
   end
 
   local choices = {
-    unified = function() return self:generate_unified(hunks, lines) end,
-    split = function() return self:generate_split(hunks, lines) end,
+    unified = function()
+      return self:generate_unified(hunks, lines)
+    end,
+    split = function()
+      return self:generate_split(hunks, lines)
+    end,
   }
 
   return choices[shape]()

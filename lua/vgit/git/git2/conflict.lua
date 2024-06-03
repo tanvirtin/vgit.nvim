@@ -9,10 +9,10 @@ end
 function git_conflict.parse(lines)
   local conflicts = {}
   local markers = {
-      start = '<<<<<<<',
-      middle = '=======',
-      finish = '>>>>>>>',
-      ancestor = '|||||||',
+    start = '<<<<<<<',
+    middle = '=======',
+    finish = '>>>>>>>',
+    ancestor = '|||||||',
   }
 
   local conflict = nil
@@ -78,7 +78,7 @@ function git_conflict.has_conflict(reponame, filename)
     'ls-files',
     '-u',
     '--',
-    filename
+    filename,
   })
 
   if err then return nil, err end

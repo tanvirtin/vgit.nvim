@@ -7,7 +7,7 @@ function repo.config()
 end
 
 function repo.discover(filepath)
-  local dirname = (filepath and vim.fn.fnamemodify(filepath, ":p:h")) or vim.loop.cwd()
+  local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
   local result, err = gitcli.run({ '-C', dirname, 'rev-parse', '--show-toplevel' })
 
   if err then return nil, err end
@@ -15,7 +15,7 @@ function repo.discover(filepath)
 end
 
 function repo.exists(filepath)
-  local dirname = (filepath and vim.fn.fnamemodify(filepath, ":p:h")) or vim.loop.cwd()
+  local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
   local _, err = gitcli.run({ '-C', dirname, 'rev-parse', '--is-inside-git-dir' })
 
   if err then return false, nil end
@@ -81,7 +81,7 @@ function repo.reset(reponame, filename)
     'clean',
     '-fd',
     '--',
-    filename or '.'
+    filename or '.',
   })
 end
 
@@ -95,7 +95,7 @@ function repo.clean(reponame, filename)
     'clean',
     '-fd',
     '--',
-    filename or '.'
+    filename or '.',
   })
 end
 

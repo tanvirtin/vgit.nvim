@@ -21,7 +21,9 @@ describe('Command:', function()
       vgit = mock(require('vgit'), true)
     end)
 
-    after_each(function() mock.revert(vgit) end)
+    after_each(function()
+      mock.revert(vgit)
+    end)
 
     it('should execute a vgit command', function()
       command:execute('hunk_up')

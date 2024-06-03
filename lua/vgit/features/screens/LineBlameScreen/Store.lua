@@ -80,7 +80,7 @@ function Store:fetch(shape, filename, lnum, opts)
   else
     hunks, hunks_err = git_hunks.list(reponame, filename, {
       parent = parent_hash,
-      current = commit_hash
+      current = commit_hash,
     })
   end
   loop.free_textlock()
@@ -92,12 +92,20 @@ function Store:fetch(shape, filename, lnum, opts)
   return self.err
 end
 
-function Store:get_blame() return self.err, self._cache.blame end
+function Store:get_blame()
+  return self.err, self._cache.blame
+end
 
-function Store:get_diff_dto() return nil, self._cache.diff_dto end
+function Store:get_diff_dto()
+  return nil, self._cache.diff_dto
+end
 
-function Store:get_filename() return nil, self.git_object:get_filename() end
+function Store:get_filename()
+  return nil, self.git_object:get_filename()
+end
 
-function Store:get_filetype() return nil, self.git_object:get_filetype() end
+function Store:get_filetype()
+  return nil, self.git_object:get_filetype()
+end
 
 return Store

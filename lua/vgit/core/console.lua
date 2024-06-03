@@ -13,16 +13,16 @@ local console = {
 }
 
 function console.format(msg)
-  local function add_vgit_prefix(line) return string.format('[VGit] %s', line) end
-  local function add_indentiation(line) return string.format('       %s', line) end
-
-  if type(msg) ~= 'table' then
-    return add_vgit_prefix(msg)
+  local function add_vgit_prefix(line)
+    return string.format('[VGit] %s', line)
+  end
+  local function add_indentiation(line)
+    return string.format('       %s', line)
   end
 
-  if #msg == 1 then
-    return add_vgit_prefix(msg[1])
-  end
+  if type(msg) ~= 'table' then return add_vgit_prefix(msg) end
+
+  if #msg == 1 then return add_vgit_prefix(msg[1]) end
 
   return utils.list.reduce(msg, '', function(acc, line, i)
     if i == 1 then
@@ -38,9 +38,7 @@ function console.format(msg)
 end
 
 console.log = loop.coroutine(function(msg, hi, is_persisted)
-  if is_persisted == nil then
-    is_persisted = false
-  end
+  if is_persisted == nil then is_persisted = false end
 
   loop.free_textlock()
 
@@ -84,9 +82,7 @@ end
 
 function console.debug.get_source_logger(source)
   return function(msg)
-    if not env.get('DEBUG') then
-      return console
-    end
+    if not env.get('DEBUG') then return console end
 
     local new_msg = ''
 

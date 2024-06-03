@@ -64,9 +64,7 @@ function DiffComponent:position_cursor(placement)
 end
 
 function DiffComponent:mount(opts)
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   local config = self.config
   opts = opts or {}
@@ -78,13 +76,9 @@ function DiffComponent:mount(opts)
   local buffer = self.buffer
   local plot = self.plot
 
-  if config.elements.header then
-    self.elements.header = HeaderElement():mount(plot.header_win_plot)
-  end
+  if config.elements.header then self.elements.header = HeaderElement():mount(plot.header_win_plot) end
 
-  if config.elements.footer then
-    self.elements.footer = FooterElement():mount(plot.footer_win_plot)
-  end
+  if config.elements.footer then self.elements.footer = FooterElement():mount(plot.footer_win_plot) end
 
   self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
 
@@ -94,21 +88,15 @@ function DiffComponent:mount(opts)
 end
 
 function DiffComponent:unmount()
-  if not self.mounted then
-    return self
-  end
+  if not self.mounted then return self end
 
   local header = self.elements.header
   local footer = self.elements.footer
 
   self.window:close()
-  if header then
-    header:unmount()
-  end
+  if header then header:unmount() end
 
-  if footer then
-    footer:unmount()
-  end
+  if footer then footer:unmount() end
 
   return self
 end
@@ -116,9 +104,7 @@ end
 function DiffComponent:set_title(title, opts)
   local header = self.elements.header
 
-  if not header then
-    return self
-  end
+  if not header then return self end
 
   self.header_title:set(header, title, opts)
 
@@ -128,9 +114,7 @@ end
 function DiffComponent:clear_title()
   local header = self.elements.header
 
-  if not header then
-    return self
-  end
+  if not header then return self end
 
   self.header_title:clear(header)
 
@@ -145,9 +129,7 @@ function DiffComponent:render_line_numbers(lines)
     local hl = lines[i][2]
     local text = lines[i][1]
     local text_len = string.len(text)
-    if text_len < max_digits then
-      text = string.format('%s%s', string.rep(' ', max_digits - text_len), text)
-    end
+    if text_len < max_digits then text = string.format('%s%s', string.rep(' ', max_digits - text_len), text) end
     self:transpose_virtual_line_number({
       row = i - 1,
       hl = hl,
@@ -163,9 +145,7 @@ function DiffComponent:clear_namespace()
 
   local header = self.elements.header
 
-  if header then
-    header:clear_namespace()
-  end
+  if header then header:clear_namespace() end
 
   return self
 end
@@ -173,9 +153,7 @@ end
 function DiffComponent:clear_notification()
   local header = self.elements.header
 
-  if not header then
-    return self
-  end
+  if not header then return self end
 
   self.notification:clear_notification(header)
 
@@ -185,9 +163,7 @@ end
 function DiffComponent:notify(text)
   local header = self.elements.header
 
-  if not header then
-    return self
-  end
+  if not header then return self end
 
   self.notification:notify(header, text)
 

@@ -25,7 +25,9 @@ function AppBarComponent:call(callback)
   return self
 end
 
-function AppBarComponent:get_height() return 1 end
+function AppBarComponent:get_height()
+  return 1
+end
 
 function AppBarComponent:set_default_win_plot(win_plot)
   win_plot.focusable = false
@@ -42,9 +44,7 @@ function AppBarComponent:set_default_win_options(win_options)
 end
 
 function AppBarComponent:mount()
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   local config = self.config
   local win_plot = config.win_plot
@@ -72,9 +72,7 @@ function AppBarComponent:unmount()
 end
 
 function AppBarComponent:clear_notification()
-  if self.buffer:is_valid() then
-    self.namespace:clear(self.buffer)
-  end
+  if self.buffer:is_valid() then self.namespace:clear(self.buffer) end
 
   return self
 end
@@ -85,7 +83,7 @@ function AppBarComponent:trigger_notification(text)
     hl = 'GitComment',
     row = 0,
     col = 0,
-    pos = 'eol'
+    pos = 'eol',
   })
 
   return self

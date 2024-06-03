@@ -33,9 +33,7 @@ function DiffScreen:create_diff_view(scene, store, opts)
 end
 
 function DiffScreen:create_app_bar_view(scene, store, opts)
-  if opts.is_hunk then
-    return nil
-  end
+  if opts.is_hunk then return nil end
 
   return AppBarView(scene, store)
 end
@@ -140,17 +138,13 @@ function DiffScreen:show(opts)
         loop.free_textlock()
         local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) '):lower()
 
-        if decision ~= 'yes' and decision ~= 'y' then
-          return
-        end
+        if decision ~= 'yes' and decision ~= 'y' then return end
 
         loop.free_textlock()
         local _, filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         self.mutation:reset_file(filename)
@@ -177,9 +171,7 @@ function DiffScreen:show(opts)
         local _, filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         self.mutation:stage_file(filename)
@@ -206,9 +198,7 @@ function DiffScreen:show(opts)
         local _, filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         self.mutation:unstage_file(filename)
@@ -231,25 +221,19 @@ function DiffScreen:show(opts)
       mode = 'n',
       key = diff_preview_setting:get('keymaps').buffer_hunk_stage,
       handler = loop.debounce_coroutine(function()
-        if self.is_staged then
-          return
-        end
+        if self.is_staged then return end
 
         loop.free_textlock()
         local _, filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         local hunk, index = self.diff_view:get_current_hunk_under_cursor()
         loop.free_textlock()
 
-        if not hunk then
-          return
-        end
+        if not hunk then return end
 
         self.mutation:stage_hunk(filename, hunk)
 
@@ -268,25 +252,19 @@ function DiffScreen:show(opts)
       mode = 'n',
       key = diff_preview_setting:get('keymaps').buffer_hunk_unstage,
       handler = loop.debounce_coroutine(function()
-        if not self.is_staged then
-          return
-        end
+        if not self.is_staged then return end
 
         loop.free_textlock()
         local _, filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         local hunk, index = self.diff_view:get_current_hunk_under_cursor()
         loop.free_textlock()
 
-        if not hunk then
-          return
-        end
+        if not hunk then return end
 
         loop.free_textlock()
         self.mutation:unstage_hunk(filename, hunk)
@@ -313,17 +291,13 @@ function DiffScreen:show(opts)
         local mark = self.diff_view:get_current_mark_under_cursor()
         loop.free_textlock()
 
-        if not mark then
-          return
-        end
+        if not mark then return end
 
         loop.free_textlock()
         local _, filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         self:destroy()
         loop.free_textlock()
@@ -379,9 +353,7 @@ function DiffScreen:show(opts)
     },
   })
 
-  if self.app_bar_view then
-    self:render_help_bar()
-  end
+  if self.app_bar_view then self:render_help_bar() end
 
   return true
 end

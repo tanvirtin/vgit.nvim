@@ -13,9 +13,7 @@ function Watcher:constructor(interval)
 end
 
 function Watcher:watch_file(path, handler)
-  if self.watcher then
-    return self.watcher
-  end
+  if self.watcher then return self.watcher end
 
   self.watcher = vim.loop.new_fs_event()
 
@@ -29,9 +27,7 @@ function Watcher:watch_file(path, handler)
 end
 
 function Watcher:watch_dir(path, handler)
-  if self.watcher then
-    return self.watcher
-  end
+  if self.watcher then return self.watcher end
 
   self.watcher = vim.loop.new_fs_poll()
 
@@ -41,9 +37,7 @@ function Watcher:watch_dir(path, handler)
 end
 
 function Watcher:unwatch()
-  if not self.watcher then
-    return
-  end
+  if not self.watcher then return end
 
   luv.fs_event_stop(self.watcher)
   self.watcher = nil

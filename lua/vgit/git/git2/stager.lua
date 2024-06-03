@@ -93,15 +93,15 @@ function stager.unstage_hunk(reponame, filename, hunk)
   fs.write_file(patch_filename, patch)
 
   local _, err = gitcli.run({
-      '-C',
-      reponame,
-      '--no-pager',
-      'apply',
-      '--reverse',
-      '--cached',
-      '--whitespace=nowarn',
-      '--unidiff-zero',
-      patch_filename,
+    '-C',
+    reponame,
+    '--no-pager',
+    'apply',
+    '--reverse',
+    '--cached',
+    '--whitespace=nowarn',
+    '--unidiff-zero',
+    patch_filename,
   })
 
   fs.remove_file(patch_filename)

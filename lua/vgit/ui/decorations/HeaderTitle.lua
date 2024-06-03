@@ -12,9 +12,7 @@ function HeaderTitle:set(source, title, opts)
   local stat = opts.stat
   local text = title
 
-  if filename or filetype or stat then
-    text = utils.str.concat(title, ': ')
-  end
+  if filename or filetype or stat then text = utils.str.concat(title, ': ') end
 
   local hl_range_infos = {}
 
@@ -65,8 +63,8 @@ function HeaderTitle:set(source, title, opts)
       row = 0,
       col_range = {
         from = range.top,
-        to = range.bot
-      }
+        to = range.bot,
+      },
     })
   end
 

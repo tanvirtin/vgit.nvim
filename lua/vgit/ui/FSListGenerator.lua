@@ -27,9 +27,7 @@ function FSListGenerator:get_parent_folder(segmented_folders, current_index)
   for i = 1, #segmented_folders do
     local foldername = segmented_folders[i]
 
-    if i == current_index then
-      return acc, count
-    end
+    if i == current_index then return acc, count end
 
     count = count + 1
     acc = string.format('%s%s%s', acc, self.seperator, foldername)
@@ -106,12 +104,10 @@ function FSListGenerator:create_node(path)
       value = path.current,
     }
 
-    if icon then
-      list_entry.icon_before = {
-        icon = icon,
-        hl = icon_hl,
-      }
-    end
+    if icon then list_entry.icon_before = {
+      icon = icon,
+      hl = icon_hl,
+    } end
 
     return list_entry
   end
@@ -135,9 +131,7 @@ end
 -- (path obj will contain it's parent path string).
 function FSListGenerator:find_parent(path)
   local function _find(tree)
-    if not tree then
-      return nil
-    end
+    if not tree then return nil end
 
     for i = 1, #tree do
       local item = tree[i]
@@ -147,9 +141,7 @@ function FSListGenerator:find_parent(path)
       else
         local found = _find(item.items)
 
-        if found then
-          return found
-        end
+        if found then return found end
       end
     end
   end

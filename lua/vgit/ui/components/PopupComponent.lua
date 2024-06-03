@@ -34,9 +34,7 @@ function PopupComponent:set_default_win_plot(win_plot)
 end
 
 function PopupComponent:mount()
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   local config = self.config
 

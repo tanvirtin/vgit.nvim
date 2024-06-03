@@ -1,7 +1,9 @@
 local Hunk = require('vgit.git.cli.models.Hunk')
 local diff_service = require('vgit.services.diff')
 
-local build_hunk = function(hunk) return setmetatable(hunk, Hunk) end
+local build_hunk = function(hunk)
+  return setmetatable(hunk, Hunk)
+end
 
 describe('diff_service:', function()
   describe('generate', function()

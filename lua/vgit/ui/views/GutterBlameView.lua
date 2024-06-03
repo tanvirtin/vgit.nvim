@@ -15,7 +15,9 @@ function GutterBlameView:constructor(scene, store, plot, config)
   }
 end
 
-function GutterBlameView:get_components() return { self.scene:get('gutter_blame') } end
+function GutterBlameView:get_components()
+  return { self.scene:get('gutter_blame') }
+end
 
 function GutterBlameView:define()
   self.scene:set(
@@ -42,10 +44,9 @@ function GutterBlameView:define()
 end
 
 function GutterBlameView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('gutter_blame'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  utils.list.each(configs, function(config)
+    self.scene:get('gutter_blame'):set_keymap(config.mode, config.key, config.handler)
+  end)
   return self
 end
 

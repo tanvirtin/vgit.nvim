@@ -4,9 +4,13 @@ local Window = require('vgit.core.Window')
 
 local FooterElement = Component:extend()
 
-function FooterElement:constructor(...) return Component.constructor(self, ...) end
+function FooterElement:constructor(...)
+  return Component.constructor(self, ...)
+end
 
-function FooterElement:get_height() return 1 end
+function FooterElement:get_height()
+  return 1
+end
 
 function FooterElement:mount(opts)
   local buffer = Buffer():create()

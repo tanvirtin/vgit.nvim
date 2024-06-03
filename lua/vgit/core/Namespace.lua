@@ -45,8 +45,8 @@ function Namespace:add_pattern_highlight(buffer, pattern, hl)
         row = i - 1,
         col_range = {
           from = from - 1,
-          to = to
-        }
+          to = to,
+        },
       })
     end
   end

@@ -26,7 +26,9 @@ function HeaderComponent:call(callback)
   return self
 end
 
-function HeaderComponent:get_height() return 1 end
+function HeaderComponent:get_height()
+  return 1
+end
 
 function HeaderComponent:set_default_win_plot(win_plot)
   win_plot.focusable = false
@@ -43,9 +45,7 @@ function HeaderComponent:set_default_win_options(win_options)
 end
 
 function HeaderComponent:mount()
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   local config = self.config
   local win_plot = config.win_plot
@@ -86,9 +86,7 @@ function HeaderComponent:set_title(title, opts)
 end
 
 function HeaderComponent:clear_notification()
-  if self.buffer:is_valid() then
-    self.namespace:clear(self.buffer)
-  end
+  if self.buffer:is_valid() then self.namespace:clear(self.buffer) end
 
   return self
 end
@@ -97,9 +95,9 @@ function HeaderComponent:trigger_notification(text)
   self.namespace:transpose_virtual_text(self.buffer, {
     text = text,
     hl = 'GitComment',
-    row = 0, 
-    col = 0, 
-    pos = 'eol'
+    row = 0,
+    col = 0,
+    pos = 'eol',
   })
 
   return self
