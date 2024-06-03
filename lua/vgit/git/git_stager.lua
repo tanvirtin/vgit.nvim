@@ -1,35 +1,10 @@
 local fs = require('vgit.core.fs')
-local Object = require('vgit.core.Object')
-local gitcli = require('vgit.git.git2.gitcli')
+local gitcli = require('vgit.git.gitcli')
+local GitPatch = require('vgit.git.GitPatch')
 
-local Patch = Object:extend()
+local git_stager = {}
 
-function Patch:constructor(filename, hunk)
-  local header = hunk.header
-
-  if hunk.type == 'add' then
-    local previous, _ = hunk:parse_header(header)
-    header = string.format('@@ -%s,%s +%s,%s @@', previous[1], previous[2], previous[1] + 1, #hunk.diff)
-  end
-
-  local patch = {
-    string.format('diff --git a/%s b/%s', filename, filename),
-    'index 000000..000000',
-    string.format('--- a/%s', filename),
-    string.format('+++ a/%s', filename),
-    header,
-  }
-
-  for i = 1, #hunk.diff do
-    patch[#patch + 1] = hunk.diff[i]
-  end
-
-  return patch
-end
-
-local stager = {}
-
-function stager.stage(reponame, filename)
+function git_stager.stage(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
   return gitcli.run({
@@ -42,7 +17,7 @@ function stager.stage(reponame, filename)
   })
 end
 
-function stager.unstage(reponame, filename)
+function git_stager.unstage(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
   return gitcli.run({
@@ -56,12 +31,12 @@ function stager.unstage(reponame, filename)
   })
 end
 
-function stager.stage_hunk(reponame, filename, hunk)
+function git_stager.stage_hunk(reponame, filename, hunk)
   if not reponame then return nil, { 'reponame is required' } end
   if not filename then return nil, { 'filename is required' } end
   if not hunk then return nil, { 'hunk is required' } end
 
-  local patch = Patch(filename, hunk)
+  local patch = GitPatch(filename, hunk)
   local patch_filename = fs.tmpname()
 
   fs.write_file(patch_filename, patch)
@@ -82,12 +57,12 @@ function stager.stage_hunk(reponame, filename, hunk)
   return nil, err
 end
 
-function stager.unstage_hunk(reponame, filename, hunk)
+function git_stager.unstage_hunk(reponame, filename, hunk)
   if not reponame then return nil, { 'reponame is required' } end
   if not filename then return nil, { 'filename is required' } end
   if not hunk then return nil, { 'hunk is required' } end
 
-  local patch = Patch(filename, hunk)
+  local patch = GitPatch(filename, hunk)
   local patch_filename = fs.tmpname()
 
   fs.write_file(patch_filename, patch)
@@ -109,4 +84,4 @@ function stager.unstage_hunk(reponame, filename, hunk)
   return nil, err
 end
 
-return stager
+return git_stager

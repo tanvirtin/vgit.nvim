@@ -5,8 +5,8 @@ local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
-local git_repo = require('vgit.git.git2.repo')
-local git_show = require('vgit.git.git2.show')
+local git_repo = require('vgit.git.git_repo')
+local git_show = require('vgit.git.git_show')
 local DiffView = require('vgit.ui.views.DiffView')
 local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
@@ -121,13 +121,13 @@ function ProjectCommitsScreen:handle_on_enter()
 
   fs.open(filename)
 
-  local diff_dto_err, diff_dto = self.store:get_diff_dto()
+  local diff_err, diff = self.store:get_diff()
 
-  if diff_dto_err or not diff_dto then return end
+  if diff_err or not diff then return end
 
   local window = Window(0)
 
-  window:set_lnum(diff_dto.marks[1].top_relative):position_cursor('center')
+  window:set_lnum(diff.marks[1].top_relative):position_cursor('center')
 end
 
 function ProjectCommitsScreen:show(args)

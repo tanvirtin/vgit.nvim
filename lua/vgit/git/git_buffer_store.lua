@@ -1,8 +1,8 @@
 local loop = require('vgit.core.loop')
-local event = require('vgit.core.event')
 local utils = require('vgit.core.utils')
-local git_repo = require('vgit.git.git2.repo')
+local event = require('vgit.core.event')
 local Watcher = require('vgit.core.Watcher')
+local git_repo = require('vgit.git.git_repo')
 local GitBuffer = require('vgit.git.GitBuffer')
 local event_type = require('vgit.core.event_type')
 

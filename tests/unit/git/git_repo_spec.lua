@@ -1,31 +1,31 @@
-local repo = require('vgit.git.git2.repo')
+local git_repo = require('vgit.git.git_repo')
 local async = require('plenary.async.tests')
 
 local eq = assert.are.same
 
 async.describe('repo:', function()
   async.it('should be able to retrieve current repo path', function()
-    local repopath, err = repo.discover()
+    local repo, err = git_repo.discover()
     assert(not err)
-    eq(repopath, vim.loop.cwd())
+    eq(repo, vim.loop.cwd())
   end)
 
   async.it('returns true if repo exists', function()
-    local exists, err = repo.exists()
+    local exists, err = git_repo.exists()
     assert(not err)
     eq(exists, true)
   end)
 
   async.it('should be able to discover a repository', function()
     local filepath = vim.loop.cwd() .. '/' .. 'README.md'
-    local repopath, err = repo.discover(filepath)
+    local repo, err = git_repo.discover(filepath)
     assert(not err)
-    eq(repopath, vim.loop.cwd())
+    eq(repo, vim.loop.cwd())
   end)
 
   async.it('should be true if a file exists in a repository', function()
     local filepath = vim.loop.cwd() .. '/' .. 'README.md'
-    local exists, err = repo.exists(filepath)
+    local exists, err = git_repo.exists(filepath)
     assert(not err)
     eq(exists, true)
   end)

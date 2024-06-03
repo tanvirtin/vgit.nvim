@@ -1,11 +1,23 @@
 local dmp = require('vgit.vendor.dmp')
+local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local DiffDTO = require('vgit.services.diff.DiffDTO')
+
+local MAX_LINES = 4
 
 local Diff = Object:extend()
 
-function Diff:constructor()
-  return { max_lines = 4 }
+function Diff:constructor(opts)
+  opts = opts or {}
+
+  return utils.object.extend({
+    hunks = {},
+    marks = {},
+    lines = {},
+    lnum_changes = {},
+    current_lines = {},
+    previous_lines = {},
+    stat = { added = 0, removed = 0 },
+  }, opts)
 end
 
 function Diff:generate_unified_deleted(hunks, lines)
@@ -26,7 +38,7 @@ function Diff:generate_unified_deleted(hunks, lines)
     s = s + 1
   end
 
-  return DiffDTO({
+  return utils.object.extend(self, {
     lines = lines,
     lnum_changes = lnum_changes,
     hunks = hunks,
@@ -66,7 +78,7 @@ function Diff:generate_split_deleted(hunks, lines)
     s = s + 1
   end
 
-  return DiffDTO({
+  return utils.object.extend(self, {
     previous_lines = lines,
     current_lines = current_lines,
     lnum_changes = lnum_changes,
@@ -83,7 +95,7 @@ function Diff:generate_split_deleted(hunks, lines)
 end
 
 function Diff:generate_unified(hunks, lines)
-  if #hunks == 0 then return DiffDTO({
+  if #hunks == 0 then return utils.object.extend(self, {
     lines = lines,
     hunks = hunks,
   }) end
@@ -177,7 +189,7 @@ function Diff:generate_unified(hunks, lines)
           new_lines_added = new_lines_added + 1
           table.insert(new_lines, s, cleaned_line)
 
-          if #removed_lines == #added_lines and #added_lines < self.max_lines then
+          if #removed_lines == #added_lines and #added_lines < MAX_LINES then
             local d = dmp.diff_main(cleaned_line, diff[#removed_lines + j]:sub(2, #diff[#removed_lines + j]))
             dmp.diff_cleanupSemantic(d)
             word_diff = d
@@ -191,7 +203,7 @@ function Diff:generate_unified(hunks, lines)
         elseif line_type == '+' then
           local word_diff = nil
 
-          if #removed_lines == #added_lines and #added_lines < self.max_lines then
+          if #removed_lines == #added_lines and #added_lines < MAX_LINES then
             local d = dmp.diff_main(cleaned_line, diff[j - #removed_lines]:sub(2, #diff[j - #removed_lines]))
             dmp.diff_cleanupSemantic(d)
             word_diff = d
@@ -213,7 +225,7 @@ function Diff:generate_unified(hunks, lines)
     end
   end
 
-  return DiffDTO({
+  return utils.object.extend(self, {
     lines = new_lines,
     lnum_changes = lnum_changes,
     hunks = hunks,
@@ -224,7 +236,7 @@ end
 
 function Diff:generate_split(hunks, lines)
   if #hunks == 0 then
-    return DiffDTO({
+    return utils.object.extend(self, {
       current_lines = lines,
       previous_lines = lines,
       hunks = hunks,
@@ -353,7 +365,7 @@ function Diff:generate_split(hunks, lines)
         if removed_line then
           local word_diff = nil
 
-          if #removed_lines == #added_lines and #added_lines < self.max_lines then
+          if #removed_lines == #added_lines and #added_lines < MAX_LINES then
             local d = dmp.diff_main(removed_line, added_lines[recalculated_index])
             dmp.diff_cleanupSemantic(d)
             word_diff = d
@@ -370,7 +382,7 @@ function Diff:generate_split(hunks, lines)
         if added_line then
           local word_diff = nil
 
-          if #removed_lines == #added_lines and #added_lines < self.max_lines then
+          if #removed_lines == #added_lines and #added_lines < MAX_LINES then
             local d = dmp.diff_main(added_line, removed_lines[recalculated_index])
             dmp.diff_cleanupSemantic(d)
             word_diff = d
@@ -414,7 +426,7 @@ function Diff:generate_split(hunks, lines)
     end
   end
 
-  return DiffDTO({
+  return utils.object.extend(self, {
     current_lines = current_lines,
     previous_lines = previous_lines,
     lnum_changes = lnum_changes,

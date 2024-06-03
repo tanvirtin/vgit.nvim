@@ -1,6 +1,6 @@
 local Object = require('vgit.core.Object')
-local git_log = require('vgit.git.git2.log')
-local git_repo = require('vgit.git.git2.repo')
+local git_log = require('vgit.git.git_log')
+local git_repo = require('vgit.git.git_repo')
 
 local Store = Object:extend()
 

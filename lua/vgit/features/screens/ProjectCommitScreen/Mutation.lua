@@ -1,7 +1,7 @@
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local git_repo = require('vgit.git.git2.repo')
-local git_commit = require('vgit.git.git2.commit')
+local git_repo = require('vgit.git.git_repo')
+local git_commit = require('vgit.git.git_commit')
 
 local Mutation = Object:extend()
 

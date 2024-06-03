@@ -1,7 +1,7 @@
 local fs = require('vgit.core.fs')
+local Diff = require('vgit.core.Diff')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
-local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
 
@@ -11,9 +11,9 @@ function Store:constructor()
     data = {},
     shape = nil,
     git_object = nil,
-    _cache = {
+    state = {
       lines = {},
-      diff_dto = nil,
+      diff = nil,
     },
   }
 end
@@ -21,9 +21,9 @@ end
 function Store:reset()
   self.err = nil
   self.data = {}
-  self._cache = {
+  self.state = {
     lines = {},
-    diff_dto = nil,
+    diff = nil,
   }
 
   return self
@@ -42,7 +42,7 @@ function Store:fetch(shape, filename, opts)
   local has_conflict = self.git_object:has_conflict()
 
   if has_conflict and opts.is_staged then
-    self._cache.lines = {}
+    self.state.lines = {}
     self.data = {}
     self.err = nil
 
@@ -87,17 +87,17 @@ function Store:fetch(shape, filename, opts)
     self.data, self.err = self.git_object:live_hunks(lines)
   end
 
-  self._cache.lines = lines
+  self.state.lines = lines
 
   return self.err, self.data
 end
 
-function Store:get_diff_dto()
-  if self._cache.diff_dto then return nil, self._cache.diff_dto end
+function Store:get_diff()
+  if self.state.diff then return nil, self.state.diff end
 
-  self._cache.diff_dto = diff_service:generate(self.data, self._cache.lines, self.shape)
+  self.state.diff = Diff():generate(self.data, self.state.lines, self.shape)
 
-  return nil, self._cache.diff_dto
+  return nil, self.state.diff
 end
 
 function Store:get_filename()

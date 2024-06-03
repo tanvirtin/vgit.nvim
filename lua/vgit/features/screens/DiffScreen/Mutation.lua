@@ -1,7 +1,7 @@
 local Object = require('vgit.core.Object')
-local git_repo = require('vgit.git.git2.repo')
-local git_stager = require('vgit.git.git2.stager')
+local git_repo = require('vgit.git.git_repo')
 local GitObject = require('vgit.git.GitObject')
+local git_stager = require('vgit.git.git_stager')
 
 local Mutation = Object:extend()
 

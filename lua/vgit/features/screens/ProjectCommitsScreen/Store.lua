@@ -1,12 +1,12 @@
 local loop = require('vgit.core.loop')
+local Diff = require('vgit.core.Diff')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local git_log = require('vgit.git.git2.log')
-local git_repo = require('vgit.git.git2.repo')
-local git_show = require('vgit.git.git2.show')
-local git_hunks = require('vgit.git.git2.hunks')
-local git_status = require('vgit.git.git2.status')
-local diff_service = require('vgit.services.diff')
+local git_log = require('vgit.git.git_log')
+local git_repo = require('vgit.git.git_repo')
+local git_show = require('vgit.git.git_show')
+local git_hunks = require('vgit.git.git_hunks')
+local git_status = require('vgit.git.git_status')
 
 local Store = Object:extend()
 
@@ -16,10 +16,10 @@ function Store:constructor()
     err = nil,
     data = nil,
     shape = nil,
-    _cache = {
+    state = {
       lnum = 1,
-      list_entry_cache = {},
       commits = {},
+      list_entry_cache = {},
     },
   }
 end
@@ -28,10 +28,10 @@ function Store:reset()
   self.id = nil
   self.err = nil
   self.data = nil
-  self._cache = {
+  self.state = {
     lnum = 1,
-    list_entry_cache = {},
     commits = {},
+    list_entry_cache = {},
   }
 
   return self
@@ -44,10 +44,10 @@ function Store:fetch(shape, commits, opts)
 
   if not commits or #commits == 0 then return { 'No commits specified' }, nil end
 
-  self._cache = {
+  self.state = {
     lnum = 1,
-    list_entry_cache = {},
     commits = {},
+    list_entry_cache = {},
   }
 
   if not git_repo.exists() then return { 'Project has no .git folder' }, nil end
@@ -82,7 +82,7 @@ function Store:fetch(shape, commits, opts)
         log = log,
         file = file,
       }
-      self._cache.commits[datum.id] = datum
+      self.state.commits[datum.id] = datum
 
       return datum
     end)
@@ -106,14 +106,13 @@ end
 function Store:get(id)
   if id then self.id = id end
 
-  local datum = self._cache.commits[self.id]
-
+  local datum = self.state.commits[self.id]
   if not datum then return { 'Item not found' }, nil end
 
   return nil, datum
 end
 
-function Store:get_diff_dto()
+function Store:get_diff()
   local err, datum = self:get()
 
   if err then return err end
@@ -129,7 +128,7 @@ function Store:get_diff_dto()
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self._cache.commits[id] then return nil, self._cache.commits[id] end
+  if self.state.commits[id] then return nil, self.state.commits[id] end
 
   local lines_err, lines
   local is_deleted = false
@@ -156,14 +155,11 @@ function Store:get_diff_dto()
     })
   end
   loop.free_textlock()
-
   if hunks_err then return hunks_err end
 
-  local diff = diff_service:generate(hunks, lines, self.shape, {
-    is_deleted = is_deleted,
-  })
+  local diff = Diff():generate(hunks, lines, self.shape, { is_deleted = is_deleted })
 
-  self._cache.commits[id] = diff
+  self.state.commits[id] = diff
 
   return nil, diff
 end
@@ -185,7 +181,7 @@ function Store:get_filetype()
 end
 
 function Store:get_lnum()
-  return nil, self._cache.lnum
+  return nil, self.state.lnum
 end
 
 function Store:get_parent_commit()
@@ -202,17 +198,17 @@ function Store:get_parent_commit()
 end
 
 function Store:set_lnum(lnum)
-  self._cache.lnum = lnum
+  self.state.lnum = lnum
 
   return self
 end
 
 function Store:get_list_folds()
-  return nil, self._cache.list_folds
+  return nil, self.state.list_folds
 end
 
 function Store:set_list_folds(list_folds)
-  self._cache.list_folds = list_folds
+  self.state.list_folds = list_folds
 
   return self
 end

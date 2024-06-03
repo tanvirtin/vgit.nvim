@@ -1,12 +1,13 @@
-local gitcli = require('vgit.git.git2.gitcli')
+local gitcli = require('vgit.git.gitcli')
 
-local repo = {}
+local git_repo = {}
 
-function repo.config()
-  return gitcli.run({ '-C', vim.loop.cwd(), 'config', '--list' })
+function git_repo.config(reponame)
+  if not reponame then return nil, { 'reponame is required' } end
+  return gitcli.run({ '-C', reponame, 'config', '--list' })
 end
 
-function repo.discover(filepath)
+function git_repo.discover(filepath)
   local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
   local result, err = gitcli.run({ '-C', dirname, 'rev-parse', '--show-toplevel' })
 
@@ -14,7 +15,7 @@ function repo.discover(filepath)
   return result[1], nil
 end
 
-function repo.exists(filepath)
+function git_repo.exists(filepath)
   local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
   local _, err = gitcli.run({ '-C', dirname, 'rev-parse', '--is-inside-git-dir' })
 
@@ -22,7 +23,7 @@ function repo.exists(filepath)
   return true, nil
 end
 
-function repo.has(reponame, filename, commit)
+function git_repo.has(reponame, filename, commit)
   if not reponame then return nil, { 'reponame is required' } end
   if not filename then return nil, { 'filename is required' } end
 
@@ -43,7 +44,7 @@ function repo.has(reponame, filename, commit)
   return true, nil
 end
 
-function repo.ignores(reponame, filename)
+function git_repo.ignores(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
   if not filename then return nil, { 'filename is required' } end
 
@@ -54,13 +55,13 @@ function repo.ignores(reponame, filename)
   return true, nil
 end
 
-function repo.checkout(reponame, name)
+function git_repo.checkout(reponame, name)
   if not reponame then return nil, { 'reponame is required' } end
   if not name then return nil, { 'name is required' } end
   return gitcli.run({ '-C', reponame, '--no-pager', 'checkout', '--quiet', name })
 end
 
-function repo.reset(reponame, filename)
+function git_repo.reset(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
   local _, err = gitcli.run({
@@ -85,7 +86,7 @@ function repo.reset(reponame, filename)
   })
 end
 
-function repo.clean(reponame, filename)
+function git_repo.clean(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
   return gitcli.run({
@@ -99,4 +100,4 @@ function repo.clean(reponame, filename)
   })
 end
 
-return repo
+return git_repo
