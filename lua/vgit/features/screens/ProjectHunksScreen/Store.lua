@@ -1,11 +1,11 @@
 local fs = require('vgit.core.fs')
+local Diff = require('vgit.core.Diff')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local git_repo = require('vgit.git.git2.repo')
-local git_show = require('vgit.git.git2.show')
-local git_hunks = require('vgit.git.git2.hunks')
-local git_status = require('vgit.git.git2.status')
-local diff_service = require('vgit.services.diff')
+local git_repo = require('vgit.git.git_repo')
+local git_show = require('vgit.git.git_show')
+local git_hunks = require('vgit.git.git_hunks')
+local git_status = require('vgit.git.git_status')
 
 local Store = Object:extend()
 
@@ -15,7 +15,7 @@ function Store:constructor()
     err = nil,
     data = nil,
     shape = nil,
-    _cache = {
+    state = {
       lnum = 1,
       list_entry_cache = {},
     },
@@ -26,7 +26,7 @@ function Store:reset()
   self.id = nil
   self.err = nil
   self.data = nil
-  self._cache = {
+  self.state = {
     lnum = 1,
     list_entry_cache = {},
   }
@@ -67,7 +67,7 @@ function Store:fetch(shape, opts)
       data[file.filename] = entry
 
       local is_deleted = status and status:has_either('DD')
-      local diff_dto = diff_service:generate(hunks, lines, shape, { is_deleted = is_deleted })
+      local diff = Diff():generate(hunks, lines, shape, { is_deleted = is_deleted })
 
       utils.list.each(hunks, function(hunk, index)
         local id = utils.math.uuid()
@@ -76,10 +76,10 @@ function Store:fetch(shape, opts)
           hunk = hunk,
           file = file,
           mark_index = index,
-          diff_dto = diff_dto,
+          diff = diff,
         }
 
-        self._cache.list_entry_cache[id] = data
+        self.state.list_entry_cache[id] = data
         entry[#entry + 1] = data
       end)
     end
@@ -101,8 +101,7 @@ end
 function Store:get_data(id)
   if id then self.id = id end
 
-  local data = self._cache.list_entry_cache[self.id]
-
+  local data = self.state.list_entry_cache[self.id]
   if not data then return { 'Item not found' }, nil end
 
   return nil, data
@@ -112,14 +111,13 @@ function Store:get_all()
   return self.err, self.data
 end
 
-function Store:get_diff_dto()
+function Store:get_diff()
   local data_err, data = self:get_data()
 
   if data_err then return data_err end
+  if not data.diff then return { 'No git file found to get code dto from' }, nil end
 
-  if not data.diff_dto then return { 'No git file found to get code dto from' }, nil end
-
-  return nil, data.diff_dto
+  return nil, data.diff
 end
 
 function Store:get_filename()
@@ -205,21 +203,21 @@ function Store:get_hunks(file, lines, is_staged)
 end
 
 function Store:get_lnum()
-  return nil, self._cache.lnum
+  return nil, self.state.lnum
 end
 
 function Store:set_lnum(lnum)
-  self._cache.lnum = lnum
+  self.state.lnum = lnum
 
   return self
 end
 
 function Store:get_list_folds()
-  return nil, self._cache.list_folds
+  return nil, self.state.list_folds
 end
 
 function Store:set_list_folds(list_folds)
-  self._cache.list_folds = list_folds
+  self.state.list_folds = list_folds
 
   return self
 end

@@ -1,4 +1,4 @@
-local gitcli = require('vgit.git.git2.gitcli')
+local gitcli = require('vgit.git.gitcli')
 
 local git_conflict = {}
 

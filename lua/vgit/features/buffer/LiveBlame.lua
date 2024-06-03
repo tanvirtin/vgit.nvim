@@ -2,7 +2,6 @@ local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
-local git_repo = require('vgit.git.git2.repo')
 local Namespace = require('vgit.core.Namespace')
 local event_type = require('vgit.core.event_type')
 local git_buffer_store = require('vgit.git.git_buffer_store')
@@ -54,12 +53,8 @@ function LiveBlame:render(git_buffer)
   if not git_buffer then return end
 
   loop.free_textlock()
-  local config, config_err = git_repo.config()
-
-  if config_err then
-    console.debug.error(config_err)
-    return
-  end
+  local config, config_err = git_buffer:config()
+  if config_err then return console.debug.error(config_err) end
 
   loop.free_textlock()
   local window = Window(0)

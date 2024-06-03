@@ -1,10 +1,10 @@
 local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
-local console = require('vgit.core.console')
 local Object = require('vgit.core.Object')
-local git_repo = require('vgit.git.git2.repo')
-local git_hunks = require('vgit.git.git2.hunks')
-local git_status = require('vgit.git.git2.status')
+local console = require('vgit.core.console')
+local git_repo = require('vgit.git.git_repo')
+local git_hunks = require('vgit.git.git_hunks')
+local git_status = require('vgit.git.git_status')
 
 local ProjectHunksQuickfix = Object:extend()
 

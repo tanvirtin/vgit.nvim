@@ -491,10 +491,10 @@ function ProjectDiffScreen:show()
         self:destroy()
         fs.open(filename)
 
-        local diff_dto_err, diff_dto = self.store:get_diff_dto()
-        if diff_dto_err or not diff_dto then return end
+        local diff_err, diff = self.store:get_diff()
+        if diff_err or not diff then return end
 
-        local mark = diff_dto.marks[1]
+        local mark = diff.marks[1]
         if not mark then return end
 
         Window(0):set_lnum(mark.top_relative):position_cursor('center')

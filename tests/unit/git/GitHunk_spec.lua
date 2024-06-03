@@ -1,8 +1,8 @@
-local Hunk = require('vgit.git.cli.models.Hunk')
+local GitHunk = require('vgit.git.GitHunk')
 
 local eq = assert.are.same
 
-describe('Hunk:', function()
+describe('GitHunk:', function()
   describe('new', function()
     it('should create a new Hunk object', function()
       local headers = {
@@ -13,7 +13,7 @@ describe('Hunk:', function()
         invalid_zero = '@@ -0,0 +0,0 @@ foo bar',
       }
 
-      eq(Hunk(headers['add']), {
+      eq(GitHunk(headers['add']), {
         header = '@@ -17,0 +18,15 @@ foo bar',
         diff = {},
         top = 18,
@@ -24,7 +24,7 @@ describe('Hunk:', function()
           removed = 0,
         },
       })
-      eq(Hunk(headers['remove']), {
+      eq(GitHunk(headers['remove']), {
         header = '@@ -9,9 +8,0 @@ @@ foo bar',
         diff = {},
         top = 8,
@@ -35,7 +35,7 @@ describe('Hunk:', function()
           removed = 0,
         },
       })
-      eq(Hunk(headers['change']), {
+      eq(GitHunk(headers['change']), {
         header = '@@ -10,7 +10,7 @@ foo bar',
         diff = {},
         top = 10,
@@ -46,7 +46,7 @@ describe('Hunk:', function()
           removed = 0,
         },
       })
-      eq(Hunk(headers['invalid']), {
+      eq(GitHunk(headers['invalid']), {
         header = '@@ --10,-1 +-10,-7 @@ foo bar',
         diff = {},
         top = -10,
@@ -57,7 +57,7 @@ describe('Hunk:', function()
           removed = 0,
         },
       })
-      eq(Hunk(headers['invalid_zero']), {
+      eq(GitHunk(headers['invalid_zero']), {
         header = '@@ -0,0 +0,0 @@ foo bar',
         diff = {},
         top = 0,

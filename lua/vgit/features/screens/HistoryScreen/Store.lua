@@ -1,8 +1,8 @@
 local loop = require('vgit.core.loop')
+local Diff = require('vgit.core.Diff')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
-local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
 
@@ -13,7 +13,7 @@ function Store:constructor()
     index = 1,
     err = nil,
     data = nil,
-    _cache = {},
+    state = {},
   }
 end
 
@@ -21,7 +21,7 @@ function Store:reset()
   self.err = nil
   self.data = nil
   self.index = 1
-  self._cache = {}
+  self.state = {}
 
   return self
 end
@@ -64,7 +64,7 @@ function Store:get(index)
   return nil, self.data[self.index]
 end
 
-function Store:get_diff_dto(index)
+function Store:get_diff(index)
   local log_err, log = self:get(index)
   loop.free_textlock()
 
@@ -74,7 +74,7 @@ function Store:get_diff_dto(index)
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self._cache[id] then return nil, self._cache[id] end
+  if self.state[id] then return nil, self.state[id] end
 
   local hunks, hunks_err = self.git_object:list_hunks({
     parent = parent_hash,
@@ -89,9 +89,9 @@ function Store:get_diff_dto(index)
 
   if lines_err then return lines_err end
 
-  local diff = diff_service:generate(hunks, lines, self.shape)
+  local diff = Diff():generate(hunks, lines, self.shape)
 
-  self._cache[id] = diff
+  self.state[id] = diff
 
   return nil, diff
 end
@@ -105,11 +105,11 @@ function Store:get_filetype()
 end
 
 function Store:get_lnum()
-  return nil, self._cache.lnum
+  return nil, self.state.lnum
 end
 
 function Store:set_lnum(lnum)
-  self._cache.lnum = lnum
+  self.state.lnum = lnum
 
   return self
 end

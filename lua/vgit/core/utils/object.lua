@@ -45,6 +45,17 @@ function object.assign(o, ...)
   return o
 end
 
+function object.extend(o, ...)
+  o = o or {}
+  local objects = { ... }
+
+  for i = 1, #objects do
+    o = vim.tbl_extend('force', o, objects[i])
+  end
+
+  return o
+end
+
 function object.merge(...)
   local o = {}
   local objects = { ... }

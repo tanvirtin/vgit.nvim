@@ -1,13 +1,13 @@
 local fs = require('vgit.core.fs')
 local Object = require('vgit.core.Object')
-local git_log = require('vgit.git.git2.log')
-local git_show = require('vgit.git.git2.show')
-local git_repo = require('vgit.git.git2.repo')
-local git_hunks = require('vgit.git.git2.hunks')
-local git_blame = require('vgit.git.git2.blame')
-local git_status = require('vgit.git.git2.status')
-local git_stager = require('vgit.git.git2.stager')
-local git_conflict = require('vgit.git.git2.conflict')
+local git_log = require('vgit.git.git_log')
+local git_show = require('vgit.git.git_show')
+local git_repo = require('vgit.git.git_repo')
+local git_hunks = require('vgit.git.git_hunks')
+local git_blame = require('vgit.git.git_blame')
+local git_status = require('vgit.git.git_status')
+local git_stager = require('vgit.git.git_stager')
+local git_conflict = require('vgit.git.git_conflict')
 
 local GitObject = Object:extend()
 
@@ -26,7 +26,7 @@ function GitObject:constructor(filepath)
 end
 
 function GitObject:config()
-  return git_repo.config()
+  return git_repo.config(self.reponame)
 end
 
 function GitObject:get_filename()

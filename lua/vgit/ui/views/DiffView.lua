@@ -301,17 +301,17 @@ function DiffView:render_title()
     return self
   end
 
-  local diff_dto_err, diff_dto = self.store:get_diff_dto()
+  local diff_err, diff = self.store:get_diff()
 
-  if diff_dto_err then
-    console.debug.error(diff_dto_err)
+  if diff_err then
+    console.debug.error(diff_err)
     return self
   end
 
   local options = {
     filename = filename,
     filetype = filetype,
-    stat = diff_dto.stat,
+    stat = diff.stat,
   }
 
   local title = self.title
@@ -350,11 +350,11 @@ function DiffView:render_filetype()
   return self
 end
 
-function DiffView:render_split_current_line_numbers(diff_dto, lnum_change_map)
+function DiffView:render_split_current_line_numbers(diff, lnum_change_map)
   local lines = {}
   local line_count = 1
   local lines_changes = {}
-  local num_lines = #diff_dto.current_lines
+  local num_lines = #diff.current_lines
 
   for i = 1, num_lines do
     local line
@@ -390,11 +390,11 @@ function DiffView:render_split_current_line_numbers(diff_dto, lnum_change_map)
   return self
 end
 
-function DiffView:render_split_previous_line_numbers(diff_dto, lnum_change_map)
+function DiffView:render_split_previous_line_numbers(diff, lnum_change_map)
   local lines = {}
   local line_count = 1
   local lines_changes = {}
-  local num_lines = #diff_dto.previous_lines
+  local num_lines = #diff.previous_lines
 
   for i = 1, num_lines do
     local line
@@ -430,7 +430,7 @@ function DiffView:render_split_previous_line_numbers(diff_dto, lnum_change_map)
 end
 
 function DiffView:render_split_line_numbers()
-  local err, diff_dto = self.store:get_diff_dto()
+  local err, diff = self.store:get_diff()
 
   if err then
     console.debug.error(err)
@@ -439,10 +439,10 @@ function DiffView:render_split_line_numbers()
 
   local current_lnum_change_map = {}
   local previous_lnum_change_map = {}
-  local num_lnum_changes = #diff_dto.lnum_changes
+  local num_lnum_changes = #diff.lnum_changes
 
   for i = 1, num_lnum_changes do
-    local lnum_change = diff_dto.lnum_changes[i]
+    local lnum_change = diff.lnum_changes[i]
 
     if lnum_change.buftype == 'current' then
       current_lnum_change_map[lnum_change.lnum] = lnum_change
@@ -452,12 +452,12 @@ function DiffView:render_split_line_numbers()
   end
 
   return self
-    :render_split_previous_line_numbers(diff_dto, previous_lnum_change_map)
-    :render_split_current_line_numbers(diff_dto, current_lnum_change_map)
+    :render_split_previous_line_numbers(diff, previous_lnum_change_map)
+    :render_split_current_line_numbers(diff, current_lnum_change_map)
 end
 
 function DiffView:render_unified_line_numbers()
-  local err, diff_dto = self.store:get_diff_dto()
+  local err, diff = self.store:get_diff()
 
   if err then
     console.debug.error(err)
@@ -468,11 +468,11 @@ function DiffView:render_unified_line_numbers()
   local lines = {}
   local line_count = 1
   local lnum_change_map = {}
-  local num_lnum_changes = #diff_dto.lnum_changes
-  local num_lines = #diff_dto.lines
+  local num_lines = #diff.lines
+  local num_lnum_changes = #diff.lnum_changes
 
   for i = 1, num_lnum_changes do
-    local lnum_change = diff_dto.lnum_changes[i]
+    local lnum_change = diff.lnum_changes[i]
     lnum_change_map[lnum_change.lnum] = lnum_change
   end
 
@@ -519,17 +519,17 @@ function DiffView:render_line_numbers()
 end
 
 function DiffView:render_lines()
-  local diff_dto_err, diff_dto = self.store:get_diff_dto()
-  if diff_dto_err then
-    console.debug.error(diff_dto_err)
+  local diff_err, diff = self.store:get_diff()
+  if diff_err then
+    console.debug.error(diff_err)
     return self
   end
 
   if self.layout_type == 'unified' then
-    self.scene:get('current'):set_lines(diff_dto.lines):enable_cursorline()
+    self.scene:get('current'):set_lines(diff.lines):enable_cursorline()
   else
-    self.scene:get('previous'):set_lines(diff_dto.previous_lines):enable_cursorline()
-    self.scene:get('current'):set_lines(diff_dto.current_lines):enable_cursorline()
+    self.scene:get('previous'):set_lines(diff.previous_lines):enable_cursorline()
+    self.scene:get('current'):set_lines(diff.current_lines):enable_cursorline()
   end
 
   return self
@@ -554,14 +554,14 @@ function DiffView:notify(msg)
 end
 
 function DiffView:get_current_mark_under_cursor()
-  local err, diff_dto = self.store:get_diff_dto()
+  local err, diff = self.store:get_diff()
 
   if err then
     console.debug.error(err)
     return nil
   end
 
-  local marks = diff_dto.marks
+  local marks = diff.marks
   local lnum = self.scene:get('current'):get_lnum()
 
   for i = 1, #marks do
@@ -574,7 +574,7 @@ function DiffView:get_current_mark_under_cursor()
 end
 
 function DiffView:get_current_hunk_under_cursor()
-  local err, diff_dto = self.store:get_diff_dto()
+  local err, diff = self.store:get_diff()
 
   if err then
     console.debug.error(err)
@@ -582,8 +582,8 @@ function DiffView:get_current_hunk_under_cursor()
   end
 
   local selected
-  local marks = diff_dto.marks
-  local hunks = diff_dto.hunks
+  local marks = diff.marks
+  local hunks = diff.hunks
   local lnum = self.scene:get('current'):get_lnum()
 
   for i = 1, #marks do
@@ -610,12 +610,12 @@ function DiffView:set_lnum(lnum, position)
 end
 
 function DiffView:set_relative_lnum(lnum, position)
-  local err, diff_dto = self.store:get_diff_dto()
+  local err, diff = self.store:get_diff()
 
   if err then return self end
 
-  for i = 1, #diff_dto.lnum_changes do
-    local lnum_change = diff_dto.lnum_changes[i]
+  for i = 1, #diff.lnum_changes do
+    local lnum_change = diff.lnum_changes[i]
     local l = lnum_change.lnum
     local type = lnum_change.type
     local buftype = lnum_change.buftype
@@ -650,14 +650,14 @@ function DiffView:select_mark(marks, mark_index, position)
 end
 
 function DiffView:prev(pos)
-  local err, diff_dto = self.store:get_diff_dto()
+  local err, diff = self.store:get_diff()
 
   if err then
     console.debug.error(err)
     return self
   end
 
-  local marks = diff_dto.marks
+  local marks = diff.marks
   local lnum = self.scene:get('current'):get_lnum()
   local mark_index = #marks
 
@@ -677,14 +677,14 @@ function DiffView:prev(pos)
 end
 
 function DiffView:next(pos)
-  local err, diff_dto = self.store:get_diff_dto()
+  local err, diff = self.store:get_diff()
 
   if err then
     console.debug.error(err)
     return self
   end
 
-  local marks = diff_dto.marks
+  local marks = diff.marks
   local lnum = self.scene:get('current'):get_lnum()
   local mark_index = 1
   local num_marks = #marks
@@ -705,14 +705,14 @@ function DiffView:next(pos)
 end
 
 function DiffView:get_relative_mark_index(lnum)
-  local err, diff_dto = self.store:get_diff_dto()
+  local err, diff = self.store:get_diff()
 
   if err then
     console.debug.error(err)
     return 1
   end
 
-  local marks = diff_dto.marks
+  local marks = diff.marks
   local mark_index = 1
 
   for i = 1, #marks do
@@ -732,14 +732,14 @@ function DiffView:navigate_to_mark(mark_index, pos)
 
   if not mark_index then mark_index = 1 end
 
-  local err, diff_dto = self.store:get_diff_dto()
+  local err, diff = self.store:get_diff()
 
   if err then
     console.debug.error(err)
     return self
   end
 
-  local marks = diff_dto.marks
+  local marks = diff.marks
   if #marks == 0 then
     self:notify('No changes found')
 
@@ -762,7 +762,7 @@ function DiffView:render()
     loop.free_textlock()
     self:clear_namespace()
 
-    local err, _ = self.store:get_diff_dto()
+    local err, _ = self.store:get_diff()
 
     if err then
       loop.free_textlock()

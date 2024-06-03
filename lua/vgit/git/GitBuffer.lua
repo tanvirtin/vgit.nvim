@@ -1,7 +1,7 @@
 local utils = require('vgit.core.utils')
 local keymap = require('vgit.core.keymap')
 local Buffer = require('vgit.core.Buffer')
-local git_repo = require('vgit.git.git2.repo')
+local git_repo = require('vgit.git.git_repo')
 local GitObject = require('vgit.git.GitObject')
 local signs_setting = require('vgit.settings.signs')
 
@@ -150,6 +150,26 @@ end
 function GitBuffer:generate_status()
   self:set_var('vgit_status', self.git_object:generate_status())
   return self
+end
+
+function GitBuffer:stage_hunk(hunk)
+  return self.git_object:stage_hunk(hunk)
+end
+
+function GitBuffer:unstage_hunk(hunk)
+  return self.git_object:unstage_hunk(hunk)
+end
+
+function GitBuffer:stage()
+  return self.git_object:stage()
+end
+
+function GitBuffer:unstage()
+  return self.git_object:unstage()
+end
+
+function GitBuffer:get_hunks()
+  return self.git_object.hunks
 end
 
 function GitBuffer:blame(lnum)

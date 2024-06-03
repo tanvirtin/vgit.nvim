@@ -33,7 +33,7 @@ end, 10)
 function LiveGutter:render(buffer, top, bot)
   if not live_gutter_setting:get('enabled') then return self end
 
-  local hunks = buffer.git_object.hunks
+  local hunks = buffer:get_hunks()
   if not hunks then return self end
 
   local signs = {}

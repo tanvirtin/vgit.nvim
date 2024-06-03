@@ -1,8 +1,8 @@
-local gitcli = require('vgit.git.git2.gitcli')
+local gitcli = require('vgit.git.gitcli')
 
-local commit = {}
+local git_commit = {}
 
-function commit.create(reponame, description)
+function git_commit.create(reponame, description)
   if not reponame then return nil, { 'reponame is required' } end
 
   local lines, err = gitcli.run({ '-C', reponame, 'commit', '-m', description })
@@ -24,9 +24,9 @@ function commit.create(reponame, description)
   return true, nil
 end
 
-function commit.dry_run(reponame)
+function git_commit.dry_run(reponame)
   if not reponame then return nil, { 'reponame is required' } end
   return gitcli.run({ '-C', reponame, 'commit', '--dry-run' })
 end
 
-return commit
+return git_commit

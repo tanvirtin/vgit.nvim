@@ -1,113 +1,10 @@
 local utils = require('vgit.core.utils')
-local Object = require('vgit.core.Object')
-local gitcli = require('vgit.git.git2.gitcli')
+local gitcli = require('vgit.git.gitcli')
+local GitHunk = require('vgit.git.GitHunk')
 
-local Hunk = Object:extend()
+local git_hunks = { algorithm = 'myers' }
 
-function Hunk:generate_header(previous, current)
-  return string.format('@@ -%s,%s +%s,%s @@', previous[1], previous[2], current[1], current[2])
-end
-
-function Hunk:parse_header(header)
-  header = header or self.header
-  local diffkey = vim.trim(vim.split(header, '@@', true)[2])
-  local parsed_diffkey = vim.split(diffkey, ' ')
-  local parsed_header = {}
-
-  for i = 1, #parsed_diffkey do
-    parsed_header[#parsed_header + 1] = vim.split(string.sub(parsed_diffkey[i], 2), ',')
-  end
-
-  local previous, current = parsed_header[1], parsed_header[2]
-
-  previous[1] = tonumber(previous[1])
-  previous[2] = tonumber(previous[2]) or 1
-  current[1] = tonumber(current[1])
-  current[2] = tonumber(current[2]) or 1
-
-  return previous, current
-end
-
-function Hunk:parse_diff(diff)
-  diff = diff or self.diff
-  local removed_lines = {}
-  local added_lines = {}
-
-  for i = 1, #diff do
-    local line = diff[i]
-    local type = line:sub(1, 1)
-    local cleaned_diff_line = line:sub(2, #line)
-
-    if type == '+' then
-      added_lines[#added_lines + 1] = cleaned_diff_line
-    elseif type == '-' then
-      removed_lines[#removed_lines + 1] = cleaned_diff_line
-    end
-  end
-
-  return removed_lines, added_lines
-end
-
-function Hunk:constructor(header)
-  local hunk = {
-    header = nil,
-    top = nil,
-    bot = nil,
-    type = nil,
-    diff = {},
-    stat = {
-      added = 0,
-      removed = 0,
-    },
-  }
-
-  if not header then return hunk end
-
-  local previous, current
-
-  if type(header) == 'string' then
-    previous, current = self:parse_header(header)
-  else
-    previous, current = unpack(header)
-    header = self:generate_header(previous, current)
-  end
-
-  hunk.header = header
-  hunk.top = current[1]
-  hunk.bot = current[1] + current[2] - 1
-
-  if current[2] == 0 then
-    hunk.bot = hunk.top
-    hunk.type = 'remove'
-  elseif previous[2] == 0 then
-    hunk.type = 'add'
-  else
-    hunk.type = 'change'
-  end
-
-  return hunk
-end
-
-function Hunk:push(line)
-  local stat = self.stat
-  local type = line:sub(1, 1)
-
-  if type == '+' then
-    stat.added = stat.added + 1
-  elseif type == '-' then
-    stat.removed = stat.removed + 1
-  end
-
-  local diff = self.diff
-
-  diff[#diff + 1] = line
-
-  return self
-end
-
-local hunks = { algorithm = 'myers' }
-
-function hunks.live(original_lines, current_lines)
+function git_hunks.live(original_lines, current_lines)
   local o_lines_str = ''
   local c_lines_str = ''
   local num_lines = math.max(#original_lines, #current_lines)
@@ -124,7 +21,7 @@ function hunks.live(original_lines, current_lines)
 
   vim.diff(o_lines_str, c_lines_str, {
     on_hunk = function(start_o, count_o, start_c, count_c)
-      local hunk = Hunk({ { start_o, count_o }, { start_c, count_c } })
+      local hunk = GitHunk({ { start_o, count_o }, { start_c, count_c } })
 
       if count_o > 0 then
         for i = start_o, start_o + count_o - 1 do
@@ -148,7 +45,7 @@ function hunks.live(original_lines, current_lines)
   return live_hunks
 end
 
-function hunks.custom(lines, opts)
+function git_hunks.custom(lines, opts)
   local diff = {}
   for i = 1, #lines do
     diff[#diff + 1] = string.format('+%s', lines[i])
@@ -157,7 +54,8 @@ function hunks.custom(lines, opts)
   local deleted = opts.deleted
   local untracked = opts.untracked
 
-  local hunk = Hunk()
+  local hunk = GitHunk()
+
   if untracked then
     hunk.type = 'add'
     hunk.stat = { added = #lines, removed = 0 }
@@ -175,7 +73,7 @@ function hunks.custom(lines, opts)
   return { hunk }
 end
 
-function hunks.list(reponame, filename, opts)
+function git_hunks.list(reponame, filename, opts)
   opts = opts or {}
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -193,7 +91,7 @@ function hunks.list(reponame, filename, opts)
     'core.safecrlf=false',
     'diff',
     '--color=never',
-    string.format('--diff-algorithm=%s', hunks.algorithm),
+    string.format('--diff-algorithm=%s', git_hunks.algorithm),
     '--patch-with-raw',
     '--unified=0',
   }
@@ -228,7 +126,7 @@ function hunks.list(reponame, filename, opts)
   for i = 1, #lines do
     local line = lines[i]
     if vim.startswith(line, '@@') then
-      result[#result + 1] = Hunk(line)
+      result[#result + 1] = GitHunk(line)
     else
       if #result > 0 then
         local hunk = result[#result]
@@ -240,4 +138,4 @@ function hunks.list(reponame, filename, opts)
   return result, err
 end
 
-return hunks
+return git_hunks

@@ -1,4 +1,3 @@
-local utils = require('vgit.core.utils')
 local Path = require('plenary.path')
 local plenary_filetype = require('plenary.filetype')
 

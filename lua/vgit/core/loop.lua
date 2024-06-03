@@ -26,8 +26,8 @@ function loop.coroutine(fn)
 
     local function resume_coroutine(...)
       local result = { coroutine.resume(thread, ...) }
-      local ok, fn_with_callback, argc = unpack(result)
 
+      local ok, fn_with_callback, argc = unpack(result)
       if not ok then return error(string.format('coroutine failed :: %s\n%s', fn, debug.traceback(thread))) end
 
       if coroutine.status(thread) == 'dead' then return end

@@ -1,8 +1,8 @@
-local gitcli = require('vgit.git.git2.gitcli')
+local gitcli = require('vgit.git.gitcli')
 
-local show = {}
+local git_show = {}
 
-function show.lines(reponame, filename, commit_hash)
+function git_show.lines(reponame, filename, commit_hash)
   if not reponame then return nil, { 'reponame is required' } end
   commit_hash = commit_hash or ''
   return gitcli.run({
@@ -13,4 +13,4 @@ function show.lines(reponame, filename, commit_hash)
   })
 end
 
-return show
+return git_show

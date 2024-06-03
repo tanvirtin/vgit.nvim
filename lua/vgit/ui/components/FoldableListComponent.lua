@@ -11,7 +11,6 @@ local FoldableListComponent = Component:extend()
 
 function FoldableListComponent:constructor(props)
   props = utils.object.assign({
-    _cache = {},
     state = {
       list = {},
       hls = {},
@@ -59,11 +58,11 @@ function FoldableListComponent:is_fold(item)
 end
 
 function FoldableListComponent:get_list_item(lnum)
-  return self._cache[lnum]
+  return self.state[lnum]
 end
 
 function FoldableListComponent:find_list_item(callback)
-  for lnum, item in pairs(self._cache) do
+  for lnum, item in pairs(self.state) do
     if callback(item) then return item, lnum end
   end
 
@@ -71,9 +70,8 @@ function FoldableListComponent:find_list_item(callback)
 end
 
 function FoldableListComponent:query_list_item(callback)
-  for _, list_item in ipairs(self._cache) do
+  for _, list_item in ipairs(self.state) do
     local result = callback(list_item)
-
     if result == true then return list_item end
   end
 
@@ -94,7 +92,8 @@ function FoldableListComponent:generate_lines()
       current_lnum = current_lnum + 1
 
       -- Memoizing recursion inside a flattened list, for O(1) memory access.
-      self._cache[current_lnum] = item
+      self.state[current_lnum] = item
+
       local value = item.value
       local items = item.items
       local icon_before = item.icon_before

@@ -1,11 +1,11 @@
 local loop = require('vgit.core.loop')
+local Diff = require('vgit.core.Diff')
 local Object = require('vgit.core.Object')
-local git_log = require('vgit.git.git2.log')
-local git_show = require('vgit.git.git2.show')
-local git_repo = require('vgit.git.git2.repo')
-local git_hunks = require('vgit.git.git2.hunks')
+local git_log = require('vgit.git.git_log')
+local git_show = require('vgit.git.git_show')
+local git_repo = require('vgit.git.git_repo')
+local git_hunks = require('vgit.git.git_hunks')
 local GitObject = require('vgit.git.GitObject')
-local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
 
@@ -14,18 +14,18 @@ function Store:constructor()
     err = nil,
     shape = nil,
     git_object = nil,
-    _cache = {
+    state = {
       blame = nil,
-      diff_dto = nil,
+      diff = nil,
     },
   }
 end
 
 function Store:reset()
   self.err = nil
-  self._cache = {
+  self.state = {
     blame = nil,
-    diff_dto = nil,
+    diff = nil,
   }
 
   return self
@@ -42,10 +42,10 @@ function Store:fetch(shape, filename, lnum, opts)
   self.git_object = GitObject(filename)
 
   loop.free_textlock()
-  self._cache.blame, self.err = self.git_object:blame(lnum)
+  self.state.blame, self.err = self.git_object:blame(lnum)
   if self.err then return self.err, nil end
 
-  local blame = self._cache.blame
+  local blame = self.state.blame
 
   if not blame then return { 'no blame found' }, nil end
   if blame:is_uncommitted() then return { 'Line is uncommitted' } end
@@ -87,17 +87,17 @@ function Store:fetch(shape, filename, lnum, opts)
 
   if hunks_err then return hunks_err end
 
-  self._cache.diff_dto = diff_service:generate(hunks, lines, self.shape, { is_deleted = is_deleted })
+  self.state.diff = Diff():generate(hunks, lines, self.shape, { is_deleted = is_deleted })
 
   return self.err
 end
 
 function Store:get_blame()
-  return self.err, self._cache.blame
+  return self.err, self.state.blame
 end
 
-function Store:get_diff_dto()
-  return nil, self._cache.diff_dto
+function Store:get_diff()
+  return nil, self.state.diff
 end
 
 function Store:get_filename()
