@@ -21,6 +21,7 @@ function LiveConflict:conflict_accept_current_change(buffer)
   local conflict_bot = conflict.incoming.bot
   lines = utils.list.replace(lines, conflict_top, conflict_bot, current_lines)
   buffer:set_lines(lines)
+  buffer:call(function() vim.cmd('LspStart') end)
 end
 
 function LiveConflict:conflict_accept_incoming_change(buffer)
@@ -34,6 +35,7 @@ function LiveConflict:conflict_accept_incoming_change(buffer)
   local conflict_bot = conflict.incoming.bot
   lines = utils.list.replace(lines, conflict_top, conflict_bot, incoming_lines)
   buffer:set_lines(lines)
+  buffer:call(function() vim.cmd('LspStart') end)
 end
 
 function LiveConflict:conflict_accept_both_changes(buffer)
@@ -49,6 +51,7 @@ function LiveConflict:conflict_accept_both_changes(buffer)
   local conflict_bot = conflict.incoming.bot
   lines = utils.list.replace(lines, conflict_top, conflict_bot, replacement_lines)
   buffer:set_lines(lines)
+  buffer:call(function() vim.cmd('LspStart') end)
 end
 
 function LiveConflict:render(buffer)
@@ -56,6 +59,7 @@ function LiveConflict:render(buffer)
   if not has_conflict then return end
 
   loop.free_textlock()
+  buffer:call(function() vim.cmd('LspStop') end)
   buffer:parse_conflicts()
   buffer:render_conflicts()
 end
