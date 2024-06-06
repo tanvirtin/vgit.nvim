@@ -1,5 +1,5 @@
-local git_repo = require('vgit.git.git_repo')
 local async = require('plenary.async.tests')
+local git_repo = require('vgit.git.git_repo')
 
 local eq = assert.are.same
 
