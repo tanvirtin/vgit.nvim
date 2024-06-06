@@ -51,8 +51,7 @@ function GutterBlameView:set_keymap(configs)
 end
 
 function GutterBlameView:render()
-  local err, blames = self.store:get_blames()
-
+  local blames, err = self.store:get_blames()
   if err then
     console.debug.error(err).error(err)
     return self

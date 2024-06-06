@@ -86,8 +86,7 @@ function ProjectHunksScreen:handle_list_move(direction)
 
   self.store:set_id(list_item.id)
   self.diff_view:render_debounced(loop.coroutine(function()
-    local _, data = self.store:get_data()
-
+    local data = self.store:get_data()
     if data then self.diff_view:navigate_to_mark(data.mark_index) end
   end))
 end
@@ -97,7 +96,6 @@ function ProjectHunksScreen:show(opts)
 
   loop.free_textlock()
   local _, err = self.store:fetch(self.layout_type, opts)
-
   loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
@@ -118,11 +116,9 @@ function ProjectHunksScreen:show(opts)
       key = '<enter>',
       handler = loop.coroutine(function()
         local mark = self.diff_view:get_current_mark_under_cursor()
-
         if not mark then return end
 
-        local _, filename = self.store:get_filename()
-
+        local filename = self.store:get_filename()
         if not filename then return end
 
         self:destroy()
@@ -153,19 +149,11 @@ function ProjectHunksScreen:show(opts)
       mode = 'n',
       key = '<enter>',
       handler = loop.coroutine(function()
-        local _, filename = self.store:get_filename()
+        local filename = self.store:get_filename()
+        if not filename then return self.foldable_list_view:toggle_current_list_item():render() end
 
-        if not filename then
-          self.foldable_list_view:toggle_current_list_item():render()
-          return
-        end
-
-        local data_err, data = self.store:get_data()
-
-        if data_err then
-          console.error(data_err)
-          return
-        end
+        local data, data_err = self.store:get_data()
+        if data_err then return console.error(data_err) end
 
         self:destroy()
 

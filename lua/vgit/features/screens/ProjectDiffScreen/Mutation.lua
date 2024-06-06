@@ -7,14 +7,12 @@ local Mutation = Object:extend()
 
 function Mutation:stage_hunk(filename, hunk)
   local git_object = GitObject(filename)
-
   if not git_object:is_tracked() then return git_object:stage() end
 
   local file, err = git_object:status()
-  if err then return err end
+  if err then return nil, err end
 
   local file_status = file.status
-
   if file_status:has('D ') or file_status:has(' D') then return git_object:stage() end
 
   return git_object:stage_hunk(hunk)
@@ -22,14 +20,12 @@ end
 
 function Mutation:unstage_hunk(filename, hunk)
   local git_object = GitObject(filename)
-
   if not git_object:is_tracked() then return git_object:unstage() end
 
   local file, err = git_object:status()
-  if err then return err end
+  if err then return nil, err end
 
   local file_status = file.status
-
   if file_status:has('D ') or file_status:has(' D') then return self.git:unstage_file(filename) end
 
   return git_object:unstage_hunk(hunk)

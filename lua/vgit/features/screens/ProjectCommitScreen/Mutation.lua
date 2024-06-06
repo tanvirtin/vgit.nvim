@@ -8,7 +8,6 @@ local Mutation = Object:extend()
 function Mutation:commit(lines)
   local description = utils.list.reduce(lines, '', function(acc, line)
     if not vim.startswith(line, '#') then acc = acc .. line .. '\n' end
-
     return acc
   end)
 

@@ -96,14 +96,13 @@ function GitLogsView:has_selection()
 end
 
 function GitLogsView:get_selected()
-  local err, data = self.store:get_data()
-
+  local logs, err = self.store:get_data()
   if err then
     console.debug.error(err)
     return {}
   end
 
-  return utils.list.filter(data, function(_, index)
+  return utils.list.filter(logs, function(_, index)
     return self.state.selected[index] == true
   end)
 end
@@ -127,8 +126,7 @@ function GitLogsView:paint()
 end
 
 function GitLogsView:render()
-  local err, logs = self.store:get_data()
-
+  local logs, err = self.store:get_data()
   if err then
     console.debug.error(err).error(err)
     return self

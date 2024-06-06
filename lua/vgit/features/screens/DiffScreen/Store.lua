@@ -45,20 +45,19 @@ function Store:fetch(shape, filename, opts)
     self.state.lines = {}
     self.data = {}
     self.err = nil
-
-    return
+    return {}
   end
 
   if has_conflict then
     local head_log, head_log_err = self.git_object:log({ rev = 'HEAD' })
     if head_log_err then
       self.err = head_log_err
-      return head_log_err
+      return nil, head_log_err
     end
     local merge_log, merge_log_err = self.git_object:log({ rev = 'MERGE_HEAD' })
     if merge_log_err then
       self.err = merge_log_err
-      return merge_log_err
+      return nil, merge_log_err
     end
     parent = head_log.commit_hash
     current = merge_log.commit_hash
@@ -76,7 +75,7 @@ function Store:fetch(shape, filename, opts)
   if lines_err then
     self.err = lines_err
 
-    return lines_err
+    return nil, lines_err
   end
 
   if opts.is_staged then
@@ -88,24 +87,23 @@ function Store:fetch(shape, filename, opts)
   end
 
   self.state.lines = lines
-
-  return self.err, self.data
+  return self.data, self.err
 end
 
 function Store:get_diff()
-  if self.state.diff then return nil, self.state.diff end
+  if self.state.diff then return self.state.diff, nil end
 
   self.state.diff = Diff():generate(self.data, self.state.lines, self.shape)
 
-  return nil, self.state.diff
+  return self.state.diff, nil
 end
 
 function Store:get_filename()
-  return nil, self.git_object:get_filename()
+  return self.git_object:get_filename(), nil
 end
 
 function Store:get_filetype()
-  return nil, self.git_object:get_filetype()
+  return self.git_object:get_filetype(), nil
 end
 
 return Store

@@ -59,8 +59,7 @@ function LineBlameView:create_committed_lines(blame)
 end
 
 function LineBlameView:render()
-  local err, blame = self.store:get_blame()
-
+  local blame, err = self.store:get_blame()
   if err then
     console.debug.error(err).error(err)
     return self

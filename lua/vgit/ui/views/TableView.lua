@@ -66,16 +66,15 @@ function TableView:move(direction)
 end
 
 function TableView:get_current_row()
-  local _, entries = self.store:get_all()
-
+  local entries  = self.store:get_all()
   if not entries then return nil end
 
   return entries[self.scene:get('table'):get_lnum()]
 end
 
 function TableView:render()
-  local _, lnum = self.store:get_lnum()
-  local err, entries = self.store:get_all()
+  local lnum = self.store:get_lnum()
+  local entries, err = self.store:get_all()
 
   if err then
     console.debug.error(err).error(err)

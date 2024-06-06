@@ -29,12 +29,10 @@ function GutterBlameScreen:open_commit()
   loop.free_textlock()
   local lnum = Window(0):get_lnum()
   loop.free_textlock()
-  local err_blames, blames = self.store:get_blames()
-
+  local blames, err_blames = self.store:get_blames()
   if err_blames then return self end
 
   local blame = blames[lnum]
-
   if not blame.committed then return self end
 
   vim.cmd('quit')
@@ -49,8 +47,7 @@ function GutterBlameScreen:show()
   local buffer = Buffer(0)
 
   loop.free_textlock()
-  local err = self.store:fetch(buffer:get_name(), buffer:get_lines())
-
+  local _, err = self.store:fetch(buffer:get_name(), buffer:get_lines())
   if err then
     console.debug.error(err).error(err)
     return false

@@ -54,8 +54,7 @@ end
 
 function ProjectCommitScreen:show()
   loop.free_textlock()
-  local err = self.store:fetch()
-
+  local _, err = self.store:fetch()
   if err then
     console.debug.error(err).error(err)
     return false
