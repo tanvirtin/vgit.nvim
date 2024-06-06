@@ -634,7 +634,7 @@ Git.show = loop.suspend(function(self, tracked_filename, commit_hash, spec, call
       '-C',
       self.cwd,
       'show',
-      string.format('%s:%s%s', commit_hash, self.cwd, tracked_filename),
+      string.format('%s:./%s', commit_hash, tracked_filename),
     }),
     on_stdout = function(line) result[#result + 1] = line end,
     on_stderr = function(line) err[#err + 1] = line end,
@@ -658,7 +658,7 @@ Git.is_in_remote = loop.suspend(function(self, tracked_filename, commit_hash, sp
       '-C',
       self.cwd,
       'show',
-      string.format('%s:%s%s', commit_hash, self.cwd, tracked_filename),
+      string.format('%s:./%s', commit_hash, tracked_filename),
     }),
     on_stderr = function(line)
       if line then
