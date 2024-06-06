@@ -388,7 +388,6 @@ function ProjectDiffScreen:show()
       key = '<enter>',
       handler = loop.coroutine(function()
         local mark, _ = self.diff_view:get_current_mark_under_cursor()
-
         if not mark then return end
 
         local filename = self.store:get_filename()
@@ -472,7 +471,7 @@ function ProjectDiffScreen:show()
       key = '<enter>',
       handler = loop.coroutine(function()
         local filename = self.store:get_filename()
-        if not filename then self.foldable_list_view:toggle_current_list_item():render() end
+        if not filename then return self.foldable_list_view:toggle_current_list_item():render() end
 
         self:destroy()
         fs.open(filename)
