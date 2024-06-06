@@ -15,7 +15,6 @@ end
 function Store:reset()
   self.err = nil
   self.data = nil
-
   return self
 end
 
@@ -27,14 +26,13 @@ function Store:fetch(opts)
   local reponame = git_repo.discover()
   self.data, self.err = git_commit.dry_run(reponame)
 
-  return self.err, self.data
+  return self.data, self.err
 end
 
 function Store:get_lines()
-  if self.err then return self.err end
+  if self.err then return nil, self.err end
 
-  return nil,
-    utils.list.concat(
+  return utils.list.concat(
       { '' },
       utils.list.map(self.data, function(line)
         return '# ' .. line

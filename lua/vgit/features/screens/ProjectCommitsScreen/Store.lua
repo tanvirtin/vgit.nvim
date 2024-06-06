@@ -42,7 +42,7 @@ function Store:fetch(shape, commits, opts)
 
   self:reset()
 
-  if not commits or #commits == 0 then return { 'No commits specified' }, nil end
+  if not commits or #commits == 0 then return nil, { 'No commits specified' } end
 
   self.state = {
     lnum = 1,
@@ -50,7 +50,7 @@ function Store:fetch(shape, commits, opts)
     list_entry_cache = {},
   }
 
-  if not git_repo.exists() then return { 'Project has no .git folder' }, nil end
+  if not git_repo.exists() then return nil, { 'Project has no .git folder' } end
 
   self.shape = shape
   local data = {}
@@ -60,8 +60,7 @@ function Store:fetch(shape, commits, opts)
     loop.free_textlock()
     local reponame = git_repo.discover()
     local log, log_err = git_log.get(reponame, commit)
-
-    if log_err then return log_err end
+    if log_err then return nil, log_err end
 
     -- We will use the parent_hash and the commit_hash inside
     -- the log object to list all the files associated with the log.
@@ -70,7 +69,7 @@ function Store:fetch(shape, commits, opts)
       commit_hash = log.commit_hash,
       parent_hash = log.parent_hash,
     })
-    if err then return err end
+    if err then return nil, err end
 
     data[commit] = utils.list.map(files, function(file)
       -- Log contains the metadata about parent_hash and commit_hash
@@ -90,16 +89,15 @@ function Store:fetch(shape, commits, opts)
 
   self.data = data
 
-  return nil, self.data
+  return self.data
 end
 
 function Store:get_all()
-  return self.err, self.data
+  return self.data, self.err
 end
 
 function Store:set_id(id)
   self.id = id
-
   return self
 end
 
@@ -107,28 +105,27 @@ function Store:get(id)
   if id then self.id = id end
 
   local datum = self.state.commits[self.id]
-  if not datum then return { 'Item not found' }, nil end
+  if not datum then return nil, { 'Item not found' } end
 
-  return nil, datum
+  return datum
 end
 
 function Store:get_diff()
-  local err, datum = self:get()
-
-  if err then return err end
+  local datum, err = self:get()
+  if err then return nil, err end
 
   local file = datum.file
-  if not file then return { 'No file found in item' }, nil end
+  if not file then return nil, { 'No file found in item' } end
 
   local log = datum.log
-  if not log then return { 'No log found in item' }, nil end
+  if not log then return nil, { 'No log found in item' } end
 
   local id = file.id
   local filename = file.filename
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self.state.commits[id] then return nil, self.state.commits[id] end
+  if self.state.commits[id] then return self.state.commits[id] end
 
   local lines_err, lines
   local is_deleted = false
@@ -143,7 +140,7 @@ function Store:get_diff()
   end
   loop.free_textlock()
 
-  if lines_err then return lines_err end
+  if lines_err then return nil, lines_err end
 
   local hunks_err, hunks
   if is_deleted then
@@ -155,46 +152,44 @@ function Store:get_diff()
     })
   end
   loop.free_textlock()
-  if hunks_err then return hunks_err end
+  if hunks_err then return nil, hunks_err end
 
   local diff = Diff():generate(hunks, lines, self.shape, { is_deleted = is_deleted })
 
   self.state.commits[id] = diff
 
-  return nil, diff
+  return diff
 end
 
 function Store:get_filename()
-  local err, datum = self:get()
+  local datum, err = self:get()
+  if err then return nil, err end
 
-  if err then return err end
-
-  return nil, datum.file.filename
+  return datum.file.filename
 end
 
 function Store:get_filetype()
-  local err, datum = self:get()
+  local datum, err = self:get()
+  if err then return nil, err end
 
-  if err then return err end
-
-  return nil, datum.file.filetype
+  return datum.file.filetype
 end
 
 function Store:get_lnum()
-  return nil, self.state.lnum
+  return self.state.lnum
 end
 
 function Store:get_parent_commit()
-  local err, datum = self:get()
-  if err then return err end
+  local datum, err = self:get()
+  if err then return nil, err end
 
   local file = datum.file
-  if not file then return { 'No file found in item' }, nil end
+  if not file then return nil, { 'No file found in item' } end
 
   local log = datum.log
-  if not log then return { 'No log found in item' }, nil end
+  if not log then return nil, { 'No log found in item' } end
 
-  return nil, log.parent_hash
+  return log.parent_hash
 end
 
 function Store:set_lnum(lnum)
@@ -204,12 +199,11 @@ function Store:set_lnum(lnum)
 end
 
 function Store:get_list_folds()
-  return nil, self.state.list_folds
+  return self.state.list_folds
 end
 
 function Store:set_list_folds(list_folds)
   self.state.list_folds = list_folds
-
   return self
 end
 

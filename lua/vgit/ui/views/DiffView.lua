@@ -287,22 +287,19 @@ function DiffView:clear_notification()
 end
 
 function DiffView:render_title()
-  local filename_err, filename = self.store:get_filename()
-
+  local filename, filename_err = self.store:get_filename()
   if filename_err then
     console.debug.error(filename_err)
     return self
   end
 
-  local filetype_err, filetype = self.store:get_filetype()
-
+  local filetype, filetype_err = self.store:get_filetype()
   if filetype_err then
     console.debug.error(filetype_err)
     return self
   end
 
-  local diff_err, diff = self.store:get_diff()
-
+  local diff, diff_err = self.store:get_diff()
   if diff_err then
     console.debug.error(diff_err)
     return self
@@ -332,8 +329,7 @@ function DiffView:render_title()
 end
 
 function DiffView:render_filetype()
-  local err, filetype = self.store:get_filetype()
-
+  local filetype, err = self.store:get_filetype()
   if err then
     console.debug.error(err)
     return self
@@ -430,8 +426,7 @@ function DiffView:render_split_previous_line_numbers(diff, lnum_change_map)
 end
 
 function DiffView:render_split_line_numbers()
-  local err, diff = self.store:get_diff()
-
+  local diff, err = self.store:get_diff()
   if err then
     console.debug.error(err)
     return self
@@ -457,8 +452,7 @@ function DiffView:render_split_line_numbers()
 end
 
 function DiffView:render_unified_line_numbers()
-  local err, diff = self.store:get_diff()
-
+  local diff, err = self.store:get_diff()
   if err then
     console.debug.error(err)
     return self
@@ -519,7 +513,7 @@ function DiffView:render_line_numbers()
 end
 
 function DiffView:render_lines()
-  local diff_err, diff = self.store:get_diff()
+  local diff, diff_err = self.store:get_diff()
   if diff_err then
     console.debug.error(diff_err)
     return self
@@ -554,8 +548,7 @@ function DiffView:notify(msg)
 end
 
 function DiffView:get_current_mark_under_cursor()
-  local err, diff = self.store:get_diff()
-
+  local diff, err = self.store:get_diff()
   if err then
     console.debug.error(err)
     return nil
@@ -574,8 +567,7 @@ function DiffView:get_current_mark_under_cursor()
 end
 
 function DiffView:get_current_hunk_under_cursor()
-  local err, diff = self.store:get_diff()
-
+  local diff, err = self.store:get_diff()
   if err then
     console.debug.error(err)
     return nil
@@ -610,8 +602,7 @@ function DiffView:set_lnum(lnum, position)
 end
 
 function DiffView:set_relative_lnum(lnum, position)
-  local err, diff = self.store:get_diff()
-
+  local diff, err = self.store:get_diff()
   if err then return self end
 
   for i = 1, #diff.lnum_changes do
@@ -650,8 +641,7 @@ function DiffView:select_mark(marks, mark_index, position)
 end
 
 function DiffView:prev(pos)
-  local err, diff = self.store:get_diff()
-
+  local diff, err = self.store:get_diff()
   if err then
     console.debug.error(err)
     return self
@@ -677,8 +667,7 @@ function DiffView:prev(pos)
 end
 
 function DiffView:next(pos)
-  local err, diff = self.store:get_diff()
-
+  local diff, err = self.store:get_diff()
   if err then
     console.debug.error(err)
     return self
@@ -705,8 +694,7 @@ function DiffView:next(pos)
 end
 
 function DiffView:get_relative_mark_index(lnum)
-  local err, diff = self.store:get_diff()
-
+  local diff, err = self.store:get_diff()
   if err then
     console.debug.error(err)
     return 1
@@ -732,8 +720,7 @@ function DiffView:navigate_to_mark(mark_index, pos)
 
   if not mark_index then mark_index = 1 end
 
-  local err, diff = self.store:get_diff()
-
+  local diff, err = self.store:get_diff()
   if err then
     console.debug.error(err)
     return self
@@ -762,8 +749,7 @@ function DiffView:render()
     loop.free_textlock()
     self:clear_namespace()
 
-    local err, _ = self.store:get_diff()
-
+    local _, err = self.store:get_diff()
     if err then
       loop.free_textlock()
       console.debug.error(err)

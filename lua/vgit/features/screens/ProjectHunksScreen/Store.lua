@@ -30,7 +30,6 @@ function Store:reset()
     lnum = 1,
     list_entry_cache = {},
   }
-
   return self
 end
 
@@ -54,10 +53,10 @@ function Store:fetch(shape, opts)
     local file = files[i]
     local status = file.status
 
-    local lines_err, lines = self:get_lines(file)
+    local lines, lines_err = self:get_lines(file)
     if lines_err then return nil, lines_err end
 
-    local hunks_err, hunks = self:get_hunks(file, lines, opts.is_staged)
+    local hunks, hunks_err = self:get_hunks(file, lines, opts.is_staged)
     if hunks_err then return nil, hunks_err end
 
     if hunks and #hunks > 0 then
@@ -94,7 +93,6 @@ end
 
 function Store:set_id(id)
   self.id = id
-
   return self
 end
 
@@ -102,44 +100,41 @@ function Store:get_data(id)
   if id then self.id = id end
 
   local data = self.state.list_entry_cache[self.id]
-  if not data then return { 'Item not found' }, nil end
+  if not data then return nil, { 'Item not found' } end
 
-  return nil, data
+  return data
 end
 
 function Store:get_all()
-  return self.err, self.data
+  return self.data, self.err
 end
 
 function Store:get_diff()
-  local data_err, data = self:get_data()
+  local data, data_err = self:get_data()
+  if data_err then return nil, data_err end
 
-  if data_err then return data_err end
-  if not data.diff then return { 'No git file found to get code dto from' }, nil end
-
-  return nil, data.diff
+  if not data.diff then return nil, { 'No git file found to get code dto from' } end
+  return data.diff
 end
 
 function Store:get_filename()
-  local data_err, data = self:get_data()
-
-  if data_err then return data_err end
+  local data, data_err = self:get_data()
+  if data_err then return nil, data_err end
 
   local file = data.file
   local filename = file.filename or ''
 
-  return nil, filename
+  return filename
 end
 
 function Store:get_filetype()
-  local data_err, data = self:get_data()
-
-  if data_err then return data_err end
+  local data, data_err = self:get_data()
+  if data_err then return nil, data_err end
 
   local file = data.file
   local filetype = file.filetype or ''
 
-  return nil, filetype
+  return filetype
 end
 
 function Store:get_lines(file)
@@ -162,7 +157,7 @@ function Store:get_lines(file)
     lines, lines_err = fs.read_file(filename)
   end
 
-  return lines_err, lines
+  return lines, lines_err 
 end
 
 function Store:get_hunks(file, lines, is_staged)
@@ -173,10 +168,9 @@ function Store:get_hunks(file, lines, is_staged)
   if is_staged then
     if file:is_staged() then
       local reponame = git_repo.discover()
-      local hunks, hunks_err = git_hunks.list(reponame, filename)
-      return hunks_err, hunks
+      return git_hunks.list(reponame, filename)
     end
-    return nil, nil
+    return nil
   end
 
   local hunks_err, hunks
@@ -188,7 +182,7 @@ function Store:get_hunks(file, lines, is_staged)
       hunks = git_hunks.custom(lines, { deleted = true })
     else
       hunks, hunks_err = git_hunks.list(reponame, filename)
-      return hunks_err, hunks
+      return hunks, hunks_err
     end
   elseif log then
     hunks, hunks_err = git_hunks.list(filename, {
@@ -199,26 +193,24 @@ function Store:get_hunks(file, lines, is_staged)
     hunks, hunks_err = git_hunks.list(reponame, filename)
   end
 
-  return hunks_err, hunks
+  return hunks, hunks_err 
 end
 
 function Store:get_lnum()
-  return nil, self.state.lnum
+  return self.state.lnum
 end
 
 function Store:set_lnum(lnum)
   self.state.lnum = lnum
-
   return self
 end
 
 function Store:get_list_folds()
-  return nil, self.state.list_folds
+  return self.state.list_folds
 end
 
 function Store:set_list_folds(list_folds)
   self.state.list_folds = list_folds
-
   return self
 end
 

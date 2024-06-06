@@ -120,9 +120,7 @@ function FSListGenerator:create_node(path)
     metadata = metadata,
     value = path.current,
     icon_before = function(item)
-      return {
-        icon = item.open and '' or '',
-      }
+      return { icon = item.open and '' or '' }
     end,
   }
 end
@@ -140,7 +138,6 @@ function FSListGenerator:find_parent(path)
         return item.items
       else
         local found = _find(item.items)
-
         if found then return found end
       end
     end

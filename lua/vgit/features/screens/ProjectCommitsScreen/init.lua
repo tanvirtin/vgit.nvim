@@ -67,7 +67,6 @@ end
 
 function ProjectCommitsScreen:handle_list_move(direction)
   local list_item = self.foldable_list_view:move(direction)
-
   if not list_item then return end
 
   self.store:set_id(list_item.id)
@@ -77,22 +76,12 @@ function ProjectCommitsScreen:handle_list_move(direction)
 end
 
 function ProjectCommitsScreen:handle_on_enter()
-  local _, filename = self.store:get_filename()
-
-  if not filename then
-    self.foldable_list_view:toggle_current_list_item():render()
-
-    return
-  end
+  local filename = self.store:get_filename()
+  if not filename then return self.foldable_list_view:toggle_current_list_item():render() end
 
   if not fs.exists(filename) then
-    local commit_err, commit_hash = self.store:get_parent_commit()
-
-    if commit_err then
-      console.debug.error(commit_err).error(commit_err)
-
-      return
-    end
+    local commit_hash, commit_err = self.store:get_parent_commit()
+    if commit_err then return console.debug.error(commit_err).error(commit_err) end
 
     local reponame = git_repo.discover()
     local lines, lines_err = git_show.lines(reponame, filename, commit_hash)
@@ -121,8 +110,7 @@ function ProjectCommitsScreen:handle_on_enter()
 
   fs.open(filename)
 
-  local diff_err, diff = self.store:get_diff()
-
+  local diff, diff_err = self.store:get_diff()
   if diff_err or not diff then return end
 
   local window = Window(0)
@@ -150,8 +138,7 @@ function ProjectCommitsScreen:show(args)
   end
 
   loop.free_textlock()
-  local err = self.store:fetch(self.layout_type, commits)
-
+  local _, err = self.store:fetch(self.layout_type, commits)
   if err then
     console.debug.error(err).error(err)
     return false

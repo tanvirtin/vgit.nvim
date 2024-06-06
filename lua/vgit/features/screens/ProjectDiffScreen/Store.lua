@@ -86,7 +86,7 @@ function Store:get_file_lines(file, status)
   local filename = file.filename
 
   local reponame = git_repo.discover()
-  local err, lines
+  local lines, err
   if file:has_both('DU') then
     lines, err = git_show.lines(reponame, filename, ':3')
   elseif file:has_both('UD') then
@@ -97,20 +97,20 @@ function Store:get_file_lines(file, status)
     lines, err = git_show.lines(reponame, filename)
   elseif status == 'unmerged' and git_conflict.has_conflict(reponame, filename) then
     local log, log_err = git_log.get(reponame, 'HEAD')
-    if log_err then return log_err end
+    if log_err then return nil, log_err end
     lines, err = git_show.lines(reponame, filename, log.commit_hash)
   else
     lines, err = fs.read_file(filename)
   end
   loop.free_textlock()
 
-  return err, lines
+  return lines, err
 end
 
 function Store:get_file_hunks(file, status, lines)
   local filename = file.filename
 
-  local hunks_err, hunks
+  local hunks, hunks_err
   local reponame = git_repo.discover()
   if file:has_both('DU') then
     hunks, hunks_err = git_hunks.list(reponame, filename, {
@@ -135,9 +135,9 @@ function Store:get_file_hunks(file, status, lines)
   elseif status == 'unmerged' then
     if git_conflict.has_conflict(reponame, filename) then
       local head_log, head_log_err = git_log.get(reponame, 'HEAD')
-      if head_log_err then return head_log_err end
+      if head_log_err then return nil, head_log_err end
       local merge_log, merge_log_err = git_log.get(reponame, 'MERGE_HEAD')
-      if merge_log_err then return merge_log_err end
+      if merge_log_err then return nil, merge_log_err end
       hunks, hunks_err =
         git_hunks.list(reponame, filename, { parent = head_log.commit_hash, current = merge_log.commit_hash })
     else
@@ -148,7 +148,7 @@ function Store:get_file_hunks(file, status, lines)
 
   loop.free_textlock()
 
-  return hunks_err, hunks
+  return hunks, hunks_err
 end
 
 function Store:reset()
@@ -168,12 +168,12 @@ function Store:fetch(shape, opts)
 
   self:reset()
 
-  if not git_repo.exists() then return { 'Project has no .git folder' }, nil end
+  if not git_repo.exists() then return nil, { 'Project has no .git folder' } end
 
   loop.free_textlock()
   local reponame = git_repo.discover()
   local status_files, status_files_err = git_status.ls(reponame)
-  if status_files_err then return status_files_err end
+  if status_files_err then return nil, status_files_err end
 
   local changed_files, staged_files, unmerged_files = self:partition_status(status_files)
 
@@ -189,12 +189,11 @@ function Store:fetch(shape, opts)
 end
 
 function Store:get_all()
-  return self.err, self.data
+  return self.data, self.err
 end
 
 function Store:set_id(id)
   self.id = id
-
   return self
 end
 
@@ -202,76 +201,67 @@ function Store:get(id)
   if id then self.id = id end
 
   local datum = self.state.list_entries[self.id]
+  if not datum then return nil, { 'Item not found' } end
 
-  if not datum then return { 'Item not found' }, nil end
-
-  return nil, datum
+  return datum, nil
 end
 
 function Store:get_diff()
-  local err, datum = self:get()
-
-  if err then return err end
+  local datum, err = self:get()
+  if err then return nil, err end
 
   local id = datum.id
   local file = datum.file
   local status = datum.status
 
-  if not file then return { 'No file found in item' }, nil end
+  if not file then return nil, { 'No file found in item' } end
 
   local cache_key = string.format('%s-%s-%s', id, status, file.id)
+  if self.state.diffs[cache_key] then return self.state.diffs[cache_key], nil end
 
-  if self.state.diffs[cache_key] then return nil, self.state.diffs[cache_key] end
+  local lines, lines_err = self:get_file_lines(file, status)
+  if lines_err then return nil, lines_err end
 
-  local lines_err, lines = self:get_file_lines(file, status)
-
-  if lines_err then return lines_err, nil end
-
-  local hunks_err, hunks = self:get_file_hunks(file, status, lines)
-
-  if hunks_err then return hunks_err end
+  local hunks, hunks_err = self:get_file_hunks(file, status, lines)
+  if hunks_err then return nil, hunks_err end
 
   local is_deleted = not (file:has_both('DU') or file:has_both('UD')) and file:has_either('DD')
   local diff = Diff():generate(hunks, lines, self.shape, { is_deleted = is_deleted })
 
   self.state.diffs[cache_key] = diff
 
-  return nil, self.state.diffs[cache_key]
+  return self.state.diffs[cache_key], nil
 end
 
 function Store:get_filename()
-  local err, datum = self:get()
+  local datum, err = self:get()
+  if err then return nil, err end
 
-  if err then return err end
-
-  return nil, datum.file.filename
+  return datum.file.filename, nil
 end
 
 function Store:get_filetype()
-  local err, datum = self:get()
+  local datum, err = self:get()
+  if err then return nil, err end
 
-  if err then return err end
-
-  return nil, datum.file.filetype
+  return datum.file.filetype, nil
 end
 
 function Store:get_lnum()
-  return nil, self.state.lnum
+  return self.state.lnum, nil
 end
 
 function Store:set_lnum(lnum)
   self.state.lnum = lnum
-
   return self
 end
 
 function Store:get_list_folds()
-  return nil, self.state.list_folds
+  return self.state.list_folds
 end
 
 function Store:set_list_folds(list_folds)
   self.state.list_folds = list_folds
-
   return self
 end
 

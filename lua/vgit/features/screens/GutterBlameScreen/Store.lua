@@ -24,12 +24,11 @@ function Store:reset()
     lines = nil,
     diff = nil,
   }
-
   return self
 end
 
 function Store:fetch(filename, lines)
-  if not filename or filename == '' then return { 'Buffer has no blame associated with it' }, nil end
+  if not filename or filename == '' then return nil, { 'Buffer has no blame associated with it' } end
 
   self:reset()
 
@@ -41,27 +40,25 @@ function Store:fetch(filename, lines)
 
   self.state.lines = lines
 
-  return self.err, self.data
+  return self.data, self.err
 end
 
 function Store:get_blames()
-  return self.err, self.data
+  return self.data, self.err
 end
 
 function Store:get_diff()
-  if self.state.diff then return nil, self.state.diff end
-
+  if self.state.diff then return self.state.diff end
   self.state.diff = Diff({ lines = self.state.lines })
-
-  return nil, self.state.diff
+  return self.state.diff
 end
 
 function Store:get_filename()
-  return nil, self.git_object:get_filename()
+  return self.git_object:get_filename()
 end
 
 function Store:get_filetype()
-  return nil, self.git_object:get_filetype()
+  return self.git_object:get_filetype()
 end
 
 return Store

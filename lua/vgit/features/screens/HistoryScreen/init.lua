@@ -74,7 +74,7 @@ end
 
 function HistoryScreen:show()
   local buffer = Buffer(0)
-  local err = self.store:fetch(self.layout_type, buffer:get_name())
+  local _, err = self.store:fetch(self.layout_type, buffer:get_name())
 
   loop.free_textlock()
   if err then
@@ -99,7 +99,6 @@ function HistoryScreen:show()
       handler = loop.coroutine(function()
         loop.free_textlock()
         local row = self.table_view:get_current_row()
-
         if not row then return end
 
         vim.cmd('quit')

@@ -22,7 +22,7 @@ end
 
 function ProjectStashScreen:show(opts)
   loop.free_textlock()
-  local err = self.store:fetch(opts)
+  local _, err = self.store:fetch(opts)
 
   loop.free_textlock()
   if err then
@@ -65,7 +65,6 @@ end
 
 function ProjectStashScreen:destroy()
   self.scene:destroy()
-
   return self
 end
 

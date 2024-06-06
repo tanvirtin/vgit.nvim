@@ -23,7 +23,7 @@ end
 
 function ProjectLogsScreen:show()
   loop.free_textlock()
-  local err = self.store:fetch()
+  local _, err = self.store:fetch()
 
   loop.free_textlock()
   if err then

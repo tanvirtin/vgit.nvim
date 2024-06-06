@@ -57,8 +57,7 @@ end
 function SimpleView:set_title()
   if self.config.elements and not self.config.elements.header then return self end
 
-  local _, title = self.store:get_title()
-
+  local title = self.store:get_title()
   self.scene:get('simple_view'):set_title(title)
 
   return self
@@ -69,8 +68,7 @@ function SimpleView:get_lines()
 end
 
 function SimpleView:render()
-  local err, lines = self.store:get_lines()
-
+  local lines, err = self.store:get_lines()
   if err then
     console.debug.error(err).error(err)
     return self
