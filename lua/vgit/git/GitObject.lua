@@ -77,6 +77,10 @@ function GitObject:parse_conflicts(lines)
   return git_conflict.parse(lines)
 end
 
+function GitObject:conflict_status()
+  return git_conflict.status(self.reponame)
+end
+
 function GitObject:log(opts)
   return git_log.get(self.reponame, opts.rev)
 end

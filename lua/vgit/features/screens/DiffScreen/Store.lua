@@ -54,7 +54,9 @@ function Store:fetch(shape, filename, opts)
       self.err = head_log_err
       return nil, head_log_err
     end
-    local merge_log, merge_log_err = self.git_object:log({ rev = 'MERGE_HEAD' })
+    local conflict_type, conflict_type_err = self.git_object:conflict_status()
+    if conflict_type_err then return nil, conflict_type_err end
+    local merge_log, merge_log_err = self.git_object:log({ rev = conflict_type })
     if merge_log_err then
       self.err = merge_log_err
       return nil, merge_log_err

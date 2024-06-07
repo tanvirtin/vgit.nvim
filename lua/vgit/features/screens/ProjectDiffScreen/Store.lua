@@ -136,7 +136,9 @@ function Store:get_file_hunks(file, status, lines)
     if git_conflict.has_conflict(reponame, filename) then
       local head_log, head_log_err = git_log.get(reponame, 'HEAD')
       if head_log_err then return nil, head_log_err end
-      local merge_log, merge_log_err = git_log.get(reponame, 'MERGE_HEAD')
+      local conflict_type, conflict_type_err = git_conflict.status(reponame)
+      if conflict_type_err then return nil, conflict_type_err end
+      local merge_log, merge_log_err = git_log.get(reponame, conflict_type)
       if merge_log_err then return nil, merge_log_err end
       hunks, hunks_err =
         git_hunks.list(reponame, filename, { parent = head_log.commit_hash, current = merge_log.commit_hash })
