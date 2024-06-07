@@ -1,3 +1,4 @@
+local fs = require('vgit.core.fs')
 local gitcli = require('vgit.git.gitcli')
 
 local git_conflict = {}
@@ -83,6 +84,17 @@ function git_conflict.has_conflict(reponame, filename)
 
   if err then return nil, err end
   return result and #result ~= 0
+end
+
+function git_conflict.status(reponame)
+  if not reponame then return nil, { 'reponame is required' } end
+
+  if fs.exists(string.format('%s/.git/MERGE_HEAD', reponame)) then return 'MERGE_HEAD' end
+  if fs.exists(string.format('%s/.git/REVERT_HEAD', reponame)) then return 'REVERT_HEAD' end
+  if fs.exists(string.format('%s/.git/REBASE_HEAD', reponame)) then return 'REBASE_HEAD' end
+  if fs.exists(string.format('%s/.git/CHERRY_PICK_HEAD', reponame)) then return 'CHERRY_PICK_HEAD' end
+
+  return nil
 end
 
 return git_conflict
