@@ -34,7 +34,7 @@ function git_blame.list(reponame, filename, commit)
     end
   end
 
-  return blames, nil
+  return blames
 end
 
 function git_blame.get(reponame, filename, lnum)

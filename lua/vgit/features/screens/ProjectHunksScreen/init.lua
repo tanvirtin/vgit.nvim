@@ -69,14 +69,10 @@ end
 
 function ProjectHunksScreen:hunk_up()
   self.diff_view:prev()
-
-  return self
 end
 
 function ProjectHunksScreen:hunk_down()
   self.diff_view:next()
-
-  return self
 end
 
 function ProjectHunksScreen:handle_list_move(direction)
@@ -176,7 +172,6 @@ end
 
 function ProjectHunksScreen:destroy()
   self.scene:destroy()
-  return self
 end
 
 return ProjectHunksScreen

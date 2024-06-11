@@ -33,8 +33,6 @@ function Store:reset()
     commits = {},
     list_entry_cache = {},
   }
-
-  return self
 end
 
 function Store:fetch(shape, commits, opts)
@@ -98,7 +96,6 @@ end
 
 function Store:set_id(id)
   self.id = id
-  return self
 end
 
 function Store:get(id)
@@ -194,8 +191,6 @@ end
 
 function Store:set_lnum(lnum)
   self.state.lnum = lnum
-
-  return self
 end
 
 function Store:get_list_folds()
@@ -204,7 +199,6 @@ end
 
 function Store:set_list_folds(list_folds)
   self.state.list_folds = list_folds
-  return self
 end
 
 return Store

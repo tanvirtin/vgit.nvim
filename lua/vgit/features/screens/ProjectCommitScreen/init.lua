@@ -48,8 +48,6 @@ function ProjectCommitScreen:render_help_bar()
   self.app_bar_view:set_lines({ text })
   self.app_bar_view:add_pattern_highlight('%((%a+)%)', 'Keyword')
   self.app_bar_view:add_pattern_highlight('|', 'Number')
-
-  return self
 end
 
 function ProjectCommitScreen:show()
@@ -91,8 +89,6 @@ end
 
 function ProjectCommitScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return ProjectCommitScreen

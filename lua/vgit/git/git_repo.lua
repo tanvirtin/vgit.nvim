@@ -12,15 +12,15 @@ function git_repo.discover(filepath)
   local result, err = gitcli.run({ '-C', dirname, 'rev-parse', '--show-toplevel' })
 
   if err then return nil, err end
-  return result[1], nil
+  return result[1] 
 end
 
 function git_repo.exists(filepath)
   local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
   local _, err = gitcli.run({ '-C', dirname, 'rev-parse', '--is-inside-git-dir' })
 
-  if err then return false, nil end
-  return true, nil
+  if err then return false end
+  return true 
 end
 
 function git_repo.has(reponame, filename, commit)
@@ -40,8 +40,8 @@ function git_repo.has(reponame, filename, commit)
   })
 
   if err then return nil, err end
-  if #result == 0 then return false, nil end
-  return true, nil
+  if #result == 0 then return false end
+  return true 
 end
 
 function git_repo.ignores(reponame, filename)
@@ -51,8 +51,8 @@ function git_repo.ignores(reponame, filename)
   local result, err = gitcli.run({ '-C', reponame, '--no-pager', 'check-ignore', filename })
 
   if err then return nil, err end
-  if #result == 0 then return false, nil end
-  return true, nil
+  if #result == 0 then return false end
+  return true 
 end
 
 function git_repo.checkout(reponame, name)

@@ -66,8 +66,6 @@ end
 
 function ProjectLogsScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return ProjectLogsScreen

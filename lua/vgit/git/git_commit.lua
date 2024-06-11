@@ -21,7 +21,7 @@ function git_commit.create(reponame, description)
   if has_no_changes then return nil, { 'Nothing to commit, working tree clean' } end
   if is_uncommitted then return nil, { 'No changes added to commit (use "git add" and/or "git commit -a")' } end
 
-  return true, nil
+  return true 
 end
 
 function git_commit.dry_run(reponame)

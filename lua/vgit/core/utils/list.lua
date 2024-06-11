@@ -111,4 +111,15 @@ function list.extract(l, startIndex, endIndex)
   return extractedItems
 end
 
+function list.some(l, callback)
+  for i = 1, #l do
+    local item = l[i]
+    local has_some = callback(item, i)
+
+    if has_some == true then return true end
+  end
+
+  return false
+end
+
 return list

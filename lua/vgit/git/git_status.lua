@@ -22,7 +22,7 @@ function git_status.ls(reponame, filename)
   local files = {}
   for i = 1, #result do
     local line = result[i]
-    files[#files + 1] = GitStatus(line:sub(4, #line), line:sub(1, 2))
+    files[#files + 1] = GitStatus(line)
   end
 
   if filename then return files[1] end
@@ -52,7 +52,7 @@ function git_status.tree(reponame, opts)
   local files = {}
   for i = 1, #result do
     local line = result[i]
-    files[#files + 1] = GitStatus(line, '--')
+    files[#files + 1] = GitStatus(string.format('%s %s', '--', line))
   end
 
   return files

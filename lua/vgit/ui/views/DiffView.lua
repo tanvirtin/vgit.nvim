@@ -562,8 +562,6 @@ function DiffView:get_current_mark_under_cursor()
 
     if lnum >= mark.top and lnum <= mark.bot then return mark, i end
   end
-
-  return nil, nil
 end
 
 function DiffView:get_current_hunk_under_cursor()
@@ -588,8 +586,6 @@ function DiffView:get_current_hunk_under_cursor()
   end
 
   if selected then return hunks[selected], selected end
-
-  return nil, nil
 end
 
 function DiffView:set_lnum(lnum, position)

@@ -15,10 +15,12 @@ function LiveConflict:conflict_accept_current_change(buffer)
   local cursor = window:get_cursor()
   local conflict = buffer:get_conflict_under_hunk(cursor)
   if not conflict then return end
+
   local lines = buffer:get_lines()
   local current_lines = utils.list.extract(lines, conflict.current.top + 1, conflict.current.bot)
   local conflict_top = conflict.current.top
   local conflict_bot = conflict.incoming.bot
+
   lines = utils.list.replace(lines, conflict_top, conflict_bot, current_lines)
   buffer:set_lines(lines)
   buffer:call(function() vim.cmd('LspStart') end)
@@ -29,10 +31,12 @@ function LiveConflict:conflict_accept_incoming_change(buffer)
   local cursor = window:get_cursor()
   local conflict = buffer:get_conflict_under_hunk(cursor)
   if not conflict then return end
+
   local lines = buffer:get_lines()
   local incoming_lines = utils.list.extract(lines, conflict.incoming.top, conflict.incoming.bot - 1)
   local conflict_top = conflict.current.top
   local conflict_bot = conflict.incoming.bot
+
   lines = utils.list.replace(lines, conflict_top, conflict_bot, incoming_lines)
   buffer:set_lines(lines)
   buffer:call(function() vim.cmd('LspStart') end)
@@ -43,12 +47,14 @@ function LiveConflict:conflict_accept_both_changes(buffer)
   local cursor = window:get_cursor()
   local conflict = buffer:get_conflict_under_hunk(cursor)
   if not conflict then return end
+
   local lines = buffer:get_lines()
   local current_lines = utils.list.extract(lines, conflict.current.top + 1, conflict.current.bot)
   local incoming_lines = utils.list.extract(lines, conflict.incoming.top, conflict.incoming.bot - 1)
   local replacement_lines = utils.list.concat(current_lines, incoming_lines)
   local conflict_top = conflict.current.top
   local conflict_bot = conflict.incoming.bot
+
   lines = utils.list.replace(lines, conflict_top, conflict_bot, replacement_lines)
   buffer:set_lines(lines)
   buffer:call(function() vim.cmd('LspStart') end)

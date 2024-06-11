@@ -14,7 +14,6 @@ end
 function Store:reset()
   self.err = nil
   self.data = nil
-  return self
 end
 
 function Store:fetch(opts)

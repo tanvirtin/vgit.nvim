@@ -24,7 +24,6 @@ function Store:reset()
     lines = nil,
     diff = nil,
   }
-  return self
 end
 
 function Store:fetch(filename, lines)

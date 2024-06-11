@@ -125,6 +125,16 @@ function GitObject:live_hunks(current_lines)
 end
 
 function GitObject:list_hunks(opts)
+  if opts.deleted then
+    local lines = opts.lines
+    opts.lines = nil
+    return git_hunks.custom(lines, opts)
+  end
+  if opts.untracked then
+    local lines = opts.lines
+    opts.lines = nil
+    return git_hunks.custom(lines, opts)
+  end
   return git_hunks.list(self.reponame, self.filename, opts)
 end
 
