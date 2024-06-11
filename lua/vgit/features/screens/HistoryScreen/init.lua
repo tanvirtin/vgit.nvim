@@ -55,14 +55,10 @@ end
 
 function HistoryScreen:hunk_up()
   self.diff_view:prev()
-
-  return self
 end
 
 function HistoryScreen:hunk_down()
   self.diff_view:next()
-
-  return self
 end
 
 function HistoryScreen:handle_list_move(direction)
@@ -135,8 +131,6 @@ end
 
 function HistoryScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return HistoryScreen

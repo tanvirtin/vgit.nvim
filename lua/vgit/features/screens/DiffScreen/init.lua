@@ -59,14 +59,10 @@ end
 
 function DiffScreen:hunk_up()
   pcall(self.diff_view.prev, self.diff_view, 'center')
-
-  return self
 end
 
 function DiffScreen:hunk_down()
   pcall(self.diff_view.next, self.diff_view, 'center')
-
-  return self
 end
 
 function DiffScreen:render_help_bar()
@@ -97,8 +93,6 @@ function DiffScreen:render_help_bar()
   self.app_bar_view:set_lines({ text })
   self.app_bar_view:add_pattern_highlight('%((%a+)%)', 'Keyword')
   self.app_bar_view:add_pattern_highlight('|', 'Number')
-
-  return self
 end
 
 function DiffScreen:show(opts)
@@ -360,8 +354,6 @@ end
 
 function DiffScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return DiffScreen

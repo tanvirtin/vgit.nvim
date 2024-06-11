@@ -21,7 +21,6 @@ end
 function Store:reset()
   self.err = nil
   self.state = { blame = nil, diff = nil }
-  return self
 end
 
 function Store:fetch(shape, filename, lnum, opts)

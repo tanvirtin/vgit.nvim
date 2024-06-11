@@ -18,7 +18,7 @@ function git_log.get(reponame, commit)
   })
 
   if err then return nil, err end
-  return GitLog(result[1]), nil
+  return GitLog(result[1])
 end
 
 function git_log.list(reponame, filename)
@@ -41,7 +41,7 @@ function git_log.list(reponame, filename)
     logs[i] = GitLog(result[i])
   end
 
-  return logs, nil
+  return logs
 end
 
 function git_log.list_stash(reponame)
@@ -66,7 +66,7 @@ function git_log.list_stash(reponame)
     logs[i] = GitLog(result[i], rev_count)
   end
 
-  return logs, nil
+  return logs
 end
 
 return git_log

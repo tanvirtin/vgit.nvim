@@ -30,7 +30,6 @@ function Store:reset()
     lnum = 1,
     list_entry_cache = {},
   }
-  return self
 end
 
 function Store:fetch(shape, opts)
@@ -93,7 +92,6 @@ end
 
 function Store:set_id(id)
   self.id = id
-  return self
 end
 
 function Store:get_data(id)
@@ -157,7 +155,7 @@ function Store:get_lines(file)
     lines, lines_err = fs.read_file(filename)
   end
 
-  return lines, lines_err 
+  return lines, lines_err
 end
 
 function Store:get_hunks(file, lines, is_staged)
@@ -211,7 +209,6 @@ end
 
 function Store:set_list_folds(list_folds)
   self.state.list_folds = list_folds
-  return self
 end
 
 return Store

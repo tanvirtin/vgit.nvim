@@ -4,8 +4,9 @@ local Object = require('vgit.core.Object')
 
 local GitStatus = Object:extend()
 
-function GitStatus:constructor(filename, value)
-  filename = filename:gsub('"', '')
+function GitStatus:constructor(status)
+  local value = status:sub(1, 2)
+  local filename = status:sub(4, #status):gsub('"', '')
 
   local first, second = GitStatus:parse(value)
   local filetype = fs.detect_filetype(filename)
@@ -26,20 +27,23 @@ end
 
 function GitStatus:has(status)
   local first, second = self:parse(status)
-  local actual_status = self.value
   local actual_first, actual_second = self.first, self.second
 
-  if actual_first ~= ' ' then
-    if first == '*' then return true end
-    if first == actual_first then return true end
+  if first == '*' then
+    if second == actual_second then
+      return true
+    end
+  elseif second == '*' then
+    if first == actual_first then
+      return true
+    end
+  else
+    if first == actual_first and second == actual_second then
+      return true
+    end
   end
 
-  if actual_second ~= ' ' then
-    if second == '*' then return true end
-    if second == actual_second then return true end
-  end
-
-  return status == '**' or status == actual_status
+  return false
 end
 
 function GitStatus:has_either(status)
@@ -52,32 +56,22 @@ function GitStatus:has_both(status)
   return first == self.first and second == self.second
 end
 
-function GitStatus:is_ignored()
-  return self:has('!!')
-end
-
-function GitStatus:is_unchanged()
-  return self:has_both('--')
+function GitStatus:is_unmerged()
+  return utils.list.some({ 'DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU' }, function (status)
+    return self:has(status)
+  end)
 end
 
 function GitStatus:is_staged()
-  return self:has('* ')
+  return utils.list.some({ 'A*', 'M*', 'T*', 'D*', 'R*', 'C*' }, function (status)
+    return self:has(status)
+  end)
 end
 
 function GitStatus:is_unstaged()
-  return self:has(' *')
-end
-
-function GitStatus:is_untracked()
-  return self:has('??')
-end
-
-function GitStatus:is_tracked()
-  return not self:is_untracked() and not self:is_ignored()
-end
-
-function GitStatus:is_unmerged()
-  return self:has_either('UU')
+  return utils.list.some({ '*M', '*T', '*D', '*R', '*C' }, function (status)
+    return self:has(status)
+  end)
 end
 
 return GitStatus

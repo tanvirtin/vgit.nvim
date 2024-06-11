@@ -104,10 +104,12 @@ function FSListGenerator:create_node(path)
       value = path.current,
     }
 
-    if icon then list_entry.icon_before = {
-      icon = icon,
-      hl = icon_hl,
-    } end
+    if icon then
+      list_entry.icon_before = {
+        icon = icon,
+        hl = icon_hl,
+      }
+    end
 
     return list_entry
   end
@@ -160,6 +162,13 @@ function FSListGenerator:sort()
         files[#files + 1] = item
       end
     end
+
+    local sort_fn = function(entry1, entry2)
+      return entry1.value < entry2.value
+    end
+
+    table.sort(folders, sort_fn)
+    table.sort(files, sort_fn)
 
     return utils.list.merge(folders, files)
   end

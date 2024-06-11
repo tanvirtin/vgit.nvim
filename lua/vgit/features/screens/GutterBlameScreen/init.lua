@@ -30,17 +30,15 @@ function GutterBlameScreen:open_commit()
   local lnum = Window(0):get_lnum()
   loop.free_textlock()
   local blames, err_blames = self.store:get_blames()
-  if err_blames then return self end
+  if err_blames then return end
 
   local blame = blames[lnum]
-  if not blame.committed then return self end
+  if not blame.committed then return end
 
   vim.cmd('quit')
 
   loop.free_textlock()
   vim.cmd(string.format('VGit project_commits_preview %s', blame.commit_hash))
-
-  return self
 end
 
 function GutterBlameScreen:show()
@@ -82,8 +80,6 @@ end
 
 function GutterBlameScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return GutterBlameScreen

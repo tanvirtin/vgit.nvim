@@ -65,7 +65,6 @@ end
 
 function ProjectStashScreen:destroy()
   self.scene:destroy()
-  return self
 end
 
 return ProjectStashScreen

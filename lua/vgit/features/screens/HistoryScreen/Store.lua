@@ -22,8 +22,6 @@ function Store:reset()
   self.data = nil
   self.index = 1
   self.state = {}
-
-  return self
 end
 
 function Store:fetch(shape, filename, opts)
@@ -50,7 +48,6 @@ end
 
 function Store:set_index(index)
   self.index = index
-  return self
 end
 
 function Store:get(index)
@@ -60,7 +57,7 @@ function Store:get(index)
     return nil, { 'No data found, check how you are defining store data' }
   end
 
-  return self.data[self.index], nil
+  return self.data[self.index]
 end
 
 function Store:get_diff(index)
@@ -73,7 +70,7 @@ function Store:get_diff(index)
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self.state[id] then return self.state[id], nil end
+  if self.state[id] then return self.state[id] end
 
   local hunks, hunks_err = self.git_object:list_hunks({
     parent = parent_hash,
@@ -109,7 +106,6 @@ end
 
 function Store:set_lnum(lnum)
   self.state.lnum = lnum
-  return self
 end
 
 return Store

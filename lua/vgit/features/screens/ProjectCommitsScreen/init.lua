@@ -206,8 +206,6 @@ end
 
 function ProjectCommitsScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return ProjectCommitsScreen

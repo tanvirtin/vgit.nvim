@@ -40,12 +40,10 @@ end
 
 function LineBlameScreen:hunk_up()
   self.diff_view:prev()
-  return self
 end
 
 function LineBlameScreen:hunk_down()
   self.diff_view:next()
-  return self
 end
 
 function LineBlameScreen:handle_on_enter(buffer, blame)
@@ -107,7 +105,6 @@ end
 
 function LineBlameScreen:destroy()
   self.scene:destroy()
-  return self
 end
 
 return LineBlameScreen
