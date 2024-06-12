@@ -1,4 +1,5 @@
 local utils = require('vgit.core.utils')
+
 local dimensions = {}
 
 function dimensions.global_width()
@@ -32,7 +33,6 @@ function dimensions.relative_size(parent, child, op)
 
   -- TODO: Can relativity be applied on integers?
   if type(child) == 'number' then return child end
-
   -- TODO: Can relativity be applied on integers?
   if type(parent) == 'number' then return parent end
 
@@ -48,7 +48,6 @@ function dimensions.relative_size(parent, child, op)
   local unit = dimensions.get_unit(parent)
 
   if op == 'add' then value = child_value + value end
-
   if op == 'remove' then value = child_value - value end
 
   return string.format('%s%s', value, unit)
@@ -74,7 +73,6 @@ function dimensions.convert(value)
     local type = value:sub(#value - 1, #value)
 
     if type == 'vh' then return utils.math.round((tonumber(number_value) / 100) * dimensions.global_height()) end
-
     if type == 'vw' then return utils.math.round((tonumber(number_value) / 100) * dimensions.global_width()) end
 
     error(debug.traceback('error :: invalid dimension, should either be \'vh\' or \'vw\''))

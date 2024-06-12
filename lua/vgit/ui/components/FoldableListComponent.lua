@@ -178,6 +178,9 @@ function FoldableListComponent:generate_lines()
     end
   end
 
+  table.sort(self.state.list, function(item1, item2)
+    return item1.value > item2.value
+  end)
   generate_lines(self.state.list, 0)
 
   self.state.hls = hls

@@ -95,6 +95,10 @@ function Store:fetch(shape, opts)
   return self.data
 end
 
+function Store:set_id(id)
+  self.id = id
+end
+
 function Store:get(id)
   if id then self.id = id end
   return self.state.list_entries[self.id]
@@ -102,10 +106,6 @@ end
 
 function Store:get_all()
   return self.data, self.err
-end
-
-function Store:set_id(id)
-  self.id = id
 end
 
 function Store:get_filename()

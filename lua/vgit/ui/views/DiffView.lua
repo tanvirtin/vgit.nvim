@@ -68,7 +68,7 @@ function DiffView:define()
           },
           win_plot = dimensions.relative_win_plot(self.plot, {
             height = '100vh',
-            width = '49vw',
+            width = '50vw',
           }),
         },
       })
@@ -88,8 +88,8 @@ function DiffView:define()
           },
           win_plot = dimensions.relative_win_plot(self.plot, {
             height = '100vh',
-            width = '51vw',
-            col = '51vw',
+            width = '50vw',
+            col = '50vw',
           }),
         },
       })
