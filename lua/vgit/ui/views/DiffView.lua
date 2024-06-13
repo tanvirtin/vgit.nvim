@@ -752,10 +752,18 @@ function DiffView:render()
 
       self.state = DiffView:get_initial_state()
 
-      return self:clear_title():clear_lines():clear_notification():reset_cursor()
+      return self:clear_title()
+        :clear_lines()
+        :clear_notification()
+        :reset_cursor()
     end
 
-    return self:reset_cursor():render_title():render_filetype():render_lines():render_line_numbers():paint()
+    return self:reset_cursor()
+      :render_title()
+      :render_filetype()
+      :render_lines()
+      :render_line_numbers()
+      :paint()
   end)
 
   if not ok then console.debug.error(msg) end
@@ -764,9 +772,8 @@ end
 
 DiffView.render_debounced = loop.debounce_coroutine(function(self, callback)
   self:render()
-
   if callback then callback() end
-end, 300)
+end, 100)
 
 function DiffView:mount()
   if self.layout_type == 'split' then self.scene:get('previous'):mount() end

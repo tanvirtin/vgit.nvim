@@ -65,8 +65,6 @@ function FoldableListComponent:find_list_item(callback)
   for lnum, item in pairs(self.state) do
     if callback(item) then return item, lnum end
   end
-
-  return nil
 end
 
 function FoldableListComponent:query_list_item(callback)
@@ -74,8 +72,6 @@ function FoldableListComponent:query_list_item(callback)
     local result = callback(list_item)
     if result == true then return list_item end
   end
-
-  return nil
 end
 
 function FoldableListComponent:generate_lines()
