@@ -3,8 +3,6 @@ local loop = require('vgit.core.loop')
 local sign = require('vgit.core.sign')
 local Command = require('vgit.Command')
 local keymap = require('vgit.core.keymap')
-local console = require('vgit.core.console')
-local git_repo = require('vgit.git.git_repo')
 local renderer = require('vgit.core.renderer')
 local highlight = require('vgit.core.highlight')
 local hls_setting = require('vgit.settings.hls')
@@ -22,7 +20,6 @@ local live_blame_setting = require('vgit.settings.live_blame')
 local live_gutter_setting = require('vgit.settings.live_gutter')
 local LiveConflict = require('vgit.features.buffer.LiveConflict')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
-local ProjectHunksQuickfix = require('vgit.features.quickfix.ProjectHunksQuickfix')
 local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
 
 local hunks = Hunks()
@@ -30,7 +27,6 @@ local command = Command()
 local live_blame = LiveBlame()
 local live_gutter = LiveGutter()
 local live_conflict = LiveConflict()
-local project_hunks_quickfix = ProjectHunksQuickfix()
 
 local settings = {
   screen = scene_setting,
@@ -109,9 +105,6 @@ local buffer = {
 }
 
 local project = {
-  hunks_qf = loop.coroutine(function()
-    project_hunks_quickfix:show()
-  end),
   commit_preview = loop.coroutine(function(...)
     screen_manager.show('commit_screen', ...)
   end),
@@ -126,13 +119,6 @@ local project = {
   end),
   commits_preview = loop.coroutine(function(...)
     screen_manager.show('project_commits_screen', ...)
-  end),
-  reset_all = loop.coroutine(function()
-    local decision = console.input('Are you sure you want to discard all tracked changes? (y/N) '):lower()
-    if decision ~= 'yes' and decision ~= 'y' then return end
-
-    local reponame = git_repo.discover()
-    git_repo.reset(reponame)
   end),
 }
 
