@@ -102,11 +102,6 @@ ProjectDiffScreen.stage_hunk = loop.debounce_coroutine(function(self)
   end
 
   self:render()
-  self:move_to(function(node)
-    local node_filename = node.path and node.path.status and node.path.status.filename or nil
-    local category = node.metadata and node.metadata.category or nil
-    return node_filename == entry.status.filename and category == 'Changes'
-  end)
 end, 5)
 
 ProjectDiffScreen.unstage_hunk = loop.debounce_coroutine(function(self)
@@ -126,11 +121,6 @@ ProjectDiffScreen.unstage_hunk = loop.debounce_coroutine(function(self)
   end
 
   self:render()
-  self:move_to(function(node)
-    local node_filename = node.path and node.path.status and node.path.status.filename or nil
-    local category = node.metadata and node.metadata.category or nil
-    return node_filename == entry.status.filename and category == 'Staged Changes'
-  end)
 end, 5)
 
 ProjectDiffScreen.stage_file = loop.debounce_coroutine(function(self)
