@@ -30,7 +30,6 @@ function Command:constructor()
       'buffer_conflict_accept_incoming_change',
       'buffer_conflict_accept_both_changes',
 
-      'project_hunks_qf',
       'project_logs_preview',
       'project_stash_preview',
       'project_diff_preview',

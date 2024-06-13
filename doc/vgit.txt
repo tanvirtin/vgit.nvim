@@ -337,10 +337,6 @@ project_stash_preview()                 *vgit.project_stash_preview()*
                 key on the preview will send the selected stashes to
                 "project_commits_preview"
 
-project_hunks_qf()                                      *vgit.project_hunks_qf()*
-                Populate the quickfix list with hunks. Automatically opens the
-                quickfix window.
-
 hunk_up()                                                        *vgit.hunk_up()*
                 Moves the cursor to the hunk above the current cursor
                 position.
