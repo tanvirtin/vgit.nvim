@@ -34,10 +34,8 @@ function Command:constructor()
       'project_logs_preview',
       'project_stash_preview',
       'project_diff_preview',
-      'project_hunks_preview',
       'project_commit_preview',
       'project_commits_preview',
-      'project_hunks_staged_preview',
 
       'toggle_tracing',
       'toggle_diff_preference',

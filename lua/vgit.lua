@@ -115,9 +115,6 @@ local project = {
   commit_preview = loop.coroutine(function(...)
     screen_manager.show('commit_screen', ...)
   end),
-  hunks_preview = loop.coroutine(function()
-    screen_manager.show('project_hunks_screen')
-  end),
   diff_preview = loop.coroutine(function()
     screen_manager.show('project_diff_screen')
   end),
@@ -129,9 +126,6 @@ local project = {
   end),
   commits_preview = loop.coroutine(function(...)
     screen_manager.show('project_commits_screen', ...)
-  end),
-  hunks_staged_preview = loop.coroutine(function()
-    screen_manager.show('project_hunks_screen', { is_staged = true })
   end),
   reset_all = loop.coroutine(function()
     local decision = console.input('Are you sure you want to discard all tracked changes? (y/N) '):lower()
@@ -264,8 +258,6 @@ return {
   project_diff_preview = project.diff_preview,
   project_logs_preview = project.logs_preview,
   project_stash_preview = project.stash_preview,
-  project_hunks_preview = project.hunks_preview,
   project_commit_preview = project.commit_preview,
   project_commits_preview = project.commits_preview,
-  project_hunks_staged_preview = project.hunks_staged_preview,
 }

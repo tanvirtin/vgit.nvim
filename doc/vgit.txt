@@ -35,8 +35,6 @@ More advanced configuration:
         ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
         ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
         ['n <leader>gg'] = function() require('vgit').buffer_gutter_blame_preview() end,
-        ['n <leader>glu'] = function() require('vgit').buffer_hunks_preview() end,
-        ['n <leader>gls'] = function() require('vgit').project_hunks_staged_preview() end,
         ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
         ['n <leader>gq'] = function() require('vgit').project_hunks_qf() end,
         ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
@@ -338,18 +336,6 @@ project_stash_preview()                 *vgit.project_stash_preview()*
                 a list item will keep the item selected. Pressing the "enter"
                 key on the preview will send the selected stashes to
                 "project_commits_preview"
-
-project_hunks_preview()                           *vgit.project_hunks_preview()*
-                Opens a diff preview along with a foldable list of all the
-                current hunks in the project. Users can use this preview to
-                cycle through all the hunks. Pressing enter on a hunk will
-                open the file and focus on the hunk.
-
-project_staged_hunks_preview()           *vgit.project_hunks_staged_preview()*
-                Opens a diff preview along with a foldable list of all the
-                current staged hunks in the project. Users can use this
-                preview to cycle through all the hunks. Pressing enter on a
-                hunk will open the file and focus on the hunk.
 
 project_hunks_qf()                                      *vgit.project_hunks_qf()*
                 Populate the quickfix list with hunks. Automatically opens the
