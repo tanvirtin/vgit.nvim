@@ -100,14 +100,12 @@ end
 function FoldableListView:move_to(callback)
   local list = self.scene:get('list')
   local item, lnum = list:find_list_item(callback)
+  if not item then return end
 
-  if item then
-    list:unlock():set_lnum(lnum):lock()
-    self.store:set_lnum(lnum)
-    return item
-  end
+  list:unlock():set_lnum(lnum):lock()
+  self.store:set_lnum(lnum)
 
-  return nil
+  return item
 end
 
 function FoldableListView:move(direction)
@@ -131,6 +129,8 @@ function FoldableListView:move(direction)
 end
 
 function FoldableListView:render()
+  self:evict_cache()
+
   local lnum = self.store:get_lnum()
   local list = self.scene:get('list')
 
