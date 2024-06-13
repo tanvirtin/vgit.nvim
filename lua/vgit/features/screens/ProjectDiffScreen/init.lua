@@ -56,7 +56,6 @@ function ProjectDiffScreen:constructor(opts)
           local entry = list[category]
           foldable_list[#foldable_list + 1] = {
             open = true,
-            show_count = false,
             value = category,
             items = StatusListGenerator(entry):generate({ category = category }),
           }
