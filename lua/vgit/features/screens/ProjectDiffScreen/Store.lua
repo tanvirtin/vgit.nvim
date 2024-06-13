@@ -45,7 +45,7 @@ function Store:partition_status(statuses)
   utils.list.each(statuses, function(status)
     if status:is_unmerged() then
       local id = utils.math.uuid()
-      local data = { id = id, file = status, type = 'unmerged' }
+      local data = { id = id, status = status, type = 'unmerged' }
       self.state.list_entries[id] = data
       table.insert(unmerged_files, data)
       -- If something is unmerged it cannot be untracked or staged
@@ -54,14 +54,14 @@ function Store:partition_status(statuses)
 
     if status:is_staged() then
       local id = utils.math.uuid()
-      local data = { id = id, file = status, type = 'staged' }
+      local data = { id = id, status = status, type = 'staged' }
       self.state.list_entries[id] = data
       table.insert(staged_files, data)
     end
 
     if status:is_unstaged() then
       local id = utils.math.uuid()
-      local data = { id = id, file = status, type = 'unstaged' }
+      local data = { id = id, status = status, type = 'unstaged' }
       self.state.list_entries[id] = data
       table.insert(changed_files, data)
     end
@@ -113,7 +113,7 @@ function Store:get_filename()
   if err then return nil, err end
   if not entry then return nil, { 'entry not found' } end
 
-  return entry.file.filename
+  return entry.status.filename
 end
 
 function Store:get_filetype()
@@ -121,7 +121,7 @@ function Store:get_filetype()
   if err then return nil, err end
   if not entry then return nil, { 'entry not found' } end
 
-  return entry.file.filetype
+  return entry.status.filetype
 end
 
 function Store:get_lnum()
@@ -190,8 +190,8 @@ function Store:get_diff()
 
   local id = entry.id
   local type = entry.type
-  local status = entry.file
-  if not status then return nil, { 'No file found in entry' } end
+  local status = entry.status
+  if not status then return nil, { 'No status found in entry' } end
 
   local cache_key = string.format('%s-%s-%s', id, type, status.id)
   if self.state.diffs[cache_key] then return self.state.diffs[cache_key] end
