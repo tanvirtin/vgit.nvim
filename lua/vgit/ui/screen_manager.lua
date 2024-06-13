@@ -6,7 +6,6 @@ local DiffScreen = require('vgit.features.screens.DiffScreen')
 local HistoryScreen = require('vgit.features.screens.HistoryScreen')
 local LineBlameScreen = require('vgit.features.screens.LineBlameScreen')
 local ProjectDiffScreen = require('vgit.features.screens.ProjectDiffScreen')
-local ProjectHunksScreen = require('vgit.features.screens.ProjectHunksScreen')
 local GutterBlameScreen = require('vgit.features.screens.GutterBlameScreen')
 local ProjectLogsScreen = require('vgit.features.screens.ProjectLogsScreen')
 local ProjectStashScreen = require('vgit.features.screens.ProjectStashScreen')
@@ -66,12 +65,6 @@ function screen_manager.screens.project_commits_screen(...)
   local project_commits_screen = ProjectCommitsScreen({ layout_type = scene_setting:get('diff_preference') })
 
   return project_commits_screen:show({ ... }), project_commits_screen
-end
-
-function screen_manager.screens.project_hunks_screen(opts)
-  local project_hunks_screen = ProjectHunksScreen({ layout_type = scene_setting:get('diff_preference') })
-
-  return project_hunks_screen:show(opts), project_hunks_screen
 end
 
 function screen_manager.screens.history_screen()

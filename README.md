@@ -119,8 +119,6 @@ require('vgit').setup({
     ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
     ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
     ['n <leader>gg'] = function() require('vgit').buffer_gutter_blame_preview() end,
-    ['n <leader>glu'] = function() require('vgit').buffer_hunks_preview() end,
-    ['n <leader>gls'] = function() require('vgit').project_hunks_staged_preview() end,
     ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
     ['n <leader>gq'] = function() require('vgit').project_hunks_qf() end,
     ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
@@ -356,8 +354,6 @@ set statusline+=%{get(b:,'vgit_status','')}
 | project_commit_preview | Opens a preview through which staged changes can be committed |
 | project_commits_preview [args] | Opens a diff preview along with a list of all your commits |
 | project_stash_preview | Opens a preview listing all stashes. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected stashes |
-| project_hunks_preview | Opens a diff preview along with a foldable list of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
-| project_hunks_staged_preview | Opens a diff preview along with a foldable list of all the current staged hunks in the project. Users can use this preview to cycle through all the hunks. |
 | project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
 | toggle_diff_preference | Used to switch between "split" and "unified" diff. |
 | toggle_live_gutter | Enables/disables git gutter signs. |
