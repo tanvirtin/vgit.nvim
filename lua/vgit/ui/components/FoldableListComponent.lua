@@ -81,8 +81,10 @@ end
 function FoldableListComponent:generate_lines()
   local spacing = 1
   local current_lnum = 0
-  local foldable_list_shadow = {}
+
   local hls = {}
+  local virtual_texts = {}
+  local foldable_list_shadow = {}
 
   local function generate_lines(list, depth)
     if not list then return end
@@ -103,9 +105,21 @@ function FoldableListComponent:generate_lines()
       if items then spacing = 2 end
 
       local indentation_count = spacing * depth
-      local indentation = string.rep(' ', indentation_count)
 
       if items then icon_hl_range_offset = 3 end
+
+      if item.virtual_text then
+        -- TODO: add other support right now just use before
+        virtual_texts[#virtual_texts + 1] = {
+          type = 'before',
+          hl = item.virtual_text.before.hl,
+          lnum = current_lnum,
+          text = item.virtual_text.before.text,
+        }
+        indentation_count = indentation_count + 1
+      end
+
+      local indentation = string.rep(' ', indentation_count)
 
       if icon_before then
         if type(icon_before) == 'function' then icon_before = icon_before(item) end
@@ -184,15 +198,28 @@ function FoldableListComponent:generate_lines()
   generate_lines(self.state.list, 0)
 
   self.state.hls = hls
+  self.state.virtual_texts = virtual_texts
 
   return foldable_list_shadow
 end
 
 function FoldableListComponent:paint()
-  local hls = self.state.hls
-  local num_hls = #hls
+  local virtual_texts = self.state.virtual_texts
+  for i = 1, #virtual_texts do
+    local virtual_text = virtual_texts[i]
+    -- TODO: add other support right now just use before
+    if virtual_text.type == 'before' then
+      self.buffer:transpose_virtual_text({
+        text = virtual_text.text,
+        hl = virtual_text.hl,
+        row = virtual_text.lnum - 1,
+        col = 0,
+      })
+    end
+  end
 
-  for i = 1, num_hls do
+  local hls = self.state.hls
+  for i = 1, #hls do
     local hl_info = hls[i]
     local hl = hl_info.hl
     local lnum = hl_info.lnum

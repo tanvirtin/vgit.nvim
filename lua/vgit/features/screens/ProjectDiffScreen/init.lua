@@ -7,8 +7,8 @@ local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
 local DiffView = require('vgit.ui.views.DiffView')
 local AppBarView = require('vgit.ui.views.AppBarView')
-local FSListGenerator = require('vgit.ui.FSListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
+local StatusListGenerator = require('vgit.ui.StatusListGenerator')
 local Store = require('vgit.features.screens.ProjectDiffScreen.Store')
 local Mutation = require('vgit.features.screens.ProjectDiffScreen.Mutation')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
@@ -58,7 +58,7 @@ function ProjectDiffScreen:constructor(opts)
             open = true,
             show_count = false,
             value = category,
-            items = FSListGenerator(entry):generate({ category = category }),
+            items = StatusListGenerator(entry):generate({ category = category }),
           }
         end
 
@@ -94,9 +94,9 @@ function ProjectDiffScreen:get_list_item(filename)
 
     local metadata = list_item.metadata
     local path = list_item.path
-    local file = path.file
+    local status = path.status
 
-    return metadata.category == 'changes' and filename == file.filename and file:is_unstaged()
+    return metadata.category == 'changes' and filename == status.filename and status:is_unstaged()
   end)
 
   return list_item or self.foldable_list_view:get_current_list_item()
@@ -111,7 +111,7 @@ ProjectDiffScreen.stage_hunk = loop.debounce_coroutine(function(self)
   local hunk = self.diff_view:get_current_hunk_under_cursor()
   if not hunk then return end
 
-  local filename = entry.file.filename
+  local filename = entry.status.filename
   local _, err = self.mutation:stage_hunk(filename, hunk)
   if err then
     console.debug.error(err)
@@ -124,14 +124,14 @@ ProjectDiffScreen.stage_hunk = loop.debounce_coroutine(function(self)
   self.foldable_list_view:evict_cache():render()
 
   local moved_to_item = self:move_to(function(node)
-    local node_filename = node.path and node.path.file and node.path.file.filename or nil
+    local node_filename = node.path and node.path.status and node.path.status.filename or nil
     local category = node.metadata and node.metadata.category or nil
-    return node_filename == entry.file.filename and category == 'Changes'
+    return node_filename == entry.status.filename and category == 'Changes'
   end)
   if not moved_to_item then
     self:move_to(function(node)
-      local node_filename = node.path and node.path.file and node.path.file.filename or nil
-      return node_filename == entry.file.filename
+      local node_filename = node.path and node.path.status and node.path.status.filename or nil
+      return node_filename == entry.status.filename
     end)
   end
 end, 5)
@@ -145,7 +145,7 @@ ProjectDiffScreen.unstage_hunk = loop.debounce_coroutine(function(self)
   local hunk = self.diff_view:get_current_hunk_under_cursor()
   if not hunk then return end
 
-  local filename = entry.file.filename
+  local filename = entry.status.filename
   local _, err = self.mutation:unstage_hunk(filename, hunk)
   if err then
     console.debug.error(err)
@@ -158,14 +158,14 @@ ProjectDiffScreen.unstage_hunk = loop.debounce_coroutine(function(self)
   self.foldable_list_view:evict_cache():render()
 
   local moved_to_item = self:move_to(function(node)
-    local node_filename = node.path and node.path.file and node.path.file.filename or nil
+    local node_filename = node.path and node.path.status and node.path.status.filename or nil
     local category = node.metadata and node.metadata.category or nil
-    return node_filename == entry.file.filename and category == 'Staged Changes'
+    return node_filename == entry.status.filename and category == 'Staged Changes'
   end)
   if not moved_to_item then
     self:move_to(function(node)
-      local node_filename = node.path and node.path.file and node.path.file.filename or nil
-      return node_filename == entry.file.filename
+      local node_filename = node.path and node.path.status and node.path.status.filename or nil
+      return node_filename == entry.status.filename
     end)
   end
 end, 5)
@@ -176,7 +176,7 @@ ProjectDiffScreen.stage_file = loop.debounce_coroutine(function(self)
   if entry.type ~= 'unstaged' and entry.type ~= 'unmerged' then return end
 
   loop.free_textlock()
-  local filename = entry.file.filename
+  local filename = entry.status.filename
   local _, err = self.mutation:stage_file(filename)
   if err then
     console.debug.error(err)
@@ -185,8 +185,8 @@ ProjectDiffScreen.stage_file = loop.debounce_coroutine(function(self)
 
   self:render()
   self:move_to(function(node)
-    local node_filename = node.path and node.path.file and node.path.file.filename or nil
-    return node_filename == entry.file.filename
+    local node_filename = node.path and node.path.status and node.path.status.filename or nil
+    return node_filename == entry.status.filename
   end)
 end, 15)
 
@@ -196,7 +196,7 @@ ProjectDiffScreen.unstage_file = loop.debounce_coroutine(function(self)
   if entry.type ~= 'staged' then return end
 
   loop.free_textlock()
-  local filename = entry.file.filename
+  local filename = entry.status.filename
   local _, err = self.mutation:unstage_file(filename)
   if err then
     console.debug.error(err)
@@ -205,8 +205,8 @@ ProjectDiffScreen.unstage_file = loop.debounce_coroutine(function(self)
 
   self:render()
   self:move_to(function(node)
-    local node_filename = node.path and node.path.file and node.path.file.filename or nil
-    return node_filename == entry.file.filename
+    local node_filename = node.path and node.path.status and node.path.status.filename or nil
+    return node_filename == entry.status.filename
   end)
 end, 15)
 
@@ -221,8 +221,8 @@ ProjectDiffScreen.stage_all = loop.debounce_coroutine(function(self)
   self:render()
   if not entry then return end
   self:move_to(function(node)
-    local node_filename = node.path and node.path.file and node.path.file.filename or nil
-    return node_filename == entry.file.filename
+    local node_filename = node.path and node.path.status and node.path.status.filename or nil
+    return node_filename == entry.status.filename
   end)
 end, 15)
 
@@ -237,8 +237,8 @@ ProjectDiffScreen.unstage_all = loop.debounce_coroutine(function(self)
   self:render()
   if not entry then return end
   self:move_to(function(node)
-    local node_filename = node.path and node.path.file and node.path.file.filename or nil
-    return node_filename == entry.file.filename
+    local node_filename = node.path and node.path.status and node.path.status.filename or nil
+    return node_filename == entry.status.filename
   end)
 end, 15)
 
@@ -554,7 +554,7 @@ function ProjectDiffScreen:show()
   self:render_help_bar()
 
   self:move_to(function(node)
-    local filename = node.path and node.path.file and node.path.file.filename or nil
+    local filename = node.path and node.path.status and node.path.status.filename or nil
     return filename ~= nil
   end)
 

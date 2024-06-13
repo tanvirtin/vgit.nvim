@@ -69,7 +69,7 @@ function GitStatus:is_staged()
 end
 
 function GitStatus:is_unstaged()
-  return utils.list.some({ '*M', '*T', '*D', '*R', '*C' }, function (status)
+  return utils.list.some({ '*M', '*T', '*D', '*R', '*C', '??' }, function (status)
     return self:has(status)
   end)
 end
