@@ -45,7 +45,6 @@ function ProjectCommitsScreen:constructor(opts)
         for commit_hash, files in pairs(commits) do
           foldable_list[#foldable_list + 1] = {
             open = true,
-            show_count = false,
             value = commit_hash,
             items = FSListGenerator(files):generate(),
           }

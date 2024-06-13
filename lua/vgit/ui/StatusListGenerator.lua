@@ -143,7 +143,6 @@ function StatusListGenerator:create_node(path)
     items = {},
     open = true,
     path = path,
-    show_count = false,
     metadata = metadata,
     value = path.current,
     icon_before = function(item)

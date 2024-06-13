@@ -14,6 +14,7 @@ function FoldableListComponent:constructor(props)
     state = {
       list = {},
       hls = {},
+      shadow_list = {},
     },
     config = {
       elements = {
@@ -58,17 +59,17 @@ function FoldableListComponent:is_fold(item)
 end
 
 function FoldableListComponent:get_list_item(lnum)
-  return self.state[lnum]
+  return self.state.shadow_list[lnum]
 end
 
 function FoldableListComponent:find_list_item(callback)
-  for lnum, item in pairs(self.state) do
+  for lnum, item in pairs(self.state.shadow_list) do
     if callback(item) then return item, lnum end
   end
 end
 
 function FoldableListComponent:query_list_item(callback)
-  for _, list_item in ipairs(self.state) do
+  for _, list_item in ipairs(self.state.shadow_list) do
     local result = callback(list_item)
     if result == true then return list_item end
   end
@@ -77,9 +78,12 @@ end
 function FoldableListComponent:generate_lines()
   local spacing = 1
   local current_lnum = 0
+  local depth_0_lnum = 0
+  local item_count_for_depth_0 = 0
 
   local hls = {}
   local virtual_texts = {}
+  local depth_0_item_counts = {}
   local foldable_list_shadow = {}
 
   local function generate_lines(list, depth)
@@ -89,8 +93,13 @@ function FoldableListComponent:generate_lines()
       local item = list[i]
       current_lnum = current_lnum + 1
 
+      if depth == 0 then
+        depth_0_lnum = current_lnum
+        item_count_for_depth_0 = 0
+      end
+
       -- Memoizing recursion inside a flattened list, for O(1) memory access.
-      self.state[current_lnum] = item
+      self.state.shadow_list[current_lnum] = item
 
       local value = item.value
       local items = item.items
@@ -146,22 +155,6 @@ function FoldableListComponent:generate_lines()
       if items then
         local fold_symbol = symbols_setting:get(item.open and 'open' or 'close')
         local fold_header = string.format('%s%s %s', indentation, fold_symbol, value)
-        local show_count = item.show_count
-
-        if show_count ~= false then show_count = true end
-
-        if show_count then
-          local item_count = string.format('(%s)', #items)
-          fold_header = string.format('%s %s', fold_header, item_count)
-          hls[#hls + 1] = {
-            hl = 'GitCount',
-            lnum = current_lnum,
-            range = {
-              top = #fold_header - #item_count,
-              bot = #fold_header,
-            },
-          }
-        end
 
         foldable_list_shadow[#foldable_list_shadow + 1] = fold_header
         hls[#hls + 1] = {
@@ -182,16 +175,33 @@ function FoldableListComponent:generate_lines()
         }
 
         if item.open then generate_lines(items, depth + 1) end
+        if depth == 0 then
+          depth_0_item_counts[#depth_0_item_counts + 1] = {
+            lnum = depth_0_lnum,
+            count = item_count_for_depth_0
+          }
+        end
       else
+        item_count_for_depth_0 = item_count_for_depth_0 + 1
         foldable_list_shadow[#foldable_list_shadow + 1] = string.format('%s%s', indentation, value)
       end
     end
   end
 
-  table.sort(self.state.list, function(item1, item2)
-    return item1.value > item2.value
-  end)
+  -- NOTE: This sorts the root categories only.
+  -- For example, in project_diff_preview, Staged Changes will always come before Changes.
+  table.sort(self.state.list, function(item1, item2) return item1.value > item2.value end)
   generate_lines(self.state.list, 0)
+
+  for i = 1, #depth_0_item_counts do
+    local depth_0_item_count = depth_0_item_counts[i]
+    virtual_texts[#virtual_texts + 1] = {
+      type = 'after',
+      hl = 'GitSignsChange',
+      lnum = depth_0_item_count.lnum,
+      text = string.format('%s', depth_0_item_count.count),
+    }
+  end
 
   self.state.hls = hls
   self.state.virtual_texts = virtual_texts
@@ -210,6 +220,15 @@ function FoldableListComponent:paint()
         hl = virtual_text.hl,
         row = virtual_text.lnum - 1,
         col = 0,
+      })
+    end
+    if virtual_text.type == 'after' then
+      self.buffer:transpose_virtual_text({
+        text = virtual_text.text,
+        hl = virtual_text.hl,
+        row = virtual_text.lnum - 1,
+        col = 0,
+        pos = 'eol'
       })
     end
   end

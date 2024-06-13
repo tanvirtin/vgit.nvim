@@ -129,8 +129,6 @@ function FoldableListView:move(direction)
 end
 
 function FoldableListView:render()
-  self:evict_cache()
-
   local lnum = self.store:get_lnum()
   local list = self.scene:get('list')
 
