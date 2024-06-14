@@ -309,6 +309,10 @@ function ProjectDiffScreen:show()
   end
 
   if utils.object.is_empty(data) then
+    if self.store:conflict_status() then
+      console.info('All conflicts fixed but you are still merging')
+      return false
+    end
     console.info('No changes found')
     return false
   end
