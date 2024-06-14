@@ -30,17 +30,11 @@ function GitStatus:has(status)
   local actual_first, actual_second = self.first, self.second
 
   if first == '*' then
-    if second == actual_second then
-      return true
-    end
+    if second == actual_second then return true end
   elseif second == '*' then
-    if first == actual_first then
-      return true
-    end
+    if first == actual_first then return true end
   else
-    if first == actual_first and second == actual_second then
-      return true
-    end
+    if first == actual_first and second == actual_second then return true end
   end
 
   return false
@@ -57,19 +51,19 @@ function GitStatus:has_both(status)
 end
 
 function GitStatus:is_unmerged()
-  return utils.list.some({ 'DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU' }, function (status)
+  return utils.list.some({ 'DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU' }, function(status)
     return self:has(status)
   end)
 end
 
 function GitStatus:is_staged()
-  return utils.list.some({ 'A*', 'M*', 'T*', 'D*', 'R*', 'C*' }, function (status)
+  return utils.list.some({ 'A*', 'M*', 'T*', 'D*', 'R*', 'C*' }, function(status)
     return self:has(status)
   end)
 end
 
 function GitStatus:is_unstaged()
-  return utils.list.some({ '*M', '*T', '*D', '*R', '*C', '??' }, function (status)
+  return utils.list.some({ '*M', '*T', '*D', '*R', '*C', '??' }, function(status)
     return self:has(status)
   end)
 end

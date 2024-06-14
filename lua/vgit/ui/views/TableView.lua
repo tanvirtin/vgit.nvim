@@ -66,7 +66,7 @@ function TableView:move(direction)
 end
 
 function TableView:get_current_row()
-  local entries  = self.store:get_all()
+  local entries = self.store:get_all()
   if not entries then return nil end
 
   return entries[self.scene:get('table'):get_lnum()]

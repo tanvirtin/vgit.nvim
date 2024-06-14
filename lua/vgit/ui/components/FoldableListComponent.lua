@@ -178,7 +178,7 @@ function FoldableListComponent:generate_lines()
         if depth == 0 then
           depth_0_item_counts[#depth_0_item_counts + 1] = {
             lnum = depth_0_lnum,
-            count = item_count_for_depth_0
+            count = item_count_for_depth_0,
           }
         end
       else
@@ -190,7 +190,9 @@ function FoldableListComponent:generate_lines()
 
   -- NOTE: This sorts the root categories only.
   -- For example, in project_diff_preview, Staged Changes will always come before Changes.
-  table.sort(self.state.list, function(item1, item2) return item1.value > item2.value end)
+  table.sort(self.state.list, function(item1, item2)
+    return item1.value > item2.value
+  end)
   generate_lines(self.state.list, 0)
 
   for i = 1, #depth_0_item_counts do
@@ -228,7 +230,7 @@ function FoldableListComponent:paint()
         hl = virtual_text.hl,
         row = virtual_text.lnum - 1,
         col = 0,
-        pos = 'eol'
+        pos = 'eol',
       })
     end
   end

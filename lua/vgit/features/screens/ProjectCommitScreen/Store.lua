@@ -32,11 +32,11 @@ function Store:get_lines()
   if self.err then return nil, self.err end
 
   return utils.list.concat(
-      { '' },
-      utils.list.map(self.data, function(line)
-        return '# ' .. line
-      end)
-    )
+    { '' },
+    utils.list.map(self.data, function(line)
+      return '# ' .. line
+    end)
+  )
 end
 
 return Store

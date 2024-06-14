@@ -119,7 +119,6 @@ require('vgit').setup({
     ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
     ['n <leader>gg'] = function() require('vgit').buffer_gutter_blame_preview() end,
     ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
-    ['n <leader>gq'] = function() require('vgit').project_hunks_qf() end,
     ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
   },
   settings = {

@@ -31,7 +31,7 @@ end
 
 function AppBarComponent:set_default_win_plot(win_plot)
   win_plot.focusable = false
-  win_plot.zindex = 3
+  win_plot.zindex = 5
   win_plot.height = 1
 
   return self

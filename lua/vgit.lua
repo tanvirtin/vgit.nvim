@@ -240,7 +240,6 @@ return {
   buffer_conflict_accept_current_change = buffer.conflict_accept_current_change,
   buffer_conflict_accept_incoming_change = buffer.conflict_accept_incoming_change,
   buffer_conflict_accept_both_changes = buffer.conflict_accept_both_changes,
-  project_hunks_qf = project.hunks_qf,
   project_diff_preview = project.diff_preview,
   project_logs_preview = project.logs_preview,
   project_stash_preview = project.stash_preview,

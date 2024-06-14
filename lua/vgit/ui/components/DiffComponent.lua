@@ -16,6 +16,9 @@ function DiffComponent:constructor(props)
         header = true,
         footer = true,
       },
+      win_plot = {
+        zindex = 3
+      }
     },
   }, props)
   return Component.constructor(self, props)

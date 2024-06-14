@@ -58,7 +58,7 @@ function fs.read_file(filepath)
 
   if not line == '' then split_data[#split_data + 1] = line end
 
-  return split_data 
+  return split_data
 end
 
 function fs.write_file(filepath, lines)

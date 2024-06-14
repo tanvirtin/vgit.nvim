@@ -64,6 +64,7 @@ function dimensions.relative_win_plot(parent, child)
     width = dimensions.relative_size(parent.width, child.width),
     row = dimensions.relative_size(parent.row, child.row, 'add'),
     col = dimensions.relative_size(parent.col, child.col, 'add'),
+    zindex = child.zindex
   }
 end
 
