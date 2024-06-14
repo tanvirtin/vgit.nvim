@@ -90,7 +90,7 @@ function DiffView:define()
             height = '100vh',
             width = '50vw',
             col = '50vw',
-            zindex = 4
+            zindex = 4,
           }),
         },
       })

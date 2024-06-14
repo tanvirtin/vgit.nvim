@@ -140,6 +140,11 @@ function Store:set_list_folds(list_folds)
   self.state.list_folds = list_folds
 end
 
+function Store:conflict_status()
+  local reponame = git_repo.discover()
+  return git_conflict.status(reponame)
+end
+
 function Store:get_file_lines(status, type)
   local filename = status.filename
   local reponame = git_repo.discover()
@@ -169,7 +174,7 @@ function Store:get_file_hunks(status, type, lines)
     local head_log, head_log_err = git_log.get(reponame, 'HEAD')
     if head_log_err then return nil, head_log_err end
     if not head_log then return nil, { 'failed to find head log' } end
-    local conflict_type, conflict_type_err = git_conflict.status(reponame)
+    local conflict_type, conflict_type_err = self:conflict_status()
     if conflict_type_err then return nil, conflict_type_err end
     local merge_log, merge_log_err = git_log.get(reponame, conflict_type)
     if not merge_log then return nil, { 'failed to find merge log' } end
