@@ -40,7 +40,10 @@ function Store:fetch(shape, commits, opts)
 
   self:reset()
 
-  if not commits or #commits == 0 then return nil, { 'No commits specified' } end
+  if not commits or #commits == 0 then
+    self.err = { 'No commits specified' }
+    return nil, self.err
+  end
 
   self.state = {
     lnum = 1,
@@ -48,7 +51,10 @@ function Store:fetch(shape, commits, opts)
     list_entry_cache = {},
   }
 
-  if not git_repo.exists() then return nil, { 'Project has no .git folder' } end
+  if not git_repo.exists() then
+    self.err = { 'Project has no .git folder' }
+    return nil, self.err
+  end
 
   self.shape = shape
   local data = {}
@@ -57,27 +63,38 @@ function Store:fetch(shape, commits, opts)
     local commit = commits[i]
     loop.free_textlock()
     local reponame = git_repo.discover()
-    local log, log_err = git_log.get(reponame, commit)
-    if log_err then return nil, log_err end
+    local log, err = git_log.get(reponame, commit)
+    if err then
+      self.err = err
+      return nil, err
+    end
+    if not log then
+      self.err = { 'No log found for commit' }
+      return nil, self.err
+    end
 
     -- We will use the parent_hash and the commit_hash inside
     -- the log object to list all the files associated with the log.
     loop.free_textlock()
-    local files, err = git_status.tree(reponame, {
+    local statuses, status_err = git_status.tree(reponame, {
       commit_hash = log.commit_hash,
       parent_hash = log.parent_hash,
     })
-    if err then return nil, err end
+    if status_err then
+      self.err = status_err
+      return nil, status_err
+    end
 
-    data[commit] = utils.list.map(files, function(file)
+    data[commit] = utils.list.map(statuses, function(status)
       -- Log contains the metadata about parent_hash and commit_hash
       -- File contains the name of the file in that particular working tree.
       -- Using commit_hash, parent_hash and the name of the file we can easily get the lines
       -- and hunks to recreate the diffs by feeding this info into our algorithm.
       local datum = {
         id = utils.math.uuid(),
+        commit = commit,
         log = log,
-        file = file,
+        file = status,
       }
       self.state.commits[datum.id] = datum
 
@@ -90,15 +107,16 @@ function Store:fetch(shape, commits, opts)
   return self.data
 end
 
-function Store:get_all()
-  return self.data, self.err
-end
-
 function Store:set_id(id)
   self.id = id
 end
 
+function Store:get_all()
+  return self.data, self.err
+end
+
 function Store:get(id)
+  if self.err then return nil, self.err end
   if id then self.id = id end
 
   local datum = self.state.commits[self.id]
@@ -110,6 +128,7 @@ end
 function Store:get_diff()
   local datum, err = self:get()
   if err then return nil, err end
+  if not datum then return nil, { 'no data found' } end
 
   local file = datum.file
   if not file then return nil, { 'No file found in item' } end
@@ -121,6 +140,7 @@ function Store:get_diff()
   local filename = file.filename
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
+  local current_commit = datum.commit
 
   if self.state.commits[id] then return self.state.commits[id] end
 
@@ -130,8 +150,12 @@ function Store:get_diff()
   loop.free_textlock()
   local reponame = git_repo.discover()
   if not git_repo.has(reponame, filename, commit_hash) then
-    is_deleted = true
-    lines, lines_err = git_show.lines(reponame, filename, parent_hash)
+    if not git_repo.has(reponame, filename, parent_hash) then
+      lines, lines_err = git_show.lines(reponame, filename, current_commit)
+    else
+      is_deleted = true
+      lines, lines_err = git_show.lines(reponame, filename, parent_hash)
+    end
   else
     lines, lines_err = git_show.lines(reponame, filename, commit_hash)
   end

@@ -75,12 +75,18 @@ function Store:fetch(shape, opts)
 
   self:reset()
 
-  if not git_repo.exists() then return nil, { 'Project has no .git folder' } end
+  if not git_repo.exists() then
+    self.err = { 'Project has no .git folder' }
+    return nil, self.err
+  end
 
   loop.free_textlock()
   local reponame = git_repo.discover()
-  local statuses, statuses_err = git_status.ls(reponame)
-  if statuses_err then return nil, statuses_err end
+  local statuses, err = git_status.ls(reponame)
+  if err then
+    self.err = err
+    return nil, err
+  end
 
   local changed_files, staged_files, unmerged_files = self:partition_status(statuses)
 
@@ -101,7 +107,7 @@ end
 
 function Store:get(id)
   if id then self.id = id end
-  return self.state.list_entries[self.id]
+  return self.state.list_entries[self.id], self.err
 end
 
 function Store:get_all()
