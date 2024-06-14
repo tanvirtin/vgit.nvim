@@ -104,12 +104,10 @@ function FSListGenerator:create_node(path)
       value = path.current,
     }
 
-    if icon then
-      list_entry.icon_before = {
-        icon = icon,
-        hl = icon_hl,
-      }
-    end
+    if icon then list_entry.icon_before = {
+      icon = icon,
+      hl = icon_hl,
+    } end
 
     return list_entry
   end

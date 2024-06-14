@@ -31,8 +31,8 @@ function ProjectDiffScreen:constructor(opts)
     app_bar_view = AppBarView(scene, store),
     diff_view = DiffView(scene, store, {
       row = 1,
-      col = '20vw',
-      width = '80vw',
+      col = '25vw',
+      width = '75vw',
     }, {
       elements = {
         header = true,
@@ -41,7 +41,7 @@ function ProjectDiffScreen:constructor(opts)
     }, layout_type),
     foldable_list_view = FoldableListView(scene, store, {
       row = 1,
-      width = '20vw',
+      width = '25vw',
     }, {
       elements = {
         header = false,

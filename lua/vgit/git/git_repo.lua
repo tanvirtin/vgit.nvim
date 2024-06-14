@@ -12,7 +12,7 @@ function git_repo.discover(filepath)
   local result, err = gitcli.run({ '-C', dirname, 'rev-parse', '--show-toplevel' })
 
   if err then return nil, err end
-  return result[1] 
+  return result[1]
 end
 
 function git_repo.exists(filepath)
@@ -20,7 +20,7 @@ function git_repo.exists(filepath)
   local _, err = gitcli.run({ '-C', dirname, 'rev-parse', '--is-inside-git-dir' })
 
   if err then return false end
-  return true 
+  return true
 end
 
 function git_repo.has(reponame, filename, commit)
@@ -41,7 +41,7 @@ function git_repo.has(reponame, filename, commit)
 
   if err then return nil, err end
   if #result == 0 then return false end
-  return true 
+  return true
 end
 
 function git_repo.ignores(reponame, filename)
@@ -52,7 +52,7 @@ function git_repo.ignores(reponame, filename)
 
   if err then return nil, err end
   if #result == 0 then return false end
-  return true 
+  return true
 end
 
 function git_repo.checkout(reponame, name)

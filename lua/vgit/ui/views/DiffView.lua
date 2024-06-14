@@ -90,6 +90,7 @@ function DiffView:define()
             height = '100vh',
             width = '50vw',
             col = '50vw',
+            zindex = 4
           }),
         },
       })
@@ -752,18 +753,10 @@ function DiffView:render()
 
       self.state = DiffView:get_initial_state()
 
-      return self:clear_title()
-        :clear_lines()
-        :clear_notification()
-        :reset_cursor()
+      return self:clear_title():clear_lines():clear_notification():reset_cursor()
     end
 
-    return self:reset_cursor()
-      :render_title()
-      :render_filetype()
-      :render_lines()
-      :render_line_numbers()
-      :paint()
+    return self:reset_cursor():render_title():render_filetype():render_lines():render_line_numbers():paint()
   end)
 
   if not ok then console.debug.error(msg) end
