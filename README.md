@@ -117,7 +117,6 @@ require('vgit').setup({
     ['n <leader>gf'] = function() require('vgit').buffer_diff_preview() end,
     ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
     ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
-    ['n <leader>gg'] = function() require('vgit').buffer_gutter_blame_preview() end,
     ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
     ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
   },
@@ -339,7 +338,6 @@ set statusline+=%{get(b:,'vgit_status','')}
 | buffer_diff_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. If the command is called while being on a hunk, the window will open focused on the diff of that hunk. |
 | buffer_history_preview | Opens a diff preview along with a table of logs, enabling users to see different iterations of the file through it's lifecycle in git. |
 | buffer_blame_preview | Opens a preview detailing the blame of the line that based on the cursor position within the buffer. |
-| buffer_gutter_blame_preview | Opens a preview which shows all the blames related to the lines of the buffer. |
 | buffer_diff_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. |
 | buffer_hunk_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. This preview will open up in a smaller window relative to where your cursor is. |
 | buffer_hunk_stage | Stages a hunk, if a cursor is on the hunk. |

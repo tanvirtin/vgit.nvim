@@ -34,7 +34,6 @@ More advanced configuration:
         ['n <leader>gf'] = function() require('vgit').buffer_diff_preview() end,
         ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
         ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
-        ['n <leader>gg'] = function() require('vgit').buffer_gutter_blame_preview() end,
         ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
         ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
       },
@@ -270,10 +269,6 @@ buffer_blame_preview()                             *vgit.buffer_blame_preview()*
 
                 Pressing the enter key will open |vgit.project_commits_preview()|
                 with with the commit associated with the link being blamed.
-
-buffer_gutter_blame_preview()                *vgit.buffer_gutter_blame_preview()*
-                Opens a preview which shows all the blames related to each
-                line in the buffer.
 
 buffer_diff_staged_preview()                  *vgit.buffer_staged_diff_preview()*
                 Opens a diff preview showing the diff of the staged changes in

@@ -18,7 +18,6 @@ function Command:constructor()
       'buffer_diff_preview',
       'buffer_history_preview',
       'buffer_blame_preview',
-      'buffer_gutter_blame_preview',
       'buffer_diff_staged_preview',
       'buffer_hunk_staged_preview',
       'buffer_hunk_stage',

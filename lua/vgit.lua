@@ -78,9 +78,6 @@ local buffer = {
   blame_preview = loop.coroutine(function()
     screen_manager.show('line_blame_screen')
   end),
-  gutter_blame_preview = loop.coroutine(function()
-    screen_manager.show('gutter_blame_screen')
-  end),
   diff_staged_preview = loop.coroutine(function()
     screen_manager.show('diff_screen', { is_staged = true })
   end),
@@ -236,7 +233,6 @@ return {
   buffer_history_preview = buffer.history_preview,
   buffer_hunk_staged_preview = buffer.hunk_staged_preview,
   buffer_diff_staged_preview = buffer.diff_staged_preview,
-  buffer_gutter_blame_preview = buffer.gutter_blame_preview,
   buffer_conflict_accept_current_change = buffer.conflict_accept_current_change,
   buffer_conflict_accept_incoming_change = buffer.conflict_accept_incoming_change,
   buffer_conflict_accept_both_changes = buffer.conflict_accept_both_changes,
