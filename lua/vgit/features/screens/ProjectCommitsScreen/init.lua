@@ -181,24 +181,10 @@ function ProjectCommitsScreen:show(args)
     end)
   )
 
-  local list_item = self.foldable_list_view:move_to(function(node)
-    local filename = node.path and node.path.file and node.path.file.filename or nil
-    return filename == target_filename
+  self.foldable_list_view:move_to(function(node)
+    local node_filename = node.path and node.path.file and node.path.file.filename or nil
+    return node_filename ~= nil
   end)
-
-  if not list_item then
-    list_item = self.foldable_list_view:move_to(function(node)
-      local filename = node.path and node.path.file and node.path.file.filename or nil
-      return filename ~= nil
-    end)
-  end
-
-  if list_item then
-    self.store:set_id(list_item.id)
-    self.diff_view:render_debounced(loop.coroutine(function()
-      self.diff_view:navigate_to_mark(1)
-    end))
-  end
 
   return true
 end

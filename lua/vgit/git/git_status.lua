@@ -51,7 +51,7 @@ function git_status.tree(reponame, opts)
 
   local files = {}
   for i = 1, #result do
-    local status, path = result[i]:match("(%w+)%s+(.+)")
+    local status, path = result[i]:match('(%w+)%s+(.+)')
     files[#files + 1] = GitStatus(string.format('%s  %s', status, path))
   end
 
