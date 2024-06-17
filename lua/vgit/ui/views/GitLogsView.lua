@@ -96,7 +96,7 @@ function GitLogsView:has_selection()
 end
 
 function GitLogsView:get_selected()
-  local logs, err = self.store:get_data()
+  local logs, err = self.store:get_logs()
   if err then
     console.debug.error(err)
     return {}
@@ -126,7 +126,7 @@ function GitLogsView:paint()
 end
 
 function GitLogsView:render()
-  local logs, err = self.store:get_data()
+  local logs, err = self.store:get_logs()
   if err then
     console.debug.error(err).error(err)
     return self

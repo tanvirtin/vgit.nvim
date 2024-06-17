@@ -151,7 +151,7 @@ function Store:conflict_status()
   return git_conflict.status(reponame)
 end
 
-function Store:get_file_lines(status, type)
+function Store:get_lines(status, type)
   local filename = status.filename
   local reponame = git_repo.discover()
 
@@ -169,7 +169,7 @@ function Store:get_file_lines(status, type)
   return fs.read_file(filename)
 end
 
-function Store:get_file_hunks(status, type, lines)
+function Store:get_hunks(status, type, lines)
   local filename = status.filename
   local reponame = git_repo.discover()
 
@@ -207,10 +207,10 @@ function Store:get_diff()
   local cache_key = string.format('%s-%s-%s', id, type, status.id)
   if self.state.diffs[cache_key] then return self.state.diffs[cache_key] end
 
-  local lines, lines_err = self:get_file_lines(status, type)
+  local lines, lines_err = self:get_lines(status, type)
   if lines_err then return nil, lines_err end
 
-  local hunks, hunks_err = self:get_file_hunks(status, type, lines)
+  local hunks, hunks_err = self:get_hunks(status, type, lines)
   if hunks_err then return nil, hunks_err end
 
   loop.free_textlock()

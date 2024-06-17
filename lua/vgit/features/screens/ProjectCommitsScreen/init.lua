@@ -8,7 +8,7 @@ local console = require('vgit.core.console')
 local git_repo = require('vgit.git.git_repo')
 local git_show = require('vgit.git.git_show')
 local DiffView = require('vgit.ui.views.DiffView')
-local FSListGenerator = require('vgit.ui.FSListGenerator')
+local StatusListGenerator = require('vgit.ui.StatusListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
 local Store = require('vgit.features.screens.ProjectCommitsScreen.Store')
 
@@ -46,7 +46,7 @@ function ProjectCommitsScreen:constructor(opts)
           foldable_list[#foldable_list + 1] = {
             open = true,
             value = commit_hash,
-            items = FSListGenerator(files):generate(),
+            items = StatusListGenerator(files):generate(),
           }
         end
 

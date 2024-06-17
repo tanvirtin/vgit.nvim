@@ -29,7 +29,7 @@ function Store:fetch()
   return self.data, self.err
 end
 
-function Store:get_data()
+function Store:get_logs()
   return self.data, self.err
 end
 

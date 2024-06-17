@@ -42,17 +42,17 @@ function git_status.tree(reponame, opts)
     '--no-pager',
     'diff-tree',
     '--no-commit-id',
-    '--name-only',
+    '--name-status',
     '-r',
-    commit_hash,
     parent_hash == '' and empty_hash or parent_hash,
+    commit_hash,
   })
   if err then return nil, err end
 
   local files = {}
   for i = 1, #result do
-    local line = result[i]
-    files[#files + 1] = GitStatus(string.format('%s %s', '--', line))
+    local status, path = result[i]:match("(%w+)%s+(.+)")
+    files[#files + 1] = GitStatus(string.format('%s  %s', status, path))
   end
 
   return files
