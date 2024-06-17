@@ -86,6 +86,21 @@ function FoldableListComponent:generate_lines()
   local depth_0_item_counts = {}
   local foldable_list_shadow = {}
 
+  local function track_closed_folder_item_count(list, depth)
+    if not list then return end
+
+    for i = 1, #list do
+      local item = list[i]
+
+      local items = item.items
+      if items then
+        track_closed_folder_item_count(items, depth + 1)
+      else
+        item_count_for_depth_0 = item_count_for_depth_0 + 1
+      end
+    end
+  end
+
   local function generate_lines(list, depth)
     if not list then return end
 
@@ -174,7 +189,11 @@ function FoldableListComponent:generate_lines()
           },
         }
 
-        if item.open then generate_lines(items, depth + 1) end
+        if item.open then
+          generate_lines(items, depth + 1)
+        else
+          track_closed_folder_item_count(items, depth + 1)
+        end
         if depth == 0 then
           depth_0_item_counts[#depth_0_item_counts + 1] = {
             lnum = depth_0_lnum,
