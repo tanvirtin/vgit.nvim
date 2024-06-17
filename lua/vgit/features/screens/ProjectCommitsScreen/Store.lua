@@ -73,8 +73,6 @@ function Store:fetch(shape, commits, opts)
       return nil, self.err
     end
 
-    -- We will use the parent_hash and the commit_hash inside
-    -- the log object to list all the files associated with the log.
     loop.free_textlock()
     local statuses, status_err = git_status.tree(reponame, {
       commit_hash = log.commit_hash,
@@ -86,19 +84,15 @@ function Store:fetch(shape, commits, opts)
     end
 
     data[commit] = utils.list.map(statuses, function(status)
-      -- Log contains the metadata about parent_hash and commit_hash
-      -- File contains the name of the file in that particular working tree.
-      -- Using commit_hash, parent_hash and the name of the file we can easily get the lines
-      -- and hunks to recreate the diffs by feeding this info into our algorithm.
-      local datum = {
-        id = utils.math.uuid(),
-        commit = commit,
+      local id = utils.math.uuid()
+      local entry = {
+        id = id,
         log = log,
-        file = status,
+        status = status,
       }
-      self.state.commits[datum.id] = datum
+      self.state.commits[id] = entry
 
-      return datum
+      return entry
     end)
   end
 
@@ -119,59 +113,45 @@ function Store:get(id)
   if self.err then return nil, self.err end
   if id then self.id = id end
 
-  local datum = self.state.commits[self.id]
-  if not datum then return nil, { 'Item not found' } end
+  local entry = self.state.commits[self.id]
+  if not entry then return nil, { 'Item not found' } end
 
-  return datum
+  return entry
 end
 
 function Store:get_diff()
-  local datum, err = self:get()
+  local entry, err = self:get()
   if err then return nil, err end
-  if not datum then return nil, { 'no data found' } end
+  if not entry then return nil, { 'no data found' } end
 
-  local file = datum.file
+  local file = entry.status
   if not file then return nil, { 'No file found in item' } end
 
-  local log = datum.log
+  local log = entry.log
   if not log then return nil, { 'No log found in item' } end
 
   local id = file.id
   local filename = file.filename
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
-  local current_commit = datum.commit
 
   if self.state.commits[id] then return self.state.commits[id] end
 
-  local lines_err, lines
-  local is_deleted = false
-
-  loop.free_textlock()
+  local is_deleted = file:has_either('DD')
   local reponame = git_repo.discover()
-  if not git_repo.has(reponame, filename, commit_hash) then
-    if not git_repo.has(reponame, filename, parent_hash) then
-      lines, lines_err = git_show.lines(reponame, filename, current_commit)
-    else
-      is_deleted = true
-      lines, lines_err = git_show.lines(reponame, filename, parent_hash)
-    end
+  local lines_err, lines
+  if is_deleted then
+    lines, lines_err = git_show.lines(reponame, filename, parent_hash)
   else
     lines, lines_err = git_show.lines(reponame, filename, commit_hash)
   end
   loop.free_textlock()
-
   if lines_err then return nil, lines_err end
 
-  local hunks_err, hunks
-  if is_deleted then
-    hunks = git_hunks.custom(lines, { deleted = true })
-  else
-    hunks, hunks_err = git_hunks.list(reponame, filename, {
-      parent = parent_hash,
-      current = commit_hash,
-    })
-  end
+  local hunks, hunks_err = git_hunks.list(reponame, filename, {
+    parent = parent_hash,
+    current = commit_hash,
+  })
   loop.free_textlock()
   if hunks_err then return nil, hunks_err end
 
@@ -183,17 +163,17 @@ function Store:get_diff()
 end
 
 function Store:get_filename()
-  local datum, err = self:get()
+  local entry, err = self:get()
   if err then return nil, err end
 
-  return datum.file.filename
+  return entry.status.filename
 end
 
 function Store:get_filetype()
-  local datum, err = self:get()
+  local entry, err = self:get()
   if err then return nil, err end
 
-  return datum.file.filetype
+  return entry.status.filetype
 end
 
 function Store:get_lnum()
@@ -201,13 +181,13 @@ function Store:get_lnum()
 end
 
 function Store:get_parent_commit()
-  local datum, err = self:get()
+  local entry, err = self:get()
   if err then return nil, err end
 
-  local file = datum.file
+  local file = entry.status
   if not file then return nil, { 'No file found in item' } end
 
-  local log = datum.log
+  local log = entry.log
   if not log then return nil, { 'No log found in item' } end
 
   return log.parent_hash
