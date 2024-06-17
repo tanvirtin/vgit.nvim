@@ -776,13 +776,9 @@ function DiffView:mount()
   return self
 end
 
-function DiffView:show(pos, lnum)
-  lnum = lnum or 1
-
+function DiffView:show()
   self.state = DiffView:get_initial_state()
-
-  local mark_index = self:get_relative_mark_index(lnum)
-  self:mount():render():navigate_to_mark(mark_index, pos)
+  self:mount():render():navigate_to_mark(1)
 
   return self
 end

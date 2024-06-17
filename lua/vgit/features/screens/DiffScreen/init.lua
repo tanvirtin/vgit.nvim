@@ -123,7 +123,7 @@ function DiffScreen:show(opts)
 
   self.diff_view:set_title(title)
   self.diff_view:define()
-  self.diff_view:show('center', lnum)
+  self.diff_view:show()
   self.diff_view:set_keymap({
     {
       mode = 'n',
@@ -346,6 +346,9 @@ function DiffScreen:show(opts)
       end, 100),
     },
   })
+
+  local mark_index = self.diff_view:get_relative_mark_index(lnum)
+  self.diff_view:navigate_to_mark(mark_index, 'center')
 
   if self.app_bar_view then self:render_help_bar() end
 

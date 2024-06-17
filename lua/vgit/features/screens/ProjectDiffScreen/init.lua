@@ -7,6 +7,8 @@ local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
 local DiffView = require('vgit.ui.views.DiffView')
 local AppBarView = require('vgit.ui.views.AppBarView')
+local git_buffer_store = require('vgit.git.git_buffer_store')
+local navigation = require('vgit.features.buffer.Hunks.navigation')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
 local StatusListGenerator = require('vgit.ui.StatusListGenerator')
 local Store = require('vgit.features.screens.ProjectDiffScreen.Store')
@@ -75,13 +77,9 @@ function ProjectDiffScreen:hunk_down()
   self.diff_view:next()
 end
 
-function ProjectDiffScreen:move_to(query_fn)
+function ProjectDiffScreen:move_to(query_fn, mark_index)
   local list_item = self.foldable_list_view:move_to(query_fn)
-  if not list_item then return end
-
-  self.store:set_id(list_item.id)
-  self.diff_view:render():navigate_to_mark(1)
-
+  self.store:set_mark_index(mark_index)
   return list_item
 end
 
@@ -246,10 +244,11 @@ function ProjectDiffScreen:render()
 
   if utils.object.is_empty(data) then return self:destroy() end
 
-  local list_item = self.foldable_list_view:render():get_current_list_item()
+  self.foldable_list_view:render()
+  local list_item = self.foldable_list_view:get_current_list_item()
   self.store:set_id(list_item.id)
 
-  self.diff_view:render():navigate_to_mark(1)
+  self.diff_view:render()
 end
 
 function ProjectDiffScreen:render_help_bar()
@@ -290,16 +289,19 @@ end
 
 function ProjectDiffScreen:handle_list_move(direction)
   local list_item = self.foldable_list_view:move(direction)
-
   if not list_item then return end
 
   self.store:set_id(list_item.id)
   self.diff_view:render_debounced(function()
-    self.diff_view:navigate_to_mark(1)
+    self.diff_view:navigate_to_mark(self.store:get_mark_index())
+    self.store:reset_mark_index()
   end)
 end
 
 function ProjectDiffScreen:show()
+  local window = Window(0)
+  local buffer = git_buffer_store.current()
+
   local data, err = self.store:fetch(self.layout_type)
   loop.free_textlock()
 
@@ -476,6 +478,7 @@ function ProjectDiffScreen:show()
       mode = 'n',
       key = '<enter>',
       handler = loop.coroutine(function()
+        local mark, _ = self.diff_view:get_current_mark_under_cursor()
         local filename = self.store:get_filename()
         if not filename then
           self.foldable_list_view:toggle_current_list_item()
@@ -486,11 +489,11 @@ function ProjectDiffScreen:show()
         self:destroy()
         fs.open(filename)
 
-        local diff, diff_err = self.store:get_diff()
-        if diff_err or not diff then return end
-
-        local mark = diff.marks[1]
-        if not mark then return end
+        if not mark then
+          local diff, diff_err = self.store:get_diff()
+          if diff_err or not diff then return end
+          mark = diff.marks[1]
+        end
 
         Window(0):set_lnum(mark.top_relative):position_cursor('center')
       end),
@@ -506,10 +509,27 @@ function ProjectDiffScreen:show()
 
   self:render_help_bar()
 
-  self:move_to(function(node)
-    local filename = node.path and node.path.status and node.path.status.filename or nil
-    return filename ~= nil
-  end)
+  if buffer then
+    -- NOTE: Hunk index should always be equal to mark index, as num hunks equals num marks.
+    local _, hunk_index_under_cursor = navigation.get_current_hunk(window, buffer:get_hunks())
+
+    local list_item = self:move_to(function(node)
+      local filename = node.path and node.path.status and node.path.status.filename or nil
+      return filename == buffer.git_object.filename
+    end, hunk_index_under_cursor)
+
+    if not list_item then
+      self:move_to(function(node)
+        local filename = node.path and node.path.status and node.path.status.filename or nil
+        return filename ~= nil
+      end)
+    end
+  else
+    self:move_to(function(node)
+      local filename = node.path and node.path.status and node.path.status.filename or nil
+      return filename ~= nil
+    end)
+  end
 
   return true
 end

@@ -21,6 +21,7 @@ function Store:constructor()
     state = {
       lnum = 1,
       diffs = {},
+      mark_index = 1,
       list_folds = {},
       list_entries = {},
     },
@@ -33,8 +34,21 @@ function Store:reset()
   self.data = nil
   self.state = {
     diffs = {},
+    mark_index = 1,
     list_entries = {},
   }
+end
+
+function Store:get_mark_index()
+  return self.state.mark_index or 1
+end
+
+function Store:set_mark_index(index)
+  self.state.mark_index = index
+end
+
+function Store:reset_mark_index()
+  self.state.mark_index = 1
 end
 
 function Store:partition_status(statuses)
