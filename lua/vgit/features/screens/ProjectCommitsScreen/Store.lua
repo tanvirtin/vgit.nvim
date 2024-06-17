@@ -124,20 +124,20 @@ function Store:get_diff()
   if err then return nil, err end
   if not entry then return nil, { 'no data found' } end
 
-  local file = entry.status
-  if not file then return nil, { 'No file found in item' } end
+  local status = entry.status
+  if not status then return nil, { 'No file found in item' } end
 
   local log = entry.log
   if not log then return nil, { 'No log found in item' } end
 
-  local id = file.id
-  local filename = file.filename
+  local id = status.id
+  local filename = status.filename
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
   if self.state.commits[id] then return self.state.commits[id] end
 
-  local is_deleted = file:has_either('DD')
+  local is_deleted = status:has_either('DD')
   local reponame = git_repo.discover()
   local lines_err, lines
   if is_deleted then
@@ -184,8 +184,8 @@ function Store:get_parent_commit()
   local entry, err = self:get()
   if err then return nil, err end
 
-  local file = entry.status
-  if not file then return nil, { 'No file found in item' } end
+  local status = entry.status
+  if not status then return nil, { 'No status found in item' } end
 
   local log = entry.log
   if not log then return nil, { 'No log found in item' } end
