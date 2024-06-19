@@ -1,7 +1,7 @@
 local M = {}
 
 function M.round(x)
-  return x >= 0 and math.ceil(x + 0.5) or math.ceil(x - 0.5)
+  return math.ceil(x)
 end
 
 function M.uuid()
@@ -21,8 +21,7 @@ end
 function M.scale_unit_down(unit, percent)
   unit = math.floor(unit * (100 - percent) / 100)
 
-  if unit < 1 then unit = 1 end
-
+  if unit < 1 then return 1 end
   return unit
 end
 
