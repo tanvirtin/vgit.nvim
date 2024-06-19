@@ -24,7 +24,7 @@ function Diff:generate_unified_deleted(hunks, lines)
   local hunk = hunks[1]
   local type = hunk.type
   local diff = hunk.diff
-  local top = hunk.top
+  local top = 1
   local bot = hunk.bot
   local lnum_changes = {}
   local s = top
@@ -57,7 +57,7 @@ function Diff:generate_split_deleted(hunks, lines)
   local hunk = hunks[1]
   local type = hunk.type
   local diff = hunk.diff
-  local top = hunk.top
+  local top = 1
   local bot = hunk.bot
   local s = top
   local lnum_changes = {}
@@ -437,31 +437,21 @@ function Diff:generate_split(hunks, lines)
 end
 
 function Diff:generate(hunks, lines, shape, opts)
-  opts = opts or { is_deleted = false }
+  opts = opts or {}
+  local is_deleted = opts.is_deleted
 
-  if opts.is_deleted then
-    local choices = {
-      unified = function()
-        return self:generate_unified_deleted(hunks, lines)
-      end,
-      split = function()
-        return self:generate_split_deleted(hunks, lines)
-      end,
-    }
+  if not shape then return error('shape is required') end
 
-    return choices[shape]()
+  if shape == 'split' then
+    if is_deleted then return self:generate_split_deleted(hunks, lines) end
+    return self:generate_split(hunks, lines)
+  end
+  if shape == 'unified' then
+    if is_deleted then return  self:generate_unified_deleted(hunks, lines) end
+    return self:generate_unified(hunks, lines)
   end
 
-  local choices = {
-    unified = function()
-      return self:generate_unified(hunks, lines)
-    end,
-    split = function()
-      return self:generate_split(hunks, lines)
-    end,
-  }
-
-  return choices[shape]()
+  error('shape provided must have values either "unified" or "split')
 end
 
 return Diff
