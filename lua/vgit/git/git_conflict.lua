@@ -89,10 +89,33 @@ end
 function git_conflict.status(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
-  if fs.exists(string.format('%s/.git/MERGE_HEAD', reponame)) then return 'MERGE_HEAD' end
-  if fs.exists(string.format('%s/.git/REVERT_HEAD', reponame)) then return 'REVERT_HEAD' end
-  if fs.exists(string.format('%s/.git/REBASE_HEAD', reponame)) then return 'REBASE_HEAD' end
-  if fs.exists(string.format('%s/.git/CHERRY_PICK_HEAD', reponame)) then return 'CHERRY_PICK_HEAD' end
+  local git_dir = string.format('%s/.git', reponame)
+  -- is_file
+  if fs.exists(string.format('%s/rebase-apply/applying', git_dir)) then return 'APPLY-MAILBOX' end
+  -- is_file
+  if fs.exists(string.format('%s/rebase-apply/rebasing', git_dir)) then return 'REBASE' end
+  -- is_dir
+  if fs.exists(string.format('%s/rebase-apply', git_dir)) then return 'APPLY-MAILBOX-REBASE' end
+  -- is_file
+  if fs.exists(string.format('%s/rebase-merge/interactive', git_dir)) then return 'REBASE-INTERACTIVE' end
+  -- is_dir
+  if fs.exists(string.format('%s/rebase-merge', git_dir)) then return 'REBASE' end
+  -- is_file
+  if fs.exists(string.format('%s/CHERRY_PICK_HEAD', git_dir)) then
+    -- is_file
+    if fs.exists(string.format('%s/sequencer/todo', git_dir)) then return 'CHERRY-PICK-SEQUENCE' end
+    return 'CHERRY-PICK'
+  end
+  -- is_file
+  if fs.exists(string.format('%s/MERGE_HEAD', git_dir)) then return 'MERGE' end
+  -- is_file
+  if fs.exists(string.format('%s/BISECT_LOG', git_dir)) then return 'BISECT' end
+  -- is_file
+  if fs.exists(string.format('%s/REVERT_HEAD', git_dir)) then
+    -- is_file
+    if fs.exists(string.format('%s/sequencer/todo', git_dir)) then return 'REVERT-SEQUENCE' end
+    return 'REVERT'
+  end
 
   return nil
 end
