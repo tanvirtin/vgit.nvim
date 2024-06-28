@@ -1,7 +1,7 @@
 local M = {}
 
 function M.round(x)
-  return math.ceil(x)
+  return math.floor(x)
 end
 
 function M.uuid()
