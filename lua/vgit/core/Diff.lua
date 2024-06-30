@@ -447,7 +447,7 @@ function Diff:generate(hunks, lines, shape, opts)
     return self:generate_split(hunks, lines)
   end
   if shape == 'unified' then
-    if is_deleted then return  self:generate_unified_deleted(hunks, lines) end
+    if is_deleted then return self:generate_unified_deleted(hunks, lines) end
     return self:generate_unified(hunks, lines)
   end
 
