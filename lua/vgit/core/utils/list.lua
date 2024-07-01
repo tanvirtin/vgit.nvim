@@ -8,7 +8,10 @@ function list.join(l, with)
   local result = ''
 
   for i = 1, #l do
-    result = result .. l[i] .. with
+    result = result .. l[i]
+    if i ~= #l then
+      result = result .. with
+    end
   end
 
   return result

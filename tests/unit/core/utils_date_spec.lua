@@ -3,7 +3,40 @@ local utils = require('vgit.core.utils')
 
 local eq = assert.are.same
 
-describe('utils:', function()
+describe('utils.date:', function()
+  describe('date.format', function()
+    it('should format the date using the default format', function()
+      local time = 1609477200  -- January 1, 2021
+      local formatted_date = utils.date.format(time)
+      assert.are.equal(formatted_date, '01 Jan 2021')
+    end)
+
+    it('should format the date using a custom format', function()
+      local current_time = os.time({ year = 2021, month = 1, day = 1, hour = 5, min = 0, sec = 0 })
+      local formatted_date = utils.date.format(current_time, '%Y-%m-%d %H:%M:%S')
+      eq(formatted_date, '2021-01-01 05:00:00')
+    end)
+
+    it('should handle invalid time input gracefully', function()
+      local invalid_time = 'invalid'
+      local formatted_date = utils.date.format(invalid_time)
+      local expected_date = os.date('%d %b %Y', os.time())  -- Use the current date
+      assert.are.equal(formatted_date, expected_date)
+    end)
+
+    it('should handle nil time input gracefully', function()
+      local formatted_date = utils.date.format(nil)
+      local expected_date = os.date('%d %b %Y', os.time())  -- Use the current date
+      assert.are.equal(formatted_date, expected_date)
+    end)
+
+    it('should handle nil format input gracefully', function()
+      local time = 1609477200  -- January 1, 2021
+      local formatted_date = utils.date.format(time, nil)
+      assert.are.equal(formatted_date, '01 Jan 2021')
+    end)
+  end)
+
   describe('age', function()
     before_each(function()
       os.time = mock(os.time, true)
@@ -153,88 +186,6 @@ describe('utils:', function()
       eq(age.unit, 5)
       eq(age.how_long, 'years')
       eq(age.display, '5 years ago')
-    end)
-  end)
-
-  describe('round', function()
-    it('should round pi to 3', function()
-      eq(utils.math.round(3.14159265359), 3)
-    end)
-  end)
-
-  describe('strip_substring', function()
-    it('should remove "/bar" from "foo/bar/baz"', function()
-      eq(utils.str.strip('foo/bar/baz', '/bar'), 'foo/baz')
-    end)
-
-    it('should remove "foo/baz" from "foo/bar/baz"', function()
-      eq(utils.str.strip('foo/bar/baz', '/bar'), 'foo/baz')
-    end)
-
-    it('should remove "helix-core/src" from "helix-core/src/comment.rs"', function()
-      eq(utils.str.strip('helix-core/src/comment.rs', 'helix-core/src'), '/comment.rs')
-    end)
-
-    it('should remove "helix-core/src/" from "helix-core/src/comment.rs"', function()
-      eq(utils.str.strip('helix-core/src/comment.rs', 'helix-core/src/'), 'comment.rs')
-    end)
-
-    it('should remove "x-c" from "helix-core"', function()
-      eq(utils.str.strip('helix-core', 'x-c'), 'heliore')
-    end)
-
-    it('should remove "ab" from "ababababa"', function()
-      eq(utils.str.strip('ababababa', 'ab'), 'abababa')
-    end)
-
-    it('should remove "ababababa" from "abababab"', function()
-      eq(utils.str.strip('ababababa', 'abababab'), 'a')
-    end)
-
-    it('should remove "ababababa" from "ababababa"', function()
-      eq(utils.str.strip('ababababa', 'ababababa'), '')
-    end)
-
-    it('should not remove "lua/" from "vgit.lua"', function()
-      eq(utils.str.strip('vgit.lua', 'lua/'), 'vgit.lua')
-    end)
-  end)
-
-  describe('object.assign', function()
-    it('should assign attributes in b into a regardless of if a has any of the attributes', function()
-      local a = {}
-      local b = {
-        config = {
-          line_number = {
-            enabled = false,
-            width = 10,
-          },
-        },
-      }
-      local c = utils.object.assign(a, b)
-
-      eq(c, b)
-    end)
-
-    it('should handle nested object assignment', function()
-      local a = {
-        config = {
-          line_number = {
-            width = 20,
-          },
-        },
-      }
-      local b = {
-        config = {
-          line_number = {
-            enabled = false,
-            width = 10,
-          },
-        },
-      }
-      local c = utils.object.assign(a, b)
-
-      eq(c, b)
     end)
   end)
 end)
