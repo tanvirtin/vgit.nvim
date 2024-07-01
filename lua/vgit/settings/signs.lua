@@ -3,6 +3,55 @@ local Config = require('vgit.core.Config')
 return Config({
   priority = 10,
   definitions = {
+    GitConflictCurrentMark = {
+      linehl = 'GitConflictCurrentMark',
+      texthl = nil,
+      numhl = nil,
+      icon = nil,
+      text = '',
+    },
+    GitConflictAncestorMark = {
+      linehl = 'GitConflictAncestorMark',
+      texthl = nil,
+      numhl = nil,
+      icon = nil,
+      text = '',
+    },
+    GitConflictIncomingMark = {
+      linehl = 'GitConflictIncomingMark',
+      texthl = nil,
+      numhl = nil,
+      icon = nil,
+      text = '',
+    },
+    GitConflictCurrent = {
+      linehl = 'GitConflictCurrent',
+      texthl = nil,
+      numhl = nil,
+      icon = nil,
+      text = '',
+    },
+    GitConflictAncestor = {
+      linehl = 'GitConflictAncestor',
+      texthl = nil,
+      numhl = nil,
+      icon = nil,
+      text = '',
+    },
+    GitConflictMiddle = {
+      linehl = 'GitConflictMiddle',
+      texthl = nil,
+      numhl = nil,
+      icon = nil,
+      text = '',
+    },
+    GitConflictIncoming = {
+      linehl = 'GitConflictIncoming',
+      texthl = nil,
+      numhl = nil,
+      icon = nil,
+      text = '',
+    },
     GitSignsAddLn = {
       linehl = 'GitSignsAddLn',
       texthl = nil,

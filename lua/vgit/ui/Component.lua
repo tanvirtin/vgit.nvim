@@ -93,11 +93,15 @@ function Component:on(event_name, callback)
   return self
 end
 
-function Component:is_focused() return self.window:is_focused() end
+function Component:is_focused()
+  return self.window:is_focused()
+end
 
-function Component:is_valid() return self.buffer:is_valid() and self.window:is_valid() end
+function Component:is_valid()
+  return self.buffer:is_valid() and self.window:is_valid()
+end
 
-function Component:make_border(config)
+function Component:render_border(config)
   if config.hl then
     local new_border = {}
 
@@ -116,9 +120,13 @@ function Component:make_border(config)
   return config.chars
 end
 
-function Component:mount() assertion.assert('Not yet implemented') end
+function Component:mount()
+  assertion.assert('Not yet implemented')
+end
 
-function Component:unmount() assertion.assert('Not yet implemented') end
+function Component:unmount()
+  assertion.assert('Not yet implemented')
+end
 
 function Component:clear_namespace()
   self.buffer:clear_namespace()
@@ -126,8 +134,15 @@ function Component:clear_namespace()
   return self
 end
 
-function Component:add_highlight(hl, row, col_top, col_end)
-  self.buffer:add_highlight(hl, row, col_top, col_end)
+function Component:add_highlight(opts)
+  self.buffer:add_highlight({
+    hl = opts.hl,
+    row = opts.row,
+    col_range = {
+      from = opts.col_range.from,
+      to = opts.col_range.to,
+    },
+  })
 
   return self
 end
@@ -138,8 +153,8 @@ function Component:add_pattern_highlight(pattern, hl)
   return self
 end
 
-function Component:clear_highlight(row_start, row_end)
-  self.buffer:clear_highlight(row_start, row_end)
+function Component:clear_highlight(row_range)
+  self.buffer:clear_highlight(row_range)
 
   return self
 end
@@ -156,14 +171,34 @@ function Component:sign_unplace()
   return self
 end
 
-function Component:transpose_virtual_text(text, hl, row, col, pos)
-  self.buffer:transpose_virtual_text(text, hl, row, col, pos)
+function Component:transpose_virtual_line_number(opts)
+  self.buffer:transpose_virtual_line_number({
+    row = opts.row,
+    hl = opts.hl,
+    text = opts.text,
+  })
 
   return self
 end
 
-function Component:transpose_virtual_line(texts, col, pos)
-  self.buffer:transpose_virtual_line(texts, col, pos)
+function Component:transpose_virtual_text(opts)
+  self.buffer:transpose_virtual_text({
+    text = opts.text,
+    hl = opts.hl,
+    row = opts.row,
+    col = opts.col,
+    pos = opts.pos,
+  })
+
+  return self
+end
+
+function Component:transpose_virtual_line(opts)
+  self.buffer:transpose_virtual_line({
+    texts = opts.texts,
+    row = opts.row,
+    pos = opts.pos,
+  })
 
   return self
 end
@@ -175,17 +210,13 @@ function Component:set_keymap(mode, key, callback)
 end
 
 function Component:set_cursor(cursor)
-  if not self.locked then
-    self.window:set_cursor(cursor)
-  end
+  if not self.locked then self.window:set_cursor(cursor) end
 
   return self
 end
 
 function Component:set_lnum(lnum)
-  if not self.locked then
-    self.window:set_lnum(lnum)
-  end
+  if not self.locked then self.window:set_lnum(lnum) end
 
   return self
 end
@@ -208,15 +239,25 @@ function Component:disable_cursorline()
   return self
 end
 
-function Component:clear_lines() return self.buffer:set_lines({}) end
+function Component:clear_lines()
+  return self.buffer:set_lines({})
+end
 
-function Component:reset_cursor() return self.window:set_cursor({ 1, 1 }) end
+function Component:reset_cursor()
+  return self.window:set_cursor({ 1, 1 })
+end
 
-function Component:get_plot() return self.plot end
+function Component:get_plot()
+  return self.plot
+end
 
-function Component:get_lnum() return self.window:get_lnum() end
+function Component:get_lnum()
+  return self.window:get_lnum()
+end
 
-function Component:get_line_count() return self.buffer:get_line_count() end
+function Component:get_line_count()
+  return self.buffer:get_line_count()
+end
 
 function Component:set_filetype(filetype)
   self.buffer:set_option('filetype', filetype)
@@ -226,21 +267,25 @@ function Component:set_filetype(filetype)
   return self
 end
 
-function Component:get_filetype() return self.buffer:get_option('filetype') end
+function Component:get_filetype()
+  return self.buffer:get_option('filetype')
+end
 
-function Component:get_lines() return self.buffer:get_lines() end
+function Component:get_lines()
+  return self.buffer:get_lines()
+end
 
 function Component:set_lines(lines, force)
-  if self.locked and not force or not self:is_valid() then
-    return self
-  end
+  if self.locked and not force or not self:is_valid() then return self end
 
   self.buffer:set_lines(lines)
 
   return self
 end
 
-function Component:is_own_window(window) return self.window:is_same(window) end
+function Component:is_own_window(window)
+  return self.window:is_same(window)
+end
 
 function Component:call(callback)
   self.window:call(callback)

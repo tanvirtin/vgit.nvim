@@ -1,10 +1,8 @@
 local env = require('vgit.core.env')
 local loop = require('vgit.core.loop')
 local sign = require('vgit.core.sign')
-local Git = require('vgit.git.cli.Git')
 local Command = require('vgit.Command')
 local keymap = require('vgit.core.keymap')
-local console = require('vgit.core.console')
 local renderer = require('vgit.core.renderer')
 local highlight = require('vgit.core.highlight')
 local hls_setting = require('vgit.settings.hls')
@@ -20,18 +18,15 @@ local git_buffer_store = require('vgit.git.git_buffer_store')
 local LiveGutter = require('vgit.features.buffer.LiveGutter')
 local live_blame_setting = require('vgit.settings.live_blame')
 local live_gutter_setting = require('vgit.settings.live_gutter')
-local AuthorshipCodeLens = require('vgit.features.buffer.AuthorshipCodeLens')
-local authorship_code_lens_setting = require('vgit.settings.authorship_code_lens')
+local LiveConflict = require('vgit.features.buffer.LiveConflict')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
-local ProjectHunksQuickfix = require('vgit.features.quickfix.ProjectHunksQuickfix')
 local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
 
 local hunks = Hunks()
 local command = Command()
 local live_blame = LiveBlame()
 local live_gutter = LiveGutter()
-local authorship_code_lens = AuthorshipCodeLens()
-local project_hunks_quickfix = ProjectHunksQuickfix()
+local live_conflict = LiveConflict()
 
 local settings = {
   screen = scene_setting,
@@ -48,7 +43,6 @@ local controls = {
 
     return screen_manager.dispatch_action('hunk_up')
   end),
-
   hunk_down = loop.coroutine(function()
     hunks:move_down()
 
@@ -57,52 +51,77 @@ local controls = {
 }
 
 local buffer = {
-  reset = loop.coroutine(function() hunks:reset_all() end),
-  stage = loop.coroutine(function() hunks:stage_all() end),
-  unstage = loop.coroutine(function() hunks:unstage_all() end),
-  hunk_stage = loop.coroutine(function() hunks:cursor_stage() end),
-  hunk_reset = loop.coroutine(function() hunks:cursor_reset() end),
-  diff_preview = loop.coroutine(function() screen_manager.show('diff_screen') end),
-  hunk_preview = loop.coroutine(function() screen_manager.show('diff_hunk_screen') end),
-  history_preview = loop.coroutine(function() screen_manager.show('history_screen') end),
-  blame_preview = loop.coroutine(function() screen_manager.show('line_blame_screen') end),
-  gutter_blame_preview = loop.coroutine(function() screen_manager.show('gutter_blame_screen') end),
-  diff_staged_preview = loop.coroutine(function() screen_manager.show('diff_screen', { is_staged = true }) end),
-  hunk_staged_preview = loop.coroutine(function() screen_manager.show('diff_hunk_screen', { is_staged = true }) end),
-}
-
-local project = {
-  stage_all = loop.coroutine(function() Git():stage() end),
-  unstage_all = loop.coroutine(function() Git():unstage() end),
-  hunks_qf = loop.coroutine(function() project_hunks_quickfix:show() end),
-  debug_preview = loop.coroutine(function(...) screen_manager.show('debug_screen', ...) end),
-  commit_preview = loop.coroutine(function(...) screen_manager.show('commit_screen', ...) end),
-  hunks_preview = loop.coroutine(function() screen_manager.show('project_hunks_screen') end),
-  diff_preview = loop.coroutine(function() screen_manager.show('project_diff_screen') end),
-  logs_preview = loop.coroutine(function(...) screen_manager.show('project_logs_screen', ...) end),
-  stash_preview = loop.coroutine(function(...) screen_manager.show('project_stash_screen', ...) end),
-  commits_preview = loop.coroutine(function(...) screen_manager.show('project_commits_screen', ...) end),
-  hunks_staged_preview = loop.coroutine(function() screen_manager.show('project_hunks_screen', { is_staged = true }) end),
-  reset_all = loop.coroutine(function()
-    local decision = console.input('Are you sure you want to discard all tracked changes? (y/N) '):lower()
-
-    if decision ~= 'yes' and decision ~= 'y' then
-      return
-    end
-
-    Git():reset_all()
+  reset = loop.coroutine(function()
+    hunks:reset_all()
+  end),
+  stage = loop.coroutine(function()
+    hunks:stage_all()
+  end),
+  unstage = loop.coroutine(function()
+    hunks:unstage_all()
+  end),
+  hunk_stage = loop.coroutine(function()
+    hunks:cursor_stage()
+  end),
+  hunk_reset = loop.coroutine(function()
+    hunks:cursor_reset()
+  end),
+  diff_preview = loop.coroutine(function()
+    screen_manager.show('diff_screen')
+  end),
+  hunk_preview = loop.coroutine(function()
+    screen_manager.show('diff_hunk_screen')
+  end),
+  history_preview = loop.coroutine(function()
+    screen_manager.show('history_screen')
+  end),
+  blame_preview = loop.coroutine(function()
+    screen_manager.show('line_blame_screen')
+  end),
+  diff_staged_preview = loop.coroutine(function()
+    screen_manager.show('diff_screen', { is_staged = true })
+  end),
+  hunk_staged_preview = loop.coroutine(function()
+    screen_manager.show('diff_hunk_screen', { is_staged = true })
+  end),
+  conflict_accept_current_change = loop.coroutine(function()
+    local buffer = git_buffer_store:current()
+    if not buffer then return end
+    live_conflict:conflict_accept_current_change(buffer)
+  end),
+  conflict_accept_incoming_change = loop.coroutine(function()
+    local buffer = git_buffer_store:current()
+    if not buffer then return end
+    live_conflict:conflict_accept_incoming_change(buffer)
+  end),
+  conflict_accept_both_changes = loop.coroutine(function()
+    local buffer = git_buffer_store:current()
+    if not buffer then return end
+    live_conflict:conflict_accept_both_changes(buffer)
   end),
 }
 
-local checkout = loop.coroutine(function(...)
-  local err = Git():checkout({ ... })
+local project = {
+  commit_preview = loop.coroutine(function(...)
+    screen_manager.show('commit_screen', ...)
+  end),
+  diff_preview = loop.coroutine(function()
+    screen_manager.show('project_diff_screen')
+  end),
+  logs_preview = loop.coroutine(function(...)
+    screen_manager.show('project_logs_screen', ...)
+  end),
+  stash_preview = loop.coroutine(function(...)
+    screen_manager.show('project_stash_screen', ...)
+  end),
+  commits_preview = loop.coroutine(function(...)
+    screen_manager.show('project_commits_screen', ...)
+  end),
+}
 
-  if err then
-    console.debug.error(err).error(err)
-  end
+local toggle_diff_preference = loop.coroutine(function()
+  screen_manager.toggle_diff_preference()
 end)
-
-local toggle_diff_preference = loop.coroutine(function() screen_manager.toggle_diff_preference() end)
 
 local toggle_live_blame = loop.coroutine(function()
   local blames_enabled = live_blame_setting:get('enabled')
@@ -118,20 +137,21 @@ local toggle_live_gutter = loop.coroutine(function()
   live_gutter:reset()
 end)
 
-local toggle_authorship_code_lens = loop.coroutine(function()
-  local authorship_code_lens_enabled = authorship_code_lens_setting:get('enabled')
-
-  authorship_code_lens_setting:set('enabled', not authorship_code_lens_enabled)
-  authorship_code_lens:reset()
+local toggle_tracing = loop.coroutine(function()
+  env.set('DEBUG', not env.get('DEBUG'))
 end)
 
-local toggle_tracing = loop.coroutine(function() env.set('DEBUG', not env.get('DEBUG')) end)
+local function command_list(...)
+  return command:list(...)
+end
 
-local function command_list(...) return command:list(...) end
+local function execute_command(...)
+  command:execute(...)
+end
 
-local function execute_command(...) command:execute(...) end
-
-local function help() vim.cmd('h vgit') end
+local function help()
+  vim.cmd('h vgit')
+end
 
 local function setup_commands()
   vim.cmd(
@@ -144,16 +164,18 @@ local function setup_commands()
 end
 
 local function register_modules()
-  highlight.register_module(function() sign.register_module() end)
+  highlight.register_module(function()
+    sign.register_module()
+  end)
   renderer.register_module()
 end
 
 local function register_events()
   live_blame:register_events()
   live_gutter:register_events()
-  authorship_code_lens:register_events()
   highlight.register_events()
   git_buffer_store.register_events()
+  live_conflict:register_events()
 end
 
 local function register_keymaps(config)
@@ -174,7 +196,6 @@ local function configure_settings(config)
   diff_preview:assign(config_settings.diff_preview)
   live_blame_setting:assign(config_settings.live_blame)
   live_gutter_setting:assign(config_settings.live_gutter)
-  authorship_code_lens_setting:assign(config_settings.authorship_code_lens)
   project_diff_preview_setting:assign(config_settings.project_diff_preview)
   project_commit_preview_setting:assign(config_settings.project_commit_preview)
 end
@@ -192,22 +213,15 @@ return {
   h = help,
   help = help,
   setup = setup,
+  settings = settings,
   command_list = command_list,
   execute_command = execute_command,
-
-  settings = settings,
-
   toggle_tracing = toggle_tracing,
   toggle_live_blame = toggle_live_blame,
   toggle_live_gutter = toggle_live_gutter,
   toggle_diff_preference = toggle_diff_preference,
-  toggle_authorship_code_lens = toggle_authorship_code_lens,
-
   hunk_up = controls.hunk_up,
   hunk_down = controls.hunk_down,
-
-  checkout = checkout,
-
   buffer_reset = buffer.reset,
   buffer_stage = buffer.stage,
   buffer_unstage = buffer.unstage,
@@ -219,18 +233,12 @@ return {
   buffer_history_preview = buffer.history_preview,
   buffer_hunk_staged_preview = buffer.hunk_staged_preview,
   buffer_diff_staged_preview = buffer.diff_staged_preview,
-  buffer_gutter_blame_preview = buffer.gutter_blame_preview,
-
-  project_hunks_qf = project.hunks_qf,
-  project_stage_all = project.stage_all,
-  project_reset_all = project.reset_all,
-  project_unstage_all = project.unstage_all,
+  buffer_conflict_accept_current_change = buffer.conflict_accept_current_change,
+  buffer_conflict_accept_incoming_change = buffer.conflict_accept_incoming_change,
+  buffer_conflict_accept_both_changes = buffer.conflict_accept_both_changes,
   project_diff_preview = project.diff_preview,
   project_logs_preview = project.logs_preview,
   project_stash_preview = project.stash_preview,
-  project_hunks_preview = project.hunks_preview,
-  project_debug_preview = project.debug_preview,
   project_commit_preview = project.commit_preview,
   project_commits_preview = project.commits_preview,
-  project_hunks_staged_preview = project.hunks_staged_preview,
 }

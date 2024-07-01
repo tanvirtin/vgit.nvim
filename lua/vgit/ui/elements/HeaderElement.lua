@@ -5,20 +5,28 @@ local Window = require('vgit.core.Window')
 
 local HeaderElement = Component:extend()
 
-function HeaderElement:constructor(...) return Component.constructor(self, ...) end
+function HeaderElement:constructor(...)
+  return Component.constructor(self, ...)
+end
 
-function HeaderElement:get_height() return 1 end
+function HeaderElement:get_height()
+  return 1
+end
 
 function HeaderElement:trigger_notification(text)
-  self.namespace:transpose_virtual_text(self.buffer, text, 'GitComment', 0, 0, 'eol')
+  self.namespace:transpose_virtual_text(self.buffer, {
+    text = text,
+    hl = 'GitComment',
+    row = 0,
+    col = 0,
+    pos = 'eol',
+  })
 
   return self
 end
 
 function HeaderElement:clear_notification()
-  if self.buffer:is_valid() then
-    self.namespace:clear(self.buffer)
-  end
+  if self.buffer:is_valid() then self.namespace:clear(self.buffer) end
 
   return self
 end
@@ -41,7 +49,7 @@ function HeaderElement:mount(opts)
     col = opts.col,
     width = opts.width,
     height = 1,
-    zindex = 3,
+    zindex = 5,
   }):assign_options({
     cursorbind = false,
     scrollbind = false,

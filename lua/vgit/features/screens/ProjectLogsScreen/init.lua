@@ -21,9 +21,9 @@ function ProjectLogsScreen:constructor(opts)
   }
 end
 
-function ProjectLogsScreen:show(opts)
+function ProjectLogsScreen:show()
   loop.free_textlock()
-  local err = self.store:fetch(opts)
+  local _, err = self.store:fetch()
 
   loop.free_textlock()
   if err then
@@ -49,20 +49,14 @@ function ProjectLogsScreen:show(opts)
       handler = loop.coroutine(function()
         local view = self.view
 
-        if not view:has_selection() then
-          view:select()
-        end
+        if not view:has_selection() then view:select() end
 
         vim.cmd('quit')
 
         loop.free_textlock()
-        vim.cmd(
-          utils.list.reduce(
-            view:get_selected(),
-            'VGit project_commits_preview',
-            function(cmd, log) return cmd .. ' ' .. log.commit_hash end
-          )
-        )
+        vim.cmd(utils.list.reduce(view:get_selected(), 'VGit project_commits_preview', function(cmd, log)
+          return cmd .. ' ' .. log.commit_hash
+        end))
       end),
     },
   })
@@ -72,8 +66,6 @@ end
 
 function ProjectLogsScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return ProjectLogsScreen

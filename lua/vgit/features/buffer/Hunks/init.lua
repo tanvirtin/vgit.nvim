@@ -17,13 +17,9 @@ end
 
 function Hunks:move_up()
   local buffer = git_buffer_store.current()
+  if not buffer then return end
 
-  if not buffer then
-    return
-  end
-
-  local hunks = buffer.git_object.hunks
-
+  local hunks = buffer:get_hunks()
   if hunks and #hunks ~= 0 then
     local window = Window(0)
     local selected = navigation.hunk_up(window, hunks)
@@ -34,13 +30,9 @@ end
 
 function Hunks:move_down()
   local buffer = git_buffer_store.current()
+  if not buffer then return end
 
-  if not buffer then
-    return
-  end
-
-  local hunks = buffer.git_object.hunks
-
+  local hunks = buffer:get_hunks()
   if hunks and #hunks ~= 0 then
     local window = Window(0)
     local selected = navigation.hunk_down(window, hunks)
@@ -51,47 +43,32 @@ end
 function Hunks:cursor_hunk()
   loop.free_textlock()
   local buffer = git_buffer_store.current()
-
-  if not buffer then
-    return
-  end
+  if not buffer then return end
 
   local window = Window(0)
   local lnum = window:get_lnum()
-  local hunks = buffer.git_object.hunks
 
-  if not hunks then
-    return
-  end
+  local hunks = buffer:get_hunks()
+  if not hunks then return end
 
   for i = 1, #hunks do
     local hunk = hunks[i]
 
-    if lnum == 1 and hunk.top == 0 and hunk.bot == 0 then
-      return hunk, i
-    end
-    if lnum >= hunk.top and lnum <= hunk.bot then
-      return hunk, i
-    end
+    if lnum == 1 and hunk.top == 0 and hunk.bot == 0 then return hunk, i end
+    if lnum >= hunk.top and lnum <= hunk.bot then return hunk, i end
   end
 end
 
 function Hunks:stage_all()
   loop.free_textlock()
   local buffer = git_buffer_store.current()
-
-  if not buffer then
-    return
-  end
-
-  local err = buffer.git_object:stage()
+  if not buffer then return end
 
   loop.free_textlock()
-  if err then
-    console.debug.error(err)
-    return
-  end
+  local _, err = buffer:stage()
+  if err then return console.debug.error(err) end
 
+  loop.free_textlock()
   buffer:edit()
 end
 
@@ -99,105 +76,71 @@ function Hunks:cursor_stage()
   loop.free_textlock()
 
   local buffer = git_buffer_store.current()
-  if not buffer then
-    return
-  end
+  if not buffer then return end
+  if buffer:editing() then return end
 
-  if buffer:editing() then
-    return
-  end
-
-  local git_object = buffer.git_object
-
-  if not git_object:is_tracked() then
-    local err = git_object:stage()
+  if not buffer:is_tracked() then
+    local _, err = buffer:stage()
 
     loop.free_textlock()
-    if err then
-      console.debug.error(err)
-      return
-    end
+    if err then return console.debug.error(err) end
 
+    loop.free_textlock()
     buffer:edit()
 
     return
   end
 
   local hunk = self:cursor_hunk()
+  if not hunk then return end
 
-  if not hunk then
-    return
-  end
+  loop.free_textlock()
+  local _, err = buffer:stage_hunk(hunk)
+  if err then return console.debug.error(err) end
 
-  local err = git_object:stage_hunk(hunk)
-
-  if err then
-    console.debug.error(err)
-    return
-  end
-
+  loop.free_textlock()
   buffer:edit()
 end
 
 function Hunks:unstage_all()
   loop.free_textlock()
   local buffer = git_buffer_store.current()
-
-  if not buffer then
-    return
-  end
-
-  local err = buffer.git_object:unstage()
+  if not buffer then return end
 
   loop.free_textlock()
-  if err then
-    console.debug.error(err)
-    return
-  end
+  local _, err = buffer:unstage()
+  if err then return console.debug.error(err) end
 
+  loop.free_textlock()
   buffer:edit()
 end
 
 function Hunks:reset_all()
   loop.free_textlock()
   local buffer = git_buffer_store.current()
+  if not buffer then return end
 
-  if not buffer then
-    return
-  end
-
-  local hunks = buffer.git_object.hunks
-
-  if not hunks and #hunks == 0 then
-    return
-  end
-
-  local err, lines = buffer.git_object:lines()
+  local hunks = buffer:get_hunks()
+  if not hunks and #hunks == 0 then return end
 
   loop.free_textlock()
-  if err then
-    return console.debug.error(err)
-  end
+  local lines, err = buffer.git_object:lines()
+  if err then return console.debug.error(err) end
 
+  loop.free_textlock()
   buffer:set_lines(lines)
-  vim.cmd('update')
+  buffer:edit()
 end
 
 function Hunks:cursor_reset()
   loop.free_textlock()
   local buffer = git_buffer_store.current()
-
-  if not buffer then
-    return
-  end
+  if not buffer then return end
 
   local window = Window(0)
   local lnum = window:get_lnum()
-  local hunks = buffer.git_object.hunks
-
-  if not hunks then
-    return
-  end
+  local hunks = buffer:get_hunks()
+  if not hunks then return end
 
   if lnum == 1 then
     local current_lines = buffer:get_lines()
@@ -210,9 +153,7 @@ function Hunks:cursor_reset()
           break
         end
       end
-      if all_removes then
-        self:reset_all()
-      end
+      if all_removes then self:reset_all() end
     end
   end
 
@@ -237,9 +178,7 @@ function Hunks:cursor_reset()
     for i = 1, #selected_hunk.diff do
       local line = selected_hunk.diff[i]
       local is_line_removed = vim.startswith(line, '-')
-      if is_line_removed then
-        replaced_lines[#replaced_lines + 1] = string.sub(line, 2, -1)
-      end
+      if is_line_removed then replaced_lines[#replaced_lines + 1] = string.sub(line, 2, -1) end
     end
 
     local top = selected_hunk.top
@@ -254,9 +193,7 @@ function Hunks:cursor_reset()
 
       local new_lnum = top
 
-      if new_lnum < 1 then
-        new_lnum = 1
-      end
+      if new_lnum < 1 then new_lnum = 1 end
 
       window:set_lnum(new_lnum)
       table.remove(hunks, selected_hunk_index)

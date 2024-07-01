@@ -33,9 +33,7 @@ function DiffScreen:create_diff_view(scene, store, opts)
 end
 
 function DiffScreen:create_app_bar_view(scene, store, opts)
-  if opts.is_hunk then
-    return nil
-  end
+  if opts.is_hunk then return nil end
 
   return AppBarView(scene, store)
 end
@@ -61,17 +59,13 @@ end
 
 function DiffScreen:hunk_up()
   pcall(self.diff_view.prev, self.diff_view, 'center')
-
-  return self
 end
 
 function DiffScreen:hunk_down()
   pcall(self.diff_view.next, self.diff_view, 'center')
-
-  return self
 end
 
-function DiffScreen:make_help_bar()
+function DiffScreen:render_help_bar()
   local text = ''
   local keymaps = diff_preview_setting:get('keymaps')
   local keys = {
@@ -99,8 +93,6 @@ function DiffScreen:make_help_bar()
   self.app_bar_view:set_lines({ text })
   self.app_bar_view:add_pattern_highlight('%((%a+)%)', 'Keyword')
   self.app_bar_view:add_pattern_highlight('|', 'Number')
-
-  return self
 end
 
 function DiffScreen:show(opts)
@@ -114,7 +106,7 @@ function DiffScreen:show(opts)
   local title = self.is_staged and 'Staged Diff' or 'Diff'
 
   loop.free_textlock()
-  local err = self.store:fetch(layout_type, buffer.filename, opts)
+  local _, err = self.store:fetch(layout_type, buffer:get_name(), opts)
 
   if err then
     loop.free_textlock()
@@ -131,7 +123,7 @@ function DiffScreen:show(opts)
 
   self.diff_view:set_title(title)
   self.diff_view:define()
-  self.diff_view:show('center', lnum)
+  self.diff_view:show()
   self.diff_view:set_keymap({
     {
       mode = 'n',
@@ -140,24 +132,20 @@ function DiffScreen:show(opts)
         loop.free_textlock()
         local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) '):lower()
 
-        if decision ~= 'yes' and decision ~= 'y' then
-          return
-        end
+        if decision ~= 'yes' and decision ~= 'y' then return end
 
         loop.free_textlock()
-        local _, filename = self.store:get_filename()
+        local filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         self.mutation:reset_file(filename)
         loop.free_textlock()
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local _, refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
         loop.free_textlock()
 
         if refetch_err then
@@ -174,19 +162,17 @@ function DiffScreen:show(opts)
       key = diff_preview_setting:get('keymaps').buffer_stage,
       handler = loop.debounce_coroutine(function()
         loop.free_textlock()
-        local _, filename = self.store:get_filename()
+        local filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         self.mutation:stage_file(filename)
         loop.free_textlock()
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local _, refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
         loop.free_textlock()
 
         if refetch_err then
@@ -203,19 +189,17 @@ function DiffScreen:show(opts)
       key = diff_preview_setting:get('keymaps').buffer_unstage,
       handler = loop.debounce_coroutine(function()
         loop.free_textlock()
-        local _, filename = self.store:get_filename()
+        local filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         self.mutation:unstage_file(filename)
         loop.free_textlock()
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local _, refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
         loop.free_textlock()
 
         if refetch_err then
@@ -231,30 +215,24 @@ function DiffScreen:show(opts)
       mode = 'n',
       key = diff_preview_setting:get('keymaps').buffer_hunk_stage,
       handler = loop.debounce_coroutine(function()
-        if self.is_staged then
-          return
-        end
+        if self.is_staged then return end
 
         loop.free_textlock()
-        local _, filename = self.store:get_filename()
+        local filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         local hunk, index = self.diff_view:get_current_hunk_under_cursor()
         loop.free_textlock()
 
-        if not hunk then
-          return
-        end
+        if not hunk then return end
 
         self.mutation:stage_hunk(filename, hunk)
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local _, refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
 
         if refetch_err then
           console.debug.error(refetch_err).error(refetch_err)
@@ -268,32 +246,26 @@ function DiffScreen:show(opts)
       mode = 'n',
       key = diff_preview_setting:get('keymaps').buffer_hunk_unstage,
       handler = loop.debounce_coroutine(function()
-        if not self.is_staged then
-          return
-        end
+        if not self.is_staged then return end
 
         loop.free_textlock()
-        local _, filename = self.store:get_filename()
+        local filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         loop.free_textlock()
         local hunk, index = self.diff_view:get_current_hunk_under_cursor()
         loop.free_textlock()
 
-        if not hunk then
-          return
-        end
+        if not hunk then return end
 
         loop.free_textlock()
         self.mutation:unstage_hunk(filename, hunk)
         loop.free_textlock()
 
         loop.free_textlock()
-        local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+        local _, refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
         loop.free_textlock()
 
         if refetch_err then
@@ -313,17 +285,13 @@ function DiffScreen:show(opts)
         local mark = self.diff_view:get_current_mark_under_cursor()
         loop.free_textlock()
 
-        if not mark then
-          return
-        end
+        if not mark then return end
 
         loop.free_textlock()
-        local _, filename = self.store:get_filename()
+        local filename = self.store:get_filename()
         loop.free_textlock()
 
-        if not filename then
-          return
-        end
+        if not filename then return end
 
         self:destroy()
         loop.free_textlock()
@@ -347,7 +315,7 @@ function DiffScreen:show(opts)
           opts.is_staged = self.is_staged
 
           loop.free_textlock()
-          local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+          local _, refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
           loop.free_textlock()
 
           if refetch_err then
@@ -364,7 +332,7 @@ function DiffScreen:show(opts)
           opts.is_staged = self.is_staged
 
           loop.free_textlock()
-          local refetch_err = self.store:fetch(layout_type, buffer.filename, opts)
+          local _, refetch_err = self.store:fetch(layout_type, buffer:get_name(), opts)
           loop.free_textlock()
 
           if refetch_err then
@@ -379,17 +347,16 @@ function DiffScreen:show(opts)
     },
   })
 
-  if self.app_bar_view then
-    self:make_help_bar()
-  end
+  local mark_index = self.diff_view:get_relative_mark_index(lnum)
+  self.diff_view:navigate_to_mark(mark_index, 'center')
+
+  if self.app_bar_view then self:render_help_bar() end
 
   return true
 end
 
 function DiffScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return DiffScreen

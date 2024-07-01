@@ -13,7 +13,6 @@ function HeaderComponent:constructor(props)
     config = {
       elements = {
         header = false,
-        line_number = false,
         footer = false,
       },
     },
@@ -27,11 +26,13 @@ function HeaderComponent:call(callback)
   return self
 end
 
-function HeaderComponent:get_height() return 1 end
+function HeaderComponent:get_height()
+  return 1
+end
 
 function HeaderComponent:set_default_win_plot(win_plot)
   win_plot.focusable = false
-  win_plot.zindex = 3
+  win_plot.zindex = 5
   win_plot.height = 1
 
   return self
@@ -44,9 +45,7 @@ function HeaderComponent:set_default_win_options(win_options)
 end
 
 function HeaderComponent:mount()
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   local config = self.config
   local win_plot = config.win_plot
@@ -87,15 +86,19 @@ function HeaderComponent:set_title(title, opts)
 end
 
 function HeaderComponent:clear_notification()
-  if self.buffer:is_valid() then
-    self.namespace:clear(self.buffer)
-  end
+  if self.buffer:is_valid() then self.namespace:clear(self.buffer) end
 
   return self
 end
 
 function HeaderComponent:trigger_notification(text)
-  self.namespace:transpose_virtual_text(self.buffer, text, 'GitComment', 0, 0, 'eol')
+  self.namespace:transpose_virtual_text(self.buffer, {
+    text = text,
+    hl = 'GitComment',
+    row = 0,
+    col = 0,
+    pos = 'eol',
+  })
 
   return self
 end

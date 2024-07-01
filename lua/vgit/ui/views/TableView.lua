@@ -15,13 +15,14 @@ function TableView:constructor(scene, store, plot, config)
   }
 end
 
-function TableView:get_components() return { self.scene:get('table') } end
+function TableView:get_components()
+  return { self.scene:get('table') }
+end
 
 function TableView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('table'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  utils.list.each(configs, function(config)
+    self.scene:get('table'):set_keymap(config.mode, config.key, config.handler)
+  end)
   return self
 end
 
@@ -50,12 +51,8 @@ function TableView:move(direction)
   local lnum = component:get_lnum()
   local count = component:get_line_count()
 
-  if direction == 'down' then
-    lnum = lnum + 1
-  end
-  if direction == 'up' then
-    lnum = lnum - 1
-  end
+  if direction == 'down' then lnum = lnum + 1 end
+  if direction == 'up' then lnum = lnum - 1 end
   if lnum < 1 then
     lnum = count
   elseif lnum > count then
@@ -69,25 +66,22 @@ function TableView:move(direction)
 end
 
 function TableView:get_current_row()
-  local _, entries = self.store:get_all()
-
-  if not entries then
-    return nil
-  end
+  local entries = self.store:get_all()
+  if not entries then return nil end
 
   return entries[self.scene:get('table'):get_lnum()]
 end
 
 function TableView:render()
-  local _, lnum = self.store:get_lnum()
-  local err, entries = self.store:get_all()
+  local lnum = self.store:get_lnum()
+  local entries, err = self.store:get_all()
 
   if err then
     console.debug.error(err).error(err)
     return self
   end
 
-  self.scene:get('table'):unlock():make_rows(entries, self.config.get_row):focus():set_lnum(lnum):lock()
+  self.scene:get('table'):unlock():render_rows(entries, self.config.get_row):focus():set_lnum(lnum):lock()
 
   return self
 end

@@ -30,7 +30,6 @@
 ---
 - Gutter changes
 - Current line blame
-- Authorship code lens 
 - Current line blame preview
 - Gutter blame preview
 - File history preview
@@ -50,7 +49,6 @@
 - Project stash preview
 - Project commit preview
 - Project commits preview
-- Send all project hunks to quickfix list
 - Hunk navigations in all buffers with a diff
 
 **Requirements**
@@ -119,24 +117,10 @@ require('vgit').setup({
     ['n <leader>gf'] = function() require('vgit').buffer_diff_preview() end,
     ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
     ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
-    ['n <leader>gg'] = function() require('vgit').buffer_gutter_blame_preview() end,
-    ['n <leader>glu'] = function() require('vgit').buffer_hunks_preview() end,
-    ['n <leader>gls'] = function() require('vgit').project_hunks_staged_preview() end,
     ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
-    ['n <leader>gq'] = function() require('vgit').project_hunks_qf() end,
     ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
   },
   settings = {
-    git = {
-      cmd = 'git', -- optional setting, not really required
-      fallback_cwd = vim.fn.expand("$HOME"),
-      fallback_args = {
-        "--git-dir",
-        vim.fn.expand("$HOME/dots/yadm-repo"),
-        "--work-tree",
-        vim.fn.expand("$HOME"),
-      },
-    },
     hls = {
       GitBackground = 'Normal',
       GitHeader = 'NormalFloat',
@@ -236,9 +220,6 @@ require('vgit').setup({
     live_gutter = {
       enabled = true,
       edge_navigation = true, -- This allows users to navigate within a hunk
-    },
-    authorship_code_lens = {
-      enabled = true,
     },
     scene = {
       diff_preference = 'unified', -- unified or split
@@ -353,12 +334,10 @@ set statusline+=%{get(b:,'vgit_status','')}
 | setup | Sets VGit up for you. This plugin cannot be used before this function has been called. |
 | hunk_up | Moves the cursor to the hunk above the current cursor position. |
 | hunk_down | Moves the cursor to the hunk below the current cursor position. |
-| checkout [args] | Wrapper command for `git checkout`. You can switch branches or restore working tree files |
 | buffer_hunk_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. This preview will open up in a smaller window relative to where your cursor is. |
 | buffer_diff_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. If the command is called while being on a hunk, the window will open focused on the diff of that hunk. |
 | buffer_history_preview | Opens a diff preview along with a table of logs, enabling users to see different iterations of the file through it's lifecycle in git. |
 | buffer_blame_preview | Opens a preview detailing the blame of the line that based on the cursor position within the buffer. |
-| buffer_gutter_blame_preview | Opens a preview which shows all the blames related to the lines of the buffer. |
 | buffer_diff_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. |
 | buffer_hunk_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. This preview will open up in a smaller window relative to where your cursor is. |
 | buffer_hunk_stage | Stages a hunk, if a cursor is on the hunk. |
@@ -371,17 +350,9 @@ set statusline+=%{get(b:,'vgit_status','')}
 | project_commit_preview | Opens a preview through which staged changes can be committed |
 | project_commits_preview [args] | Opens a diff preview along with a list of all your commits |
 | project_stash_preview | Opens a preview listing all stashes. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected stashes |
-| project_hunks_preview | Opens a diff preview along with a foldable list of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
-| project_hunks_staged_preview | Opens a diff preview along with a foldable list of all the current staged hunks in the project. Users can use this preview to cycle through all the hunks. |
-| project_debug_preview | Opens a VGit view showing logs of a pariticular kind traced within the application. |
-| project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
-| project_stage_all | Stages all file changes in your project. |
-| project_unstage_all | Unstages all file changes in your project. |
-| project_reset_all | Discards all file changes that are not staged. |
 | toggle_diff_preference | Used to switch between "split" and "unified" diff. |
 | toggle_live_gutter | Enables/disables git gutter signs. |
 | toggle_live_blame | Used to switch between "split" and "unified" diff. |
-| toggle_authorship_code_lens | Enables/disables authorship code lens that can be found on top of the file |
 | toggle_tracing | Enables/disables debug logs that are used internally by VGit to make suppressed logs visible. |
 
 <details>
@@ -390,8 +361,4 @@ set statusline+=%{get(b:,'vgit_status','')}
 Start off by allowing VGit to trace your actions:
 - `:VGit toggle_tracing`
 
-Each category of logs can be previewed using the following commands:
-- `:VGit debug_preview infos`
-- `:VGit debug_preview warnings`
-- `:VGit debug_preview errors`
 </details>

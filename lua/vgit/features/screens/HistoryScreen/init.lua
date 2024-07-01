@@ -55,24 +55,22 @@ end
 
 function HistoryScreen:hunk_up()
   self.diff_view:prev()
-
-  return self
 end
 
 function HistoryScreen:hunk_down()
   self.diff_view:next()
-
-  return self
 end
 
 function HistoryScreen:handle_list_move(direction)
   self.store:set_index(self.table_view:move(direction))
-  self.diff_view:render_debounced(function() self.diff_view:navigate_to_mark(1) end)
+  self.diff_view:render_debounced(function()
+    self.diff_view:navigate_to_mark(1)
+  end)
 end
 
 function HistoryScreen:show()
   local buffer = Buffer(0)
-  local err = self.store:fetch(self.layout_type, buffer.filename)
+  local _, err = self.store:fetch(self.layout_type, buffer:get_name())
 
   loop.free_textlock()
   if err then
@@ -97,38 +95,42 @@ function HistoryScreen:show()
       handler = loop.coroutine(function()
         loop.free_textlock()
         local row = self.table_view:get_current_row()
-
-        if not row then
-          return
-        end
+        if not row then return end
 
         vim.cmd('quit')
 
         loop.free_textlock()
-        vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', buffer.filename, row.commit_hash))
+        vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', buffer:get_name(), row.commit_hash))
       end),
     },
     {
       mode = 'n',
       key = 'j',
-      handler = loop.coroutine(function() self:handle_list_move('down') end),
+      handler = loop.coroutine(function()
+        self:handle_list_move('down')
+      end),
     },
     {
       mode = 'n',
       key = 'k',
-      handler = loop.coroutine(function() self:handle_list_move('up') end),
+      handler = loop.coroutine(function()
+        self:handle_list_move('up')
+      end),
     },
   })
 
-  self.table_view.scene:get('table').buffer:on('CursorMoved', loop.coroutine(function() self:handle_list_move() end))
+  self.table_view.scene:get('table').buffer:on(
+    'CursorMoved',
+    loop.coroutine(function()
+      self:handle_list_move()
+    end)
+  )
 
   return true
 end
 
 function HistoryScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return HistoryScreen

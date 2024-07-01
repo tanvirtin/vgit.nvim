@@ -40,21 +40,18 @@ end
 
 function LineBlameScreen:hunk_up()
   self.diff_view:prev()
-
-  return self
 end
 
 function LineBlameScreen:hunk_down()
   self.diff_view:next()
-
-  return self
 end
 
 function LineBlameScreen:handle_on_enter(buffer, blame)
   vim.cmd('quit')
 
   loop.free_textlock()
-  vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', buffer.filename, blame.commit_hash))
+  local filename = buffer:get_name()
+  vim.cmd(string.format('VGit project_commits_preview --filename=%s %s', filename, blame.commit_hash))
 end
 
 function LineBlameScreen:show()
@@ -63,10 +60,10 @@ function LineBlameScreen:show()
 
   loop.free_textlock()
   local lnum = window:get_lnum()
-  local filename = buffer.filename
+  local filename = buffer:get_name()
   local layout_type = self.layout_type
-  local err = self.store:fetch(layout_type, filename, lnum)
-
+  local _, err = self.store:fetch(layout_type, filename, lnum)
+  loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
     return false
@@ -80,25 +77,26 @@ function LineBlameScreen:show()
   self.line_blame_view:show()
   self.diff_view:show()
 
-  local blame_err, blame = self.store:get_blame()
-
-  if blame_err then
-    return true
-  end
+  local blame, blame_err = self.store:get_blame()
+  if blame_err then return true end
 
   self.diff_view:set_relative_lnum(blame.lnum)
   self.diff_view:set_keymap({
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.coroutine(function() self:handle_on_enter(buffer, blame) end),
+      handler = loop.coroutine(function()
+        self:handle_on_enter(buffer, blame)
+      end),
     },
   })
   self.line_blame_view:set_keymap({
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.coroutine(function() self:handle_on_enter(buffer, blame) end),
+      handler = loop.coroutine(function()
+        self:handle_on_enter(buffer, blame)
+      end),
     },
   })
 
@@ -107,8 +105,6 @@ end
 
 function LineBlameScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return LineBlameScreen

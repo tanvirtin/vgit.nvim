@@ -1,5 +1,4 @@
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
 local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
@@ -16,68 +15,61 @@ function LiveBlame:constructor()
     name = 'Live Blame',
     namespace = Namespace(),
     last_lnum = nil,
-    git = Git(),
   }
 end
 
 function LiveBlame:display(lnum, buffer, config, blame)
   if buffer:is_valid() then
-    local virt_text = live_blame_setting:get('format')(blame, config)
+    local text = live_blame_setting:get('format')(blame, config)
 
-    if type(virt_text) == 'string' then
+    if type(text) == 'string' then
       loop.free_textlock()
-      self.namespace:transpose_virtual_text(buffer, virt_text, 'GitComment', lnum - 1, 0, 'eol')
+      self.namespace:transpose_virtual_text(buffer, {
+        text = text,
+        hl = 'GitComment',
+        row = lnum - 1,
+        col = 0,
+        pos = 'eol',
+      })
     end
   end
 end
 
 function LiveBlame:clear(buffer)
-  if buffer:is_valid() then
-    self.namespace:clear(buffer)
-  end
+  if buffer:is_valid() then self.namespace:clear(buffer) end
 end
 
 function LiveBlame:reset()
-  git_buffer_store.for_each(function(git_buffer) self:clear(git_buffer) end)
+  git_buffer_store.for_each(function(git_buffer)
+    self:clear(git_buffer)
+  end)
 end
 
 function LiveBlame:render(git_buffer)
-  if not live_blame_setting:get('enabled') then
-    return
-  end
+  if not live_blame_setting:get('enabled') then return end
 
   git_buffer = git_buffer or git_buffer_store.current()
 
-  if not git_buffer then
-    return
-  end
+  if not git_buffer then return end
 
   loop.free_textlock()
-  local config_err, config = self.git:config()
-
-  if config_err then
-    console.debug.error(config_err)
-    return
-  end
+  local config, config_err = git_buffer:config()
+  if config_err then return console.debug.error(config_err) end
 
   loop.free_textlock()
   local window = Window(0)
   loop.free_textlock()
   local lnum = window:get_lnum()
 
-  if self.last_lnum == lnum then
-    return
-  end
+  if self.last_lnum == lnum then return end
 
   loop.free_textlock()
-  local blame_err, blame = git_buffer.git_object:blame_line(lnum)
+  local blame, blame_err = git_buffer:blame(lnum)
 
   loop.free_textlock()
   local new_lnum = window:get_lnum()
 
-  if lnum ~= new_lnum then
-    return
-  end
+  if lnum ~= new_lnum then return end
 
   if blame_err then
     console.debug.error(blame_err)
@@ -94,11 +86,21 @@ end
 function LiveBlame:register_events()
   git_buffer_store.attach('attach', function(git_buffer)
     git_buffer
-      :on(event_type.BufEnter, function() self:reset() end)
-      :on(event_type.WinEnter, function() self:reset() end)
-      :on(event_type.CursorMoved, function() self:reset() end)
-      :on(event_type.InsertEnter, function() self:reset() end)
-      :on(event_type.CursorHold, function() self:render() end)
+      :on(event_type.BufEnter, function()
+        self:reset()
+      end)
+      :on(event_type.WinEnter, function()
+        self:reset()
+      end)
+      :on(event_type.CursorMoved, function()
+        self:reset()
+      end)
+      :on(event_type.InsertEnter, function()
+        self:reset()
+      end)
+      :on(event_type.CursorHold, function()
+        self:render()
+      end)
   end)
 
   return self

@@ -12,7 +12,6 @@ function AppBarComponent:constructor(props)
     config = {
       elements = {
         header = false,
-        line_number = false,
         footer = false,
       },
     },
@@ -26,11 +25,13 @@ function AppBarComponent:call(callback)
   return self
 end
 
-function AppBarComponent:get_height() return 1 end
+function AppBarComponent:get_height()
+  return 1
+end
 
 function AppBarComponent:set_default_win_plot(win_plot)
   win_plot.focusable = false
-  win_plot.zindex = 3
+  win_plot.zindex = 5
   win_plot.height = 1
 
   return self
@@ -43,9 +44,7 @@ function AppBarComponent:set_default_win_options(win_options)
 end
 
 function AppBarComponent:mount()
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   local config = self.config
   local win_plot = config.win_plot
@@ -73,15 +72,19 @@ function AppBarComponent:unmount()
 end
 
 function AppBarComponent:clear_notification()
-  if self.buffer:is_valid() then
-    self.namespace:clear(self.buffer)
-  end
+  if self.buffer:is_valid() then self.namespace:clear(self.buffer) end
 
   return self
 end
 
 function AppBarComponent:trigger_notification(text)
-  self.namespace:transpose_virtual_text(self.buffer, text, 'GitComment', 0, 0, 'eol')
+  self.namespace:transpose_virtual_text(self.buffer, {
+    text = text,
+    hl = 'GitComment',
+    row = 0,
+    col = 0,
+    pos = 'eol',
+  })
 
   return self
 end

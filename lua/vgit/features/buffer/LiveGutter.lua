@@ -16,7 +16,7 @@ LiveGutter.fetch = loop.debounce_coroutine(function(self, buffer)
   if not buffer:is_valid() then return self end
 
   loop.free_textlock()
-  local err = buffer:live_hunks()
+  local _, err = buffer:live_hunks()
 
   loop.free_textlock()
   if err then
@@ -33,7 +33,7 @@ end, 10)
 function LiveGutter:render(buffer, top, bot)
   if not live_gutter_setting:get('enabled') then return self end
 
-  local hunks = buffer.git_object.hunks
+  local hunks = buffer:get_hunks()
   if not hunks then return self end
 
   local signs = {}
@@ -52,9 +52,7 @@ function LiveGutter:reset()
   for i = 1, #buffers do
     local buffer = buffers[i]
 
-    if buffer then
-      buffer:sign_unplace()
-    end
+    if buffer then buffer:sign_unplace() end
   end
 
   return self
@@ -82,7 +80,7 @@ function LiveGutter:register_events()
       end
     end)
     .attach('render', function(buffer, top, bot)
-      self:render(buffer, top, bot)
+      self:render(buffer, top, bot + 1)
     end)
 
   return self

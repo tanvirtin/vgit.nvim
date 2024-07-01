@@ -5,8 +5,10 @@ local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
+local git_repo = require('vgit.git.git_repo')
+local git_show = require('vgit.git.git_show')
 local DiffView = require('vgit.ui.views.DiffView')
-local FSListGenerator = require('vgit.ui.FSListGenerator')
+local StatusListGenerator = require('vgit.ui.StatusListGenerator')
 local FoldableListView = require('vgit.ui.views.FoldableListView')
 local Store = require('vgit.features.screens.ProjectCommitsScreen.Store')
 
@@ -43,9 +45,8 @@ function ProjectCommitsScreen:constructor(opts)
         for commit_hash, files in pairs(commits) do
           foldable_list[#foldable_list + 1] = {
             open = true,
-            show_count = false,
             value = commit_hash,
-            items = FSListGenerator(files):generate(),
+            items = StatusListGenerator(files):generate(),
           }
         end
 
@@ -55,40 +56,34 @@ function ProjectCommitsScreen:constructor(opts)
   }
 end
 
-function ProjectCommitsScreen:hunk_up() self.diff_view:prev() end
+function ProjectCommitsScreen:hunk_up()
+  self.diff_view:prev()
+end
 
-function ProjectCommitsScreen:hunk_down() self.diff_view:next() end
+function ProjectCommitsScreen:hunk_down()
+  self.diff_view:next()
+end
 
 function ProjectCommitsScreen:handle_list_move(direction)
   local list_item = self.foldable_list_view:move(direction)
-
-  if not list_item then
-    return
-  end
+  if not list_item then return end
 
   self.store:set_id(list_item.id)
-  self.diff_view:render_debounced(loop.coroutine(function() self.diff_view:navigate_to_mark(1) end))
+  self.diff_view:render_debounced(loop.coroutine(function()
+    self.diff_view:navigate_to_mark(1)
+  end))
 end
 
 function ProjectCommitsScreen:handle_on_enter()
-  local _, filename = self.store:get_filename()
-
-  if not filename then
-    self.foldable_list_view:toggle_current_list_item():render()
-
-    return
-  end
+  local filename = self.store:get_filename()
+  if not filename then return self.foldable_list_view:toggle_current_list_item():render() end
 
   if not fs.exists(filename) then
-    local commit_err, commit_hash = self.store:get_parent_commit()
+    local commit_hash, commit_err = self.store:get_parent_commit()
+    if commit_err then return console.debug.error(commit_err).error(commit_err) end
 
-    if commit_err then
-      console.debug.error(commit_err).error(commit_err)
-
-      return
-    end
-
-    local lines_err, lines = self.store:get_remote_lines(filename, commit_hash)
+    local reponame = git_repo.discover()
+    local lines, lines_err = git_show.lines(reponame, filename, commit_hash)
     loop.free_textlock()
 
     if lines_err then
@@ -114,21 +109,18 @@ function ProjectCommitsScreen:handle_on_enter()
 
   fs.open(filename)
 
-  local diff_dto_err, diff_dto = self.store:get_diff_dto()
-
-  if diff_dto_err or not diff_dto then
-    return
-  end
+  local diff, diff_err = self.store:get_diff()
+  if diff_err or not diff then return end
 
   local window = Window(0)
 
-  window:set_lnum(diff_dto.marks[1].top_relative):position_cursor('center')
+  window:set_lnum(diff.marks[1].top_relative):position_cursor('center')
 end
 
 function ProjectCommitsScreen:show(args)
   local commits = {}
   local buffer = Buffer(0)
-  local target_filename = buffer.filename
+  local filename = buffer:get_name()
 
   -- TODO: Need to add an arg parser in core that takes you can
   --       somehow define and then parse the input using definition.
@@ -136,19 +128,16 @@ function ProjectCommitsScreen:show(args)
     local arg = args[i]
 
     if vim.startswith(arg, '--filename') then
-      target_filename = arg:sub(#'--filename=' + 1, #arg)
+      filename = arg:sub(#'--filename=' + 1, #arg)
 
-      if target_filename == '' then
-        target_filename = nil
-      end
+      if filename == '' then filename = nil end
     else
       commits[#commits + 1] = arg
     end
   end
 
   loop.free_textlock()
-  local err = self.store:fetch(self.layout_type, commits)
-
+  local _, err = self.store:fetch(self.layout_type, commits)
   if err then
     console.debug.error(err).error(err)
     return false
@@ -165,46 +154,43 @@ function ProjectCommitsScreen:show(args)
     {
       mode = 'n',
       key = 'j',
-      handler = loop.coroutine(function() self:handle_list_move('down') end),
+      handler = loop.coroutine(function()
+        self:handle_list_move('down')
+      end),
     },
     {
       mode = 'n',
       key = 'k',
-      handler = loop.coroutine(function() self:handle_list_move('up') end),
+      handler = loop.coroutine(function()
+        self:handle_list_move('up')
+      end),
     },
     {
       mode = 'n',
       key = '<enter>',
-      handler = loop.coroutine(function() self:handle_on_enter() end),
+      handler = loop.coroutine(function()
+        self:handle_on_enter()
+      end),
     },
   })
 
-  self.foldable_list_view.scene:get('list').buffer:on('CursorMoved', loop.coroutine(function() self:handle_list_move() end))
-
-  local list_item = self.foldable_list_view:move_to(function(node)
-    local filename = node.path and node.path.file and node.path.file.filename or nil
-    return filename == target_filename
-  end)
-
-  if not list_item then
-    list_item = self.foldable_list_view:move_to(function(node)
-      local filename = node.path and node.path.file and node.path.file.filename or nil
-      return filename ~= nil
+  self.foldable_list_view.scene:get('list').buffer:on(
+    'CursorMoved',
+    loop.coroutine(function()
+      self:handle_list_move()
     end)
-  end
+  )
 
-  if list_item then
-    self.store:set_id(list_item.id)
-    self.diff_view:render_debounced(loop.coroutine(function() self.diff_view:navigate_to_mark(1) end))
-  end
+  self.foldable_list_view:move_to(function(node)
+    local node_filename = node.path and node.path.file and node.path.file.filename or nil
+    return node_filename ~= nil
+  end)
 
   return true
 end
 
 function ProjectCommitsScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return ProjectCommitsScreen

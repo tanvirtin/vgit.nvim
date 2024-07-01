@@ -1,8 +1,12 @@
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
+local Diff = require('vgit.core.Diff')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local diff_service = require('vgit.services.diff')
+local git_log = require('vgit.git.git_log')
+local git_repo = require('vgit.git.git_repo')
+local git_show = require('vgit.git.git_show')
+local git_hunks = require('vgit.git.git_hunks')
+local git_status = require('vgit.git.git_status')
 
 local Store = Object:extend()
 
@@ -12,11 +16,10 @@ function Store:constructor()
     err = nil,
     data = nil,
     shape = nil,
-    git = Git(),
-    _cache = {
+    state = {
       lnum = 1,
-      list_entry_cache = {},
       commits = {},
+      list_entry_cache = {},
     },
   }
 end
@@ -25,13 +28,11 @@ function Store:reset()
   self.id = nil
   self.err = nil
   self.data = nil
-  self._cache = {
+  self.state = {
     lnum = 1,
-    list_entry_cache = {},
     commits = {},
+    list_entry_cache = {},
   }
-
-  return self
 end
 
 function Store:fetch(shape, commits, opts)
@@ -40,17 +41,19 @@ function Store:fetch(shape, commits, opts)
   self:reset()
 
   if not commits or #commits == 0 then
-    return { 'No commits specified' }, nil
+    self.err = { 'No commits specified' }
+    return nil, self.err
   end
 
-  self._cache = {
+  self.state = {
     lnum = 1,
-    list_entry_cache = {},
     commits = {},
+    list_entry_cache = {},
   }
 
-  if not self.git:is_inside_git_dir() then
-    return { 'Project has no .git folder' }, nil
+  if not git_repo.exists() then
+    self.err = { 'Project has no .git folder' }
+    return nil, self.err
   end
 
   self.shape = shape
@@ -58,180 +61,148 @@ function Store:fetch(shape, commits, opts)
 
   for i = 1, #commits do
     local commit = commits[i]
-    -- Get the log associated with the commit
-    local log_err, log = self.git:log(commit)
     loop.free_textlock()
-
-    if log_err then
-      return log_err
-    end
-
-    -- We will use the parent_hash and the commit_hash inside
-    -- the log object to list all the files associated with the log.
-    local err, files = self.git:ls_log(log)
-    loop.free_textlock()
-
+    local reponame = git_repo.discover()
+    local log, err = git_log.get(reponame, commit)
     if err then
-      return err
+      self.err = err
+      return nil, err
+    end
+    if not log then
+      self.err = { 'No log found for commit' }
+      return nil, self.err
     end
 
-    data[commit] = utils.list.map(files, function(file)
-      -- Log contains the metadata about parent_hash and commit_hash
-      -- File contains the name of the file in that particular working tree.
-      -- Using commit_hash, parent_hash and the name of the file we can easily get the lines
-      -- and hunks to recreate the diffs by feeding this info into our algorithm.
-      local datum = {
-        id = utils.math.uuid(),
-        log = log,
-        file = file,
-      }
-      self._cache.commits[datum.id] = datum
+    loop.free_textlock()
+    local statuses, status_err = git_status.tree(reponame, {
+      commit_hash = log.commit_hash,
+      parent_hash = log.parent_hash,
+    })
+    if status_err then
+      self.err = status_err
+      return nil, status_err
+    end
 
-      return datum
+    data[commit] = utils.list.map(statuses, function(status)
+      local id = utils.math.uuid()
+      local entry = {
+        id = id,
+        log = log,
+        status = status,
+      }
+      self.state.commits[id] = entry
+
+      return entry
     end)
   end
 
   self.data = data
 
-  return nil, self.data
+  return self.data
 end
-
-function Store:get_all() return self.err, self.data end
 
 function Store:set_id(id)
   self.id = id
+end
 
-  return self
+function Store:get_all()
+  return self.data, self.err
 end
 
 function Store:get(id)
-  if id then
-    self.id = id
-  end
+  if self.err then return nil, self.err end
+  if id then self.id = id end
 
-  local datum = self._cache.commits[self.id]
+  local entry = self.state.commits[self.id]
+  if not entry then return nil, { 'Item not found' } end
 
-  if not datum then
-    return { 'Item not found' }, nil
-  end
-
-  return nil, datum
+  return entry
 end
 
-function Store:get_diff_dto()
-  local err, datum = self:get()
+function Store:get_diff()
+  local entry, err = self:get()
+  if err then return nil, err end
+  if not entry then return nil, { 'no data found' } end
 
-  if err then
-    return err
-  end
+  local status = entry.status
+  if not status then return nil, { 'No file found in item' } end
 
-  local file = datum.file
+  local log = entry.log
+  if not log then return nil, { 'No log found in item' } end
 
-  if not file then
-    return { 'No file found in item' }, nil
-  end
-
-  local id = file.id
-  local filename = file.filename
-  local log = file.log
+  local id = status.id
+  local filename = status.filename
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self._cache.commits[id] then
-    return nil, self._cache.commits[id]
-  end
+  if self.state.commits[id] then return self.state.commits[id] end
 
+  local is_deleted = status:has_either('DD')
+  local reponame = git_repo.discover()
   local lines_err, lines
-  local is_deleted = false
-
-  loop.free_textlock()
-  if not self.git:is_in_remote(filename, commit_hash) then
-    is_deleted = true
-    lines_err, lines = self.git:show(filename, parent_hash)
-  else
-    lines_err, lines = self.git:show(filename, commit_hash)
-  end
-  loop.free_textlock()
-
-  if lines_err then
-    return lines_err
-  end
-
-  local hunks_err, hunks
   if is_deleted then
-    hunks = self.git:deleted_hunks(lines)
+    lines, lines_err = git_show.lines(reponame, filename, parent_hash)
   else
-    hunks_err, hunks = self.git:remote_hunks(filename, parent_hash, commit_hash)
+    lines, lines_err = git_show.lines(reponame, filename, commit_hash)
   end
   loop.free_textlock()
+  if lines_err then return nil, lines_err end
 
-  if hunks_err then
-    return hunks_err
-  end
-
-  local diff = diff_service:generate(hunks, lines, self.shape, {
-    is_deleted = is_deleted,
+  local hunks, hunks_err = git_hunks.list(reponame, filename, {
+    parent = parent_hash,
+    current = commit_hash,
   })
+  loop.free_textlock()
+  if hunks_err then return nil, hunks_err end
 
-  self._cache.commits[id] = diff
+  local diff = Diff():generate(hunks, lines, self.shape, { is_deleted = is_deleted })
 
-  return nil, diff
+  self.state.commits[id] = diff
+
+  return diff
 end
 
 function Store:get_filename()
-  local err, datum = self:get()
+  local entry, err = self:get()
+  if err then return nil, err end
 
-  if err then
-    return err
-  end
-
-  return nil, datum.file.filename
+  return entry.status.filename
 end
 
 function Store:get_filetype()
-  local err, datum = self:get()
+  local entry, err = self:get()
+  if err then return nil, err end
 
-  if err then
-    return err
-  end
-
-  return nil, datum.file.filetype
+  return entry.status.filetype
 end
 
-function Store:get_lnum() return nil, self._cache.lnum end
+function Store:get_lnum()
+  return self.state.lnum
+end
 
 function Store:get_parent_commit()
-  local err, datum = self:get()
+  local entry, err = self:get()
+  if err then return nil, err end
 
-  if err then
-    return err
-  end
+  local status = entry.status
+  if not status then return nil, { 'No status found in item' } end
 
-  local file = datum.file
+  local log = entry.log
+  if not log then return nil, { 'No log found in item' } end
 
-  if not file then
-    return { 'No file found in item' }, nil
-  end
-
-  local log = file.log
-
-  return nil, log.parent_hash
+  return log.parent_hash
 end
-
-function Store:get_remote_lines(filename, commit_hash) return self.git:show(filename, commit_hash) end
 
 function Store:set_lnum(lnum)
-  self._cache.lnum = lnum
-
-  return self
+  self.state.lnum = lnum
 end
 
-function Store:get_list_folds() return nil, self._cache.list_folds end
+function Store:get_list_folds()
+  return self.state.list_folds
+end
 
 function Store:set_list_folds(list_folds)
-  self._cache.list_folds = list_folds
-
-  return self
+  self.state.list_folds = list_folds
 end
 
 return Store

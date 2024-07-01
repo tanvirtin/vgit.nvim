@@ -29,9 +29,7 @@ function str.concat(existing_text, new_text)
 end
 
 function str.strip(given_string, substring)
-  if substring == '' then
-    return given_string
-  end
+  if substring == '' then return given_string end
 
   local rc_s = ''
   local i = 1
@@ -45,9 +43,7 @@ function str.strip(given_string, substring)
         local s_j = substring:sub(j, j)
         local s_i = given_string:sub(i + temp_i, i + temp_i)
 
-        if s_j == s_i then
-          temp_i = temp_i + 1
-        end
+        if s_j == s_i then temp_i = temp_i + 1 end
       end
     end
     if temp_i == #substring then

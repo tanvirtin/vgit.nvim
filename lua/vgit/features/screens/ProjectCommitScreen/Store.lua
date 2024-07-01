@@ -1,6 +1,7 @@
-local Git = require('vgit.git.cli.Git')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
+local git_repo = require('vgit.git.git_repo')
+local git_commit = require('vgit.git.git_commit')
 
 local Store = Object:extend()
 
@@ -8,15 +9,12 @@ function Store:constructor()
   return {
     err = nil,
     data = nil,
-    git = Git(),
   }
 end
 
 function Store:reset()
   self.err = nil
   self.data = nil
-
-  return self
 end
 
 function Store:fetch(opts)
@@ -24,17 +22,21 @@ function Store:fetch(opts)
 
   self:reset()
 
-  self.err, self.data = self.git:get_commit()
+  local reponame = git_repo.discover()
+  self.data, self.err = git_commit.dry_run(reponame)
 
-  return self.err, self.data
+  return self.data, self.err
 end
 
 function Store:get_lines()
-  if self.err then
-    return self.err
-  end
+  if self.err then return nil, self.err end
 
-  return nil, utils.list.concat({ '' }, utils.list.map(self.data, function(line) return '# ' .. line end))
+  return utils.list.concat(
+    { '' },
+    utils.list.map(self.data, function(line)
+      return '# ' .. line
+    end)
+  )
 end
 
 return Store

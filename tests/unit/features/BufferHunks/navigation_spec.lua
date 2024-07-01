@@ -34,8 +34,12 @@ a.describe('navigation:', function()
     },
   }
 
-  before_each(function() vim.api.nvim_win_set_cursor = mock(vim.api.nvim_win_set_cursor, true) end)
-  after_each(function() mock.revert(vim.api.nvim_win_set_cursor) end)
+  before_each(function()
+    vim.api.nvim_win_set_cursor = mock(vim.api.nvim_win_set_cursor, true)
+  end)
+  after_each(function()
+    mock.revert(vim.api.nvim_win_set_cursor)
+  end)
 
   a.describe('hunk_up', function()
     a.it('should select the last hunk when the cursor is above the first hunk', function()

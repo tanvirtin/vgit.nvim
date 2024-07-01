@@ -18,7 +18,6 @@ function Command:constructor()
       'buffer_diff_preview',
       'buffer_history_preview',
       'buffer_blame_preview',
-      'buffer_gutter_blame_preview',
       'buffer_diff_staged_preview',
       'buffer_hunk_staged_preview',
       'buffer_hunk_stage',
@@ -26,25 +25,20 @@ function Command:constructor()
       'buffer_stage',
       'buffer_unstage',
       'buffer_reset',
+      'buffer_conflict_accept_current_change',
+      'buffer_conflict_accept_incoming_change',
+      'buffer_conflict_accept_both_changes',
 
-      'project_hunks_qf',
-      'project_reset_all',
-      'project_stage_all',
-      'project_unstage_all',
       'project_logs_preview',
       'project_stash_preview',
       'project_diff_preview',
-      'project_hunks_preview',
-      'project_debug_preview',
       'project_commit_preview',
       'project_commits_preview',
-      'project_hunks_staged_preview',
 
       'toggle_tracing',
       'toggle_diff_preference',
       'toggle_live_gutter',
       'toggle_live_blame',
-      'toggle_authorship_code_lens',
 
       'h',
       'help',
@@ -81,9 +75,7 @@ function Command:list(arglead, line)
 
   if #vim.split(line, '%s+') == 2 then
     self.commands:for_each(function(command)
-      if vim.startswith(command, arglead) then
-        matches[#matches + 1] = command
-      end
+      if vim.startswith(command, arglead) then matches[#matches + 1] = command end
     end)
   end
 

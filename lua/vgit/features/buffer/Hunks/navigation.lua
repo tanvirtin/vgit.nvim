@@ -2,6 +2,15 @@ local live_gutter_setting = require('vgit.settings.live_gutter')
 
 local navigation = {}
 
+function navigation.get_current_hunk(window, hunks)
+  local lnum = window:get_lnum()
+
+  for i = #hunks, 1, -1 do
+    local hunk = hunks[i]
+    if lnum >= hunk.top and lnum <= hunk.bot then return hunk, i end
+  end
+end
+
 function navigation.hunk_up(window, hunks)
   local new_lnum = nil
   local selected = nil
@@ -26,9 +35,7 @@ function navigation.hunk_up(window, hunks)
     end
   end
 
-  if new_lnum and new_lnum < 1 then
-    new_lnum = 1
-  end
+  if new_lnum and new_lnum < 1 then new_lnum = 1 end
 
   if new_lnum and lnum ~= new_lnum then
     window:set_lnum(new_lnum):position_cursor('center')
@@ -74,9 +81,7 @@ function navigation.hunk_down(window, hunks)
     end
   end
 
-  if new_lnum and new_lnum < 1 then
-    new_lnum = 1
-  end
+  if new_lnum and new_lnum < 1 then new_lnum = 1 end
 
   if new_lnum then
     window:set_lnum(new_lnum):position_cursor('center')

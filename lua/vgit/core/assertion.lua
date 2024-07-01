@@ -1,9 +1,7 @@
 local assertion = {}
 
 function assertion.assert(cond, msg)
-  if not cond then
-    error(debug.traceback(msg))
-  end
+  if not cond then error(debug.traceback(msg)) end
 
   return assertion
 end
@@ -20,9 +18,7 @@ function assertion.assert_types(value, types)
 
   for i = 1, #types do
     local t = types[i]
-    if type(value) == t then
-      passed = true
-    end
+    if type(value) == t then passed = true end
   end
 
   assertion.assert(passed, string.format('type error :: expected %s', vim.inspect(types)))

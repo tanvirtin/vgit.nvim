@@ -5,9 +5,7 @@ return Config({
   format = function(blame, git_config)
     local config_author = git_config['user.name']
     local author = blame.author
-    if config_author == author then
-      author = 'You'
-    end
+    if config_author == author then author = 'You' end
     local commit_message = blame.commit_message
     if not blame.committed then
       author = 'You'

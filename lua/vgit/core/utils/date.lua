@@ -5,8 +5,13 @@ local date = {}
 
 function date.format(time, format)
   format = format or '%d %b %Y'
+  local timestamp = tonumber(time)
 
-  return os.date(format, tonumber(time))
+  if not timestamp or timestamp == 0 then
+    timestamp = os.time()
+  end
+
+  return os.date(format, timestamp)
 end
 
 function date.age(current_time)

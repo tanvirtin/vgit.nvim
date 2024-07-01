@@ -1,8 +1,11 @@
 local loop = require('vgit.core.loop')
-local Git = require('vgit.git.cli.Git')
+local Diff = require('vgit.core.Diff')
 local Object = require('vgit.core.Object')
+local git_log = require('vgit.git.git_log')
+local git_show = require('vgit.git.git_show')
+local git_repo = require('vgit.git.git_repo')
+local git_hunks = require('vgit.git.git_hunks')
 local GitObject = require('vgit.git.GitObject')
-local diff_service = require('vgit.services.diff')
 
 local Store = Object:extend()
 
@@ -10,31 +13,20 @@ function Store:constructor()
   return {
     err = nil,
     shape = nil,
-    git = Git(),
     git_object = nil,
-    _cache = {
-      blame = nil,
-      diff_dto = nil,
-    },
+    state = { blame = nil, diff = nil },
   }
 end
 
 function Store:reset()
   self.err = nil
-  self._cache = {
-    blame = nil,
-    diff_dto = nil,
-  }
-
-  return self
+  self.state = { blame = nil, diff = nil }
 end
 
 function Store:fetch(shape, filename, lnum, opts)
   opts = opts or {}
 
-  if not filename or filename == '' then
-    return { 'Buffer has no blame associated with it' }, nil
-  end
+  if not filename or filename == '' then return nil, { 'Buffer has no blame associated with it' } end
 
   self:reset()
 
@@ -42,24 +34,18 @@ function Store:fetch(shape, filename, lnum, opts)
   self.git_object = GitObject(filename)
 
   loop.free_textlock()
-  self.err, self._cache.blame = self.git_object:blame_line(lnum)
+  self.state.blame, self.err = self.git_object:blame(lnum)
+  if self.err then return nil, self.err end
+
+  local blame = self.state.blame
+
+  if not blame then return nil, { 'no blame found' } end
+  if blame:is_uncommitted() then return nil, { 'Line is uncommitted' } end
+
   loop.free_textlock()
-
-  if self.err then
-    return self.err
-  end
-
-  local blame = self._cache.blame
-
-  if blame:is_uncommitted() then
-    return { 'Line is uncommitted' }
-  end
-
-  local log_err, log = self.git:log(blame.commit_hash)
-
-  if log_err then
-    return log_err
-  end
+  local reponame = git_repo.discover()
+  local log, log_err = git_log.get(reponame, blame.commit_hash)
+  if log_err then return nil, log_err end
 
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
@@ -71,41 +57,45 @@ function Store:fetch(shape, filename, lnum, opts)
   -- this is why we should use blame.filename filename passed as args.
   filename = blame.filename
 
-  loop.free_textlock()
-  if not self.git:is_in_remote(filename, commit_hash) then
+  if not git_repo.has(reponame, filename, commit_hash) then
     is_deleted = true
-    lines_err, lines = self.git:show(filename, parent_hash)
+    lines, lines_err = git_show.lines(reponame, filename, parent_hash)
   else
-    lines_err, lines = self.git:show(filename, commit_hash)
+    lines, lines_err = git_show.lines(reponame, filename, commit_hash)
   end
-
-  if lines_err then
-    return lines_err
-  end
+  if lines_err then return nil, lines_err end
 
   local hunks_err, hunks
   if is_deleted then
-    hunks = self.git:deleted_hunks(lines)
+    hunks = git_hunks.custom(lines, { deleted = true })
   else
-    hunks_err, hunks = self.git:remote_hunks(filename, parent_hash, commit_hash)
+    hunks, hunks_err = git_hunks.list(reponame, filename, {
+      parent = parent_hash,
+      current = commit_hash,
+    })
   end
   loop.free_textlock()
+  if hunks_err then return nil, hunks_err end
 
-  if hunks_err then
-    return hunks_err
-  end
+  self.state.diff = Diff():generate(hunks, lines, self.shape, { is_deleted = is_deleted })
 
-  self._cache.diff_dto = diff_service:generate(hunks, lines, self.shape, { is_deleted = is_deleted })
-
-  return self.err
+  return nil, self.err
 end
 
-function Store:get_blame() return self.err, self._cache.blame end
+function Store:get_blame()
+  return self.state.blame, self.err
+end
 
-function Store:get_diff_dto() return nil, self._cache.diff_dto end
+function Store:get_diff()
+  return self.state.diff
+end
 
-function Store:get_filename() return nil, self.git_object:get_filename() end
+function Store:get_filename()
+  return self.git_object:get_filename()
+end
 
-function Store:get_filetype() return nil, self.git_object:get_filetype() end
+function Store:get_filetype()
+  return self.git_object:get_filetype()
+end
 
 return Store

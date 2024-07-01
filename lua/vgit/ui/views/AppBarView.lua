@@ -28,7 +28,9 @@ function AppBarView:define()
   return self
 end
 
-function AppBarView:get_components() return { self.scene:get('app_bar') } end
+function AppBarView:get_components()
+  return { self.scene:get('app_bar') }
+end
 
 function AppBarView:set_lines(lines)
   self.scene:get('app_bar'):set_lines(lines)

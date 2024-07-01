@@ -21,7 +21,9 @@ function GitLogsView:constructor(scene, store, plot, config)
   }
 end
 
-function GitLogsView:get_components() return { self.scene:get('selectable_view') } end
+function GitLogsView:get_components()
+  return { self.scene:get('selectable_view') }
+end
 
 function GitLogsView:define()
   self.scene:set(
@@ -48,14 +50,13 @@ function GitLogsView:define()
 end
 
 function GitLogsView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('selectable_view'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  utils.list.each(configs, function(config)
+    self.scene:get('selectable_view'):set_keymap(config.mode, config.key, config.handler)
+  end)
   return self
 end
 
-function GitLogsView:make_title(labels)
+function GitLogsView:render_title(labels)
   self.scene:get('selectable_view'):set_title(labels[1])
 
   return self
@@ -69,27 +70,41 @@ function GitLogsView:select()
   if self.state.selected[lnum] then
     self.state.selected[lnum] = nil
 
-    self.namespace:clear(buffer, lnum - 1, lnum)
+    self.namespace:clear(buffer, {
+      from = lnum - 1,
+      to = lnum,
+    })
+
     return self
   end
 
   self.state.selected[lnum] = true
 
-  self.namespace:add_highlight(buffer, 'GitSelected', lnum - 1, 1, 41)
+  self.namespace:add_highlight(buffer, {
+    hl = 'GitSelected',
+    row = lnum - 1,
+    col_range = {
+      from = 1,
+      to = 41,
+    },
+  })
   return self
 end
 
-function GitLogsView:has_selection() return not utils.object.is_empty(self.state.selected) end
+function GitLogsView:has_selection()
+  return not utils.object.is_empty(self.state.selected)
+end
 
 function GitLogsView:get_selected()
-  local err, data = self.store:get_data()
-
+  local logs, err = self.store:get_logs()
   if err then
     console.debug.error(err)
     return {}
   end
 
-  return utils.list.filter(data, function(_, index) return self.state.selected[index] == true end)
+  return utils.list.filter(logs, function(_, index)
+    return self.state.selected[index] == true
+  end)
 end
 
 function GitLogsView:paint()
@@ -97,15 +112,21 @@ function GitLogsView:paint()
   local num_lines = component:get_line_count()
 
   for i = 1, num_lines do
-    component:add_highlight('Constant', i - 1, 0, 41)
+    component:add_highlight({
+      hl = 'Constant',
+      row = i - 1,
+      col_range = {
+        from = 0,
+        to = 41,
+      },
+    })
   end
 
   return self
 end
 
 function GitLogsView:render()
-  local err, logs = self.store:get_data()
-
+  local logs, err = self.store:get_logs()
   if err then
     console.debug.error(err).error(err)
     return self
@@ -127,7 +148,7 @@ function GitLogsView:render()
     80
   ):generate()
 
-  self:make_title(labels)
+  self:render_title(labels)
 
   self.scene:get('selectable_view'):unlock():set_lines(rows):focus():lock()
 

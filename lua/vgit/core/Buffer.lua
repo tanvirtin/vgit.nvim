@@ -11,18 +11,10 @@ local Namespace = require('vgit.core.Namespace')
 local Buffer = Object:extend()
 
 function Buffer:constructor(bufnr)
-  local filename = nil
-
-  -- 0 represents the current buffer.
-  if bufnr == 0 then
-    bufnr = vim.api.nvim_get_current_buf()
-    local bufname = vim.api.nvim_buf_get_name(bufnr)
-    filename = fs.relative_filename(bufname)
-  end
+  if bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
 
   return {
     bufnr = bufnr,
-    filename = filename,
     rendering = false,
     namespace = Namespace(),
     watcher = Watcher(),
@@ -73,40 +65,36 @@ function Buffer:on(event_type, callback)
 end
 
 function Buffer:on_render(top, bot)
-  -- We invoke the render function called on runtime.
   self.state.on_render(top, bot)
 
   return self
 end
 
-function Buffer:is_rendering() return self.rendering end
+function Buffer:is_rendering()
+  return self.rendering
+end
 
 function Buffer:is_in_disk()
-  local filename = self.filename
+  return fs.exists(self:get_name())
+end
 
-  if not filename or filename == '' then
-    return false
-  end
-  if not fs.exists(filename) then
-    return false
-  end
-
-  return true
+function Buffer:sync()
+  return self
 end
 
 function Buffer:watch(callback)
+  local name = self:get_name()
+
   self.watcher:watch_file(
-    self.filename,
+    self:get_name(),
     loop.coroutine(function(err)
       if err then
-        console.debug.error(string.format('Error encountered while watching %s', self.filename))
+        console.debug.error(string.format('Error encountered while watching %s', name))
         return
       end
 
       loop.free_textlock()
-      if self and self:is_valid() and callback then
-        callback()
-      end
+      if self and self:is_valid() and callback then callback() end
     end)
   )
 
@@ -119,10 +107,19 @@ function Buffer:unwatch()
   return self
 end
 
-function Buffer:get_name() return vim.api.nvim_buf_get_name(self.bufnr) end
+function Buffer:get_name()
+  return vim.api.nvim_buf_get_name(self.bufnr)
+end
 
-function Buffer:add_highlight(hl, row, col_top, col_end)
-  self.namespace:add_highlight(self, hl, row, col_top, col_end)
+function Buffer:add_highlight(opts)
+  self.namespace:add_highlight(self, {
+    hl = opts.hl,
+    row = opts.row,
+    col_range = {
+      from = opts.col_range.from,
+      to = opts.col_range.to,
+    },
+  })
 
   return self
 end
@@ -133,8 +130,8 @@ function Buffer:add_pattern_highlight(pattern, hl)
   return self
 end
 
-function Buffer:clear_highlight(row_start, row_end)
-  self.namespace:clear(self, row_start, row_end)
+function Buffer:clear_highlight(row_range)
+  self.namespace:clear(self, row_range)
 
   return self
 end
@@ -157,27 +154,53 @@ function Buffer:sign_unplace()
   return self
 end
 
-function Buffer:transpose_virtual_text(text, hl, row, col, pos, priority)
-  self.namespace:transpose_virtual_text(self, text, hl, row, col, pos, priority)
+function Buffer:transpose_virtual_text(opts)
+  self.namespace:transpose_virtual_text(self, {
+    text = opts.text,
+    hl = opts.hl,
+    row = opts.row,
+    col = opts.col,
+    pos = opts.pos,
+    priority = opts.priority,
+  })
 
   return self
 end
 
-function Buffer:transpose_virtual_line(texts, col, pos, priority)
-  self.namespace:transpose_virtual_line(self, texts, col, pos, priority)
+function Buffer:transpose_virtual_line(opts)
+  self.namespace:transpose_virtual_line(self, {
+    texts = opts.texts,
+    row = opts.row,
+    pos = opts.pos,
+    priority = opts.priority,
+  })
+
+  return self
+end
+
+function Buffer:transpose_virtual_line_number(opts)
+  self.namespace:transpose_virtual_line_number(self, {
+    row = opts.row,
+    hl = opts.hl,
+    text = opts.text,
+  })
+
+  return self
+end
+
+function Buffer:insert_virtual_line(opts)
+  self.namespace:insert_virtual_line(self, {
+    text = opts.text,
+    hl = opts.hl,
+    row = opts.row,
+    priority = opts.priority,
+  })
 
   return self
 end
 
 function Buffer:clear_namespace()
   self.namespace:clear(self)
-
-  return self
-end
-
-function Buffer:sync()
-  local bufname = vim.api.nvim_buf_get_name(self.bufnr)
-  self.filename = fs.relative_filename(bufname)
 
   return self
 end
@@ -190,7 +213,9 @@ function Buffer:create(listed, scratch)
   return self
 end
 
-function Buffer:is_current() return self.bufnr == vim.api.nvim_get_current_buf() end
+function Buffer:is_current()
+  return self.bufnr == vim.api.nvim_get_current_buf()
+end
 
 function Buffer:is_valid()
   local bufnr = self.bufnr
@@ -213,7 +238,9 @@ function Buffer:get_lines(top, bot)
   return vim.api.nvim_buf_get_lines(self.bufnr, top, bot, false)
 end
 
-function Buffer:get_option(key) return vim.api.nvim_buf_get_option(self.bufnr, key) end
+function Buffer:get_option(key)
+  return vim.api.nvim_buf_get_option(self.bufnr, key)
+end
 
 function Buffer:set_lines(lines, top, bot)
   top = top or 0
@@ -249,7 +276,9 @@ function Buffer:assign_options(options)
   return self
 end
 
-function Buffer:get_line_count() return vim.api.nvim_buf_line_count(self.bufnr) end
+function Buffer:get_line_count()
+  return vim.api.nvim_buf_line_count(self.bufnr)
+end
 
 function Buffer:edit()
   return self:call(function()
@@ -260,9 +289,19 @@ function Buffer:edit()
   end)
 end
 
-function Buffer:editing() return self:get_option('modified') end
+function Buffer:editing()
+  return self:get_option('modified')
+end
 
-function Buffer:filetype() return fs.detect_filetype(self.filename) end
+function Buffer:update()
+  return self:call(function()
+    vim.cmd('update')
+  end)
+end
+
+function Buffer:filetype()
+  return fs.detect_filetype(self:get_name())
+end
 
 function Buffer:list()
   local bufnrs = vim.api.nvim_list_bufs()

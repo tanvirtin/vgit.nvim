@@ -34,7 +34,7 @@ function ProjectCommitScreen:constructor(opts)
   }
 end
 
-function ProjectCommitScreen:make_help_bar()
+function ProjectCommitScreen:render_help_bar()
   local text = ''
   local keymaps = project_commit_preview_setting:get('keymaps')
   local keys = { 'save' }
@@ -48,14 +48,11 @@ function ProjectCommitScreen:make_help_bar()
   self.app_bar_view:set_lines({ text })
   self.app_bar_view:add_pattern_highlight('%((%a+)%)', 'Keyword')
   self.app_bar_view:add_pattern_highlight('|', 'Number')
-
-  return self
 end
 
 function ProjectCommitScreen:show()
   loop.free_textlock()
-  local err = self.store:fetch()
-
+  local _, err = self.store:fetch()
   if err then
     console.debug.error(err).error(err)
     return false
@@ -66,7 +63,7 @@ function ProjectCommitScreen:show()
   self.app_bar_view:define()
 
   self.app_bar_view:show()
-  self:make_help_bar()
+  self:render_help_bar()
 
   self.view:show()
   self.view:set_keymap({
@@ -74,12 +71,10 @@ function ProjectCommitScreen:show()
       mode = 'n',
       key = project_commit_preview_setting:get('keymaps').save,
       handler = loop.coroutine(function()
-        local commit_err = self.mutation:commit(self.view:get_lines())
+        local _, commit_err = self.mutation:commit(self.view:get_lines())
         loop.free_textlock()
 
-        if commit_err then
-          return console.debug.error(commit_err).error(commit_err)
-        end
+        if commit_err then return console.debug.error(commit_err).error(commit_err) end
 
         console.info('Successfully committed changes')
 
@@ -94,8 +89,6 @@ end
 
 function ProjectCommitScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return ProjectCommitScreen

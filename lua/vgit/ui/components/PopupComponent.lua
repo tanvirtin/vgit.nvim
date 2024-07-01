@@ -10,7 +10,6 @@ function PopupComponent:constructor(props)
     config = {
       elements = {
         header = false,
-        line_number = false,
         footer = false,
       },
     },
@@ -26,7 +25,7 @@ end
 
 function PopupComponent:set_default_win_plot(win_plot)
   win_plot.relative = 'cursor'
-  win_plot.border = self:make_border({
+  win_plot.border = self:render_border({
     hl = 'GitBorder',
     chars = { '╭', '─', '╮', '│', '╯', '─', '╰', '│' },
   })
@@ -35,9 +34,7 @@ function PopupComponent:set_default_win_plot(win_plot)
 end
 
 function PopupComponent:mount()
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   local config = self.config
 

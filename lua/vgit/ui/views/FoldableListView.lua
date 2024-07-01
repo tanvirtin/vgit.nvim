@@ -17,7 +17,9 @@ function FoldableListView:constructor(scene, store, plot, config)
   }
 end
 
-function FoldableListView:get_components() return { self.scene:get('list') } end
+function FoldableListView:get_components()
+  return { self.scene:get('list') }
+end
 
 function FoldableListView:define()
   self.scene:set(
@@ -43,59 +45,54 @@ function FoldableListView:define()
 end
 
 function FoldableListView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('list'):set_keymap(config.mode, config.key, config.handler) end
-  )
+  utils.list.each(configs, function(config)
+    self.scene:get('list'):set_keymap(config.mode, config.key, config.handler)
+  end)
 
   return self
 end
 
 function FoldableListView:set_title(text)
   self.title = text
-
   return self
 end
 
 function FoldableListView:evict_cache()
   self.store:set_list_folds(nil)
-
   return self
 end
 
 function FoldableListView:get_list()
-  local _, list = self.store:get_list_folds()
+  local list = self.store:get_list_folds()
+  if list then return list end
 
-  if list then
-    return list
-  end
-
-  local err, data = self.store:get_all()
-
+  local data, err = self.store:get_all()
   if err then
     console.debug.error(err).error(err)
     return {}
   end
 
   list = self.config.get_list(data)
-
   self.store:set_list_folds(list)
 
   return list
 end
 
-function FoldableListView:get_list_item(lnum) return self.scene:get('list'):get_list_item(lnum) end
+function FoldableListView:get_list_item(lnum)
+  return self.scene:get('list'):get_list_item(lnum)
+end
 
-function FoldableListView:get_current_list_item() return self:get_list_item(self.scene:get('list'):get_lnum()) end
+function FoldableListView:get_current_list_item()
+  return self:get_list_item(self.scene:get('list'):get_lnum())
+end
 
-function FoldableListView:query_list_item(callback) return self.scene:get('list'):query_list_item(callback) end
+function FoldableListView:query_list_item(callback)
+  return self.scene:get('list'):query_list_item(callback)
+end
 
 function FoldableListView:toggle_current_list_item()
   local item = self:get_list_item(self.scene:get('list'):get_lnum())
-
-  if item and item.open ~= nil then
-    item.open = not item.open
-  end
+  if item and item.open ~= nil then item.open = not item.open end
 
   return self
 end
@@ -103,15 +100,12 @@ end
 function FoldableListView:move_to(callback)
   local list = self.scene:get('list')
   local item, lnum = list:find_list_item(callback)
+  if not item then return end
 
-  if item then
-    list:unlock():set_lnum(lnum):lock()
-    self.store:set_lnum(lnum)
+  list:unlock():set_lnum(lnum):lock()
+  self.store:set_lnum(lnum)
 
-    return item
-  end
-
-  return nil
+  return item
 end
 
 function FoldableListView:move(direction)
@@ -119,13 +113,8 @@ function FoldableListView:move(direction)
   local lnum = list:get_lnum()
   local count = list:get_line_count()
 
-  if direction == 'down' then
-    lnum = lnum + 1
-  end
-
-  if direction == 'up' then
-    lnum = lnum - 1
-  end
+  if direction == 'down' then lnum = lnum + 1 end
+  if direction == 'up' then lnum = lnum - 1 end
 
   if lnum < 1 then
     lnum = count
@@ -134,14 +123,13 @@ function FoldableListView:move(direction)
   end
 
   list:unlock():set_lnum(lnum):lock()
-
   self.store:set_lnum(lnum)
 
   return self:get_list_item(lnum)
 end
 
 function FoldableListView:render()
-  local _, lnum = self.store:get_lnum()
+  local lnum = self.store:get_lnum()
   local list = self.scene:get('list')
 
   loop.free_textlock()
@@ -156,13 +144,11 @@ end
 
 function FoldableListView:mount(opts)
   self.scene:get('list'):mount(opts)
-
   return self
 end
 
 function FoldableListView:show(opts)
   self:mount(opts):render()
-
   return self
 end
 
