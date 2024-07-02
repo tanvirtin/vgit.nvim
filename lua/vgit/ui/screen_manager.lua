@@ -1,6 +1,6 @@
 local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local keymap = require('vgit.core.keymap')
-local event_type = require('vgit.core.event_type')
 local scene_setting = require('vgit.settings.scene')
 local DiffScreen = require('vgit.features.screens.DiffScreen')
 local HistoryScreen = require('vgit.features.screens.HistoryScreen')
@@ -111,11 +111,11 @@ function screen_manager.show(screen_name, ...)
   if success then
     screen_manager.active_screen = screen
     screen.scene
-      :on(event_type.BufWinLeave, function()
+      :on(event.type.BufWinLeave, function()
         loop.free_textlock()
         if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
       end)
-      :on(event_type.QuitPre, function()
+      :on(event.type.QuitPre, function()
         if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
       end)
   end

@@ -5,6 +5,10 @@ local Object = require('vgit.core.Object')
 local Color = Object:extend()
 
 function Color:constructor(spec)
+  if not spec then error('spec is required') end
+  if not spec.name then error('spec.name is required') end
+  if not spec.attribute then error('spec.attribute is required') end
+
   return {
     spec = spec,
     rgb = nil,
