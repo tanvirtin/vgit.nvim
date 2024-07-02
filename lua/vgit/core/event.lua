@@ -1,6 +1,19 @@
 local loop = require('vgit.core.loop')
 
 local event = {
+  type = {
+    BufRead = 'BufRead',
+    BufEnter = 'BufEnter',
+    BufDelete = 'BufDelete',
+    WinEnter = 'WinEnter',
+    BufWinEnter = 'BufWinEnter',
+    BufWinLeave = 'BufWinLeave',
+    ColorScheme = 'ColorScheme',
+    CursorHold = 'CursorHold',
+    CursorMoved = 'CursorMoved',
+    InsertEnter = 'InsertEnter',
+    QuitPre = 'QuitPre'
+  },
   group = vim.api.nvim_create_augroup('VGitGroup', { clear = true }),
 }
 

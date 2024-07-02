@@ -4,7 +4,6 @@ local event = require('vgit.core.event')
 local Watcher = require('vgit.core.Watcher')
 local git_repo = require('vgit.git.git_repo')
 local GitBuffer = require('vgit.git.GitBuffer')
-local event_type = require('vgit.core.event_type')
 
 local buffers = {}
 local event_handlers = {
@@ -27,7 +26,7 @@ git_buffer_store.register_events = loop.coroutine(function()
 
   is_registerd = true
 
-  event.on(event_type.BufRead, function()
+  event.on(event.type.BufRead, function()
     git_buffer_store.collect()
   end)
 

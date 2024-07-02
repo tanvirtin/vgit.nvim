@@ -1,6 +1,5 @@
 local event = require('vgit.core.event')
 local hls_setting = require('vgit.settings.hls')
-local event_type = require('vgit.core.event_type')
 
 local highlight = {}
 
@@ -39,7 +38,7 @@ function highlight.register_module(dependency)
 end
 
 function highlight.register_events()
-  event.on(event_type.ColorScheme, function()
+  event.on(event.type.ColorScheme, function()
     hls_setting:for_each(function(hl, color)
       highlight.define(hl, color)
     end)
