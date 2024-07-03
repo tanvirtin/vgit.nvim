@@ -71,10 +71,6 @@ function LiveGutter:register_events()
     .attach('change', function(buffer)
       self:fetch(buffer)
     end)
-    .attach('watch', function(buffer)
-      buffer:sync()
-      self:fetch(buffer)
-    end)
     .attach('git_watch', function(buffers)
       for i = 1, #buffers do
         local buffer = buffers[i]

@@ -1,6 +1,6 @@
 local list = {}
 
-list.is_list = vim.tbl_islist
+list.is_list = vim.is_list
 
 list.is_empty = vim.tbl_isempty
 
