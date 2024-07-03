@@ -42,16 +42,6 @@ function event.custom_on(event_name, callback)
   return event
 end
 
-function event.create(event_name)
-  vim.api.nvim_create_autocmd('User', {
-    group = event.group,
-    pattern = event_name,
-    callback = function() end,
-  })
-
-  return event
-end
-
 function event.emit(event_name, data)
   vim.api.nvim_exec_autocmds({ 'User' }, {
     group = event.group,
