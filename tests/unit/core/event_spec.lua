@@ -1,4 +1,5 @@
 local event = require('vgit.core.event')
+local Buffer = require('vgit.core.Buffer')
 
 describe('event', function()
   describe('on', function()
@@ -16,7 +17,7 @@ describe('event', function()
   describe('buffer_on', function()
     it('should create an autocmd for the specified buffer event', function()
       local callback_called = false
-      local buffer = { bufnr = vim.api.nvim_create_buf(false, true) }
+      local buffer = Buffer(0)
       event.buffer_on(buffer, event.type.BufRead, function()
         callback_called = true
       end)
