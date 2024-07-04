@@ -7,13 +7,12 @@ function Window:constructor(win_id)
   assertion.assert_number(win_id)
 
   if win_id == 0 then win_id = vim.api.nvim_get_current_win() end
-
-  return {
-    win_id = win_id,
-  }
+  return { win_id = win_id }
 end
 
 function Window:open(buffer, opts)
+  if not buffer then error('buffer is required') end
+
   opts = opts or {}
   local focus = opts.focus
 
@@ -21,15 +20,12 @@ function Window:open(buffer, opts)
 
   local win_id = vim.api.nvim_open_win(buffer.bufnr, focus ~= nil and focus or false, opts)
 
-  return setmetatable({
-    win_id = win_id,
-  }, Window)
+  return Window(win_id)
 end
 
 function Window:get_cursor()
-  local _, cursor = pcall(vim.api.nvim_win_get_cursor, self.win_id)
-
-  if not cursor then return { 1, 1 } end
+  local ok, cursor = pcall(vim.api.nvim_win_get_cursor, self.win_id)
+  if not ok or not cursor then return { 1, 1 } end
 
   return cursor
 end
