@@ -12,7 +12,7 @@ local event = {
     CursorHold = 'CursorHold',
     CursorMoved = 'CursorMoved',
     InsertEnter = 'InsertEnter',
-    QuitPre = 'QuitPre'
+    QuitPre = 'QuitPre',
   },
   group = vim.api.nvim_create_augroup('VGitGroup', { clear = true }),
 }

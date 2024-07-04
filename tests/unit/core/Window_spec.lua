@@ -6,7 +6,7 @@ describe('Window:', function()
 
   local function create_test_buffer()
     local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, {'Line 1', 'Line 2', 'Line 3'})
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'Line 1', 'Line 2', 'Line 3' })
     return Buffer(buf)
   end
 
@@ -15,7 +15,7 @@ describe('Window:', function()
     width = 20,
     height = 10,
     row = 5,
-    col = 5
+    col = 5,
   }
 
   before_each(function()
@@ -23,11 +23,9 @@ describe('Window:', function()
   end)
 
   after_each(function()
-    if win and win.win_id and vim.api.nvim_win_is_valid(win.win_id) then
-      win:close()
-    end
+    if win and win.win_id and vim.api.nvim_win_is_valid(win.win_id) then win:close() end
     if buffer and buffer.bufnr and vim.api.nvim_buf_is_valid(buffer.bufnr) then
-      vim.api.nvim_buf_delete(buffer.bufnr, {force = true})
+      vim.api.nvim_buf_delete(buffer.bufnr, { force = true })
     end
   end)
 
@@ -47,7 +45,9 @@ describe('Window:', function()
     end)
 
     it('should throw an error if win_id is not a number', function()
-      assert.has_error(function() Window('not a number') end)
+      assert.has_error(function()
+        Window('not a number')
+      end)
     end)
   end)
 
@@ -60,13 +60,15 @@ describe('Window:', function()
     end)
 
     it('should focus the new window if focus option is true', function()
-      win = Window:open(buffer, vim.tbl_extend('force', default_float_opts, {focus = true}))
+      win = Window:open(buffer, vim.tbl_extend('force', default_float_opts, { focus = true }))
 
       assert.are.equal(win.win_id, vim.api.nvim_get_current_win())
     end)
 
     it('should throw an error if buffer is not provided', function()
-      assert.has_error(function() Window:open() end, 'buffer is required')
+      assert.has_error(function()
+        Window:open()
+      end, 'buffer is required')
     end)
   end)
 
@@ -80,17 +82,17 @@ describe('Window:', function()
     end)
 
     it('should return {1, 1} if get_cursor fails', function()
-      win = Window(-1)  -- Invalid window
+      win = Window(-1) -- Invalid window
 
       local cursor = win:get_cursor()
-      assert.are.same({1, 1}, cursor)
+      assert.are.same({ 1, 1 }, cursor)
     end)
   end)
 
   describe('get_lnum', function()
     it('should return the current line number', function()
       win = Window:open(buffer, default_float_opts)
-      win:set_cursor({2, 0})
+      win:set_cursor({ 2, 0 })
 
       assert.are.equal(2, win:get_lnum())
     end)
@@ -129,20 +131,20 @@ describe('Window:', function()
   describe('set_cursor', function()
     it('should set cursor position', function()
       win = Window:open(buffer, default_float_opts)
-      win:set_cursor({2, 0})
+      win:set_cursor({ 2, 0 })
       local cursor = win:get_cursor()
 
-      assert.are.same({2, 0}, cursor)
+      assert.are.same({ 2, 0 }, cursor)
     end)
   end)
 
   describe('set_lnum', function()
     it('should set the line number while maintaining column position', function()
       win = Window:open(buffer, default_float_opts)
-      win:set_cursor({1, 2})
+      win:set_cursor({ 1, 2 })
       win:set_lnum(2)
 
-      assert.are.same({2, 2}, win:get_cursor())
+      assert.are.same({ 2, 2 }, win:get_cursor())
     end)
   end)
 
@@ -176,7 +178,7 @@ describe('Window:', function()
   describe('set_win_plot and get_win_plot', function()
     it('should set and get window configuration', function()
       win = Window:open(buffer, default_float_opts)
-      local config = {relative = 'editor', row = 6, col = 11, width = 31, height = 16}
+      local config = { relative = 'editor', row = 6, col = 11, width = 31, height = 16 }
       win:set_win_plot(config)
       local new_config = win:get_win_plot()
 
@@ -190,7 +192,7 @@ describe('Window:', function()
   describe('assign_options', function()
     it('should set multiple window options', function()
       win = Window:open(buffer, default_float_opts)
-      win:assign_options({wrap = false, number = true})
+      win:assign_options({ wrap = false, number = true })
 
       assert.is_false(vim.api.nvim_win_get_option(win.win_id, 'wrap'))
       assert.is_true(vim.api.nvim_win_get_option(win.win_id, 'number'))
@@ -223,13 +225,13 @@ describe('Window:', function()
 
   describe('is_focused', function()
     it('should return true if window is focused', function()
-      win = Window:open(buffer, vim.tbl_extend('force', default_float_opts, {focus = true}))
+      win = Window:open(buffer, vim.tbl_extend('force', default_float_opts, { focus = true }))
 
       assert.is_true(win:is_focused())
     end)
 
     it('should return false if window is not focused', function()
-      win = Window:open(buffer, vim.tbl_extend('force', default_float_opts, {focus = false}))
+      win = Window:open(buffer, vim.tbl_extend('force', default_float_opts, { focus = false }))
 
       assert.is_false(win:is_focused())
     end)
@@ -237,7 +239,7 @@ describe('Window:', function()
 
   describe('focus', function()
     it('should focus the window', function()
-      win = Window:open(buffer, vim.tbl_extend('force', default_float_opts, {focus = false}))
+      win = Window:open(buffer, vim.tbl_extend('force', default_float_opts, { focus = false }))
       win:focus()
 
       assert.is_true(win:is_focused())
@@ -266,14 +268,18 @@ describe('Window:', function()
       win = Window:open(buffer, default_float_opts)
       win:position_cursor()
 
-      assert.has_no.errors(function() win:get_cursor() end)
+      assert.has_no.errors(function()
+        win:get_cursor()
+      end)
     end)
 
     it('should position cursor at the top when specified', function()
       win = Window:open(buffer, default_float_opts)
       win:position_cursor('top')
 
-      assert.has_no.errors(function() win:get_cursor() end)
+      assert.has_no.errors(function()
+        win:get_cursor()
+      end)
     end)
   end)
 

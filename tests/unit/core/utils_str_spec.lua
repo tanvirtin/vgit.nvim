@@ -5,7 +5,7 @@ local eq = assert.are.same
 describe('utils.str:', function()
   describe('str.split', function()
     it('should split a string by the given delimiter', function()
-      local s = "a,b,c"
+      local s = 'a,b,c'
       local result = utils.str.split(s, ',')
       eq(result, { 'a', 'b', 'c' })
     end)
@@ -13,13 +13,13 @@ describe('utils.str:', function()
 
   describe('str.length', function()
     it('should return the length of a string', function()
-      local s = "hello"
+      local s = 'hello'
       local length = utils.str.length(s)
       eq(length, 5)
     end)
 
     it('should return the correct length for a string with multibyte characters', function()
-      local s = "こんにちは"
+      local s = 'こんにちは'
       local length = utils.str.length(s)
       eq(length, 5)
     end)
@@ -27,13 +27,13 @@ describe('utils.str:', function()
 
   describe('str.shorten', function()
     it('should shorten a string to the given limit and add "..." if it exceeds the limit', function()
-      local s = "hello world"
+      local s = 'hello world'
       local shortened = utils.str.shorten(s, 8)
-      eq(shortened, "hello...")
+      eq(shortened, 'hello...')
     end)
 
     it('should not modify the string if it does not exceed the limit', function()
-      local s = "hello"
+      local s = 'hello'
       local shortened = utils.str.shorten(s, 10)
       eq(shortened, s)
     end)
@@ -41,10 +41,10 @@ describe('utils.str:', function()
 
   describe('str.concat', function()
     it('should concatenate two strings and return the concatenated string and range', function()
-      local existing_text = "hello"
-      local new_text = " world"
+      local existing_text = 'hello'
+      local new_text = ' world'
       local concatenated, range = utils.str.concat(existing_text, new_text)
-      eq(concatenated, "hello world")
+      eq(concatenated, 'hello world')
       eq(range, { top = 5, bot = 11 })
     end)
   end)

@@ -79,15 +79,12 @@ describe('keymap', function()
       })
 
       for index in ipairs(expected) do
-        assert.stub(vim.api.nvim_set_keymap).was.called_with(
-          expected[index][1],
-          expected[index][2],
-          expected[index][3],
-          {
+        assert
+          .stub(vim.api.nvim_set_keymap).was
+          .called_with(expected[index][1], expected[index][2], expected[index][3], {
             noremap = true,
             silent = true,
-          }
-        )
+          })
       end
     end)
   end)

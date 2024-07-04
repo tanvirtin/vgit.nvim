@@ -8,8 +8,12 @@ describe('icons', function()
   describe('get', function()
     it('should return icon and color when nvim-web-devicons is loaded', function()
       package.loaded['nvim-web-devicons'] = {
-        has_loaded = function() return true end,
-        get_icon = function(fname, ext) return '', 'blue' end,
+        has_loaded = function()
+          return true
+        end,
+        get_icon = function(fname, ext)
+          return '', 'blue'
+        end,
       }
       local icon, color = icons.get('icons_spec.lua', 'lua')
       assert.equals('', icon)
@@ -18,7 +22,9 @@ describe('icons', function()
 
     it('should return nil and empty string when nvim-web-devicons is not loaded', function()
       package.loaded['nvim-web-devicons'] = {
-        has_loaded = function() return false end,
+        has_loaded = function()
+          return false
+        end,
       }
 
       local icon, color = icons.get('test.txt', 'txt')

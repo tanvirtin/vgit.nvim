@@ -6,7 +6,7 @@ local eq = assert.are.same
 describe('utils.date:', function()
   describe('date.format', function()
     it('should format the date using the default format', function()
-      local time = 1609477200  -- January 1, 2021
+      local time = 1609477200 -- January 1, 2021
       local formatted_date = utils.date.format(time)
       assert.are.equal(formatted_date, '01 Jan 2021')
     end)
@@ -20,18 +20,18 @@ describe('utils.date:', function()
     it('should handle invalid time input gracefully', function()
       local invalid_time = 'invalid'
       local formatted_date = utils.date.format(invalid_time)
-      local expected_date = os.date('%d %b %Y', os.time())  -- Use the current date
+      local expected_date = os.date('%d %b %Y', os.time()) -- Use the current date
       assert.are.equal(formatted_date, expected_date)
     end)
 
     it('should handle nil time input gracefully', function()
       local formatted_date = utils.date.format(nil)
-      local expected_date = os.date('%d %b %Y', os.time())  -- Use the current date
+      local expected_date = os.date('%d %b %Y', os.time()) -- Use the current date
       assert.are.equal(formatted_date, expected_date)
     end)
 
     it('should handle nil format input gracefully', function()
-      local time = 1609477200  -- January 1, 2021
+      local time = 1609477200 -- January 1, 2021
       local formatted_date = utils.date.format(time, nil)
       assert.are.equal(formatted_date, '01 Jan 2021')
     end)
