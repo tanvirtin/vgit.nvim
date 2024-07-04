@@ -9,9 +9,7 @@ function list.join(l, with)
 
   for i = 1, #l do
     result = result .. l[i]
-    if i ~= #l then
-      result = result .. with
-    end
+    if i ~= #l then result = result .. with end
   end
 
   return result

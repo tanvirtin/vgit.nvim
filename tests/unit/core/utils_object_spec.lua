@@ -105,8 +105,18 @@ describe('utils.object:', function()
       local a = { a = 1, b = 2 }
       local result = object.pairs(a)
       eq(#result, 2)
-      eq(utils.list.some(result, function(item) return item[1] == 'a' and item[2] == 1 end), true)
-      eq(utils.list.some(result, function(item) return item[1] == 'b' and item[2] == 2 end), true)
+      eq(
+        utils.list.some(result, function(item)
+          return item[1] == 'a' and item[2] == 1
+        end),
+        true
+      )
+      eq(
+        utils.list.some(result, function(item)
+          return item[1] == 'b' and item[2] == 2
+        end),
+        true
+      )
     end)
   end)
 
