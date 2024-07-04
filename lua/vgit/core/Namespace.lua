@@ -23,13 +23,14 @@ function Namespace:add_highlight(buffer, opts)
   local row = opts.row
   local col_range = opts.col_range
 
-  pcall(vim.api.nvim_buf_add_highlight, buffer.bufnr, self.ns_id, hl, row, col_range.from, col_range.to)
-
-  return self
+  return pcall(vim.api.nvim_buf_add_highlight, buffer.bufnr, self.ns_id, hl, row, col_range.from, col_range.to)
 end
 
 function Namespace:add_pattern_highlight(buffer, pattern, hl)
   local lines = buffer:get_lines()
+
+  local err
+  local is_successful = true
 
   for i = 1, #lines do
     local line = lines[i]
@@ -40,7 +41,7 @@ function Namespace:add_pattern_highlight(buffer, pattern, hl)
       j = from
 
       if from == nil then break end
-      self:add_highlight(buffer, {
+      local success, hl_err = self:add_highlight(buffer, {
         hl = hl,
         row = i - 1,
         col_range = {
@@ -48,10 +49,15 @@ function Namespace:add_pattern_highlight(buffer, pattern, hl)
           to = to,
         },
       })
+
+      if not success then
+        err = hl_err
+        is_successful = false
+      end
     end
   end
 
-  return self
+  return is_successful, err
 end
 
 function Namespace:transpose_virtual_text(buffer, opts)
@@ -64,15 +70,13 @@ function Namespace:transpose_virtual_text(buffer, opts)
 
   local id = row + 1 + col
 
-  pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, col, {
+  return pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, col, {
     id = id,
     virt_text = { { text, hl } },
     virt_text_pos = pos or 'overlay',
     hl_mode = 'combine',
     priority = priority,
   })
-
-  return id
 end
 
 function Namespace:transpose_virtual_line(buffer, opts)
@@ -83,15 +87,13 @@ function Namespace:transpose_virtual_line(buffer, opts)
 
   local id = row + 1
 
-  pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
+  return pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
     id = id,
     virt_text = texts,
     virt_text_pos = pos or 'overlay',
     hl_mode = 'combine',
     priority = priority,
   })
-
-  return id
 end
 
 function Namespace:transpose_virtual_line_number(buffer, opts)
@@ -100,14 +102,12 @@ function Namespace:transpose_virtual_line_number(buffer, opts)
   local text = opts.text
   local id = self.virtual_line_number_id + row + 1
 
-  pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
+  return pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
     id = id,
     virt_text = { { text, hl } },
     virt_text_pos = 'inline',
     hl_mode = 'combine',
   })
-
-  return id
 end
 
 function Namespace:insert_virtual_line(buffer, opts)
@@ -118,31 +118,25 @@ function Namespace:insert_virtual_line(buffer, opts)
 
   local id = self.virtual_line_number_id + row + 1
 
-  pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
+  return pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, 0, {
     id = id,
     virt_lines = { { { text, hl } } },
     virt_lines_above = true,
     priority = priority,
   })
-
-  return id
 end
 
 function Namespace:sign_place(buffer, lnum, sign_name)
-  pcall(vim.fn.sign_place, lnum, self:get_sign_ns_id(buffer), sign_name, buffer.bufnr, {
+  return pcall(vim.fn.sign_place, lnum, self:get_sign_ns_id(buffer), sign_name, buffer.bufnr, {
     id = lnum,
     lnum = lnum,
     buffer = buffer.bufnr,
     priority = signs_setting:get('priority'),
   })
-
-  return self
 end
 
 function Namespace:sign_unplace(buffer, lnum)
-  pcall(vim.fn.sign_unplace, self:get_sign_ns_id(buffer), { buffer = buffer.bufnr, id = lnum })
-
-  return self
+  return pcall(vim.fn.sign_unplace, self:get_sign_ns_id(buffer), { buffer = buffer.bufnr, id = lnum })
 end
 
 function Namespace:clear(buffer, row_range)
@@ -150,9 +144,7 @@ function Namespace:clear(buffer, row_range)
   local row_from = row_range.from or 0
   local row_to = row_range.to or -1
 
-  pcall(vim.api.nvim_buf_clear_namespace, buffer.bufnr, self.ns_id, row_from, row_to)
-
-  return self
+  return pcall(vim.api.nvim_buf_clear_namespace, buffer.bufnr, self.ns_id, row_from, row_to)
 end
 
 return Namespace
