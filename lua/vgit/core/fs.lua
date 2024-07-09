@@ -34,31 +34,9 @@ function fs.filetype(buffer)
 end
 
 function fs.read_file(filepath)
-  local fd = vim.loop.fs_open(filepath, 'r', 438)
-  if fd == nil then return nil, { 'File not found' } end
-
-  local stat = vim.loop.fs_fstat(fd)
-  if stat.type ~= 'file' then return nil, { 'File not found' } end
-
-  local data = vim.loop.fs_read(fd, stat.size, 0)
-  if not vim.loop.fs_close(fd) then return nil, { 'Failed to close file' } end
-
-  local split_data = {}
-  local line = ''
-
-  for i = 1, #data do
-    local word = data:sub(i, i)
-    if word == '\n' or word == '\r' then
-      split_data[#split_data + 1] = line
-      line = ''
-    else
-      line = line .. word
-    end
-  end
-
-  if not line == '' then split_data[#split_data + 1] = line end
-
-  return split_data
+  local lines = vim.fn.readfile(filepath)
+  if not lines then return nil, { 'file not found' } end
+  return lines
 end
 
 function fs.write_file(filepath, lines)
