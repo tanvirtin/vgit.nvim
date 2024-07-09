@@ -1,4 +1,5 @@
 local fs = require('vgit.core.fs')
+local loop = require('vgit.core.loop')
 local Diff = require('vgit.core.Diff')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
@@ -30,6 +31,7 @@ function Store:get_lines(filename, status, opts)
     return self.git_object:lines(log.commit_hash)
   end
 
+  loop.free_textlock()
   return fs.read_file(filename)
 end
 

@@ -180,39 +180,6 @@ function GitBuffer:blames()
   return self.git_object:blames()
 end
 
-function GitBuffer:fetch_signs()
-  local lines = self:get_lines()
-  local hunks, err = self.git_object:live_hunks(lines)
-
-  if err then return nil, err end
-
-  local sign_types = signs_setting:get('usage').main
-  local sign_priority = signs_setting:get('priority')
-  local sign_definitions = signs_setting:get('definitions')
-
-  self.signs = {}
-  for i = 1, #hunks do
-    local hunk = hunks[i]
-
-    for j = hunk.top, hunk.bot do
-      local sign_type = sign_types[hunk.type]
-      local sign_definition = sign_definitions[sign_type]
-      local sign_text = sign_definition.text
-      local lnum = (hunk.type == 'remove' and j == 0) and 1 or j
-
-      self.signs[lnum] = {
-        id = lnum,
-        lnum = lnum,
-        text = sign_text,
-        hl_group = sign_type,
-        priority = sign_priority,
-      }
-    end
-  end
-
-  return self.signs
-end
-
 function GitBuffer:live_hunks()
   local lines = self:get_lines()
   local hunks, err = self.git_object:live_hunks(lines)

@@ -180,6 +180,7 @@ function Store:get_lines(status, type)
   if status:has('D ') then return git_show.lines(reponame, filename, 'HEAD') end
   if type == 'staged' or status:has(' D') then return git_show.lines(reponame, filename) end
 
+  loop.free_textlock()
   return fs.read_file(filename)
 end
 
