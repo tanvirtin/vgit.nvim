@@ -122,8 +122,6 @@ function ProjectCommitsScreen:show(args)
   local buffer = Buffer(0)
   local filename = buffer:get_name()
 
-  -- TODO: Need to add an arg parser in core that takes you can
-  --       somehow define and then parse the input using definition.
   for i = 1, #args do
     local arg = args[i]
 

@@ -4,7 +4,7 @@ local Object = require('vgit.core.Object')
 local GitLog = Object:extend()
 
 function GitLog:constructor(line, revision_count)
-  local log = vim.split(line, '-')
+  local log = vim.split(line, '\x1F')
   local parents = vim.split(log[2], ' ')
   local revision = revision_count and string.format('HEAD~%s', revision_count)
 
