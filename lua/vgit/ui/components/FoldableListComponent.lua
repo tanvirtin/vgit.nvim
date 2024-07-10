@@ -129,7 +129,6 @@ function FoldableListComponent:generate_lines()
       if items then icon_hl_range_offset = 3 end
 
       if item.virtual_text then
-        -- TODO: add other support right now just use before
         virtual_texts[#virtual_texts + 1] = {
           type = 'before',
           hl = item.virtual_text.before.hl,
@@ -234,7 +233,6 @@ function FoldableListComponent:paint()
   local virtual_texts = self.state.virtual_texts
   for i = 1, #virtual_texts do
     local virtual_text = virtual_texts[i]
-    -- TODO: add other support right now just use before
     if virtual_text.type == 'before' then
       self.buffer:transpose_virtual_text({
         text = virtual_text.text,

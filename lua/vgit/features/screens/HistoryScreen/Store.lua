@@ -85,6 +85,7 @@ function Store:get_diff(index)
 
   if lines_err then return nil, lines_err end
 
+  -- TODO(renames): If a file is renamed changes are not reflected.
   local diff = Diff():generate(hunks, lines, self.shape)
 
   self.state[id] = diff
