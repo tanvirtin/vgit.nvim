@@ -398,12 +398,13 @@ function ProjectDiffScreen:show()
         local mark, _ = self.diff_view:get_current_mark_under_cursor()
         if not mark then return end
 
-        local filename = self.store:get_filename()
-        if not filename then return end
+        local filepath = self.store:get_filepath()
+        loop.free_textlock()
+        if not filepath then return end
 
         self:destroy()
 
-        fs.open(filename)
+        fs.open(filepath)
 
         Window(0):set_lnum(mark.top_relative):position_cursor('center')
       end),
@@ -479,7 +480,9 @@ function ProjectDiffScreen:show()
       key = '<enter>',
       handler = loop.coroutine(function()
         local mark, _ = self.diff_view:get_current_mark_under_cursor()
-        local filename = self.store:get_filename()
+        local filename = self.store:get_filepath()
+        loop.free_textlock()
+
         if not filename then
           self.foldable_list_view:toggle_current_list_item()
           self.foldable_list_view:render()
