@@ -21,6 +21,7 @@ function Store:constructor()
     state = {
       lnum = 1,
       diffs = {},
+      reponame = nil,
       mark_index = 1,
       list_folds = {},
       list_entries = {},
@@ -34,6 +35,7 @@ function Store:reset()
   self.data = nil
   self.state = {
     diffs = {},
+    reponame = nil,
     mark_index = 1,
     list_entries = {},
   }
@@ -111,6 +113,7 @@ function Store:fetch(shape, opts)
 
   self.shape = shape
   self.data = data
+  self.state.reponame = reponame
 
   return self.data
 end
@@ -134,6 +137,16 @@ function Store:get_filename()
   if not entry then return nil, { 'entry not found' } end
 
   return entry.status.filename
+end
+
+function Store:get_filepath()
+  local reponame = self.state.reponame
+  local filename = self:get_filename()
+
+  filename = fs.make_relative(reponame, filename)
+  filename = string.format('%s/%s', reponame, filename)
+
+  return filename
 end
 
 function Store:get_filetype()
@@ -161,13 +174,12 @@ function Store:set_list_folds(list_folds)
 end
 
 function Store:conflict_status()
-  local reponame = git_repo.discover()
-  return git_conflict.status(reponame)
+  return git_conflict.status(self.state.reponame)
 end
 
 function Store:get_lines(status, type)
   local filename = status.filename
-  local reponame = git_repo.discover()
+  local reponame = self.state.reponame
 
   if type == 'unmerged' then
     if status:has_both('UD') then return git_show.lines(reponame, filename, ':2') end
@@ -180,13 +192,12 @@ function Store:get_lines(status, type)
   if status:has('D ') then return git_show.lines(reponame, filename, 'HEAD') end
   if type == 'staged' or status:has(' D') then return git_show.lines(reponame, filename) end
 
-  loop.free_textlock()
-  return fs.read_file(filename)
+  return fs.read_file(self:get_filepath())
 end
 
 function Store:get_hunks(status, type, lines)
   local filename = status.filename
-  local reponame = git_repo.discover()
+  local reponame = self.state.reponame
 
   if type == 'unmerged' then
     if status:has_both('UD') then return git_hunks.custom(lines, { deleted = true }) end
