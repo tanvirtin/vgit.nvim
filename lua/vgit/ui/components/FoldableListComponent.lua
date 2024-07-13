@@ -273,7 +273,8 @@ function FoldableListComponent:paint()
 end
 
 function FoldableListComponent:sync()
-  self.buffer:clear_namespace():set_lines(self:generate_lines())
+  self.buffer:clear_namespace()
+  self.buffer:set_lines(self:generate_lines())
 
   loop.free_textlock()
   self:paint()
