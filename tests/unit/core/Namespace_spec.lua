@@ -92,9 +92,9 @@ describe('Namespace', function()
       buffer:set_lines({ 'Hello World', 'sup' })
       local opts = {}
       local success, extmark_id = namespace:transpose_virtual_line_number(buffer, {
- text = 'virtual',
- hl = 'Error',
- row = 1
+        text = 'virtual',
+        hl = 'Error',
+        row = 1,
       })
       assert.is_true(success)
       assert.is_number(extmark_id)

@@ -59,6 +59,8 @@ end
 function Store:fetch(shape, filename, opts)
   opts = opts or {}
 
+  if not fs.exists(filename) then return nil, { 'Buffer has no diff associated with it' } end
+
   self:reset()
 
   self.shape = shape
