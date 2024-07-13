@@ -165,9 +165,9 @@ describe('Buffer', function()
     it('should transpose virtual line number in buffer', function()
       buffer:set_lines({ 'Hello World', 'sup' })
       local ok, extmark_id = buffer:transpose_virtual_line_number({
-  text = 'virtual',
- hl = 'Error',
- row = 1
+        text = 'virtual',
+        hl = 'Error',
+        row = 1,
       })
       assert.is_true(ok)
       assert.is_not_nil(extmark_id)
@@ -202,116 +202,116 @@ describe('Buffer', function()
     end)
   end)
 
-    describe('create', function()
-      it('should create a new buffer', function()
-        buffer = Buffer():create(false, true)
-        assert.is_not_nil(buffer.bufnr)
-        assert.is_not.same(buffer.bufnr, bufnr)
-      end)
+  describe('create', function()
+    it('should create a new buffer', function()
+      buffer = Buffer():create(false, true)
+      assert.is_not_nil(buffer.bufnr)
+      assert.is_not.same(buffer.bufnr, bufnr)
     end)
+  end)
 
-    describe('is_current', function()
-      it('should return if buffer is current', function()
-        local other_buffer = Buffer():create(false, true)
-        local window = Window(0):open(buffer, {
-          relative = 'editor',
-          width = 20,
-          height = 10,
-          row = 5,
-          col = 5,
-        })
-        window:focus()
-        assert.is_true(buffer:is_current())
-        assert.is_false(other_buffer:is_current())
-      end)
+  describe('is_current', function()
+    it('should return if buffer is current', function()
+      local other_buffer = Buffer():create(false, true)
+      local window = Window(0):open(buffer, {
+        relative = 'editor',
+        width = 20,
+        height = 10,
+        row = 5,
+        col = 5,
+      })
+      window:focus()
+      assert.is_true(buffer:is_current())
+      assert.is_false(other_buffer:is_current())
     end)
+  end)
 
-    describe('is_valid', function()
-      it('should return if buffer is valid', function()
-        assert.is_true(buffer:is_valid())
-        vim.api.nvim_buf_delete(buffer.bufnr, { force = true })
-        assert.is_false(buffer:is_valid())
-      end)
+  describe('is_valid', function()
+    it('should return if buffer is valid', function()
+      assert.is_true(buffer:is_valid())
+      vim.api.nvim_buf_delete(buffer.bufnr, { force = true })
+      assert.is_false(buffer:is_valid())
     end)
+  end)
 
-    describe('delete', function()
-      it('should delete buffer', function()
-        assert.is_true(buffer:is_valid())
-        vim.api.nvim_buf_delete(buffer.bufnr, { force = true })
-        assert.is_false(buffer:is_valid())
-      end)
+  describe('delete', function()
+    it('should delete buffer', function()
+      assert.is_true(buffer:is_valid())
+      vim.api.nvim_buf_delete(buffer.bufnr, { force = true })
+      assert.is_false(buffer:is_valid())
     end)
+  end)
 
-    describe('get_lines', function()
-      it('should get buffer lines', function()
-        vim.api.nvim_buf_set_lines(buffer.bufnr, 0, -1, false, { 'line1', 'line2' })
-        assert.are.same(buffer:get_lines(), { 'line1', 'line2' })
-      end)
+  describe('get_lines', function()
+    it('should get buffer lines', function()
+      vim.api.nvim_buf_set_lines(buffer.bufnr, 0, -1, false, { 'line1', 'line2' })
+      assert.are.same(buffer:get_lines(), { 'line1', 'line2' })
     end)
+  end)
 
-    describe('set_lines', function()
-      it('should set buffer lines', function()
-        buffer:set_lines({ 'line1', 'line2' })
-        assert.are.same(buffer:get_lines(), { 'line1', 'line2' })
-      end)
+  describe('set_lines', function()
+    it('should set buffer lines', function()
+      buffer:set_lines({ 'line1', 'line2' })
+      assert.are.same(buffer:get_lines(), { 'line1', 'line2' })
     end)
+  end)
 
-    describe('set_option', function()
-      it('should set buffer option', function()
-        vim.api.nvim_buf_set_option(buffer.bufnr, 'ft', 'lua')
-        assert.equals(buffer:get_option('ft'), 'lua')
-      end)
+  describe('set_option', function()
+    it('should set buffer option', function()
+      vim.api.nvim_buf_set_option(buffer.bufnr, 'ft', 'lua')
+      assert.equals(buffer:get_option('ft'), 'lua')
     end)
+  end)
 
-    describe('get_option', function()
-      it('should get buffer option', function()
-        buffer:set_option('ft', 'lua')
-        assert.equals(buffer:get_option('ft'), 'lua')
-      end)
+  describe('get_option', function()
+    it('should get buffer option', function()
+      buffer:set_option('ft', 'lua')
+      assert.equals(buffer:get_option('ft'), 'lua')
     end)
+  end)
 
-    describe('assign_options', function()
-      it('should assign multiple buffer options', function()
-        buffer:assign_options({
-          ft = 'lua',
-          bufhidden = 'wipe'
-        })
-        assert.equals(buffer:get_option('ft'), 'lua')
-        assert.equals(buffer:get_option('bufhidden'), 'wipe')
-      end)
+  describe('assign_options', function()
+    it('should assign multiple buffer options', function()
+      buffer:assign_options({
+        ft = 'lua',
+        bufhidden = 'wipe',
+      })
+      assert.equals(buffer:get_option('ft'), 'lua')
+      assert.equals(buffer:get_option('bufhidden'), 'wipe')
     end)
+  end)
 
-    describe('get_line_count', function()
-      it('should get buffer line count', function()
-        buffer:set_lines({ 'line1', 'line2' })
-        assert.equals(buffer:get_line_count(), 2)
-      end)
+  describe('get_line_count', function()
+    it('should get buffer line count', function()
+      buffer:set_lines({ 'line1', 'line2' })
+      assert.equals(buffer:get_line_count(), 2)
     end)
+  end)
 
-    describe('list', function()
-      it('should list all buffers', function()
-        local buffers = buffer:list()
-        assert.is_true(#buffers > 0)
-        for i = 1, #buffers do
-          buffer = buffers[i]
-          buffer:delete()
-        end
-        assert.are.same(#buffer:list(), 1)
-      end)
+  describe('list', function()
+    it('should list all buffers', function()
+      local buffers = buffer:list()
+      assert.is_true(#buffers > 0)
+      for i = 1, #buffers do
+        buffer = buffers[i]
+        buffer:delete()
+      end
+      assert.are.same(#buffer:list(), 1)
     end)
+  end)
 
-    describe('set_var', function()
-      it('should set buffer variable', function()
-        buffer:set_var('vgit_status', {
-          added = 0,
-          changed = 0,
-          removed = 0
-        })
-        assert.are.same(vim.api.nvim_buf_get_var(buffer.bufnr, 'vgit_status'), {
-          added = 0,
-          changed = 0,
-          removed = 0
-        })
-      end)
+  describe('set_var', function()
+    it('should set buffer variable', function()
+      buffer:set_var('vgit_status', {
+        added = 0,
+        changed = 0,
+        removed = 0,
+      })
+      assert.are.same(vim.api.nvim_buf_get_var(buffer.bufnr, 'vgit_status'), {
+        added = 0,
+        changed = 0,
+        removed = 0,
+      })
     end)
+  end)
 end)
