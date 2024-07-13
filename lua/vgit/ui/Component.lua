@@ -153,12 +153,6 @@ function Component:add_pattern_highlight(pattern, hl)
   return self
 end
 
-function Component:clear_highlight(row_range)
-  self.buffer:clear_highlight(row_range)
-
-  return self
-end
-
 function Component:sign_place(lnum, sign_name)
   self.buffer:sign_place(lnum, sign_name)
 

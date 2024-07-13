@@ -19,15 +19,12 @@ describe('Spawn:', function()
       local spawn = Spawn({
         command = 'ls',
         args = { '-l' },
-        on_stderr = function()
-        end,
-        on_stdout = function()
-        end,
-        on_exit = function()
-        end,
+        on_stderr = function() end,
+        on_stdout = function() end,
+        on_exit = function() end,
       })
       local output = {}
-      spawn:parse_result({'line1\nline2\nline3', '\nline4', '\nline5\nline6'}, function(line)
+      spawn:parse_result({ 'line1\nline2\nline3', '\nline4', '\nline5\nline6' }, function(line)
         table.insert(output, line)
       end)
       assert.are.same(table.concat(output), 'line1line2line3line4line5line6')

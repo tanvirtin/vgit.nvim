@@ -23,25 +23,25 @@ function Namespace:add_highlight(buffer, opts)
   local row = opts.row
   local col_range = opts.col_range
 
-  return pcall(vim.api.nvim_buf_add_highlight, buffer.bufnr, self.ns_id, hl, row, col_range.from, col_range.to)
+  return pcall(vim.api.nvim_buf_set_extmark, buffer.bufnr, self.ns_id, row, col_range.from, {
+    end_col = col_range.to,
+    hl_group = hl,
+  })
 end
 
 function Namespace:add_pattern_highlight(buffer, pattern, hl)
+  local result = {}
+
   local lines = buffer:get_lines()
-
-  local err
-  local is_successful = true
-
   for i = 1, #lines do
     local line = lines[i]
 
     local j = 0
     while true do
       local from, to = line:find(pattern, j + 1)
-      j = from
-
       if from == nil then break end
-      local success, hl_err = self:add_highlight(buffer, {
+
+      local ok, value = self:add_highlight(buffer, {
         hl = hl,
         row = i - 1,
         col_range = {
@@ -49,15 +49,14 @@ function Namespace:add_pattern_highlight(buffer, pattern, hl)
           to = to,
         },
       })
+      if not ok then return false, value end
 
-      if not success then
-        err = hl_err
-        is_successful = false
-      end
+      j = from
+      result[#result + 1] = value
     end
   end
 
-  return is_successful, err
+  return true, result
 end
 
 function Namespace:transpose_virtual_text(buffer, opts)

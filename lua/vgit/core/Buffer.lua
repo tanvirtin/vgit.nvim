@@ -70,10 +70,6 @@ function Buffer:on_render(top, bot)
   return self
 end
 
-function Buffer:is_rendering()
-  return self.rendering
-end
-
 function Buffer:is_in_disk()
   return fs.exists(self:get_name())
 end
@@ -112,7 +108,7 @@ function Buffer:get_name()
 end
 
 function Buffer:add_highlight(opts)
-  self.namespace:add_highlight(self, {
+  return self.namespace:add_highlight(self, {
     hl = opts.hl,
     row = opts.row,
     col_range = {
@@ -120,26 +116,14 @@ function Buffer:add_highlight(opts)
       to = opts.col_range.to,
     },
   })
-
-  return self
 end
 
 function Buffer:add_pattern_highlight(pattern, hl)
-  self.namespace:add_pattern_highlight(self, pattern, hl)
-
-  return self
-end
-
-function Buffer:clear_highlight(row_range)
-  self.namespace:clear(self, row_range)
-
-  return self
+  return self.namespace:add_pattern_highlight(self, pattern, hl)
 end
 
 function Buffer:sign_place(lnum, sign_name)
-  self.namespace:sign_place(self, lnum, sign_name)
-
-  return self
+  return self.namespace:sign_place(self, lnum, sign_name)
 end
 
 function Buffer:sign_placelist(signs)
@@ -149,13 +133,11 @@ function Buffer:sign_placelist(signs)
 end
 
 function Buffer:sign_unplace()
-  self.namespace:sign_unplace(self)
-
-  return self
+  return self.namespace:sign_unplace(self)
 end
 
 function Buffer:transpose_virtual_text(opts)
-  self.namespace:transpose_virtual_text(self, {
+  return self.namespace:transpose_virtual_text(self, {
     text = opts.text,
     hl = opts.hl,
     row = opts.row,
@@ -163,46 +145,36 @@ function Buffer:transpose_virtual_text(opts)
     pos = opts.pos,
     priority = opts.priority,
   })
-
-  return self
 end
 
 function Buffer:transpose_virtual_line(opts)
-  self.namespace:transpose_virtual_line(self, {
+  return self.namespace:transpose_virtual_line(self, {
     texts = opts.texts,
     row = opts.row,
     pos = opts.pos,
     priority = opts.priority,
   })
-
-  return self
 end
 
 function Buffer:transpose_virtual_line_number(opts)
-  self.namespace:transpose_virtual_line_number(self, {
+  return self.namespace:transpose_virtual_line_number(self, {
     row = opts.row,
     hl = opts.hl,
     text = opts.text,
   })
-
-  return self
 end
 
 function Buffer:insert_virtual_line(opts)
-  self.namespace:insert_virtual_line(self, {
+  return self.namespace:insert_virtual_line(self, {
     text = opts.text,
     hl = opts.hl,
     row = opts.row,
     priority = opts.priority,
   })
-
-  return self
 end
 
 function Buffer:clear_namespace()
-  self.namespace:clear(self)
-
-  return self
+  return self.namespace:clear(self)
 end
 
 function Buffer:create(listed, scratch)
@@ -291,12 +263,6 @@ end
 
 function Buffer:editing()
   return self:get_option('modified')
-end
-
-function Buffer:update()
-  return self:call(function()
-    vim.cmd('update')
-  end)
 end
 
 function Buffer:filetype()
