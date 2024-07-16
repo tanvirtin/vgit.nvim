@@ -34,9 +34,8 @@ function fs.filetype(buffer)
 end
 
 function fs.read_file(filepath)
-  local lines = vim.fn.readfile(filepath)
-  if not lines then return nil, { 'file not found' } end
-  return lines
+  if not fs.exists(filepath) then return nil, { 'file not found' } end
+  return vim.fn.readfile(filepath)
 end
 
 function fs.write_file(filepath, lines)
