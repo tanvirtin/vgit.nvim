@@ -99,6 +99,7 @@ function Hunks:cursor_stage()
   if err then return console.debug.error(err) end
 
   loop.free_textlock()
+  buffer:clear_namespace()
   buffer:edit()
 end
 

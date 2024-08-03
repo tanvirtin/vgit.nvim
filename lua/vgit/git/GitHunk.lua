@@ -42,6 +42,14 @@ function GitHunk:constructor(header)
   return hunk
 end
 
+function GitHunk:__tostring()
+  return table.concat({
+    string.upper(self.type),
+    string.format('%s,%s', self.top, self.bot),
+    string.format('+%s,-%s', self.stat.added, self.stat.removed)
+  }, '\n')
+end
+
 function GitHunk:generate_header(previous, current)
   return string.format('@@ -%s,%s +%s,%s @@', previous[1], previous[2], current[1], current[2])
 end

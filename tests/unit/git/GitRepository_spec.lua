@@ -1,0 +1,17 @@
+local async = require('plenary.async.tests')
+local GitRepository = require('vgit.git.GitRepository')
+
+async.describe('GitRepo:', function()
+  async.describe('constructor', function()
+    async.it('should be able to discover current git repository', function()
+      local repo = GitRepository()
+      assert.is_not_nil(repo.name)
+    end)
+
+    async.it('should NOT be able to create a repo if .git folder does not exist', function()
+      assert.has_error(function()
+        GitRepository('asda/test')
+      end)
+    end)
+  end)
+end)

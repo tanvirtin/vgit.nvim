@@ -21,6 +21,10 @@ function GitStatus:constructor(status)
   }
 end
 
+function GitStatus:__tostring()
+  return self.value
+end
+
 function GitStatus:parse(status)
   return status:sub(1, 1), status:sub(2, 2)
 end

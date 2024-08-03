@@ -1,3 +1,4 @@
+local utils = require('vgit.core.utils')
 local GitLog = require('vgit.git.GitLog')
 local gitcli = require('vgit.git.gitcli')
 
@@ -21,49 +22,57 @@ function git_log.get(reponame, commit)
   return GitLog(result[1])
 end
 
-function git_log.list(reponame, filename)
+function git_log.count(reponame)
+  if not reponame then return nil, { 'reponame is required' } end
+  return gitcli.run({
+    '-C',
+    reponame,
+    'rev-list',
+    '--count',
+    '--all',
+  })
+end
+
+function git_log.list(reponame, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
-  local result, err = gitcli.run({
+  opts = opts or {}
+
+  local filename = opts.filename
+  local from = opts.from
+  local count = opts.count
+  local stashed = opts.stashed
+
+  local args = {
     '-C',
     reponame,
     '--no-pager',
-    'log',
-    '--color=never',
-    git_log.format,
-    filename,
-  })
+  }
 
+  if stashed then
+    args = utils.list.merge(args, { 'stash', 'list' })
+  else
+    args = utils.list.merge(args, { 'log' })
+  end
+
+  args = utils.list.merge(args, { '--color=never', git_log.format })
+
+  if from and count then
+    args = utils.list.merge(args, {
+      string.format('--skip=%s', filename),
+      '-n',
+      count,
+    })
+  end
+
+  if filename then args = utils.list.merge(args, { filename }) end
+
+  local result, err = gitcli.run(args)
   if err then return nil, err end
 
   local logs = {}
   for i = 1, #result do
     logs[i] = GitLog(result[i])
-  end
-
-  return logs
-end
-
-function git_log.list_stash(reponame)
-  if not reponame then return nil, { 'reponame is required' } end
-
-  local result, err = gitcli.run({
-    '-C',
-    reponame,
-    '--no-pager',
-    'stash',
-    'list',
-    '--color=never',
-    git_log.format,
-  })
-
-  if err then return nil, err end
-
-  local logs = {}
-  local rev_count = 0
-  for i = 1, #result do
-    rev_count = rev_count + 1
-    logs[i] = GitLog(result[i], rev_count)
   end
 
   return logs

@@ -1,7 +1,53 @@
+local utils = require('vgit.core.utils')
 local gitcli = require('vgit.git.gitcli')
 local GitStatus = require('vgit.git.GitStatus')
 
 local git_status = {}
+
+function git_status.get(reponame, filename, commit_hash)
+  if not reponame then return nil, { 'reponame is required' } end
+  if not filename then return nil, { 'filename is required' } end
+
+  local args = {
+    '-C',
+    reponame,
+    '--no-pager',
+  }
+
+  if commit_hash then
+    args = utils.list.merge(args, {
+      'diff-tree',
+      '--no-commit-id',
+      '--name-status',
+      '-r',
+      commit_hash .. "^",
+      commit_hash,
+      '--',
+      filename
+    })
+  else
+    args = utils.list.merge(args, {
+      'status',
+      '-u',
+      '-s',
+      '--no-renames',
+      '--ignore-submodules',
+      '--',
+      filename
+    })
+  end
+
+  local result, err = gitcli.run(args)
+  if err then return nil, err end
+  if #result == 0 then return nil, { 'no status found' } end
+
+  if commit_hash then
+    local status, path = result[1]:match('(%w+)%s+(.+)')
+    return GitStatus(string.format('%s  %s', status or ' ', path or filename))
+  end
+
+  return GitStatus(result[1])
+end
 
 function git_status.ls(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end

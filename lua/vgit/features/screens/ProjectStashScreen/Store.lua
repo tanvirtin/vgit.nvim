@@ -22,7 +22,7 @@ function Store:fetch(opts)
   self:reset()
 
   local reponame = git_repo.discover()
-  local logs, err = git_log.list_stash(reponame)
+  local logs, err = git_log.list(reponame, { stashed = true })
   if err then return nil, err end
 
   self.err = nil

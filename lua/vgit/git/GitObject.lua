@@ -86,7 +86,7 @@ function GitObject:log(opts)
 end
 
 function GitObject:logs()
-  return git_log.list(self.reponame, self.filename)
+  return git_log.list(self.reponame, { filename = self.filename })
 end
 
 function GitObject:status()
