@@ -12,6 +12,8 @@ function LiveGutter:constructor()
 end
 
 LiveGutter.fetch = loop.debounce_coroutine(function(self, buffer)
+  if not live_gutter_setting:get('enabled') then return self end
+
   loop.free_textlock()
   if not buffer:is_valid() then return self end
 
