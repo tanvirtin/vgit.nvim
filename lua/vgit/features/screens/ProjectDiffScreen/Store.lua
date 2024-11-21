@@ -142,6 +142,7 @@ end
 function Store:get_filepath()
   local reponame = self.state.reponame
   local filename = self:get_filename()
+  if not filename then return nil, { 'entry not found' } end
 
   filename = fs.make_relative(reponame, filename)
   filename = string.format('%s/%s', reponame, filename)
