@@ -17,8 +17,8 @@ local event = {
   group = vim.api.nvim_create_augroup('VGitGroup', { clear = true }),
 }
 
-function event.on(event_name, callback)
-  vim.api.nvim_create_autocmd(event_name, { callback = loop.coroutine(callback) })
+function event.on(event_names, callback)
+  vim.api.nvim_create_autocmd(event_names, { callback = loop.coroutine(callback) })
 
   return event
 end

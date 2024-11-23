@@ -3,13 +3,7 @@ local utils = require('vgit.core.utils')
 local dimensions = {}
 
 function dimensions.global_width()
-  local dim = vim.o.columns
-  -- NOTE: we want width to be divisible by 1
-  if dim % 2 ~= 0 then
-    if dim == 1 then return dim end
-    return dim - 1
-  end
-  return dim
+  return vim.o.columns
 end
 
 function dimensions.global_height()
