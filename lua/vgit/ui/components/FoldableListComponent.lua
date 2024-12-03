@@ -206,6 +206,8 @@ function FoldableListComponent:generate_lines()
     end
   end
 
+  if not self.state.list then return end
+
   -- NOTE: This sorts the root categories only.
   -- For example, in project_diff_preview, Staged Changes will always come before Changes.
   table.sort(self.state.list, function(item1, item2)

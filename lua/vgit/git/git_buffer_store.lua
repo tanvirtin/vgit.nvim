@@ -1,60 +1,63 @@
 local loop = require('vgit.core.loop')
-local utils = require('vgit.core.utils')
 local event = require('vgit.core.event')
-local Watcher = require('vgit.core.Watcher')
+local utils = require('vgit.core.utils')
 local git_repo = require('vgit.git.git_repo')
 local GitBuffer = require('vgit.git.GitBuffer')
+local assertion = require('vgit.core.assertion')
 
 local buffers = {}
-local event_handlers = {
-  watch = {},
+local events = {
+  sync = {},
   attach = {},
   change = {},
   reload = {},
   detach = {},
   render = {},
-  register = {},
-  git_watch = {},
 }
-local dir_watcher = Watcher()
-local is_registerd = false
+local is_registered = false
 
 local git_buffer_store = {}
 
 git_buffer_store.register_events = loop.coroutine(function()
-  if is_registerd then return end
+  if is_registered then return end
+  is_registered = true
 
-  is_registerd = true
-
-  event.on(event.type.BufRead, function()
+  event.on({ event.type.BufRead, event.type.BufNew }, function()
     git_buffer_store.collect()
   end)
-
-  for _, handler in pairs(event_handlers.register) do
-    loop.free_textlock()
-    handler()
-  end
 
   loop.free_textlock()
   if not git_repo.exists() then return end
 
   loop.free_textlock()
-  local git_dir = git_repo.discover()
-  if not git_dir then return end
+  if not git_repo.discover() then return end
 
-  dir_watcher:watch_dir(git_dir, function()
-    local git_buffers = utils.object.values(buffers)
+  local handle = vim.loop.new_fs_event()
+  if not handle then return end
 
-    for i = 1, #git_buffers do
+  loop.free_textlock()
+  local git_dirname = git_repo.dirname()
+  local ok = handle:start(git_dirname, {}, loop.debounce_coroutine(function(err, filename, event_name)
+    if err then return end
+    if filename and not filename:match('index%.lock$') then
       loop.free_textlock()
-      git_buffers[i]:sync()
-    end
-
-    for _, handler in pairs(event_handlers.git_watch) do
+      local git_dir = git_repo.dirname()
       loop.free_textlock()
-      handler(git_buffers)
+      event.emit('VGitSync', {
+        git_dir = git_dir,
+        filename = filename,
+        event_name = event_name,
+      })
+      loop.free_textlock()
+      event.custom_on('VGitSync', function()
+        git_buffer_store.for_each(function(buffer)
+          git_buffer_store.dispatch(buffer, 'sync')
+        end)
+      end)
     end
-  end)
+  end, 10))
+
+  if not ok then return handle:close() end
 end)
 
 git_buffer_store.for_each = function(callback)
@@ -63,16 +66,24 @@ git_buffer_store.for_each = function(callback)
   end
 end
 
-git_buffer_store.attach = function(type, handler)
-  local handlers = event_handlers[type]
-  handlers[#handlers + 1] = handler
+git_buffer_store.on = function(event_types, handler)
+  if type(event_types) == 'string' then
+    event_types = { event_types }
+  end
+
+  for i = 1, #event_types do
+    local event_type = event_types[i]
+    local handlers = events[event_type]
+    assertion.assert(handlers, 'invalid event -- ' .. '"' .. event_type .. '"')
+
+    handlers[#handlers + 1] = handler
+  end
 
   return git_buffer_store
 end
 
 git_buffer_store.add = function(buffer)
   buffers[buffer.bufnr] = buffer
-
   return git_buffer_store
 end
 
@@ -80,16 +91,13 @@ git_buffer_store.contains = function(buffer)
   return buffers[buffer.bufnr] ~= nil
 end
 
-git_buffer_store.remove = function(buffer, callback)
-  if not buffer then return buffer end
+git_buffer_store.remove = function(buffer)
+  if not buffer then return nil end
 
   buffer = buffers[buffer.bufnr]
-
   if not buffer then return end
 
   buffers[buffer.bufnr] = nil
-
-  if callback then callback(buffer) end
 
   return buffer
 end
@@ -100,91 +108,62 @@ end
 
 function git_buffer_store.current()
   local bufnr = vim.api.nvim_get_current_buf()
-
   return buffers[bufnr]
 end
 
 git_buffer_store.size = function()
-  local count = 0
-
-  for _, _ in pairs(buffers) do
-    count = count + 1
-  end
-
-  return count
+  return utils.object.size(buffers)
 end
 
 git_buffer_store.is_empty = function()
   return git_buffer_store.size() == 0
 end
 
+git_buffer_store.dispatch = function(git_buffer, event_type, ...)
+  local handlers = events[event_type]
+  assertion.assert(handlers, 'invalid event -- ' .. '"' .. event_type .. '"')
+
+  for _, handler in pairs(handlers) do
+    handler(git_buffer, ...)
+  end
+end
+
 git_buffer_store.collect = function()
   loop.free_textlock()
   local git_buffer = GitBuffer(0)
-
-  loop.free_textlock()
   if git_buffer_store.contains(git_buffer) then return end
 
   loop.free_textlock()
   git_buffer:sync()
 
   loop.free_textlock()
-  if not git_buffer:is_inside_git_dir() then return end
+  if not git_buffer:exists() then return end
 
-  loop.free_textlock()
-  if not git_buffer:is_valid() then return end
-
-  loop.free_textlock()
-  if not git_buffer:is_in_disk() then return end
-
-  loop.free_textlock()
-  if git_buffer:is_ignored() then return end
-
-  loop.free_textlock()
   git_buffer_store.add(git_buffer)
-  loop.free_textlock()
 
+  loop.free_textlock()
   git_buffer
     :attach_to_changes({
       on_lines = loop.coroutine(function(_, _, _, _, p_lnum, n_lnum, byte_count)
         if p_lnum == n_lnum and byte_count == 0 then return end
-
-        for _, handler in pairs(event_handlers.change) do
-          handler(git_buffer, p_lnum, n_lnum, byte_count)
-        end
+        git_buffer_store.dispatch(git_buffer, 'change')
       end),
 
       on_reload = loop.coroutine(function()
-        for _, handler in pairs(event_handlers.reload) do
-          handler(git_buffer)
-        end
+        git_buffer_store.dispatch(git_buffer, 'reload')
       end),
 
       on_detach = loop.coroutine(function()
-        for _, handler in pairs(event_handlers.detach) do
-          loop.free_textlock()
-          handler(git_buffer)
-        end
-
-        git_buffer:unwatch():detach_from_renderer()
+        git_buffer_store.dispatch(git_buffer, 'detach')
         git_buffer_store.remove(git_buffer)
+        git_buffer:detach_from_renderer()
       end),
     })
     :attach_to_renderer(loop.coroutine(function(top, bot)
-      for _, handler in pairs(event_handlers.render) do
-        handler(git_buffer, top, bot)
-      end
+      git_buffer_store.dispatch(git_buffer, 'render', top, bot)
     end))
 
-  git_buffer:watch(loop.coroutine(function()
-    for _, handler in pairs(event_handlers.watch) do
-      handler(git_buffer)
-    end
-  end))
-
-  for _, handler in pairs(event_handlers.attach) do
-    handler(git_buffer)
-  end
+    git_buffer_store.dispatch(git_buffer, 'attach')
 end
 
 return git_buffer_store

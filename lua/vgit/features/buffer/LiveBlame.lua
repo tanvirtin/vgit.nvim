@@ -84,23 +84,16 @@ function LiveBlame:render(git_buffer)
 end
 
 function LiveBlame:register_events()
-  git_buffer_store.attach('attach', function(git_buffer)
-    git_buffer
-      :on(event.type.BufEnter, function()
-        self:reset()
-      end)
-      :on(event.type.WinEnter, function()
-        self:reset()
-      end)
-      :on(event.type.CursorMoved, function()
-        self:reset()
-      end)
-      :on(event.type.InsertEnter, function()
-        self:reset()
-      end)
-      :on(event.type.CursorHold, function()
-        self:render()
-      end)
+  git_buffer_store.on('attach', function(buffer)
+    buffer:on({
+      event.type.BufEnter,
+      event.type.WinEnter,
+      event.type.CursorMoved,
+      event.type.InsertEnter,
+      event.type.CursorHold
+    }, function()
+      self:reset()
+    end)
   end)
 
   return self

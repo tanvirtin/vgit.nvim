@@ -1,10 +1,7 @@
 local fs = require('vgit.core.fs')
-local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local keymap = require('vgit.core.keymap')
-local Watcher = require('vgit.core.Watcher')
-local console = require('vgit.core.console')
 local renderer = require('vgit.core.renderer')
 local Namespace = require('vgit.core.Namespace')
 
@@ -17,7 +14,6 @@ function Buffer:constructor(bufnr)
     bufnr = bufnr,
     rendering = false,
     namespace = Namespace(),
-    watcher = Watcher(),
     state = {
       is_processing = false,
       is_attached_to_screen = false,
@@ -75,31 +71,6 @@ function Buffer:is_in_disk()
 end
 
 function Buffer:sync()
-  return self
-end
-
-function Buffer:watch(callback)
-  local name = self:get_name()
-
-  self.watcher:watch_file(
-    self:get_name(),
-    loop.coroutine(function(err)
-      if err then
-        console.debug.error(string.format('Error encountered while watching %s', name))
-        return
-      end
-
-      loop.free_textlock()
-      if self and self:is_valid() and callback then callback() end
-    end)
-  )
-
-  return self
-end
-
-function Buffer:unwatch()
-  self.watcher:unwatch()
-
   return self
 end
 

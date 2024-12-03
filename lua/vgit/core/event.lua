@@ -2,6 +2,7 @@ local loop = require('vgit.core.loop')
 
 local event = {
   type = {
+    BufNew = 'BufNew',
     BufRead = 'BufRead',
     BufEnter = 'BufEnter',
     BufDelete = 'BufDelete',

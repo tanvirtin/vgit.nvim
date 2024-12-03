@@ -33,6 +33,9 @@ LiveGutter.fetch = loop.debounce_coroutine(function(self, buffer)
 end, 10)
 
 function LiveGutter:render(buffer, top, bot)
+  top = top or 0
+  bot = bot or -1
+
   if not live_gutter_setting:get('enabled') then return self end
 
   local hunks = buffer:get_hunks()
@@ -61,24 +64,15 @@ function LiveGutter:reset()
 end
 
 function LiveGutter:register_events()
-  git_buffer_store
-    .attach('attach', function(buffer)
+  git_buffer_store.on({ 'attach', 'reload', 'change' }, function(buffer)
       self:fetch(buffer)
     end)
-    .attach('reload', function(buffer)
-      self:fetch(buffer)
-    end)
-    .attach('change', function(buffer)
-      self:fetch(buffer)
-    end)
-    .attach('git_watch', function(buffers)
-      for i = 1, #buffers do
-        local buffer = buffers[i]
-        self:fetch(buffer)
-      end
-    end)
-    .attach('render', function(buffer, top, bot)
+    .on('render', function(buffer, top, bot)
       self:render(buffer, top, bot + 1)
+    end)
+    .on('sync', function(buffer)
+      self:fetch(buffer)
+      self:render(buffer)
     end)
 
   return self

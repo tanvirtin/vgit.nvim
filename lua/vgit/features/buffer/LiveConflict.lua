@@ -79,24 +79,9 @@ function LiveConflict:render(buffer)
 end
 
 function LiveConflict:register_events()
-  git_buffer_store
-    .attach('attach', function(buffer)
+  git_buffer_store.on({ 'attach', 'reload', 'change', 'sync' }, function(buffer)
       self:render(buffer)
-    end)
-    .attach('reload', function(buffer)
-      self:render(buffer)
-    end)
-    .attach('change', function(buffer)
-      self:render(buffer)
-    end)
-    .attach('watch', function(buffer)
-      self:render(buffer)
-    end)
-    .attach('git_watch', function(buffers)
-      for i = 1, #buffers do
-        self:render(buffers[i])
-      end
-    end)
+  end)
 
   return self
 end

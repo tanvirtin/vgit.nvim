@@ -15,6 +15,17 @@ function git_repo.discover(filepath)
   return result[1]
 end
 
+function git_repo.dirname()
+  local reponame, err = git_repo.discover()
+  if err then return nil, err end
+
+  local result, git_dir_err = gitcli.run({ '-C', reponame, 'rev-parse', '--git-dir' })
+  local git_dir = result[1]
+  if git_dir_err then return nil, git_dir_err end
+
+  return reponame .. '/' .. git_dir
+end
+
 function git_repo.exists(filepath)
   local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
   local _, err = gitcli.run({ '-C', dirname, 'rev-parse', '--is-inside-git-dir' })

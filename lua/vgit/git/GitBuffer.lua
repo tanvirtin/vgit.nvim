@@ -1,3 +1,4 @@
+local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local keymap = require('vgit.core.keymap')
 local Buffer = require('vgit.core.Buffer')
@@ -216,6 +217,22 @@ function GitBuffer:get_conflict_under_hunk(cursor)
     local bot = conflict.incoming.bot
     return lnum >= top and lnum <= bot
   end)
+end
+
+function GitBuffer:exists()
+  loop.free_textlock()
+  if not self:is_inside_git_dir() then return false end
+
+  loop.free_textlock()
+  if not self:is_valid() then return false end
+
+  loop.free_textlock()
+  if not self:is_in_disk() then return false end
+
+  loop.free_textlock()
+  if self:is_ignored() then return false end
+
+  return true
 end
 
 return GitBuffer
