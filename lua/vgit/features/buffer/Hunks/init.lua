@@ -4,14 +4,12 @@ local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local navigation = require('vgit.features.buffer.Hunks.navigation')
-local NavigationVirtualText = require('vgit.features.buffer.Hunks.NavigationVirtualText')
 
 local Hunks = Object:extend()
 
 function Hunks:constructor()
   return {
     name = 'Buffer Hunks',
-    navigation_virtual_text = NavigationVirtualText(),
   }
 end
 
@@ -22,9 +20,7 @@ function Hunks:move_up()
   local hunks = buffer:get_hunks()
   if hunks and #hunks ~= 0 then
     local window = Window(0)
-    local selected = navigation.hunk_up(window, hunks)
-
-    self.navigation_virtual_text:place(buffer, window, string.format('%s/%s Changes', selected, #hunks))
+    navigation.hunk_up(window, hunks)
   end
 end
 
@@ -35,8 +31,7 @@ function Hunks:move_down()
   local hunks = buffer:get_hunks()
   if hunks and #hunks ~= 0 then
     local window = Window(0)
-    local selected = navigation.hunk_down(window, hunks)
-    self.navigation_virtual_text:place(buffer, window, string.format('%s/%s Changes', selected, #hunks))
+    navigation.hunk_down(window, hunks)
   end
 end
 

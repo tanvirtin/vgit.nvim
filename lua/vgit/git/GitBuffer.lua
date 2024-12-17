@@ -221,10 +221,10 @@ end
 
 function GitBuffer:exists()
   loop.free_textlock()
-  if not self:is_inside_git_dir() then return false end
+  if not self:is_valid() then return false end
 
   loop.free_textlock()
-  if not self:is_valid() then return false end
+  if not self:is_inside_git_dir() then return false end
 
   loop.free_textlock()
   if not self:is_in_disk() then return false end
