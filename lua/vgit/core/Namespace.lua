@@ -138,6 +138,30 @@ function Namespace:sign_unplace(buffer, lnum)
   return pcall(vim.fn.sign_unplace, self:get_sign_ns_id(buffer), { buffer = buffer.bufnr, id = lnum })
 end
 
+
+function Namespace:virtual_sign_place(buffer, lnum, sign_name)
+    local definitions = signs_setting:get('definitions')
+    local sign_definition = definitions[sign_name]
+    local sign_text = sign_definition.text
+
+    return pcall(vim.api.nvim_buf_set_extmark,
+      buffer.bufnr,
+      self.ns_id,
+      lnum - 1,
+      0,
+      {
+        id = lnum,
+        sign_text = sign_text,
+        sign_hl_group = sign_definition.texthl,
+        priority = signs_setting:get('priority'),
+      }
+    )
+end
+
+function Namespace:virtual_sign_unplace(buffer, lnum)
+  return pcall(vim.api.nvim_buf_del_extmark, buffer.bufnr, self.ns_id, lnum)
+end
+
 function Namespace:clear(buffer, row_range)
   row_range = row_range or {}
   local row_from = row_range.from or 0

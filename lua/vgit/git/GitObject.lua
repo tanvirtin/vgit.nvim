@@ -95,16 +95,16 @@ end
 
 function GitObject:generate_status()
   local hunks = self.hunks or {}
-  local stats_dict = { added = 0, changed = 0, removed = 0 }
+  local status = { added = 0, changed = 0, removed = 0 }
 
   for _, h in ipairs(hunks) do
     local changed = math.min(h.stat.added, h.stat.removed)
-    stats_dict.added = stats_dict.added + math.abs(h.stat.added - changed)
-    stats_dict.removed = stats_dict.removed + math.abs(h.stat.removed - changed)
-    stats_dict.changed = stats_dict.changed + changed
+    status.added = status.added + math.abs(h.stat.added - changed)
+    status.removed = status.removed + math.abs(h.stat.removed - changed)
+    status.changed = status.changed + changed
   end
 
-  return stats_dict
+  return status
 end
 
 function GitObject:lines(commit_hash)

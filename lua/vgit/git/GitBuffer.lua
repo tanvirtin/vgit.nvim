@@ -181,7 +181,7 @@ function GitBuffer:blames()
   return self.git_object:blames()
 end
 
-function GitBuffer:live_hunks()
+function GitBuffer:live_signs()
   local lines = self:get_lines()
   local hunks, err = self.git_object:live_hunks(lines)
 

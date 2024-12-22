@@ -98,13 +98,21 @@ function Buffer:sign_place(lnum, sign_name)
 end
 
 function Buffer:sign_placelist(signs)
-  vim.fn.sign_placelist(signs)
+  for _, sign in ipairs(signs) do
+    self.namespace:virtual_sign_place(self, sign.lnum, sign.name)
+  end
 
   return self
 end
 
 function Buffer:sign_unplace()
-  return self.namespace:sign_unplace(self)
+  local count = self:get_line_count()
+
+  for lnum = 1, count  do
+    self.namespace:virtual_sign_unplace(self, lnum)
+  end
+
+  return self
 end
 
 function Buffer:transpose_virtual_text(opts)

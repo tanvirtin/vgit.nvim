@@ -11,44 +11,38 @@ function LiveGutter:constructor()
   return { name = 'Live Gutter' }
 end
 
-LiveGutter.fetch = loop.debounce_coroutine(function(self, buffer)
-  if not live_gutter_setting:get('enabled') then return self end
+LiveGutter.fetch = loop.debounce_coroutine(function(_, buffer)
+  if not live_gutter_setting:get('enabled') then return end
 
   loop.free_textlock()
-  if not buffer:is_valid() then return self end
+  if not buffer:is_valid() then return end
 
   loop.free_textlock()
-  local _, err = buffer:live_hunks()
+  local _, err = buffer:live_signs()
 
   loop.free_textlock()
   if err then
     console.debug.error(err)
-    return self
+    return
   end
 
-  buffer:sign_unplace()
   buffer:generate_status()
-
-  return self
 end, 10)
 
 function LiveGutter:render(buffer, top, bot)
   top = top or 0
   bot = bot or -1
 
-  if not live_gutter_setting:get('enabled') then return self end
-
-  local hunks = buffer:get_hunks()
-  if not hunks then return self end
+  if not #buffer.signs == 0 then return end
+  if not live_gutter_setting:get('enabled') then return end
 
   local signs = {}
   for i = top, bot do
     signs[#signs + 1] = buffer.signs[i]
   end
 
+  buffer:sign_unplace()
   buffer:sign_placelist(signs)
-
-  return self
 end
 
 function LiveGutter:reset()
@@ -56,26 +50,20 @@ function LiveGutter:reset()
 
   for i = 1, #buffers do
     local buffer = buffers[i]
-
     if buffer then buffer:sign_unplace() end
   end
-
-  return self
 end
 
 function LiveGutter:register_events()
   git_buffer_store.on({ 'attach', 'reload', 'change' }, function(buffer)
       self:fetch(buffer)
     end)
+    .on('sync', function(buffer)
+      self:fetch(buffer)
+    end)
     .on('render', function(buffer, top, bot)
       self:render(buffer, top, bot + 1)
     end)
-    .on('sync', function(buffer)
-      self:fetch(buffer)
-      self:render(buffer)
-    end)
-
-  return self
 end
 
 return LiveGutter
