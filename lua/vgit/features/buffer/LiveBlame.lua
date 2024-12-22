@@ -90,9 +90,11 @@ function LiveBlame:register_events()
       event.type.WinEnter,
       event.type.CursorMoved,
       event.type.InsertEnter,
-      event.type.CursorHold
     }, function()
       self:reset()
+    end)
+    buffer:on(event.type.CursorHold, function()
+      self:render()
     end)
   end)
 
