@@ -91,8 +91,14 @@ function DiffScreen:render_help_bar()
   end
 
   self.app_bar_view:set_lines({ text })
-  self.app_bar_view:add_pattern_highlight('%((%a+)%)', 'Keyword')
-  self.app_bar_view:add_pattern_highlight('|', 'Number')
+  self.app_bar_view:place_extmark_highlight({
+    hl = 'Keyword',
+    pattern = '%((%a+)%)'
+  })
+  self.app_bar_view:place_extmark_highlight({
+    hl = 'Number',
+    pattern = '|',
+  })
 end
 
 function DiffScreen:show(opts)

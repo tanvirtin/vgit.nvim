@@ -58,7 +58,7 @@ function HeaderTitle:set(source, title, opts)
   for _, range_info in ipairs(hl_range_infos) do
     local hl = range_info.hl
     local range = range_info.range
-    source:add_highlight({
+    source:place_extmark_highlight({
       hl = hl,
       row = 0,
       col_range = {

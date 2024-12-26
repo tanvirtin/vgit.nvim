@@ -97,6 +97,10 @@ function object.values(o)
   return values
 end
 
+function object.deep_clone(o)
+  return vim.deepcopy(o, true)
+end
+
 function object.clone(config_object)
   return vim.tbl_extend('force', {}, config_object)
 end

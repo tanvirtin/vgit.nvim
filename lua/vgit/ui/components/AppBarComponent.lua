@@ -1,6 +1,5 @@
 local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
-local Namespace = require('vgit.core.Namespace')
 local Notification = require('vgit.ui.decorations.Notification')
 local Buffer = require('vgit.core.Buffer')
 local Component = require('vgit.ui.Component')
@@ -53,7 +52,6 @@ function AppBarComponent:mount()
   self:set_default_win_plot(win_plot):set_default_win_options(win_options)
 
   self.notification = Notification()
-  self.namespace = Namespace()
   self.buffer = Buffer():create():assign_options(config.buf_options)
 
   local buffer = self.buffer
@@ -72,13 +70,13 @@ function AppBarComponent:unmount()
 end
 
 function AppBarComponent:clear_notification()
-  if self.buffer:is_valid() then self.namespace:clear(self.buffer) end
+  if self.buffer:is_valid() then self:clear_extmarks() end
 
   return self
 end
 
 function AppBarComponent:trigger_notification(text)
-  self.namespace:transpose_virtual_text(self.buffer, {
+  self:place_extmark_text({
     text = text,
     hl = 'GitComment',
     row = 0,

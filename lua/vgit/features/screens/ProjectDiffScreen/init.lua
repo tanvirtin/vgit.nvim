@@ -283,8 +283,14 @@ function ProjectDiffScreen:render_help_bar()
   end
 
   self.app_bar_view:set_lines({ text })
-  self.app_bar_view:add_pattern_highlight('%((%a+)%)', 'Keyword')
-  self.app_bar_view:add_pattern_highlight('|', 'Number')
+  self.app_bar_view:place_extmark_highlight({
+    hl = 'Keyword',
+    pattern = '%((%a+)%)'
+  })
+  self.app_bar_view:place_extmark_highlight({
+    hl = 'Number',
+    pattern = '|',
+  })
 end
 
 function ProjectDiffScreen:handle_list_move(direction)
@@ -514,19 +520,22 @@ function ProjectDiffScreen:show()
   self:render_help_bar()
 
   if buffer then
-    -- NOTE: Hunk index should always be equal to mark index, as num hunks equals num marks.
-    local _, hunk_index_under_cursor = navigation.get_current_hunk(window, buffer:get_hunks())
+    local hunks = buffer:get_hunks()
+    if hunks and #hunks ~= 0 then
+      -- NOTE: Hunk index should always be equal to mark index, as num hunks equals num marks.
+      local _, hunk_index_under_cursor = navigation.get_current_hunk(window, hunks)
 
-    local list_item = self:move_to(function(node)
-      local filename = node.path and node.path.status and node.path.status.filename or nil
-      return filename == buffer.git_object.filename
-    end, hunk_index_under_cursor)
-
-    if not list_item then
-      self:move_to(function(node)
+      local list_item = self:move_to(function(node)
         local filename = node.path and node.path.status and node.path.status.filename or nil
-        return filename ~= nil
-      end)
+        return filename == buffer.git_object.filename
+      end, hunk_index_under_cursor)
+
+      if not list_item then
+        self:move_to(function(node)
+          local filename = node.path and node.path.status and node.path.status.filename or nil
+          return filename ~= nil
+        end)
+      end
     end
   else
     self:move_to(function(node)

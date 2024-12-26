@@ -73,7 +73,7 @@ function GitObject:has_conflict()
   return git_conflict.has_conflict(self.reponame, self.filename)
 end
 
-function GitObject:parse_conflicts(lines)
+function GitObject:conflicts(lines)
   return git_conflict.parse(lines)
 end
 

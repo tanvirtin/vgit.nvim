@@ -64,7 +64,6 @@ function Hunks:stage_all()
   if err then return console.debug.error(err) end
 
   loop.free_textlock()
-  buffer:edit()
 end
 
 function Hunks:cursor_stage()
@@ -81,7 +80,6 @@ function Hunks:cursor_stage()
     if err then return console.debug.error(err) end
 
     loop.free_textlock()
-    buffer:edit()
 
     return
   end
@@ -92,9 +90,6 @@ function Hunks:cursor_stage()
   loop.free_textlock()
   local _, err = buffer:stage_hunk(hunk)
   if err then return console.debug.error(err) end
-
-  loop.free_textlock()
-  buffer:edit()
 end
 
 function Hunks:unstage_all()
@@ -105,9 +100,6 @@ function Hunks:unstage_all()
   loop.free_textlock()
   local _, err = buffer:unstage()
   if err then return console.debug.error(err) end
-
-  loop.free_textlock()
-  buffer:edit()
 end
 
 function Hunks:reset_all()
@@ -124,7 +116,6 @@ function Hunks:reset_all()
 
   loop.free_textlock()
   buffer:set_lines(lines)
-  buffer:edit()
 end
 
 function Hunks:cursor_reset()

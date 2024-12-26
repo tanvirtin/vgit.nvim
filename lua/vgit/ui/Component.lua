@@ -101,25 +101,6 @@ function Component:is_valid()
   return self.buffer:is_valid() and self.window:is_valid()
 end
 
-function Component:render_border(config)
-  if config.hl then
-    local new_border = {}
-
-    for _, char in pairs(config.chars) do
-      if type(char) == 'table' then
-        char[2] = config.hl
-        new_border[#new_border + 1] = char
-      else
-        new_border[#new_border + 1] = { char, config.hl }
-      end
-    end
-
-    return new_border
-  end
-
-  return config.chars
-end
-
 function Component:mount()
   assertion.assert('Not yet implemented')
 end
@@ -128,117 +109,89 @@ function Component:unmount()
   assertion.assert('Not yet implemented')
 end
 
-function Component:clear_namespace()
-  self.buffer:clear_namespace()
-
+function Component:clear_extmark_lnums()
+  self.buffer:clear_extmark_lnums()
   return self
 end
 
-function Component:add_highlight(opts)
-  self.buffer:add_highlight({
-    hl = opts.hl,
-    row = opts.row,
-    col_range = {
-      from = opts.col_range.from,
-      to = opts.col_range.to,
-    },
-  })
-
+function Component:clear_extmark_texts()
+  self.buffer:clear_extmark_texts()
   return self
 end
 
-function Component:add_pattern_highlight(pattern, hl)
-  self.buffer:add_pattern_highlight(pattern, hl)
-
+function Component:clear_extmark_signs()
+  self.buffer:clear_extmark_signs()
   return self
 end
 
-function Component:sign_place(lnum, sign_name)
-  self.buffer:sign_place(lnum, sign_name)
-
+function Component:clear_extmark_highlights()
+  self.buffer:clear_extmark_highlights()
   return self
 end
 
-function Component:sign_unplace()
-  self.buffer:sign_unplace()
-
+function Component:clear_extmarks()
+  self.buffer:clear_extmarks()
   return self
 end
 
-function Component:transpose_virtual_line_number(opts)
-  self.buffer:transpose_virtual_line_number({
-    row = opts.row,
-    hl = opts.hl,
-    text = opts.text,
-  })
-
+function Component:place_extmark_text(opts)
+  self.buffer:place_extmark_text(opts)
   return self
 end
 
-function Component:transpose_virtual_text(opts)
-  self.buffer:transpose_virtual_text({
-    text = opts.text,
-    hl = opts.hl,
-    row = opts.row,
-    col = opts.col,
-    pos = opts.pos,
-  })
-
+function Component:place_extmark_lnum(opts)
+  self.buffer:place_extmark_lnum(opts)
   return self
 end
 
-function Component:transpose_virtual_line(opts)
-  self.buffer:transpose_virtual_line({
-    texts = opts.texts,
-    row = opts.row,
-    pos = opts.pos,
-  })
+function Component:place_extmark_sign(sign)
+  self.buffer:place_extmark_sign(sign)
+  return self
+end
 
+function Component:place_extmark_highlight(opts)
+  self.buffer:place_extmark_highlight(opts)
   return self
 end
 
 function Component:set_keymap(mode, key, callback)
   self.buffer:set_keymap(mode, key, callback)
-
   return self
 end
 
 function Component:set_cursor(cursor)
   if not self.locked then self.window:set_cursor(cursor) end
-
   return self
 end
 
 function Component:set_lnum(lnum)
   if not self.locked then self.window:set_lnum(lnum) end
-
   return self
 end
 
 function Component:position_cursor(placement)
   self.window:position_cursor(placement)
-
   return self
 end
 
 function Component:enable_cursorline()
   self.window:set_option('cursorline', true)
-
   return self
 end
 
 function Component:disable_cursorline()
   self.window:set_option('cursorline', false)
-
   return self
 end
 
 function Component:clear_lines()
-  return self.buffer:set_lines({})
+  self.buffer:set_lines({})
+  return self
 end
 
 function Component:reset_cursor()
-  return self.window:set_cursor({ 1, 1 })
+  self.window:set_cursor({ 1, 1 })
+  return self
 end
 
 function Component:get_plot()
@@ -271,9 +224,7 @@ end
 
 function Component:set_lines(lines, force)
   if self.locked and not force or not self:is_valid() then return self end
-
   self.buffer:set_lines(lines)
-
   return self
 end
 
@@ -283,25 +234,21 @@ end
 
 function Component:call(callback)
   self.window:call(callback)
-
   return self
 end
 
 function Component:lock()
   self.locked = true
-
   return self
 end
 
 function Component:unlock()
   self.locked = false
-
   return self
 end
 
 function Component:focus()
   self.window:focus()
-
   return self
 end
 

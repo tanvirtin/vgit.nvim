@@ -1,7 +1,6 @@
-local Component = require('vgit.ui.Component')
-local Namespace = require('vgit.core.Namespace')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
+local Component = require('vgit.ui.Component')
 
 local HeaderElement = Component:extend()
 
@@ -14,7 +13,7 @@ function HeaderElement:get_height()
 end
 
 function HeaderElement:trigger_notification(text)
-  self.namespace:transpose_virtual_text(self.buffer, {
+  self:place_extmark_text({
     text = text,
     hl = 'GitComment',
     row = 0,
@@ -26,8 +25,7 @@ function HeaderElement:trigger_notification(text)
 end
 
 function HeaderElement:clear_notification()
-  if self.buffer:is_valid() then self.namespace:clear(self.buffer) end
-
+  self:clear_extmark_texts()
   return self
 end
 
@@ -55,14 +53,12 @@ function HeaderElement:mount(opts)
     scrollbind = false,
     winhl = 'Normal:GitHeader',
   })
-  self.namespace = Namespace()
 
   return self
 end
 
 function HeaderElement:unmount()
   self.window:close()
-
   return self
 end
 

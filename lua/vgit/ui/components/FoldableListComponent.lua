@@ -236,7 +236,7 @@ function FoldableListComponent:paint()
   for i = 1, #virtual_texts do
     local virtual_text = virtual_texts[i]
     if virtual_text.type == 'before' then
-      self.buffer:transpose_virtual_text({
+      self.buffer:place_extmark_text({
         text = virtual_text.text,
         hl = virtual_text.hl,
         row = virtual_text.lnum - 1,
@@ -244,7 +244,7 @@ function FoldableListComponent:paint()
       })
     end
     if virtual_text.type == 'after' then
-      self.buffer:transpose_virtual_text({
+      self.buffer:place_extmark_text({
         text = virtual_text.text,
         hl = virtual_text.hl,
         row = virtual_text.lnum - 1,
@@ -261,7 +261,7 @@ function FoldableListComponent:paint()
     local lnum = hl_info.lnum
     local range = hl_info.range
 
-    self.buffer:add_highlight({
+    self.buffer:place_extmark_highlight({
       hl = hl,
       row = lnum - 1,
       col_range = {
@@ -275,7 +275,7 @@ function FoldableListComponent:paint()
 end
 
 function FoldableListComponent:sync()
-  self.buffer:clear_namespace()
+  self.buffer:clear_extmarks()
   self.buffer:set_lines(self:generate_lines())
 
   loop.free_textlock()

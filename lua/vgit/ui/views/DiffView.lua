@@ -159,7 +159,7 @@ function DiffView:paint_word(component_type, line_changes, lnum)
       if operation == 0 or operation == -1 then offset = offset + #fragment end
     end
 
-    component:transpose_virtual_line({
+    component:place_extmark_text({
       texts = texts,
       row = lnum - 1,
     })
@@ -184,11 +184,17 @@ function DiffView:paint_line(component_type, line_changes, lnum)
 
   if change_type ~= 'void' then line_number_hl = main_signs[change_type] end
 
-  if sign_name then component:sign_place(lnum, sign_name) end
+  if sign_name then
+    component:place_extmark_sign({
+      col = lnum - 1,
+      name = sign_name,
+    })
+  end
 
   if change_type == 'void' then
-    component:transpose_virtual_text({
-      text = string.rep(symbols_setting:get('void'), component.window:get_width()),
+    local text = string.rep(symbols_setting:get('void'), component.window:get_width())
+    component:place_extmark_text({
+      text = text,
       hl = line_number_hl,
       row = lnum - 1,
       col = 0,
@@ -248,15 +254,15 @@ function DiffView:clear_title()
   return self
 end
 
-function DiffView:clear_namespace()
-  if self.layout_type == 'split' then self.scene:get('previous'):clear_namespace() end
+function DiffView:clear_extmarks()
+  if self.layout_type == 'split' then self.scene:get('previous'):clear_extmarks() end
 
-  self.scene:get('current'):clear_namespace()
+  self.scene:get('current'):clear_extmarks()
 
   local header_component = self.scene:get('header')
 
   if header_component then
-    header_component:clear_namespace()
+    header_component:clear_extmarks()
 
     return self
   end
@@ -744,7 +750,7 @@ end
 function DiffView:render()
   local ok, msg = pcall(function()
     loop.free_textlock()
-    self:clear_namespace()
+    self:clear_extmarks()
 
     local _, err = self.store:get_diff()
     if err then

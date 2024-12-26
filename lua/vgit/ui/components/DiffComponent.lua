@@ -133,7 +133,7 @@ function DiffComponent:render_line_numbers(lines)
     local text = lines[i][1]
     local text_len = string.len(text)
     if text_len < max_digits then text = string.format('%s%s', string.rep(' ', max_digits - text_len), text) end
-    self:transpose_virtual_line_number({
+    self:place_extmark_lnum({
       row = i - 1,
       hl = hl,
       text = text,
@@ -143,12 +143,11 @@ function DiffComponent:render_line_numbers(lines)
   return self
 end
 
-function DiffComponent:clear_namespace()
-  Component.clear_namespace(self)
+function DiffComponent:clear_extmarks()
+  Component.clear_extmarks(self)
 
   local header = self.elements.header
-
-  if header then header:clear_namespace() end
+  if header then header:clear_extmarks() end
 
   return self
 end

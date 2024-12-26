@@ -36,7 +36,7 @@ function TableComponent:paint(hls)
     local hl = hl_info.hl
     local range = hl_info.range
 
-    self.buffer:add_highlight({
+    self.buffer:place_extmark_highlight({
       hl = hl,
       row = hl_info.row - 1,
       col_range = {

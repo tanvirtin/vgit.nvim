@@ -1,5 +1,5 @@
-local utils = require('vgit.core.utils')
 local loop = require('vgit.core.loop')
+local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
 local Object = require('vgit.core.Object')
 local git_buffer_store = require('vgit.git.git_buffer_store')
@@ -13,7 +13,7 @@ end
 function LiveConflict:conflict_accept_current_change(buffer)
   local window = Window(0)
   local cursor = window:get_cursor()
-  local conflict = buffer:get_conflict_under_hunk(cursor)
+  local conflict = buffer:get_conflict(cursor[1])
   if not conflict then return end
 
   local lines = buffer:get_lines()
@@ -23,15 +23,12 @@ function LiveConflict:conflict_accept_current_change(buffer)
 
   lines = utils.list.replace(lines, conflict_top, conflict_bot, current_lines)
   buffer:set_lines(lines)
-  buffer:call(function()
-    vim.cmd('LspStart')
-  end)
 end
 
 function LiveConflict:conflict_accept_incoming_change(buffer)
   local window = Window(0)
   local cursor = window:get_cursor()
-  local conflict = buffer:get_conflict_under_hunk(cursor)
+  local conflict = buffer:get_conflict(cursor[1])
   if not conflict then return end
 
   local lines = buffer:get_lines()
@@ -41,15 +38,12 @@ function LiveConflict:conflict_accept_incoming_change(buffer)
 
   lines = utils.list.replace(lines, conflict_top, conflict_bot, incoming_lines)
   buffer:set_lines(lines)
-  buffer:call(function()
-    vim.cmd('LspStart')
-  end)
 end
 
 function LiveConflict:conflict_accept_both_changes(buffer)
   local window = Window(0)
   local cursor = window:get_cursor()
-  local conflict = buffer:get_conflict_under_hunk(cursor)
+  local conflict = buffer:get_conflict(cursor[1])
   if not conflict then return end
 
   local lines = buffer:get_lines()
@@ -61,26 +55,13 @@ function LiveConflict:conflict_accept_both_changes(buffer)
 
   lines = utils.list.replace(lines, conflict_top, conflict_bot, replacement_lines)
   buffer:set_lines(lines)
-  buffer:call(function()
-    vim.cmd('LspStart')
-  end)
-end
-
-function LiveConflict:render(buffer)
-  local has_conflict = buffer:has_conflict()
-  if not has_conflict then return end
-
-  loop.free_textlock()
-  buffer:call(function()
-    vim.cmd('LspStop')
-  end)
-  buffer:parse_conflicts()
-  buffer:render_conflicts()
 end
 
 function LiveConflict:register_events()
   git_buffer_store.on({ 'attach', 'reload', 'change', 'sync' }, function(buffer)
-      self:render(buffer)
+    buffer:conflicts()
+    loop.free_textlock()
+    buffer:render_conflicts()
   end)
 
   return self

@@ -2,26 +2,95 @@ local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local keymap = require('vgit.core.keymap')
 local Buffer = require('vgit.core.Buffer')
+local Extmark = require('vgit.ui.Extmark')
 local git_repo = require('vgit.git.git_repo')
 local GitObject = require('vgit.git.GitObject')
 local signs_setting = require('vgit.settings.signs')
+local live_blame_setting = require('vgit.settings.live_blame')
 
 local GitBuffer = Buffer:extend()
 
+function GitBuffer:constructor(...)
+  local buffer = Buffer.constructor(self, ...)
+  local bufnr = buffer.bufnr
+
+  buffer.blame_extmark = Extmark(bufnr)
+  buffer.gutter_extmark = Extmark(bufnr)
+  buffer.conflict_extmark = Extmark(bufnr)
+  buffer.state = {
+    signs = {},
+    blames = {},
+    config = nil,
+    conflicts = {},
+  }
+
+  return buffer
+end
+
+function GitBuffer:create(...)
+  Buffer.create(self, ...)
+
+  self.blame_extmark = Extmark(self.bufnr)
+  self.gutter_extmark = Extmark(self.bufnr)
+  self.conflict_extmark = Extmark(self.bufnr)
+
+  return self
+end
+
 function GitBuffer:sync()
   Buffer.sync(self)
-
-  self.signs = {}
-  self.conflicts = {}
-  self.is_processing = false
-  self.is_showing_lens = false
+  self.state = {
+    signs = {},
+    blames = {},
+    config = nil,
+    conflicts = {},
+  }
   self.git_object = GitObject(self:get_name())
 
   return self
 end
 
+function Buffer:clear_conflicts(top, bot)
+  top = top or 0
+  bot = bot or -1
+
+  self.conflict_extmark:clear(top, bot)
+  return self
+end
+
+function Buffer:clear_blames(top, bot)
+  top = top or 0
+  bot = bot or -1
+
+  self.blame_extmark:clear(top, bot)
+  return self
+end
+
+function Buffer:clear_signs(top, bot)
+  top = top or 0
+  bot = bot or -1
+
+  self.gutter_extmark:clear(top, bot)
+  return self
+end
+
+function GitBuffer:clear_extmarks(top, bot)
+  top = top or 0
+  bot = bot or -1
+
+  Buffer.clear_extmarks(self)
+  self:clear_signs(top, bot)
+  self:clear_blames(top, bot)
+  self:clear_conflicts(top, bot)
+
+  return self
+end
+
 function GitBuffer:config()
-  return self.git_object:config()
+  if self.state.config then return self.state.config end
+  local config, err = self.git_object:config()
+  if config then self:set_state({ config = config }) end
+  return config, err
 end
 
 function GitBuffer:is_ignored()
@@ -36,13 +105,101 @@ function GitBuffer:is_inside_git_dir()
   return git_repo.exists(self:get_name())
 end
 
-function GitBuffer:has_conflict()
-  return self.git_object:has_conflict()
+function GitBuffer:generate_status()
+  self:set_var('vgit_status', self.git_object:generate_status())
+  return self
 end
 
-function GitBuffer:parse_conflicts()
-  self.conflicts = self.git_object:parse_conflicts(self:get_lines())
-  return self.conflicts
+function GitBuffer:stage_hunk(hunk)
+  return self.git_object:stage_hunk(hunk)
+end
+
+function GitBuffer:unstage_hunk(hunk)
+  return self.git_object:unstage_hunk(hunk)
+end
+
+function GitBuffer:stage()
+  return self.git_object:stage()
+end
+
+function GitBuffer:unstage()
+  return self.git_object:unstage()
+end
+
+function GitBuffer:get_hunks()
+  return self.git_object.hunks
+end
+
+function GitBuffer:blame(lnum)
+  local blame, err = self.git_object:blame(lnum)
+  if blame then self:set_state({ blames = { [lnum] = blame } }) end
+  return blame, err
+end
+
+function GitBuffer:blames()
+  return self.git_object:blames()
+end
+
+function GitBuffer:get_conflict(lnum)
+  local conflicts = self.state.conflicts
+  return utils.list.find(conflicts, function(conflict)
+    local top = conflict.current.top
+    local bot = conflict.incoming.bot
+    return lnum >= top and lnum <= bot
+  end)
+end
+
+function GitBuffer:conflicts()
+  local state = self.state
+  if not self.git_object:has_conflict() then
+    state.conflicts = {}
+    return state.conflicts
+  end
+  loop.free_textlock()
+  local lines = self:get_lines()
+  local conflicts = self.git_object:conflicts(lines)
+  self:set_state({ conflicts = conflicts })
+  return conflicts
+end
+
+function GitBuffer:diff()
+  local lines = self:get_lines()
+  local hunks, err = self.git_object:live_hunks(lines)
+  if err then return nil, err end
+
+  local sign_types = signs_setting:get('usage').main
+
+  local signs = {}
+  for i = 1, #hunks do
+    local hunk = hunks[i]
+    for j = hunk.top, hunk.bot do
+      local lnum = (hunk.type == 'remove' and j == 0) and 1 or j
+      signs[#signs + 1] = {
+        col = lnum - 1,
+        name = sign_types[hunk.type],
+      }
+    end
+  end
+
+  self:set_state({ signs = signs })
+
+  return hunks
+end
+
+function GitBuffer:exists()
+  loop.free_textlock()
+  if not self:is_valid() then return false end
+
+  loop.free_textlock()
+  if not self:is_inside_git_dir() then return false end
+
+  loop.free_textlock()
+  if not self:is_in_disk() then return false end
+
+  loop.free_textlock()
+  if self:is_ignored() then return false end
+
+  return true
 end
 
 function GitBuffer:render_conflict_help_text(conflict)
@@ -77,10 +234,10 @@ function GitBuffer:render_conflict_help_text(conflict)
   end
 
   if help_text ~= '' then
-    self:insert_virtual_line({
+    self.conflict_extmark:text({
       text = help_text,
       hl = 'GitComment',
-      row = current.top - 1,
+      row = current.top - 2,
       col = 0,
     })
   end
@@ -94,8 +251,11 @@ function GitBuffer:render_conflict(conflict)
   local ancestor = conflict.ancestor
   local incoming = conflict.incoming
 
-  self:sign_place(current.top, 'GitConflictCurrentMark')
-  self:transpose_virtual_text({
+  self.conflict_extmark:sign({
+    col = current.top - 1,
+    name = 'GitConflictCurrentMark'
+  })
+  self.conflict_extmark:text({
     text = '(Current Change)',
     hl = 'GitComment',
     row = current.top - 1,
@@ -104,19 +264,32 @@ function GitBuffer:render_conflict(conflict)
   })
 
   for lnum = current.top + 1, current.bot do
-    self:sign_place(lnum, 'GitConflictCurrent')
+    self.conflict_extmark:sign({
+      col = lnum - 1,
+      name = 'GitConflictCurrent'
+    })
   end
 
   for lnum = middle.top, middle.bot do
-    self:sign_place(lnum, 'GitConflictMiddle')
+    self.conflict_extmark:sign({
+      col = lnum - 1,
+      name = 'GitConflictMiddle'
+    })
   end
 
   for lnum = incoming.top, incoming.bot - 1 do
-    self:sign_place(lnum, 'GitConflictIncoming')
+    self.conflict_extmark:sign({
+      col = lnum - 1,
+      name = 'GitConflictIncoming'
+    })
   end
 
-  self:sign_place(incoming.bot, 'GitConflictIncomingMark')
-  self:transpose_virtual_text({
+  self.conflict_extmark:sign({
+    col = incoming.bot - 1,
+    name = 'GitConflictIncomingMark'
+  })
+
+  self.conflict_extmark:text({
     text = '(Incoming Change)',
     hl = 'GitComment',
     row = incoming.bot - 1,
@@ -125,114 +298,78 @@ function GitBuffer:render_conflict(conflict)
   })
 
   if ancestor and not utils.list.is_empty(ancestor) then
-    self:sign_place(ancestor.top, 'GitConflictAncestorMark')
+    self.conflict_extmark:sign({
+      col = ancestor.top - 1,
+      name = 'GitConflictAncestorMark'
+    })
     for lnum = ancestor.top + 1, ancestor.bot do
-      self:sign_place(lnum, 'GitConflictAncestor')
+      self.conflict_extmark:sign({
+        col = lnum - 1,
+        name = 'GitConflictAncestor'
+      })
     end
   end
 
   return self
 end
 
-function GitBuffer:render_conflicts()
-  self:sign_unplace()
-  self:clear_namespace()
+function GitBuffer:render_conflicts(top, bot)
+  top = top or 0
+  bot = bot or -1
 
-  for i = 1, #self.conflicts do
-    local conflict = self.conflicts[i]
-
+  self:clear_conflicts(top, bot)
+  utils.list.each(self.state.conflicts, function (conflict)
     self:render_conflict_help_text(conflict)
     self:render_conflict(conflict)
+  end)
+
+  return self
+end
+
+function Buffer:render_signs(top, bot)
+  top = top or 0
+  bot = bot or -1
+  self:clear_signs(top, bot)
+
+  local signs = self.state.signs or {}
+  for _, sign in ipairs(signs) do
+    local col = sign.col;
+    if col >= top and (bot == -1 or col <= bot) then self.gutter_extmark:sign(sign) end
   end
 
   return self
 end
 
-function GitBuffer:generate_status()
-  self:set_var('vgit_status', self.git_object:generate_status())
-  return self
-end
+function Buffer:render_blames(top, bot)
+  top = top or 0
+  bot = bot or -1
 
-function GitBuffer:stage_hunk(hunk)
-  return self.git_object:stage_hunk(hunk)
-end
+  self:clear_blames(top, bot)
 
-function GitBuffer:unstage_hunk(hunk)
-  return self.git_object:unstage_hunk(hunk)
-end
-
-function GitBuffer:stage()
-  return self.git_object:stage()
-end
-
-function GitBuffer:unstage()
-  return self.git_object:unstage()
-end
-
-function GitBuffer:get_hunks()
-  return self.git_object.hunks
-end
-
-function GitBuffer:blame(lnum)
-  return self.git_object:blame(lnum)
-end
-
-function GitBuffer:blames()
-  return self.git_object:blames()
-end
-
-function GitBuffer:live_signs()
-  local lines = self:get_lines()
-  local hunks, err = self.git_object:live_hunks(lines)
-
-  if err then return nil, err end
-
-  local sign_types = signs_setting:get('usage').main
-  local sign_priority = signs_setting:get('priority')
-  local sign_group = self.namespace:get_sign_ns_id(self)
-
-  self.signs = {}
-  for i = 1, #hunks do
-    local hunk = hunks[i]
-    for j = hunk.top, hunk.bot do
-      local lnum = (hunk.type == 'remove' and j == 0) and 1 or j
-      self.signs[lnum] = {
-        id = lnum,
-        lnum = lnum,
-        buffer = self.bufnr,
-        group = sign_group,
-        name = sign_types[hunk.type],
-        priority = sign_priority,
-      }
+  local blames = self.state.blames or {}
+  for lnum, blame in pairs(blames) do
+    if lnum >= top and (bot == -1 or lnum <= bot) then
+      local text = live_blame_setting:get('format')(blame, self.state.config)
+      if type(text) == 'string' then
+        self.blame_extmark:text({
+          text = text,
+          hl = 'GitComment',
+          row = lnum - 1,
+          col = 0,
+          pos = 'eol',
+        })
+      end
     end
   end
 
-  return hunks
+  return self
 end
 
-function GitBuffer:get_conflict_under_hunk(cursor)
-  local lnum = cursor[1]
-  return utils.list.find(self.conflicts, function(conflict)
-    local top = conflict.current.top
-    local bot = conflict.incoming.bot
-    return lnum >= top and lnum <= bot
-  end)
-end
+function GitBuffer:render(top, bot)
+  Buffer.render(self, top, bot)
+  self:render_signs(top, bot)
 
-function GitBuffer:exists()
-  loop.free_textlock()
-  if not self:is_valid() then return false end
-
-  loop.free_textlock()
-  if not self:is_inside_git_dir() then return false end
-
-  loop.free_textlock()
-  if not self:is_in_disk() then return false end
-
-  loop.free_textlock()
-  if self:is_ignored() then return false end
-
-  return true
+  return self
 end
 
 return GitBuffer

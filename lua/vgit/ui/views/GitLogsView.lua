@@ -1,7 +1,6 @@
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local Namespace = require('vgit.core.Namespace')
 local dimensions = require('vgit.ui.dimensions')
 local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 local TableGenerator = require('vgit.ui.TableGenerator')
@@ -14,7 +13,6 @@ function GitLogsView:constructor(scene, store, plot, config)
     store = store,
     plot = plot,
     config = config or {},
-    namespace = Namespace(),
     state = {
       selected = {},
     },
@@ -64,30 +62,14 @@ end
 
 function GitLogsView:select()
   local component = self.scene:get('selectable_view')
-  local buffer = component.buffer
   local lnum = component:get_lnum()
 
   if self.state.selected[lnum] then
     self.state.selected[lnum] = nil
-
-    self.namespace:clear(buffer, {
-      from = lnum - 1,
-      to = lnum,
-    })
-
     return self
   end
 
   self.state.selected[lnum] = true
-
-  self.namespace:add_highlight(buffer, {
-    hl = 'GitSelected',
-    row = lnum - 1,
-    col_range = {
-      from = 1,
-      to = 41,
-    },
-  })
   return self
 end
 
@@ -112,7 +94,7 @@ function GitLogsView:paint()
   local num_lines = component:get_line_count()
 
   for i = 1, num_lines do
-    component:add_highlight({
+    component:place_extmark_highlight({
       hl = 'Constant',
       row = i - 1,
       col_range = {

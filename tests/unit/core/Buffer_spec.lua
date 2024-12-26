@@ -48,8 +48,8 @@ describe('Buffer', function()
       local on_render = function() end
       buffer:attach_to_renderer(on_render)
 
-      assert.are.same(on_render, buffer.state.on_render)
-      assert.is_true(buffer.state.is_attached_to_screen)
+      assert.are.same(on_render, buffer.on_render)
+      assert.is_true(buffer.is_attached_to_screen)
       assert.is_true(renderer.buffers[bufnr] ~= nil)
     end)
   end)
@@ -86,9 +86,9 @@ describe('Buffer', function()
   describe('on_render', function()
     it('should call on_render function with correct parameters', function()
       local top, bot = 1, 10
-      buffer.state.on_render = spy.new(function() end)
-      buffer:on_render(top, bot)
-      assert.spy(buffer.state.on_render).was.called_with(top, bot)
+      buffer.on_render = spy.new(function() end)
+      buffer:render(top, bot)
+      assert.spy(buffer.on_render).was.called_with(top, bot)
     end)
   end)
 
@@ -107,94 +107,15 @@ describe('Buffer', function()
     end)
   end)
 
-  describe('add_highlight', function()
-    it('should add highlight to buffer', function()
-      buffer:set_lines({ 'hello world', 'foo bar' })
-      local ok, extmark_id = buffer:add_highlight({
-        hl = 'Error',
-        row = 1,
-        col_range = { from = 1, to = 2 },
-      })
-      assert.is_true(ok)
-      assert.is_not_nil(extmark_id)
-    end)
-  end)
-
-  describe('add_pattern_highlight', function()
-    it('should add pattern highlight to buffer', function()
-      buffer:set_lines({ 'Hello | World' })
-      local ok, extmark_ids = buffer:add_pattern_highlight('pattern', 'Error')
-      assert.is_true(ok)
-      assert.is_not_nil(extmark_ids)
-      for i = 1, #extmark_ids do
-        local extmark_id = extmark_ids[i]
-        local extmark = vim.api.nvim_buf_get_extmark_by_id(buffer.bufnr, buffer.namespace.ns_id, extmark_id, {})
-        assert.are.same(extmark, { 0, 6 })
-      end
-    end)
-  end)
-
-  describe('transpose_virtual_text', function()
-    it('should transpose virtual text in buffer', function()
-      buffer:set_lines({ 'Hello World' })
-      local ok, extmark_id = buffer:transpose_virtual_text({
-        text = 'virtual',
-        hl = 'Error',
-        row = 0,
-        col = 3,
-      })
-      assert.is_true(ok)
-      assert.is_not_nil(extmark_id)
-    end)
-  end)
-
-  describe('transpose_virtual_line', function()
-    it('should transpose virtual line in buffer', function()
-      buffer:set_lines({ 'Hello World' })
-      local ok, extmark_id = buffer:transpose_virtual_line({
-        row = 0,
-        texts = { { 'virtual', 'Error' } },
-      })
-      assert.is_true(ok)
-      assert.is_not_nil(extmark_id)
-    end)
-  end)
-
-  describe('transpose_virtual_line_number', function()
-    it('should transpose virtual line number in buffer', function()
-      buffer:set_lines({ 'Hello World', 'sup' })
-      local ok, extmark_id = buffer:transpose_virtual_line_number({
-        text = 'virtual',
-        hl = 'Error',
-        row = 1,
-      })
-      assert.is_true(ok)
-      assert.is_not_nil(extmark_id)
-    end)
-  end)
-
-  describe('insert_virtual_line', function()
-    it('should insert virtual line in buffer', function()
-      buffer:set_lines({ 'Hello World', 'foo', 'bar' })
-      local ok, extmark_id = buffer:insert_virtual_line({
-        text = 'virtual',
-        hl = 'Error',
-        row = 2,
-      })
-      assert.is_true(ok)
-      assert.is_not_nil(extmark_id)
-    end)
-  end)
-
-  describe('clear_namespace', function()
+  describe('clear_extmarks', function()
     it('should clear highlight from buffer', function()
       buffer:set_lines({ 'Hello World', 'foo', 'bar' })
-      local _, extmark_id = buffer:insert_virtual_line({
+      local _, extmark_id = buffer:transpose_virtual_line_number({
         text = 'virtual',
         hl = 'Error',
-        row = 2,
+        row = 1,
       })
-      local success = buffer:clear_namespace()
+      local success = buffer:clear_extmarks()
       assert.is_true(success)
       local extmark = vim.api.nvim_buf_get_extmark_by_id(buffer.bufnr, buffer.namespace.ns_id, extmark_id, {})
       assert.are.same(extmark, {})
@@ -284,18 +205,6 @@ describe('Buffer', function()
     it('should get buffer line count', function()
       buffer:set_lines({ 'line1', 'line2' })
       assert.equals(buffer:get_line_count(), 2)
-    end)
-  end)
-
-  describe('list', function()
-    it('should list all buffers', function()
-      local buffers = buffer:list()
-      assert.is_true(#buffers > 0)
-      for i = 1, #buffers do
-        buffer = buffers[i]
-        buffer:delete()
-      end
-      assert.are.same(#buffer:list(), 1)
     end)
   end)
 

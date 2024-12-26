@@ -34,25 +34,21 @@ end
 
 function AppBarView:set_lines(lines)
   self.scene:get('app_bar'):set_lines(lines)
-
   return self
 end
 
-function AppBarView:add_pattern_highlight(pattern, hl)
-  self.scene:get('app_bar'):add_pattern_highlight(pattern, hl)
-
+function AppBarView:place_extmark_highlight(opts)
+  self.scene:get('app_bar'):place_extmark_highlight(opts)
   return self
 end
 
 function AppBarView:mount(opts)
   self.scene:get('app_bar'):mount(opts)
-
   return self
 end
 
 function AppBarView:show(opts)
   self:mount(opts)
-
   return self
 end
 
