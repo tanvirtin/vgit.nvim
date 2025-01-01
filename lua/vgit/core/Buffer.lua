@@ -75,6 +75,12 @@ function Buffer:get_name()
   return vim.api.nvim_buf_get_name(self.bufnr)
 end
 
+function Buffer:get_relative_name()
+  local name = self:get_name()
+  if not name and name == '' then return name end
+  return fs.relative_filename(name)
+end
+
 function Buffer:place_extmark_text(opts)
   return self.text_extmark:text(opts)
 end
@@ -92,18 +98,15 @@ function Buffer:place_extmark_highlight(opts)
 end
 
 function Buffer:clear_extmark_texts()
-  self.text_extmark:clear()
-  return self
+  return self.text_extmark:clear()
 end
 
 function Buffer:clear_extmark_lnums()
-  self.lnum_extmark:clear()
-  return self
+  return self.lnum_extmark:clear()
 end
 
 function Buffer:clear_extmark_signs()
-  self.sign_extmark:clear()
-  return self
+  return self.sign_extmark:clear()
 end
 
 function Buffer:clear_extmark_highlights()

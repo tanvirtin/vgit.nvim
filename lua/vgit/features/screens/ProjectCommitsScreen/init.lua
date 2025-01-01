@@ -9,23 +9,35 @@ local git_repo = require('vgit.git.git_repo')
 local git_show = require('vgit.git.git_show')
 local DiffView = require('vgit.ui.views.DiffView')
 local StatusListGenerator = require('vgit.ui.StatusListGenerator')
-local FoldableListView = require('vgit.ui.views.FoldableListView')
-local Store = require('vgit.features.screens.ProjectCommitsScreen.Store')
+local StatusListView = require('vgit.ui.views.StatusListView')
+local Model = require('vgit.features.screens.ProjectCommitsScreen.Model')
 
 local ProjectCommitsScreen = Object:extend()
 
 function ProjectCommitsScreen:constructor(opts)
   opts = opts or {}
+
   local scene = Scene()
-  local store = Store()
-  local layout_type = opts.layout_type or 'unified'
+  local model = Model(opts)
 
   return {
     name = 'Project Commits Screen',
     scene = scene,
-    store = store,
-    layout_type = layout_type,
-    diff_view = DiffView(scene, store, {
+    model = model,
+    diff_view = DiffView(scene, {
+      layout_type = function()
+        return model:get_layout_type()
+      end,
+      filename = function()
+        return model:get_filename()
+      end,
+      filetype = function()
+        return model:get_filetype()
+      end,
+      diff = function()
+        return model:get_diff()
+      end,
+    }, {
       col = '25vw',
       width = '75vw',
     }, {
@@ -33,25 +45,16 @@ function ProjectCommitsScreen:constructor(opts)
         header = true,
         footer = false,
       },
-    }, layout_type),
-    foldable_list_view = FoldableListView(scene, store, { width = '25vw' }, {
+    }),
+    status_list_view = StatusListView(scene, {
+      entries = function()
+        return model:get_entries()
+      end
+    }, { width = '25vw' }, {
       elements = {
         header = true,
         footer = false,
       },
-      get_list = function(commits)
-        local foldable_list = {}
-
-        for commit_hash, files in pairs(commits) do
-          foldable_list[#foldable_list + 1] = {
-            open = true,
-            value = commit_hash,
-            items = StatusListGenerator(files):generate(),
-          }
-        end
-
-        return foldable_list
-      end,
     }),
   }
 end
@@ -65,22 +68,26 @@ function ProjectCommitsScreen:hunk_down()
 end
 
 function ProjectCommitsScreen:handle_list_move(direction)
-  local list_item = self.foldable_list_view:move(direction)
+  local list_item = self.status_list_view:move(direction)
   if not list_item then return end
 
-  self.store:set_id(list_item.id)
-  self.diff_view:render_debounced(loop.coroutine(function()
-    self.diff_view:navigate_to_mark(1)
-  end))
+  self.model:set_entry_id(list_item.id)
+  self.diff_view:render()
+  self.diff_view:move_to_hunk()
 end
 
-function ProjectCommitsScreen:handle_on_enter()
-  local filename = self.store:get_filename()
-  if not filename then return self.foldable_list_view:toggle_current_list_item():render() end
+function ProjectCommitsScreen:open_file()
+  local filename = self.model:get_filename()
+  if not filename then return self.status_list_view:toggle_current_list_item() end
 
   if not fs.exists(filename) then
-    local commit_hash, commit_err = self.store:get_parent_commit()
-    if commit_err then return console.debug.error(commit_err).error(commit_err) end
+    local commit_hash, commit_err = self.model:get_parent_commit()
+    loop.free_textlock()
+
+    if commit_err then
+      console.debug.error(commit_err).error(commit_err)
+      return
+    end
 
     local reponame = git_repo.discover()
     local lines, lines_err = git_show.lines(reponame, filename, commit_hash)
@@ -88,12 +95,10 @@ function ProjectCommitsScreen:handle_on_enter()
 
     if lines_err then
       console.debug.error(lines_err).error(lines_err)
-
       return
     end
 
     self:destroy()
-
     vim.cmd('enew')
 
     local buffer = Buffer(0)
@@ -109,7 +114,7 @@ function ProjectCommitsScreen:handle_on_enter()
 
   fs.open(filename)
 
-  local diff, diff_err = self.store:get_diff()
+  local diff, diff_err = self.model:get_diff()
   if diff_err or not diff then return end
 
   local window = Window(0)
@@ -117,7 +122,7 @@ function ProjectCommitsScreen:handle_on_enter()
   window:set_lnum(diff.marks[1].top_relative):position_cursor('center')
 end
 
-function ProjectCommitsScreen:show(args)
+function ProjectCommitsScreen:create(args)
   local commits = {}
   local buffer = Buffer(0)
   local filename = buffer:get_name()
@@ -135,7 +140,9 @@ function ProjectCommitsScreen:show(args)
   end
 
   loop.free_textlock()
-  local _, err = self.store:fetch(self.layout_type, commits)
+  local _, err = self.model:fetch(commits)
+  loop.free_textlock()
+
   if err then
     console.debug.error(err).error(err)
     return false
@@ -143,46 +150,23 @@ function ProjectCommitsScreen:show(args)
 
   loop.free_textlock()
   self.diff_view:define()
-  self.foldable_list_view:set_title('Project commits')
-  self.foldable_list_view:define()
+  self.status_list_view:define()
+  self.status_list_view:set_title('Project commits')
 
-  self.diff_view:show()
-  self.foldable_list_view:show()
-  self.foldable_list_view:set_keymap({
-    {
-      mode = 'n',
-      key = 'j',
-      handler = loop.coroutine(function()
-        self:handle_list_move('down')
-      end),
-    },
-    {
-      mode = 'n',
-      key = 'k',
-      handler = loop.coroutine(function()
-        self:handle_list_move('up')
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<enter>',
-      handler = loop.coroutine(function()
-        self:handle_on_enter()
-      end),
-    },
+  self.diff_view:mount()
+  self.diff_view:render()
+
+  self.status_list_view:mount({
+    event_handlers = {
+      on_enter = function()
+        self:open_file()
+      end,
+      on_move = function()
+        self:handle_list_move()
+      end
+    }
   })
-
-  self.foldable_list_view.scene:get('list').buffer:on(
-    'CursorMoved',
-    loop.coroutine(function()
-      self:handle_list_move()
-    end)
-  )
-
-  self.foldable_list_view:move_to(function(node)
-    local node_filename = node.path and node.path.file and node.path.file.filename or nil
-    return node_filename ~= nil
-  end)
+  self.status_list_view:render()
 
   return true
 end

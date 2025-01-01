@@ -75,12 +75,7 @@ function Hunks:cursor_stage()
 
   if not buffer:is_tracked() then
     local _, err = buffer:stage()
-
-    loop.free_textlock()
     if err then return console.debug.error(err) end
-
-    loop.free_textlock()
-
     return
   end
 

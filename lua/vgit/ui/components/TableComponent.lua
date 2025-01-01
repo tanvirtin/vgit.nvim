@@ -104,7 +104,6 @@ function TableComponent:unmount()
   self.window:close()
 
   if header then header:unmount() end
-
   if footer then footer:unmount() end
 
   return self

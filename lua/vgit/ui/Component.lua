@@ -110,48 +110,39 @@ function Component:unmount()
 end
 
 function Component:clear_extmark_lnums()
-  self.buffer:clear_extmark_lnums()
-  return self
+  return self.buffer:clear_extmark_lnums()
 end
 
 function Component:clear_extmark_texts()
-  self.buffer:clear_extmark_texts()
-  return self
+  return self.buffer:clear_extmark_texts()
 end
 
 function Component:clear_extmark_signs()
-  self.buffer:clear_extmark_signs()
-  return self
+  return self.buffer:clear_extmark_signs()
 end
 
 function Component:clear_extmark_highlights()
-  self.buffer:clear_extmark_highlights()
-  return self
+  return self.buffer:clear_extmark_highlights()
 end
 
 function Component:clear_extmarks()
-  self.buffer:clear_extmarks()
-  return self
+  return self.buffer:clear_extmarks()
 end
 
 function Component:place_extmark_text(opts)
-  self.buffer:place_extmark_text(opts)
-  return self
+  return self.buffer:place_extmark_text(opts)
 end
 
 function Component:place_extmark_lnum(opts)
-  self.buffer:place_extmark_lnum(opts)
-  return self
+  return self.buffer:place_extmark_lnum(opts)
 end
 
 function Component:place_extmark_sign(sign)
-  self.buffer:place_extmark_sign(sign)
-  return self
+  return self.buffer:place_extmark_sign(sign)
 end
 
 function Component:place_extmark_highlight(opts)
-  self.buffer:place_extmark_highlight(opts)
-  return self
+  return self.buffer:place_extmark_highlight(opts)
 end
 
 function Component:set_keymap(mode, key, callback)

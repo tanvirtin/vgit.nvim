@@ -3,21 +3,21 @@ local Object = require('vgit.core.Object')
 local git_repo = require('vgit.git.git_repo')
 local git_commit = require('vgit.git.git_commit')
 
-local Store = Object:extend()
+local Model = Object:extend()
 
-function Store:constructor()
+function Model:constructor()
   return {
     err = nil,
     data = nil,
   }
 end
 
-function Store:reset()
+function Model:reset()
   self.err = nil
   self.data = nil
 end
 
-function Store:fetch(opts)
+function Model:fetch(opts)
   opts = opts or {}
 
   self:reset()
@@ -28,7 +28,7 @@ function Store:fetch(opts)
   return self.data, self.err
 end
 
-function Store:get_lines()
+function Model:get_lines()
   if self.err then return nil, self.err end
 
   return utils.list.concat(
@@ -39,4 +39,14 @@ function Store:get_lines()
   )
 end
 
-return Store
+function Model:commit(lines)
+  local description = utils.list.reduce(lines, '', function(acc, line)
+    if not vim.startswith(line, '#') then acc = acc .. line .. '\n' end
+    return acc
+  end)
+
+  local reponame = git_repo.discover()
+  return git_commit.create(reponame, description)
+end
+
+return Model

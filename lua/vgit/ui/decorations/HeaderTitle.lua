@@ -73,7 +73,6 @@ end
 
 function HeaderTitle:clear(source)
   source:set_lines({})
-
   return self
 end
 

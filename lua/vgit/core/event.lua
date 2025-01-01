@@ -3,24 +3,7 @@ local utils = require('vgit.core.utils')
 
 vim.api.nvim_create_augroup('VGitGroup', { clear = true })
 
-local event = {
-  type = {
-    BufNew = 'BufNew',
-    BufRead = 'BufRead',
-    BufEnter = 'BufEnter',
-    BufDelete = 'BufDelete',
-    BufWipeout = 'BufWipeout',
-    WinEnter = 'WinEnter',
-    BufWinEnter = 'BufWinEnter',
-    BufWinLeave = 'BufWinLeave',
-    ColorScheme = 'ColorScheme',
-    CursorHold = 'CursorHold',
-    CursorMoved = 'CursorMoved',
-    InsertEnter = 'InsertEnter',
-    QuitPre = 'QuitPre',
-  },
-  group = 'VGitGroup',
-}
+local event = { group = 'VGitGroup' }
 
 function event.on(event_names, callback)
   vim.api.nvim_create_autocmd(event_names, { callback = loop.coroutine(callback) })
@@ -36,7 +19,7 @@ function event.buffer_on(buffer, event_name, callback)
       return acc
     end)
   end
-  group = event.group .. '::' .. group
+  group = event.group .. '::' .. group .. '::' .. buffer.bufnr
   vim.api.nvim_create_augroup(group, { clear = true })
   vim.api.nvim_create_autocmd(event_name, {
     group = group,

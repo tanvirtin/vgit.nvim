@@ -20,13 +20,12 @@ function LiveGutter:fetch(buffer)
 
   loop.free_textlock()
   local _, err = buffer:diff()
-
-  loop.free_textlock()
   if err then
     console.debug.error(err)
     return
   end
 
+  loop.free_textlock()
   buffer:generate_status()
 end
 

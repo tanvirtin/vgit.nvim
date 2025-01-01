@@ -5,7 +5,7 @@ describe('event', function()
   describe('on', function()
     it('should create an autocmd for the specified event', function()
       local callback_called = false
-      event.on(event.type.BufRead, function()
+      event.on('BufRead', function()
         callback_called = true
       end)
       vim.api.nvim_exec_autocmds('BufRead', { modeline = false })
@@ -18,7 +18,7 @@ describe('event', function()
     it('should create an autocmd for the specified buffer event', function()
       local callback_called = false
       local buffer = Buffer(0)
-      event.buffer_on(buffer, event.type.BufRead, function()
+      event.buffer_on(buffer, 'BufRead', function()
         callback_called = true
       end)
       vim.api.nvim_exec_autocmds('BufRead', { buffer = buffer.bufnr, modeline = false })

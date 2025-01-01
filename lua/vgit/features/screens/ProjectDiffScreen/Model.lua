@@ -7,53 +7,42 @@ local git_log = require('vgit.git.git_log')
 local git_show = require('vgit.git.git_show')
 local git_repo = require('vgit.git.git_repo')
 local git_hunks = require('vgit.git.git_hunks')
+local GitObject = require('vgit.git.GitObject')
+local git_stager = require('vgit.git.git_stager')
 local git_status = require('vgit.git.git_status')
 local git_conflict = require('vgit.git.git_conflict')
 
-local Store = Object:extend()
+local Model = Object:extend()
 
-function Store:constructor()
+function Model:constructor(opts)
   return {
-    id = nil,
-    err = nil,
-    data = nil,
-    shape = nil,
     state = {
-      lnum = 1,
+      id = nil,
       diffs = {},
+      entries = nil,
       reponame = nil,
-      mark_index = 1,
-      list_folds = {},
       list_entries = {},
-    },
+      layout_type = opts.layout_type or 'unified',
+    }
   }
 end
 
-function Store:reset()
-  self.id = nil
-  self.err = nil
-  self.data = nil
+function Model:reset()
   self.state = {
+    id = nil,
     diffs = {},
+    entries = nil,
     reponame = nil,
-    mark_index = 1,
     list_entries = {},
+    layout_type = self.state.layout_type
   }
 end
 
-function Store:get_mark_index()
-  return self.state.mark_index or 1
+function Model:get_layout_type()
+  return self.state.layout_type
 end
 
-function Store:set_mark_index(index)
-  self.state.mark_index = index
-end
-
-function Store:reset_mark_index()
-  self.state.mark_index = 1
-end
-
-function Store:partition_status(statuses)
+function Model:partition_status(statuses)
   local changed_files = {}
   local staged_files = {}
   local unmerged_files = {}
@@ -86,60 +75,51 @@ function Store:partition_status(statuses)
   return changed_files, staged_files, unmerged_files
 end
 
-function Store:fetch(shape, opts)
-  opts = opts or {}
-
+function Model:fetch()
   self:reset()
 
-  if not git_repo.exists() then
-    self.err = { 'Project has no .git folder' }
-    return nil, self.err
-  end
+  if not git_repo.exists() then return nil, { 'Project has no .git folder' } end
 
   loop.free_textlock()
   local reponame = git_repo.discover()
   local statuses, err = git_status.ls(reponame)
-  if err then
-    self.err = err
-    return nil, err
-  end
+  if err then return nil, err end
 
   local changed_files, staged_files, unmerged_files = self:partition_status(statuses)
 
-  local data = {}
-  if #changed_files ~= 0 then data['Changes'] = changed_files end
-  if #staged_files ~= 0 then data['Staged Changes'] = staged_files end
-  if #unmerged_files ~= 0 then data['Merge Changes'] = unmerged_files end
+  local entries = {}
+  if #changed_files ~= 0 then entries['Changes'] = changed_files end
+  if #staged_files ~= 0 then entries['Staged Changes'] = staged_files end
+  if #unmerged_files ~= 0 then entries['Merge Changes'] = unmerged_files end
 
-  self.shape = shape
-  self.data = data
+  self.state.entries = entries
   self.state.reponame = reponame
 
-  return self.data
+  return self.state.entries
 end
 
-function Store:set_id(id)
-  self.id = id
+function Model:set_entry_id(id)
+  self.state.id = id
 end
 
-function Store:get(id)
-  if id then self.id = id end
-  return self.state.list_entries[self.id], self.err
+function Model:get_entry(id)
+  if id then self.state.id = id end
+  return self.state.list_entries[self.state.id]
 end
 
-function Store:get_all()
-  return self.data, self.err
+function Model:get_entries()
+  return self.state.entries
 end
 
-function Store:get_filename()
-  local entry, err = self:get()
+function Model:get_filename()
+  local entry, err = self:get_entry()
   if err then return nil, err end
   if not entry then return nil, { 'entry not found' } end
 
   return entry.status.filename
 end
 
-function Store:get_filepath()
+function Model:get_filepath()
   local reponame = self.state.reponame
   local filename = self:get_filename()
   if not filename then return nil, { 'entry not found' } end
@@ -150,35 +130,19 @@ function Store:get_filepath()
   return filename
 end
 
-function Store:get_filetype()
-  local entry, err = self:get()
+function Model:get_filetype()
+  local entry, err = self:get_entry()
   if err then return nil, err end
   if not entry then return nil, { 'entry not found' } end
 
   return entry.status.filetype
 end
 
-function Store:get_lnum()
-  return self.state.lnum
-end
-
-function Store:set_lnum(lnum)
-  self.state.lnum = lnum
-end
-
-function Store:get_list_folds()
-  return self.state.list_folds
-end
-
-function Store:set_list_folds(list_folds)
-  self.state.list_folds = list_folds
-end
-
-function Store:conflict_status()
+function Model:conflict_status()
   return git_conflict.status(self.state.reponame)
 end
 
-function Store:get_lines(status, type)
+function Model:get_lines(status, type)
   local filename = status.filename
   local reponame = self.state.reponame
 
@@ -196,7 +160,7 @@ function Store:get_lines(status, type)
   return fs.read_file(self:get_filepath())
 end
 
-function Store:get_hunks(status, type, lines)
+function Model:get_hunks(status, type, lines)
   local filename = status.filename
   local reponame = self.state.reponame
 
@@ -221,8 +185,8 @@ function Store:get_hunks(status, type, lines)
   return {}
 end
 
-function Store:get_diff()
-  local entry, err = self:get()
+function Model:get_diff()
+  local entry, err = self:get_entry()
   if err then return nil, err end
   if not entry then return nil, { 'entry not found' } end
 
@@ -241,10 +205,68 @@ function Store:get_diff()
   if hunks_err then return nil, hunks_err end
 
   loop.free_textlock()
-  local diff = Diff():generate(hunks, lines, self.shape, { is_deleted = status:has_either('*D') })
+  local layout_type = self:get_layout_type()
+  local diff = Diff():generate(hunks, lines, layout_type, { is_deleted = status:has_either('*D') })
   self.state.diffs[cache_key] = diff
 
   return diff
 end
 
-return Store
+function Model:stage_hunk(filename, hunk)
+  local git_object = GitObject(filename)
+  if not git_object:is_tracked() then return git_object:stage() end
+
+  local file, err = git_object:status()
+  if err then return nil, err end
+
+  if file:has('D ') or file:has(' D') then return git_object:stage() end
+  return git_object:stage_hunk(hunk)
+end
+
+function Model:unstage_hunk(filename, hunk)
+  local git_object = GitObject(filename)
+  if not git_object:is_tracked() then return git_object:unstage() end
+
+  local file, err = git_object:status()
+  if err then return nil, err end
+
+  if file:has('D ') or file:has(' D') then return git_object:unstage(filename) end
+  return git_object:unstage_hunk(hunk)
+end
+
+function Model:stage_file(filename)
+  local reponame = git_repo.discover()
+  return git_stager.stage(reponame, filename)
+end
+
+function Model:unstage_file(filename)
+  local reponame = git_repo.discover()
+  return git_stager.unstage(reponame, filename)
+end
+
+function Model:reset_file(filename)
+  local reponame = git_repo.discover()
+  if git_repo.has(reponame, filename) then return git_repo.reset(reponame, filename) end
+
+  return git_repo.clean(reponame, filename)
+end
+
+function Model:stage_all()
+  local reponame = git_repo.discover()
+  return git_stager.stage(reponame)
+end
+
+function Model:unstage_all()
+  local reponame = git_repo.discover()
+  return git_stager.unstage(reponame)
+end
+
+function Model:reset_all()
+  local reponame = git_repo.discover()
+  local _, reset_err = git_repo.reset(reponame)
+  if reset_err then return reset_err end
+
+  return git_repo.clean(reponame)
+end
+
+return Model

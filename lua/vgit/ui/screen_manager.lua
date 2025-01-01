@@ -20,62 +20,52 @@ function screen_manager.dispatch_action(action_name, ...)
   if screen_manager.has_active_screen() and screen_manager.has_action(action_name) then
     screen_manager.active_screen[action_name](screen_manager.active_screen, ...)
   end
-
   return screen_manager
 end
 
 function screen_manager.screens.diff_screen(opts)
   local diff_screen = DiffScreen({ layout_type = scene_setting:get('diff_preference') })
-
-  return diff_screen:show(opts), diff_screen
+  return diff_screen:create(opts), diff_screen
 end
 
 function screen_manager.screens.diff_hunk_screen(opts)
   local diff_hunk_screen = DiffScreen({ is_hunk = true, layout_type = scene_setting:get('diff_preference') })
-
-  return diff_hunk_screen:show(opts), diff_hunk_screen
+  return diff_hunk_screen:create(opts), diff_hunk_screen
 end
 
 function screen_manager.screens.project_logs_screen(...)
   local project_logs_screen = ProjectLogsScreen()
-
-  return project_logs_screen:show({ ... }), project_logs_screen
+  return project_logs_screen:create({ ... }), project_logs_screen
 end
 
 function screen_manager.screens.project_stash_screen(...)
   local project_stash_screen = ProjectStashScreen()
-
-  return project_stash_screen:show({ ... }), project_stash_screen
+  return project_stash_screen:create({ ... }), project_stash_screen
 end
 
 function screen_manager.screens.project_diff_screen()
   local project_diff_screen = ProjectDiffScreen({ layout_type = scene_setting:get('diff_preference') })
-
-  return project_diff_screen:show(), project_diff_screen
+  return project_diff_screen:create(), project_diff_screen
 end
 
 function screen_manager.screens.project_commits_screen(...)
   local project_commits_screen = ProjectCommitsScreen({ layout_type = scene_setting:get('diff_preference') })
-
-  return project_commits_screen:show({ ... }), project_commits_screen
+  return project_commits_screen:create({ ... }), project_commits_screen
 end
 
 function screen_manager.screens.history_screen()
   local history_screen = HistoryScreen({ layout_type = scene_setting:get('diff_preference') })
-
-  return history_screen:show(), history_screen
+  return history_screen:create(), history_screen
 end
 
 function screen_manager.screens.commit_screen(...)
   local commit_screen = ProjectCommitScreen()
-
-  return commit_screen:show(...), commit_screen
+  return commit_screen:create(...), commit_screen
 end
 
 function screen_manager.screens.line_blame_screen()
   local line_blame_screen = LineBlameScreen({ layout_type = scene_setting:get('diff_preference') })
-
-  return line_blame_screen:show(), line_blame_screen
+  return line_blame_screen:create(), line_blame_screen
 end
 
 function screen_manager.is_screen_registered(screen_name)
@@ -102,20 +92,19 @@ function screen_manager.toggle_diff_preference()
   return screen_manager
 end
 
-function screen_manager.show(screen_name, ...)
+function screen_manager.create(screen_name, ...)
   if not screen_manager.is_screen_registered(screen_name) then return screen_manager end
-
   if screen_manager.has_active_screen() then screen_manager.destroy_active_screen() end
 
   local success, screen = screen_manager.screens[screen_name](...)
   if success then
     screen_manager.active_screen = screen
     screen.scene
-      :on(event.type.BufWinLeave, function()
+      :on('BufWinLeave', function()
         loop.free_textlock()
         if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
       end)
-      :on(event.type.QuitPre, function()
+      :on('QuitPre', function()
         if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
       end)
   end

@@ -8,55 +8,45 @@ local git_show = require('vgit.git.git_show')
 local git_hunks = require('vgit.git.git_hunks')
 local git_status = require('vgit.git.git_status')
 
-local Store = Object:extend()
+local Model = Object:extend()
 
-function Store:constructor()
+function Model:constructor(opts)
   return {
-    id = nil,
-    err = nil,
-    data = nil,
     shape = nil,
     state = {
+      id = nil,
       lnum = 1,
       commits = {},
+      entries = nil,
       list_entry_cache = {},
+      layout_type = opts.layout_type or 'unified',
     },
   }
 end
 
-function Store:reset()
-  self.id = nil
-  self.err = nil
-  self.data = nil
+function Model:get_layout_type()
+  return self.state.layout_type
+end
+
+function Model:reset()
   self.state = {
+    id = nil,
     lnum = 1,
     commits = {},
+    entries = nil,
     list_entry_cache = {},
+    layout_type = self.state.layout_type
   }
 end
 
-function Store:fetch(shape, commits, opts)
+function Model:fetch(commits, opts)
   opts = opts or {}
 
   self:reset()
 
-  if not commits or #commits == 0 then
-    self.err = { 'No commits specified' }
-    return nil, self.err
-  end
+  if not commits or #commits == 0 then return nil, { 'No commits specified' } end
+  if not git_repo.exists() then return nil, { 'Project has no .git folder' } end
 
-  self.state = {
-    lnum = 1,
-    commits = {},
-    list_entry_cache = {},
-  }
-
-  if not git_repo.exists() then
-    self.err = { 'Project has no .git folder' }
-    return nil, self.err
-  end
-
-  self.shape = shape
   local data = {}
 
   for i = 1, #commits do
@@ -64,24 +54,15 @@ function Store:fetch(shape, commits, opts)
     loop.free_textlock()
     local reponame = git_repo.discover()
     local log, err = git_log.get(reponame, commit)
-    if err then
-      self.err = err
-      return nil, err
-    end
-    if not log then
-      self.err = { 'No log found for commit' }
-      return nil, self.err
-    end
+    if err then return nil, err end
+    if not log then return nil, { 'No log found for commit' } end
 
     loop.free_textlock()
     local statuses, status_err = git_status.tree(reponame, {
       commit_hash = log.commit_hash,
       parent_hash = log.parent_hash,
     })
-    if status_err then
-      self.err = status_err
-      return nil, status_err
-    end
+    if status_err then return nil, status_err end
 
     data[commit] = utils.list.map(statuses, function(status)
       local id = utils.math.uuid()
@@ -96,31 +77,30 @@ function Store:fetch(shape, commits, opts)
     end)
   end
 
-  self.data = data
+  self.state.entries = data
 
-  return self.data
+  return data
 end
 
-function Store:set_id(id)
-  self.id = id
+function Model:set_entry_id(id)
+  self.state.id = id
 end
 
-function Store:get_all()
-  return self.data, self.err
+function Model:get_entries()
+  return self.state.entries
 end
 
-function Store:get(id)
-  if self.err then return nil, self.err end
-  if id then self.id = id end
+function Model:get_entry(id)
+  if id then self.state.id = id end
 
-  local entry = self.state.commits[self.id]
+  local entry = self.state.commits[self.state.id]
   if not entry then return nil, { 'Item not found' } end
 
   return entry
 end
 
-function Store:get_diff()
-  local entry, err = self:get()
+function Model:get_diff()
+  local entry, err = self:get_entry()
   if err then return nil, err end
   if not entry then return nil, { 'no data found' } end
 
@@ -155,34 +135,34 @@ function Store:get_diff()
   loop.free_textlock()
   if hunks_err then return nil, hunks_err end
 
-  local diff = Diff():generate(hunks, lines, self.shape, { is_deleted = is_deleted })
+  local layout_type = self:get_layout_type()
+  local diff = Diff():generate(hunks, lines, layout_type, { is_deleted = is_deleted })
 
   self.state.commits[id] = diff
 
   return diff
 end
 
-function Store:get_filename()
-  local entry, err = self:get()
+function Model:get_filename()
+  local entry, err = self:get_entry()
   if err then return nil, err end
+  if not entry then return nil, { 'entry not found' } end
 
   return entry.status.filename
 end
 
-function Store:get_filetype()
-  local entry, err = self:get()
+function Model:get_filetype()
+  local entry, err = self:get_entry()
   if err then return nil, err end
+  if not entry then return nil, { 'entry not found' } end
 
   return entry.status.filetype
 end
 
-function Store:get_lnum()
-  return self.state.lnum
-end
-
-function Store:get_parent_commit()
-  local entry, err = self:get()
+function Model:get_parent_commit()
+  local entry, err = self:get_entry()
   if err then return nil, err end
+  if not entry then return nil, { 'entry not found' } end
 
   local status = entry.status
   if not status then return nil, { 'No status found in item' } end
@@ -193,16 +173,4 @@ function Store:get_parent_commit()
   return log.parent_hash
 end
 
-function Store:set_lnum(lnum)
-  self.state.lnum = lnum
-end
-
-function Store:get_list_folds()
-  return self.state.list_folds
-end
-
-function Store:set_list_folds(list_folds)
-  self.state.list_folds = list_folds
-end
-
-return Store
+return Model

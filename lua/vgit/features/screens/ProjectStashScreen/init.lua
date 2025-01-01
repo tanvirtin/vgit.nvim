@@ -4,41 +4,44 @@ local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local GitLogsView = require('vgit.ui.views.GitLogsView')
-local Store = require('vgit.features.screens.ProjectStashScreen.Store')
+local Model = require('vgit.features.screens.ProjectStashScreen.Model')
 
 local ProjectStashScreen = Object:extend()
 
 function ProjectStashScreen:constructor()
   local scene = Scene()
-  local store = Store()
+  local model = Model()
 
   return {
     name = 'Stash Screen',
     scene = scene,
-    store = store,
-    view = GitLogsView(scene, store),
+    model = model,
+    view = GitLogsView(scene, {
+      logs = function ()
+        return model:get_logs()
+      end
+    }),
   }
 end
 
-function ProjectStashScreen:show(opts)
+function ProjectStashScreen:create(opts)
   loop.free_textlock()
-  local _, err = self.store:fetch(opts)
+  local _, err = self.model:fetch(opts)
+  loop.free_textlock()
 
-  loop.free_textlock()
   if err then
     console.debug.error(err).error(err)
     return false
   end
 
   self.view:define()
-  self.view:show()
+  self.view:mount()
+  self.view:render()
   self.view:set_keymap({
     {
       mode = 'n',
       key = '<tab>',
       handler = loop.coroutine(function()
-        loop.free_textlock()
-
         self.view:select()
       end),
     },
@@ -46,14 +49,9 @@ function ProjectStashScreen:show(opts)
       mode = 'n',
       key = '<enter>',
       handler = loop.coroutine(function()
-        local view = self.view
-
-        if not view:has_selection() then view:select() end
-
+        if not self.view:has_selection() then self.view:select() end
         vim.cmd('quit')
-
-        loop.free_textlock()
-        vim.cmd(utils.list.reduce(view:get_selected(), 'VGit project_commits_preview', function(cmd, log)
+        vim.cmd(utils.list.reduce(self.view:get_selected(), 'VGit project_commits_preview', function(cmd, log)
           return cmd .. ' ' .. log.commit_hash
         end))
       end),

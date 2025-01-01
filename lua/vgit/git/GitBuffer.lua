@@ -111,19 +111,39 @@ function GitBuffer:generate_status()
 end
 
 function GitBuffer:stage_hunk(hunk)
-  return self.git_object:stage_hunk(hunk)
+  local _, err = self.git_object:stage_hunk(hunk)
+  if not err then
+    loop.free_textlock()
+    self:diff()
+  end
+  return _, err
 end
 
 function GitBuffer:unstage_hunk(hunk)
-  return self.git_object:unstage_hunk(hunk)
+  local _, err = self.git_object:unstage_hunk(hunk)
+  if not err then
+    loop.free_textlock()
+    self:diff()
+  end
+  return _, err
 end
 
 function GitBuffer:stage()
-  return self.git_object:stage()
+  local _, err = self.git_object:stage()
+  if not err then
+    loop.free_textlock()
+    self:diff()
+  end
+  return _, err
 end
 
 function GitBuffer:unstage()
-  return self.git_object:unstage()
+  local _, err = self.git_object:unstage()
+  if not err then
+    loop.free_textlock()
+    self:diff()
+  end
+  return _, err
 end
 
 function GitBuffer:get_hunks()

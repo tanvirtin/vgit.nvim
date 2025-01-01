@@ -25,9 +25,9 @@ function StatusListGenerator:get_parent_folder(segmented_folders, current_index)
   local count = 1
 
   for i = 1, #segmented_folders do
-    local foldername = segmented_folders[i]
-
     if i == current_index then return acc, count end
+
+    local foldername = segmented_folders[i]
 
     count = count + 1
     acc = string.format('%s%s%s', acc, self.seperator, foldername)
@@ -36,7 +36,7 @@ function StatusListGenerator:get_parent_folder(segmented_folders, current_index)
   return acc, count
 end
 
-function StatusListGenerator:normalize_filename(filename, id, status)
+function StatusListGenerator:normalize_filename(filename, id, status, entry_type)
   local normalized_paths = self.normalized_paths
   -- Split the filename by it's seperator and create a list of all folders.
   local segmented_folders = vim.split(filename, self.seperator)
@@ -57,6 +57,7 @@ function StatusListGenerator:normalize_filename(filename, id, status)
       parent = parent_folder_name,
       current = current_folder_name,
       path = path,
+      type = entry_type,
       status = i == #segmented_folders and status or nil,
     }
   end
@@ -129,10 +130,12 @@ function StatusListGenerator:create_node(path)
       },
     }
 
-    if icon then list_entry.icon_before = {
-      icon = icon,
-      hl = icon_hl,
-    } end
+    if icon then 
+      list_entry.icon_before = {
+        icon = icon,
+        hl = icon_hl,
+      }
+    end
 
     return list_entry
   end
@@ -177,7 +180,6 @@ function StatusListGenerator:sort()
 
     for i = 1, #list do
       local item = list[i]
-
       if item.items then
         folders[#folders + 1] = item
       else
@@ -219,14 +221,12 @@ function StatusListGenerator:generate_tree()
   for i = 1, #normalized_paths_sorted_by_depth do
     -- As we now, each element in the normalized_paths_sorted_by_depth is a list of paths.
     local paths = normalized_paths_sorted_by_depth[i]
-
     for j = 1, #paths do
       local path = paths[j]
       -- Given a path self:find_parent will find the parent list from the tree.
       -- NOTE: path is an object which contains metadata on it's own pathname, parent pathname, etc.
       -- If we are in the root depth, self:find_parent(path) will return nil, so we just point to the root list.
       local parent = self:find_parent(path) or self.tree
-
       -- We create a node which can be a file item entry or a folder item entry to the parent list we found.
       parent[#parent + 1] = self:create_node(path)
     end
@@ -243,9 +243,10 @@ function StatusListGenerator:generate(metadata)
     local entry = entries[i]
     local id = entry.id
     local status = entry.status
+    local entry_type = entry.type
     local filename = status.filename
 
-    self:normalize_filename(filename, id, status)
+    self:normalize_filename(filename, id, status, entry_type)
   end
 
   self:sort_normalized_paths_by_depth():generate_tree():sort()

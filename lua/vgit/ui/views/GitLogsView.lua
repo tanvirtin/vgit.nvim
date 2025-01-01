@@ -1,26 +1,19 @@
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local console = require('vgit.core.console')
 local dimensions = require('vgit.ui.dimensions')
-local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 local TableGenerator = require('vgit.ui.TableGenerator')
+local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 
 local GitLogsView = Object:extend()
 
-function GitLogsView:constructor(scene, store, plot, config)
+function GitLogsView:constructor(scene, props, plot, config)
   return {
-    scene = scene,
-    store = store,
     plot = plot,
+    scene = scene,
+    props = props,
     config = config or {},
-    state = {
-      selected = {},
-    },
+    state = { selected = {} },
   }
-end
-
-function GitLogsView:get_components()
-  return { self.scene:get('selectable_view') }
 end
 
 function GitLogsView:define()
@@ -44,20 +37,19 @@ function GitLogsView:define()
       },
     })
   )
-  return self
 end
 
 function GitLogsView:set_keymap(configs)
   utils.list.each(configs, function(config)
-    self.scene:get('selectable_view'):set_keymap(config.mode, config.key, config.handler)
+    local component = self.scene:get('selectable_view')
+    component:set_keymap(config.mode, config.key, config.handler)
   end)
-  return self
 end
 
 function GitLogsView:render_title(labels)
-  self.scene:get('selectable_view'):set_title(labels[1])
-
-  return self
+  local component = self.scene:get('selectable_view')
+  local label = labels[1]
+  component:set_title(label)
 end
 
 function GitLogsView:select()
@@ -66,11 +58,10 @@ function GitLogsView:select()
 
   if self.state.selected[lnum] then
     self.state.selected[lnum] = nil
-    return self
+    return
   end
 
   self.state.selected[lnum] = true
-  return self
 end
 
 function GitLogsView:has_selection()
@@ -78,11 +69,8 @@ function GitLogsView:has_selection()
 end
 
 function GitLogsView:get_selected()
-  local logs, err = self.store:get_logs()
-  if err then
-    console.debug.error(err)
-    return {}
-  end
+  local logs = self.props.logs()
+  if not logs then return {} end
 
   return utils.list.filter(logs, function(_, index)
     return self.state.selected[index] == true
@@ -103,16 +91,11 @@ function GitLogsView:paint()
       },
     })
   end
-
-  return self
 end
 
 function GitLogsView:render()
-  local logs, err = self.store:get_logs()
-  if err then
-    console.debug.error(err).error(err)
-    return self
-  end
+  local logs = self.props.logs()
+  if not logs then return end
 
   local labels, rows, _ = TableGenerator(
     {
@@ -123,7 +106,6 @@ function GitLogsView:render()
     },
     utils.list.map(logs, function(log)
       local time = utils.date.format(log.timestamp)
-
       return { log.commit_hash, log.author_name, time, log.summary }
     end),
     1,
@@ -132,21 +114,15 @@ function GitLogsView:render()
 
   self:render_title(labels)
 
-  self.scene:get('selectable_view'):unlock():set_lines(rows):focus():lock()
+  local component = self.scene:get('selectable_view')
+  component:unlock():set_lines(rows):focus():lock()
 
-  return self:paint()
+  self:paint()
 end
 
 function GitLogsView:mount(opts)
-  self.scene:get('selectable_view'):mount(opts)
-
-  return self
-end
-
-function GitLogsView:show(opts)
-  self:mount(opts):render()
-
-  return self
+  local component = self.scene:get('selectable_view')
+  component:mount(opts)
 end
 
 return GitLogsView

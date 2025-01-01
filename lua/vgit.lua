@@ -40,12 +40,10 @@ local settings = {
 local controls = {
   hunk_up = loop.coroutine(function()
     hunks:move_up()
-
     return screen_manager.dispatch_action('hunk_up')
   end),
   hunk_down = loop.coroutine(function()
     hunks:move_down()
-
     return screen_manager.dispatch_action('hunk_down')
   end),
 }
@@ -67,22 +65,22 @@ local buffer = {
     hunks:cursor_reset()
   end),
   diff_preview = loop.coroutine(function()
-    screen_manager.show('diff_screen')
+    screen_manager.create('diff_screen')
   end),
   hunk_preview = loop.coroutine(function()
-    screen_manager.show('diff_hunk_screen')
+    screen_manager.create('diff_hunk_screen')
   end),
   history_preview = loop.coroutine(function()
-    screen_manager.show('history_screen')
+    screen_manager.create('history_screen')
   end),
   blame_preview = loop.coroutine(function()
-    screen_manager.show('line_blame_screen')
+    screen_manager.create('line_blame_screen')
   end),
   diff_staged_preview = loop.coroutine(function()
-    screen_manager.show('diff_screen', { is_staged = true })
+    screen_manager.create('diff_screen', { is_staged = true })
   end),
   hunk_staged_preview = loop.coroutine(function()
-    screen_manager.show('diff_hunk_screen', { is_staged = true })
+    screen_manager.create('diff_hunk_screen', { is_staged = true })
   end),
   conflict_accept_current_change = loop.coroutine(function()
     local buffer = git_buffer_store:current()
@@ -103,19 +101,19 @@ local buffer = {
 
 local project = {
   commit_preview = loop.coroutine(function(...)
-    screen_manager.show('commit_screen', ...)
+    screen_manager.create('commit_screen', ...)
   end),
   diff_preview = loop.coroutine(function()
-    screen_manager.show('project_diff_screen')
+    screen_manager.create('project_diff_screen')
   end),
   logs_preview = loop.coroutine(function(...)
-    screen_manager.show('project_logs_screen', ...)
+    screen_manager.create('project_logs_screen', ...)
   end),
   stash_preview = loop.coroutine(function(...)
-    screen_manager.show('project_stash_screen', ...)
+    screen_manager.create('project_stash_screen', ...)
   end),
   commits_preview = loop.coroutine(function(...)
-    screen_manager.show('project_commits_screen', ...)
+    screen_manager.create('project_commits_screen', ...)
   end),
 }
 

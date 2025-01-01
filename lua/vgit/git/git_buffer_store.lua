@@ -21,14 +21,12 @@ git_buffer_store.register_events = loop.coroutine(function()
   if is_registered then return end
   is_registered = true
 
-  event.on({ event.type.BufRead, event.type.BufNew }, function()
+  event.on({ 'BufRead', 'BufNew' }, function()
     git_buffer_store.collect()
   end)
 
   loop.free_textlock()
   if not git_repo.exists() then return end
-
-  loop.free_textlock()
   if not git_repo.discover() then return end
 
   local handle = vim.loop.new_fs_event()
@@ -47,7 +45,6 @@ git_buffer_store.register_events = loop.coroutine(function()
         filename = filename,
         event_name = event_name,
       })
-      loop.free_textlock()
       event.custom_on('VGitSync', function()
         git_buffer_store.for_each(function(buffer)
           git_buffer_store.dispatch(buffer, 'sync')
@@ -82,31 +79,36 @@ git_buffer_store.on = function(event_types, handler)
 end
 
 git_buffer_store.add = function(buffer)
-  buffers[buffer.bufnr] = buffer
+  local bufnr = tostring(buffer.bufnr)
+  buffers[bufnr] = buffer
   return git_buffer_store
 end
 
 git_buffer_store.contains = function(buffer)
-  return buffers[buffer.bufnr] ~= nil
+  local bufnr = tostring(buffer.bufnr)
+  return buffers[bufnr] ~= nil
 end
 
 git_buffer_store.remove = function(buffer)
   if not buffer then return nil end
 
-  buffer = buffers[buffer.bufnr]
+  local bufnr = tostring(buffer.bufnr)
+  buffer = buffers[bufnr]
   if not buffer then return end
 
-  buffers[buffer.bufnr] = nil
+  buffers[bufnr] = nil
 
   return buffer
 end
 
 git_buffer_store.get = function(buffer)
-  return buffers[buffer.bufnr]
+  local bufnr = tostring(buffer.bufnr)
+  return buffers[bufnr]
 end
 
 function git_buffer_store.current()
   local bufnr = vim.api.nvim_get_current_buf()
+  bufnr = tostring(bufnr)
   return buffers[bufnr]
 end
 
@@ -130,10 +132,15 @@ end
 git_buffer_store.collect = function()
   local git_buffer = GitBuffer(0)
   git_buffer:sync()
+
   if not git_buffer:exists() then return git_buffer_store.remove(git_buffer) end
 
-  if git_buffer_store.contains(git_buffer) then return end
-  git_buffer_store.add(git_buffer)
+  if git_buffer_store.contains(git_buffer) then
+    local existing_git_buffer = git_buffer_store.get(git_buffer)
+    return git_buffer_store.dispatch(existing_git_buffer, 'reload')
+  else
+    git_buffer_store.add(git_buffer)
+  end
 
   loop.free_textlock()
   git_buffer
@@ -146,14 +153,14 @@ git_buffer_store.collect = function()
       on_reload = loop.coroutine(function()
         git_buffer_store.dispatch(git_buffer, 'reload')
       end),
+
+      on_detach = loop.coroutine(function()
+        git_buffer_store.dispatch(git_buffer, 'detach')
+        git_buffer_store.remove(git_buffer)
+        git_buffer:detach_from_renderer()
+      end),
     })
     :attach_to_renderer()
-
-    git_buffer:on(event.type.BufWipeout, function()
-      git_buffer_store.dispatch(git_buffer, 'detach')
-      git_buffer_store.remove(git_buffer)
-      git_buffer:detach_from_renderer()
-    end)
 
     git_buffer_store.dispatch(git_buffer, 'attach')
 end

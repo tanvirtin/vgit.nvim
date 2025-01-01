@@ -1,16 +1,15 @@
 local utils = require('vgit.core.utils')
-local dimensions = require('vgit.ui.dimensions')
 local Object = require('vgit.core.Object')
-local console = require('vgit.core.console')
+local dimensions = require('vgit.ui.dimensions')
 local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 
 local LineBlameView = Object:extend()
 
-function LineBlameView:constructor(scene, store, plot, config)
+function LineBlameView:constructor(scene, props, plot, config)
   return {
-    scene = scene,
-    store = store,
     plot = plot,
+    scene = scene,
+    props = props,
     config = config or {},
   }
 end
@@ -25,7 +24,6 @@ function LineBlameView:define()
       },
     })
   )
-  return self
 end
 
 function LineBlameView:get_components()
@@ -37,7 +35,6 @@ function LineBlameView:set_keymap(configs)
   utils.list.each(configs, function(config)
     component:set_keymap(config.mode, config.key, config.handler)
   end)
-  return self
 end
 
 function LineBlameView:create_committed_lines(blame)
@@ -59,31 +56,18 @@ function LineBlameView:create_committed_lines(blame)
 end
 
 function LineBlameView:render()
-  local blame, err = self.store:get_blame()
-  if err then
-    console.debug.error(err).error(err)
-    return self
-  end
+  local blame, err = self.props.blame()
+  if err then return end
 
   local component = self.scene:get('line_blame')
   local lines = self:create_committed_lines(blame)
 
-  component:unlock():set_lines(lines):focus():lock()
-
-  return self
+  component:unlock():set_lines(lines):lock()
 end
 
 function LineBlameView:mount(opts)
   local component = self.scene:get('line_blame')
   component:mount(opts)
-
-  return self
-end
-
-function LineBlameView:show(opts)
-  self:mount(opts):render()
-
-  return self
 end
 
 return LineBlameView

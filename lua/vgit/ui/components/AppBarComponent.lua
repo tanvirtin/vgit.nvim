@@ -20,7 +20,6 @@ end
 
 function AppBarComponent:call(callback)
   self.window:call(callback)
-
   return self
 end
 
@@ -38,7 +37,6 @@ end
 
 function AppBarComponent:set_default_win_options(win_options)
   win_options.winhl = 'Normal:GitAppBar'
-
   return self
 end
 
@@ -65,13 +63,11 @@ end
 
 function AppBarComponent:unmount()
   self.window:close()
-
   return self
 end
 
 function AppBarComponent:clear_notification()
   if self.buffer:is_valid() then self:clear_extmarks() end
-
   return self
 end
 
@@ -83,13 +79,11 @@ function AppBarComponent:trigger_notification(text)
     col = 0,
     pos = 'eol',
   })
-
   return self
 end
 
 function AppBarComponent:notify(text)
   self.notification:notify(self, text)
-
   return self
 end
 

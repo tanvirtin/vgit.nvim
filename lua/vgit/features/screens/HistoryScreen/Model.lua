@@ -4,67 +4,73 @@ local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local GitObject = require('vgit.git.GitObject')
 
-local Store = Object:extend()
+local Model = Object:extend()
 
-function Store:constructor()
+function Model:constructor(opts)
   return {
-    shape = nil,
     git_object = nil,
-    index = 1,
-    err = nil,
-    data = nil,
-    state = {},
+    state = {
+      config = nil,
+      entries = nil,
+      entry_index = 1,
+      layout_type = opts.layout_type or 'unified',
+    },
   }
 end
 
-function Store:reset()
-  self.err = nil
-  self.data = nil
-  self.index = 1
-  self.state = {}
+function Model:reset()
+  self.state = {
+    config = nil,
+    entries = nil,
+    entry_index = 1,
+    layout_type = self.state.layout_type,
+  }
 end
 
-function Store:fetch(shape, filename, opts)
+function Model:get_layout_type()
+  return self.state.layout_type
+end
+
+function Model:fetch(filename, opts)
   opts = opts or {}
 
   if not filename or filename == '' then return nil, { 'Buffer has no history associated with it' } end
 
   self:reset()
 
-  self.shape = shape
   self.git_object = GitObject(filename)
-  self.data, self.err = self.git_object:logs()
 
-  if self.data and utils.list.is_empty(self.data) then
+  local entries, err = self.git_object:logs()
+  if err then return nil, err end
+
+  local config, err = self.git_object:config()
+  if err then return nil, err end
+
+  self.state.config = config
+  self.state.entries = entries
+
+  if entries and utils.list.is_empty(entries) then
     return nil, { 'There is no history associated with this buffer' }
   end
 
-  return self.data, self.err
+  return entries, err
 end
 
-function Store:get_all()
-  return self.data, self.err
+function Model:get_config()
+  return self.state.config
 end
 
-function Store:set_index(index)
-  self.index = index
+function Model:get_entries()
+  return self.state.entries
 end
 
-function Store:get(index)
-  if index then self.index = index end
-
-  if not self.data or not self.data[self.index] then
-    return nil, { 'No data found, check how you are defining store data' }
-  end
-
-  return self.data[self.index]
+function Model:set_entry_index(index)
+  self.state.entry_index = index
 end
 
-function Store:get_diff(index)
-  local log, log_err = self:get(index)
-  loop.free_textlock()
-
-  if log_err then return nil, log_err end
+function Model:get_diff()
+  local log = self.state.entries[self.state.entry_index]
+  if not log then return nil end
 
   local id = log.id
   local parent_hash = log.parent_hash
@@ -86,27 +92,19 @@ function Store:get_diff(index)
   if lines_err then return nil, lines_err end
 
   -- TODO(renames): If a file is renamed changes are not reflected.
-  local diff = Diff():generate(hunks, lines, self.shape)
+  local diff = Diff():generate(hunks, lines, self:get_layout_type())
 
   self.state[id] = diff
 
   return diff
 end
 
-function Store:get_filename()
+function Model:get_filename()
   return self.git_object:get_filename()
 end
 
-function Store:get_filetype()
+function Model:get_filetype()
   return self.git_object:get_filetype()
 end
 
-function Store:get_lnum()
-  return self.state.lnum
-end
-
-function Store:set_lnum(lnum)
-  self.state.lnum = lnum
-end
-
-return Store
+return Model

@@ -72,7 +72,6 @@ end
 function list.each(l, callback)
   for i = 1, #l do
     local break_loop = callback(l[i], i)
-
     if break_loop then return end
   end
 end

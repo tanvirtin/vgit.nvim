@@ -16,7 +16,6 @@ describe('Buffer', function()
   describe('constructor', function()
     it('should initialize buffer with a buffer number', function()
       assert.are.same(buffer.bufnr, bufnr)
-      assert.is_not_nil(buffer.namespace)
     end)
   end)
 
@@ -104,21 +103,6 @@ describe('Buffer', function()
     it('should return buffer name', function()
       vim.api.nvim_buf_set_name(bufnr, 'test')
       assert.equals(buffer:get_name(), string.format('%s/test', vim.loop.cwd()))
-    end)
-  end)
-
-  describe('clear_extmarks', function()
-    it('should clear highlight from buffer', function()
-      buffer:set_lines({ 'Hello World', 'foo', 'bar' })
-      local _, extmark_id = buffer:transpose_virtual_line_number({
-        text = 'virtual',
-        hl = 'Error',
-        row = 1,
-      })
-      local success = buffer:clear_extmarks()
-      assert.is_true(success)
-      local extmark = vim.api.nvim_buf_get_extmark_by_id(buffer.bufnr, buffer.namespace.ns_id, extmark_id, {})
-      assert.are.same(extmark, {})
     end)
   end)
 

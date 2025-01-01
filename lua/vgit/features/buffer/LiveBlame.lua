@@ -23,14 +23,14 @@ end
 function LiveBlame:register_events()
   git_buffer_store.on('attach', function(buffer)
     buffer:on({
-      event.type.BufEnter,
-      event.type.WinEnter,
-      event.type.CursorMoved,
-      event.type.InsertEnter,
+      'BufEnter',
+      'WinEnter',
+      'CursorMoved',
+      'InsertEnter',
     }, function()
       buffer:clear_blames()
     end)
-    buffer:on(event.type.CursorHold, function()
+    buffer:on('CursorHold', function()
       if not live_blame_setting:get('enabled') then return end
 
       buffer = buffer or git_buffer_store.current()

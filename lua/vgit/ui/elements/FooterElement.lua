@@ -44,7 +44,6 @@ end
 
 function FooterElement:unmount()
   self.window:close()
-
   return self
 end
 

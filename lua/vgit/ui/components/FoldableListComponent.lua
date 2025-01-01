@@ -32,25 +32,21 @@ end
 
 function FoldableListComponent:call(callback)
   self.window:call(callback)
-
   return self
 end
 
 function FoldableListComponent:set_list(list)
   self.state.list = list
-
   return self
 end
 
 function FoldableListComponent:set_title(text)
   if self.elements.header then self.elements.header:set_lines({ text }) end
-
   return self
 end
 
 function FoldableListComponent:toggle_list_item(item)
   if item.items then item.open = not item.open end
-
   return self
 end
 
@@ -62,16 +58,15 @@ function FoldableListComponent:get_list_item(lnum)
   return self.state.shadow_list[lnum]
 end
 
-function FoldableListComponent:find_list_item(callback)
+function FoldableListComponent:each_list_item(callback)
   for lnum, item in pairs(self.state.shadow_list) do
-    if callback(item) then return item, lnum end
+    callback(item, lnum)
   end
 end
 
-function FoldableListComponent:query_list_item(callback)
-  for _, list_item in ipairs(self.state.shadow_list) do
-    local result = callback(list_item)
-    if result == true then return list_item end
+function FoldableListComponent:find_list_item(callback)
+  for lnum, item in pairs(self.state.shadow_list) do
+    if callback(item, lnum) then return item, lnum end
   end
 end
 
@@ -311,7 +306,6 @@ function FoldableListComponent:unmount()
 
   self.window:close()
   if header then header:unmount() end
-
   if footer then footer:unmount() end
 end
 

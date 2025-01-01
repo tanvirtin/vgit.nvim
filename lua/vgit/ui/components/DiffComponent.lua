@@ -26,61 +26,54 @@ end
 
 function DiffComponent:set_cursor(cursor)
   self.window:set_cursor(cursor)
-
   return self
 end
 
 function DiffComponent:set_lnum(lnum)
   self.window:set_lnum(lnum)
-
   return self
 end
 
 function DiffComponent:call(callback)
   self.window:call(callback)
-
   return self
 end
 
 function DiffComponent:reset_cursor()
   Component.reset_cursor(self)
-
   return self
 end
 
 function DiffComponent:clear_lines()
   Component.clear_lines(self)
-
   return self
 end
 
 function DiffComponent:sign_unplace()
   self.buffer:sign_unplace()
-
   return self
 end
 
 function DiffComponent:position_cursor(placement)
   Component.position_cursor(self, placement)
-
   return self
 end
 
 function DiffComponent:mount(opts)
+  opts = opts or {}
+
   if self.mounted then return self end
 
   local config = self.config
-  opts = opts or {}
 
   self.notification = Notification()
   self.header_title = HeaderTitle()
   self.buffer = Buffer():create():assign_options(config.buf_options)
 
-  local buffer = self.buffer
   local plot = self.plot
+  local buffer = self.buffer
 
   if config.elements.header then self.elements.header = HeaderElement():mount(plot.header_win_plot) end
-
   if config.elements.footer then self.elements.footer = FooterElement():mount(plot.footer_win_plot) end
 
   self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
@@ -98,7 +91,6 @@ function DiffComponent:unmount()
 
   self.window:close()
   if header then header:unmount() end
-
   if footer then footer:unmount() end
 
   return self
@@ -106,7 +98,6 @@ end
 
 function DiffComponent:set_title(title, opts)
   local header = self.elements.header
-
   if not header then return self end
 
   self.header_title:set(header, title, opts)
@@ -116,7 +107,6 @@ end
 
 function DiffComponent:clear_title()
   local header = self.elements.header
-
   if not header then return self end
 
   self.header_title:clear(header)
@@ -154,7 +144,6 @@ end
 
 function DiffComponent:clear_notification()
   local header = self.elements.header
-
   if not header then return self end
 
   self.notification:clear_notification(header)
@@ -164,7 +153,6 @@ end
 
 function DiffComponent:notify(text)
   local header = self.elements.header
-
   if not header then return self end
 
   self.notification:notify(header, text)

@@ -16,20 +16,18 @@ function DiffView:get_initial_state()
   }
 end
 
-function DiffView:constructor(scene, store, plot, config, layout_type)
+function DiffView:constructor(scene, props, plot, config)
   return {
-    title = 'Diff',
     scene = scene,
-    store = store,
     plot = plot,
+    props = props,
     config = config or {},
-    layout_type = layout_type,
     state = DiffView:get_initial_state(),
   }
 end
 
 function DiffView:define()
-  if self.layout_type == 'unified' then
+  if self.props.layout_type() == 'unified' then
     self.scene:set(
       'current',
       DiffComponent({
@@ -52,7 +50,7 @@ function DiffView:define()
     )
   end
 
-  if self.layout_type == 'split' then
+  if self.props.layout_type() == 'split' then
     self.scene:set(
       'previous',
       DiffComponent({
@@ -96,26 +94,15 @@ function DiffView:define()
       })
     )
   end
-
-  return self
 end
 
 function DiffView:get_components()
-  if self.layout_type == 'split' then return { self.scene:get('previous'), self.scene:get('current') } end
-
+  if self.props.layout_type() == 'split' then return { self.scene:get('previous'), self.scene:get('current') } end
   return { self.scene:get('current') }
 end
 
-function DiffView:set_title(title)
-  if not title then return self end
-
-  self.title = title
-
-  return self
-end
-
 function DiffView:set_keymap(configs)
-  if self.layout_type == 'split' then
+  if self.props.layout_type() == 'split' then
     utils.list.each(configs, function(config)
       self.scene:get('previous'):set_keymap(config.mode, config.key, config.handler)
     end)
@@ -124,65 +111,63 @@ function DiffView:set_keymap(configs)
   utils.list.each(configs, function(config)
     self.scene:get('current'):set_keymap(config.mode, config.key, config.handler)
   end)
-
-  return self
 end
 
 function DiffView:paint_word(component_type, line_changes, lnum)
   local lnum_change = line_changes.lnum_change
+  if not lnum_change then return end
 
-  if not lnum_change then return self end
+  local word_diff = lnum_change.word_diff
+  if not word_diff then return end
 
+  local offset = 0
   local texts = {}
   local change_type = lnum_change.type
-  local word_diff = lnum_change.word_diff
   local component = self.scene:get(component_type)
+  local num_word_diff = #word_diff
 
-  if word_diff then
-    local offset = 0
-    local num_word_diff = #word_diff
+  for j = 1, num_word_diff do
+    local segment = word_diff[j]
+    local operation, fragment = unpack(segment)
 
-    for j = 1, num_word_diff do
-      local segment = word_diff[j]
-      local operation, fragment = unpack(segment)
-
-      if operation == -1 then
-        local hl = change_type == 'remove' and 'GitWordDelete' or 'GitWordAdd'
-        texts[#texts + 1] = { fragment, hl }
-      elseif operation == 0 then
-        texts[#texts + 1] = {
-          fragment,
-          nil,
-        }
-      end
-
-      if operation == 0 or operation == -1 then offset = offset + #fragment end
+    if operation == -1 then
+      local hl = change_type == 'remove' and 'GitWordDelete' or 'GitWordAdd'
+      texts[#texts + 1] = { fragment, hl }
+    elseif operation == 0 then
+      texts[#texts + 1] = {
+        fragment,
+        nil,
+      }
     end
 
-    component:place_extmark_text({
-      texts = texts,
-      row = lnum - 1,
-    })
+    if operation == 0 or operation == -1 then
+      offset = offset + #fragment
+    end
   end
 
-  return self
+  component:place_extmark_text({
+    texts = texts,
+    row = lnum - 1,
+  })
 end
 
 function DiffView:paint_line(component_type, line_changes, lnum)
   local line_number_hl = 'GitLineNr'
-  local lnum_change = line_changes.lnum_change
   local signs_usage_setting = signs_setting:get('usage')
   local scene_signs = signs_usage_setting.scene
   local main_signs = signs_usage_setting.main
   local component = self.scene:get(component_type)
 
-  if not lnum_change then return self end
+  local lnum_change = line_changes.lnum_change
+  if not lnum_change then return end
 
   lnum = lnum_change.lnum
   local change_type = lnum_change.type
   local sign_name = scene_signs[change_type]
 
-  if change_type ~= 'void' then line_number_hl = main_signs[change_type] end
+  if change_type ~= 'void' then
+    line_number_hl = main_signs[change_type]
+  end
 
   if sign_name then
     component:place_extmark_sign({
@@ -200,12 +185,11 @@ function DiffView:paint_line(component_type, line_changes, lnum)
       col = 0,
     })
   end
-
-  return self
 end
 
 function DiffView:apply_paint_instructions(component_type, line_changes, lnum)
-  return self:paint_line(component_type, line_changes, lnum):paint_word(component_type, line_changes, lnum)
+  self:paint_line(component_type, line_changes, lnum)
+  self:paint_word(component_type, line_changes, lnum)
 end
 
 function DiffView:apply_brush(top, bot)
@@ -213,7 +197,7 @@ function DiffView:apply_brush(top, bot)
   local previous_lines_changes = self.state.previous_lines_changes
 
   for i = top, bot do
-    if self.layout_type == 'split' and previous_lines_changes and previous_lines_changes[i] then
+    if self.props.layout_type() == 'split' and previous_lines_changes and previous_lines_changes[i] then
       self:apply_paint_instructions('previous', previous_lines_changes[i], i)
     end
 
@@ -221,8 +205,6 @@ function DiffView:apply_brush(top, bot)
       self:apply_paint_instructions('current', current_lines_changes[i], i)
     end
   end
-
-  return self
 end
 
 function DiffView:paint()
@@ -230,87 +212,52 @@ function DiffView:paint()
 end
 
 function DiffView:reset_cursor()
-  if self.layout_type == 'split' then self.scene:get('previous'):reset_cursor() end
-
+  if self.props.layout_type() == 'split' then self.scene:get('previous'):reset_cursor() end
   self.scene:get('current'):reset_cursor()
-
-  return self
 end
 
 function DiffView:clear_title()
   local header_component = self.scene:get('header')
+  if header_component then return header_component:clear_title() end
 
-  if header_component then
-    header_component:clear_title()
-    return self
-  end
-
-  if self.layout_type == 'split' then
+  if self.props.layout_type() == 'split' then
     self.scene:get('previous'):clear_title()
   else
     self.scene:get('current'):clear_title()
   end
-
-  return self
 end
 
 function DiffView:clear_extmarks()
-  if self.layout_type == 'split' then self.scene:get('previous'):clear_extmarks() end
+  if self.props.layout_type() == 'split' then self.scene:get('previous'):clear_extmarks() end
 
   self.scene:get('current'):clear_extmarks()
 
   local header_component = self.scene:get('header')
-
-  if header_component then
-    header_component:clear_extmarks()
-
-    return self
-  end
-
-  return self
+  if header_component then header_component:clear_extmarks() end
 end
 
 function DiffView:clear_lines()
-  if self.layout_type == 'split' then self.scene:get('previous'):clear_lines():disable_cursorline() end
-
+  if self.props.layout_type() == 'split' then self.scene:get('previous'):clear_lines():disable_cursorline() end
   self.scene:get('current'):clear_lines():disable_cursorline()
-
-  return self
 end
 
 function DiffView:clear_notification()
   local header_component = self.scene:get('header')
+  if header_component then return header_component:clear_notification() end
 
-  if header_component then
-    header_component:clear_notification()
-    return self
-  end
-
-  if self.layout_type == 'split' then self.scene:get('previous'):clear_notification() end
-
+  if self.props.layout_type() == 'split' then self.scene:get('previous'):clear_notification() end
   self.scene:get('current'):clear_notification()
-
-  return self
 end
 
 function DiffView:render_title()
-  local filename, filename_err = self.store:get_filename()
-  if filename_err then
-    console.debug.error(filename_err)
-    return self
-  end
+  local filename = self.props.filename()
+  if not filename then return end
 
-  local filetype, filetype_err = self.store:get_filetype()
-  if filetype_err then
-    console.debug.error(filetype_err)
-    return self
-  end
+  local filetype = self.props.filetype()
+  if not filetype then return end
 
-  local diff, diff_err = self.store:get_diff()
-  if diff_err then
-    console.debug.error(diff_err)
-    return self
-  end
+  local diff = self.props.diff()
+  if not diff then return end
 
   local options = {
     filename = filename,
@@ -318,39 +265,26 @@ function DiffView:render_title()
     stat = diff.stat,
   }
 
-  local title = self.title
+  local title = 'Diff'
   local header_component = self.scene:get('header')
+  if header_component then return header_component:set_title(title, options) end
 
-  if header_component then
-    header_component:set_title(title, options)
-    return self
+  if self.props.layout_type() == 'split' then
+    return self.scene:get('previous'):set_title(title, options)
   end
 
-  if self.layout_type == 'split' then
-    self.scene:get('previous'):set_title(title, options)
-  else
-    self.scene:get('current'):set_title(title, options)
-  end
-
-  return self
+  self.scene:get('current'):set_title(title, options)
 end
 
 function DiffView:render_filetype()
-  local filetype, err = self.store:get_filetype()
-  if err then
-    console.debug.error(err)
-    return self
-  end
+  local filetype = self.props.filetype()
+  if not filetype then return end
 
   local current_component = self.scene:get('current')
+  if current_component:get_filetype() == filetype then return end
 
-  if current_component:get_filetype() == filetype then return self end
-
-  if self.layout_type == 'split' then self.scene:get('previous'):set_filetype(filetype) end
-
+  if self.props.layout_type() == 'split' then self.scene:get('previous'):set_filetype(filetype) end
   current_component:set_filetype(filetype)
-
-  return self
 end
 
 function DiffView:render_split_current_line_numbers(diff, lnum_change_map)
@@ -387,10 +321,7 @@ function DiffView:render_split_current_line_numbers(diff, lnum_change_map)
   end
 
   self.state.current_lines_changes = lines_changes
-
   self.scene:get('current'):render_line_numbers(lines)
-
-  return self
 end
 
 function DiffView:render_split_previous_line_numbers(diff, lnum_change_map)
@@ -428,16 +359,11 @@ function DiffView:render_split_previous_line_numbers(diff, lnum_change_map)
 
   self.state.previous_lines_changes = lines_changes
   self.scene:get('previous'):render_line_numbers(lines)
-
-  return self
 end
 
 function DiffView:render_split_line_numbers()
-  local diff, err = self.store:get_diff()
-  if err then
-    console.debug.error(err)
-    return self
-  end
+  local diff = self.props.diff()
+  if not diff then return end
 
   local current_lnum_change_map = {}
   local previous_lnum_change_map = {}
@@ -453,17 +379,13 @@ function DiffView:render_split_line_numbers()
     end
   end
 
-  return self
-    :render_split_previous_line_numbers(diff, previous_lnum_change_map)
-    :render_split_current_line_numbers(diff, current_lnum_change_map)
+  self:render_split_previous_line_numbers(diff, previous_lnum_change_map)
+  self:render_split_current_line_numbers(diff, current_lnum_change_map)
 end
 
 function DiffView:render_unified_line_numbers()
-  local diff, err = self.store:get_diff()
-  if err then
-    console.debug.error(err)
-    return self
-  end
+  local diff = self.props.diff()
+  if not diff then return end
 
   local lines_changes = {}
   local lines = {}
@@ -500,83 +422,64 @@ function DiffView:render_unified_line_numbers()
     }
   end
 
-  self.scene:get('current'):render_line_numbers(lines)
-
   self.state.current_lines_changes = lines_changes
-
-  return self
+  self.scene:get('current'):render_line_numbers(lines)
 end
 
 function DiffView:render_line_numbers()
-  local layout_type = self.layout_type
+  local layout_type = self.props.layout_type()
 
   if layout_type == 'split' then
     self:render_split_line_numbers()
   elseif layout_type == 'unified' then
     self:render_unified_line_numbers()
   end
-
-  return self
 end
 
 function DiffView:render_lines()
-  local diff, diff_err = self.store:get_diff()
-  if diff_err then
-    console.debug.error(diff_err)
-    return self
+  local diff = self.props.diff()
+  if not diff then return end
+
+  if self.props.layout_type() == 'unified' then
+    return self.scene:get('current'):set_lines(diff.lines):enable_cursorline()
   end
 
-  if self.layout_type == 'unified' then
-    self.scene:get('current'):set_lines(diff.lines):enable_cursorline()
-  else
-    self.scene:get('previous'):set_lines(diff.previous_lines):enable_cursorline()
-    self.scene:get('current'):set_lines(diff.current_lines):enable_cursorline()
-  end
-
-  return self
+  self.scene:get('previous'):set_lines(diff.previous_lines):enable_cursorline()
+  self.scene:get('current'):set_lines(diff.current_lines):enable_cursorline()
 end
 
 function DiffView:notify(msg)
-  local layout_type = self.layout_type
+  local layout_type = self.props.layout_type()
   local header_component = self.scene:get('header')
 
   if header_component then
     header_component:notify(msg)
-    return self
+    return
   end
 
   if layout_type == 'split' then
-    self.scene:get('previous'):notify(msg)
-  elseif layout_type == 'unified' then
-    self.scene:get('current'):notify(msg)
+    return self.scene:get('previous'):notify(msg)
   end
 
-  return self
+  self.scene:get('current'):notify(msg)
 end
 
 function DiffView:get_current_mark_under_cursor()
-  local diff, err = self.store:get_diff()
-  if err then
-    console.debug.error(err)
-    return nil
-  end
+  local diff = self.props.diff()
+  if not diff then return end
 
   local marks = diff.marks
   local lnum = self.scene:get('current'):get_lnum()
 
   for i = 1, #marks do
     local mark = marks[i]
-
     if lnum >= mark.top and lnum <= mark.bot then return mark, i end
   end
 end
 
-function DiffView:get_current_hunk_under_cursor()
-  local diff, err = self.store:get_diff()
-  if err then
-    console.debug.error(err)
-    return nil
-  end
+function DiffView:get_hunk_under_cursor()
+  local diff = self.props.diff()
+  if not diff then return end
 
   local selected
   local marks = diff.marks
@@ -585,7 +488,6 @@ function DiffView:get_current_hunk_under_cursor()
 
   for i = 1, #marks do
     local mark = marks[i]
-
     if lnum >= mark.top and lnum <= mark.bot then
       selected = i
       break
@@ -596,17 +498,13 @@ function DiffView:get_current_hunk_under_cursor()
 end
 
 function DiffView:set_lnum(lnum, position)
-  if self.layout_type == 'split' then self.scene:get('previous'):set_lnum(lnum):position_cursor(position) end
-
-  -- NOTE: Current must always be set after previous.
+  if self.props.layout_type() == 'split' then self.scene:get('previous'):set_lnum(lnum):position_cursor(position) end
   self.scene:get('current'):set_lnum(lnum):position_cursor(position)
-
-  return self
 end
 
 function DiffView:set_relative_lnum(lnum, position)
-  local diff, err = self.store:get_diff()
-  if err then return self end
+  local diff = self.props.diff()
+  if not diff then return end
 
   for i = 1, #diff.lnum_changes do
     local lnum_change = diff.lnum_changes[i]
@@ -614,19 +512,21 @@ function DiffView:set_relative_lnum(lnum, position)
     local type = lnum_change.type
     local buftype = lnum_change.buftype
 
-    if buftype == 'current' and (type == 'void' or type == 'remove') and lnum >= l then lnum = lnum + 1 end
+    if buftype == 'current' and (type == 'void' or type == 'remove') and lnum >= l then
+      lnum = lnum + 1
+    end
   end
 
   self:set_lnum(lnum, position)
-
-  return self
 end
 
-function DiffView:select_mark(marks, mark_index, position)
+function DiffView:move_to_mark(marks, mark_index, position)
   local lnum = nil
   local mark = marks[mark_index]
 
-  if mark then lnum = mark.top end
+  if mark then
+    lnum = mark.top
+  end
 
   if not lnum then
     if marks and marks[#marks] and marks[#marks].top then
@@ -640,15 +540,12 @@ function DiffView:select_mark(marks, mark_index, position)
 
   self:set_lnum(lnum, position)
 
-  return self
+  return mark
 end
 
 function DiffView:prev(pos)
-  local diff, err = self.store:get_diff()
-  if err then
-    console.debug.error(err)
-    return self
-  end
+  local diff = self.props.diff()
+  if not diff then return end
 
   local marks = diff.marks
   local lnum = self.scene:get('current'):get_lnum()
@@ -666,15 +563,12 @@ function DiffView:prev(pos)
     end
   end
 
-  return self:navigate_to_mark(mark_index, pos)
+  return self:move_to_hunk(mark_index, pos)
 end
 
 function DiffView:next(pos)
-  local diff, err = self.store:get_diff()
-  if err then
-    console.debug.error(err)
-    return self
-  end
+  local diff = self.props.diff()
+  if not diff then return end
 
   local marks = diff.marks
   local lnum = self.scene:get('current'):get_lnum()
@@ -693,15 +587,12 @@ function DiffView:next(pos)
     end
   end
 
-  return self:navigate_to_mark(mark_index, pos)
+  return self:move_to_hunk(mark_index, pos)
 end
 
 function DiffView:get_relative_mark_index(lnum)
-  local diff, err = self.store:get_diff()
-  if err then
-    console.debug.error(err)
-    return 1
-  end
+  local diff = self.props.diff()
+  if not diff then return 1 end
 
   local marks = diff.marks
   local mark_index = 1
@@ -718,23 +609,18 @@ function DiffView:get_relative_mark_index(lnum)
   return mark_index
 end
 
-function DiffView:navigate_to_mark(mark_index, pos)
+function DiffView:move_to_hunk(mark_index, pos)
   if not pos then pos = 'top' end
 
-  if not mark_index then mark_index = 1 end
-
-  local diff, err = self.store:get_diff()
-  if err then
-    console.debug.error(err)
-    return self
+  if not mark_index then
+    mark_index = 1
   end
+
+  local diff = self.props.diff()
+  if not diff then return end
 
   local marks = diff.marks
-  if #marks == 0 then
-    self:notify('No changes found')
-
-    return self
-  end
+  if #marks == 0 then return self:notify('No changes found') end
 
   if mark_index < 1 then
     mark_index = #marks
@@ -742,9 +628,10 @@ function DiffView:navigate_to_mark(mark_index, pos)
     mark_index = 1
   end
 
-  return self
-    :select_mark(marks, mark_index, pos)
-    :notify(string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks))
+  self:move_to_mark(marks, mark_index, pos)
+
+  local msg = string.format('%s%s/%s Changes', string.rep(' ', 1), mark_index, #marks)
+  self:notify(msg)
 end
 
 function DiffView:render()
@@ -752,41 +639,34 @@ function DiffView:render()
     loop.free_textlock()
     self:clear_extmarks()
 
-    local _, err = self.store:get_diff()
-    if err then
-      loop.free_textlock()
-      console.debug.error(err)
-
+    local diff = self.props.diff()
+    if not diff then
       self.state = DiffView:get_initial_state()
 
-      return self:clear_title():clear_lines():clear_notification():reset_cursor()
+      self:clear_title()
+      self:clear_lines()
+      self:clear_notification()
+      self:reset_cursor()
+
+      return
     end
 
-    return self:reset_cursor():render_title():render_filetype():render_lines():render_line_numbers():paint()
+    self:reset_cursor()
+    self:render_title()
+    self:render_filetype()
+    self:render_lines()
+    self:render_line_numbers()
+    self:paint()
   end)
 
   if not ok then console.debug.error(msg) end
-  return self
 end
-
-DiffView.render_debounced = loop.debounce_coroutine(function(self, callback)
-  self:render()
-  if callback then callback() end
-end, 100)
 
 function DiffView:mount()
-  if self.layout_type == 'split' then self.scene:get('previous'):mount() end
+  if self.props.layout_type() == 'split' then self.scene:get('previous'):mount() end
 
   self.scene:get('current'):mount()
-
-  return self
-end
-
-function DiffView:show()
   self.state = DiffView:get_initial_state()
-  self:mount():render():navigate_to_mark(1)
-
-  return self
 end
 
 return DiffView

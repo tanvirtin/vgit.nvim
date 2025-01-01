@@ -7,38 +7,43 @@ local git_repo = require('vgit.git.git_repo')
 local git_hunks = require('vgit.git.git_hunks')
 local GitObject = require('vgit.git.GitObject')
 
-local Store = Object:extend()
+local Model = Object:extend()
 
-function Store:constructor()
+function Model:constructor(opts)
   return {
-    err = nil,
-    shape = nil,
     git_object = nil,
-    state = { blame = nil, diff = nil },
+    state = {
+      diff = nil,
+      blame = nil,
+      layout_type = opts.layout_type or 'unified',
+    },
   }
 end
 
-function Store:reset()
-  self.err = nil
-  self.state = { blame = nil, diff = nil }
+function Model:reset()
+  self.state = {
+    diff = nil,
+    blame = nil,
+    layout_type = self.state.layout_type
+  }
 end
 
-function Store:fetch(shape, filename, lnum, opts)
+function Model:get_layout_type()
+  return self.state.layout_type
+end
+
+function Model:fetch(filename, lnum, opts)
   opts = opts or {}
 
   if not filename or filename == '' then return nil, { 'Buffer has no blame associated with it' } end
 
   self:reset()
 
-  self.shape = shape
   self.git_object = GitObject(filename)
 
   loop.free_textlock()
-  self.state.blame, self.err = self.git_object:blame(lnum)
-  if self.err then return nil, self.err end
-
-  local blame = self.state.blame
-
+  local blame, err = self.git_object:blame(lnum)
+  if err then return nil, err end
   if not blame then return nil, { 'no blame found' } end
   if blame:is_uncommitted() then return nil, { 'Line is uncommitted' } end
 
@@ -46,6 +51,7 @@ function Store:fetch(shape, filename, lnum, opts)
   local reponame = git_repo.discover()
   local log, log_err = git_log.get(reponame, blame.commit_hash)
   if log_err then return nil, log_err end
+  if not log then return nil, { 'log not found' } end
 
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
@@ -77,25 +83,26 @@ function Store:fetch(shape, filename, lnum, opts)
   loop.free_textlock()
   if hunks_err then return nil, hunks_err end
 
-  self.state.diff = Diff():generate(hunks, lines, self.shape, { is_deleted = is_deleted })
+  self.state.blame = blame
+  self.state.diff = Diff():generate(hunks, lines, self:get_layout_type(), { is_deleted = is_deleted })
 
-  return nil, self.err
+  return blame, err
 end
 
-function Store:get_blame()
-  return self.state.blame, self.err
+function Model:get_blame()
+  return self.state.blame
 end
 
-function Store:get_diff()
+function Model:get_diff()
   return self.state.diff
 end
 
-function Store:get_filename()
+function Model:get_filename()
   return self.git_object:get_filename()
 end
 
-function Store:get_filetype()
+function Model:get_filetype()
   return self.git_object:get_filetype()
 end
 
-return Store
+return Model
