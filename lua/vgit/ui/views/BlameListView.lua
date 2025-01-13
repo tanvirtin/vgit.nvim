@@ -94,9 +94,7 @@ function BlameListView:render()
 
     local max_len = 255
     local commit_message = entry.summary
-    if #commit_message > max_len then
-      commit_message = commit_message:sub(1, max_len) .. '...'
-    end
+    if #commit_message > max_len then commit_message = commit_message:sub(1, max_len) .. '...' end
 
     local age = entry:age().display
 
@@ -105,15 +103,15 @@ function BlameListView:render()
     highlight_groups[#highlight_groups + 1] = {
       {
         hl = 'Keyword',
-        col_range = { from = 0, to = #commit_hash }
+        col_range = { from = 0, to = #commit_hash },
       },
       {
         hl = 'Comment',
         col_range = {
           from = #commit_hash + 1 + #commit_message + 1,
-          to = #line
-        }
-      }
+          to = #line,
+        },
+      },
     }
   end)
 
@@ -125,7 +123,7 @@ function BlameListView:render()
       component:place_extmark_highlight({
         row = row - 1,
         hl = highlight.hl,
-        col_range = highlight.col_range
+        col_range = highlight.col_range,
       })
     end)
   end)
@@ -137,9 +135,7 @@ function BlameListView:mount(opts)
   local component = self:get_component()
   component:mount(opts)
 
-  if opts.event_handlers then
-    self.event_handlers = utils.object.assign(self.event_handlers, opts.event_handlers)
-  end
+  if opts.event_handlers then self.event_handlers = utils.object.assign(self.event_handlers, opts.event_handlers) end
 
   self:set_keymap({
     {
@@ -152,7 +148,7 @@ function BlameListView:mount(opts)
       end),
     },
   })
-  component:on('CursorMoved', function ()
+  component:on('CursorMoved', function()
     local lnum = self:move()
     self.event_handlers.on_move(lnum)
   end)

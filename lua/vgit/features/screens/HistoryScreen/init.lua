@@ -34,7 +34,7 @@ function HistoryScreen:constructor(opts)
       end,
     }, {
       row = '20vh',
-      height = '100vh'
+      height = '100vh',
     }, {
       elements = {
         header = true,
@@ -45,7 +45,7 @@ function HistoryScreen:constructor(opts)
       config = function()
         return model:get_config()
       end,
-      entries = function ()
+      entries = function()
         return model:get_entries()
       end,
     }, { height = '20vh' }, {
@@ -100,7 +100,7 @@ function HistoryScreen:create()
       on_move = function(lnum)
         self:on_list_move(lnum)
       end,
-    }
+    },
   })
 
   self.diff_view:render()

@@ -17,9 +17,9 @@ function ProjectStashScreen:constructor()
     scene = scene,
     model = model,
     view = GitLogsView(scene, {
-      logs = function ()
+      logs = function()
         return model:get_logs()
-      end
+      end,
     }),
   }
 end

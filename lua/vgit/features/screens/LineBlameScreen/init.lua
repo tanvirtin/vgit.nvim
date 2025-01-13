@@ -21,31 +21,25 @@ function LineBlameScreen:constructor(opts)
     name = 'Line Blame Screen',
     scene = scene,
     model = model,
-    diff_view = DiffView(
-      scene,
-      {
-        layout_type = function()
-          return model:get_layout_type()
-        end,
-        filename = function()
-          return model:get_filename()
-        end,
-        filetype = function()
-          return model:get_filetype()
-        end,
-        diff = function()
-          return model:get_diff()
-        end,
-      },
-      { relative = 'cursor', height = '35vh' },
-      { elements = { header = true, footer = true } }
-    ),
-    line_blame_view = LineBlameView(
-      scene,
-      { blame = function() return model:get_blame() end },
-      { relative = 'cursor', height = 5 },
-      { elements = { header = false } }
-    ),
+    diff_view = DiffView(scene, {
+      layout_type = function()
+        return model:get_layout_type()
+      end,
+      filename = function()
+        return model:get_filename()
+      end,
+      filetype = function()
+        return model:get_filetype()
+      end,
+      diff = function()
+        return model:get_diff()
+      end,
+    }, { relative = 'cursor', height = '35vh' }, { elements = { header = true, footer = true } }),
+    line_blame_view = LineBlameView(scene, {
+      blame = function()
+        return model:get_blame()
+      end,
+    }, { relative = 'cursor', height = 5 }, { elements = { header = false } }),
   }
 end
 

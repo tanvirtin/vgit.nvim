@@ -34,24 +34,28 @@ git_buffer_store.register_events = loop.coroutine(function()
 
   loop.free_textlock()
   local git_dirname = git_repo.dirname()
-  local ok = handle:start(git_dirname, {}, loop.debounce_coroutine(function(err, filename, event_name)
-    if err then return end
-    if filename and not filename:match('index%.lock$') then
-      loop.free_textlock()
-      local git_dir = git_repo.dirname()
-      loop.free_textlock()
-      event.emit('VGitSync', {
-        git_dir = git_dir,
-        filename = filename,
-        event_name = event_name,
-      })
-      event.custom_on('VGitSync', function()
-        git_buffer_store.for_each(function(buffer)
-          git_buffer_store.dispatch(buffer, 'sync')
+  local ok = handle:start(
+    git_dirname,
+    {},
+    loop.debounce_coroutine(function(err, filename, event_name)
+      if err then return end
+      if filename and not filename:match('index%.lock$') then
+        loop.free_textlock()
+        local git_dir = git_repo.dirname()
+        loop.free_textlock()
+        event.emit('VGitSync', {
+          git_dir = git_dir,
+          filename = filename,
+          event_name = event_name,
+        })
+        event.custom_on('VGitSync', function()
+          git_buffer_store.for_each(function(buffer)
+            git_buffer_store.dispatch(buffer, 'sync')
+          end)
         end)
-      end)
-    end
-  end, 10))
+      end
+    end, 10)
+  )
 
   if not ok then return handle:close() end
 end)
@@ -63,9 +67,7 @@ git_buffer_store.for_each = function(callback)
 end
 
 git_buffer_store.on = function(event_types, handler)
-  if type(event_types) == 'string' then
-    event_types = { event_types }
-  end
+  if type(event_types) == 'string' then event_types = { event_types } end
 
   for i = 1, #event_types do
     local event_type = event_types[i]
@@ -162,7 +164,7 @@ git_buffer_store.collect = function()
     })
     :attach_to_renderer()
 
-    git_buffer_store.dispatch(git_buffer, 'attach')
+  git_buffer_store.dispatch(git_buffer, 'attach')
 end
 
 return git_buffer_store

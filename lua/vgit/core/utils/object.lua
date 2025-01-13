@@ -49,12 +49,10 @@ function object.pick(o, keys)
   o = o or {}
   local picked_o = {}
 
-  object.each(o, function (value, key)
+  object.each(o, function(value, key)
     for i = 1, #keys do
       local k = keys[i]
-      if k == key then
-        picked_o[key] = value
-      end
+      if k == key then picked_o[key] = value end
     end
   end)
 

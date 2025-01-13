@@ -11,7 +11,7 @@ function Extmark:constructor(bufnr)
       sign = 100,
       lnum = 1000,
     },
-    ns_id = vim.api.nvim_create_namespace(""),
+    ns_id = vim.api.nvim_create_namespace(''),
   }
 end
 
@@ -71,7 +71,7 @@ function Extmark:text(opts)
   local priority = opts.priority
   local pos = opts.pos or 'overlay'
   local hl_mode = opts.hl_mode or 'combine'
-  local virt_text = opts.texts or {{ text, hl }}
+  local virt_text = opts.texts or { { text, hl } }
 
   local id = self:derive_id(row, 'text')
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, col, {
@@ -121,27 +121,19 @@ function Extmark:sign(sign)
     })
   end
 
-  return pcall(vim.api.nvim_buf_set_extmark,
-    self.bufnr,
-    self.ns_id,
-    col,
-    0,
-    {
-      id = id,
-      sign_text = sign_text,
-      sign_hl_group = sign_definition.texthl,
-      priority = priority,
-    }
-  )
+  return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, col, 0, {
+    id = id,
+    sign_text = sign_text,
+    sign_hl_group = sign_definition.texthl,
+    priority = priority,
+  })
 end
 
 function Extmark:clear(from_col, to_col)
   from_col = from_col or 0
   to_col = to_col or -1
 
-  if to_col ~= -1 then
-    to_col = to_col + 1
-  end
+  if to_col ~= -1 then to_col = to_col + 1 end
 
   return pcall(vim.api.nvim_buf_clear_namespace, self.bufnr, self.ns_id, from_col, to_col)
 end

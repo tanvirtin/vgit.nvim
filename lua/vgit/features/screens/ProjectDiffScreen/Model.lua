@@ -23,7 +23,7 @@ function Model:constructor(opts)
       reponame = nil,
       list_entries = {},
       layout_type = opts.layout_type or 'unified',
-    }
+    },
   }
 end
 
@@ -34,7 +34,7 @@ function Model:reset()
     entries = nil,
     reponame = nil,
     list_entries = {},
-    layout_type = self.state.layout_type
+    layout_type = self.state.layout_type,
   }
 end
 

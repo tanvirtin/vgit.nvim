@@ -130,12 +130,10 @@ function StatusListGenerator:create_node(path)
       },
     }
 
-    if icon then 
-      list_entry.icon_before = {
-        icon = icon,
-        hl = icon_hl,
-      }
-    end
+    if icon then list_entry.icon_before = {
+      icon = icon,
+      hl = icon_hl,
+    } end
 
     return list_entry
   end

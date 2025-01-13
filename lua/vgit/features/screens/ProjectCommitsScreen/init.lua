@@ -49,7 +49,7 @@ function ProjectCommitsScreen:constructor(opts)
     status_list_view = StatusListView(scene, {
       entries = function()
         return model:get_entries()
-      end
+      end,
     }, { width = '25vw' }, {
       elements = {
         header = true,
@@ -163,8 +163,8 @@ function ProjectCommitsScreen:create(args)
       end,
       on_move = function()
         self:handle_list_move()
-      end
-    }
+      end,
+    },
   })
   self.status_list_view:render()
 

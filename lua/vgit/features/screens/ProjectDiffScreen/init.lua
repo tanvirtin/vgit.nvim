@@ -38,7 +38,7 @@ function ProjectDiffScreen:constructor(opts)
           { 'Reset all', keymaps['reset_all'] },
           { 'Commit', keymaps['commit'] },
         }
-      end
+      end,
     }),
     diff_view = DiffView(scene, {
       layout_type = function()
@@ -66,7 +66,7 @@ function ProjectDiffScreen:constructor(opts)
     status_list_view = StatusListView(scene, {
       entries = function()
         return model:get_entries()
-      end
+      end,
     }, {
       row = 1,
       width = '25vw',
@@ -110,9 +110,7 @@ function ProjectDiffScreen:stage_hunk()
   self:render(function()
     local has_unstaged = false
     self.status_list_view:each_status(function(status, entry_type)
-      if entry_type == 'unstaged' and status.filename == entry.status.filename then
-        has_unstaged = true
-      end
+      if entry_type == 'unstaged' and status.filename == entry.status.filename then has_unstaged = true end
     end)
     self:move_to(function(status, entry_type)
       if has_unstaged and entry_type == 'staged' then return false end
@@ -140,9 +138,7 @@ function ProjectDiffScreen:unstage_hunk()
   self:render(function()
     local has_staged = false
     self.status_list_view:each_status(function(status, entry_type)
-      if entry_type == 'staged' and status.filename == entry.status.filename then
-        has_staged = true
-      end
+      if entry_type == 'staged' and status.filename == entry.status.filename then has_staged = true end
     end)
     self:move_to(function(status, entry_type)
       if has_staged and entry_type == 'unstaged' then return false end
@@ -373,8 +369,8 @@ function ProjectDiffScreen:create()
       end,
       on_move = function()
         self:handle_list_move()
-      end
-    }
+      end,
+    },
   })
 
   self.diff_view:render()

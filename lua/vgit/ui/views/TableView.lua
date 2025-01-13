@@ -80,21 +80,14 @@ function TableView:render()
   local entries = self.props.entries()
   if not entries then return end
 
-  self.scene:get('table')
-    :unlock()
-    :render_rows(entries, self.props.row)
-    :focus()
-    :set_lnum(self.state.lnum)
-    :lock()
+  self.scene:get('table'):unlock():render_rows(entries, self.props.row):focus():set_lnum(self.state.lnum):lock()
 end
 
 function TableView:mount(opts)
   local component = self.scene:get('table')
   component:mount(opts)
 
-  if opts.event_handlers then
-    self.event_handlers = utils.object.assign(self.event_handlers, opts.event_handlers)
-  end
+  if opts.event_handlers then self.event_handlers = utils.object.assign(self.event_handlers, opts.event_handlers) end
 
   self:set_keymap({
     {
@@ -108,7 +101,7 @@ function TableView:mount(opts)
     },
   })
 
-  component:on('CursorMoved', function ()
+  component:on('CursorMoved', function()
     local lnum = self:move()
     self.event_handlers.on_move(lnum)
   end)

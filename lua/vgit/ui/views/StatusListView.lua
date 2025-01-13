@@ -131,16 +131,10 @@ function StatusListView:toggle_current_list_item()
   local lnum = self.scene:get('list'):get_lnum()
   local item = self:get_list_item(lnum)
 
-  if item and item.open ~= nil then
-    item.open = not item.open
-  end
+  if item and item.open ~= nil then item.open = not item.open end
 
   local component = self.scene:get('list')
-  component:unlock()
-    :set_title(self.state.title)
-    :set_list(self.state.folds)
-    :sync()
-    :lock()
+  component:unlock():set_title(self.state.title):set_list(self.state.folds):sync():lock()
 end
 
 function StatusListView:render()
@@ -166,9 +160,7 @@ function StatusListView:mount(opts)
   local component = self.scene:get('list')
   component:mount(opts)
 
-  if opts.event_handlers then
-    self.event_handlers = utils.object.assign(self.event_handlers, opts.event_handlers)
-  end
+  if opts.event_handlers then self.event_handlers = utils.object.assign(self.event_handlers, opts.event_handlers) end
 
   self:set_keymap({
     {
@@ -182,7 +174,7 @@ function StatusListView:mount(opts)
     },
   })
 
-  component:on('CursorMoved', function ()
+  component:on('CursorMoved', function()
     local item = self:move()
     self.event_handlers.on_move(item)
   end)

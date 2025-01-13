@@ -35,7 +35,7 @@ function Model:reset()
     commits = {},
     entries = nil,
     list_entry_cache = {},
-    layout_type = self.state.layout_type
+    layout_type = self.state.layout_type,
   }
 end
 

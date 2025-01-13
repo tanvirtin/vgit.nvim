@@ -273,7 +273,7 @@ function GitBuffer:render_conflict(conflict)
 
   self.conflict_extmark:sign({
     col = current.top - 1,
-    name = 'GitConflictCurrentMark'
+    name = 'GitConflictCurrentMark',
   })
   self.conflict_extmark:text({
     text = '(Current Change)',
@@ -286,27 +286,27 @@ function GitBuffer:render_conflict(conflict)
   for lnum = current.top + 1, current.bot do
     self.conflict_extmark:sign({
       col = lnum - 1,
-      name = 'GitConflictCurrent'
+      name = 'GitConflictCurrent',
     })
   end
 
   for lnum = middle.top, middle.bot do
     self.conflict_extmark:sign({
       col = lnum - 1,
-      name = 'GitConflictMiddle'
+      name = 'GitConflictMiddle',
     })
   end
 
   for lnum = incoming.top, incoming.bot - 1 do
     self.conflict_extmark:sign({
       col = lnum - 1,
-      name = 'GitConflictIncoming'
+      name = 'GitConflictIncoming',
     })
   end
 
   self.conflict_extmark:sign({
     col = incoming.bot - 1,
-    name = 'GitConflictIncomingMark'
+    name = 'GitConflictIncomingMark',
   })
 
   self.conflict_extmark:text({
@@ -320,12 +320,12 @@ function GitBuffer:render_conflict(conflict)
   if ancestor and not utils.list.is_empty(ancestor) then
     self.conflict_extmark:sign({
       col = ancestor.top - 1,
-      name = 'GitConflictAncestorMark'
+      name = 'GitConflictAncestorMark',
     })
     for lnum = ancestor.top + 1, ancestor.bot do
       self.conflict_extmark:sign({
         col = lnum - 1,
-        name = 'GitConflictAncestor'
+        name = 'GitConflictAncestor',
       })
     end
   end
@@ -338,7 +338,7 @@ function GitBuffer:render_conflicts(top, bot)
   bot = bot or -1
 
   self:clear_conflicts(top, bot)
-  utils.list.each(self.state.conflicts, function (conflict)
+  utils.list.each(self.state.conflicts, function(conflict)
     self:render_conflict_help_text(conflict)
     self:render_conflict(conflict)
   end)
@@ -353,7 +353,7 @@ function Buffer:render_signs(top, bot)
 
   local signs = self.state.signs or {}
   for _, sign in ipairs(signs) do
-    local col = sign.col;
+    local col = sign.col
     if col >= top and (bot == -1 or col <= bot) then self.gutter_extmark:sign(sign) end
   end
 

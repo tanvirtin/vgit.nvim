@@ -42,14 +42,13 @@ function KeymapHelpBarView:render()
     local action = keymap[1]
     local key = keymap[2]
 
-    text = i == 1 and string.format('%s (%s)', action, key)
-      or string.format('%s | %s (%s)', text, action, key)
+    text = i == 1 and string.format('%s (%s)', action, key) or string.format('%s | %s (%s)', text, action, key)
   end
 
   self.scene:get('app_bar'):set_lines({ text })
   self.scene:get('app_bar'):place_extmark_highlight({
     hl = 'Keyword',
-    pattern = '%((%a+)%)'
+    pattern = '%((%a+)%)',
   })
   self.scene:get('app_bar'):place_extmark_highlight({
     hl = 'Number',

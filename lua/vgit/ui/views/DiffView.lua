@@ -140,9 +140,7 @@ function DiffView:paint_word(component_type, line_changes, lnum)
       }
     end
 
-    if operation == 0 or operation == -1 then
-      offset = offset + #fragment
-    end
+    if operation == 0 or operation == -1 then offset = offset + #fragment end
   end
 
   component:place_extmark_text({
@@ -165,16 +163,12 @@ function DiffView:paint_line(component_type, line_changes, lnum)
   local change_type = lnum_change.type
   local sign_name = scene_signs[change_type]
 
-  if change_type ~= 'void' then
-    line_number_hl = main_signs[change_type]
-  end
+  if change_type ~= 'void' then line_number_hl = main_signs[change_type] end
 
-  if sign_name then
-    component:place_extmark_sign({
-      col = lnum - 1,
-      name = sign_name,
-    })
-  end
+  if sign_name then component:place_extmark_sign({
+    col = lnum - 1,
+    name = sign_name,
+  }) end
 
   if change_type == 'void' then
     local text = string.rep(symbols_setting:get('void'), component.window:get_width())
@@ -269,9 +263,7 @@ function DiffView:render_title()
   local header_component = self.scene:get('header')
   if header_component then return header_component:set_title(title, options) end
 
-  if self.props.layout_type() == 'split' then
-    return self.scene:get('previous'):set_title(title, options)
-  end
+  if self.props.layout_type() == 'split' then return self.scene:get('previous'):set_title(title, options) end
 
   self.scene:get('current'):set_title(title, options)
 end
@@ -457,9 +449,7 @@ function DiffView:notify(msg)
     return
   end
 
-  if layout_type == 'split' then
-    return self.scene:get('previous'):notify(msg)
-  end
+  if layout_type == 'split' then return self.scene:get('previous'):notify(msg) end
 
   self.scene:get('current'):notify(msg)
 end
@@ -512,9 +502,7 @@ function DiffView:set_relative_lnum(lnum, position)
     local type = lnum_change.type
     local buftype = lnum_change.buftype
 
-    if buftype == 'current' and (type == 'void' or type == 'remove') and lnum >= l then
-      lnum = lnum + 1
-    end
+    if buftype == 'current' and (type == 'void' or type == 'remove') and lnum >= l then lnum = lnum + 1 end
   end
 
   self:set_lnum(lnum, position)
@@ -524,9 +512,7 @@ function DiffView:move_to_mark(marks, mark_index, position)
   local lnum = nil
   local mark = marks[mark_index]
 
-  if mark then
-    lnum = mark.top
-  end
+  if mark then lnum = mark.top end
 
   if not lnum then
     if marks and marks[#marks] and marks[#marks].top then
@@ -612,9 +598,7 @@ end
 function DiffView:move_to_hunk(mark_index, pos)
   if not pos then pos = 'top' end
 
-  if not mark_index then
-    mark_index = 1
-  end
+  if not mark_index then mark_index = 1 end
 
   local diff = self.props.diff()
   if not diff then return end

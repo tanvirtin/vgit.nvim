@@ -22,15 +22,15 @@ function ProjectCommitScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_commit_preview_setting:get('keymaps')
         return { { 'Save Commit', keymaps['save'] } }
-      end
+      end,
     }),
     view = SimpleView(scene, {
-      title = function ()
+      title = function()
         return model:get_title()
       end,
-      lines = function ()
+      lines = function()
         return model:get_lines()
-      end
+      end,
     }, { row = 1 }, {
       elements = {
         header = false,

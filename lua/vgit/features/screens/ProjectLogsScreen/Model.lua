@@ -6,7 +6,7 @@ local Model = Object:extend()
 
 function Model:constructor()
   return {
-    state = { logs = nil }
+    state = { logs = nil },
   }
 end
 

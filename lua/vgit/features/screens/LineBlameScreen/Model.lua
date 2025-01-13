@@ -24,7 +24,7 @@ function Model:reset()
   self.state = {
     diff = nil,
     blame = nil,
-    layout_type = self.state.layout_type
+    layout_type = self.state.layout_type,
   }
 end
 

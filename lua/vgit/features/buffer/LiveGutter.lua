@@ -41,7 +41,8 @@ function LiveGutter:reset()
 end
 
 function LiveGutter:register_events()
-  git_buffer_store.on({ 'attach', 'reload' }, function(buffer)
+  git_buffer_store
+    .on({ 'attach', 'reload' }, function(buffer)
       self:fetch(buffer)
       buffer:render_signs()
     end)

@@ -47,20 +47,20 @@ end
 function DiffScreen:create_app_bar_view(scene, model)
   if model:is_hunk() then return nil end
   return KeymapHelpBarView(scene, {
-    keymaps = function ()
+    keymaps = function()
       local keymaps = diff_preview_setting:get('keymaps')
       if model:is_staged() then
-         return {
-           { 'Unstage Buffer', keymaps['buffer_unstage'] },
-           { 'Unstage Hunk', keymaps['buffer_hunk_unstage'] },
-           { 'Switch to Staged View', keymaps['toggle_view'] },
+        return {
+          { 'Unstage Buffer', keymaps['buffer_unstage'] },
+          { 'Unstage Hunk', keymaps['buffer_hunk_unstage'] },
+          { 'Switch to Staged View', keymaps['toggle_view'] },
         }
       end
       return {
         { 'Stage Buffer', keymaps['buffer_stage'] },
         { 'Stage Hunk', keymaps['buffer_hunk_stage'] },
-        { 'Reset Buffer',  keymaps['reset'] },
-        { 'Switch to Unstage View',  keymaps['toggle_view'] },
+        { 'Reset Buffer', keymaps['reset'] },
+        { 'Switch to Unstage View', keymaps['toggle_view'] },
       }
     end,
   })

@@ -49,9 +49,7 @@ function Model:fetch(filename, opts)
   self.state.config = config
   self.state.entries = entries
 
-  if entries and utils.list.is_empty(entries) then
-    return nil, { 'There is no history associated with this buffer' }
-  end
+  if entries and utils.list.is_empty(entries) then return nil, { 'There is no history associated with this buffer' } end
 
   return entries, err
 end
