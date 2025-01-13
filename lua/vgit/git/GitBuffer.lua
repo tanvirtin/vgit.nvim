@@ -368,7 +368,7 @@ function Buffer:render_blames(top, bot)
 
   local blames = self.state.blames or {}
   for lnum, blame in pairs(blames) do
-    if lnum >= top and (bot == -1 or lnum <= bot) then
+    if blame and lnum >= top and (bot == -1 or lnum <= bot) then
       local text = live_blame_setting:get('format')(blame, self.state.config)
       if type(text) == 'string' then
         self.blame_extmark:text({

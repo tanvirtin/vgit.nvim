@@ -27,8 +27,9 @@ function Buffer:sync()
 end
 
 function Buffer:set_state(state)
-  state = utils.object.deep_clone(state)
-  self.state = utils.object.assign(self.state, state)
+  for key, value in pairs(state) do
+    self.state[key] = value
+  end
 end
 
 function Buffer:call(callback)
