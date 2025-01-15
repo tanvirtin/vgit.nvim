@@ -206,7 +206,8 @@ function Model:get_diff()
 
   loop.free_textlock()
   local layout_type = self:get_layout_type()
-  local diff = Diff():generate(hunks, lines, layout_type, { is_deleted = status:has_either('*D') })
+  local is_deleted = status:has_either('DD')
+  local diff = Diff():generate(hunks, lines, layout_type, { is_deleted = is_deleted })
   self.state.diffs[cache_key] = diff
 
   return diff
