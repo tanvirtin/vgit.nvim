@@ -292,6 +292,7 @@ function ProjectDiffScreen:open_file()
     local diff, diff_err = self.model:get_diff()
     if diff_err or not diff then return end
     mark = diff.marks[1]
+    if not mark then return end
   end
 
   Window(0):set_lnum(mark.top_relative):position_cursor('center')

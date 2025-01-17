@@ -1,5 +1,4 @@
 local loop = require('vgit.core.loop')
-local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
@@ -37,8 +36,7 @@ function LiveBlame:register_events()
       if not buffer then return end
 
       loop.free_textlock()
-      local conflicts, conflicts_err = buffer:conflicts()
-      if conflicts_err then return console.debug.error(conflicts_err) end
+      local conflicts = buffer:get_conflicts()
       if #conflicts ~= 0 then return end
 
       loop.free_textlock()

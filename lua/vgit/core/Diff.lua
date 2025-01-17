@@ -20,6 +20,223 @@ function Diff:constructor(opts)
   }, opts)
 end
 
+function Diff:generate_unified_conflict(conflicts, lines)
+  local marks = {}
+  local lnum_changes = {}
+
+  for i = 1, #conflicts do
+    local conflict = conflicts[i]
+    local current = conflict.current
+    local ancestor = conflict.ancestor
+    local middle = conflict.middle
+    local incoming = conflict.incoming
+
+    local top = current.top
+    local bot = incoming.bot
+
+    marks[#marks + 1] = {
+      type = type,
+      top = top,
+      bot = bot,
+      top_relative = top,
+      bot_relative = bot,
+    }
+
+    lnum_changes[#lnum_changes + 1] = {
+      lnum = current.top,
+      buftype = 'current',
+      type = 'conflict_current_mark',
+    }
+
+    for lnum = current.top + 1, current.bot do
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = lnum,
+        buftype = 'current',
+        type = 'conflict_current',
+      }
+    end
+
+    if ancestor and not utils.list.is_empty(ancestor) then
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = ancestor.top,
+        buftype = 'current',
+        type = 'conflict_ancestor_mark',
+      }
+      for lnum = ancestor.top + 1, ancestor.bot do
+        lnum_changes[#lnum_changes + 1] = {
+          lnum = lnum,
+          buftype = 'current',
+          type = 'conflict_ancestor',
+        }
+      end
+    end
+
+    for lnum = middle.top, middle.bot do
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = lnum,
+        buftype = 'current',
+        type = 'conflict_middle',
+      }
+    end
+
+    for lnum = incoming.top, incoming.bot - 1 do
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = lnum,
+        buftype = 'current',
+        type = 'conflict_incoming',
+      }
+    end
+
+    lnum_changes[#lnum_changes + 1] = {
+      lnum = incoming.bot,
+      buftype = 'current',
+      type = 'conflict_incoming_mark',
+    }
+  end
+
+  return utils.object.extend(self, {
+    lines = lines,
+    hunks = {},
+    marks = marks,
+    lnum_changes = lnum_changes,
+    stat = { added = 0, removed = 0 },
+  })
+end
+
+function Diff:generate_split_conflict(conflicts, lines)
+  local marks = {}
+  local lnum_changes = {}
+  local previous_lines = {}
+  local current_lines = {}
+
+  for key, value in pairs(lines) do
+    previous_lines[key] = value
+    current_lines[key] = value
+  end
+
+  for i = 1, #conflicts do
+    local conflict = conflicts[i]
+    local current = conflict.current
+    local ancestor = conflict.ancestor
+    local middle = conflict.middle
+    local incoming = conflict.incoming
+
+    local top = current.top
+    local bot = incoming.bot
+
+    marks[#marks + 1] = {
+      type = type,
+      top = top,
+      bot = bot,
+      top_relative = top,
+      bot_relative = bot,
+    }
+
+    previous_lines[current.top] = ''
+    lnum_changes[#lnum_changes + 1] = {
+      lnum = current.top,
+      buftype = 'current',
+      type = 'conflict_current_mark',
+    }
+    lnum_changes[#lnum_changes + 1] = {
+      lnum = current.top,
+      buftype = 'previous',
+      type = 'void',
+    }
+
+    for lnum = current.top + 1, current.bot do
+      previous_lines[lnum] = ''
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = lnum,
+        buftype = 'current',
+        type = 'conflict_current',
+      }
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = lnum,
+        buftype = 'previous',
+        type = 'void',
+      }
+    end
+
+    if ancestor and not utils.list.is_empty(ancestor) then
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = ancestor.top,
+        buftype = 'previous',
+        type = 'conflict_ancestor_mark',
+      }
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = ancestor.top,
+        buftype = 'current',
+        type = 'conflict_ancestor_mark',
+      }
+      for lnum = ancestor.top + 1, ancestor.bot do
+        lnum_changes[#lnum_changes + 1] = {
+          lnum = lnum,
+          buftype = 'previous',
+          type = 'conflict_ancestor',
+        }
+        lnum_changes[#lnum_changes + 1] = {
+          lnum = lnum,
+          buftype = 'current',
+          type = 'conflict_ancestor',
+        }
+      end
+    end
+
+    for lnum = middle.top, middle.bot do
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = lnum,
+        buftype = 'current',
+        type = 'conflict_middle',
+      }
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = lnum,
+        buftype = 'previous',
+        type = 'conflict_middle',
+      }
+    end
+
+    current_lines[incoming.top] = ''
+    lnum_changes[#lnum_changes + 1] = {
+      lnum = incoming.bot,
+      buftype = 'previous',
+      type = 'conflict_incoming_mark',
+    }
+    lnum_changes[#lnum_changes + 1] = {
+      lnum = incoming.top,
+      buftype = 'current',
+      type = 'void',
+    }
+    for lnum = incoming.top, incoming.bot - 1 do
+      current_lines[lnum] = ''
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = lnum,
+        buftype = 'previous',
+        type = 'conflict_incoming',
+      }
+      lnum_changes[#lnum_changes + 1] = {
+        lnum = lnum,
+        buftype = 'current',
+        type = 'void',
+      }
+    end
+    lnum_changes[#lnum_changes + 1] = {
+      lnum = incoming.bot,
+      buftype = 'current',
+      type = 'void',
+    }
+  end
+
+  return utils.object.extend(self, {
+    hunks = {},
+    marks = marks,
+    lnum_changes = lnum_changes,
+    previous_lines = previous_lines,
+    current_lines = current_lines,
+    stat = { added = 0, removed = 0 },
+  })
+end
+
 function Diff:generate_unified_deleted(hunks, lines)
   local hunk = hunks[1]
   local type = hunk.type
@@ -256,10 +473,9 @@ function Diff:generate_split(hunks, lines)
     removed = 0,
   }
 
-  -- shallow copy
   for key, value in pairs(lines) do
-    current_lines[key] = value
     previous_lines[key] = value
+    current_lines[key] = value
   end
 
   for i = 1, #hunks do
@@ -437,16 +653,19 @@ function Diff:generate_split(hunks, lines)
 end
 
 function Diff:generate(hunks, lines, shape, opts)
-  opts = opts or {}
-  local is_deleted = opts.is_deleted
-
   if not shape then return error('shape is required') end
 
+  opts = opts or {}
+  local conflicts = opts.conflicts
+  local is_deleted = opts.is_deleted
+
   if shape == 'split' then
+    if conflicts then return self:generate_split_conflict(conflicts, lines) end
     if is_deleted then return self:generate_split_deleted(hunks, lines) end
     return self:generate_split(hunks, lines)
   end
   if shape == 'unified' then
+    if conflicts then return self:generate_unified_conflict(conflicts, lines) end
     if is_deleted then return self:generate_unified_deleted(hunks, lines) end
     return self:generate_unified(hunks, lines)
   end

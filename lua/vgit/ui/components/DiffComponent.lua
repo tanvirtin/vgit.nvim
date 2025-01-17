@@ -49,11 +49,6 @@ function DiffComponent:clear_lines()
   return self
 end
 
-function DiffComponent:sign_unplace()
-  self.buffer:sign_unplace()
-  return self
-end
-
 function DiffComponent:position_cursor(placement)
   Component.position_cursor(self, placement)
   return self

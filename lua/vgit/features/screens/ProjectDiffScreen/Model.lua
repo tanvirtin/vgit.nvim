@@ -146,16 +146,9 @@ function Model:get_lines(status, type)
   local filename = status.filename
   local reponame = self.state.reponame
 
-  if type == 'unmerged' then
-    if status:has_both('UD') then return git_show.lines(reponame, filename, ':2') end
-    if status:has_both('DU') then return git_show.lines(reponame, filename, ':3') end
-    local log, log_err = git_log.get(reponame, 'HEAD')
-    if log_err then return nil, log_err end
-    if not log then return nil, { 'failed to find log at HEAD' } end
-    return git_show.lines(reponame, filename, log.commit_hash)
-  end
-  if status:has('D ') then return git_show.lines(reponame, filename, 'HEAD') end
+  if type == 'unmerged' then return fs.read_file(self:get_filepath()) end
   if type == 'staged' or status:has(' D') then return git_show.lines(reponame, filename) end
+  if status:has('D ') then return git_show.lines(reponame, filename, 'HEAD') end
 
   return fs.read_file(self:get_filepath())
 end
@@ -164,20 +157,6 @@ function Model:get_hunks(status, type, lines)
   local filename = status.filename
   local reponame = self.state.reponame
 
-  if type == 'unmerged' then
-    if status:has_both('UD') then return git_hunks.custom(lines, { deleted = true }) end
-    if status:has_both('DU') then return git_hunks.custom(lines, { untracked = true }) end
-    if status:has_either('DD') then return git_hunks.custom(lines, { deleted = true }) end
-    local head_log, head_log_err = git_log.get(reponame, 'HEAD')
-    if head_log_err then return nil, head_log_err end
-    if not head_log then return nil, { 'failed to find head log' } end
-    local conflict_type, conflict_type_err = self:conflict_status()
-    if conflict_type_err then return nil, conflict_type_err end
-    local merge_log, merge_log_err = git_log.get(reponame, conflict_type)
-    if not merge_log then return nil, { 'failed to find merge log' } end
-    if merge_log_err then return nil, merge_log_err end
-    return git_hunks.list(reponame, filename, { parent = head_log.commit_hash, current = merge_log.commit_hash })
-  end
   if status:has_both('??') then return git_hunks.custom(lines, { untracked = true }) end
   if type == 'staged' then return git_hunks.list(reponame, filename, { staged = true }) end
   if type == 'unstaged' then return git_hunks.list(reponame, filename) end
@@ -201,11 +180,21 @@ function Model:get_diff()
   local lines, lines_err = self:get_lines(status, type)
   if lines_err then return nil, lines_err end
 
+  local layout_type = self:get_layout_type()
+
+  if type == 'unmerged' then
+    loop.free_textlock()
+    local conflicts = git_conflict.parse(lines)
+    local diff = Diff():generate(nil, lines, layout_type, { conflicts = conflicts })
+    self.state.diffs[cache_key] = diff
+
+    return diff
+  end
+
   local hunks, hunks_err = self:get_hunks(status, type, lines)
   if hunks_err then return nil, hunks_err end
 
   loop.free_textlock()
-  local layout_type = self:get_layout_type()
   local is_deleted = status:has_either('DD')
   local diff = Diff():generate(hunks, lines, layout_type, { is_deleted = is_deleted })
   self.state.diffs[cache_key] = diff

@@ -92,6 +92,13 @@ return Config({
     scene = {
       add = 'GitSignsAddLn',
       remove = 'GitSignsDeleteLn',
+      conflict_current_mark = 'GitConflictCurrentMark',
+      conflict_current = 'GitConflictCurrent',
+      conflict_middle = 'GitConflictMiddle',
+      conflict_incoming_mark = 'GitConflictIncomingMark',
+      conflict_incoming = 'GitConflictIncoming',
+      conflict_ancestor_mark = 'GitConflictAncestorMark',
+      conflict_ancestor = 'GitConflictAncestor'
     },
     main = {
       add = 'GitSignsAdd',

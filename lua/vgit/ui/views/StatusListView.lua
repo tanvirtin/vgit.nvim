@@ -137,25 +137,6 @@ function StatusListView:toggle_current_list_item()
   component:unlock():set_title(self.state.title):set_list(self.state.folds):sync():lock()
 end
 
-function StatusListView:render()
-  local entries = self.props.entries()
-
-  local folds = {}
-  for category in pairs(entries) do
-    local entry = entries[category]
-    folds[#folds + 1] = {
-      open = true,
-      value = category,
-      items = StatusListGenerator(entry):generate({ category = category }),
-    }
-  end
-
-  self.state.folds = folds
-
-  local component = self.scene:get('list')
-  component:unlock():set_title(self.state.title):set_list(folds):sync():lock()
-end
-
 function StatusListView:mount(opts)
   local component = self.scene:get('list')
   component:mount(opts)
@@ -178,6 +159,25 @@ function StatusListView:mount(opts)
     local item = self:move()
     self.event_handlers.on_move(item)
   end)
+end
+
+function StatusListView:render()
+  local entries = self.props.entries()
+
+  local folds = {}
+  for category in pairs(entries) do
+    local entry = entries[category]
+    folds[#folds + 1] = {
+      open = true,
+      value = category,
+      items = StatusListGenerator(entry):generate({ category = category }),
+    }
+  end
+
+  self.state.folds = folds
+
+  local component = self.scene:get('list')
+  component:unlock():set_title(self.state.title):set_list(folds):sync():lock()
 end
 
 return StatusListView

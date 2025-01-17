@@ -93,6 +93,11 @@ function GitLogsView:paint()
   end
 end
 
+function GitLogsView:mount(opts)
+  local component = self.scene:get('selectable_view')
+  component:mount(opts)
+end
+
 function GitLogsView:render()
   local logs = self.props.logs()
   if not logs then return end
@@ -118,11 +123,6 @@ function GitLogsView:render()
   component:unlock():set_lines(rows):focus():lock()
 
   self:paint()
-end
-
-function GitLogsView:mount(opts)
-  local component = self.scene:get('selectable_view')
-  component:mount(opts)
 end
 
 return GitLogsView

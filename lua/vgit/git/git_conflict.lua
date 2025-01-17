@@ -3,26 +3,26 @@ local gitcli = require('vgit.git.gitcli')
 
 local git_conflict = {}
 
-function git_conflict.match_line(line, marker)
+local function match_line(line, marker)
   return line:match(string.format('^%s', marker))
 end
 
 function git_conflict.parse(lines)
-  local conflicts = {}
   local markers = {
     start = '<<<<<<<',
+    ancestor = '|||||||',
     middle = '=======',
     finish = '>>>>>>>',
-    ancestor = '|||||||',
   }
 
+  local conflicts = {}
   local conflict = nil
   local has_start = false
   local has_middle = false
   local has_ancestor = false
 
   for lnum, line in ipairs(lines) do
-    if git_conflict.match_line(line, markers.start) then
+    if match_line(line, markers.start) then
       has_start = true
 
       conflict = {
@@ -33,14 +33,14 @@ function git_conflict.parse(lines)
       }
     end
 
-    if has_start and git_conflict.match_line(line, markers.ancestor) then
+    if has_start and match_line(line, markers.ancestor) then
       has_ancestor = true
 
       conflict.ancestor.top = lnum
       conflict.current.bot = lnum - 1
     end
 
-    if has_start and git_conflict.match_line(line, markers.middle) then
+    if has_start and match_line(line, markers.middle) then
       has_middle = true
 
       if has_ancestor then
@@ -54,10 +54,12 @@ function git_conflict.parse(lines)
       conflict.incoming.top = lnum + 1
     end
 
-    if has_start and has_middle and git_conflict.match_line(line, markers.finish) then
+    if has_start and has_middle and match_line(line, markers.finish) then
       conflict.incoming.bot = lnum
 
-      conflicts[#conflicts + 1] = conflict
+      if has_start and has_middle then
+        conflicts[#conflicts + 1] = conflict
+      end
 
       conflict = nil
       has_start = false

@@ -110,21 +110,11 @@ function Extmark:sign(sign)
   local sign_definition = definitions[name]
   local sign_text = sign_definition.text
 
-  if sign_definition.linehl then
-    local lnum = col + 1
-    local ns_id = string.format('tanvirtin/vgit.nvim/hunk/signs/%s', self.bufnr)
-    return pcall(vim.fn.sign_place, col + 1, ns_id, name, self.bufnr, {
-      id = lnum,
-      lnum = lnum,
-      buffer = self.bufnr,
-      priority = priority,
-    })
-  end
-
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, col, 0, {
     id = id,
     sign_text = sign_text,
     sign_hl_group = sign_definition.texthl,
+    line_hl_group = sign_definition.linehl,
     priority = priority,
   })
 end

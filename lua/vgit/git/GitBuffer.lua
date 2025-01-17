@@ -150,6 +150,10 @@ function GitBuffer:get_hunks()
   return self.git_object.hunks
 end
 
+function GitBuffer:get_conflicts()
+  return self.state.conflicts
+end
+
 function GitBuffer:blame(lnum)
   local blame, err = self.git_object:blame(lnum)
   if blame then self:set_state({ blames = { [lnum] = blame } }) end
@@ -161,7 +165,7 @@ function GitBuffer:blames()
 end
 
 function GitBuffer:get_conflict(lnum)
-  local conflicts = self.state.conflicts
+  local conflicts = self:get_conflicts()
   return utils.list.find(conflicts, function(conflict)
     local top = conflict.current.top
     local bot = conflict.incoming.bot
@@ -266,9 +270,9 @@ function GitBuffer:render_conflict_help_text(conflict)
 end
 
 function GitBuffer:render_conflict(conflict)
-  local middle = conflict.middle
   local current = conflict.current
   local ancestor = conflict.ancestor
+  local middle = conflict.middle
   local incoming = conflict.incoming
 
   self.conflict_extmark:sign({
@@ -288,6 +292,19 @@ function GitBuffer:render_conflict(conflict)
       col = lnum - 1,
       name = 'GitConflictCurrent',
     })
+  end
+
+  if ancestor and not utils.list.is_empty(ancestor) then
+    self.conflict_extmark:sign({
+      col = ancestor.top - 1,
+      name = 'GitConflictAncestorMark',
+    })
+    for lnum = ancestor.top + 1, ancestor.bot do
+      self.conflict_extmark:sign({
+        col = lnum - 1,
+        name = 'GitConflictAncestor',
+      })
+    end
   end
 
   for lnum = middle.top, middle.bot do
@@ -317,19 +334,6 @@ function GitBuffer:render_conflict(conflict)
     pos = 'eol',
   })
 
-  if ancestor and not utils.list.is_empty(ancestor) then
-    self.conflict_extmark:sign({
-      col = ancestor.top - 1,
-      name = 'GitConflictAncestorMark',
-    })
-    for lnum = ancestor.top + 1, ancestor.bot do
-      self.conflict_extmark:sign({
-        col = lnum - 1,
-        name = 'GitConflictAncestor',
-      })
-    end
-  end
-
   return self
 end
 
@@ -338,7 +342,9 @@ function GitBuffer:render_conflicts(top, bot)
   bot = bot or -1
 
   self:clear_conflicts(top, bot)
-  utils.list.each(self.state.conflicts, function(conflict)
+
+  local conflicts = self:get_conflicts()
+  utils.list.each(conflicts, function(conflict)
     self:render_conflict_help_text(conflict)
     self:render_conflict(conflict)
   end)

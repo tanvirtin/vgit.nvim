@@ -1,4 +1,3 @@
-local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Window = require('vgit.core.Window')
 local Object = require('vgit.core.Object')
@@ -60,7 +59,6 @@ end
 function LiveConflict:register_events()
   git_buffer_store.on({ 'attach', 'reload', 'change', 'sync' }, function(buffer)
     buffer:conflicts()
-    loop.free_textlock()
     buffer:render_conflicts()
   end)
 

@@ -39,40 +39,14 @@ function Model:toggle_staged()
   return is_staged
 end
 
-function Model:get_lines(filename, status)
+function Model:get_lines(filename)
   if self:is_staged() then return self.git_object:lines() end
-
-  if status and status:is_unmerged() then
-    if status:has_both('UD') then return self.git_object:lines(':2') end
-    if status:has_both('DU') then return self.git_object:lines(':3') end
-    local log, log_err = self.git_object:log({ rev = 'HEAD' })
-    if log_err then return nil, log_err end
-    if not log then return nil, { 'failed to find log at HEAD' } end
-    return self.git_object:lines(log.commit_hash)
-  end
-
   loop.free_textlock()
   return fs.read_file(filename)
 end
 
-function Model:get_hunks(status, lines)
+function Model:get_hunks(lines)
   if self:is_staged() then return self.git_object:list_hunks({ staged = true }) end
-
-  if status and status:is_unmerged() then
-    if status:has_both('UD') then return self.git_object:list_hunks({ lines = lines, deleted = true }) end
-    if status:has_both('DU') then return self.git_object:list_hunks({ lines = lines, untracked = true }) end
-    if status:has_either('DD') then return self.git_object:list_hunks({ lines = lines, deleted = true }) end
-    local head_log, head_log_err = self.git_object:log({ rev = 'HEAD' })
-    if head_log_err then return nil, head_log_err end
-    if not head_log then return nil, { 'failed to find head log' } end
-    local conflict_type, conflict_type_err = git_conflict.status(self.git_object.reponame)
-    if conflict_type_err then return nil, conflict_type_err end
-    local merge_log, merge_log_err = self.git_object:log({ rev = conflict_type })
-    if not merge_log then return nil, { 'failed to find merge log' } end
-    if merge_log_err then return nil, merge_log_err end
-    return self.git_object:list_hunks({ parent = head_log.commit_hash, current = merge_log.commit_hash })
-  end
-
   return self.git_object:live_hunks(lines)
 end
 
@@ -89,13 +63,19 @@ function Model:fetch(filename)
 
   local status = self.git_object:status()
 
-  local lines, lines_err = self:get_lines(filename, status, opts)
+  local lines, lines_err = self:get_lines(filename)
   if lines_err then return nil, lines_err end
 
-  local hunks, hunks_err = self:get_hunks(status, lines, opts)
+  local layout_type = self:get_layout_type()
+  if status and status:is_unmerged() then
+    local conflicts = git_conflict.parse(lines)
+    self.state.diff = Diff():generate(nil, lines, layout_type, { conflicts = conflicts })
+    return self.state.diff
+  end
+  local hunks, hunks_err = self:get_hunks(lines)
   if hunks_err then return nil, hunks_err end
 
-  self.state.diff = Diff():generate(hunks, lines, self:get_layout_type())
+  self.state.diff = Diff():generate(hunks, lines, layout_type)
 
   return self.state.diff
 end

@@ -127,7 +127,7 @@ git_buffer_store.dispatch = function(git_buffer, event_type, ...)
   assertion.assert(handlers, 'invalid event -- ' .. '"' .. event_type .. '"')
 
   for _, handler in pairs(handlers) do
-    handler(git_buffer, ...)
+    handler(git_buffer, event_type, ...)
   end
 end
 

@@ -113,7 +113,7 @@ function DiffView:set_keymap(configs)
   end)
 end
 
-function DiffView:paint_word(component_type, line_changes, lnum)
+function DiffView:render_word_diff(component_type, line_changes, lnum)
   local lnum_change = line_changes.lnum_change
   if not lnum_change then return end
 
@@ -149,7 +149,7 @@ function DiffView:paint_word(component_type, line_changes, lnum)
   })
 end
 
-function DiffView:paint_line(component_type, line_changes, lnum)
+function DiffView:render_line_diff(component_type, line_changes, lnum)
   local line_number_hl = 'GitLineNr'
   local signs_usage_setting = signs_setting:get('usage')
   local scene_signs = signs_usage_setting.scene
@@ -181,28 +181,38 @@ function DiffView:paint_line(component_type, line_changes, lnum)
   end
 end
 
-function DiffView:apply_paint_instructions(component_type, line_changes, lnum)
-  self:paint_line(component_type, line_changes, lnum)
-  self:paint_word(component_type, line_changes, lnum)
-end
+function DiffView:render_diff(top, bot)
+  top = top or 1
+  bot = bot or #self.state.current_lines_changes
 
-function DiffView:apply_brush(top, bot)
   local current_lines_changes = self.state.current_lines_changes
   local previous_lines_changes = self.state.previous_lines_changes
 
-  for i = top, bot do
-    if self.props.layout_type() == 'split' and previous_lines_changes and previous_lines_changes[i] then
-      self:apply_paint_instructions('previous', previous_lines_changes[i], i)
+  for lnum = top, bot do
+    if self.props.layout_type() == 'split' and previous_lines_changes and previous_lines_changes[lnum] then
+      local component_type = 'previous'
+      local line_changes = previous_lines_changes[lnum]
+
+      self:render_line_diff(component_type, line_changes, lnum)
+      self:render_word_diff(component_type, line_changes, lnum)
     end
 
-    if current_lines_changes and current_lines_changes[i] then
-      self:apply_paint_instructions('current', current_lines_changes[i], i)
+    if current_lines_changes and current_lines_changes[lnum] then
+      local component_type = 'current'
+      local line_changes = current_lines_changes[lnum]
+
+      self:render_line_diff(component_type, line_changes, lnum)
+      self:render_word_diff(component_type, line_changes, lnum)
     end
   end
 end
 
-function DiffView:paint()
-  return self:apply_brush(1, #self.state.current_lines_changes)
+function DiffView:render_unified_conflicts(conflicts)
+  local component = self.scene:get('current')
+
+  utils.list.each(conflicts, function(conflict)
+
+  end)
 end
 
 function DiffView:reset_cursor()
@@ -618,6 +628,13 @@ function DiffView:move_to_hunk(mark_index, pos)
   self:notify(msg)
 end
 
+function DiffView:mount()
+  if self.props.layout_type() == 'split' then self.scene:get('previous'):mount() end
+
+  self.scene:get('current'):mount()
+  self.state = DiffView:get_initial_state()
+end
+
 function DiffView:render()
   local ok, msg = pcall(function()
     loop.free_textlock()
@@ -640,17 +657,10 @@ function DiffView:render()
     self:render_filetype()
     self:render_lines()
     self:render_line_numbers()
-    self:paint()
+    self:render_diff()
   end)
 
   if not ok then console.debug.error(msg) end
-end
-
-function DiffView:mount()
-  if self.props.layout_type() == 'split' then self.scene:get('previous'):mount() end
-
-  self.scene:get('current'):mount()
-  self.state = DiffView:get_initial_state()
 end
 
 return DiffView

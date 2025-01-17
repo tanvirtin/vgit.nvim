@@ -76,13 +76,6 @@ function TableView:get_current_row()
   return entries[lnum]
 end
 
-function TableView:render()
-  local entries = self.props.entries()
-  if not entries then return end
-
-  self.scene:get('table'):unlock():render_rows(entries, self.props.row):focus():set_lnum(self.state.lnum):lock()
-end
-
 function TableView:mount(opts)
   local component = self.scene:get('table')
   component:mount(opts)
@@ -105,6 +98,13 @@ function TableView:mount(opts)
     local lnum = self:move()
     self.event_handlers.on_move(lnum)
   end)
+end
+
+function TableView:render()
+  local entries = self.props.entries()
+  if not entries then return end
+
+  self.scene:get('table'):unlock():render_rows(entries, self.props.row):focus():set_lnum(self.state.lnum):lock()
 end
 
 return TableView

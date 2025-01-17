@@ -60,16 +60,16 @@ function SimpleView:get_lines()
   return self.scene:get('simple_view'):get_lines()
 end
 
+function SimpleView:mount(opts)
+  self.scene:get('simple_view'):mount(opts)
+end
+
 function SimpleView:render()
   local lines = self.props.lines()
   if not lines then return end
 
   self:set_title()
   self.scene:get('simple_view'):unlock():set_lines(lines):lock()
-end
-
-function SimpleView:mount(opts)
-  self.scene:get('simple_view'):mount(opts)
 end
 
 return SimpleView

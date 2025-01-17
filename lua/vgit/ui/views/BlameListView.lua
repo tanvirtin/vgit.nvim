@@ -75,6 +75,29 @@ function BlameListView:get_current_row()
   return entries[lnum]
 end
 
+function BlameListView:mount(opts)
+  local component = self:get_component()
+  component:mount(opts)
+
+  if opts.event_handlers then self.event_handlers = utils.object.assign(self.event_handlers, opts.event_handlers) end
+
+  self:set_keymap({
+    {
+      mode = 'n',
+      key = '<enter>',
+      handler = loop.coroutine(function()
+        local row = self:get_current_row()
+        if not row then return end
+        self.event_handlers.on_enter(row)
+      end),
+    },
+  })
+  component:on('CursorMoved', function()
+    local lnum = self:move()
+    self.event_handlers.on_move(lnum)
+  end)
+end
+
 function BlameListView:render()
   local entries = self.props.entries()
   if not entries then return end
@@ -129,29 +152,6 @@ function BlameListView:render()
   end)
 
   component:focus():set_lnum(self.state.lnum):lock()
-end
-
-function BlameListView:mount(opts)
-  local component = self:get_component()
-  component:mount(opts)
-
-  if opts.event_handlers then self.event_handlers = utils.object.assign(self.event_handlers, opts.event_handlers) end
-
-  self:set_keymap({
-    {
-      mode = 'n',
-      key = '<enter>',
-      handler = loop.coroutine(function()
-        local row = self:get_current_row()
-        if not row then return end
-        self.event_handlers.on_enter(row)
-      end),
-    },
-  })
-  component:on('CursorMoved', function()
-    local lnum = self:move()
-    self.event_handlers.on_move(lnum)
-  end)
 end
 
 return BlameListView
