@@ -332,8 +332,13 @@ function ProjectDiffScreen:focus_relative_buffer_entry(buffer)
     return
   end
 
-  self:move_to(function(status)
+  local list_item = self:move_to(function(status)
     return status.filename == filename
+  end)
+  if list_item then return end
+
+  self:move_to(function()
+    return true
   end)
 end
 

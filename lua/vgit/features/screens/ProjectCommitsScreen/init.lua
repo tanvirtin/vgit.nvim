@@ -8,7 +8,6 @@ local console = require('vgit.core.console')
 local git_repo = require('vgit.git.git_repo')
 local git_show = require('vgit.git.git_show')
 local DiffView = require('vgit.ui.views.DiffView')
-local StatusListGenerator = require('vgit.ui.StatusListGenerator')
 local StatusListView = require('vgit.ui.views.StatusListView')
 local Model = require('vgit.features.screens.ProjectCommitsScreen.Model')
 
