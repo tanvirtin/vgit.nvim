@@ -25,9 +25,9 @@ function Command:constructor()
       'buffer_stage',
       'buffer_unstage',
       'buffer_reset',
-      'buffer_conflict_accept_current_change',
-      'buffer_conflict_accept_incoming_change',
-      'buffer_conflict_accept_both_changes',
+      'buffer_conflict_accept_both',
+      'buffer_conflict_accept_current',
+      'buffer_conflict_accept_incoming',
 
       'project_logs_preview',
       'project_stash_preview',

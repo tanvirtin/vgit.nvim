@@ -154,6 +154,25 @@ function GitBuffer:get_conflicts()
   return self.state.conflicts
 end
 
+function GitBuffer:get_conflict(lnum)
+  local conflicts = self:get_conflicts()
+  return utils.list.find(conflicts, function(conflict)
+    local top = conflict.current.top
+    local bot = conflict.incoming.bot
+    return lnum >= top and lnum <= bot
+  end)
+end
+
+function GitBuffer:get_conflict_marks()
+  local conflicts = self:get_conflicts()
+  return utils.list.map(conflicts, function(conflict)
+    return {
+      top = conflict.current.top,
+      bot = conflict.incoming.bot
+    }
+  end)
+end
+
 function GitBuffer:blame(lnum)
   local blame, err = self.git_file:blame(lnum)
   if blame then self:set_state({ blames = { [lnum] = blame } }) end
@@ -162,15 +181,6 @@ end
 
 function GitBuffer:blames()
   return self.git_file:blames()
-end
-
-function GitBuffer:get_conflict(lnum)
-  local conflicts = self:get_conflicts()
-  return utils.list.find(conflicts, function(conflict)
-    local top = conflict.current.top
-    local bot = conflict.incoming.bot
-    return lnum >= top and lnum <= bot
-  end)
 end
 
 function GitBuffer:conflicts()
@@ -232,16 +242,16 @@ function GitBuffer:render_conflict_help_text(conflict)
 
   local help_text = ''
 
-  local accept_current_change_keymap = utils.list.find(keymap.find('conflict_accept_current_change'), function(binding)
+  local accept_current_change_keymap = utils.list.find(keymap.find('conflict_accept_current'), function(binding)
     return binding.mode == 'n'
   end)
   local accept_incoming_change_keymap = utils.list.find(
-    keymap.find('conflict_accept_incoming_change'),
+    keymap.find('conflict_accept_incoming'),
     function(binding)
       return binding.mode == 'n'
     end
   )
-  local accept_both_changes_keymap = utils.list.find(keymap.find('conflict_accept_both_changes'), function(binding)
+  local accept_both_changes_keymap = utils.list.find(keymap.find('conflict_accept_both'), function(binding)
     return binding.mode == 'n'
   end)
 

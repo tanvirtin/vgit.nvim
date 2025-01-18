@@ -13,6 +13,7 @@ local signs_setting = require('vgit.settings.signs')
 local screen_manager = require('vgit.ui.screen_manager')
 local symbols_setting = require('vgit.settings.symbols')
 local diff_preview = require('vgit.settings.diff_preview')
+local Conflicts = require('vgit.features.buffer.Conflicts')
 local LiveBlame = require('vgit.features.buffer.LiveBlame')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local LiveGutter = require('vgit.features.buffer.LiveGutter')
@@ -24,6 +25,7 @@ local project_commit_preview_setting = require('vgit.settings.project_commit_pre
 
 local hunks = Hunks()
 local command = Command()
+local conflicts = Conflicts()
 local live_blame = LiveBlame()
 local live_gutter = LiveGutter()
 local live_conflict = LiveConflict()
@@ -40,10 +42,12 @@ local settings = {
 local controls = {
   hunk_up = loop.coroutine(function()
     hunks:move_up()
+    conflicts:move_up()
     return screen_manager.dispatch_action('hunk_up')
   end),
   hunk_down = loop.coroutine(function()
     hunks:move_down()
+    conflicts:move_down()
     return screen_manager.dispatch_action('hunk_down')
   end),
 }
@@ -82,20 +86,14 @@ local buffer = {
   hunk_staged_preview = loop.coroutine(function()
     screen_manager.create('diff_hunk_screen', { is_staged = true })
   end),
-  conflict_accept_current_change = loop.coroutine(function()
-    local buffer = git_buffer_store:current()
-    if not buffer then return end
-    live_conflict:conflict_accept_current_change(buffer)
+  conflict_accept_both = loop.coroutine(function()
+    conflicts:accept_both()
   end),
-  conflict_accept_incoming_change = loop.coroutine(function()
-    local buffer = git_buffer_store:current()
-    if not buffer then return end
-    live_conflict:conflict_accept_incoming_change(buffer)
+  conflict_accept_current = loop.coroutine(function()
+    conflicts:accept_current()
   end),
-  conflict_accept_both_changes = loop.coroutine(function()
-    local buffer = git_buffer_store:current()
-    if not buffer then return end
-    live_conflict:conflict_accept_both_changes(buffer)
+  conflict_accept_incoming = loop.coroutine(function()
+    conflicts:accept_incoming()
   end),
 }
 
@@ -231,9 +229,9 @@ return {
   buffer_history_preview = buffer.history_preview,
   buffer_hunk_staged_preview = buffer.hunk_staged_preview,
   buffer_diff_staged_preview = buffer.diff_staged_preview,
-  buffer_conflict_accept_current_change = buffer.conflict_accept_current_change,
-  buffer_conflict_accept_incoming_change = buffer.conflict_accept_incoming_change,
-  buffer_conflict_accept_both_changes = buffer.conflict_accept_both_changes,
+  buffer_conflict_accept_both = buffer.conflict_accept_both,
+  buffer_conflict_accept_current = buffer.conflict_accept_current,
+  buffer_conflict_accept_incoming = buffer.conflict_accept_incoming,
   project_diff_preview = project.diff_preview,
   project_logs_preview = project.logs_preview,
   project_stash_preview = project.stash_preview,

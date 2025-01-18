@@ -2,25 +2,27 @@ local live_gutter_setting = require('vgit.settings.live_gutter')
 
 local navigation = {}
 
-function navigation.hunk_up(window, hunks)
+function navigation.up(window, marks)
   local new_lnum = nil
   local selected = nil
   local lnum = window:get_lnum()
   local is_edge_navigation = live_gutter_setting:get('edge_navigation')
 
-  -- We loop backwards, to find the most immediate hunk before the current lnum.
-  for i = #hunks, 1, -1 do
-    local hunk = hunks[i]
+  -- We loop backwards, to find the most immediate mark before the current lnum.
+  for i = #marks, 1, -1 do
+    local mark = marks[i]
+    local top = mark.top
+    local bot = mark.bot
 
-    -- If lnum > hunk.bot, that's hunk we must jump to.
-    if lnum > hunk.bot then
-      new_lnum = hunk.bot
+    -- If lnum > mark.bot, that's mark we must jump to.
+    if lnum > bot then
+      new_lnum = bot
       selected = i
       break
-      -- This scenario will only occur if we are within a hunk's top and bot range.
-      -- lnum <= hunk.bot is implied here.
-    elseif is_edge_navigation and lnum > hunk.top then
-      new_lnum = hunk.top
+      -- This scenario will only occur if we are within a mark's top and bot range.
+      -- lnum <= mark.bot is implied here.
+    elseif is_edge_navigation and lnum > top then
+      new_lnum = top
       selected = i
       break
     end
@@ -33,10 +35,10 @@ function navigation.hunk_up(window, hunks)
 
     return selected
   else
-    local hunk = hunks[#hunks]
-    new_lnum = is_edge_navigation and hunk.bot or hunk.top
+    local mark = marks[#marks]
+    new_lnum = is_edge_navigation and mark.bot or mark.top
 
-    selected = #hunks
+    selected = #marks
 
     if new_lnum < 1 then
       new_lnum = 1
@@ -48,25 +50,27 @@ function navigation.hunk_up(window, hunks)
   end
 end
 
-function navigation.hunk_down(window, hunks)
+function navigation.down(window, marks)
   local new_lnum = nil
   local selected = nil
   local lnum = window:get_lnum()
   local is_edge_navigation = live_gutter_setting:get('edge_navigation')
 
-  for i = 1, #hunks do
-    local hunk = hunks[i]
+  for i = 1, #marks do
+    local mark = marks[i]
+    local top = mark.top
+    local bot = mark.bot
 
-    -- If our current lnum is < hunk.top, we have encounted a hunk whose top
-    -- is greater than our hunk, meaning it's the hunk we should jump to.
-    if lnum < hunk.top then
-      new_lnum = hunk.top
+    -- If our current lnum is < mark.top, we have encounted a mark whose top
+    -- is greater than our mark, meaning it's the mark we should jump to.
+    if lnum < top then
+      new_lnum = top
       selected = i
       break
-      -- This scenario will occur if we are within a hunk's top and bot range.
-      -- lnum >= hunk.top is implied here.
-    elseif is_edge_navigation and lnum < hunk.bot then
-      new_lnum = hunk.bot
+      -- This scenario will occur if we are within a mark's top and bot range.
+      -- lnum >= mark.top is implied here.
+    elseif is_edge_navigation and lnum < bot then
+      new_lnum = bot
       selected = i
       break
     end
@@ -79,7 +83,8 @@ function navigation.hunk_down(window, hunks)
 
     return selected
   else
-    new_lnum = hunks[1].top
+    local first_mark = marks[1]
+    new_lnum = first_mark.top
     selected = 1
 
     if new_lnum < 1 then

@@ -146,9 +146,9 @@ function Model:get_lines(status, type)
   local filename = status.filename
   local reponame = self.state.reponame
 
+  if status:has('D ') then return git_show.lines(reponame, filename, 'HEAD') end
   if type == 'unmerged' then return fs.read_file(self:get_filepath()) end
   if type == 'staged' or status:has(' D') then return git_show.lines(reponame, filename) end
-  if status:has('D ') then return git_show.lines(reponame, filename, 'HEAD') end
 
   return fs.read_file(self:get_filepath())
 end

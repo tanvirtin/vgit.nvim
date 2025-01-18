@@ -68,7 +68,7 @@ function Buffer:render(top, bot)
 end
 
 function Buffer:is_in_disk()
-  return fs.exists(self:get_name())
+  return self:is_valid() and fs.exists(self:get_name())
 end
 
 function Buffer:get_name()

@@ -2,8 +2,8 @@ local loop = require('vgit.core.loop')
 local Window = require('vgit.core.Window')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
+local navigation = require('vgit.core.navigation')
 local git_buffer_store = require('vgit.git.git_buffer_store')
-local navigation = require('vgit.features.buffer.Hunks.navigation')
 
 local Hunks = Object:extend()
 
@@ -18,10 +18,10 @@ function Hunks:move_up()
   if not buffer then return end
 
   local hunks = buffer:get_hunks()
-  if hunks and #hunks ~= 0 then
-    local window = Window(0)
-    navigation.hunk_up(window, hunks)
-  end
+  if not hunks or #hunks == 0 then return end
+
+  local window = Window(0)
+  navigation.up(window, hunks)
 end
 
 function Hunks:move_down()
@@ -29,10 +29,10 @@ function Hunks:move_down()
   if not buffer then return end
 
   local hunks = buffer:get_hunks()
-  if hunks and #hunks ~= 0 then
-    local window = Window(0)
-    navigation.hunk_down(window, hunks)
-  end
+  if not hunks or #hunks == 0 then return end
+
+  local window = Window(0)
+  navigation.down(window, hunks)
 end
 
 function Hunks:cursor_hunk()
