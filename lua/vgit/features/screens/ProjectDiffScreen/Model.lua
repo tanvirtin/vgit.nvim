@@ -7,7 +7,7 @@ local git_log = require('vgit.git.git_log')
 local git_show = require('vgit.git.git_show')
 local git_repo = require('vgit.git.git_repo')
 local git_hunks = require('vgit.git.git_hunks')
-local GitObject = require('vgit.git.GitObject')
+local GitFile = require('vgit.git.GitFile')
 local git_stager = require('vgit.git.git_stager')
 local git_status = require('vgit.git.git_status')
 local git_conflict = require('vgit.git.git_conflict')
@@ -203,25 +203,25 @@ function Model:get_diff()
 end
 
 function Model:stage_hunk(filename, hunk)
-  local git_object = GitObject(filename)
-  if not git_object:is_tracked() then return git_object:stage() end
+  local git_file = GitFile(filename)
+  if not git_file:is_tracked() then return git_file:stage() end
 
-  local file, err = git_object:status()
+  local file, err = git_file:status()
   if err then return nil, err end
 
-  if file:has('D ') or file:has(' D') then return git_object:stage() end
-  return git_object:stage_hunk(hunk)
+  if file:has('D ') or file:has(' D') then return git_file:stage() end
+  return git_file:stage_hunk(hunk)
 end
 
 function Model:unstage_hunk(filename, hunk)
-  local git_object = GitObject(filename)
-  if not git_object:is_tracked() then return git_object:unstage() end
+  local git_file = GitFile(filename)
+  if not git_file:is_tracked() then return git_file:unstage() end
 
-  local file, err = git_object:status()
+  local file, err = git_file:status()
   if err then return nil, err end
 
-  if file:has('D ') or file:has(' D') then return git_object:unstage(filename) end
-  return git_object:unstage_hunk(hunk)
+  if file:has('D ') or file:has(' D') then return git_file:unstage(filename) end
+  return git_file:unstage_hunk(hunk)
 end
 
 function Model:stage_file(filename)

@@ -3,7 +3,7 @@ local loop = require('vgit.core.loop')
 local Diff = require('vgit.core.Diff')
 local Object = require('vgit.core.Object')
 local git_repo = require('vgit.git.git_repo')
-local GitObject = require('vgit.git.GitObject')
+local GitFile = require('vgit.git.GitFile')
 local git_stager = require('vgit.git.git_stager')
 local git_conflict = require('vgit.git.git_conflict')
 
@@ -11,7 +11,7 @@ local Model = Object:extend()
 
 function Model:constructor(opts)
   return {
-    git_object = nil,
+    git_file = nil,
     state = {
       diff = nil,
       is_hunk = opts.is_hunk,
@@ -40,28 +40,28 @@ function Model:toggle_staged()
 end
 
 function Model:get_lines(filename)
-  if self:is_staged() then return self.git_object:lines() end
+  if self:is_staged() then return self.git_file:lines() end
   loop.free_textlock()
   return fs.read_file(filename)
 end
 
 function Model:get_hunks(lines)
-  if self:is_staged() then return self.git_object:list_hunks({ staged = true }) end
-  return self.git_object:live_hunks(lines)
+  if self:is_staged() then return self.git_file:list_hunks({ staged = true }) end
+  return self.git_file:live_hunks(lines)
 end
 
 function Model:fetch(filename)
   if not fs.exists(filename) then return nil, { 'Buffer has no diff associated with it' } end
 
-  self.git_object = GitObject(filename)
+  self.git_file = GitFile(filename)
 
-  local has_conflict = self.git_object:has_conflict()
+  local has_conflict = self.git_file:has_conflict()
   if has_conflict and self:is_staged() then
     self.state.diff = nil
     return
   end
 
-  local status = self.git_object:status()
+  local status = self.git_file:status()
 
   local lines, lines_err = self:get_lines(filename)
   if lines_err then return nil, lines_err end
@@ -85,25 +85,25 @@ function Model:get_diff()
 end
 
 function Model:get_filename()
-  return self.git_object:get_filename()
+  return self.git_file:get_filename()
 end
 
 function Model:get_filetype()
-  return self.git_object:get_filetype()
+  return self.git_file:get_filetype()
 end
 
 function Model:stage_hunk(filename, hunk)
-  local git_object = GitObject(filename)
-  if not git_object:is_tracked() then return git_object:stage() end
+  local git_file = GitFile(filename)
+  if not git_file:is_tracked() then return git_file:stage() end
 
-  return git_object:stage_hunk(hunk)
+  return git_file:stage_hunk(hunk)
 end
 
 function Model:unstage_hunk(filename, hunk)
-  local git_object = GitObject(filename)
-  if not git_object:is_tracked() then return git_object:unstage() end
+  local git_file = GitFile(filename)
+  if not git_file:is_tracked() then return git_file:unstage() end
 
-  return git_object:unstage_hunk(hunk)
+  return git_file:unstage_hunk(hunk)
 end
 
 function Model:stage_file(filename)

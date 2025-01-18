@@ -5,13 +5,13 @@ local git_log = require('vgit.git.git_log')
 local git_show = require('vgit.git.git_show')
 local git_repo = require('vgit.git.git_repo')
 local git_hunks = require('vgit.git.git_hunks')
-local GitObject = require('vgit.git.GitObject')
+local GitFile = require('vgit.git.GitFile')
 
 local Model = Object:extend()
 
 function Model:constructor(opts)
   return {
-    git_object = nil,
+    git_file = nil,
     state = {
       diff = nil,
       blame = nil,
@@ -39,10 +39,10 @@ function Model:fetch(filename, lnum, opts)
 
   self:reset()
 
-  self.git_object = GitObject(filename)
+  self.git_file = GitFile(filename)
 
   loop.free_textlock()
-  local blame, err = self.git_object:blame(lnum)
+  local blame, err = self.git_file:blame(lnum)
   if err then return nil, err end
   if not blame then return nil, { 'no blame found' } end
   if blame:is_uncommitted() then return nil, { 'Line is uncommitted' } end
@@ -98,11 +98,11 @@ function Model:get_diff()
 end
 
 function Model:get_filename()
-  return self.git_object:get_filename()
+  return self.git_file:get_filename()
 end
 
 function Model:get_filetype()
-  return self.git_object:get_filetype()
+  return self.git_file:get_filetype()
 end
 
 return Model

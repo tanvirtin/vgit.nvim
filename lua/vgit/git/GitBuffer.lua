@@ -3,8 +3,8 @@ local utils = require('vgit.core.utils')
 local keymap = require('vgit.core.keymap')
 local Buffer = require('vgit.core.Buffer')
 local Extmark = require('vgit.ui.Extmark')
+local GitFile = require('vgit.git.GitFile')
 local git_repo = require('vgit.git.git_repo')
-local GitObject = require('vgit.git.GitObject')
 local signs_setting = require('vgit.settings.signs')
 local live_blame_setting = require('vgit.settings.live_blame')
 
@@ -45,7 +45,7 @@ function GitBuffer:sync()
     config = nil,
     conflicts = {},
   }
-  self.git_object = GitObject(self:get_name())
+  self.git_file = GitFile(self:get_name())
 
   return self
 end
@@ -88,17 +88,17 @@ end
 
 function GitBuffer:config()
   if self.state.config then return self.state.config end
-  local config, err = self.git_object:config()
+  local config, err = self.git_file:config()
   if config then self:set_state({ config = config }) end
   return config, err
 end
 
 function GitBuffer:is_ignored()
-  return self.git_object:is_ignored()
+  return self.git_file:is_ignored()
 end
 
 function GitBuffer:is_tracked()
-  return self.git_object:is_tracked()
+  return self.git_file:is_tracked()
 end
 
 function GitBuffer:is_inside_git_dir()
@@ -106,12 +106,12 @@ function GitBuffer:is_inside_git_dir()
 end
 
 function GitBuffer:generate_status()
-  self:set_var('vgit_status', self.git_object:generate_status())
+  self:set_var('vgit_status', self.git_file:generate_status())
   return self
 end
 
 function GitBuffer:stage_hunk(hunk)
-  local _, err = self.git_object:stage_hunk(hunk)
+  local _, err = self.git_file:stage_hunk(hunk)
   if not err then
     loop.free_textlock()
     self:diff()
@@ -120,7 +120,7 @@ function GitBuffer:stage_hunk(hunk)
 end
 
 function GitBuffer:unstage_hunk(hunk)
-  local _, err = self.git_object:unstage_hunk(hunk)
+  local _, err = self.git_file:unstage_hunk(hunk)
   if not err then
     loop.free_textlock()
     self:diff()
@@ -129,7 +129,7 @@ function GitBuffer:unstage_hunk(hunk)
 end
 
 function GitBuffer:stage()
-  local _, err = self.git_object:stage()
+  local _, err = self.git_file:stage()
   if not err then
     loop.free_textlock()
     self:diff()
@@ -138,7 +138,7 @@ function GitBuffer:stage()
 end
 
 function GitBuffer:unstage()
-  local _, err = self.git_object:unstage()
+  local _, err = self.git_file:unstage()
   if not err then
     loop.free_textlock()
     self:diff()
@@ -147,7 +147,7 @@ function GitBuffer:unstage()
 end
 
 function GitBuffer:get_hunks()
-  return self.git_object.hunks
+  return self.git_file:get_hunks()
 end
 
 function GitBuffer:get_conflicts()
@@ -155,13 +155,13 @@ function GitBuffer:get_conflicts()
 end
 
 function GitBuffer:blame(lnum)
-  local blame, err = self.git_object:blame(lnum)
+  local blame, err = self.git_file:blame(lnum)
   if blame then self:set_state({ blames = { [lnum] = blame } }) end
   return blame, err
 end
 
 function GitBuffer:blames()
-  return self.git_object:blames()
+  return self.git_file:blames()
 end
 
 function GitBuffer:get_conflict(lnum)
@@ -175,20 +175,20 @@ end
 
 function GitBuffer:conflicts()
   local state = self.state
-  if not self.git_object:has_conflict() then
+  if not self.git_file:has_conflict() then
     state.conflicts = {}
     return state.conflicts
   end
   loop.free_textlock()
   local lines = self:get_lines()
-  local conflicts = self.git_object:conflicts(lines)
+  local conflicts = self.git_file:conflicts(lines)
   self:set_state({ conflicts = conflicts })
   return conflicts
 end
 
 function GitBuffer:diff()
   local lines = self:get_lines()
-  local hunks, err = self.git_object:live_hunks(lines)
+  local hunks, err = self.git_file:live_hunks(lines)
   if err then return nil, err end
 
   local sign_types = signs_setting:get('usage').main

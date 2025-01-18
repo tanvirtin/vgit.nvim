@@ -106,7 +106,7 @@ function Hunks:reset_all()
   if not hunks and #hunks == 0 then return end
 
   loop.free_textlock()
-  local lines, err = buffer.git_object:lines()
+  local lines, err = buffer.git_file:lines()
   if err then return console.debug.error(err) end
 
   loop.free_textlock()

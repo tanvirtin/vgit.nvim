@@ -2,13 +2,13 @@ local loop = require('vgit.core.loop')
 local Diff = require('vgit.core.Diff')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local GitObject = require('vgit.git.GitObject')
+local GitFile = require('vgit.git.GitFile')
 
 local Model = Object:extend()
 
 function Model:constructor(opts)
   return {
-    git_object = nil,
+    git_file = nil,
     state = {
       config = nil,
       entries = nil,
@@ -38,12 +38,12 @@ function Model:fetch(filename, opts)
 
   self:reset()
 
-  self.git_object = GitObject(filename)
+  self.git_file = GitFile(filename)
 
-  local entries, err = self.git_object:logs()
+  local entries, err = self.git_file:logs()
   if err then return nil, err end
 
-  local config, err = self.git_object:config()
+  local config, err = self.git_file:config()
   if err then return nil, err end
 
   self.state.config = config
@@ -76,7 +76,7 @@ function Model:get_diff()
 
   if self.state[id] then return self.state[id] end
 
-  local hunks, hunks_err = self.git_object:list_hunks({
+  local hunks, hunks_err = self.git_file:list_hunks({
     parent = parent_hash,
     current = commit_hash,
   })
@@ -84,7 +84,7 @@ function Model:get_diff()
 
   if hunks_err then return nil, hunks_err end
 
-  local lines, lines_err = self.git_object:lines(commit_hash)
+  local lines, lines_err = self.git_file:lines(commit_hash)
   loop.free_textlock()
 
   if lines_err then return nil, lines_err end
@@ -98,11 +98,11 @@ function Model:get_diff()
 end
 
 function Model:get_filename()
-  return self.git_object:get_filename()
+  return self.git_file:get_filename()
 end
 
 function Model:get_filetype()
-  return self.git_object:get_filetype()
+  return self.git_file:get_filetype()
 end
 
 return Model
