@@ -58,10 +58,11 @@ function GitLogsView:select()
 
   if self.state.selected[lnum] then
     self.state.selected[lnum] = nil
-    return
+  else
+    self.state.selected[lnum] = true
   end
 
-  self.state.selected[lnum] = true
+  self:render()
 end
 
 function GitLogsView:has_selection()
@@ -75,22 +76,6 @@ function GitLogsView:get_selected()
   return utils.list.filter(logs, function(_, index)
     return self.state.selected[index] == true
   end)
-end
-
-function GitLogsView:paint()
-  local component = self.scene:get('selectable_view')
-  local num_lines = component:get_line_count()
-
-  for i = 1, num_lines do
-    component:place_extmark_highlight({
-      hl = 'Constant',
-      row = i - 1,
-      col_range = {
-        from = 0,
-        to = 41,
-      },
-    })
-  end
 end
 
 function GitLogsView:mount(opts)
@@ -122,7 +107,18 @@ function GitLogsView:render()
   local component = self.scene:get('selectable_view')
   component:unlock():set_lines(rows):focus():lock()
 
-  self:paint()
+  local num_lines = component:get_line_count()
+  for lnum = 1, num_lines do
+    local is_selected = self.state.selected[lnum]
+    component:place_extmark_highlight({
+      hl = is_selected and 'Keyword' or 'Constant',
+      row = lnum - 1,
+      col_range = {
+        from = 0,
+        to = 41,
+      },
+    })
+  end
 end
 
 return GitLogsView
