@@ -85,7 +85,7 @@ end
 
 function GitLogsView:render()
   local logs = self.props.logs()
-  if not logs then return end
+  if not logs or #logs == 0 then return end
 
   local labels, rows, _ = TableGenerator(
     {

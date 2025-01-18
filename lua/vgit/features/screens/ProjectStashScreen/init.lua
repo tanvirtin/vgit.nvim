@@ -26,11 +26,16 @@ end
 
 function ProjectStashScreen:create(opts)
   loop.free_textlock()
-  local _, err = self.model:fetch(opts)
+  local logs, err = self.model:fetch(opts)
   loop.free_textlock()
 
   if err then
     console.debug.error(err).error(err)
+    return false
+  end
+
+  if not logs or #logs == 0 then
+    console.info('No stash found')
     return false
   end
 
