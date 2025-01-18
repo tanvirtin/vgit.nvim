@@ -124,7 +124,8 @@ function GitFile:live_hunks(current_lines)
   local original_lines, original_lines_err = self:lines()
   if original_lines_err then return nil, original_lines_err end
 
-  self.state.hunks = git_hunks.live(original_lines, current_lines)
+  self.state.hunks = git_hunks.live(self.reponame, original_lines, current_lines)
+
   return self.state.hunks
 end
 
@@ -139,7 +140,9 @@ function GitFile:list_hunks(opts)
     opts.lines = nil
     return git_hunks.custom(lines, opts)
   end
-  return git_hunks.list(self.reponame, self.filename, opts)
+
+  opts.filename = self.filename
+  return git_hunks.list(self.reponame, opts)
 end
 
 return GitFile

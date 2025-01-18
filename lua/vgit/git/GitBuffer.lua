@@ -190,6 +190,7 @@ function GitBuffer:diff()
   local lines = self:get_lines()
   local hunks, err = self.git_file:live_hunks(lines)
   if err then return nil, err end
+  if not hunks then return nil end
 
   local sign_types = signs_setting:get('usage').main
 

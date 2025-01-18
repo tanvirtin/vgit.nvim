@@ -1,10 +1,28 @@
+local fs = require('vgit.core.fs')
 local utils = require('vgit.core.utils')
 local gitcli = require('vgit.git.gitcli')
 local GitHunk = require('vgit.git.GitHunk')
 
 local git_hunks = { algorithm = 'myers' }
 
-function git_hunks.live(original_lines, current_lines)
+function git_hunks.live(reponame, original_lines, current_lines)
+  local lines_limit = 5000
+
+  if #current_lines > lines_limit then
+    local temp_filename_b = fs.tmpname()
+    local temp_filename_a = fs.tmpname()
+
+    fs.write_file(temp_filename_a, original_lines)
+    fs.write_file(temp_filename_b, current_lines)
+
+    local hunks, hunks_err = git_hunks.list(reponame, { filenames = { temp_filename_a, temp_filename_b } })
+
+    fs.remove_file(temp_filename_a)
+    fs.remove_file(temp_filename_b)
+
+    return hunks, hunks_err
+  end
+
   local o_lines_str = ''
   local c_lines_str = ''
   local num_lines = math.max(#original_lines, #current_lines)
@@ -73,7 +91,7 @@ function git_hunks.custom(lines, opts)
   return { hunk }
 end
 
-function git_hunks.list(reponame, filename, opts)
+function git_hunks.list(reponame, opts)
   opts = opts or {}
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -81,7 +99,11 @@ function git_hunks.list(reponame, filename, opts)
   local unmerged = opts.unmerged
   local current = opts.current
   local parent = opts.parent
+  local filename = opts.filename
   local empty_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+
+  local filenames = opts.filenames
+  if filenames and #filenames ~= 2 then error('incorrect number of files provided') end
 
   local args = {
     '-C',
@@ -97,8 +119,9 @@ function git_hunks.list(reponame, filename, opts)
   }
 
   if staged == true then utils.list.concat(args, { '--cached' }) end
-
-  if unmerged == true then
+  if filenames then
+    utils.list.concat(args, { '--no-index' }, filenames)
+  elseif unmerged == true then
     if not parent then return nil, { 'parent is required' } end
     if not current then return nil, { 'current is required' } end
 

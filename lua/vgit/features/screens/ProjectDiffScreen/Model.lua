@@ -158,8 +158,8 @@ function Model:get_hunks(status, type, lines)
   local reponame = self.state.reponame
 
   if status:has_both('??') then return git_hunks.custom(lines, { untracked = true }) end
-  if type == 'staged' then return git_hunks.list(reponame, filename, { staged = true }) end
-  if type == 'unstaged' then return git_hunks.list(reponame, filename) end
+  if type == 'staged' then return git_hunks.list(reponame, { filename = filename, staged = true }) end
+  if type == 'unstaged' then return git_hunks.list(reponame, { filename = filename }) end
 
   return {}
 end

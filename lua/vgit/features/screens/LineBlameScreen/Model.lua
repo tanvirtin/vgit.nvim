@@ -75,7 +75,8 @@ function Model:fetch(filename, lnum, opts)
   if is_deleted then
     hunks = git_hunks.custom(lines, { deleted = true })
   else
-    hunks, hunks_err = git_hunks.list(reponame, filename, {
+    hunks, hunks_err = git_hunks.list(reponame, {
+      filename = filename,
       parent = parent_hash,
       current = commit_hash,
     })

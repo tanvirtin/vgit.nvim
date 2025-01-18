@@ -23,9 +23,14 @@ function list.pick(l, item)
   return l[1]
 end
 
-function list.concat(a, b)
-  for i = 1, #b do
-    a[#a + 1] = b[i]
+function list.concat(a, ...)
+  local lists = { ... }
+
+  for i = 1, #lists do
+    local b = lists[i]
+    for j = 1, #b do
+      a[#a + 1] = b[j]
+    end
   end
 
   return a

@@ -128,7 +128,8 @@ function Model:get_diff()
   loop.free_textlock()
   if lines_err then return nil, lines_err end
 
-  local hunks, hunks_err = git_hunks.list(reponame, filename, {
+  local hunks, hunks_err = git_hunks.list(reponame, {
+    filename = filename,
     parent = parent_hash,
     current = commit_hash,
   })
