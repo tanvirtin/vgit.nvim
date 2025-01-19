@@ -1,5 +1,4 @@
 local loop = require('vgit.core.loop')
-local event = require('vgit.core.event')
 local keymap = require('vgit.core.keymap')
 local scene_setting = require('vgit.settings.scene')
 local DiffScreen = require('vgit.features.screens.DiffScreen')
@@ -39,7 +38,7 @@ function screen_manager.screens.project_logs_screen(...)
 end
 
 function screen_manager.screens.project_stash_screen(...)
-  local project_stash_screen = ProjectStashScreen()
+  local project_stash_screen = ProjectStashScreen({ layout_type = scene_setting:get('diff_preference') })
   return project_stash_screen:create({ ... }), project_stash_screen
 end
 

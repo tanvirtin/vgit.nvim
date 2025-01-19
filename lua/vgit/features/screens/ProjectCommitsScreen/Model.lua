@@ -15,28 +15,26 @@ function Model:constructor(opts)
     shape = nil,
     state = {
       id = nil,
-      lnum = 1,
-      commits = {},
+      diffs = {},
+      statuses = {},
       entries = nil,
-      list_entry_cache = {},
       layout_type = opts.layout_type or 'unified',
     },
   }
 end
 
-function Model:get_layout_type()
-  return self.state.layout_type
-end
-
 function Model:reset()
   self.state = {
     id = nil,
-    lnum = 1,
-    commits = {},
+    diffs = {},
+    statuses = {},
     entries = nil,
-    list_entry_cache = {},
     layout_type = self.state.layout_type,
   }
+end
+
+function Model:get_layout_type()
+  return self.state.layout_type
 end
 
 function Model:fetch(commits, opts)
@@ -47,12 +45,11 @@ function Model:fetch(commits, opts)
   if not commits or #commits == 0 then return nil, { 'No commits specified' } end
   if not git_repo.exists() then return nil, { 'Project has no .git folder' } end
 
-  local data = {}
+  local entries = {}
+  local reponame = git_repo.discover()
 
   for i = 1, #commits do
     local commit = commits[i]
-    loop.free_textlock()
-    local reponame = git_repo.discover()
     local log, err = git_log.get(reponame, commit)
     if err then return nil, err end
     if not log then return nil, { 'No log found for commit' } end
@@ -64,36 +61,36 @@ function Model:fetch(commits, opts)
     })
     if status_err then return nil, status_err end
 
-    data[commit] = utils.list.map(statuses, function(status)
+    entries[commit] = utils.list.map(statuses, function(status)
       local id = utils.math.uuid()
       local entry = {
         id = id,
         log = log,
         status = status,
       }
-      self.state.commits[id] = entry
+      self.state.statuses[id] = entry
 
       return entry
     end)
   end
 
-  self.state.entries = data
+  self.state.entries = entries
 
-  return data
-end
-
-function Model:set_entry_id(id)
-  self.state.id = id
+  return entries
 end
 
 function Model:get_entries()
   return self.state.entries
 end
 
+function Model:set_entry_id(id)
+  self.state.id = id
+end
+
 function Model:get_entry(id)
   if id then self.state.id = id end
 
-  local entry = self.state.commits[self.state.id]
+  local entry = self.state.statuses[self.state.id]
   if not entry then return nil, { 'Item not found' } end
 
   return entry
@@ -115,7 +112,7 @@ function Model:get_diff()
   local parent_hash = log.parent_hash
   local commit_hash = log.commit_hash
 
-  if self.state.commits[id] then return self.state.commits[id] end
+  if self.state.diffs[id] then return self.state.diffs[id] end
 
   local is_deleted = status:has_either('DD')
   local reponame = git_repo.discover()
@@ -139,7 +136,7 @@ function Model:get_diff()
   local layout_type = self:get_layout_type()
   local diff = Diff():generate(hunks, lines, layout_type, { is_deleted = is_deleted })
 
-  self.state.commits[id] = diff
+  self.state.diffs[id] = diff
 
   return diff
 end

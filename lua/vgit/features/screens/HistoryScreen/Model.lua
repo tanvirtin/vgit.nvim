@@ -68,7 +68,7 @@ end
 
 function Model:get_diff()
   local log = self.state.entries[self.state.entry_index]
-  if not log then return nil end
+  if not log then return nil, { 'no log found' } end
 
   local id = log.id
   local parent_hash = log.parent_hash

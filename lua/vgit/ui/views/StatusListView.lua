@@ -150,6 +150,7 @@ function StatusListView:mount(opts)
       handler = loop.coroutine(function()
         local item = self:get_current_list_item()
         if not item then return end
+        self:toggle_current_list_item()
         self.event_handlers.on_enter(item)
       end),
     },
@@ -164,11 +165,17 @@ end
 function StatusListView:render()
   local entries = self.props.entries()
 
+  local open = true
+  local open_by_default = self.config.open_by_default
+  if open_by_default ~= nil then
+    open = open_by_default
+  end
+
   local folds = {}
   for category in pairs(entries) do
     local entry = entries[category]
     folds[#folds + 1] = {
-      open = true,
+      open = open,
       value = category,
       items = StatusListGenerator(entry):generate({ category = category }),
     }

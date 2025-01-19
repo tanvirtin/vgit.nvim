@@ -6,15 +6,11 @@ local git_commit = require('vgit.git.git_commit')
 local Model = Object:extend()
 
 function Model:constructor()
-  return {
-    err = nil,
-    data = nil,
-  }
+  return { state = { data = nil } }
 end
 
 function Model:reset()
-  self.err = nil
-  self.data = nil
+  self.state = { data = nil }
 end
 
 function Model:fetch(opts)
@@ -23,17 +19,17 @@ function Model:fetch(opts)
   self:reset()
 
   local reponame = git_repo.discover()
-  self.data, self.err = git_commit.dry_run(reponame)
+  local data, err = git_commit.dry_run(reponame)
 
-  return self.data, self.err
+  self.state.data = data
+
+  return data, err
 end
 
 function Model:get_lines()
-  if self.err then return nil, self.err end
-
   return utils.list.concat(
     { '' },
-    utils.list.map(self.data, function(line)
+    utils.list.map(self.state.data, function(line)
       return '# ' .. line
     end)
   )

@@ -77,7 +77,7 @@ end
 
 function ProjectCommitsScreen:open_file()
   local filename = self.model:get_filename()
-  if not filename then return self.status_list_view:toggle_current_list_item() end
+  if not filename then return end
 
   if not fs.exists(filename) then
     local commit_hash, commit_err = self.model:get_parent_commit()
@@ -149,12 +149,11 @@ function ProjectCommitsScreen:create(args)
 
   loop.free_textlock()
   self.diff_view:define()
-  self.status_list_view:define()
-  self.status_list_view:set_title('Project commits')
-
   self.diff_view:mount()
   self.diff_view:render()
 
+  self.status_list_view:define()
+  self.status_list_view:set_title('Project commits')
   self.status_list_view:mount({
     event_handlers = {
       on_enter = function()

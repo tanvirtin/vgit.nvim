@@ -280,7 +280,7 @@ end
 
 function ProjectDiffScreen:open_file()
   local filename = self.model:get_filepath()
-  if not filename then return self.status_list_view:toggle_current_list_item() end
+  if not filename then return end
 
   local mark = self.diff_view:get_current_mark_under_cursor()
 
@@ -299,10 +299,10 @@ function ProjectDiffScreen:open_file()
 end
 
 function ProjectDiffScreen:render(on_status_list_render)
-  local data = self.model:fetch()
+  local entries = self.model:fetch()
   loop.free_textlock()
 
-  if utils.object.is_empty(data) then return self:destroy() end
+  if utils.object.is_empty(entries) then return self:destroy() end
 
   self.status_list_view:render()
   if on_status_list_render then on_status_list_render() end

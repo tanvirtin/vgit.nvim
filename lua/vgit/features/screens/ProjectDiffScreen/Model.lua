@@ -3,7 +3,6 @@ local Diff = require('vgit.core.Diff')
 local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local git_log = require('vgit.git.git_log')
 local git_show = require('vgit.git.git_show')
 local git_repo = require('vgit.git.git_repo')
 local git_hunks = require('vgit.git.git_hunks')
@@ -183,7 +182,6 @@ function Model:get_diff()
   local layout_type = self:get_layout_type()
 
   if type == 'unmerged' then
-    loop.free_textlock()
     local conflicts = git_conflict.parse(lines)
     local diff = Diff():generate(nil, lines, layout_type, { conflicts = conflicts })
     self.state.diffs[cache_key] = diff
@@ -254,7 +252,7 @@ end
 function Model:reset_all()
   local reponame = git_repo.discover()
   local _, reset_err = git_repo.reset(reponame)
-  if reset_err then return reset_err end
+  if reset_err then return nil, reset_err end
 
   return git_repo.clean(reponame)
 end
