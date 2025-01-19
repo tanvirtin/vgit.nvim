@@ -109,7 +109,7 @@ function ProjectStashScreen:add()
 end
 
 function ProjectStashScreen:apply(stash_index)
-  local _, err = self.model:apply(stash_index)
+  local result, err = self.model:apply(stash_index)
   loop.free_textlock()
 
   if err then
@@ -117,7 +117,19 @@ function ProjectStashScreen:apply(stash_index)
     return
   end
 
-  console.info('Stash ' .. stash_index .. ' applied')
+  local has_conflict = false
+  utils.list.each(result, function(line)
+    if line:lower():find('conflict') then
+      has_conflict = true
+    end
+  end)
+
+  local msg = 'Stash ' .. stash_index .. ' applied'
+  if has_conflict then
+    msg = msg .. ' with conflict'
+  end
+  console.info(msg)
+
   self:render()
 end
 
@@ -126,13 +138,26 @@ function ProjectStashScreen:pop(stash_index)
   local decision = console.input('Are you sure you want to pop ' .. stash_index .. '? (y/N) '):lower()
   if decision ~= 'yes' and decision ~= 'y' then return end
 
-  local _, err = self.model:pop(stash_index)
+  local result, err = self.model:pop(stash_index)
   loop.free_textlock()
 
   if err then
     console.debug.error(err).error(err)
     return
   end
+
+  local has_conflict = false
+  utils.list.each(result, function(line)
+    if line:lower():find('conflict') then
+      has_conflict = true
+    end
+  end)
+
+  local msg = 'Stash ' .. stash_index .. ' applied'
+  if has_conflict then
+    msg = msg .. ' with conflict'
+  end
+  console.info(msg)
 
   self:render()
 end

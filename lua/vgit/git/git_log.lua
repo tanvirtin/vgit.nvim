@@ -44,29 +44,4 @@ function git_log.list(reponame, filename)
   return logs
 end
 
-function git_log.list_stash(reponame)
-  if not reponame then return nil, { 'reponame is required' } end
-
-  local result, err = gitcli.run({
-    '-C',
-    reponame,
-    '--no-pager',
-    'stash',
-    'list',
-    '--color=never',
-    git_log.format,
-  })
-
-  if err then return nil, err end
-
-  local logs = {}
-  local rev_count = 0
-  for i = 1, #result do
-    rev_count = rev_count + 1
-    logs[i] = GitLog(result[i], rev_count)
-  end
-
-  return logs
-end
-
 return git_log

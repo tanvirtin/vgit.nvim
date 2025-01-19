@@ -2,7 +2,6 @@ local loop = require('vgit.core.loop')
 local Diff = require('vgit.core.Diff')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local git_log = require('vgit.git.git_log')
 local git_show = require('vgit.git.git_show')
 local git_repo = require('vgit.git.git_repo')
 local git_hunks = require('vgit.git.git_hunks')
@@ -47,7 +46,7 @@ function Model:fetch(opts)
   local reponame = git_repo.discover()
   self.state.reponame = reponame
 
-  local logs, err = git_log.list_stash(reponame)
+  local logs, err = git_stash.list(reponame)
   if err then return nil, err end
   if not logs then return nil, { 'No logs found' } end
 
@@ -64,7 +63,7 @@ function Model:fetch(opts)
     })
     if status_err then return nil, status_err end
 
-    local stash_index = 'stash@{' .. num_logs - i .. '}'
+    local stash_index = 'stash@{' .. i - 1 .. '}'
     local title = stash_index .. ': ' .. log.summary
     entries[title] = utils.list.map(statuses, function(status)
       local id = utils.math.uuid()
