@@ -37,22 +37,9 @@ function LineBlameView:set_keymap(configs)
   end)
 end
 
-function LineBlameView:create_committed_lines(blame)
-  local max_line_length = 88
-  local commit_message = blame.commit_message
-
-  if #commit_message > max_line_length then commit_message = commit_message:sub(1, max_line_length) .. '...' end
-
-  local commit_details = blame.commit_hash
-
-  if blame.parent_hash then commit_details = string.format('%s -> %s', blame.parent_hash, blame.commit_hash) end
-
-  return {
-    commit_details,
-    string.format('%s (%s)', blame.author, blame.author_mail),
-    string.format('%s (%s)', blame:age().display, os.date('%c', blame.author_time)),
-    string.format('%s', commit_message),
-  }
+function LineBlameView:mount(opts)
+  local component = self.scene:get('line_blame')
+  component:mount(opts)
 end
 
 function LineBlameView:render()
@@ -60,14 +47,51 @@ function LineBlameView:render()
   if err then return end
 
   local component = self.scene:get('line_blame')
-  local lines = self:create_committed_lines(blame)
+  local max_line_length = 88
+  local commit_message = blame.commit_message
+
+  if #commit_message > max_line_length then commit_message = commit_message:sub(1, max_line_length) .. '...' end
+
+  local commit_details = blame.commit_hash
+  if blame.parent_hash then commit_details = string.format('%s -> %s', blame.parent_hash, blame.commit_hash) end
+
+  local lines = {
+    commit_details,
+    string.format('%s (%s)', blame.author, blame.author_mail),
+    string.format('%s', commit_message),
+  }
 
   component:unlock():set_lines(lines):lock()
-end
+  component:clear_extmarks()
 
-function LineBlameView:mount(opts)
-  local component = self.scene:get('line_blame')
-  component:mount(opts)
+  if lines[1]:match("^[a-f0-9]+%s*%->%s*[a-f0-9]+$") then
+    component:place_extmark_highlight({
+      hl = 'Character',
+      pattern = '^([a-f0-9]+)',
+      row = 0,
+    })
+    component:place_extmark_highlight({
+      hl = 'Constant',
+      pattern = '([a-f0-9]+)$',
+      row = 0,
+    })
+  else
+    component:place_extmark_highlight({
+      hl = 'Constant',
+      row = 0,
+      col_range = {
+        from = 0,
+        to = #lines[1],
+      },
+    })
+  end
+  component:place_extmark_text({
+    text = string.format('%s (%s)', blame:age().display, os.date('%c', blame.author_time)),
+    hl = 'GitComment',
+    row = 1,
+    col = 0,
+    pos = 'eol',
+  })
 end
 
 return LineBlameView

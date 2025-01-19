@@ -35,22 +35,24 @@ function Extmark:highlight(opts)
       local j = 0
       local line = lines[i]
 
-      while true do
-        local from, to = line:find(pattern, j + 1)
-        if from == nil then break end
+      if i - 1 == row or row == nil then
+        while true do
+          local from, to = line:find(pattern, j + 1)
+          if from == nil then break end
 
-        local ok, value = self:highlight({
-          hl = hl,
-          row = i - 1,
-          col_range = {
-            from = from - 1,
-            to = to,
-          },
-        })
-        if not ok then return false, value end
+          local ok, value = self:highlight({
+            hl = hl,
+            row = i - 1,
+            col_range = {
+              from = from - 1,
+              to = to,
+            },
+          })
+          if not ok then return false, value end
 
-        j = from
-        result[#result + 1] = value
+          j = from
+          result[#result + 1] = value
+        end
       end
     end
 

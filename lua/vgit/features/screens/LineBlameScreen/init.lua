@@ -21,6 +21,11 @@ function LineBlameScreen:constructor(opts)
     name = 'Line Blame Screen',
     scene = scene,
     model = model,
+    line_blame_view = LineBlameView(scene, {
+      blame = function()
+        return model:get_blame()
+      end,
+    }, { relative = 'cursor', height = 5 }, { elements = { header = false, footer = false } }),
     diff_view = DiffView(scene, {
       layout_type = function()
         return model:get_layout_type()
@@ -35,11 +40,6 @@ function LineBlameScreen:constructor(opts)
         return model:get_diff()
       end,
     }, { relative = 'cursor', height = '35vh' }, { elements = { header = true, footer = true } }),
-    line_blame_view = LineBlameView(scene, {
-      blame = function()
-        return model:get_blame()
-      end,
-    }, { relative = 'cursor', height = 5 }, { elements = { header = false } }),
   }
 end
 
