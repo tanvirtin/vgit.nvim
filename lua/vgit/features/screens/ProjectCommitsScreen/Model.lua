@@ -61,7 +61,8 @@ function Model:fetch(commits, opts)
     })
     if status_err then return nil, status_err end
 
-    entries[commit] = utils.list.map(statuses, function(status)
+    local title = commit:sub(1, 7) .. ' (' .. log.author_name .. ')' .. ': ' .. log.summary
+    entries[title] = utils.list.map(statuses, function(status)
       local id = utils.math.uuid()
       local entry = {
         id = id,

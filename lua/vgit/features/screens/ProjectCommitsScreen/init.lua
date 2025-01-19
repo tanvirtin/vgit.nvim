@@ -23,6 +23,17 @@ function ProjectCommitsScreen:constructor(opts)
     name = 'Project Commits Screen',
     scene = scene,
     model = model,
+    status_list_view = StatusListView(scene, {
+      entries = function()
+        return model:get_entries()
+      end,
+    }, { height = '25vh' }, {
+      open_folds = false,
+      elements = {
+        header = true,
+        footer = false,
+      },
+    }),
     diff_view = DiffView(scene, {
       layout_type = function()
         return model:get_layout_type()
@@ -37,19 +48,9 @@ function ProjectCommitsScreen:constructor(opts)
         return model:get_diff()
       end,
     }, {
-      col = '25vw',
-      width = '75vw',
+      row = '25vh',
+      height = '100vh',
     }, {
-      elements = {
-        header = true,
-        footer = false,
-      },
-    }),
-    status_list_view = StatusListView(scene, {
-      entries = function()
-        return model:get_entries()
-      end,
-    }, { width = '25vw' }, {
       elements = {
         header = true,
         footer = false,
@@ -153,7 +154,6 @@ function ProjectCommitsScreen:create(args)
   self.diff_view:render()
 
   self.status_list_view:define()
-  self.status_list_view:set_title('Project commits')
   self.status_list_view:mount({
     event_handlers = {
       on_enter = function()

@@ -166,9 +166,9 @@ function StatusListView:render()
   local entries = self.props.entries()
 
   local open = true
-  local open_by_default = self.config.open_by_default
-  if open_by_default ~= nil then
-    open = open_by_default
+  local open_folds = self.config.open_folds
+  if open_folds ~= nil then
+    open = open_folds
   end
 
   local folds = {}

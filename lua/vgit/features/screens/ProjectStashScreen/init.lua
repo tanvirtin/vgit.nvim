@@ -45,7 +45,7 @@ function ProjectStashScreen:constructor(opts)
         header = false,
         footer = false,
       },
-      open_by_default = false,
+      open_folds = false,
     }),
     diff_view = DiffView(scene, {
       layout_type = function()
@@ -58,8 +58,7 @@ function ProjectStashScreen:constructor(opts)
         return model:get_filetype()
       end,
       diff = function()
-        local diff, err = model:get_diff()
-        return diff
+        return model:get_diff()
       end,
     }, {
       row = '20vh',
