@@ -25,10 +25,10 @@ function ProjectStashScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_stash_preview_setting:get('keymaps')
         return {
-          { 'Add', keymaps['add'] },
+          { 'Add',   keymaps['add'] },
           { 'Apply', keymaps['apply'] },
-          { 'Pop', keymaps['pop'] },
-          { 'Drop', keymaps['drop'] },
+          { 'Pop',   keymaps['pop'] },
+          { 'Drop',  keymaps['drop'] },
           { 'Clear', keymaps['clear'] },
         }
       end,
@@ -39,7 +39,7 @@ function ProjectStashScreen:constructor(opts)
       end,
     }, {
       row = 1,
-      height = '20vh'
+      width = '25vw',
     }, {
       elements = {
         header = false,
@@ -61,8 +61,9 @@ function ProjectStashScreen:constructor(opts)
         return model:get_diff()
       end,
     }, {
-      row = '20vh',
-      height = '100vh',
+      row = 1,
+      col = '25vw',
+      width = '75vw',
     }, {
       elements = {
         header = true,
@@ -194,6 +195,14 @@ function ProjectStashScreen:clear()
   self:render()
 end
 
+function ProjectStashScreen:hunk_up()
+  self.diff_view:prev()
+end
+
+function ProjectStashScreen:hunk_down()
+  self.diff_view:next()
+end
+
 function ProjectStashScreen:create(opts)
   loop.free_textlock()
   local _, err = self.model:fetch(opts)
@@ -236,11 +245,12 @@ function ProjectStashScreen:create(opts)
       handler = loop.coroutine(function()
         local list_item = self.status_list_view:get_current_list_item()
         if not list_item then return end
+        local metadata = list_item.metadata
+        if not metadata then return end
 
-        if list_item.items then
-          local stash_index = string.match(list_item.value, "stash@%b{}")
-          if stash_index then self:apply(stash_index) end
-        end
+        local stash_index = metadata.stash_index
+        if not stash_index then return end
+        if stash_index then self:apply(stash_index) end
       end),
     },
     {
@@ -249,11 +259,12 @@ function ProjectStashScreen:create(opts)
       handler = loop.coroutine(function()
         local list_item = self.status_list_view:get_current_list_item()
         if not list_item then return end
+        local metadata = list_item.metadata
+        if not metadata then return end
 
-        if list_item.items then
-          local stash_index = string.match(list_item.value, "stash@%b{}")
-          if stash_index then self:pop(stash_index) end
-        end
+        local stash_index = metadata.stash_index
+        if not stash_index then return end
+        if stash_index then self:pop(stash_index) end
       end),
     },
     {
@@ -262,11 +273,12 @@ function ProjectStashScreen:create(opts)
       handler = loop.coroutine(function()
         local list_item = self.status_list_view:get_current_list_item()
         if not list_item then return end
+        local metadata = list_item.metadata
+        if not metadata then return end
 
-        if list_item.items then
-          local stash_index = string.match(list_item.value, "stash@%b{}")
-          if stash_index then self:drop(stash_index) end
-        end
+        local stash_index = metadata.stash_index
+        if not stash_index then return end
+        if stash_index then self:drop(stash_index) end
       end),
     },
     {

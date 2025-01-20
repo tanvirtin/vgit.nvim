@@ -74,9 +74,9 @@ end
 
 function StatusListView:find_status(callback)
   return self:find_list_item(function(node, lnum)
-    local status = node.path and node.path.status or nil
+    local status = node.entry and node.entry.status or nil
     if not status then return false end
-    local entry_type = node.path.type
+    local entry_type = node.entry.type
     return callback(status, entry_type, lnum) == true
   end)
 end
@@ -84,9 +84,9 @@ end
 function StatusListView:each_status(callback)
   local component = self.scene:get('list')
   component:each_list_item(function(node, lnum)
-    local status = node.path and node.path.status or nil
+    local status = node.entry and node.entry.status or nil
     if not status then return false end
-    local entry_type = node.path.type
+    local entry_type = node.entry.type
     callback(status, entry_type, lnum)
   end)
 end
@@ -172,13 +172,24 @@ function StatusListView:render()
   end
 
   local folds = {}
-  for category in pairs(entries) do
-    local entry = entries[category]
-    folds[#folds + 1] = {
-      open = open,
-      value = category,
-      items = StatusListGenerator(entry):generate({ category = category }),
-    }
+  if utils.list.is_list(entries) then
+    for _, entry in ipairs(entries) do
+      folds[#folds + 1] = {
+        open = open,
+        value = entry.title,
+        metadata = entry.metadata,
+        items = StatusListGenerator(entry.metadata):generate(entry.entries),
+      }
+    end
+  else
+    for title in pairs(entries) do
+      local entry = entries[title]
+      folds[#folds + 1] = {
+        open = open,
+        value = title,
+        items = StatusListGenerator():generate(entry),
+      }
+    end
   end
 
   self.state.folds = folds

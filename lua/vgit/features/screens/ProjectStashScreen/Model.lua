@@ -64,18 +64,21 @@ function Model:fetch(opts)
     if status_err then return nil, status_err end
 
     local stash_index = 'stash@{' .. i - 1 .. '}'
-    local title = stash_index .. ': ' .. log.summary
-    entries[title] = utils.list.map(statuses, function(status)
-      local id = utils.math.uuid()
-      local entry = {
-        id = id,
-        log = log,
-        status = status,
-      }
-      self.state.statuses[id] = entry
+    entries[#entries + 1] = {
+      title = stash_index,
+      metadata = { stash_index = stash_index },
+      entries = utils.list.map(statuses, function(status)
+        local id = utils.math.uuid()
+        local entry = {
+          id = id,
+          log = log,
+          status = status,
+        }
+        self.state.statuses[id] = entry
 
-      return entry
-    end)
+        return entry
+      end)
+    }
   end
 
   self.state.entries = entries

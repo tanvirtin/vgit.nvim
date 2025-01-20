@@ -28,15 +28,15 @@ function ProjectDiffScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_diff_preview_setting:get('keymaps')
         return {
-          { 'Stage', keymaps['buffer_stage'] },
-          { 'Unstage', keymaps['buffer_unstage'] },
-          { 'Stage hunk', keymaps['buffer_hunk_stage'] },
+          { 'Stage',        keymaps['buffer_stage'] },
+          { 'Unstage',      keymaps['buffer_unstage'] },
+          { 'Stage hunk',   keymaps['buffer_hunk_stage'] },
           { 'Unstage hunk', keymaps['buffer_hunk_unstage'] },
-          { 'Reset', keymaps['buffer_reset'] },
-          { 'Stage all', keymaps['stage_all'] },
-          { 'Unstage all', keymaps['unstage_all'] },
-          { 'Reset all', keymaps['reset_all'] },
-          { 'Commit', keymaps['commit'] },
+          { 'Reset',        keymaps['buffer_reset'] },
+          { 'Stage all',    keymaps['stage_all'] },
+          { 'Unstage all',  keymaps['unstage_all'] },
+          { 'Reset all',    keymaps['reset_all'] },
+          { 'Commit',       keymaps['commit'] },
         }
       end,
     }),
@@ -230,7 +230,7 @@ function ProjectDiffScreen:reset_file()
 
   loop.free_textlock()
   local decision =
-    console.input(string.format('Are you sure you want to discard changes in %s? (y/N) ', filename)):lower()
+      console.input(string.format('Are you sure you want to discard changes in %s? (y/N) ', filename)):lower()
 
   if decision ~= 'yes' and decision ~= 'y' then return end
 
