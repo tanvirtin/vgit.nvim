@@ -176,7 +176,12 @@ Detailed configuration example: >
           },
           settings = {
             hls = {
+              GitCount = 'Keyword',
+              GitSymbol = 'CursorLineNr',
+              GitTitle = 'Directory',
+              GitSelected = 'QuickfixLine',
               GitBackground = 'Normal',
+              GitAppBar = 'StatusLine',
               GitHeader = 'NormalFloat',
               GitFooter = 'NormalFloat',
               GitBorder = 'LineNr',
@@ -219,6 +224,13 @@ Detailed configuration example: >
                 sp = nil,
                 override = false,
               },
+              GitConflictCurrentMark = 'DiffAdd',
+              GitConflictAncestorMark = 'Visual',
+              GitConflictIncomingMark = 'DiffChange',
+              GitConflictCurrent = 'DiffAdd',
+              GitConflictAncestor = 'Visual',
+              GitConflictMiddle = 'Visual',
+              GitConflictIncoming = 'DiffChange',
             },
             live_blame = {
               enabled = true,
@@ -283,6 +295,7 @@ Detailed configuration example: >
             },
             diff_preview = {
               keymaps = {
+                reset = 'r',
                 buffer_stage = 'S',
                 buffer_unstage = 'U',
                 buffer_hunk_stage = 's',
@@ -292,6 +305,7 @@ Detailed configuration example: >
             },
             project_diff_preview = {
               keymaps = {
+                commit = 'C',
                 buffer_stage = 's',
                 buffer_unstage = 'u',
                 buffer_hunk_stage = 'gs',
@@ -310,6 +324,55 @@ Detailed configuration example: >
             signs = {
               priority = 10,
               definitions = {
+                GitConflictCurrentMark = {
+                  linehl = 'GitConflictCurrentMark',
+                  texthl = nil,
+                  numhl = nil,
+                  icon = nil,
+                  text = '',
+                },
+                GitConflictAncestorMark = {
+                  linehl = 'GitConflictAncestorMark',
+                  texthl = nil,
+                  numhl = nil,
+                  icon = nil,
+                  text = '',
+                },
+                GitConflictIncomingMark = {
+                  linehl = 'GitConflictIncomingMark',
+                  texthl = nil,
+                  numhl = nil,
+                  icon = nil,
+                  text = '',
+                },
+                GitConflictCurrent = {
+                  linehl = 'GitConflictCurrent',
+                  texthl = nil,
+                  numhl = nil,
+                  icon = nil,
+                  text = '',
+                },
+                GitConflictAncestor = {
+                  linehl = 'GitConflictAncestor',
+                  texthl = nil,
+                  numhl = nil,
+                  icon = nil,
+                  text = '',
+                },
+                GitConflictMiddle = {
+                  linehl = 'GitConflictMiddle',
+                  texthl = nil,
+                  numhl = nil,
+                  icon = nil,
+                  text = '',
+                },
+                GitConflictIncoming = {
+                  linehl = 'GitConflictIncoming',
+                  texthl = nil,
+                  numhl = nil,
+                  icon = nil,
+                  text = '',
+                },
                 GitSignsAddLn = {
                   linehl = 'GitSignsAddLn',
                   texthl = nil,
@@ -350,6 +413,13 @@ Detailed configuration example: >
                 screen = {
                   add = 'GitSignsAddLn',
                   remove = 'GitSignsDeleteLn',
+                  conflict_current_mark = 'GitConflictCurrentMark',
+                  conflict_current = 'GitConflictCurrent',
+                  conflict_middle = 'GitConflictMiddle',
+                  conflict_incoming_mark = 'GitConflictIncomingMark',
+                  conflict_incoming = 'GitConflictIncoming',
+                  conflict_ancestor_mark = 'GitConflictAncestorMark',
+                  conflict_ancestor = 'GitConflictAncestor'
                 },
                 main = {
                   add = 'GitSignsAdd',
@@ -360,6 +430,8 @@ Detailed configuration example: >
             },
             symbols = {
               void = '⣿',
+              open = '',
+              close = '',
             },
           }
         })
