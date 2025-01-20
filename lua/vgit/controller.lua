@@ -28,15 +28,6 @@ local live_blame = LiveBlame()
 local live_gutter = LiveGutter()
 local live_conflict = LiveConflict()
 
-local settings = {
-  screen = scene_setting,
-  hls = hls_setting,
-  symbols = symbols_setting,
-  signs = signs_setting,
-  git = git_setting,
-  live_blame = live_blame_setting,
-}
-
 local controls = {
   hunk_up = loop.coroutine(function()
     hunks:move_up()
@@ -77,12 +68,6 @@ local buffer = {
   end),
   blame_preview = loop.coroutine(function()
     screen_manager.create('line_blame_screen')
-  end),
-  diff_staged_preview = loop.coroutine(function()
-    screen_manager.create('diff_screen', { is_staged = true })
-  end),
-  hunk_staged_preview = loop.coroutine(function()
-    screen_manager.create('diff_hunk_screen', { is_staged = true })
   end),
   conflict_accept_both = loop.coroutine(function()
     conflicts:accept_both()
@@ -193,10 +178,8 @@ end
 
 function controller.commands()
   return {
-    h = help,
     help = help,
     setup = controller.setup,
-    settings = settings,
     toggle_tracing = toggle_tracing,
     toggle_live_blame = toggle_live_blame,
     toggle_live_gutter = toggle_live_gutter,
@@ -212,8 +195,6 @@ function controller.commands()
     buffer_diff_preview = buffer.diff_preview,
     buffer_blame_preview = buffer.blame_preview,
     buffer_history_preview = buffer.history_preview,
-    buffer_hunk_staged_preview = buffer.hunk_staged_preview,
-    buffer_diff_staged_preview = buffer.diff_staged_preview,
     buffer_conflict_accept_both = buffer.conflict_accept_both,
     buffer_conflict_accept_current = buffer.conflict_accept_current,
     buffer_conflict_accept_incoming = buffer.conflict_accept_incoming,

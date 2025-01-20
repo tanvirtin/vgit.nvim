@@ -1,374 +1,368 @@
-*vgit.nvim*
+*vgit.nvim*                                                                *vgit*
 
-Supported Neovim Versions: >= 0.8.0
-
-Supported Git Versions >= 2.18.0
-
-Author: Tanvir Islam <tanvir.tinz@gmail.com>
-
-License: MIT license
+A Git integration plugin for Neovim that enhances your Git experience visually.
 
 ==============================================================================
-INTRODUCTION                                                              *vgit*
+REQUIREMENTS                                                 *vgit-requirements*
 
-VGit is a git integration plugin written for Neovim. The goal of this plugin
-is to visually enhance your git experience.
+- Neovim >= 0.10.0
+- Git >= 2.18.0
 
-==============================================================================
-USAGE                                                               *vgit-usage*
-
-For a basic setup with no configuration:
->
-    require('vgit').setup() 
-
-More advanced configuration:
->
-    require('vgit').setup({
-      keymaps = {
-        ['n <C-k>'] = function() require('vgit').hunk_up() end,
-        ['n <C-j>'] = function() require('vgit').hunk_down() end,
-        ['n <leader>gs'] = function() require('vgit').buffer_hunk_stage() end,
-        ['n <leader>gr'] = function() require('vgit').buffer_hunk_reset() end,
-        ['n <leader>gp'] = function() require('vgit').buffer_hunk_preview() end,
-        ['n <leader>gb'] = function() require('vgit').buffer_blame_preview() end,
-        ['n <leader>gf'] = function() require('vgit').buffer_diff_preview() end,
-        ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
-        ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
-        ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
-        ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
-      },
-      settings = {
-        hls = {
-          GitBackground = 'NormalFloat',
-          GitHeader = 'NormalFloat',
-          GitFooter = 'NormalFloat',
-          GitBorder = 'LineNr',
-          GitLineNr = 'LineNr',
-          GitComment = 'Comment',
-          GitSignsAdd = {
-            gui = nil,
-            fg = '#d7ffaf',
-            bg = nil,
-            sp = nil,
-            override = false,
-          },
-          GitSignsChange = {
-            gui = nil,
-            fg = '#7AA6DA',
-            bg = nil,
-            sp = nil,
-            override = false,
-          },
-          GitSignsDelete = {
-            gui = nil,
-            fg = '#e95678',
-            bg = nil,
-            sp = nil,
-            override = false,
-          },
-          GitSignsAddLn = 'DiffAdd',
-          GitSignsDeleteLn = 'DiffDelete',
-          GitWordAdd = {
-            gui = nil,
-            fg = nil,
-            bg = '#5d7a22',
-            sp = nil,
-            override = false,
-          },
-          GitWordDelete = {
-            gui = nil,
-            fg = nil,
-            bg = '#960f3d',
-            sp = nil,
-            override = false,
-          },
-        },
-        live_blame = {
-          enabled = true,
-          format = function(blame, git_config)
-            local config_author = git_config['user.name']
-            local author = blame.author
-            if config_author == author then
-              author = 'You'
-            end
-            local time = os.difftime(os.time(), blame.author_time)
-              / (60 * 60 * 24 * 30 * 12)
-            local time_divisions = {
-              { 1, 'years' },
-              { 12, 'months' },
-              { 30, 'days' },
-              { 24, 'hours' },
-              { 60, 'minutes' },
-              { 60, 'seconds' },
-            }
-            local counter = 1
-            local time_division = time_divisions[counter]
-            local time_boundary = time_division[1]
-            local time_postfix = time_division[2]
-            while time < 1 and counter ~= #time_divisions do
-              time_division = time_divisions[counter]
-              time_boundary = time_division[1]
-              time_postfix = time_division[2]
-              time = time * time_boundary
-              counter = counter + 1
-            end
-            local commit_message = blame.commit_message
-            if not blame.committed then
-              author = 'You'
-              commit_message = 'Uncommitted changes'
-              return string.format(' %s • %s', author, commit_message)
-            end
-            local max_commit_message_length = 255
-            if #commit_message > max_commit_message_length then
-              commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
-            end
-            return string.format(
-              ' %s, %s • %s',
-              author,
-              string.format(
-                '%s %s ago',
-                time >= 0 and math.floor(time + 0.5) or math.ceil(time - 0.5),
-                time_postfix
-              ),
-              commit_message
-            )
-          end,
-        },
-        live_gutter = {
-          enabled = true,
-          edge_navigation = true,  -- This allows users to navigate within a hunk
-        },
-        scene = {
-          diff_preference = 'unified',
-          keymaps = {
-            quit = 'q'
-          }
-        },
-       diff_preview = {
-          keymaps = {
-            buffer_stage = 'S',
-            buffer_unstage = 'U',
-            buffer_hunk_stage = 's',
-            buffer_hunk_unstage = 'u',
-            toggle_view = 't',
-          },
-        },
-        project_diff_preview = {
-          keymaps = {
-            buffer_stage = 's',
-            buffer_unstage = 'u',
-            buffer_hunk_stage = 'gs',
-            buffer_hunk_unstage = 'gu',
-            buffer_reset = 'r',
-            stage_all = 'S',
-            unstage_all = 'U',
-            reset_all = 'R',
-          },
-        },
-        project_commit_preview = {
-          keymaps = {
-            save = 'S',
-          },
-        },
-        signs = {
-          priority = 10,
-          definitions = {
-            GitSignsAddLn = {
-              linehl = 'GitSignsAddLn',
-              texthl = nil,
-              numhl = nil,
-              icon = nil,
-              text = '',
-            },
-            GitSignsDeleteLn = {
-              linehl = 'GitSignsDeleteLn',
-              texthl = nil,
-              numhl = nil,
-              icon = nil,
-              text = '',
-            },
-            GitSignsAdd = {
-              texthl = 'GitSignsAdd',
-              numhl = nil,
-              icon = nil,
-              linehl = nil,
-              text = '┃',
-            },
-            GitSignsDelete = {
-              texthl = 'GitSignsDelete',
-              numhl = nil,
-              icon = nil,
-              linehl = nil,
-              text = '┃',
-            },
-            GitSignsChange = {
-              texthl = 'GitSignsChange',
-              numhl = nil,
-              icon = nil,
-              linehl = nil,
-              text = '┃',
-            },
-          },
-          usage = {
-            screen = {
-              add = 'GitSignsAddLn',
-              remove = 'GitSignsDeleteLn',
-            },
-            main = {
-              add = 'GitSignsAdd',
-              remove = 'GitSignsDelete',
-              change = 'GitSignsChange',
-            },
-          },
-        },
-        symbols = {
-          void = '⣿',
-        },
-      }
-    }) 
+License: MIT
 
 ==============================================================================
-COMMAND                                                           *vgit-command*
+INTRODUCTION                                                 *vgit-introduction*
+
+VGit is a Git integration plugin that provides visual enhancements to your Git
+workflow in Neovim. 
+
+==============================================================================
+SETUP                                                               *vgit-setup*
+
+Basic setup with default configuration: >
+        require('vgit').setup()
+<
+
+For detailed configuration options, see |vgit-configuration|.
+
+==============================================================================
+COMMANDS                                                         *vgit-commands*
 
                                                                       *:VGit*
-:VGit {subcommand} {arguments} Runs a command exposed by the plugin. Typing
-VGit followed by tab will show you all the |vgit-functions| available to you.
-
-                           Note this command is equivalent to:
-                             `:lua require('vgit').{subcommand}([arguments])`
+:VGit {subcommand} {arguments}                                
+        Execute VGit commands. Tab completion shows available |vgit-functions|.
+        Equivalent to `:lua require('vgit').{subcommand}([arguments])`
 
 ==============================================================================
 FUNCTIONS                                                       *vgit-functions*
 
-setup({config})                                                 *vgit.setup()*
-                Sets VGit up for you. This plugin cannot be used before this
-                function has been called.
+Core Functions~
+                                                                   *vgit.setup()*
+setup({config})                                                
+        Initialize VGit with optional configuration table.
+        Must be called before using any other functionality.
 
-                Parameters: ~
-                  {config} Table object containing configuration.
+                                                                    *vgit.help()*
+help()                                                
+        Opens vim documentation for the plugin.
 
-buffer_diff_preview()                               *vgit.buffer_diff_preview()*
-                Opens a diff preview showing the diff of the current buffer in
-                comparison to that found in index. If the command is called
-                while being on a hunk, the window will open focused on the
-                diff of that hunk.
+Buffer Operations~
+                                                     *vgit.buffer_diff_preview()*
+buffer_diff_preview()                              
+        Show diff preview of current buffer compared to index.
+        When cursor is on a hunk, focuses on that specific change.
 
-buffer_hunk_preview()                                *vgit.buffer_hunk_preview()*
-                Opens a diff preview showing the diff of the current buffer in
-                comparison to that found in index. This preview will open up in
-                a smaller window relative to where your cursor is.
+                                                      *vgit.buffer_hunk_preview()*
+buffer_hunk_preview()                             
+        Display focused diff preview near cursor position.
 
-buffer_history_preview()                         *vgit.buffer_history_preview()*
-                Opens a diff preview along with a table of logs, enabling
-                users to see different iterations of the file through it's
-                lifecycle in git.
+                                                     *vgit.buffer_blame_preview()*
+buffer_blame_preview()                          
+        Show blame information for current line.
+        Press <Enter> to view commit details in |vgit.project_commits_preview()|
 
-buffer_blame_preview()                             *vgit.buffer_blame_preview()*
-                Opens a preview detailing the blame of the line based on the
-                current cursor position.
+                                                   *vgit.buffer_history_preview()*
+buffer_history_preview()                      
+        Display file history with interactive diff viewing.
 
-                Pressing the enter key will open |vgit.project_commits_preview()|
-                with with the commit associated with the link being blamed.
+                                                        *vgit.buffer_hunk_reset()*
+buffer_hunk_reset({target}, {opts})                 
+        Reset hunk under cursor to HEAD version.
 
-buffer_diff_staged_preview()                  *vgit.buffer_staged_diff_preview()*
-                Opens a diff preview showing the diff of the staged changes in
-                the current buffer.
+                                                        *vgit.buffer_hunk_stage()*
+buffer_hunk_stage()                 
+        Stages the current hunk under cursor.
 
-buffer_hunk_staged_preview()                  *vgit.buffer_staged_hunk_preview()*
-                Opens a diff preview showing the diff of the staged changes in
-                the current buffer. This preview will open up in a smaller
-                window relative to where your cursor is.
+                                                             *vgit.buffer_stage()*
+buffer_stage()                                       
+        Stage all changes in current buffer.
 
-buffer_hunk_stage()                                    *vgit.buffer_hunk_stage()*
-                Stages a hunk, if a cursor is on the hunk.
+                                                           *vgit.buffer_unstage()*
+buffer_unstage()                                     
+        Unstage all changes in current buffer.
+                                                             *vgit.buffer_reset()*
+buffer_reset()                                       
+        Reset buffer to HEAD version, discarding changes.
 
-buffer_hunk_reset({target}, {opts})                    *vgit.buffer_hunk_reset()*
-                Removes all changes made in the buffer on the hunk the cursor
-                is currently on to what exists in HEAD.
+                                              *vgit.buffer_conflict_accept_both()*
+buffer_conflict_accept_both()
+        Acceps both changes from the conflict under cursor.
 
-buffer_stage()                                              *vgit.buffer_stage()*
-                Stages all changes in the current buffer.
+                                           *vgit.buffer_conflict_accept_current()*
+buffer_conflict_accept_current()                         
+        Accepts the current changes form the conflict under cursor.
 
-buffer_unstage()                                          *vgit.buffer_unstage()*
-                Unstages all changes in the current buffer.
+                                          *vgit.buffer_conflict_accept_incoming()*
+buffer_conflict_accept_incoming()                                       
+        Accepts the incoming changes form the conclict under cursor.
 
-buffer_reset()                                              *vgit.buffer_reset()*
-                Removes all current changes in the buffer and resets it to the
-                version in HEAD.
+Project-wide Operations~
+                                                     *vgit.project_diff_preview()*
+project_diff_preview()                             
+        Show project-wide diff with staged/unstaged files list.
+        Supports configurable keymaps for various operations.
 
-project_diff_preview()                            *vgit.project_diff_preview()*
-                Opens a diff preview along with a list of staged and unstaged
-                files in your project.
+                                                     *vgit.project_logs_preview()*
+project_logs_preview([options...])                
+        Display branch commit logs with filtering support.
+        Use <Tab> to select, <Enter> to view commits.
 
-                Using configurable keymaps users can perform the following
-                actions:
-                - Discard changes
-                - Stage/unstage a file
-                - Stage/unstage a hunk
-                - Open the file
+                                                   *vgit.project_commit_preview()*
+project_commit_preview()                       
+        Interactive commit interface for staged changes.
 
-project_logs_preview(opt1, opt2, ...)                 *vgit.project_logs_preview()*
-                Opens a preview listing all logs in the current working
-                branch. Users can filter the list by passing options to this
-                list. Pressing the "tab" key on a list item will keep the item
-                selected. Pressing the "enter" key on the preview will send the
-                selected commits to "project_commits_preview".
+                                                  *vgit.project_commits_preview()*
+project_commits_preview([commit1, commit2, ...])
+        Show commit details with optional filtering.
+        Use <Tab> to select, <Enter> to view details.
 
-project_commit_preview()                             *vgit.project_commit_preview()*
-                Opens a preview through which staged changes can be committed.
+                                                    *vgit.project_stash_preview()*
+project_stash_preview()                       
+        List and manage stashed changes.
 
-project_commits_preview(commit1, commit2, ...)      *vgit.project_commits_preview()*
-                Opens a preview listing all the logs in the current working
-                branch. Users can filter the list by passing options when
-                calling this preview. Pressing the "tab" key on a list item
-                will select it. Pressing the "enter" key on the preview will
-                close the current preview and open "project_commits_preview"
-                with the commits that were selected.
+Navigation and Toggles~
+                                                                  *vgit.hunk_up()*
+hunk_up()                                         
+        Move cursor to previous hunk.
 
-project_stash_preview()                 *vgit.project_stash_preview()*
-                Opens a preview listing all stashes. Pressing the "tab" key on
-                a list item will keep the item selected. Pressing the "enter"
-                key on the preview will send the selected stashes to
-                "project_commits_preview"
+                                                                *vgit.hunk_down()*
+hunk_down()                                       
+        Move cursor to next hunk.
 
-hunk_up()                                                        *vgit.hunk_up()*
-                Moves the cursor to the hunk above the current cursor
-                position.
+                                                   *vgit.toggle_diff_preference()*
+toggle_diff_preference()                         
+        Switch between split and unified diff views.
 
-hunk_down()                                                    *vgit.hunk_down()*
-                Moves the cursor to the hunk below the current cursor
-                position.
+                                                       *vgit.toggle_live_gutter()*
+toggle_live_gutter()                             
+        Toggle git gutter signs visibility.
 
-toggle_diff_preference()                          *vgit.toggle_diff_preference()*
-                Used to switch between "split" and "unified" diff.
+                                                        *vgit.toggle_live_blame()*
+toggle_live_blame()                              
+        Toggle inline blame information.
 
-toggle_live_gutter()                                  *vgit.toggle_live_gutter()*
-                Enables/disables git gutter signs.
-
-toggle_live_blame()                                    *vgit.toggle_live_blame()*
-                Enables/disables current line blame functionality that is seen
-                in the form of virtual texts.
-
-toggle_tracing()                                          *vgit.toggle_tracing()*
-                Enables/disables debug logs that are used internally by VGit to make
-                suppressed logs visible.
+                                                           *vgit.toggle_tracing()*
+toggle_tracing()                                 
+        Toggle debug logging visibility.
 
 ==============================================================================
 NAVIGATION                                                     *vgit-navigation*
 
-Any VGit preview that contains changes with highlights is navigatable,
-enhancing your git workflow drastically. Please refer to |hunk_up| and
-|hunk_down| mapping these functions to "<C-j>" and "<C-k>" is a personal
-recommendation. Executing these commands while being on a table associated
-with a diff will also enable hunk navigations.
+All VGit previews with change highlights support navigation. Recommended
+keymaps:
+- |hunk_up()|: Map to <C-k> for previous hunk
+- |hunk_down()|: Map to <C-j> for next hunk
+
+Navigation works in both diff views and associated tables.
 
 ==============================================================================
-PREFERENCE                                                *vgit-diff-preference*
+CONFIGURATION                                              *vgit-configuration*
 
-Any VGit preview with a diff can be seen visually in two different ways,
-unified and split. Users can switch between these two styles anytime using
-|toggle_diff_preference|.
+Detailed configuration example: >
 
-------------------------------------------------------------------------------
+        require('vgit').setup({
+          keymaps = {
+            ['n <C-k>'] = function() require('vgit').hunk_up() end,
+            ['n <C-j>'] = function() require('vgit').hunk_down() end,
+            ['n <leader>gs'] = function() require('vgit').buffer_hunk_stage() end,
+            ['n <leader>gr'] = function() require('vgit').buffer_hunk_reset() end,
+            ['n <leader>gp'] = function() require('vgit').buffer_hunk_preview() end,
+            ['n <leader>gb'] = function() require('vgit').buffer_blame_preview() end,
+            ['n <leader>gf'] = function() require('vgit').buffer_diff_preview() end,
+            ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
+            ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
+            ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
+            ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
+          },
+          settings = {
+            hls = {
+              GitBackground = 'Normal',
+              GitHeader = 'NormalFloat',
+              GitFooter = 'NormalFloat',
+              GitBorder = 'LineNr',
+              GitLineNr = 'LineNr',
+              GitComment = 'Comment',
+              GitSignsAdd = {
+                gui = nil,
+                fg = '#d7ffaf',
+                bg = nil,
+                sp = nil,
+                override = false,
+              },
+              GitSignsChange = {
+                gui = nil,
+                fg = '#7AA6DA',
+                bg = nil,
+                sp = nil,
+                override = false,
+              },
+              GitSignsDelete = {
+                gui = nil,
+                fg = '#e95678',
+                bg = nil,
+                sp = nil,
+                override = false,
+              },
+              GitSignsAddLn = 'DiffAdd',
+              GitSignsDeleteLn = 'DiffDelete',
+              GitWordAdd = {
+                gui = nil,
+                fg = nil,
+                bg = '#5d7a22',
+                sp = nil,
+                override = false,
+              },
+              GitWordDelete = {
+                gui = nil,
+                fg = nil,
+                bg = '#960f3d',
+                sp = nil,
+                override = false,
+              },
+            },
+            live_blame = {
+              enabled = true,
+              format = function(blame, git_config)
+                local config_author = git_config['user.name']
+                local author = blame.author
+                if config_author == author then
+                  author = 'You'
+                end
+                local time = os.difftime(os.time(), blame.author_time)
+                  / (60 * 60 * 24 * 30 * 12)
+                local time_divisions = {
+                  { 1, 'years' },
+                  { 12, 'months' },
+                  { 30, 'days' },
+                  { 24, 'hours' },
+                  { 60, 'minutes' },
+                  { 60, 'seconds' },
+                }
+                local counter = 1
+                local time_division = time_divisions[counter]
+                local time_boundary = time_division[1]
+                local time_postfix = time_division[2]
+                while time < 1 and counter ~= #time_divisions do
+                  time_division = time_divisions[counter]
+                  time_boundary = time_division[1]
+                  time_postfix = time_division[2]
+                  time = time * time_boundary
+                  counter = counter + 1
+                end
+                local commit_message = blame.commit_message
+                if not blame.committed then
+                  author = 'You'
+                  commit_message = 'Uncommitted changes'
+                  return string.format(' %s • %s', author, commit_message)
+                end
+                local max_commit_message_length = 255
+                if #commit_message > max_commit_message_length then
+                  commit_message = commit_message:sub(1, max_commit_message_length) .. '...'
+                end
+                return string.format(
+                  ' %s, %s • %s',
+                  author,
+                  string.format(
+                    '%s %s ago',
+                    time >= 0 and math.floor(time + 0.5) or math.ceil(time - 0.5),
+                    time_postfix
+                  ),
+                  commit_message
+                )
+              end,
+            },
+            live_gutter = {
+              enabled = true,
+              edge_navigation = true, -- This allows users to navigate within a hunk
+            },
+            scene = {
+              diff_preference = 'unified', -- unified or split
+              keymaps = {
+                quit = 'q'
+              }
+            },
+            diff_preview = {
+              keymaps = {
+                buffer_stage = 'S',
+                buffer_unstage = 'U',
+                buffer_hunk_stage = 's',
+                buffer_hunk_unstage = 'u',
+                toggle_view = 't',
+              },
+            },
+            project_diff_preview = {
+              keymaps = {
+                buffer_stage = 's',
+                buffer_unstage = 'u',
+                buffer_hunk_stage = 'gs',
+                buffer_hunk_unstage = 'gu',
+                buffer_reset = 'r',
+                stage_all = 'S',
+                unstage_all = 'U',
+                reset_all = 'R',
+              },
+            },
+            project_commit_preview = {
+              keymaps = {
+                save = 'S',
+              },
+            },
+            signs = {
+              priority = 10,
+              definitions = {
+                GitSignsAddLn = {
+                  linehl = 'GitSignsAddLn',
+                  texthl = nil,
+                  numhl = nil,
+                  icon = nil,
+                  text = '',
+                },
+                GitSignsDeleteLn = {
+                  linehl = 'GitSignsDeleteLn',
+                  texthl = nil,
+                  numhl = nil,
+                  icon = nil,
+                  text = '',
+                },
+                GitSignsAdd = {
+                  texthl = 'GitSignsAdd',
+                  numhl = nil,
+                  icon = nil,
+                  linehl = nil,
+                  text = '┃',
+                },
+                GitSignsDelete = {
+                  texthl = 'GitSignsDelete',
+                  numhl = nil,
+                  icon = nil,
+                  linehl = nil,
+                  text = '┃',
+                },
+                GitSignsChange = {
+                  texthl = 'GitSignsChange',
+                  numhl = nil,
+                  icon = nil,
+                  linehl = nil,
+                  text = '┃',
+                },
+              },
+              usage = {
+                screen = {
+                  add = 'GitSignsAddLn',
+                  remove = 'GitSignsDeleteLn',
+                },
+                main = {
+                  add = 'GitSignsAdd',
+                  remove = 'GitSignsDelete',
+                  change = 'GitSignsChange',
+                },
+              },
+            },
+            symbols = {
+              void = '⣿',
+            },
+          }
+        })
 
+==============================================================================
 vim:tw=78:ts=8:ft=help:norl:
