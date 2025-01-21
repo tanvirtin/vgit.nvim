@@ -129,7 +129,7 @@ function BlameListView:render()
         col_range = { from = 0, to = #commit_hash },
       },
       {
-        hl = 'Comment',
+        hl = 'GitComment',
         col_range = {
           from = #commit_hash + 1 + #commit_message + 1,
           to = #line,

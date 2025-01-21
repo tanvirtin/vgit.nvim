@@ -64,8 +64,13 @@ function Model:fetch(filename, lnum, opts)
   filename = blame.filename
 
   if not git_repo.has(reponame, filename, commit_hash) then
-    is_deleted = true
-    lines, lines_err = git_show.lines(reponame, filename, parent_hash)
+    local new_filename = self.git_file.filename
+    if new_filename ~= filename and git_repo.has(reponame, new_filename, commit_hash) then
+      lines, lines_err = git_show.lines(reponame, filename, commit_hash)
+    else
+      is_deleted = true
+      lines, lines_err = git_show.lines(reponame, filename, parent_hash)
+    end
   else
     lines, lines_err = git_show.lines(reponame, filename, commit_hash)
   end
