@@ -143,8 +143,8 @@ function FoldableListComponent:generate_lines()
           hl = icon_before.hl,
           lnum = current_lnum,
           range = {
-            top = indentation_count + icon_hl_range_offset + 2,
-            bot = indentation_count + icon_hl_range_offset + #icon_before.icon + 1,
+            top = indentation_count + icon_hl_range_offset,
+            bot = indentation_count + icon_hl_range_offset + #icon_before.icon,
           },
         }
       elseif icon_after then
