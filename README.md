@@ -22,6 +22,59 @@
 
 <br />
 
+<p align="center">
+  VGit's feature views are designed to be lightning-fast. Whether you're diving into a file's history, comparing changes, or managing stashes, every view is optimized to provide instant insights and seamless navigation. With intuitive previews, VGit ensures you stay productive without missing a beat.
+</p>
+
+### Project Diff Preview
+---
+
+Explore all changes in your project at a glance. The diff preview displays modified files and highlights the changes for better project-wide management.
+
+![Image](https://github.com/user-attachments/assets/57da5113-3a9f-4569-91f3-773ab9c0702d)
+
+### Project Logs Preview
+---
+
+View and filter the logs of your current branch in an intuitive interface. Select logs and open detailed commit previews effortlessly.
+
+![Image](https://github.com/user-attachments/assets/187ec555-47c4-4c43-b52f-aa5cd9f7b04c)
+
+### Project Stash Preview
+---
+
+Easily manage and preview all your stashed changes in one place. Keep your work organized and accessible.
+
+![Image](https://github.com/user-attachments/assets/b67b8594-c137-4497-915c-0c64595d8167)
+
+### Buffer Diff Preview
+---
+
+Visually compare your current buffer with its version in the Git index. If focused on a hunk, this preview zooms into the relevant changes for a streamlined review experience.
+
+![Image](https://github.com/user-attachments/assets/103122f1-4748-417c-9318-f1934da0186c)
+
+### Buffer Blame Preview
+---
+
+Gain instant insight into the author and commit history of any line in your buffer. This feature enables seamless debugging and tracing of code changes.
+
+![Image](https://github.com/user-attachments/assets/990110ac-4ca8-416e-a600-49f903bd93af)
+
+### Buffer History Preview
+---
+
+Dive into the history of your file with a detailed view of all its Git iterations. See how the file has evolved through various commits.
+
+![Image](https://github.com/user-attachments/assets/0c4ddc13-2245-4a49-aa5f-6150f8a2fad1)
+
+### Live Blame
+---
+
+Enable live blame annotations directly in your editor to see the author and commit for each line in real time. Perfect for understanding the evolution of code at a glance.
+
+![Image](https://github.com/user-attachments/assets/2dc4c57d-c9d1-40d4-9f20-54a5f5cf1743)
+
 **Requirements**
 ---
 - Neovim `0.10+`
