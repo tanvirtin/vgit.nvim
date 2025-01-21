@@ -8,9 +8,9 @@ local Object = require('vgit.core.Object')
   generic data shape can generate a tree blueprint out of it.
 --]]
 
-local StatusListGenerator = Object:extend()
+local StatusFolds = Object:extend()
 
-function StatusListGenerator:constructor(metadata)
+function StatusFolds:constructor(metadata)
   return {
     tree = {},
     seperator = '/',
@@ -18,7 +18,7 @@ function StatusListGenerator:constructor(metadata)
   }
 end
 
-function StatusListGenerator:get_parent_folder(segmented_folders, current_index)
+function StatusFolds:get_parent_folder(segmented_folders, current_index)
   local acc = ''
   local count = 1
 
@@ -34,7 +34,7 @@ function StatusListGenerator:get_parent_folder(segmented_folders, current_index)
   return acc, count
 end
 
-function StatusListGenerator:derive_status_hl(status)
+function StatusFolds:derive_status_hl(status)
   if status:is_staged() then
     if status:has('A*') or status:has('C*') or status:has('R*') then return 'GitSignsAdd' end
     if status:has('D*') then return 'GitSignsDelete' end
@@ -53,7 +53,7 @@ function StatusListGenerator:derive_status_hl(status)
   return 'GitLineNr'
 end
 
-function StatusListGenerator:create_node(entry)
+function StatusFolds:create_node(entry)
   if entry.status then
     local id = entry.id
     local status = entry.status
@@ -98,7 +98,7 @@ end
 
 -- Finds the parent from the tree for a given path
 -- (path obj will contain it's parent path string).
-function StatusListGenerator:find_parent(entry)
+function StatusFolds:find_parent(entry)
   local function _find(tree)
     if not tree then return nil end
 
@@ -117,7 +117,7 @@ function StatusListGenerator:find_parent(entry)
   return _find(self.tree)
 end
 
-function StatusListGenerator:normalize_entries(entries)
+function StatusFolds:normalize_entries(entries)
   local normalized_entries = {}
 
   for i = 1, #entries do
@@ -173,7 +173,7 @@ function StatusListGenerator:normalize_entries(entries)
   return normalized_entries_by_depth
 end
 
-function StatusListGenerator:generate_tree(normalized_entries)
+function StatusFolds:generate_tree(normalized_entries)
   for i = 1, #normalized_entries do
     -- As we now, each element in the normalized_entries is a list of entries.
     local entries = normalized_entries[i]
@@ -189,7 +189,7 @@ function StatusListGenerator:generate_tree(normalized_entries)
   end
 end
 
-function StatusListGenerator:sort_tree()
+function StatusFolds:sort_tree()
   local function sort_tree(list)
     local folders = {}
     local files = {}
@@ -227,7 +227,7 @@ function StatusListGenerator:sort_tree()
   _sort_tree(self.tree)
 end
 
-function StatusListGenerator:generate(entries)
+function StatusFolds:generate(entries)
   local normalized_entries = self:normalize_entries(entries)
 
   self:generate_tree(normalized_entries)
@@ -236,4 +236,4 @@ function StatusListGenerator:generate(entries)
   return self.tree
 end
 
-return StatusListGenerator
+return StatusFolds

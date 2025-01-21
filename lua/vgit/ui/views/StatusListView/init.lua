@@ -2,7 +2,7 @@ local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local dimensions = require('vgit.ui.dimensions')
-local StatusListGenerator = require('vgit.ui.StatusListGenerator')
+local StatusFolds = require('vgit.ui.views.StatusListView.StatusFolds')
 local FoldableListComponent = require('vgit.ui.components.FoldableListComponent')
 
 local StatusListView = Object:extend()
@@ -172,24 +172,13 @@ function StatusListView:render()
   end
 
   local folds = {}
-  if utils.list.is_list(entries) then
-    for _, entry in ipairs(entries) do
-      folds[#folds + 1] = {
-        open = open,
-        value = entry.title,
-        metadata = entry.metadata,
-        items = StatusListGenerator(entry.metadata):generate(entry.entries),
-      }
-    end
-  else
-    for title in pairs(entries) do
-      local entry = entries[title]
-      folds[#folds + 1] = {
-        open = open,
-        value = title,
-        items = StatusListGenerator():generate(entry),
-      }
-    end
+  for _, entry in ipairs(entries) do
+    folds[#folds + 1] = {
+      open = open,
+      value = entry.title,
+      metadata = entry.metadata,
+      items = StatusFolds(entry.metadata):generate(entry.entries),
+    }
   end
 
   self.state.folds = folds

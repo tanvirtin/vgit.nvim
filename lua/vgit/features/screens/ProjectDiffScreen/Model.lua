@@ -87,9 +87,24 @@ function Model:fetch()
   local changed_files, staged_files, unmerged_files = self:partition_status(statuses)
 
   local entries = {}
-  if #changed_files ~= 0 then entries['Changes'] = changed_files end
-  if #staged_files ~= 0 then entries['Staged Changes'] = staged_files end
-  if #unmerged_files ~= 0 then entries['Merge Changes'] = unmerged_files end
+  if #unmerged_files ~= 0 then
+    entries[#entries + 1] = {
+      title = 'Merge Changes',
+      entries = staged_files
+    }
+  end
+  if #staged_files ~= 0 then
+    entries[#entries + 1] = {
+      title = 'Staged Changes',
+      entries = staged_files
+    }
+  end
+  if #changed_files ~= 0 then
+    entries[#entries + 1] = {
+      title = 'Changes',
+      entries = changed_files
+    }
+  end
 
   self.state.entries = entries
   self.state.reponame = reponame
@@ -146,8 +161,11 @@ function Model:get_lines(status, type)
   local reponame = self.state.reponame
 
   if status:has('D ') then return git_show.lines(reponame, filename, 'HEAD') end
+  if type == 'staged' or status:has(' D') and not status:has_both('MD') then
+    return git_show.lines(reponame, filename)
+  end
+  if status:has('MD') then return git_show.lines(reponame, filename, 'HEAD^1') end
   if type == 'unmerged' then return fs.read_file(self:get_filepath()) end
-  if type == 'staged' or status:has(' D') then return git_show.lines(reponame, filename) end
 
   return fs.read_file(self:get_filepath())
 end
@@ -193,7 +211,7 @@ function Model:get_diff()
   if hunks_err then return nil, hunks_err end
 
   loop.free_textlock()
-  local is_deleted = status:has_either('DD')
+  local is_deleted = status:has_either('DD') and not status:has_both('MD')
   local diff = Diff():generate(hunks, lines, layout_type, { is_deleted = is_deleted })
   self.state.diffs[cache_key] = diff
 
