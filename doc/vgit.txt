@@ -156,6 +156,16 @@ keymaps:
 Navigation works in both diff views and associated tables.
 
 ==============================================================================
+STATUS                                                             *vgit-status*
+
+Use `b:vgit_status`, a table containing the current buffer's number of `added`,
+`removed`, `changed` lines.
+
+Example:
+
+    set statusline+=%{get(b:,'vgit_status','')}
+
+==============================================================================
 CONFIGURATION                                              *vgit-configuration*
 
 Detailed configuration example: >
@@ -314,6 +324,15 @@ Detailed configuration example: >
                 stage_all = 'S',
                 unstage_all = 'U',
                 reset_all = 'R',
+              },
+            },
+            project_stash_preview = {
+              keymaps = {
+                add = 'A',
+                apply = 'a',
+                pop = 'p',
+                drop = 'd',
+                clear = 'C'
               },
             },
             project_commit_preview = {
