@@ -93,6 +93,13 @@ Enable live blame annotations directly in your editor to see the author and comm
 **Installation**
 ---
 
+> [!Warning]
+> `v1.0.0` contains several new features and massive optimizations but also unfortunately contains several breaking and deprecated changes.
+> For the time being the main branch will still be following `v0.2.x` while core users slowly migrate to `v1.0.0` without breaking their current workflow.
+> New users please use tag `v1.0.0` or branch `v1.0.x` for the latest chanegs!
+
+---
+
 Using [vim-plug](https://github.com/junegunn/vim-plug)
 
 ```viml
