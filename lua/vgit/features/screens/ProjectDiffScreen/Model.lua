@@ -90,7 +90,7 @@ function Model:fetch()
   if #unmerged_files ~= 0 then
     entries[#entries + 1] = {
       title = 'Merge Changes',
-      entries = staged_files
+      entries = unmerged_files
     }
   end
   if #staged_files ~= 0 then
