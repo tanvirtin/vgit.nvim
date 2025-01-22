@@ -22,70 +22,114 @@
 
 <br />
 
-<div align="center">
-  <img width="1512" alt="Hunk Preview" src="https://user-images.githubusercontent.com/25164326/149684229-6fc1422a-3db2-4e17-88f9-eb5897ca5ddc.png">
-</div>
+<p align="center">
+  VGit's feature views are designed to be lightning-fast. Whether you're diving into a file's history, comparing changes, or managing stashes.
+</p>
 
-**Highlighted features**
+### Project Diff Preview
 ---
-- Gutter changes
-- Current line blame
-- Authorship code lens 
-- Current line blame preview
-- Gutter blame preview
-- File history preview
-- File diff preview
-- File hunk preview
-- File staged diff preview
-- Project diff preview
-  - Discard all changes
-  - Discard individual file
-  - Stage/unstage all changes
-  - Stage/unstage individual files
-  - Stage/unstage hunks
-  - Open the file with changes
-- Project hunks preview
-- Project staged hunks preview
-- Project logs preview
-- Project stash preview
-- Project commit preview
-- Project commits preview
-- Send all project hunks to quickfix list
-- Hunk navigations in all buffers with a diff
+
+Explore all changes in your project at a glance. The diff preview displays modified files and highlights the changes for better project-wide management.
+
+![Project Diff Preview](https://github.com/user-attachments/assets/68d7e6bf-06da-4279-95b7-5baea5303c1f)
+
+### Project Logs Preview
+---
+
+View and filter the logs of your current branch in an intuitive interface. Select logs and open detailed commit previews effortlessly.
+
+![Project Logs Preview](https://github.com/user-attachments/assets/187ec555-47c4-4c43-b52f-aa5cd9f7b04c)
+
+### Project Stash Preview
+---
+
+Easily manage and preview all your stashed changes in one place. Keep your work organized and accessible.
+
+![Project Stash Preview](https://github.com/user-attachments/assets/b67b8594-c137-4497-915c-0c64595d8167)
+
+### Buffer Diff Preview
+---
+
+Visually compare your current buffer with its version in the Git index. If focused on a hunk, this preview zooms into the relevant changes for a streamlined review experience.
+
+![Buffer Diff Preview](https://github.com/user-attachments/assets/103122f1-4748-417c-9318-f1934da0186c)
+
+### Buffer Blame Preview
+---
+
+Gain instant insight into the author and commit history of any line in your buffer. This feature enables seamless tracing of code changes.
+
+![Buffer Blame Preview](https://github.com/user-attachments/assets/990110ac-4ca8-416e-a600-49f903bd93af)
+
+### Buffer History Preview
+---
+
+Dive into the history of your file with a detailed view of all its Git iterations. See how the file has evolved through various commits.
+
+![Buffer History Preview](https://github.com/user-attachments/assets/0c4ddc13-2245-4a49-aa5f-6150f8a2fad1)
+
+### Conflict Management
+
+VGit simplifies conflict resolution by clearly highlighting different segments of a conflict and giving you the flexibility to choose the necessary changes,
+making it easy to merge and resolve conflicts efficiently.
+
+![Conflict Management](https://github.com/user-attachments/assets/8b4e2eb6-e0b6-4702-8aad-9c46fd345a71)
+
+### Live Blame
+---
+
+Enable live blame annotations directly in your editor to see the author and commit for each line in real time. Perfect for understanding the evolution of code at a glance.
+
+![Live blame](https://github.com/user-attachments/assets/2dc4c57d-c9d1-40d4-9f20-54a5f5cf1743)
 
 **Requirements**
 ---
-- Neovim `0.8+`
+- Neovim `0.10+`
 - Git `2.18.0+`
 - Supported Operating Systems:
     - `linux-gnu*`
     - `Darwin`
 
-**Prerequisites**
----
-- [Git](https://git-scm.com/)
-- [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
-- [nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons) (optional)
-
-**Recommended settings**
----
-```lua
-vim.o.updatetime = 300
-vim.o.incsearch = false
-vim.wo.signcolumn = 'yes'
-```
-
 **Installation**
 ---
-Default installation via Packer.
+
+> [!NOTE]
+> Package managers with lazy loading is necessary for installation.
+
+---
+
+Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+
 ```lua
 use {
-  'tanvirtin/vgit.nvim',
-  requires = {
-    'nvim-lua/plenary.nvim'
-  }
+  'tanvirtin/vgit.nvim', tag = 'v1.0.0',
+  -- or                , branch = 'v1.0.x',
+  requires = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
+  -- Lazy loading on 'VimEnter' event is necessary.
+  event = 'VimEnter',
+  config = function() require("vgit").setup() end,
 }
 ```
+
+Using [lazy.nvim](https://github.com/folke/lazy.nvim)
+
+```lua
+{
+  'tanvirtin/vgit.nvim', tag = 'v1.0.0',
+   -- or               , branch = 'v1.0.x',
+  dependencies = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
+  -- Lazy loading on 'VimEnter' event is necessary.
+  event = 'VimEnter',
+  config = function() require("vgit").setup() end,
+}
+```
+
+> [!Warning]
+> `v1.0.0` contains several new features and massive optimizations but unfortunately also contains several breaking and deprecated changes.
+> For the time being the main branch will still be following `v0.2.x` while core users slowly migrate to `v1.0.0` without breaking their current workflow.
+> New users please use tag `v1.0.0` or branch `v1.0.x` for the latest chanegs!
+
+---
 
 **Setup**
 ---
@@ -94,18 +138,14 @@ You must instantiate the plugin in order for the features to work.
 require('vgit').setup()
 ```
 
-To embed the above code snippet in a .vim file wrap it in lua << EOF code-snippet EOF.
-```lua
-lua << EOF
-require('vgit').setup()
-EOF
-```
+> [!NOTE]
+> Highlights, signs, keymappings are few examples of what can be configured in VGit.
+> Advanced setting should only be used if you intend to change functionality 
+> provided by default. 
 
-Highlights, signs, keymappings are few examples of what can be configured in VGit. Advanced setup below shows you all configurable parameters in VGit.
+---
 
 <details><summary><b>Show advanced setup</b></summary>
-
-<br />
 
 ```lua
 require('vgit').setup({
@@ -119,26 +159,18 @@ require('vgit').setup({
     ['n <leader>gf'] = function() require('vgit').buffer_diff_preview() end,
     ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
     ['n <leader>gu'] = function() require('vgit').buffer_reset() end,
-    ['n <leader>gg'] = function() require('vgit').buffer_gutter_blame_preview() end,
-    ['n <leader>glu'] = function() require('vgit').buffer_hunks_preview() end,
-    ['n <leader>gls'] = function() require('vgit').project_hunks_staged_preview() end,
     ['n <leader>gd'] = function() require('vgit').project_diff_preview() end,
-    ['n <leader>gq'] = function() require('vgit').project_hunks_qf() end,
     ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
   },
   settings = {
-    git = {
-      cmd = 'git', -- optional setting, not really required
-      fallback_cwd = vim.fn.expand("$HOME"),
-      fallback_args = {
-        "--git-dir",
-        vim.fn.expand("$HOME/dots/yadm-repo"),
-        "--work-tree",
-        vim.fn.expand("$HOME"),
-      },
-    },
+    -- You can either allow corresponding mapping for existing hl, or re-define them yourself entirely.
     hls = {
+      GitCount = 'Keyword',
+      GitSymbol = 'CursorLineNr',
+      GitTitle = 'Directory',
+      GitSelected = 'QuickfixLine',
       GitBackground = 'Normal',
+      GitAppBar = 'StatusLine',
       GitHeader = 'NormalFloat',
       GitFooter = 'NormalFloat',
       GitBorder = 'LineNr',
@@ -181,6 +213,13 @@ require('vgit').setup({
         sp = nil,
         override = false,
       },
+      GitConflictCurrentMark = 'DiffAdd',
+      GitConflictAncestorMark = 'Visual',
+      GitConflictIncomingMark = 'DiffChange',
+      GitConflictCurrent = 'DiffAdd',
+      GitConflictAncestor = 'Visual',
+      GitConflictMiddle = 'Visual',
+      GitConflictIncoming = 'DiffChange',
     },
     live_blame = {
       enabled = true,
@@ -237,9 +276,6 @@ require('vgit').setup({
       enabled = true,
       edge_navigation = true, -- This allows users to navigate within a hunk
     },
-    authorship_code_lens = {
-      enabled = true,
-    },
     scene = {
       diff_preference = 'unified', -- unified or split
       keymaps = {
@@ -248,6 +284,7 @@ require('vgit').setup({
     },
     diff_preview = {
       keymaps = {
+        reset = 'r',
         buffer_stage = 'S',
         buffer_unstage = 'U',
         buffer_hunk_stage = 's',
@@ -257,6 +294,7 @@ require('vgit').setup({
     },
     project_diff_preview = {
       keymaps = {
+        commit = 'C',
         buffer_stage = 's',
         buffer_unstage = 'u',
         buffer_hunk_stage = 'gs',
@@ -267,6 +305,15 @@ require('vgit').setup({
         reset_all = 'R',
       },
     },
+    project_stash_preview = {
+      keymaps = {
+        add = 'A',
+        apply = 'a',
+        pop = 'p',
+        drop = 'd',
+        clear = 'C'
+      },
+    },
     project_commit_preview = {
       keymaps = {
         save = 'S',
@@ -275,6 +322,56 @@ require('vgit').setup({
     signs = {
       priority = 10,
       definitions = {
+        -- The sign definitions you provide will automatically be instantiated for you.
+        GitConflictCurrentMark = {
+          linehl = 'GitConflictCurrentMark',
+          texthl = nil,
+          numhl = nil,
+          icon = nil,
+          text = '',
+        },
+        GitConflictAncestorMark = {
+          linehl = 'GitConflictAncestorMark',
+          texthl = nil,
+          numhl = nil,
+          icon = nil,
+          text = '',
+        },
+        GitConflictIncomingMark = {
+          linehl = 'GitConflictIncomingMark',
+          texthl = nil,
+          numhl = nil,
+          icon = nil,
+          text = '',
+        },
+        GitConflictCurrent = {
+          linehl = 'GitConflictCurrent',
+          texthl = nil,
+          numhl = nil,
+          icon = nil,
+          text = '',
+        },
+        GitConflictAncestor = {
+          linehl = 'GitConflictAncestor',
+          texthl = nil,
+          numhl = nil,
+          icon = nil,
+          text = '',
+        },
+        GitConflictMiddle = {
+          linehl = 'GitConflictMiddle',
+          texthl = nil,
+          numhl = nil,
+          icon = nil,
+          text = '',
+        },
+        GitConflictIncoming = {
+          linehl = 'GitConflictIncoming',
+          texthl = nil,
+          numhl = nil,
+          icon = nil,
+          text = '',
+        },
         GitSignsAddLn = {
           linehl = 'GitSignsAddLn',
           texthl = nil,
@@ -312,9 +409,17 @@ require('vgit').setup({
         },
       },
       usage = {
+        -- Please ensure these signs are defined.
         screen = {
           add = 'GitSignsAddLn',
           remove = 'GitSignsDeleteLn',
+          conflict_current_mark = 'GitConflictCurrentMark',
+          conflict_current = 'GitConflictCurrent',
+          conflict_middle = 'GitConflictMiddle',
+          conflict_incoming_mark = 'GitConflictIncomingMark',
+          conflict_incoming = 'GitConflictIncoming',
+          conflict_ancestor_mark = 'GitConflictAncestorMark',
+          conflict_ancestor = 'GitConflictAncestor'
         },
         main = {
           add = 'GitSignsAdd',
@@ -325,6 +430,8 @@ require('vgit').setup({
     },
     symbols = {
       void = '⣿',
+      open = '',
+      close = '',
     },
   }
 })
@@ -345,53 +452,33 @@ set statusline+=%{get(b:,'vgit_status','')}
 **API**
 ---
 
-<img width="342" alt="VGit Commands" src="https://user-images.githubusercontent.com/25164326/147710754-fcbe0cef-3e74-41cd-a6d6-4b9a6a9eb258.png">
+<img width="350" alt="VGit Commands" src="https://github.com/user-attachments/assets/f9718464-079b-42ea-a04f-084d8de1df18" />
 <br />
 
 | Function Name | Description |
 |---------------|-------------|
-| setup | Sets VGit up for you. This plugin cannot be used before this function has been called. |
-| hunk_up | Moves the cursor to the hunk above the current cursor position. |
-| hunk_down | Moves the cursor to the hunk below the current cursor position. |
-| checkout [args] | Wrapper command for `git checkout`. You can switch branches or restore working tree files |
-| buffer_hunk_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. This preview will open up in a smaller window relative to where your cursor is. |
-| buffer_diff_preview | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. If the command is called while being on a hunk, the window will open focused on the diff of that hunk. |
-| buffer_history_preview | Opens a diff preview along with a table of logs, enabling users to see different iterations of the file through it's lifecycle in git. |
-| buffer_blame_preview | Opens a preview detailing the blame of the line that based on the cursor position within the buffer. |
-| buffer_gutter_blame_preview | Opens a preview which shows all the blames related to the lines of the buffer. |
-| buffer_diff_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. |
-| buffer_hunk_staged_preview | Opens a diff preview showing the diff of the staged changes in the current buffer. This preview will open up in a smaller window relative to where your cursor is. |
-| buffer_hunk_stage | Stages a hunk, if a cursor is on the hunk. |
-| buffer_hunk_reset | Removes all changes made in the buffer on the hunk the cursor is currently on to what exists in HEAD. |
-| buffer_stage | Stages all changes in the current buffer. |
-| buffer_unstage | Unstages all changes in the current buffer. |
-| buffer_reset | Removes all current changes in the buffer and resets it to the version in HEAD. |
-| project_diff_preview | Opens a diff preview along with a list of all the files that have been changed, enabling users to see all the files that were changed in the current project |
-| project_logs_preview [args] | Opens a preview listing all the logs in the current working branch. Users can filter the list by passing options to this list. Pressing the "tab" key on a list item will keep the item selected. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected commits |
-| project_commit_preview | Opens a preview through which staged changes can be committed |
-| project_commits_preview [args] | Opens a diff preview along with a list of all your commits |
-| project_stash_preview | Opens a preview listing all stashes. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected stashes |
-| project_hunks_preview | Opens a diff preview along with a foldable list of all the current hunks in the project. Users can use this preview to cycle through all the hunks. |
-| project_hunks_staged_preview | Opens a diff preview along with a foldable list of all the current staged hunks in the project. Users can use this preview to cycle through all the hunks. |
-| project_debug_preview | Opens a VGit view showing logs of a pariticular kind traced within the application. |
-| project_hunks_qf | Populate the quickfix list with hunks. Automatically opens the quickfix window. |
-| project_stage_all | Stages all file changes in your project. |
-| project_unstage_all | Unstages all file changes in your project. |
-| project_reset_all | Discards all file changes that are not staged. |
-| toggle_diff_preference | Used to switch between "split" and "unified" diff. |
-| toggle_live_gutter | Enables/disables git gutter signs. |
-| toggle_live_blame | Used to switch between "split" and "unified" diff. |
-| toggle_authorship_code_lens | Enables/disables authorship code lens that can be found on top of the file |
-| toggle_tracing | Enables/disables debug logs that are used internally by VGit to make suppressed logs visible. |
-
-<details>
-<summary><h3> Debugging </h3></summary>
-
-Start off by allowing VGit to trace your actions:
-- `:VGit toggle_tracing`
-
-Each category of logs can be previewed using the following commands:
-- `:VGit debug_preview infos`
-- `:VGit debug_preview warnings`
-- `:VGit debug_preview errors`
-</details>
+| `help` | Vim documentation |
+| `setup` | Sets VGit up for you. This plugin cannot be used before this function has been called. |
+| `hunk_up` | Moves the cursor to the hunk above the current cursor position. |
+| `hunk_down` | Moves the cursor to the hunk below the current cursor position. |
+| `buffer_hunk_preview` | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. This preview will open up in a smaller window relative to where your cursor is. |
+| `buffer_diff_preview` | Opens a diff preview showing the diff of the current buffer in comparison to that found in index. If the command is called while being on a hunk, the window will open focused on the diff of that hunk. |
+| `buffer_history_preview` | Opens a diff preview along with a table of logs, enabling users to see different iterations of the file through it's lifecycle in git. |
+| `buffer_blame_preview` | Opens a preview detailing the blame of the line that based on the cursor position within the buffer. |
+| `buffer_hunk_stage` | Stages a hunk, if a cursor is on the hunk. |
+| `buffer_hunk_reset` | Removes all changes made in the buffer on the hunk the cursor is currently on to what exists in HEAD. |
+| `buffer_stage` | Stages all changes in the current buffer. |
+| `buffer_unstage` | Unstages all changes in the current buffer. |
+| `buffer_reset` | Removes all current changes in the buffer and resets it to the version in HEAD. |
+| `buffer_conflict_accept_both` | Acceps both changes from the conflict under cursor. |
+| `buffer_conflict_accept_current` | Accepts the current changes form the conflict under cursor. |
+| `buffer_conflict_accept_incoming` | Accepts the incoming changes form the conclict under cursor. |
+| `project_diff_preview` | Opens a diff preview along with a list of all the files that have been changed, enabling users to see all the files that were changed in the current project |
+| `project_logs_preview` [args] | Opens a preview listing all the logs in the current working branch. Users can filter the list by passing options to this list. Pressing the "tab" key on a list item will keep the item selected. Pressing the "enter" key on the preview will close the preview and open "project_commits_preview" with the selected commits |
+| `project_commit_preview` | Opens a preview through which staged changes can be committed |
+| `project_commits_preview` [args] | Opens a diff preview along with a list of all your commits |
+| `project_stash_preview` | Opens a preview of all your stash changes and provides you with the ability to manage these changes |
+| `toggle_diff_preference` | Used to switch between "split" and "unified" diff. |
+| `toggle_live_gutter` | Enables/disables git gutter signs. |
+| `toggle_live_blame` | Used to switch between "split" and "unified" diff. |
+| `toggle_tracing` | Enables/disables debug logs that are used internally by VGit to make suppressed logs visible. |
