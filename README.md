@@ -68,6 +68,13 @@ Dive into the history of your file with a detailed view of all its Git iteration
 
 ![Image](https://github.com/user-attachments/assets/0c4ddc13-2245-4a49-aa5f-6150f8a2fad1)
 
+### Conflict Management
+
+VGit simplifies conflict resolution by clearly highlighting different segments of a conflict and giving you the flexibility to choose the necessary changes,
+making it easy to merge and resolve conflicts efficiently.
+
+![Image](https://github.com/user-attachments/assets/8b4e2eb6-e0b6-4702-8aad-9c46fd345a71)
+
 ### Live Blame
 ---
 
