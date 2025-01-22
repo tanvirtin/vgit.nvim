@@ -23,7 +23,7 @@
 <br />
 
 <p align="center">
-  VGit's feature views are designed to be lightning-fast. Whether you're diving into a file's history, comparing changes, or managing stashes, every view is optimized to provide instant insights and seamless navigation. With intuitive previews, VGit ensures you stay productive without missing a beat.
+  VGit's feature views are designed to be lightning-fast. Whether you're diving into a file's history, comparing changes, or managing stashes.
 </p>
 
 ### Project Diff Preview
@@ -93,38 +93,21 @@ Enable live blame annotations directly in your editor to see the author and comm
 **Installation**
 ---
 
-> [!Warning]
-> `v1.0.0` contains several new features and massive optimizations but also unfortunately contains several breaking and deprecated changes.
-> For the time being the main branch will still be following `v0.2.x` while core users slowly migrate to `v1.0.0` without breaking their current workflow.
-> New users please use tag `v1.0.0` or branch `v1.0.x` for the latest chanegs!
+> [!NOTE]
+> Package managers with lazy loading is necessary for installation.
 
 ---
-
-Using [vim-plug](https://github.com/junegunn/vim-plug)
-
-```viml
-Plug 'nvim-lua/plenary.nvim'
-Plug 'nvim-tree/nvim-web-devicons'
-Plug 'tanvirtin/vgit.nvim', { 'tag': 'v1.0.0' }
-" or                      , { 'branch': 'v1.0.x' }
-```
-
-Using [dein](https://github.com/Shougo/dein.vim)
-
-```viml
-call dein#add('nvim-lua/plenary.nvim')
-call dein#add('nvim-tree/nvim-web-devicons')
-call dein#add('tanvirtin/vgit.nvim', { 'rev': 'v1.0.0' })
-" or                               , { 'rev': 'v1.0.x' })
-```
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
 ```lua
 use {
   'tanvirtin/vgit.nvim', tag = 'v1.0.0',
--- or                  , branch = 'v1.0.x',
-  requires = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' }
+  -- or                , branch = 'v1.0.x',
+  requires = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
+  -- Lazy loading on 'VimEnter' event is necessary.
+  event = 'VimEnter',
+  config = function() require("vgit").setup() end,
 }
 ```
 
@@ -133,16 +116,20 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 ```lua
 {
   'tanvirtin/vgit.nvim', tag = 'v1.0.0',
--- or                 , branch = 'v1.0.x',
-  dependencies = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' }
-}
-
-return {
-  'tanvirtin/vgit.nvim', tag = 'v1.0.0',
--- or                  , branch = 'v1.0.x',
-  dependencies = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' }
+   -- or               , branch = 'v1.0.x',
+  dependencies = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
+  -- Lazy loading on 'VimEnter' event is necessary.
+  event = 'VimEnter',
+  config = function() require("vgit").setup() end,
 }
 ```
+
+> [!Warning]
+> `v1.0.0` contains several new features and massive optimizations but unfortunately also contains several breaking and deprecated changes.
+> For the time being the main branch will still be following `v0.2.x` while core users slowly migrate to `v1.0.0` without breaking their current workflow.
+> New users please use tag `v1.0.0` or branch `v1.0.x` for the latest chanegs!
+
+---
 
 **Setup**
 ---
