@@ -31,7 +31,7 @@
 
 Explore all changes in your project at a glance. The diff preview displays modified files and highlights the changes for better project-wide management.
 
-![Image](https://github.com/user-attachments/assets/57da5113-3a9f-4569-91f3-773ab9c0702d)
+![Image](https://github.com/user-attachments/assets/68d7e6bf-06da-4279-95b7-5baea5303c1f)
 
 ### Project Logs Preview
 ---
