@@ -4,7 +4,7 @@ local utils = require('vgit.core.utils')
 local Log = Object:extend()
 
 function Log:constructor(line, revision_count)
-  local log = vim.split(line, '-')
+  local log = vim.split(line, '<>', { plain = true })
   -- Sometimes you can have multiple parents, in that instance we pick the first!
   local parents = vim.split(log[2], ' ')
 

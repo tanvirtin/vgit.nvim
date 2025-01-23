@@ -12,6 +12,8 @@ local Status = require('vgit.git.cli.models.Status')
 
 local Git = Object:extend()
 
+local log_line_format = '%H<>%P<>%at<>%an<>%ae<>%s'
+
 function Git:constructor(cwd)
   local newself = {
     cwd = cwd or '',
@@ -243,7 +245,7 @@ Git.log = loop.suspend(function(self, commit_hash, spec, callback)
       'show',
       commit_hash,
       '--color=never',
-      '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
+      '--pretty=format:"' .. log_line_format .. '"',
       '--no-patch',
     }),
     on_stdout = function(line)
@@ -277,7 +279,7 @@ Git.logs = loop.suspend(function(self, options, spec, callback)
       '--no-pager',
       'log',
       '--color=never',
-      '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
+      '--pretty=format:"' .. log_line_format .. '"',
     }, options),
     on_stdout = function(line)
       revision_count = revision_count + 1
@@ -309,7 +311,7 @@ Git.file_logs = loop.suspend(function(self, filename, spec, callback)
       self.cwd,
       'log',
       '--color=never',
-      '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
+      '--pretty=format:"' .. log_line_format .. '"',
       '--',
       filename,
     }),
@@ -1133,7 +1135,7 @@ Git.ls_stash = loop.suspend(function(self, spec, callback)
       'stash',
       'list',
       '--color=never',
-      '--pretty=format:"%H-%P-%at-%an-%ae-%s"',
+      '--pretty=format:"' .. log_line_format .. '"',
     }),
     on_stdout = function(line)
       revision_count = revision_count + 1
