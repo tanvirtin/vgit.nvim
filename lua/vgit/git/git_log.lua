@@ -1,3 +1,4 @@
+local utils = require('vgit.core.utils')
 local GitLog = require('vgit.git.GitLog')
 local gitcli = require('vgit.git.gitcli')
 
@@ -21,18 +22,36 @@ function git_log.get(reponame, commit)
   return GitLog(result[1])
 end
 
-function git_log.list(reponame, filename)
+function git_log.list(reponame, opts)
+  opts = opts or {}
+
   if not reponame then return nil, { 'reponame is required' } end
 
-  local result, err = gitcli.run({
+  local filename = opts.filename
+  local pagination = opts.pagination
+
+  local args = {
     '-C',
     reponame,
     '--no-pager',
     'log',
     '--color=never',
+  }
+
+  if pagination then
+    utils.list.concat(args, {
+      '-n',
+      pagination.count,
+      string.format('--skip=%s', pagination.skip),
+    })
+  end
+
+  utils.list.concat(args, {
     git_log.format,
     filename,
   })
+
+  local result, err = gitcli.run(args)
 
   if err then return nil, err end
 

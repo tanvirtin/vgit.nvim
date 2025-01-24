@@ -22,6 +22,10 @@ function GitLog:constructor(line, revision_count)
   }
 end
 
+function GitLog:date(format)
+  return utils.date.format(self.timestamp, format)
+end
+
 function GitLog:age()
   return utils.date.age(self.timestamp)
 end

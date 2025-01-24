@@ -3,8 +3,10 @@ local Scene = require('vgit.ui.Scene')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local GitLogsView = require('vgit.ui.views.GitLogsView')
+local TableView = require('vgit.ui.views.TableView')
+local PaginationView = require('vgit.ui.views.PaginationView')
 local Model = require('vgit.features.screens.ProjectLogsScreen.Model')
+local project_logs_preview_setting = require('vgit.settings.project_logs_preview')
 
 local ProjectLogsScreen = Object:extend()
 
@@ -17,12 +19,80 @@ function ProjectLogsScreen:constructor(opts)
     name = 'Logs Screen',
     scene = scene,
     model = model,
-    view = GitLogsView(scene, {
-      logs = function()
+    event_handlers = { on_select = function() end },
+    pagination_view = PaginationView(scene, {
+      keymaps = function()
+        local keymaps = project_logs_preview_setting:get('keymaps')
+        return {
+          keymaps['previous'],
+          keymaps['next'],
+        }
+      end,
+      pagination = function()
+        return model:get_pagination()
+      end
+    }),
+    logs_view = TableView(scene, {
+       headers = function()
+        return {
+          {
+            name = 'commit_hash',
+            caption = 'Commit'
+          },
+          {
+            name = 'author_name',
+            caption = 'Author'
+          },
+          {
+            name = 'timestamp',
+            caption = 'Date'
+          },
+          {
+            name = 'summary',
+            caption = 'Summary'
+          },
+        }
+      end,
+      entries = function()
         return model:get_logs()
       end,
-    }),
+      is_selected = function(entry)
+        return model:is_selected(entry)
+      end,
+    }, { row = 1 }),
   }
+end
+
+function ProjectLogsScreen:open()
+  vim.cmd(
+    utils.list.reduce(
+      self.model:get_selected(),
+      'VGit project_commits_preview',
+      function(cmd, log) return cmd .. ' ' .. log.commit_hash end
+    )
+  )
+end
+
+function ProjectLogsScreen:previous()
+  loop.free_textlock()
+  self.model:previous()
+
+  loop.free_textlock()
+  self.pagination_view:render()
+  self.logs_view:render()
+end
+
+function ProjectLogsScreen:next()
+  loop.free_textlock()
+  self.model:next()
+
+  loop.free_textlock()
+  self.pagination_view:render()
+  self.logs_view:render()
+end
+
+function ProjectLogsScreen:select(entry)
+  self.model:select(entry)
 end
 
 function ProjectLogsScreen:create()
@@ -35,26 +105,40 @@ function ProjectLogsScreen:create()
     return false
   end
 
-  self.view:define()
-  self.view:mount()
-  self.view:render()
-  self.view:set_keymap({
+  self.logs_view:define()
+  self.pagination_view:define()
+
+  self.pagination_view:mount()
+  self.pagination_view:render()
+
+  self.logs_view:mount({
+    event_handlers = {
+      on_select = function(entry)
+        self:select(entry)
+      end,
+    },
+  })
+  self.logs_view:render()
+  self.logs_view:set_keymap({
     {
       mode = 'n',
-      key = '<tab>',
+      key = project_logs_preview_setting:get('keymaps').previous,
       handler = loop.coroutine(function()
-        self.view:select()
+        self:previous()
+      end),
+    },
+    {
+      mode = 'n',
+      key = project_logs_preview_setting:get('keymaps').next,
+      handler = loop.coroutine(function()
+        self:next()
       end),
     },
     {
       mode = 'n',
       key = '<enter>',
       handler = loop.coroutine(function()
-        if not self.view:has_selection() then self.view:select() end
-        vim.cmd('quit')
-        vim.cmd(utils.list.reduce(self.view:get_selected(), 'VGit project_commits_preview', function(cmd, log)
-          return cmd .. ' ' .. log.commit_hash
-        end))
+        self:open()
       end),
     },
   })

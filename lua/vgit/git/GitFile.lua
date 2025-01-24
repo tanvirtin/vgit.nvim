@@ -90,7 +90,7 @@ function GitFile:log(opts)
 end
 
 function GitFile:logs()
-  return git_log.list(self.reponame, self.filename)
+  return git_log.list(self.reponame, { filename = self.filename })
 end
 
 function GitFile:status()
