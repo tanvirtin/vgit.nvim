@@ -87,7 +87,16 @@ function Model:get_diff()
   local lines, lines_err = self.git_file:lines(commit_hash)
   loop.free_textlock()
 
-  if lines_err then return nil, lines_err end
+  if lines_err then
+    local err_str = string.format("fatal: path '%s' exists on disk, but not in '%s'", self.git_file.filename, commit_hash)
+    if lines_err[1] == err_str then
+      loop.free_textlock()
+      lines, lines_err = self.git_file:lines(parent_hash)
+      loop.free_textlock()
+    else
+      return nil, lines_err
+    end
+  end
 
   -- TODO(renames): If a file is renamed changes are not reflected.
   local diff = Diff():generate(hunks, lines, self:get_layout_type())
