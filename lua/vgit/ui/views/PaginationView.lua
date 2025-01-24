@@ -46,7 +46,7 @@ function PaginationView:render()
   component:clear_extmarks()
   component:place_extmark_highlight({
     hl = 'Keyword',
-    pattern = '%((%a+)%)',
+    pattern = '%(([%a%-=]+)%)',
   })
   component:place_extmark_highlight({
     hl = 'Number',

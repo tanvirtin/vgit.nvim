@@ -161,7 +161,15 @@ function ProjectDiffScreen:stage_file()
   end
 
   self:render(function()
+    local has_unstaged = false
+    self.status_list_view:each_status(function(status)
+      if status:is_staged() then
+        has_unstaged = true
+      end
+    end)
+
     self:move_to(function(status)
+      if has_unstaged then return status:is_unstaged() == true end
       return status.filename == entry.status.filename
     end)
   end)
@@ -181,7 +189,15 @@ function ProjectDiffScreen:unstage_file()
   end
 
   self:render(function()
+    local has_staged = false
+    self.status_list_view:each_status(function(status)
+      if status:is_staged() then
+        has_staged = true
+      end
+    end)
+
     self:move_to(function(status)
+      if has_staged then return status:is_staged() == true end
       return status.filename == entry.status.filename
     end)
   end)
