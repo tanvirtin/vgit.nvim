@@ -335,6 +335,12 @@ Detailed configuration example: >
                 clear = 'C'
               },
             },
+            project_logs_preview = {
+              keymaps = {
+                previous = '-',
+                next = '=',
+              },
+            },
             project_commit_preview = {
               keymaps = {
                 save = 'S',

@@ -20,6 +20,8 @@ local live_blame_setting = require('vgit.settings.live_blame')
 local live_gutter_setting = require('vgit.settings.live_gutter')
 local LiveConflict = require('vgit.features.buffer.LiveConflict')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
+local project_logs_preview_setting = require('vgit.settings.project_logs_preview')
+local project_stash_preview_setting = require('vgit.settings.project_stash_preview')
 local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
 
 local hunks = Hunks()
@@ -158,6 +160,8 @@ local function configure_settings(config)
   live_blame_setting:assign(config_settings.live_blame)
   live_gutter_setting:assign(config_settings.live_gutter)
   project_diff_preview_setting:assign(config_settings.project_diff_preview)
+  project_logs_preview_setting:assign(config_settings.project_logs_preview)
+  project_stash_preview_setting:assign(config_settings.project_stash_preview)
   project_commit_preview_setting:assign(config_settings.project_commit_preview)
 end
 
