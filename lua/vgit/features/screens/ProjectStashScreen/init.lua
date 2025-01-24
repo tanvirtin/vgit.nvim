@@ -205,11 +205,16 @@ end
 
 function ProjectStashScreen:create(opts)
   loop.free_textlock()
-  local _, err = self.model:fetch(opts)
+  local entries, err = self.model:fetch(opts)
   loop.free_textlock()
 
   if err then
     console.debug.error(err).error(err)
+    return false
+  end
+
+  if utils.object.is_empty(entries) then
+    console.info('No stashed changes found')
     return false
   end
 
