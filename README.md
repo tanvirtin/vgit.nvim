@@ -102,7 +102,7 @@ Enable live blame annotations directly in your editor to see the author and comm
 > Releases prior to the major versions will no longer be maintained.
 > Branch `v1.0.x` contains several new features and massive optimizations but unfortunately also contains several breaking and deprecated changes.
 > For the time being the main branch will still be following `v0.2.x` while core users slowly migrate to `v1.0.x` without breaking their current workflow.
-> New users please use tag `v1.0.0` or branch `v1.0.x` for the latest chanegs!
+> New users please use tag `v1.0.1` or branch `v1.0.x` for the latest changes!
 
 ---
 
