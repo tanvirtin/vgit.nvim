@@ -5,7 +5,7 @@ local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local DiffView = require('vgit.ui.views.DiffView')
 local StatusListView = require('vgit.ui.views.StatusListView')
-local KeymapHelpBarView = require('vgit.ui.views.KeymapHelpBarView')
+local KeyHelpBarView = require('vgit.ui.views.KeyHelpBarView')
 local Model = require('vgit.features.screens.ProjectStashScreen.Model')
 local project_stash_preview_setting = require('vgit.settings.project_stash_preview')
 
@@ -21,7 +21,7 @@ function ProjectStashScreen:constructor(opts)
     name = 'Stash Screen',
     scene = scene,
     model = model,
-    app_bar_view = KeymapHelpBarView(scene, {
+    app_bar_view = KeyHelpBarView(scene, {
       keymaps = function()
         local keymaps = project_stash_preview_setting:get('keymaps')
         return {

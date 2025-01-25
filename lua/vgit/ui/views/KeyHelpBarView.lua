@@ -2,9 +2,9 @@ local Object = require('vgit.core.Object')
 local dimensions = require('vgit.ui.dimensions')
 local AppBarComponent = require('vgit.ui.components.AppBarComponent')
 
-local KeymapHelpBarView = Object:extend()
+local KeyHelpBarView = Object:extend()
 
-function KeymapHelpBarView:constructor(scene, props, plot)
+function KeyHelpBarView:constructor(scene, props, plot)
   return {
     plot = plot,
     scene = scene,
@@ -12,7 +12,7 @@ function KeymapHelpBarView:constructor(scene, props, plot)
   }
 end
 
-function KeymapHelpBarView:define()
+function KeyHelpBarView:define()
   self.scene:set(
     'app_bar',
     AppBarComponent({
@@ -26,15 +26,15 @@ function KeymapHelpBarView:define()
   )
 end
 
-function KeymapHelpBarView:get_components()
+function KeyHelpBarView:get_components()
   return { self.scene:get('app_bar') }
 end
 
-function KeymapHelpBarView:mount(opts)
+function KeyHelpBarView:mount(opts)
   self.scene:get('app_bar'):mount(opts)
 end
 
-function KeymapHelpBarView:render()
+function KeyHelpBarView:render()
   local keymaps = self.props.keymaps()
 
   local text = ''
@@ -56,4 +56,4 @@ function KeymapHelpBarView:render()
   })
 end
 
-return KeymapHelpBarView
+return KeyHelpBarView

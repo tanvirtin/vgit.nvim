@@ -6,9 +6,9 @@ local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local console = require('vgit.core.console')
 local DiffView = require('vgit.ui.views.DiffView')
+local KeyHelpBarView = require('vgit.ui.views.KeyHelpBarView')
 local Model = require('vgit.features.screens.DiffScreen.Model')
 local diff_preview_setting = require('vgit.settings.diff_preview')
-local KeymapHelpBarView = require('vgit.ui.views.KeymapHelpBarView')
 
 local DiffScreen = Object:extend()
 
@@ -46,20 +46,20 @@ end
 
 function DiffScreen:create_app_bar_view(scene, model)
   if model:is_hunk() then return nil end
-  return KeymapHelpBarView(scene, {
+  return KeyHelpBarView(scene, {
     keymaps = function()
       local keymaps = diff_preview_setting:get('keymaps')
       if model:is_staged() then
         return {
-          { 'Unstage Buffer', keymaps['buffer_unstage'] },
-          { 'Unstage Hunk', keymaps['buffer_hunk_unstage'] },
+          { 'Unstage Buffer',        keymaps['buffer_unstage'] },
+          { 'Unstage Hunk',          keymaps['buffer_hunk_unstage'] },
           { 'Switch to Staged View', keymaps['toggle_view'] },
         }
       end
       return {
-        { 'Stage Buffer', keymaps['buffer_stage'] },
-        { 'Stage Hunk', keymaps['buffer_hunk_stage'] },
-        { 'Reset Buffer', keymaps['reset'] },
+        { 'Stage Buffer',           keymaps['buffer_stage'] },
+        { 'Stage Hunk',             keymaps['buffer_hunk_stage'] },
+        { 'Reset Buffer',           keymaps['reset'] },
         { 'Switch to Unstage View', keymaps['toggle_view'] },
       }
     end,

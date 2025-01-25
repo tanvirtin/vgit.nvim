@@ -3,7 +3,7 @@ local Scene = require('vgit.ui.Scene')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local SimpleView = require('vgit.ui.views.SimpleView')
-local KeymapHelpBarView = require('vgit.ui.views.KeyMapHelpBarView')
+local KeyHelpBarView = require('vgit.ui.views.KeyHelpBarView')
 local Model = require('vgit.features.screens.ProjectCommitScreen.Model')
 local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
 
@@ -18,7 +18,7 @@ function ProjectCommitScreen:constructor(opts)
     name = 'Project Commit Screen',
     scene = scene,
     model = model,
-    app_bar_view = KeymapHelpBarView(scene, {
+    app_bar_view = KeyHelpBarView(scene, {
       keymaps = function()
         local keymaps = project_commit_preview_setting:get('keymaps')
         return { { 'Save Commit', keymaps['save'] } }

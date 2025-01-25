@@ -8,7 +8,7 @@ local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
 local DiffView = require('vgit.ui.views.DiffView')
 local StatusListView = require('vgit.ui.views.StatusListView')
-local KeymapHelpBarView = require('vgit.ui.views.KeymapHelpBarView')
+local KeyHelpBarView = require('vgit.ui.views.KeyHelpBarView')
 local Model = require('vgit.features.screens.ProjectDiffScreen.Model')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
 
@@ -24,7 +24,7 @@ function ProjectDiffScreen:constructor(opts)
     name = 'Project Diff Screen',
     scene = scene,
     model = model,
-    app_bar_view = KeymapHelpBarView(scene, {
+    app_bar_view = KeyHelpBarView(scene, {
       keymaps = function()
         local keymaps = project_diff_preview_setting:get('keymaps')
         return {
