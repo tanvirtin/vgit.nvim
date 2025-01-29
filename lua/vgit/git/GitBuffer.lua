@@ -50,6 +50,11 @@ function GitBuffer:sync()
   return self
 end
 
+function GitBuffer:reset_signs()
+  self.state.signs = {}
+  return self
+end
+
 function Buffer:clear_conflicts(top, bot)
   top = top or 0
   bot = bot or -1

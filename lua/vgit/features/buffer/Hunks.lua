@@ -4,6 +4,7 @@ local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local navigation = require('vgit.core.navigation')
 local git_buffer_store = require('vgit.git.git_buffer_store')
+local live_gutter_setting = require('vgit.settings.live_gutter')
 
 local Hunks = Object:extend()
 
@@ -13,7 +14,13 @@ function Hunks:constructor()
   }
 end
 
+function Hunks:is_enabled()
+  return live_gutter_setting:get('enabled') == true
+end
+
 function Hunks:move_up()
+  if not self:is_enabled() then return end
+
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
@@ -25,6 +32,8 @@ function Hunks:move_up()
 end
 
 function Hunks:move_down()
+  if not self:is_enabled() then return end
+
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
@@ -67,7 +76,7 @@ function Hunks:stage_all()
 end
 
 function Hunks:cursor_stage()
-  loop.free_textlock()
+  if not self:is_enabled() then return end
 
   local buffer = git_buffer_store.current()
   if not buffer then return end
@@ -114,6 +123,8 @@ function Hunks:reset_all()
 end
 
 function Hunks:cursor_reset()
+  if not self:is_enabled() then return end
+
   loop.free_textlock()
   local buffer = git_buffer_store.current()
   if not buffer then return end
@@ -144,8 +155,8 @@ function Hunks:cursor_reset()
   for i = 1, #hunks do
     local hunk = hunks[i]
     if
-      (lnum >= hunk.top and lnum <= hunk.bot)
-      or (hunk.top == 0 and hunk.bot == 0 and lnum - 1 == hunk.top and lnum - 1 == hunk.bot)
+        (lnum >= hunk.top and lnum <= hunk.bot)
+        or (hunk.top == 0 and hunk.bot == 0 and lnum - 1 == hunk.top and lnum - 1 == hunk.bot)
     then
       selected_hunk = hunk
       selected_hunk_index = i
