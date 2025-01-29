@@ -115,7 +115,7 @@ local toggle_live_gutter = loop.coroutine(function()
   local live_gutter_enabled = live_gutter_setting:get('enabled')
 
   live_gutter_setting:set('enabled', not live_gutter_enabled)
-  live_gutter:reset()
+  live_gutter:toggle()
 end)
 
 local toggle_tracing = loop.coroutine(function()

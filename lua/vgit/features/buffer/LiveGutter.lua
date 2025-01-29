@@ -1,8 +1,6 @@
 local loop = require('vgit.core.loop')
-local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local buffer_store = require('vgit.core.buffer_store')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local live_gutter_setting = require('vgit.settings.live_gutter')
 
@@ -12,9 +10,11 @@ function LiveGutter:constructor()
   return { name = 'Live Gutter' }
 end
 
-function LiveGutter:fetch(buffer)
-  if not live_gutter_setting:get('enabled') then return end
+function LiveGutter:is_enabled()
+  return live_gutter_setting:get('enabled') == true
+end
 
+function LiveGutter:fetch(buffer)
   loop.free_textlock()
   if not buffer:is_valid() then return end
 
@@ -33,28 +33,36 @@ LiveGutter.fetch_debounced = loop.debounce_coroutine(function(self, buffer)
   self:fetch(buffer)
 end, 10)
 
-function LiveGutter:reset()
-  local buffers = buffer_store.list()
-  utils.list.for_each(buffers, function(buffer)
-    buffer:clear_signs()
+function LiveGutter:toggle()
+  git_buffer_store.for_each(function(buffer)
+    if self:is_enabled() then
+      self:fetch(buffer)
+    else
+      buffer:reset_signs()
+    end
+    buffer:render_signs()
   end)
 end
 
 function LiveGutter:register_events()
   git_buffer_store
-    .on({ 'attach', 'reload' }, function(buffer)
-      self:fetch(buffer)
-      buffer:render_signs()
-    end)
-    .on({ 'change' }, function(buffer)
-      self:fetch_debounced(buffer)
-    end)
-    .on('sync', function(buffer)
-      self:fetch_debounced(buffer)
-    end)
-    .on('detach', function(buffer)
-      buffer:clear_extmarks()
-    end)
+      .on({ 'attach', 'reload' }, function(buffer)
+        if not self:is_enabled() then return end
+
+        self:fetch(buffer)
+        buffer:render_signs()
+      end)
+      .on({ 'change' }, function(buffer)
+        if not self:is_enabled() then return end
+        self:fetch_debounced(buffer)
+      end)
+      .on('sync', function(buffer)
+        if not self:is_enabled() then return end
+        self:fetch_debounced(buffer)
+      end)
+      .on('detach', function(buffer)
+        buffer:clear_extmarks()
+      end)
 end
 
 return LiveGutter
