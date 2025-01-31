@@ -51,16 +51,16 @@ function DiffScreen:create_app_bar_view(scene, model)
       local keymaps = diff_preview_setting:get('keymaps')
       if model:is_staged() then
         return {
-          { 'Unstage Buffer',        keymaps['buffer_unstage'] },
-          { 'Unstage Hunk',          keymaps['buffer_hunk_unstage'] },
-          { 'Switch to Staged View', keymaps['toggle_view'] },
+          { keymaps['buffer_unstage'] },
+          { keymaps['buffer_hunk_unstage'] },
+          { 'Switch to Staged View',       keymaps['toggle_view'] },
         }
       end
       return {
-        { 'Stage Buffer',           keymaps['buffer_stage'] },
-        { 'Stage Hunk',             keymaps['buffer_hunk_stage'] },
-        { 'Reset Buffer',           keymaps['reset'] },
-        { 'Switch to Unstage View', keymaps['toggle_view'] },
+        { keymaps['buffer_stage'] },
+        { keymaps['buffer_hunk_stage'] },
+        { keymaps['reset'] },
+        { 'Switch to Unstage View',    keymaps['toggle_view'] },
       }
     end,
   })
@@ -268,6 +268,67 @@ function DiffScreen:unstage(buffer)
   end
 end
 
+function DiffScreen:setup_keymaps(buffer)
+  local keymaps = diff_preview_setting:get('keymaps')
+
+  self.diff_view:set_keymap({
+    {
+      mode = 'n',
+      mapping = keymaps.reset,
+      handler = loop.debounce_coroutine(function()
+        self:reset(buffer)
+      end, 100),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_stage,
+      handler = loop.debounce_coroutine(function()
+        self:stage(buffer)
+        self:toggle_view(buffer)
+      end, 100),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_unstage,
+      handler = loop.debounce_coroutine(function()
+        self:unstage(buffer)
+        self:toggle_view(buffer)
+      end, 100),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_hunk_stage,
+      handler = loop.debounce_coroutine(function()
+        self:stage_hunk(buffer)
+      end, 100),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_hunk_unstage,
+      handler = loop.debounce_coroutine(function()
+        self:unstage_hunk(buffer)
+      end, 100),
+    },
+    {
+      mode = 'n',
+      mapping = {
+        key = '<enter>',
+        desc = 'Open buffer',
+      },
+      handler = loop.debounce_coroutine(function()
+        self:enter_view()
+      end, 100),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.toggle_view,
+      handler = loop.debounce_coroutine(function()
+        self:toggle_view(buffer)
+      end, 100),
+    },
+  })
+end
+
 function DiffScreen:create(opts)
   opts = opts or {}
 
@@ -292,59 +353,9 @@ function DiffScreen:create(opts)
   self.diff_view:define()
   self.diff_view:mount()
   self.diff_view:render()
-  self.diff_view:set_keymap({
-    {
-      mode = 'n',
-      key = diff_preview_setting:get('keymaps').reset,
-      handler = loop.debounce_coroutine(function()
-        self:reset(buffer)
-      end, 100),
-    },
-    {
-      mode = 'n',
-      key = diff_preview_setting:get('keymaps').buffer_stage,
-      handler = loop.debounce_coroutine(function()
-        self:stage(buffer)
-        self:toggle_view(buffer)
-      end, 100),
-    },
-    {
-      mode = 'n',
-      key = diff_preview_setting:get('keymaps').buffer_unstage,
-      handler = loop.debounce_coroutine(function()
-        self:unstage(buffer)
-        self:toggle_view(buffer)
-      end, 100),
-    },
-    {
-      mode = 'n',
-      key = diff_preview_setting:get('keymaps').buffer_hunk_stage,
-      handler = loop.debounce_coroutine(function()
-        self:stage_hunk(buffer)
-      end, 100),
-    },
-    {
-      mode = 'n',
-      key = diff_preview_setting:get('keymaps').buffer_hunk_unstage,
-      handler = loop.debounce_coroutine(function()
-        self:unstage_hunk(buffer)
-      end, 100),
-    },
-    {
-      mode = 'n',
-      key = '<enter>',
-      handler = loop.debounce_coroutine(function()
-        self:enter_view()
-      end, 100),
-    },
-    {
-      mode = 'n',
-      key = diff_preview_setting:get('keymaps').toggle_view,
-      handler = loop.debounce_coroutine(function()
-        self:toggle_view(buffer)
-      end, 100),
-    },
-  })
+
+  self:setup_keymaps(buffer)
+
   local mark_index = self.diff_view:get_relative_mark_index(lnum)
   self.diff_view:move_to_hunk(mark_index, 'center')
 

@@ -28,15 +28,15 @@ function ProjectDiffScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_diff_preview_setting:get('keymaps')
         return {
-          { 'Stage',        keymaps['buffer_stage'] },
-          { 'Unstage',      keymaps['buffer_unstage'] },
-          { 'Stage hunk',   keymaps['buffer_hunk_stage'] },
-          { 'Unstage hunk', keymaps['buffer_hunk_unstage'] },
-          { 'Reset',        keymaps['buffer_reset'] },
-          { 'Stage all',    keymaps['stage_all'] },
-          { 'Unstage all',  keymaps['unstage_all'] },
-          { 'Reset all',    keymaps['reset_all'] },
-          { 'Commit',       keymaps['commit'] },
+          { keymaps['buffer_stage'] },
+          { keymaps['buffer_unstage'] },
+          { keymaps['buffer_reset'] },
+          { keymaps['buffer_hunk_stage'] },
+          { keymaps['buffer_hunk_unstage'] },
+          { keymaps['stage_all'] },
+          { keymaps['unstage_all'] },
+          { keymaps['reset_all'] },
+          { keymaps['commit'] },
         }
       end,
     }),
@@ -358,6 +358,147 @@ function ProjectDiffScreen:focus_relative_buffer_entry(buffer)
   end)
 end
 
+function ProjectDiffScreen:setup_list_keymaps()
+  local keymaps = project_diff_preview_setting:get('keymaps')
+
+  self.status_list_view:set_keymap({
+    {
+      mode = 'n',
+      mapping = keymaps.commit,
+      handler = loop.coroutine(function()
+        self:commit()
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_reset,
+      handler = loop.coroutine(function()
+        self:reset_file()
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_stage,
+      handler = loop.coroutine(function()
+        self:stage_file()
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_unstage,
+      handler = loop.coroutine(function()
+        self:unstage_file()
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.stage_all,
+      handler = loop.coroutine(function()
+        self:stage_all()
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.unstage_all,
+      handler = loop.coroutine(function()
+        self:unstage_all()
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.reset_all,
+      handler = loop.coroutine(function()
+        self:reset_all()
+      end),
+    },
+  })
+end
+
+function ProjectDiffScreen:setup_diff_keymaps()
+  local keymaps = project_diff_preview_setting:get('keymaps')
+
+  self.diff_view:set_keymap({
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_hunk_stage,
+      handler = loop.debounce_coroutine(function()
+        self:stage_hunk()
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_hunk_unstage,
+      handler = loop.debounce_coroutine(function()
+        self:unstage_hunk()
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_reset,
+      handler = loop.debounce_coroutine(function()
+        self:reset_file()
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_stage,
+      handler = loop.debounce_coroutine(function()
+        self:stage_file()
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_unstage,
+      handler = loop.debounce_coroutine(function()
+        self:unstage_file()
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.stage_all,
+      handler = loop.debounce_coroutine(function()
+        self:stage_all()
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.unstage_all,
+      handler = loop.debounce_coroutine(function()
+        self:unstage_all()
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.reset_all,
+      handler = loop.debounce_coroutine(function()
+        self:reset_all()
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.commit,
+      handler = loop.debounce_coroutine(function()
+        self:commit()
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = {
+        key = '<enter>',
+        desc = 'Open buffer'
+      },
+      handler = loop.coroutine(function()
+        self:enter_view()
+      end),
+    },
+  })
+end
+
+function ProjectDiffScreen:setup_keymaps()
+  self:setup_list_keymaps()
+  self:setup_diff_keymaps()
+end
+
 function ProjectDiffScreen:create()
   local buffer = Buffer(0)
 
@@ -399,131 +540,7 @@ function ProjectDiffScreen:create()
   self.app_bar_view:render()
   self.status_list_view:render()
 
-  self.diff_view:set_keymap({
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').buffer_hunk_stage,
-      handler = loop.debounce_coroutine(function()
-        self:stage_hunk()
-      end, 15),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').buffer_hunk_unstage,
-      handler = loop.debounce_coroutine(function()
-        self:unstage_hunk()
-      end, 15),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').buffer_reset,
-      handler = loop.debounce_coroutine(function()
-        self:reset_file()
-      end, 15),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').buffer_stage,
-      handler = loop.debounce_coroutine(function()
-        self:stage_file()
-      end, 15),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').buffer_unstage,
-      handler = loop.debounce_coroutine(function()
-        self:unstage_file()
-      end, 15),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').stage_all,
-      handler = loop.debounce_coroutine(function()
-        self:stage_all()
-      end, 15),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').unstage_all,
-      handler = loop.debounce_coroutine(function()
-        self:unstage_all()
-      end, 15),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').reset_all,
-      handler = loop.debounce_coroutine(function()
-        self:reset_all()
-      end, 15),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').commit,
-      handler = loop.debounce_coroutine(function()
-        self:commit()
-      end, 15),
-    },
-    {
-      mode = 'n',
-      key = '<enter>',
-      handler = loop.coroutine(function()
-        self:enter_view()
-      end),
-    },
-  })
-
-  self.status_list_view:set_keymap({
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').commit,
-      handler = loop.coroutine(function()
-        self:commit()
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').buffer_reset,
-      handler = loop.coroutine(function()
-        self:reset_file()
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').buffer_stage,
-      handler = loop.coroutine(function()
-        self:stage_file()
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').buffer_unstage,
-      handler = loop.coroutine(function()
-        self:unstage_file()
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').stage_all,
-      handler = loop.coroutine(function()
-        self:stage_all()
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').unstage_all,
-      handler = loop.coroutine(function()
-        self:unstage_all()
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_diff_preview_setting:get('keymaps').reset_all,
-      handler = loop.coroutine(function()
-        self:reset_all()
-      end),
-    },
-  })
-
+  self:setup_keymaps()
   self:focus_relative_buffer_entry(buffer)
 
   return true

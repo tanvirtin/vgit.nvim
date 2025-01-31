@@ -85,6 +85,7 @@ function LineBlameScreen:create()
   self.line_blame_view:set_keymap({
     {
       mode = 'n',
+      desc = 'Inspect commit',
       key = '<enter>',
       handler = loop.coroutine(function()
         self:handle_on_enter(buffer, blame)
@@ -94,6 +95,7 @@ function LineBlameScreen:create()
   self.diff_view:set_keymap({
     {
       mode = 'n',
+      desc = 'Inspect commit',
       key = '<enter>',
       handler = loop.coroutine(function()
         self:handle_on_enter(buffer, blame)

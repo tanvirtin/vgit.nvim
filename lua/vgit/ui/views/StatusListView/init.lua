@@ -51,7 +51,7 @@ end
 
 function StatusListView:set_keymap(configs)
   utils.list.each(configs, function(config)
-    self.scene:get('list'):set_keymap(config.mode, config.key, config.handler)
+    self.scene:get('list'):set_keymap(config, config.handler)
   end)
 end
 
@@ -147,6 +147,7 @@ function StatusListView:mount(opts)
     {
       mode = 'n',
       key = '<enter>',
+      desc = 'Enter item',
       handler = loop.coroutine(function()
         local item = self:get_current_list_item()
         if not item then return end

@@ -2,7 +2,13 @@ local Config = require('vgit.core.Config')
 
 return Config({
   keymaps = {
-    previous = '-',
-    next = '=',
+    previous = {
+      key = '-',
+      desc = 'Previous',
+    },
+    next = {
+      key = '=',
+      desc = 'Next'
+    },
   },
 })

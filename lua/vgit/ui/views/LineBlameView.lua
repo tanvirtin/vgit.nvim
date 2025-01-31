@@ -33,7 +33,7 @@ end
 function LineBlameView:set_keymap(configs)
   local component = self.scene:get('line_blame')
   utils.list.each(configs, function(config)
-    component:set_keymap(config.mode, config.key, config.handler)
+    component:set_keymap(config, config.handler)
   end)
 end
 
