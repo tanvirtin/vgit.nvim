@@ -145,6 +145,7 @@ function DiffView:render_word_diff(component_type, line_changes, lnum)
 
   component:place_extmark_text({
     texts = texts,
+    col = 0,
     row = lnum - 1,
   })
 end
