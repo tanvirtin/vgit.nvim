@@ -210,15 +210,13 @@ function Buffer:filetype()
   return fs.detect_filetype(self:get_name())
 end
 
-function Buffer:set_keymap(mode, key, callback)
-  keymap.buffer_set(self, mode, key, callback)
-
+function Buffer:set_keymap(opts, callback)
+  keymap.buffer_set(self, opts, callback)
   return self
 end
 
 function Buffer:set_var(name, value)
   vim.api.nvim_buf_set_var(self.bufnr, name, value)
-
   return self
 end
 

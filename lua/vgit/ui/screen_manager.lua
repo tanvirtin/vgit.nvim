@@ -99,13 +99,13 @@ function screen_manager.create(screen_name, ...)
   if success then
     screen_manager.active_screen = screen
     screen.scene
-      :on('BufWinLeave', function()
-        loop.free_textlock()
-        if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
-      end)
-      :on('QuitPre', function()
-        if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
-      end)
+        :on('BufWinLeave', function()
+          loop.free_textlock()
+          if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
+        end)
+        :on('QuitPre', function()
+          if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
+        end)
   end
 
   return screen_manager
@@ -123,7 +123,10 @@ function screen_manager.handle_on_quit_keypress()
 end
 
 function screen_manager.register_keymaps()
-  keymap.set('n', scene_setting:get('keymaps').quit, screen_manager.handle_on_quit_keypress)
+  keymap.set({
+    mode = 'n',
+    key = scene_setting:get('keymaps').quit
+  }, screen_manager.handle_on_quit_keypress)
 end
 
 return screen_manager

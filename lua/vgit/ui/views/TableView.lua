@@ -46,7 +46,7 @@ end
 function TableView:set_keymap(configs)
   utils.list.each(configs, function(config)
     local component = self.scene:get('selectable_view')
-    component:set_keymap(config.mode, config.key, config.handler)
+    component:set_keymap(config, config.handler)
   end)
 end
 

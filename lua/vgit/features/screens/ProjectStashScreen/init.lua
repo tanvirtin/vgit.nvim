@@ -25,11 +25,11 @@ function ProjectStashScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_stash_preview_setting:get('keymaps')
         return {
-          { 'Add',   keymaps['add'] },
-          { 'Apply', keymaps['apply'] },
-          { 'Pop',   keymaps['pop'] },
-          { 'Drop',  keymaps['drop'] },
-          { 'Clear', keymaps['clear'] },
+          { keymaps['add'] },
+          { keymaps['apply'] },
+          { keymaps['pop'] },
+          { keymaps['drop'] },
+          { keymaps['clear'] },
         }
       end,
     }),
@@ -203,6 +203,69 @@ function ProjectStashScreen:hunk_down()
   self.diff_view:next()
 end
 
+function ProjectStashScreen:setup_keymaps()
+  local keymaps = project_stash_preview_setting:get('keymaps')
+
+  self.status_list_view:set_keymap({
+    {
+      mode = 'n',
+      mapping = keymaps.add,
+      handler = loop.coroutine(function()
+        self:add()
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.apply,
+      handler = loop.coroutine(function()
+        local list_item = self.status_list_view:get_current_list_item()
+        if not list_item then return end
+        local metadata = list_item.metadata
+        if not metadata then return end
+
+        local stash_index = metadata.stash_index
+        if not stash_index then return end
+        if stash_index then self:apply(stash_index) end
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.pop,
+      handler = loop.coroutine(function()
+        local list_item = self.status_list_view:get_current_list_item()
+        if not list_item then return end
+        local metadata = list_item.metadata
+        if not metadata then return end
+
+        local stash_index = metadata.stash_index
+        if not stash_index then return end
+        if stash_index then self:pop(stash_index) end
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.drop,
+      handler = loop.coroutine(function()
+        local list_item = self.status_list_view:get_current_list_item()
+        if not list_item then return end
+        local metadata = list_item.metadata
+        if not metadata then return end
+
+        local stash_index = metadata.stash_index
+        if not stash_index then return end
+        if stash_index then self:drop(stash_index) end
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.clear,
+      handler = loop.coroutine(function()
+        self:clear()
+      end),
+    },
+  })
+end
+
 function ProjectStashScreen:create(opts)
   loop.free_textlock()
   local entries, err = self.model:fetch(opts)
@@ -236,64 +299,7 @@ function ProjectStashScreen:create(opts)
   self.status_list_view:render()
   self.diff_view:render()
 
-  self.status_list_view:set_keymap({
-    {
-      mode = 'n',
-      key = project_stash_preview_setting:get('keymaps').add,
-      handler = loop.coroutine(function()
-        self:add()
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_stash_preview_setting:get('keymaps').apply,
-      handler = loop.coroutine(function()
-        local list_item = self.status_list_view:get_current_list_item()
-        if not list_item then return end
-        local metadata = list_item.metadata
-        if not metadata then return end
-
-        local stash_index = metadata.stash_index
-        if not stash_index then return end
-        if stash_index then self:apply(stash_index) end
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_stash_preview_setting:get('keymaps').pop,
-      handler = loop.coroutine(function()
-        local list_item = self.status_list_view:get_current_list_item()
-        if not list_item then return end
-        local metadata = list_item.metadata
-        if not metadata then return end
-
-        local stash_index = metadata.stash_index
-        if not stash_index then return end
-        if stash_index then self:pop(stash_index) end
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_stash_preview_setting:get('keymaps').drop,
-      handler = loop.coroutine(function()
-        local list_item = self.status_list_view:get_current_list_item()
-        if not list_item then return end
-        local metadata = list_item.metadata
-        if not metadata then return end
-
-        local stash_index = metadata.stash_index
-        if not stash_index then return end
-        if stash_index then self:drop(stash_index) end
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_stash_preview_setting:get('keymaps').clear,
-      handler = loop.coroutine(function()
-        self:clear()
-      end),
-    },
-  })
+  self:setup_keymaps()
 
   return true
 end

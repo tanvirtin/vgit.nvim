@@ -45,7 +45,7 @@ end
 
 function SimpleView:set_keymap(configs)
   utils.list.each(configs, function(config)
-    self.scene:get('simple_view'):set_keymap(config.mode, config.key, config.handler)
+    self.scene:get('simple_view'):set_keymap(config, config.handler)
   end)
 end
 

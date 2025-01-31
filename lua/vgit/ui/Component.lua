@@ -145,8 +145,8 @@ function Component:place_extmark_highlight(opts)
   return self.buffer:place_extmark_highlight(opts)
 end
 
-function Component:set_keymap(mode, key, callback)
-  self.buffer:set_keymap(mode, key, callback)
+function Component:set_keymap(opts, callback)
+  self.buffer:set_keymap(opts, callback)
   return self
 end
 

@@ -24,8 +24,8 @@ function ProjectLogsScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_logs_preview_setting:get('keymaps')
         return {
-          keymaps['previous'],
-          keymaps['next'],
+          { keymaps['previous'] },
+          { keymaps['next'] },
         }
       end,
       pagination = function()
@@ -33,7 +33,7 @@ function ProjectLogsScreen:constructor(opts)
       end
     }),
     logs_view = TableView(scene, {
-       headers = function()
+      headers = function()
         return {
           {
             name = 'commit_hash',
@@ -98,6 +98,37 @@ function ProjectLogsScreen:select(entry)
   self.model:select(entry)
 end
 
+function ProjectLogsScreen:setup_keymaps()
+  local keymaps = project_logs_preview_setting:get('keymaps')
+
+  self.logs_view:set_keymap({
+    {
+      mode = 'n',
+      mapping = keymaps.previous,
+      handler = loop.coroutine(function()
+        self:previous()
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.next,
+      handler = loop.coroutine(function()
+        self:next()
+      end),
+    },
+    {
+      mode = 'n',
+      mapping = {
+        key = '<enter>',
+        desc = 'Open commit(s)'
+      },
+      handler = loop.coroutine(function()
+        self:open()
+      end),
+    },
+  })
+end
+
 function ProjectLogsScreen:create()
   loop.free_textlock()
   local _, err = self.model:fetch()
@@ -122,29 +153,8 @@ function ProjectLogsScreen:create()
     },
   })
   self.logs_view:render()
-  self.logs_view:set_keymap({
-    {
-      mode = 'n',
-      key = project_logs_preview_setting:get('keymaps').previous,
-      handler = loop.coroutine(function()
-        self:previous()
-      end),
-    },
-    {
-      mode = 'n',
-      key = project_logs_preview_setting:get('keymaps').next,
-      handler = loop.coroutine(function()
-        self:next()
-      end),
-    },
-    {
-      mode = 'n',
-      key = '<enter>',
-      handler = loop.coroutine(function()
-        self:open()
-      end),
-    },
-  })
+
+  self:setup_keymaps()
 
   return true
 end

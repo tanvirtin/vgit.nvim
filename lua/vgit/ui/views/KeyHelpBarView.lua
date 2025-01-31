@@ -34,23 +34,45 @@ function KeyHelpBarView:mount(opts)
   self.scene:get('app_bar'):mount(opts)
 end
 
-function KeyHelpBarView:render()
+function KeyHelpBarView:render_help_text(component)
   local keymaps = self.props.keymaps()
 
   local text = ''
   for i, keymap in ipairs(keymaps) do
-    local action = keymap[1]
-    local key = keymap[2]
+    local key
+    local desc
 
-    text = i == 1 and string.format('%s (%s)', action, key) or string.format('%s | %s (%s)', text, action, key)
+    if #keymap == 1 then
+      local config = keymap[1]
+      key = config.key
+      desc = config.desc
+    else
+      if keymap[2] == 'table' then
+        local config = keymap[1]
+        key = config.key
+        desc = keymap[1]
+      else
+        local config = keymap[2]
+        key = config
+        desc = keymap[1]
+      end
+    end
+
+    text = i == 1 and string.format('%s (%s)', desc, key) or string.format('%s | %s (%s)', text, desc, key)
   end
 
-  self.scene:get('app_bar'):set_lines({ text })
-  self.scene:get('app_bar'):place_extmark_highlight({
+  component:set_lines({ text })
+end
+
+function KeyHelpBarView:render()
+  local component = self.scene:get('app_bar')
+  self:render_help_text(component)
+
+  component:place_extmark_highlight({
     hl = 'Keyword',
     pattern = '%((%a+)%)',
   })
-  self.scene:get('app_bar'):place_extmark_highlight({
+  component:place_extmark_highlight({
     hl = 'Number',
     pattern = '|',
   })

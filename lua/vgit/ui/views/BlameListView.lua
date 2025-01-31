@@ -42,7 +42,8 @@ end
 
 function BlameListView:set_keymap(configs)
   utils.list.each(configs, function(config)
-    self:get_component():set_keymap(config.mode, config.key, config.handler)
+    local component = self:get_component()
+    component:set_keymap(config, config.handler)
   end)
 end
 

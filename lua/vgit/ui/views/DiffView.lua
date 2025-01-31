@@ -104,12 +104,12 @@ end
 function DiffView:set_keymap(configs)
   if self.props.layout_type() == 'split' then
     utils.list.each(configs, function(config)
-      self.scene:get('previous'):set_keymap(config.mode, config.key, config.handler)
+      self.scene:get('previous'):set_keymap(config, config.handler)
     end)
   end
 
   utils.list.each(configs, function(config)
-    self.scene:get('current'):set_keymap(config.mode, config.key, config.handler)
+    self.scene:get('current'):set_keymap(config, config.handler)
   end)
 end
 
@@ -165,10 +165,12 @@ function DiffView:render_line_diff(component_type, line_changes, lnum)
 
   if change_type ~= 'void' then line_number_hl = main_signs[change_type] end
 
-  if sign_name then component:place_extmark_sign({
-    col = lnum - 1,
-    name = sign_name,
-  }) end
+  if sign_name then
+    component:place_extmark_sign({
+      col = lnum - 1,
+      name = sign_name,
+    })
+  end
 
   if change_type == 'void' then
     local text = string.rep(symbols_setting:get('void'), component.window:get_width())

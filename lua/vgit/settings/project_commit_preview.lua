@@ -2,6 +2,9 @@ local Config = require('vgit.core.Config')
 
 return Config({
   keymaps = {
-    save = 'S',
+    save = {
+      key = 'S',
+      desc = 'Save commit'
+    },
   },
 })
