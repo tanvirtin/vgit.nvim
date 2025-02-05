@@ -28,15 +28,15 @@ function ProjectDiffScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_diff_preview_setting:get('keymaps')
         return {
-          { keymaps['buffer_stage'] },
-          { keymaps['buffer_unstage'] },
-          { keymaps['buffer_reset'] },
-          { keymaps['buffer_hunk_stage'] },
-          { keymaps['buffer_hunk_unstage'] },
-          { keymaps['stage_all'] },
-          { keymaps['unstage_all'] },
-          { keymaps['reset_all'] },
-          { keymaps['commit'] },
+          { 'Stage',        keymaps['buffer_stage'] },
+          { 'Unstage',      keymaps['buffer_unstage'] },
+          { 'Reset',        keymaps['buffer_reset'] },
+          { 'Stage hunk',   keymaps['buffer_hunk_stage'] },
+          { 'Unstage hunk', keymaps['buffer_hunk_unstage'] },
+          { 'Stage all',    keymaps['stage_all'] },
+          { 'Unstage all',  keymaps['unstage_all'] },
+          { 'Reset all',    keymaps['reset_all'] },
+          { 'Commit',       keymaps['commit'] },
         }
       end,
     }),

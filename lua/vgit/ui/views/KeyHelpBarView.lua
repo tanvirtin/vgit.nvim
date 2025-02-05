@@ -42,20 +42,12 @@ function KeyHelpBarView:render_help_text(component)
     local key
     local desc
 
-    if #keymap == 1 then
-      local config = keymap[1]
-      key = config.key
-      desc = config.desc
+    if type(keymap[2]) == 'table' then
+      key = keymap[2].key
+      desc = keymap[2].desc
     else
-      if keymap[2] == 'table' then
-        local config = keymap[1]
-        key = config.key
-        desc = keymap[1]
-      else
-        local config = keymap[2]
-        key = config
-        desc = keymap[1]
-      end
+      key = keymap[2]
+      desc = keymap[1]
     end
 
     text = i == 1 and string.format('%s (%s)', desc, key) or string.format('%s | %s (%s)', text, desc, key)
