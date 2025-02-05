@@ -1,5 +1,3 @@
-local Object = require('vgit.core.Object')
-local dimensions = require('vgit.ui.dimensions')
 local KeyHelpBarView = require('vgit.ui.views.KeyHelpBarView')
 
 local PaginationView = KeyHelpBarView:extend()
