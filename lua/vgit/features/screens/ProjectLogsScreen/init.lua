@@ -24,8 +24,8 @@ function ProjectLogsScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_logs_preview_setting:get('keymaps')
         return {
-          { keymaps['previous'] },
-          { keymaps['next'] },
+          { 'Previous', keymaps['previous'] },
+          { 'Next', keymaps['next'] },
         }
       end,
       pagination = function()

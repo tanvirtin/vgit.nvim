@@ -102,7 +102,7 @@ Enable live blame annotations directly in your editor to see the author and comm
 > Releases prior to the major versions will no longer be maintained.
 > Branch `v1.0.x` contains several new features and massive optimizations but unfortunately also contains several breaking and deprecated changes.
 > For the time being the main branch will still be following `v0.2.x` while core users slowly migrate to `v1.0.x` without breaking their current workflow.
-> New users please use tag `v1.0.4` or branch `v1.0.x` for the latest changes!
+> New users please use tag `v1.0.5` or branch `v1.0.x` for the latest changes!
 
 ---
 
@@ -111,7 +111,7 @@ Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
 ```lua
 use {
   'tanvirtin/vgit.nvim', branch = 'v1.0.x',
-  -- or                , tag = 'v1.0.4',
+  -- or                , tag = 'v1.0.5',
   requires = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
   -- Lazy loading on 'VimEnter' event is necessary.
   event = 'VimEnter',
@@ -124,7 +124,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 ```lua
 {
   'tanvirtin/vgit.nvim', branch = 'v1.0.x',
-   -- or               , tag = 'v1.0.4',
+   -- or               , tag = 'v1.0.5',
   dependencies = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
   -- Lazy loading on 'VimEnter' event is necessary.
   event = 'VimEnter',
