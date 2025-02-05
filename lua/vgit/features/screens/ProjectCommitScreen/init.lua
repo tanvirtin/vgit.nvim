@@ -21,7 +21,7 @@ function ProjectCommitScreen:constructor(opts)
     app_bar_view = KeyHelpBarView(scene, {
       keymaps = function()
         local keymaps = project_commit_preview_setting:get('keymaps')
-        return { { keymaps['save'] } }
+        return { { 'Save commit', keymaps['save'] } }
       end,
     }),
     view = SimpleView(scene, {

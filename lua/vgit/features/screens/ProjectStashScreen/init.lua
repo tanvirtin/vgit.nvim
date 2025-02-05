@@ -25,11 +25,11 @@ function ProjectStashScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_stash_preview_setting:get('keymaps')
         return {
-          { keymaps['add'] },
-          { keymaps['apply'] },
-          { keymaps['pop'] },
-          { keymaps['drop'] },
-          { keymaps['clear'] },
+          { 'Add stash',   keymaps['add'] },
+          { 'Apply stash', keymaps['apply'] },
+          { 'Pop stash',   keymaps['pop'] },
+          { 'Drop stash',  keymaps['drop'] },
+          { 'Clear stash', keymaps['clear'] },
         }
       end,
     }),
