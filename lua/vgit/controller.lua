@@ -143,8 +143,6 @@ end
 
 local function register_keymaps(config)
   local keymaps = config and config.keymaps or {}
-
-  screen_manager.register_keymaps()
   keymap.define(keymaps)
 end
 
