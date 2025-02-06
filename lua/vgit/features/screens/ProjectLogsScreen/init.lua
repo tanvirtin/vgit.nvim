@@ -30,26 +30,26 @@ function ProjectLogsScreen:constructor(opts)
       end,
       pagination = function()
         return model:get_pagination()
-      end
+      end,
     }),
     logs_view = TableView(scene, {
       headers = function()
         return {
           {
             name = 'commit_hash',
-            caption = 'Commit'
+            caption = 'Commit',
           },
           {
             name = 'author_name',
-            caption = 'Author'
+            caption = 'Author',
           },
           {
             name = 'timestamp',
-            caption = 'Date'
+            caption = 'Date',
           },
           {
             name = 'summary',
-            caption = 'Summary'
+            caption = 'Summary',
           },
         }
       end,
@@ -67,13 +67,9 @@ function ProjectLogsScreen:open()
   local commit_hashes = self.model:get_selected()
   if #commit_hashes == 0 then return end
 
-  vim.cmd(
-    utils.list.reduce(
-      commit_hashes,
-      'VGit project_commits_preview',
-      function(cmd, log) return cmd .. ' ' .. log.commit_hash end
-    )
-  )
+  vim.cmd(utils.list.reduce(commit_hashes, 'VGit project_commits_preview', function(cmd, log)
+    return cmd .. ' ' .. log.commit_hash
+  end))
 end
 
 function ProjectLogsScreen:previous()
@@ -120,7 +116,7 @@ function ProjectLogsScreen:setup_keymaps()
       mode = 'n',
       mapping = {
         key = '<enter>',
-        desc = 'Open commit(s)'
+        desc = 'Open commit(s)',
       },
       handler = loop.coroutine(function()
         self:open()

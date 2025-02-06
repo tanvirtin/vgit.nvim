@@ -2,9 +2,9 @@ local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
 local utils = require('vgit.core.utils')
 local console = require('vgit.core.console')
-local git_repo = require('vgit.git.git_repo')
 local GitBuffer = require('vgit.git.GitBuffer')
 local assertion = require('vgit.core.assertion')
+local git_repo = require('vgit.libgit2.git_repo')
 
 local buffers = {}
 local events = {
@@ -31,26 +31,13 @@ git_buffer_store.register_events = loop.coroutine(function()
 
   loop.free_textlock()
   if not git_repo.exists() then return end
-  if not git_repo.discover() then return end
+  local git_dirname = git_repo.discover(nil, { git_dirname = true })
+  if not git_dirname then return end
 
   local handle = vim.loop.new_fs_event()
   if not handle then return end
 
   loop.free_textlock()
-  local git_dirname = git_repo.dirname()
-
-  -- Register VGitSync handler once, outside the filesystem callback
-  -- Use vim.schedule to avoid "must not be called in a lua loop callback" error
-  vim.schedule(function()
-    event.custom_on('VGitSync', function()
-      if suppress_sync then return end
-
-      git_buffer_store.for_each(function(buffer)
-        git_buffer_store.dispatch(buffer, 'sync')
-      end)
-    end)
-  end)
-
   local ok = handle:start(
     git_dirname,
     {},
@@ -58,16 +45,13 @@ git_buffer_store.register_events = loop.coroutine(function()
       if err then return end
       if filename and not filename:match('index%.lock$') then
         loop.free_textlock()
-        local git_dir = git_repo.dirname()
-        loop.free_textlock()
-        -- Emit event to trigger the handler registered above
         event.emit('VGitSync', {
-          git_dir = git_dir,
+          git_dir = git_dirname,
           filename = filename,
           event_name = event_name,
         })
       end
-    end, 10)
+    end, 50)
   )
 
   if not ok then return handle:close() end
@@ -165,23 +149,23 @@ git_buffer_store.collect = function()
 
   loop.free_textlock()
   git_buffer
-    :attach_to_changes({
-      on_lines = loop.coroutine(function(_, _, _, _, p_lnum, n_lnum, byte_count)
-        if p_lnum == n_lnum and byte_count == 0 then return end
-        git_buffer_store.dispatch(git_buffer, 'change')
-      end),
+      :attach_to_changes({
+        on_lines = loop.coroutine(function(_, _, _, _, p_lnum, n_lnum, byte_count)
+          if p_lnum == n_lnum and byte_count == 0 then return end
+          git_buffer_store.dispatch(git_buffer, 'change')
+        end),
 
-      on_reload = loop.coroutine(function()
-        git_buffer_store.dispatch(git_buffer, 'reload')
-      end),
+        on_reload = loop.coroutine(function()
+          git_buffer_store.dispatch(git_buffer, 'reload')
+        end),
 
-      on_detach = loop.coroutine(function()
-        git_buffer_store.dispatch(git_buffer, 'detach')
-        git_buffer_store.remove(git_buffer)
-        git_buffer:detach_from_renderer()
-      end),
-    })
-    :attach_to_renderer()
+        on_detach = loop.coroutine(function()
+          git_buffer_store.dispatch(git_buffer, 'detach')
+          git_buffer_store.remove(git_buffer)
+          git_buffer:detach_from_renderer()
+        end),
+      })
+      :attach_to_renderer()
 
   git_buffer_store.dispatch(git_buffer, 'attach')
 end

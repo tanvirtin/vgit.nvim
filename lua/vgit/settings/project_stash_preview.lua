@@ -20,7 +20,7 @@ return Config({
     },
     clear = {
       key = 'C',
-      desc = 'Clear stash'
-    }
+      desc = 'Clear stash',
+    },
   },
 })

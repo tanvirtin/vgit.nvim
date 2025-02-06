@@ -1,4 +1,5 @@
 local fs = require('vgit.core.fs')
+local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
 local Extmark = require('vgit.ui.Extmark')
 local Object = require('vgit.core.Object')
@@ -98,6 +99,7 @@ function Buffer:place_extmark_highlight(opts)
 end
 
 function Buffer:clear_extmark_texts()
+  if not self:is_valid() then return end
   return self.text_extmark:clear()
 end
 
@@ -142,6 +144,7 @@ function Buffer:is_current()
 end
 
 function Buffer:is_valid()
+  loop.free_textlock()
   local bufnr = self.bufnr
   return vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr)
 end
@@ -165,6 +168,11 @@ function Buffer:get_option(key)
   return vim.api.nvim_buf_get_option(self.bufnr, key)
 end
 
+function Buffer:set_option(key, value)
+  pcall(vim.api.nvim_buf_set_option, self.bufnr, key, value)
+  return self
+end
+
 function Buffer:set_lines(lines, top, bot)
   top = top or 0
   bot = bot or -1
@@ -176,15 +184,10 @@ function Buffer:set_lines(lines, top, bot)
     return self
   end
 
-  vim.api.nvim_buf_set_option(bufnr, 'modifiable', true)
-  pcall(vim.api.nvim_buf_set_lines, bufnr, top, bot, false, lines)
-  vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
+  self:set_option('modifiable', true)
+  vim.api.nvim_buf_set_lines(bufnr, top, bot, false, lines)
+  self:set_option('modifiable', false)
 
-  return self
-end
-
-function Buffer:set_option(key, value)
-  pcall(vim.api.nvim_buf_set_option, self.bufnr, key, value)
   return self
 end
 

@@ -2,8 +2,8 @@ local loop = require('vgit.core.loop')
 local Diff = require('vgit.core.Diff')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local git_show = require('vgit.git.git_show')
-local git_repo = require('vgit.git.git_repo')
+local git_show = require('vgit.libgit2.git_show')
+local git_repo = require('vgit.libgit2.git_repo')
 local git_hunks = require('vgit.git.git_hunks')
 local git_stash = require('vgit.git.git_stash')
 local git_status = require('vgit.git.git_status')
@@ -77,7 +77,7 @@ function Model:fetch(opts)
         self.state.statuses[id] = entry
 
         return entry
-      end)
+      end),
     }
   end
 

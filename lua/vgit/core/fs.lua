@@ -3,6 +3,7 @@ local plenary_filetype = require('plenary.filetype')
 
 local fs = {}
 
+fs.sep = Path.path.sep
 fs.detect_filetype = plenary_filetype.detect
 
 function fs.make_relative(dirname, filepath)
@@ -18,7 +19,7 @@ function fs.short_filename(filepath)
 
   for i = #filepath, 1, -1 do
     local letter = filepath:sub(i, i)
-    if letter == '/' then break end
+    if letter == fs.sep then break end
     filename = letter .. filename
   end
 

@@ -1,9 +1,8 @@
-local utils = require('vgit.core.utils')
 local Spawn = require('vgit.core.Spawn')
 
 describe('Spawn:', function()
   describe('constructor', function()
-    it('should be able to construct Spawn with specifications', function()
+    it('should construct Spawn with specifications', function()
       Spawn({
         command = 'ls',
         args = { '-l' },
@@ -14,25 +13,41 @@ describe('Spawn:', function()
     end)
   end)
 
-  describe('parse_result', function()
-    it('parses the output correctly', function()
+  describe('line processing', function()
+    it('handles split chunks and empty lines', function()
       local spawn = Spawn({
-        command = 'ls',
-        args = { '-l' },
-        on_stderr = function() end,
+        command = 'echo',
+        args = { 'test' },
         on_stdout = function() end,
+        on_stderr = function() end,
         on_exit = function() end,
       })
+
       local output = {}
-      spawn:parse_result({ 'line1\nline2\nline3', '\nline4', '\nline5\nline6' }, function(line)
+
+      spawn:process_chunk('line1\nline2\nline3', spawn.stdout_buffer, function(line)
         table.insert(output, line)
       end)
-      assert.are.same(table.concat(output), 'line1line2line3line4line5line6')
+      spawn:process_chunk('\nline4', spawn.stdout_buffer, function(line)
+        table.insert(output, line)
+      end)
+      spawn:process_chunk('\nline5\nline6\n', spawn.stdout_buffer, function(line)
+        table.insert(output, line)
+      end)
+
+      assert.are.same(output, {
+        'line1',
+        'line2',
+        'line3',
+        'line4',
+        'line5',
+        'line6',
+      })
     end)
   end)
 
   describe('start', function()
-    it('should be able to spawn a process and pipe stdout', function()
+    it('spawns process and pipes stdout', function()
       local stdout = {}
 
       Spawn({
@@ -40,30 +55,26 @@ describe('Spawn:', function()
         args = { '-l' },
         on_stderr = function() end,
         on_stdout = function(line)
-          table.insert(stdout, line)
+          if line ~= '' then table.insert(stdout, line) end
         end,
         on_exit = function()
-          assert.is_true(not utils.list.is_empty(stdout))
+          assert.is_true(#stdout > 0)
         end,
       }):start()
     end)
 
-    it('should pipe stderr correctly', function()
+    it('pipes stderr correctly', function()
       local stderr = {}
-      local stdout = {}
 
       Spawn({
         command = 'ls',
-        args = { '-lasdasd' },
+        args = { '-invalid-flag' },
         on_stderr = function(line)
-          table.insert(stdout, line)
+          if line ~= '' then table.insert(stderr, line) end
         end,
-        on_stdout = function(line)
-          table.insert(stdout, line)
-        end,
+        on_stdout = function() end,
         on_exit = function()
-          assert.is_true(utils.list.is_empty(stderr))
-          assert.is_true(not utils.list.is_empty(stdout))
+          assert.is_true(#stderr > 0)
         end,
       }):start()
     end)

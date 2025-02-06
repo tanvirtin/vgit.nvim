@@ -1,7 +1,9 @@
 local env = require('vgit.core.env')
 local loop = require('vgit.core.loop')
 local sign = require('vgit.core.sign')
+local libgit2 = require('vgit.libgit2')
 local keymap = require('vgit.core.keymap')
+local console = require('vgit.core.console')
 local renderer = require('vgit.core.renderer')
 local highlight = require('vgit.core.highlight')
 local hls_setting = require('vgit.settings.hls')
@@ -9,6 +11,7 @@ local git_setting = require('vgit.settings.git')
 local Hunks = require('vgit.features.buffer.Hunks')
 local scene_setting = require('vgit.settings.scene')
 local signs_setting = require('vgit.settings.signs')
+local libgit2_setting = require('vgit.settings.libgit2')
 local screen_manager = require('vgit.ui.screen_manager')
 local symbols_setting = require('vgit.settings.symbols')
 local diff_preview = require('vgit.settings.diff_preview')
@@ -131,6 +134,9 @@ local function register_modules()
     sign.register_module()
   end)
   renderer.register_module()
+
+  local _, err = libgit2.register()
+  if err then console.error(err) end
 end
 
 local function register_events()
@@ -153,6 +159,7 @@ local function configure_settings(config)
   hls_setting:assign(config_settings.hls)
   signs_setting:assign(config_settings.signs)
   scene_setting:assign(config_settings.scene)
+  libgit2_setting:assign(config_settings.libgit2)
   symbols_setting:assign(config_settings.symbols)
   diff_preview:assign(config_settings.diff_preview)
   live_blame_setting:assign(config_settings.live_blame)
@@ -168,8 +175,8 @@ local controller = {}
 function controller.setup(config)
   configure_settings(config)
 
-  vim.api.nvim_create_user_command("VGit", controller.execute_command, {
-    nargs = "*",
+  vim.api.nvim_create_user_command('VGit', controller.execute_command, {
+    nargs = '*',
     complete = controller.autocomplete,
   })
 
@@ -212,7 +219,7 @@ function controller.execute_command(args)
   local commands = controller.commands()
 
   if not args.fargs or #args.fargs == 0 then
-    vim.notify("Vgit: No command provided", vim.log.levels.ERROR)
+    vim.notify('Vgit: No command provided', vim.log.levels.ERROR)
     return
   end
 
@@ -220,13 +227,13 @@ function controller.execute_command(args)
   local cmd_func = commands[cmd]
 
   if not cmd_func then
-    vim.notify(string.format("Vgit: Unknown command '%s'", cmd), vim.log.levels.ERROR)
+    vim.notify(string.format('Vgit: Unknown command \'%s\'', cmd), vim.log.levels.ERROR)
     return
   end
 
   local ok, err = pcall(cmd_func, unpack(args.fargs, 2))
   if not ok then
-    vim.notify(string.format("Vgit: Error executing command '%s': %s", cmd, err), vim.log.levels.ERROR)
+    vim.notify(string.format('Vgit: Error executing command \'%s\': %s', cmd, err), vim.log.levels.ERROR)
   end
 end
 
@@ -234,7 +241,7 @@ function controller.autocomplete(arg_lead, cmd_line, _)
   local commands = controller.commands()
   local cmd_list = vim.tbl_keys(commands)
 
-  local split_cmd = vim.split(cmd_line, "%s+")
+  local split_cmd = vim.split(cmd_line, '%s+')
   if #split_cmd == 2 then
     return vim.tbl_filter(function(cmd)
       return vim.startswith(cmd, arg_lead)

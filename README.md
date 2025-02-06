@@ -157,6 +157,10 @@ require('vgit').setup({
     ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
   },
   settings = {
+    libgit2 = {
+      enabled = false,
+      path = '<path-to>/libgit2/lib/libgit2.dylib',
+    },
     -- You can either allow corresponding mapping for existing hl, or re-define them yourself entirely.
     hls = {
       GitCount = 'Keyword',
