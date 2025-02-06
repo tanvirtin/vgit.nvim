@@ -231,6 +231,9 @@ function GitBuffer:exists()
   if not self:is_valid() then return false end
 
   loop.free_textlock()
+  if self:get_option('buftype') ~= '' then return false end
+
+  loop.free_textlock()
   if not self:is_inside_git_dir() then return false end
 
   loop.free_textlock()

@@ -1,6 +1,7 @@
 local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
 local utils = require('vgit.core.utils')
+local console = require('vgit.core.console')
 local git_repo = require('vgit.git.git_repo')
 local GitBuffer = require('vgit.git.GitBuffer')
 local assertion = require('vgit.core.assertion')
@@ -135,7 +136,13 @@ git_buffer_store.collect = function()
   local git_buffer = GitBuffer(0)
   git_buffer:sync()
 
-  if not git_buffer:exists() then return git_buffer_store.remove(git_buffer) end
+  local ok, result = pcall(git_buffer.exists, git_buffer)
+  if not ok then
+    git_buffer_store.remove(git_buffer)
+    console.debug.error(result)
+    return
+  end
+  if ok and not result then return git_buffer_store.remove(git_buffer) end
 
   if git_buffer_store.contains(git_buffer) then
     local existing_git_buffer = git_buffer_store.get(git_buffer)
