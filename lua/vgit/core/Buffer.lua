@@ -99,6 +99,7 @@ function Buffer:place_extmark_highlight(opts)
 end
 
 function Buffer:clear_extmark_texts()
+  loop.free_textlock()
   if not self:is_valid() then return end
   return self.text_extmark:clear()
 end
@@ -144,7 +145,6 @@ function Buffer:is_current()
 end
 
 function Buffer:is_valid()
-  loop.free_textlock()
   local bufnr = self.bufnr
   return vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr)
 end
