@@ -16,26 +16,35 @@ function loop.free_textlock(times)
   return loop
 end
 
--- Registry to track debounced handlers and their cleanup functions
--- Uses weak keys so handlers can be garbage collected when no longer referenced
-local debounced_registry = setmetatable({}, { __mode = 'k' })
+function loop.debounce(fn, ms, opts)
+  opts = opts or {}
 
-function loop.debounce(fn, ms)
+  local prolong = opts.prolong ~= nil and opts.prolong or true
+
+  local args, argc
+  local cooldown = false
   local timer = vim.loop.new_timer()
   local closed = false
 
-  local debounced = function(...)
-    if closed then return end
-    local argv = { ... }
-    local argc = select('#', ...)
+  return function(...)
+    args = { ... }
+    argc = select('#', ...)
+
+    if not cooldown then
+      cooldown = true
+      fn(...)
+      timer:start(ms, 0, function()
+        cooldown = false
+      end)
+      return
+    end
+
+    if not prolong then return end
 
     timer:stop()
     timer:start(ms, 0, function()
-      vim.schedule(function()
-        if not closed then
-          fn(unpack(argv, 1, argc))
-        end
-      end)
+      cooldown = false
+      fn(unpack(args, 1, argc))
     end)
   end
 
