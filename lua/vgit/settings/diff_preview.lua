@@ -4,23 +4,23 @@ return Config({
   keymaps = {
     buffer_stage = {
       key = 'S',
-      desc = 'Stage'
+      desc = 'Stage',
     },
     buffer_unstage = {
       key = 'U',
-      desc = 'Unstage'
+      desc = 'Unstage',
     },
     reset = {
       key = 'r',
-      desc = 'Reset'
+      desc = 'Reset',
     },
     buffer_hunk_stage = {
       key = 's',
-      desc = 'Stage hunk'
+      desc = 'Stage hunk',
     },
     buffer_hunk_unstage = {
       key = 'u',
-      desc = 'Unstage hunk'
+      desc = 'Unstage hunk',
     },
     toggle_view = 't',
   },

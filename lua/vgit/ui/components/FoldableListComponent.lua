@@ -287,7 +287,6 @@ function FoldableListComponent:mount()
   self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
 
   if config.elements.header then self.elements.header = HeaderElement():mount(plot.header_win_plot) end
-
   if config.elements.footer then self.elements.footer = FooterElement():mount(plot.footer_win_plot) end
 
   self.mounted = true

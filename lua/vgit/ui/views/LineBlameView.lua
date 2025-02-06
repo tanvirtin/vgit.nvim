@@ -64,7 +64,7 @@ function LineBlameView:render()
   component:unlock():set_lines(lines):lock()
   component:clear_extmarks()
 
-  if lines[1]:match("^[a-f0-9]+%s*%->%s*[a-f0-9]+$") then
+  if lines[1]:match('^[a-f0-9]+%s*%->%s*[a-f0-9]+$') then
     component:place_extmark_highlight({
       hl = 'Character',
       pattern = '^([a-f0-9]+)',
