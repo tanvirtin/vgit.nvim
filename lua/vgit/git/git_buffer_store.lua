@@ -53,7 +53,7 @@ git_buffer_store.register_events = loop.coroutine(function()
           end)
         end)
       end
-    end, 50)
+    end, 200)
   )
 
   if not ok then return handle:close() end

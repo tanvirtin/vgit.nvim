@@ -56,7 +56,7 @@ function LiveBlame:register_events()
 
         loop.free_textlock()
         buffer:render_blames()
-      end, 50)
+      end, 200)
     )
   end)
 
