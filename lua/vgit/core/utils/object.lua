@@ -45,6 +45,31 @@ function object.assign(o, ...)
   return o
 end
 
+function object.pick(o, keys)
+  o = o or {}
+  local picked_o = {}
+
+  object.each(o, function(value, key)
+    for i = 1, #keys do
+      local k = keys[i]
+      if k == key then picked_o[key] = value end
+    end
+  end)
+
+  return picked_o
+end
+
+function object.extend(o, ...)
+  o = o or {}
+  local objects = { ... }
+
+  for i = 1, #objects do
+    o = vim.tbl_extend('force', o, objects[i])
+  end
+
+  return o
+end
+
 function object.merge(...)
   local o = {}
   local objects = { ... }
@@ -57,13 +82,13 @@ function object.merge(...)
 end
 
 function object.pairs(o)
-  local pairs = {}
+  local p = {}
 
   for key, component in pairs(o) do
-    pairs[#pairs + 1] = { key, component }
+    p[#p + 1] = { key, component }
   end
 
-  return pairs
+  return p
 end
 
 function object.keys(o)
@@ -86,17 +111,18 @@ function object.values(o)
   return values
 end
 
-function object.clone_deep(config_object) return vim.tbl_deep_extend('force', {}, config_object) end
+function object.deep_clone(o)
+  return vim.deepcopy(o, true)
+end
 
-function object.clone(config_object) return vim.tbl_extend('force', {}, config_object) end
+function object.clone(config_object)
+  return vim.tbl_extend('force', {}, config_object)
+end
 
 function object.each(o, callback)
   for key, value in pairs(o) do
     local break_loop = callback(value, key)
-
-    if break_loop then
-      return
-    end
+    if break_loop then return end
   end
 end
 

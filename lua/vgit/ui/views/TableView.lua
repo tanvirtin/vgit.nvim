@@ -1,40 +1,39 @@
+local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local console = require('vgit.core.console')
 local dimensions = require('vgit.ui.dimensions')
-local TableComponent = require('vgit.ui.components.TableComponent')
+local TableGenerator = require('vgit.ui.TableGenerator')
+local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 
 local TableView = Object:extend()
 
-function TableView:constructor(scene, store, plot, config)
+function TableView:constructor(scene, props, plot, config)
   return {
-    scene = scene,
-    store = store,
     plot = plot,
+    scene = scene,
+    props = props,
+    state = { entries = {} },
     config = config or {},
+    event_handlers = {
+      on_select = function(entry) end,
+    },
   }
-end
-
-function TableView:get_components() return { self.scene:get('table') } end
-
-function TableView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('table'):set_keymap(config.mode, config.key, config.handler) end
-  )
-  return self
 end
 
 function TableView:define()
   self.scene:set(
-    'table',
-    TableComponent({
+    'selectable_view',
+    PresentationalComponent({
       config = {
-        column_labels = self.config.column_labels,
         elements = utils.object.assign({
           header = true,
           footer = false,
         }, self.config.elements),
+        win_options = {
+          cursorbind = true,
+          scrollbind = true,
+          cursorline = true,
+        },
         win_plot = dimensions.relative_win_plot(self.plot, {
           height = '100vh',
           width = '100vw',
@@ -42,66 +41,89 @@ function TableView:define()
       },
     })
   )
-  return self
 end
 
-function TableView:move(direction)
-  local component = self.scene:get('table')
-  local lnum = component:get_lnum()
-  local count = component:get_line_count()
-
-  if direction == 'down' then
-    lnum = lnum + 1
-  end
-  if direction == 'up' then
-    lnum = lnum - 1
-  end
-  if lnum < 1 then
-    lnum = count
-  elseif lnum > count then
-    lnum = 1
-  end
-
-  component:unlock():set_lnum(lnum):lock()
-  self.store:set_lnum(lnum)
-
-  return lnum
+function TableView:set_keymap(configs)
+  utils.list.each(configs, function(config)
+    local component = self.scene:get('selectable_view')
+    component:set_keymap(config, config.handler)
+  end)
 end
 
-function TableView:get_current_row()
-  local _, entries = self.store:get_all()
-
-  if not entries then
-    return nil
-  end
-
-  return entries[self.scene:get('table'):get_lnum()]
-end
-
-function TableView:render()
-  local _, lnum = self.store:get_lnum()
-  local err, entries = self.store:get_all()
-
-  if err then
-    console.debug.error(err).error(err)
-    return self
-  end
-
-  self.scene:get('table'):unlock():make_rows(entries, self.config.get_row):focus():set_lnum(lnum):lock()
-
-  return self
+function TableView:render_title(labels)
+  local component = self.scene:get('selectable_view')
+  local label = labels[1]
+  component:set_title(label)
 end
 
 function TableView:mount(opts)
-  self.scene:get('table'):mount(opts)
+  opts = opts or {}
 
-  return self
+  local component = self.scene:get('selectable_view')
+  component:mount(opts)
+
+  if opts.event_handlers then self.event_handlers = utils.object.assign(self.event_handlers, opts.event_handlers) end
+
+  self:set_keymap({
+    {
+      mode = 'n',
+      key = '<tab>',
+      handler = loop.coroutine(function()
+        local lnum = component:get_lnum()
+        local entry = self.state.entries[lnum]
+        if not entry then return end
+        self.event_handlers.on_select(entry)
+        self:render()
+      end),
+    }
+  })
 end
 
-function TableView:show(opts)
-  self:mount(opts):render()
+function TableView:generate_table(entries)
+  local headers = self.props.headers()
+  local header_captions = utils.list.map(headers, function(header)
+    return header.caption
+  end)
+  local header_names = utils.list.map(headers, function(header)
+    return header.name
+  end)
 
-  return self
+  local row_mappings = utils.list.map(entries, function(entry)
+    return utils.list.map(header_names, function(header_name)
+      return entry[header_name]
+    end)
+  end)
+
+  self.state.entries = entries
+
+  return TableGenerator(header_captions, row_mappings, 1, 80):generate()
+end
+
+function TableView:render()
+  local entries = self.props.entries()
+  if not entries or #entries == 0 then return end
+
+  local labels, rows = self:generate_table(entries)
+  self:render_title(labels)
+
+  local component = self.scene:get('selectable_view')
+  component:unlock():set_lines(rows):focus():lock()
+
+  local num_lines = component:get_line_count()
+
+  for lnum = 1, num_lines do
+    local entry = self.state.entries[lnum]
+    local is_selected = self.props.is_selected(entry)
+
+    component:place_extmark_highlight({
+      hl = is_selected and 'Keyword' or 'Constant',
+      row = lnum - 1,
+      col_range = {
+        from = 0,
+        to = 41,
+      },
+    })
+  end
 end
 
 return TableView

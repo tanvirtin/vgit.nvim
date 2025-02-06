@@ -13,7 +13,6 @@ function PresentationalComponent:constructor(props)
       elements = {
         header = true,
         footer = true,
-        line_number = false,
       },
     },
   }, props)
@@ -22,14 +21,11 @@ end
 
 function PresentationalComponent:call(callback)
   self.window:call(callback)
-
   return self
 end
 
 function PresentationalComponent:mount(opts)
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   opts = opts or {}
   local config = self.config
@@ -42,13 +38,8 @@ function PresentationalComponent:mount(opts)
 
   self.window = Window:open(buffer, win_plot):assign_options(config.win_options)
 
-  if config.elements.header then
-    self.elements.header = HeaderElement():mount(plot.header_win_plot)
-  end
-
-  if config.elements.footer then
-    self.elements.footer = FooterElement():mount(plot.footer_win_plot)
-  end
+  if config.elements.header then self.elements.header = HeaderElement():mount(plot.header_win_plot) end
+  if config.elements.footer then self.elements.footer = FooterElement():mount(plot.footer_win_plot) end
 
   self.mounted = true
 
@@ -61,23 +52,15 @@ function PresentationalComponent:unmount()
 
   self.window:close()
 
-  if header then
-    header:unmount()
-  end
-
-  if footer then
-    footer:unmount()
-  end
+  if header then header:unmount() end
+  if footer then footer:unmount() end
 
   return self
 end
 
 function PresentationalComponent:set_title(text)
   local header = self.elements.header
-
-  if header then
-    header:set_lines({ text })
-  end
+  if header then header:set_lines({ text }) end
 
   return self
 end

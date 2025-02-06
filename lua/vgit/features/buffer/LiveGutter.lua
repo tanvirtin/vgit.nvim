@@ -1,7 +1,6 @@
 local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local GitBuffer = require('vgit.git.GitBuffer')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local live_gutter_setting = require('vgit.settings.live_gutter')
 
@@ -11,83 +10,59 @@ function LiveGutter:constructor()
   return { name = 'Live Gutter' }
 end
 
-LiveGutter.fetch = loop.debounce_coroutine(function(self, buffer)
-  if not live_gutter_setting:get('enabled') then return self end
-
-  loop.free_textlock()
-  if not buffer:is_valid() then return self end
-
-  loop.free_textlock()
-  local err = buffer:live_hunks()
-
-  loop.free_textlock()
-  if err then
-    console.debug.error(err)
-    return self
-  end
-
-  buffer:sign_unplace()
-  buffer:generate_status()
-
-  return self
-end, 10)
-
-function LiveGutter:render(buffer, top, bot)
-  if not live_gutter_setting:get('enabled') then return self end
-
-  local hunks = buffer.git_object.hunks
-  if not hunks then return self end
-
-  local signs = {}
-  for i = top, bot do
-    signs[#signs + 1] = buffer.signs[i]
-  end
-
-  buffer:sign_placelist(signs)
-
-  return self
+function LiveGutter:is_enabled()
+  return live_gutter_setting:get('enabled') == true
 end
 
-function LiveGutter:reset()
-  local buffers = GitBuffer:list()
+function LiveGutter:fetch(buffer)
+  loop.free_textlock()
+  if not buffer:is_valid() then return end
 
-  for i = 1, #buffers do
-    local buffer = buffers[i]
-
-    if buffer then
-      buffer:sign_unplace()
-    end
+  loop.free_textlock()
+  local _, err = buffer:diff()
+  if err then
+    console.debug.error(err)
+    return
   end
 
-  return self
+  loop.free_textlock()
+  buffer:generate_status()
+end
+
+LiveGutter.fetch_debounced = loop.debounce_coroutine(function(self, buffer)
+  self:fetch(buffer)
+end, 10)
+
+function LiveGutter:toggle()
+  git_buffer_store.for_each(function(buffer)
+    if self:is_enabled() then
+      self:fetch(buffer)
+    else
+      buffer:reset_signs()
+    end
+    buffer:render_signs()
+  end)
 end
 
 function LiveGutter:register_events()
   git_buffer_store
-    .attach('attach', function(buffer)
-      self:fetch(buffer)
-    end)
-    .attach('reload', function(buffer)
-      self:fetch(buffer)
-    end)
-    .attach('change', function(buffer)
-      self:fetch(buffer)
-    end)
-    .attach('watch', function(buffer)
-      buffer:sync()
-      self:fetch(buffer)
-    end)
-    .attach('git_watch', function(buffers)
-      for i = 1, #buffers do
-        local buffer = buffers[i]
-        self:fetch(buffer)
-      end
-    end)
-    .attach('render', function(buffer, top, bot)
-      self:render(buffer, top, bot)
-    end)
+      .on({ 'attach', 'reload' }, function(buffer)
+        if not self:is_enabled() then return end
 
-  return self
+        self:fetch(buffer)
+        buffer:render_signs()
+      end)
+      .on({ 'change' }, function(buffer)
+        if not self:is_enabled() then return end
+        self:fetch_debounced(buffer)
+      end)
+      .on('sync', function(buffer)
+        if not self:is_enabled() then return end
+        self:fetch_debounced(buffer)
+      end)
+      .on('detach', function(buffer)
+        buffer:clear_extmarks()
+      end)
 end
 
 return LiveGutter

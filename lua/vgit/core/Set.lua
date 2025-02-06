@@ -14,7 +14,9 @@ function Set:constructor(list)
   }
 end
 
-function Set:has(key) return self.set[key] ~= nil end
+function Set:has(key)
+  return self.set[key] ~= nil
+end
 
 function Set:add(key)
   self.set[key] = true
@@ -35,9 +37,7 @@ function Set:for_each(callback)
     index = index + 1
     local result = callback(key, index)
 
-    if result == false then
-      break
-    end
+    if result == false then break end
   end
 
   return self

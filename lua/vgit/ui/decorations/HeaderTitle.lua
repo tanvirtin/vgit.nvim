@@ -12,9 +12,7 @@ function HeaderTitle:set(source, title, opts)
   local stat = opts.stat
   local text = title
 
-  if filename or filetype or stat then
-    text = utils.str.concat(title, ': ')
-  end
+  if filename or filetype or stat then text = utils.str.concat(title, ': ') end
 
   local hl_range_infos = {}
 
@@ -60,7 +58,14 @@ function HeaderTitle:set(source, title, opts)
   for _, range_info in ipairs(hl_range_infos) do
     local hl = range_info.hl
     local range = range_info.range
-    source:add_highlight(hl, 0, range.top, range.bot)
+    source:place_extmark_highlight({
+      hl = hl,
+      row = 0,
+      col_range = {
+        from = range.top,
+        to = range.bot,
+      },
+    })
   end
 
   return self
@@ -68,7 +73,6 @@ end
 
 function HeaderTitle:clear(source)
   source:set_lines({})
-
   return self
 end
 

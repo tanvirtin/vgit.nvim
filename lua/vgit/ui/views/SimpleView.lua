@@ -1,21 +1,22 @@
 local utils = require('vgit.core.utils')
-local dimensions = require('vgit.ui.dimensions')
 local Object = require('vgit.core.Object')
-local console = require('vgit.core.console')
+local dimensions = require('vgit.ui.dimensions')
 local PresentationalComponent = require('vgit.ui.components.PresentationalComponent')
 
 local SimpleView = Object:extend()
 
-function SimpleView:constructor(scene, store, plot, config)
+function SimpleView:constructor(scene, props, plot, config)
   return {
-    scene = scene,
-    store = store,
     plot = plot,
+    scene = scene,
+    props = props,
     config = config or {},
   }
 end
 
-function SimpleView:get_components() return { self.scene:get('simple_view') } end
+function SimpleView:get_components()
+  return { self.scene:get('simple_view') }
+end
 
 function SimpleView:define()
   self.scene:set(
@@ -36,61 +37,39 @@ function SimpleView:define()
       },
     })
   )
-  return self
 end
 
 function SimpleView:set_filetype(filetype)
   self.scene:get('simple_view'):set_filetype(filetype)
-
-  return self
 end
 
 function SimpleView:set_keymap(configs)
-  utils.list.each(
-    configs,
-    function(config) self.scene:get('simple_view'):set_keymap(config.mode, config.key, config.handler) end
-  )
-  return self
+  utils.list.each(configs, function(config)
+    self.scene:get('simple_view'):set_keymap(config, config.handler)
+  end)
 end
 
 function SimpleView:set_title()
-  if self.config.elements and not self.config.elements.header then
-    return self
-  end
+  if self.config.elements and not self.config.elements.header then return end
 
-  local _, title = self.store:get_title()
-
+  local title = self.props.title()
   self.scene:get('simple_view'):set_title(title)
-
-  return self
 end
 
-function SimpleView:get_lines() return self.scene:get('simple_view'):get_lines() end
-
-function SimpleView:render()
-  local err, lines = self.store:get_lines()
-
-  if err then
-    console.debug.error(err).error(err)
-    return self
-  end
-
-  self:set_title()
-  self.scene:get('simple_view'):unlock():set_lines(lines):focus():lock()
-
-  return self
+function SimpleView:get_lines()
+  return self.scene:get('simple_view'):get_lines()
 end
 
 function SimpleView:mount(opts)
   self.scene:get('simple_view'):mount(opts)
-
-  return self
 end
 
-function SimpleView:show(opts)
-  self:mount(opts):render()
+function SimpleView:render()
+  local lines = self.props.lines()
+  if not lines then return end
 
-  return self
+  self:set_title()
+  self.scene:get('simple_view'):unlock():set_lines(lines):lock()
 end
 
 return SimpleView

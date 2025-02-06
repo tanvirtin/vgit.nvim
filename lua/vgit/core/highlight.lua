@@ -1,6 +1,5 @@
 local event = require('vgit.core.event')
 local hls_setting = require('vgit.settings.hls')
-local event_type = require('vgit.core.event_type')
 
 local highlight = {}
 
@@ -11,15 +10,11 @@ function highlight.define(group, color, force)
     return highlight
   end
 
-  if type(color) == 'function' then
-    color = color()
-  end
+  if type(color) == 'function' then color = color() end
 
   if not force and color.override == false then
     local ok, hl = pcall(vim.api.nvim_get_hl_by_name, group, true)
-    if ok and (type(hl) == 'table' and not hl[true] and hl ~= nil) then
-      return
-    end
+    if ok and (type(hl) == 'table' and not hl[true] and hl ~= nil) then return end
   end
 
   local gui = color.gui and 'gui = ' .. color.gui or 'gui = NONE'
@@ -33,18 +28,20 @@ function highlight.define(group, color, force)
 end
 
 function highlight.register_module(dependency)
-  hls_setting:for_each(function(hl, color) highlight.define(hl, color) end)
+  hls_setting:for_each(function(hl, color)
+    highlight.define(hl, color)
+  end)
 
-  if dependency then
-    dependency()
-  end
+  if dependency then dependency() end
 
   return highlight
 end
 
 function highlight.register_events()
-  event.on(event_type.ColorScheme, function()
-    hls_setting:for_each(function(hl, color) highlight.define(hl, color) end)
+  event.on('ColorScheme', function()
+    hls_setting:for_each(function(hl, color)
+      highlight.define(hl, color)
+    end)
   end)
 end
 
