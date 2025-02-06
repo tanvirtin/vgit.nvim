@@ -213,6 +213,51 @@ function DiffView:render_diff_partially()
   end)
 end
 
+function DiffView:render_folds()
+  local diff = self.props.diff()
+  local marks = diff.marks
+
+  local current_component = self.scene:get('current')
+  local line_count = current_component:get_line_count()
+
+  local folds = {}
+  local fold_top = 2
+  local num_focus_lines = 7
+
+  utils.list.each(marks, function(mark)
+    folds[#folds + 1] = {
+      top = fold_top,
+      bot = mark.top - num_focus_lines,
+    }
+    fold_top = mark.bot + num_focus_lines + 1
+  end)
+
+  if fold_top > line_count then
+    fold_top = fold_top - num_focus_lines + 1
+  end
+
+  if fold_top < line_count - 1 then
+    folds[#folds + 1] = {
+      top = fold_top,
+      bot = line_count - 1,
+    }
+  end
+
+  current_component:call(function()
+    utils.list.each(folds, function(fold)
+      vim.cmd(string.format('%s,%sfold', fold.top, fold.bot))
+    end)
+  end)
+
+  if self.props.layout_type() ~= 'split' then return end
+
+  self.scene:get('previous'):call(function()
+    utils.list.each(folds, function(fold)
+      vim.cmd(string.format('%s,%sfold', fold.top, fold.bot))
+    end)
+  end)
+end
+
 function DiffView:reset_cursor()
   if self.props.layout_type() == 'split' then self.scene:get('previous'):reset_cursor() end
   self.scene:get('current'):reset_cursor()
@@ -653,6 +698,7 @@ function DiffView:render()
     self:render_lines()
     self:render_line_numbers()
     self:render_diff_partially()
+    self:render_folds()
   end)
 
    if not ok then console.debug.error(msg) end
