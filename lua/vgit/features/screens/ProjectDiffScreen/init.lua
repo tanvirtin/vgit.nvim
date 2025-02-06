@@ -329,7 +329,7 @@ end
 ProjectDiffScreen.render_diff_view_debounced = loop.debounce_coroutine(function(self)
   self.diff_view:render()
   self.diff_view:move_to_hunk()
-end, 100)
+end, 200)
 
 function ProjectDiffScreen:handle_list_move()
   local list_item = self.status_list_view:move()
@@ -343,7 +343,7 @@ function ProjectDiffScreen:focus_relative_buffer_entry(buffer)
   local filename = buffer:get_relative_name()
   if filename == '' then
     local has_unstaged = false
-    self.status_list_view:each_status(function(status, entry_type)
+    self.status_list_view:each_status(function(_, entry_type)
       if entry_type == 'unstaged' then has_unstaged = true end
     end)
     self:move_to(function(_, entry_type)
@@ -432,63 +432,63 @@ function ProjectDiffScreen:setup_diff_keymaps()
       mapping = keymaps.buffer_hunk_stage,
       handler = loop.debounce_coroutine(function()
         self:stage_hunk()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_hunk_unstage,
       handler = loop.debounce_coroutine(function()
         self:unstage_hunk()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_reset,
       handler = loop.debounce_coroutine(function()
         self:reset_file()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_stage,
       handler = loop.debounce_coroutine(function()
         self:stage_file()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_unstage,
       handler = loop.debounce_coroutine(function()
         self:unstage_file()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.stage_all,
       handler = loop.debounce_coroutine(function()
         self:stage_all()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.unstage_all,
       handler = loop.debounce_coroutine(function()
         self:unstage_all()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.reset_all,
       handler = loop.debounce_coroutine(function()
         self:reset_all()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.commit,
       handler = loop.debounce_coroutine(function()
         self:commit()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
