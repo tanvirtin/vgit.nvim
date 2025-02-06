@@ -277,7 +277,7 @@ function DiffScreen:setup_keymaps(buffer)
       mapping = keymaps.reset,
       handler = loop.debounce_coroutine(function()
         self:reset(buffer)
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
@@ -285,7 +285,7 @@ function DiffScreen:setup_keymaps(buffer)
       handler = loop.debounce_coroutine(function()
         self:stage(buffer)
         self:toggle_view(buffer)
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
@@ -293,21 +293,21 @@ function DiffScreen:setup_keymaps(buffer)
       handler = loop.debounce_coroutine(function()
         self:unstage(buffer)
         self:toggle_view(buffer)
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_hunk_stage,
       handler = loop.debounce_coroutine(function()
         self:stage_hunk(buffer)
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_hunk_unstage,
       handler = loop.debounce_coroutine(function()
         self:unstage_hunk(buffer)
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
@@ -317,14 +317,14 @@ function DiffScreen:setup_keymaps(buffer)
       },
       handler = loop.debounce_coroutine(function()
         self:enter_view()
-      end, 50),
+      end, 200),
     },
     {
       mode = 'n',
       mapping = keymaps.toggle_view,
       handler = loop.debounce_coroutine(function()
         self:toggle_view(buffer)
-      end, 50),
+      end, 200),
     },
   })
 end
