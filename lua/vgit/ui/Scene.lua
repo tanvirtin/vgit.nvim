@@ -34,16 +34,6 @@ function Scene:get(key)
   return self.components[key]
 end
 
-function Scene:is_focused()
-  local focused = false
-
-  for _, component in pairs(self.components) do
-    if component:is_focused() then return true end
-  end
-
-  return focused
-end
-
 function Scene:on(event_name, callback)
   for _, component in pairs(self.components) do
     component:on(event_name, callback)
@@ -52,9 +42,18 @@ function Scene:on(event_name, callback)
   return self
 end
 
+function Scene:set_keymap(configs)
+  for _, config in ipairs(configs) do
+    for _, component in pairs(self.components) do
+      component:set_keymap(config, config.handler)
+    end
+  end
+
+  return self
+end
+
 function Scene:destroy()
   local components = self:get_components()
-
   for _, component in pairs(components) do
     component:unmount()
   end

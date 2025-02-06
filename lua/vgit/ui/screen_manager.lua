@@ -1,5 +1,4 @@
 local loop = require('vgit.core.loop')
-local keymap = require('vgit.core.keymap')
 local scene_setting = require('vgit.settings.scene')
 local DiffScreen = require('vgit.features.screens.DiffScreen')
 local HistoryScreen = require('vgit.features.screens.HistoryScreen')
@@ -91,6 +90,19 @@ function screen_manager.toggle_diff_preference()
   return screen_manager
 end
 
+function screen_manager.destroy_active_screen()
+  local screen = screen_manager.active_screen
+  if not screen then return screen_manager end
+
+  local scene = screen.scene
+  if not scene then return screen_manager end
+
+  scene:destroy()
+  screen_manager.active_screen = nil
+
+  return screen_manager
+end
+
 function screen_manager.create(screen_name, ...)
   if not screen_manager.is_screen_registered(screen_name) then return screen_manager end
   if screen_manager.has_active_screen() then screen_manager.destroy_active_screen() end
@@ -98,7 +110,8 @@ function screen_manager.create(screen_name, ...)
   local success, screen = screen_manager.screens[screen_name](...)
   if success then
     screen_manager.active_screen = screen
-    screen.scene
+    local scene = screen.scene
+    scene
         :on('BufWinLeave', function()
           loop.free_textlock()
           if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
@@ -106,27 +119,18 @@ function screen_manager.create(screen_name, ...)
         :on('QuitPre', function()
           if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
         end)
+    scene:set_keymap({
+      {
+        mode = 'n',
+        key = scene_setting:get('keymaps').quit,
+        handler = function()
+          screen_manager.destroy_active_screen()
+        end
+      }
+    })
   end
 
   return screen_manager
-end
-
-function screen_manager.destroy_active_screen()
-  screen_manager.active_screen:destroy()
-  screen_manager.active_screen = nil
-
-  return screen_manager
-end
-
-function screen_manager.handle_on_quit_keypress()
-  if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
-end
-
-function screen_manager.register_keymaps()
-  keymap.set({
-    mode = 'n',
-    key = scene_setting:get('keymaps').quit
-  }, screen_manager.handle_on_quit_keypress)
 end
 
 return screen_manager
