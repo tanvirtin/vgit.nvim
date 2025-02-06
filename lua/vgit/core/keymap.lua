@@ -22,9 +22,7 @@ function keymap.set(opts, callback)
   if type(callback) == 'string' then
     local command = callback
 
-    if not desc then
-      desc = 'VGit:' .. command
-    end
+    if not desc then desc = 'VGit:' .. command end
 
     vim.api.nvim_set_keymap(mode, key, string.format('<Cmd>lua require("vgit").%s()<CR>', command), {
       desc = desc,
@@ -76,13 +74,13 @@ end
 function keymap.define(keymaps)
   for commands, callback in pairs(keymaps) do
     if type(callback) == 'table' then
-      local config = callback;
+      local config = callback
       keymap.set(config, config.handler)
     else
       commands = vim.split(commands, ' ')
       local config = {
         mode = commands[1],
-        key = commands[2]
+        key = commands[2],
       }
       keymap.set(config, callback)
     end

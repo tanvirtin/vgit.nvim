@@ -5,24 +5,17 @@ local ComponentPlot = require('vgit.ui.ComponentPlot')
 
 local Component = Object:extend()
 
--- create plot in runtime.
 function Component:constructor(props)
   props = utils.object.assign({
     buffer = nil,
     window = nil,
     notification = nil,
-    namespace = nil,
     plot = nil,
     mounted = false,
     elements = {},
     state = {},
-    -- The properties that can be used to align components with each other.
     config = {
       elements = {},
-      border = {
-        hl = 'GitBorder',
-        chars = { '', '', '', '', '', '', '', '' },
-      },
       buf_options = {
         modifiable = false,
         buflisted = false,
@@ -59,37 +52,31 @@ end
 
 function Component:attach_to_renderer(on_render)
   self.buffer:attach_to_renderer(on_render)
-
   return self
 end
 
 function Component:detach_from_renderer()
   self.buffer:detach_from_renderer()
-
   return self
 end
 
 function Component:set_width(width)
   self.window:set_width(width)
-
   return self
 end
 
 function Component:set_height(height)
   self.window:set_height(height)
-
   return self
 end
 
 function Component:set_win_plot(win_plot)
   self.window:set_win_plot(win_plot)
-
   return self
 end
 
 function Component:on(event_name, callback)
   self.buffer:on(event_name, callback)
-
   return self
 end
 

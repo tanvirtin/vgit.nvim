@@ -98,7 +98,7 @@ return Config({
       conflict_incoming_mark = 'GitConflictIncomingMark',
       conflict_incoming = 'GitConflictIncoming',
       conflict_ancestor_mark = 'GitConflictAncestorMark',
-      conflict_ancestor = 'GitConflictAncestor'
+      conflict_ancestor = 'GitConflictAncestor',
     },
     main = {
       add = 'GitSignsAdd',

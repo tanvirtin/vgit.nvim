@@ -29,32 +29,35 @@ function LiveBlame:register_events()
     }, function()
       buffer:clear_blames()
     end)
-    buffer:on('CursorHold', function()
-      if not live_blame_setting:get('enabled') then return end
+    buffer:on(
+      'CursorHold',
+      loop.debounce_coroutine(function()
+        if not live_blame_setting:get('enabled') then return end
 
-      buffer = buffer or git_buffer_store.current()
-      if not buffer then return end
+        buffer = buffer or git_buffer_store.current()
+        if not buffer then return end
 
-      loop.free_textlock()
-      local conflicts = buffer:get_conflicts()
-      if #conflicts ~= 0 then return end
+        loop.free_textlock()
+        local conflicts = buffer:get_conflicts()
+        if #conflicts ~= 0 then return end
 
-      loop.free_textlock()
-      local _, config_err = buffer:config()
-      if config_err then return console.debug.error(config_err) end
+        loop.free_textlock()
+        local _, config_err = buffer:config()
+        if config_err then return console.debug.error(config_err) end
 
-      loop.free_textlock()
-      local window = Window(0)
-      loop.free_textlock()
-      local lnum = window:get_lnum()
+        loop.free_textlock()
+        local window = Window(0)
+        loop.free_textlock()
+        local lnum = window:get_lnum()
 
-      loop.free_textlock()
-      local _, blame_err = buffer:blame(lnum)
-      if blame_err then return console.debug.error(blame_err) end
+        loop.free_textlock()
+        local _, blame_err = buffer:blame(lnum)
+        if blame_err then return console.debug.error(blame_err) end
 
-      loop.free_textlock()
-      buffer:render_blames()
-    end)
+        loop.free_textlock()
+        buffer:render_blames()
+      end, 50)
+    )
   end)
 
   return self
