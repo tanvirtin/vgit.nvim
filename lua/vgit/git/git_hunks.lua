@@ -57,7 +57,7 @@ function git_hunks.live(reponame, original_lines, current_lines)
 
       live_hunks[#live_hunks + 1] = hunk
     end,
-    algorithm = 'myers',
+    algorithm = git_hunks.algorithm,
   })
 
   return live_hunks
