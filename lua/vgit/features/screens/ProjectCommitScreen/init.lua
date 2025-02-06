@@ -2,8 +2,7 @@ local loop = require('vgit.core.loop')
 local Scene = require('vgit.ui.Scene')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
-local SimpleView = require('vgit.ui.views.SimpleView')
-local KeyHelpBarView = require('vgit.ui.views.KeyHelpBarView')
+local SimpleSplit = require('vgit.ui.splits.SimpleSplit')
 local Model = require('vgit.features.screens.ProjectCommitScreen.Model')
 local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
 
@@ -18,16 +17,7 @@ function ProjectCommitScreen:constructor(opts)
     name = 'Project Commit Screen',
     scene = scene,
     model = model,
-    app_bar_view = KeyHelpBarView(scene, {
-      keymaps = function()
-        local keymaps = project_commit_preview_setting:get('keymaps')
-        return { { 'Save commit', keymaps['save'] } }
-      end,
-    }),
-    view = SimpleView(scene, {
-      title = function()
-        return model:get_title()
-      end,
+    split = SimpleSplit(scene, {
       lines = function()
         return model:get_lines()
       end,
@@ -43,6 +33,14 @@ function ProjectCommitScreen:constructor(opts)
   }
 end
 
+function ProjectCommitScreen:save()
+  local _, err = self.model:commit(self.split:get_lines())
+  loop.free_textlock()
+  if err then return console.debug.error(err).error(err) end
+  console.info('Successfully committed changes')
+  self:destroy()
+end
+
 function ProjectCommitScreen:create()
   loop.free_textlock()
   local _, err = self.model:fetch()
@@ -54,31 +52,21 @@ function ProjectCommitScreen:create()
   end
 
   loop.free_textlock()
-  self.view:define()
-  self.app_bar_view:define()
+  self.split:define()
 
-  self.app_bar_view:mount()
-  self.app_bar_view:render()
+  self.split:mount()
+  self.split:render()
+  self.split:set_filetype('gitcommit')
 
-  self.view:mount()
-  self.view:render()
-  self.view:set_keymap({
+  self.split:set_keymap({
     {
       mode = 'n',
       mapping = project_commit_preview_setting:get('keymaps').save,
       handler = loop.coroutine(function()
-        local _, commit_err = self.model:commit(self.view:get_lines())
-        loop.free_textlock()
-
-        if commit_err then return console.debug.error(commit_err).error(commit_err) end
-
-        console.info('Successfully committed changes')
-
-        self:destroy()
+        self:save()
       end),
     },
   })
-  self.view:set_filetype('gitcommit')
 
   return true
 end

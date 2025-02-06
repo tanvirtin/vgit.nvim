@@ -3,7 +3,7 @@ local Config = require('vgit.core.Config')
 return Config({
   keymaps = {
     save = {
-      key = 'S',
+      key = '<enter>',
       desc = 'Save commit',
     },
   },
