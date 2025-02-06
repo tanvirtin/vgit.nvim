@@ -165,12 +165,11 @@ end
 
 function StatusListView:render()
   local entries = self.props.entries()
+  if not entries then return end
 
   local open = true
   local open_folds = self.config.open_folds
-  if open_folds ~= nil then
-    open = open_folds
-  end
+  if open_folds ~= nil then open = open_folds end
 
   local folds = {}
   for _, entry in ipairs(entries) do

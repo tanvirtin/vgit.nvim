@@ -19,7 +19,7 @@ function git_stash.apply(reponame, stash_index)
     reponame,
     'stash',
     'apply',
-    stash_index
+    stash_index,
   })
 end
 
@@ -32,7 +32,7 @@ function git_stash.pop(reponame, stash_index)
     reponame,
     'stash',
     'pop',
-    stash_index
+    stash_index,
   })
 end
 
@@ -45,7 +45,7 @@ function git_stash.drop(reponame, stash_index)
     reponame,
     'stash',
     'drop',
-    stash_index
+    stash_index,
   })
 end
 

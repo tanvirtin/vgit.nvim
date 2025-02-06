@@ -1,3 +1,4 @@
+local loop = require('vgit.core.loop')
 local Object = require('vgit.core.Object')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 
@@ -8,10 +9,13 @@ function LiveConflict:constructor()
 end
 
 function LiveConflict:register_events()
-  git_buffer_store.on({ 'attach', 'reload', 'change', 'sync' }, function(buffer)
-    buffer:conflicts()
-    buffer:render_conflicts()
-  end)
+  git_buffer_store.on(
+    { 'attach', 'reload', 'change', 'sync' },
+    loop.debounce_coroutine(function(buffer)
+      buffer:conflicts()
+      buffer:render_conflicts()
+    end, 100)
+  )
 
   return self
 end

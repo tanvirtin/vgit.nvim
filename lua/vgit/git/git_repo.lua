@@ -1,3 +1,4 @@
+local fs = require('vgit.core.fs')
 local gitcli = require('vgit.git.gitcli')
 
 local git_repo = {}
@@ -7,23 +8,18 @@ function git_repo.config(reponame)
   return gitcli.run({ '-C', reponame, 'config', '--list' })
 end
 
-function git_repo.discover(filepath)
+function git_repo.discover(filepath, opts)
+  opts = opts or {}
+  local git_dirname = opts.git_dirname
   local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
+
   local result, err = gitcli.run({ '-C', dirname, 'rev-parse', '--show-toplevel' })
-
-  if err then return nil, err end
-  return result[1]
-end
-
-function git_repo.dirname()
-  local reponame, err = git_repo.discover()
   if err then return nil, err end
 
-  local result, git_dir_err = gitcli.run({ '-C', reponame, 'rev-parse', '--git-dir' })
-  local git_dir = result[1]
-  if git_dir_err then return nil, git_dir_err end
+  local repo = result[1]
+  if git_dirname == true then return table.concat({ repo, fs.sep, '.git' }) end
 
-  return reponame .. '/' .. git_dir
+  return repo
 end
 
 function git_repo.exists(filepath)
@@ -64,12 +60,6 @@ function git_repo.ignores(reponame, filename)
   if err then return nil, err end
   if #result == 0 then return false end
   return true
-end
-
-function git_repo.checkout(reponame, name)
-  if not reponame then return nil, { 'reponame is required' } end
-  if not name then return nil, { 'name is required' } end
-  return gitcli.run({ '-C', reponame, '--no-pager', 'checkout', '--quiet', name })
 end
 
 function git_repo.reset(reponame, filename)

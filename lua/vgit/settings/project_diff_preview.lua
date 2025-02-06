@@ -8,35 +8,35 @@ return Config({
     },
     buffer_stage = {
       key = 's',
-      desc = 'Stage'
+      desc = 'Stage',
     },
     buffer_unstage = {
       key = 'u',
-      desc = 'Unstage'
+      desc = 'Unstage',
     },
     buffer_reset = {
       key = 'r',
-      desc = 'Reset'
+      desc = 'Reset',
     },
     buffer_hunk_stage = {
       key = 'gs',
-      desc = 'Stage hunk'
+      desc = 'Stage hunk',
     },
     buffer_hunk_unstage = {
       key = 'gu',
-      desc = 'Unstage hunk'
+      desc = 'Unstage hunk',
     },
     stage_all = {
       key = 'S',
-      desc = 'Stage all'
+      desc = 'Stage all',
     },
     unstage_all = {
       key = 'U',
-      desc = 'Unstage all'
+      desc = 'Unstage all',
     },
     reset_all = {
       key = 'R',
-      desc = 'Reset all'
+      desc = 'Reset all',
     },
   },
 })
