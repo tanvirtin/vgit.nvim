@@ -2,10 +2,10 @@ local fs = require('vgit.core.fs')
 local loop = require('vgit.core.loop')
 local Diff = require('vgit.core.Diff')
 local Object = require('vgit.core.Object')
-local git_repo = require('vgit.git.git_repo')
+local git_repo = require('vgit.libgit2.git_repo')
 local GitFile = require('vgit.git.GitFile')
 local git_stager = require('vgit.git.git_stager')
-local git_conflict = require('vgit.git.git_conflict')
+local git_conflict = require('vgit.libgit2.git_conflict')
 
 local Model = Object:extend()
 

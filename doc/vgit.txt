@@ -190,6 +190,10 @@ Detailed configuration example: >
             ['n <leader>gx'] = function() require('vgit').toggle_diff_preference() end,
           },
           settings = {
+            libgit2 = {
+              enabled = false,
+              path = '<path-to>/libgit2/lib/libgit2.dylib',
+            },
             hls = {
               GitCount = 'Keyword',
               GitSymbol = 'CursorLineNr',

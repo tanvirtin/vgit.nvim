@@ -75,7 +75,7 @@ function TableView:mount(opts)
         self.event_handlers.on_select(entry)
         self:render()
       end),
-    }
+    },
   })
 end
 

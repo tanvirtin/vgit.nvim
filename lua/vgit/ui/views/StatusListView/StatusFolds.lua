@@ -1,3 +1,4 @@
+local fs = require('vgit.core.fs')
 local utils = require('vgit.core.utils')
 local icons = require('vgit.core.icons')
 local Object = require('vgit.core.Object')
@@ -13,7 +14,7 @@ local StatusFolds = Object:extend()
 function StatusFolds:constructor(metadata)
   return {
     tree = {},
-    seperator = '/',
+    seperator = fs.sep,
     metadata = metadata,
   }
 end
@@ -74,12 +75,10 @@ function StatusFolds:create_node(entry)
       },
     }
 
-    if icon then
-      node.icon_before = {
-        icon = icon,
-        hl = icon_hl,
-      }
-    end
+    if icon then node.icon_before = {
+      icon = icon,
+      hl = icon_hl,
+    } end
 
     return node
   end

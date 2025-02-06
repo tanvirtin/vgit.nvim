@@ -3,13 +3,13 @@ local Diff = require('vgit.core.Diff')
 local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local git_show = require('vgit.git.git_show')
-local git_repo = require('vgit.git.git_repo')
-local git_hunks = require('vgit.git.git_hunks')
 local GitFile = require('vgit.git.GitFile')
+local git_repo = require('vgit.libgit2.git_repo')
+local git_show = require('vgit.libgit2.git_show')
+local git_hunks = require('vgit.git.git_hunks')
 local git_stager = require('vgit.git.git_stager')
 local git_status = require('vgit.git.git_status')
-local git_conflict = require('vgit.git.git_conflict')
+local git_conflict = require('vgit.libgit2.git_conflict')
 
 local Model = Object:extend()
 
@@ -90,21 +90,17 @@ function Model:fetch()
   if #unmerged_files ~= 0 then
     entries[#entries + 1] = {
       title = 'Merge Changes',
-      entries = unmerged_files
+      entries = unmerged_files,
     }
   end
-  if #staged_files ~= 0 then
-    entries[#entries + 1] = {
-      title = 'Staged Changes',
-      entries = staged_files
-    }
-  end
-  if #changed_files ~= 0 then
-    entries[#entries + 1] = {
-      title = 'Changes',
-      entries = changed_files
-    }
-  end
+  if #staged_files ~= 0 then entries[#entries + 1] = {
+    title = 'Staged Changes',
+    entries = staged_files,
+  } end
+  if #changed_files ~= 0 then entries[#entries + 1] = {
+    title = 'Changes',
+    entries = changed_files,
+  } end
 
   self.state.entries = entries
   self.state.reponame = reponame

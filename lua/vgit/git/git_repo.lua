@@ -20,8 +20,6 @@ function git_repo.discover(filepath)
   local result, err = gitcli.run({ '-C', dirname, 'rev-parse', '--show-toplevel' })
   if err then return nil, err end
   if #result == 0 then return nil, {} end
-
-  discover_cache[dirname] = result[1]
   return result[1]
 end
 
@@ -32,7 +30,7 @@ function git_repo.dirname()
   local result, git_dir_err = gitcli.run({ '-C', reponame, 'rev-parse', '--git-dir' })
   local git_dir = result[1]
   if git_dir_err then return nil, git_dir_err end
-  if #result==0 then return nil, {} end
+  if #result == 0 then return nil, {} end
 
   return reponame .. '/' .. git_dir
 end
