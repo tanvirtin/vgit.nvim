@@ -1,4 +1,3 @@
-local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
@@ -166,12 +165,10 @@ function DiffView:render_line_diff(component_type, line_changes, lnum)
 
   if change_type ~= 'void' then line_number_hl = main_signs[change_type] end
 
-  if sign_name then
-    component:place_extmark_sign({
-      col = lnum - 1,
-      name = sign_name,
-    })
-  end
+  if sign_name then component:place_extmark_sign({
+    col = lnum - 1,
+    name = sign_name,
+  }) end
 
   if change_type == 'void' then
     local text = string.rep(symbols_setting:get('void'), component.window:get_width())
@@ -210,11 +207,9 @@ function DiffView:render_diff(top, bot)
   end
 end
 
-function DiffView:render_unified_conflicts(conflicts)
-  local component = self.scene:get('current')
-
-  utils.list.each(conflicts, function(conflict)
-
+function DiffView:render_diff_partially()
+  self.scene:get('current'):attach_to_renderer(function(top, bot)
+    self:render_diff(top, bot + 1)
   end)
 end
 
@@ -610,7 +605,6 @@ end
 
 function DiffView:move_to_hunk(mark_index, pos)
   if not pos then pos = 'top' end
-
   if not mark_index then mark_index = 1 end
 
   local diff = self.props.diff()
@@ -640,7 +634,6 @@ end
 
 function DiffView:render()
   local ok, msg = pcall(function()
-    loop.free_textlock()
     self:clear_extmarks()
 
     local diff = self.props.diff()
@@ -655,15 +648,14 @@ function DiffView:render()
       return
     end
 
-    self:reset_cursor()
-    self:render_title()
     self:render_filetype()
+    self:render_title()
     self:render_lines()
     self:render_line_numbers()
-    self:render_diff()
+    self:render_diff_partially()
   end)
 
-  if not ok then console.debug.error(msg) end
+   if not ok then console.debug.error(msg) end
 end
 
 return DiffView

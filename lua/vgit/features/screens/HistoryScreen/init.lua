@@ -65,13 +65,17 @@ function HistoryScreen:hunk_down()
   self.diff_view:next()
 end
 
-function HistoryScreen:on_list_move(lnum)
-  self.model:set_entry_index(lnum)
+HistoryScreen.render_diff_view_debounced = loop.debounce_coroutine(function(self)
   self.diff_view:render()
   self.diff_view:move_to_hunk()
+end, 100)
+
+function HistoryScreen:handle_list_move(lnum)
+  self.model:set_entry_index(lnum)
+  self:render_diff_view_debounced()
 end
 
-function HistoryScreen:on_list_enter(buffer, row)
+function HistoryScreen:handle_list_enter(buffer, row)
   vim.cmd('quit')
 
   loop.free_textlock()
@@ -95,15 +99,14 @@ function HistoryScreen:create()
   self.blame_list_view:mount({
     event_handlers = {
       on_enter = function(row)
-        self:on_list_enter(buffer, row)
+        self:handle_list_enter(buffer, row)
       end,
       on_move = function(lnum)
-        self:on_list_move(lnum)
+        self:handle_list_move(lnum)
       end,
     },
   })
 
-  self.diff_view:render()
   self.blame_list_view:render()
 
   return true

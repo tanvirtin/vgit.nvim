@@ -1,7 +1,7 @@
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local git_log = require('vgit.git.git_log')
-local git_repo = require('vgit.git.git_repo')
+local git_repo = require('vgit.libgit2.git_repo')
 
 local Model = Object:extend()
 
@@ -42,9 +42,7 @@ function Model:select(log)
     self.state.selected.set[log.commit_hash] = nil
     for i = 1, #self.state.selected.ordered do
       local selected_log = self.state.selected.ordered[i]
-      if selected_log.commit_hash == log.commit_hash then
-        self.state.selected.ordered[i] = nil
-      end
+      if selected_log.commit_hash == log.commit_hash then self.state.selected.ordered[i] = nil end
     end
     return
   end
@@ -67,7 +65,7 @@ function Model:fetch()
   local pagination = {
     skip = 0,
     count = 100,
-    display = string.format('%s-%s', 1, 100)
+    display = string.format('%s-%s', 1, 100),
   }
   local logs, err = git_log.list(reponame, { pagination = pagination })
   if err then return nil, err end
@@ -96,7 +94,7 @@ function Model:next()
   local pagination = {
     count = count,
     skip = skip,
-    display = nil
+    display = nil,
   }
   local logs, err = git_log.list(reponame, { pagination = pagination })
   if err then return nil, err end
@@ -122,7 +120,7 @@ function Model:previous()
   local pagination = {
     count = count,
     skip = skip,
-    display = nil
+    display = nil,
   }
   local logs, err = git_log.list(reponame, { pagination = pagination })
   if err then return nil, err end

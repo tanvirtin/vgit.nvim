@@ -57,9 +57,7 @@ function git_conflict.parse(lines)
     if has_start and has_middle and match_line(line, markers.finish) then
       conflict.incoming.bot = lnum
 
-      if has_start and has_middle then
-        conflicts[#conflicts + 1] = conflict
-      end
+      if has_start and has_middle then conflicts[#conflicts + 1] = conflict end
 
       conflict = nil
       has_start = false
@@ -69,23 +67,6 @@ function git_conflict.parse(lines)
   end
 
   return conflicts
-end
-
-function git_conflict.has_conflict(reponame, filename)
-  if not reponame then return nil, { 'reponame is required' } end
-  if not filename then return nil, { 'filename is required' } end
-
-  local result, err = gitcli.run({
-    '-C',
-    reponame,
-    'ls-files',
-    '-u',
-    '--',
-    filename,
-  })
-
-  if err then return nil, err end
-  return result and #result ~= 0
 end
 
 function git_conflict.status(reponame)
@@ -109,6 +90,23 @@ function git_conflict.status(reponame)
   end
 
   return nil
+end
+
+function git_conflict.has_conflict(reponame, filename)
+  if not reponame then return nil, { 'reponame is required' } end
+  if not filename then return nil, { 'filename is required' } end
+
+  local result, err = gitcli.run({
+    '-C',
+    reponame,
+    'ls-files',
+    '-u',
+    '--',
+    filename,
+  })
+
+  if err then return nil, err end
+  return result and #result ~= 0
 end
 
 return git_conflict

@@ -155,8 +155,8 @@ function Hunks:cursor_reset()
   for i = 1, #hunks do
     local hunk = hunks[i]
     if
-        (lnum >= hunk.top and lnum <= hunk.bot)
-        or (hunk.top == 0 and hunk.bot == 0 and lnum - 1 == hunk.top and lnum - 1 == hunk.bot)
+      (lnum >= hunk.top and lnum <= hunk.bot)
+      or (hunk.top == 0 and hunk.bot == 0 and lnum - 1 == hunk.top and lnum - 1 == hunk.bot)
     then
       selected_hunk = hunk
       selected_hunk_index = i

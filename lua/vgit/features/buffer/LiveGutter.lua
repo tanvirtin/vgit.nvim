@@ -20,7 +20,9 @@ function LiveGutter:fetch(buffer)
 
   loop.free_textlock()
   local _, err = buffer:diff()
+
   if err then
+    loop.free_textlock()
     console.debug.error(err)
     return
   end
@@ -31,7 +33,7 @@ end
 
 LiveGutter.fetch_debounced = loop.debounce_coroutine(function(self, buffer)
   self:fetch(buffer)
-end, 10)
+end, 50)
 
 function LiveGutter:toggle()
   git_buffer_store.for_each(function(buffer)
@@ -46,23 +48,23 @@ end
 
 function LiveGutter:register_events()
   git_buffer_store
-      .on({ 'attach', 'reload' }, function(buffer)
-        if not self:is_enabled() then return end
+    .on({ 'attach', 'reload' }, function(buffer)
+      if not self:is_enabled() then return end
 
-        self:fetch(buffer)
-        buffer:render_signs()
-      end)
-      .on({ 'change' }, function(buffer)
-        if not self:is_enabled() then return end
-        self:fetch_debounced(buffer)
-      end)
-      .on('sync', function(buffer)
-        if not self:is_enabled() then return end
-        self:fetch_debounced(buffer)
-      end)
-      .on('detach', function(buffer)
-        buffer:clear_extmarks()
-      end)
+      self:fetch(buffer)
+      buffer:render_signs()
+    end)
+    .on({ 'change' }, function(buffer)
+      if not self:is_enabled() then return end
+      self:fetch_debounced(buffer)
+    end)
+    .on('sync', function(buffer)
+      if not self:is_enabled() then return end
+      self:fetch_debounced(buffer)
+    end)
+    .on('detach', function(buffer)
+      buffer:clear_extmarks()
+    end)
 end
 
 return LiveGutter

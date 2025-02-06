@@ -1,6 +1,6 @@
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
-local git_repo = require('vgit.git.git_repo')
+local git_repo = require('vgit.libgit2.git_repo')
 local git_commit = require('vgit.git.git_commit')
 
 local Model = Object:extend()

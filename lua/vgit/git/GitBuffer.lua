@@ -4,7 +4,7 @@ local keymap = require('vgit.core.keymap')
 local Buffer = require('vgit.core.Buffer')
 local Extmark = require('vgit.ui.Extmark')
 local GitFile = require('vgit.git.GitFile')
-local git_repo = require('vgit.git.git_repo')
+local git_repo = require('vgit.libgit2.git_repo')
 local signs_setting = require('vgit.settings.signs')
 local live_blame_setting = require('vgit.settings.live_blame')
 
@@ -55,7 +55,7 @@ function GitBuffer:reset_signs()
   return self
 end
 
-function Buffer:clear_conflicts(top, bot)
+function GitBuffer:clear_conflicts(top, bot)
   top = top or 0
   bot = bot or -1
 
@@ -173,7 +173,7 @@ function GitBuffer:get_conflict_marks()
   return utils.list.map(conflicts, function(conflict)
     return {
       top = conflict.current.top,
-      bot = conflict.incoming.bot
+      bot = conflict.incoming.bot,
     }
   end)
 end
@@ -253,12 +253,9 @@ function GitBuffer:render_conflict_help_text(conflict)
   local accept_current_change_keymap = utils.list.find(keymap.find('conflict_accept_current'), function(binding)
     return binding.mode == 'n'
   end)
-  local accept_incoming_change_keymap = utils.list.find(
-    keymap.find('conflict_accept_incoming'),
-    function(binding)
-      return binding.mode == 'n'
-    end
-  )
+  local accept_incoming_change_keymap = utils.list.find(keymap.find('conflict_accept_incoming'), function(binding)
+    return binding.mode == 'n'
+  end)
   local accept_both_changes_keymap = utils.list.find(keymap.find('conflict_accept_both'), function(binding)
     return binding.mode == 'n'
   end)
@@ -360,6 +357,7 @@ function GitBuffer:render_conflicts(top, bot)
   top = top or 0
   bot = bot or -1
 
+  loop.free_textlock()
   self:clear_conflicts(top, bot)
 
   local conflicts = self:get_conflicts()

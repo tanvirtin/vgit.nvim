@@ -1,4 +1,4 @@
-local git_conflict = require('vgit.git.git_conflict')
+local git_conflict = require('vgit.libgit2.git_conflict')
 
 describe('git_conflict:', function()
   describe('parse', function()

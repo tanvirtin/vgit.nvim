@@ -25,10 +25,10 @@ function ProjectStashScreen:constructor(opts)
       keymaps = function()
         local keymaps = project_stash_preview_setting:get('keymaps')
         return {
-          { 'Add stash',   keymaps['add'] },
+          { 'Add stash', keymaps['add'] },
           { 'Apply stash', keymaps['apply'] },
-          { 'Pop stash',   keymaps['pop'] },
-          { 'Drop stash',  keymaps['drop'] },
+          { 'Pop stash', keymaps['pop'] },
+          { 'Drop stash', keymaps['drop'] },
           { 'Clear stash', keymaps['clear'] },
         }
       end,
@@ -43,7 +43,7 @@ function ProjectStashScreen:constructor(opts)
     }, {
       elements = {
         header = false,
-        footer = false,
+        footer = true,
       },
       open_folds = false,
     }),
@@ -67,19 +67,23 @@ function ProjectStashScreen:constructor(opts)
     }, {
       elements = {
         header = true,
-        footer = false,
+        footer = true,
       },
     }),
   }
 end
+
+ProjectStashScreen.render_diff_view_debounced = loop.debounce_coroutine(function(self)
+  self.diff_view:render()
+  self.diff_view:move_to_hunk()
+end, 100)
 
 function ProjectStashScreen:handle_list_move(direction)
   local list_item = self.status_list_view:move(direction)
   if not list_item then return end
 
   self.model:set_entry_id(list_item.id)
-  self.diff_view:render()
-  self.diff_view:move_to_hunk()
+  self:render_diff_view_debounced()
 end
 
 function ProjectStashScreen:render()
@@ -120,15 +124,11 @@ function ProjectStashScreen:apply(stash_index)
 
   local has_conflict = false
   utils.list.each(result, function(line)
-    if line:lower():find('conflict') then
-      has_conflict = true
-    end
+    if line:lower():find('conflict') then has_conflict = true end
   end)
 
   local msg = 'Stash ' .. stash_index .. ' applied'
-  if has_conflict then
-    msg = msg .. ' with conflict'
-  end
+  if has_conflict then msg = msg .. ' with conflict' end
   console.info(msg)
 
   self:render()
@@ -149,15 +149,11 @@ function ProjectStashScreen:pop(stash_index)
 
   local has_conflict = false
   utils.list.each(result, function(line)
-    if line:lower():find('conflict') then
-      has_conflict = true
-    end
+    if line:lower():find('conflict') then has_conflict = true end
   end)
 
   local msg = 'Stash ' .. stash_index .. ' applied'
-  if has_conflict then
-    msg = msg .. ' with conflict'
-  end
+  if has_conflict then msg = msg .. ' with conflict' end
   console.info(msg)
 
   self:render()
@@ -297,7 +293,6 @@ function ProjectStashScreen:create(opts)
 
   self.app_bar_view:render()
   self.status_list_view:render()
-  self.diff_view:render()
 
   self:setup_keymaps()
 

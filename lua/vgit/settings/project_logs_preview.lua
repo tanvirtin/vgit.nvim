@@ -8,7 +8,7 @@ return Config({
     },
     next = {
       key = '=',
-      desc = 'Next'
+      desc = 'Next',
     },
   },
 })

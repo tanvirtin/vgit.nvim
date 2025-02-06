@@ -51,15 +51,15 @@ function DiffScreen:create_app_bar_view(scene, model)
       local keymaps = diff_preview_setting:get('keymaps')
       if model:is_staged() then
         return {
-          { 'Unstage',               keymaps['buffer_unstage'] },
-          { 'Unstage hunk',          keymaps['buffer_hunk_unstage'] },
+          { 'Unstage', keymaps['buffer_unstage'] },
+          { 'Unstage hunk', keymaps['buffer_hunk_unstage'] },
           { 'Switch to Staged View', keymaps['toggle_view'] },
         }
       end
       return {
-        { 'Stage',                  keymaps['buffer_stage'] },
-        { 'Stage hunk',             keymaps['buffer_hunk_stage'] },
-        { 'Reset',                  keymaps['reset'] },
+        { 'Stage', keymaps['buffer_stage'] },
+        { 'Stage hunk', keymaps['buffer_hunk_stage'] },
+        { 'Reset', keymaps['reset'] },
         { 'Switch to Unstage View', keymaps['toggle_view'] },
       }
     end,
@@ -80,11 +80,11 @@ function DiffScreen:constructor(opts)
 end
 
 function DiffScreen:hunk_up()
-  pcall(self.diff_view.prev, self.diff_view, 'center')
+  self.diff_view.prev(self.diff_view, 'center')
 end
 
 function DiffScreen:hunk_down()
-  pcall(self.diff_view.next, self.diff_view, 'center')
+  self.diff_view.next(self.diff_view, 'center')
 end
 
 function DiffScreen:toggle_view(buffer)
@@ -277,7 +277,7 @@ function DiffScreen:setup_keymaps(buffer)
       mapping = keymaps.reset,
       handler = loop.debounce_coroutine(function()
         self:reset(buffer)
-      end, 100),
+      end, 50),
     },
     {
       mode = 'n',
@@ -285,7 +285,7 @@ function DiffScreen:setup_keymaps(buffer)
       handler = loop.debounce_coroutine(function()
         self:stage(buffer)
         self:toggle_view(buffer)
-      end, 100),
+      end, 50),
     },
     {
       mode = 'n',
@@ -293,21 +293,21 @@ function DiffScreen:setup_keymaps(buffer)
       handler = loop.debounce_coroutine(function()
         self:unstage(buffer)
         self:toggle_view(buffer)
-      end, 100),
+      end, 50),
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_hunk_stage,
       handler = loop.debounce_coroutine(function()
         self:stage_hunk(buffer)
-      end, 100),
+      end, 50),
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_hunk_unstage,
       handler = loop.debounce_coroutine(function()
         self:unstage_hunk(buffer)
-      end, 100),
+      end, 50),
     },
     {
       mode = 'n',
@@ -317,14 +317,14 @@ function DiffScreen:setup_keymaps(buffer)
       },
       handler = loop.debounce_coroutine(function()
         self:enter_view()
-      end, 100),
+      end, 50),
     },
     {
       mode = 'n',
       mapping = keymaps.toggle_view,
       handler = loop.debounce_coroutine(function()
         self:toggle_view(buffer)
-      end, 100),
+      end, 50),
     },
   })
 end
