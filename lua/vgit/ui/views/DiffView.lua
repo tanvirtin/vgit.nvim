@@ -221,27 +221,36 @@ function DiffView:render_folds()
   local line_count = current_component:get_line_count()
 
   local folds = {}
-  local fold_top = 2
   local num_focus_lines = 7
 
-  utils.list.each(marks, function(mark)
-    folds[#folds + 1] = {
-      top = fold_top,
-      bot = mark.top - num_focus_lines,
-    }
-    fold_top = mark.bot + num_focus_lines + 1
-  end)
+  for i = 1, #marks do
+    local previous_mark = marks[i - 1]
+    local mark = marks[i]
+    local next_mark = marks[i + 1]
 
-  if fold_top > line_count then
-    fold_top = fold_top - num_focus_lines + 1
+    -- We are at the top
+    if not previous_mark then
+      local top = num_focus_lines
+      local bot = mark.top - num_focus_lines
+      if top < bot then folds[#folds + 1] = { top = top, bot = bot } end
+    -- We are at the bottom
+    elseif not next_mark then
+      local top = mark.bot + num_focus_lines
+      local bot = line_count - 1
+      if top < bot then folds[#folds + 1] = { top = top, bot = bot } end
+    -- Middle ofcourse, fold everything on top and bot of hunks
+    else
+      local top = previous_mark.bot + num_focus_lines + 1
+      local bot = mark.top - num_focus_lines
+      if top < bot then folds[#folds + 1] = { top = top, bot = bot } end
+
+      top = mark.bot + num_focus_lines
+      bot = next_mark.top - num_focus_lines
+      if top < bot then folds[#folds + 1] = { top = top, bot = bot } end
+    end
   end
 
-  if fold_top < line_count - 1 then
-    folds[#folds + 1] = {
-      top = fold_top,
-      bot = line_count - 1,
-    }
-  end
+  if #folds == 0 then return end
 
   current_component:call(function()
     utils.list.each(folds, function(fold)
@@ -271,6 +280,18 @@ function DiffView:clear_title()
     self.scene:get('previous'):clear_title()
   else
     self.scene:get('current'):clear_title()
+  end
+end
+
+function DiffView:clear_folds()
+  if self.props.layout_type() == 'split' then
+    self.scene:get('previous'):call(function()
+      vim.api.nvim_command("normal! zR")
+    end)
+  else
+    self.scene:get('current'):call(function()
+      vim.api.nvim_command("normal! zR")
+    end)
   end
 end
 
@@ -698,7 +719,6 @@ function DiffView:render()
     self:render_lines()
     self:render_line_numbers()
     self:render_diff_partially()
-    self:render_folds()
   end)
 
    if not ok then console.debug.error(msg) end
