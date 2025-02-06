@@ -3,9 +3,8 @@ local Scene = require('vgit.ui.Scene')
 local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local SimpleView = require('vgit.ui.views.SimpleView')
-local AppBarView = require('vgit.ui.views.AppBarView')
-local Store = require('vgit.features.screens.ProjectCommitScreen.Store')
-local Mutation = require('vgit.features.screens.ProjectCommitScreen.Mutation')
+local KeyHelpBarView = require('vgit.ui.views.KeyHelpBarView')
+local Model = require('vgit.features.screens.ProjectCommitScreen.Model')
 local project_commit_preview_setting = require('vgit.settings.project_commit_preview')
 
 local ProjectCommitScreen = Object:extend()
@@ -13,16 +12,26 @@ local ProjectCommitScreen = Object:extend()
 function ProjectCommitScreen:constructor(opts)
   opts = opts or {}
   local scene = Scene()
-  local store = Store()
-  local mutation = Mutation()
+  local model = Model()
 
   return {
     name = 'Project Commit Screen',
     scene = scene,
-    store = store,
-    mutation = mutation,
-    app_bar_view = AppBarView(scene, store),
-    view = SimpleView(scene, store, { row = 1 }, {
+    model = model,
+    app_bar_view = KeyHelpBarView(scene, {
+      keymaps = function()
+        local keymaps = project_commit_preview_setting:get('keymaps')
+        return { { 'Save commit', keymaps['save'] } }
+      end,
+    }),
+    view = SimpleView(scene, {
+      title = function()
+        return model:get_title()
+      end,
+      lines = function()
+        return model:get_lines()
+      end,
+    }, { row = 1 }, {
       elements = {
         header = false,
         footer = false,
@@ -34,27 +43,10 @@ function ProjectCommitScreen:constructor(opts)
   }
 end
 
-function ProjectCommitScreen:make_help_bar()
-  local text = ''
-  local keymaps = project_commit_preview_setting:get('keymaps')
-  local keys = { 'save' }
-  local translations = { 'Save commit' }
-
-  for i = 1, #keys do
-    text = i == 1 and string.format('%s (%s)', translations[i], keymaps[keys[i]])
-      or string.format('%s | %s (%s)', text, translations[i], keymaps[keys[i]])
-  end
-
-  self.app_bar_view:set_lines({ text })
-  self.app_bar_view:add_pattern_highlight('%((%a+)%)', 'Keyword')
-  self.app_bar_view:add_pattern_highlight('|', 'Number')
-
-  return self
-end
-
-function ProjectCommitScreen:show()
+function ProjectCommitScreen:create()
   loop.free_textlock()
-  local err = self.store:fetch()
+  local _, err = self.model:fetch()
+  loop.free_textlock()
 
   if err then
     console.debug.error(err).error(err)
@@ -65,21 +57,20 @@ function ProjectCommitScreen:show()
   self.view:define()
   self.app_bar_view:define()
 
-  self.app_bar_view:show()
-  self:make_help_bar()
+  self.app_bar_view:mount()
+  self.app_bar_view:render()
 
-  self.view:show()
+  self.view:mount()
+  self.view:render()
   self.view:set_keymap({
     {
       mode = 'n',
-      key = project_commit_preview_setting:get('keymaps').save,
+      mapping = project_commit_preview_setting:get('keymaps').save,
       handler = loop.coroutine(function()
-        local commit_err = self.mutation:commit(self.view:get_lines())
+        local _, commit_err = self.model:commit(self.view:get_lines())
         loop.free_textlock()
 
-        if commit_err then
-          return console.debug.error(commit_err).error(commit_err)
-        end
+        if commit_err then return console.debug.error(commit_err).error(commit_err) end
 
         console.info('Successfully committed changes')
 
@@ -94,8 +85,6 @@ end
 
 function ProjectCommitScreen:destroy()
   self.scene:destroy()
-
-  return self
 end
 
 return ProjectCommitScreen

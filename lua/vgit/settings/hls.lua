@@ -27,21 +27,21 @@ return Config({
   end,
   GitAppBar = function()
     return {
-      bg = Color({ name = 'StatusLine', attribute = 'bg' }):darken(35):get(),
+      bg = Color({ name = 'StatusLine', attribute = 'bg' }):darken(90):get(),
       fg = Color({ name = 'StatusLine', attribute = 'fg' }):get(),
       override = false,
     }
   end,
   GitHeader = function()
     return {
-      bg = Color({ name = 'StatusLine', attribute = 'bg' }):darken(35):get(),
+      bg = Color({ name = 'StatusLine', attribute = 'bg' }):darken(90):get(),
       fg = Color({ name = 'StatusLine', attribute = 'fg' }):get(),
       override = false,
     }
   end,
   GitFooter = function()
     return {
-      bg = Color({ name = 'StatusLine', attribute = 'bg' }):darken(35):get(),
+      bg = Color({ name = 'StatusLine', attribute = 'bg' }):darken(90):get(),
       fg = Color({ name = 'StatusLine', attribute = 'fg' }):get(),
       override = false,
     }
@@ -94,6 +94,48 @@ return Config({
   GitWordDelete = function()
     return {
       bg = Color({ name = 'DiffDelete', attribute = 'bg' }):lighten(50):get(),
+      override = false,
+    }
+  end,
+  GitConflictCurrentMark = function()
+    return {
+      bg = Color({ name = 'DiffAdd', attribute = 'bg' }):lighten(20):get(),
+      override = false,
+    }
+  end,
+  GitConflictAncestorMark = function()
+    return {
+      bg = Color({ name = 'Visual', attribute = 'bg' }):darken(10):get(),
+      override = false,
+    }
+  end,
+  GitConflictIncomingMark = function()
+    return {
+      bg = Color({ name = 'DiffChange', attribute = 'bg' }):lighten(20):get(),
+      override = false,
+    }
+  end,
+  GitConflictCurrent = function()
+    return {
+      bg = Color({ name = 'DiffAdd', attribute = 'bg' }):darken(20):get(),
+      override = false,
+    }
+  end,
+  GitConflictAncestor = function()
+    return {
+      bg = Color({ name = 'Visual', attribute = 'bg' }):darken(15):get(),
+      override = false,
+    }
+  end,
+  GitConflictMiddle = function()
+    return {
+      bg = Color({ name = 'Visual', attribute = 'bg' }):darken(30):get(),
+      override = false,
+    }
+  end,
+  GitConflictIncoming = function()
+    return {
+      bg = Color({ name = 'DiffChange', attribute = 'bg' }):darken(20):get(),
       override = false,
     }
   end,

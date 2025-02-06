@@ -96,22 +96,11 @@ Enable live blame annotations directly in your editor to see the author and comm
 > [!NOTE]
 > Package managers with lazy loading is necessary for installation.
 
----
-
-> [!Warning]
-> Releases prior to the major versions will no longer be maintained.
-> Branch `v1.0.x` contains several new features and massive optimizations but unfortunately also contains several breaking and deprecated changes.
-> For the time being the main branch will still be following `v0.2.x` while core users slowly migrate to `v1.0.x` without breaking their current workflow.
-> New users please use tag `v1.0.2` or branch `v1.0.x` for the latest changes!
-
----
-
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
 ```lua
 use {
-  'tanvirtin/vgit.nvim', branch = 'v1.0.x',
-  -- or                , tag = 'v1.0.2',
+  'tanvirtin/vgit.nvim',
   requires = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
   -- Lazy loading on 'VimEnter' event is necessary.
   event = 'VimEnter',
@@ -123,8 +112,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 {
-  'tanvirtin/vgit.nvim', branch = 'v1.0.x',
-   -- or               , tag = 'v1.0.2',
+  'tanvirtin/vgit.nvim',
   dependencies = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
   -- Lazy loading on 'VimEnter' event is necessary.
   event = 'VimEnter',
@@ -152,11 +140,16 @@ require('vgit').setup()
 require('vgit').setup({
   keymaps = {
     ['n <C-k>'] = function() require('vgit').hunk_up() end,
-    ['n <C-j>'] = function() require('vgit').hunk_down() end,
+    {
+      mode = 'n',
+      key = '<C-j>',
+      handler = 'hunk_down',
+      desc = 'Go down in the direction of the hunk',
+    }
     ['n <leader>gs'] = function() require('vgit').buffer_hunk_stage() end,
     ['n <leader>gr'] = function() require('vgit').buffer_hunk_reset() end,
     ['n <leader>gp'] = function() require('vgit').buffer_hunk_preview() end,
-    ['n <leader>gb'] = function() require('vgit').buffer_blame_preview() end,
+    ['n <leader>gb'] = 'buffer_blame_preview',
     ['n <leader>gf'] = function() require('vgit').buffer_diff_preview() end,
     ['n <leader>gh'] = function() require('vgit').buffer_history_preview() end,
     ['n <leader>gu'] = function() require('vgit').buffer_reset() end,

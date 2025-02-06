@@ -1,45 +1,115 @@
 local keymap = {}
 
-local function parse_commands(commands)
-  local parsed_commands = vim.split(commands, ' ')
+function keymap.set(opts, callback)
+  opts = opts or {}
 
-  for i = 1, #parsed_commands do
-    local c = parsed_commands[i]
+  local key = opts.key
+  local mode = opts.mode
+  local desc = opts.desc
+  local mapping = opts.mapping
+  local silent = opts.silent == nil and true or opts.silent
+  local noremap = opts.noremap == nil and true or opts.noremap
 
-    parsed_commands[i] = vim.trim(c)
+  if mapping then
+    if type(mapping) == 'table' then
+      key = mapping.key
+      desc = mapping.desc
+    else
+      key = mapping
+    end
   end
 
-  return parsed_commands
-end
-
-function keymap.set(mode, key, callback)
   if type(callback) == 'string' then
-    vim.api.nvim_set_keymap(mode, key, string.format('<Cmd>lua require("vgit").%s()<CR>', callback), {
-      noremap = true,
-      silent = true,
+    local command = callback
+
+    if not desc then
+      desc = 'VGit:' .. command
+    end
+
+    vim.api.nvim_set_keymap(mode, key, string.format('<Cmd>lua require("vgit").%s()<CR>', command), {
+      desc = desc,
+      silent = silent,
+      noremap = noremap,
     })
 
     return keymap
   end
 
-  vim.keymap.set(mode, key, callback, { silent = true, noremap = true })
+  vim.keymap.set(mode, key, callback, {
+    desc = desc,
+    silent = silent,
+    noremap = noremap,
+  })
 
   return keymap
 end
 
-function keymap.buffer_set(buffer, mode, key, callback)
-  vim.keymap.set(mode, key, callback, { buffer = buffer.bufnr, silent = true, noremap = true })
+function keymap.buffer_set(buffer, opts, callback)
+  opts = opts or {}
+
+  local key = opts.key
+  local mode = opts.mode
+  local desc = opts.desc
+  local mapping = opts.mapping
+  local silent = opts.silent == nil and true or opts.silent
+  local noremap = opts.noremap == nil and true or opts.noremap
+
+  if mapping then
+    if type(mapping) == 'table' then
+      key = mapping.key
+      desc = mapping.desc
+    else
+      key = mapping
+    end
+  end
+
+  vim.keymap.set(mode, key, callback, {
+    desc = desc,
+    silent = silent,
+    noremap = noremap,
+    buffer = buffer.bufnr,
+  })
 
   return keymap
 end
 
 function keymap.define(keymaps)
   for commands, callback in pairs(keymaps) do
-    commands = parse_commands(commands)
-    keymap.set(commands[1], commands[2], callback)
+    if type(callback) == 'table' then
+      local config = callback;
+      keymap.set(config, config.handler)
+    else
+      commands = vim.split(commands, ' ')
+      local config = {
+        mode = commands[1],
+        key = commands[2]
+      }
+      keymap.set(config, callback)
+    end
   end
 
   return keymap
+end
+
+function keymap.find(command)
+  local keybindings = {}
+  local modes = { 'n', 'i', 'v', 'x', 's', 'o', 't', 'c' }
+
+  for _, mode in ipairs(modes) do
+    local keymaps = vim.api.nvim_get_keymap(mode)
+
+    for _, binding in ipairs(keymaps) do
+      if binding.rhs and string.find(binding.rhs, command) then
+        table.insert(keybindings, {
+          mode = mode,
+          lhs = binding.lhs,
+          rhs = binding.rhs,
+        })
+      end
+    end
+  end
+
+  return keybindings
 end
 
 return keymap

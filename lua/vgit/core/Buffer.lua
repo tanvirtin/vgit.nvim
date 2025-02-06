@@ -1,60 +1,52 @@
 local fs = require('vgit.core.fs')
-local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
+local Extmark = require('vgit.ui.Extmark')
 local Object = require('vgit.core.Object')
 local keymap = require('vgit.core.keymap')
-local Watcher = require('vgit.core.Watcher')
-local console = require('vgit.core.console')
 local renderer = require('vgit.core.renderer')
-local Namespace = require('vgit.core.Namespace')
 
 local Buffer = Object:extend()
 
 function Buffer:constructor(bufnr)
-  local filename = nil
-
-  -- 0 represents the current buffer.
-  if bufnr == 0 then
-    bufnr = vim.api.nvim_get_current_buf()
-    local bufname = vim.api.nvim_buf_get_name(bufnr)
-    filename = fs.relative_filename(bufname)
-  end
+  if bufnr == 0 then bufnr = vim.api.nvim_get_current_buf() end
 
   return {
     bufnr = bufnr,
-    filename = filename,
-    rendering = false,
-    namespace = Namespace(),
-    watcher = Watcher(),
-    state = {
-      is_processing = false,
-      is_attached_to_screen = false,
-      on_render = function() end,
-    },
+    on_render = function() end,
+    is_attached_to_screen = false,
+    text_extmark = Extmark(bufnr),
+    lnum_extmark = Extmark(bufnr),
+    sign_extmark = Extmark(bufnr),
+    highlight_extmark = Extmark(bufnr),
   }
+end
+
+function Buffer:sync()
+  return self
+end
+
+function Buffer:set_state(state)
+  for key, value in pairs(state) do
+    self.state[key] = value
+  end
 end
 
 function Buffer:call(callback)
   vim.api.nvim_buf_call(self.bufnr, callback)
-
   return self
 end
 
 function Buffer:attach_to_changes(opts)
   vim.api.nvim_buf_attach(self.bufnr, false, opts)
-
   return self
 end
 
 function Buffer:attach_to_renderer(on_render)
-  -- Method to inject on_render logic and only state it.
-  -- This allows us to change rendering logic during run time.
-  local state = self.state
-  state.on_render = on_render
+  self.on_render = on_render or function() end
 
-  if not state.is_attached_to_screen then
+  if not self.is_attached_to_screen then
     renderer.attach(self)
-    state.is_attached_to_screen = true
+    self.is_attached_to_screen = true
   end
 
   return self
@@ -62,122 +54,71 @@ end
 
 function Buffer:detach_from_renderer()
   renderer.detach(self)
-
   return self
 end
 
 function Buffer:on(event_type, callback)
   event.buffer_on(self, event_type, callback)
-
   return self
 end
 
-function Buffer:on_render(top, bot)
-  -- We invoke the render function called on runtime.
-  self.state.on_render(top, bot)
-
+function Buffer:render(top, bot)
+  self.on_render(top, bot)
   return self
 end
-
-function Buffer:is_rendering() return self.rendering end
 
 function Buffer:is_in_disk()
-  local filename = self.filename
-
-  if not filename or filename == '' then
-    return false
-  end
-  if not fs.exists(filename) then
-    return false
-  end
-
-  return true
+  return self:is_valid() and fs.exists(self:get_name())
 end
 
-function Buffer:watch(callback)
-  self.watcher:watch_file(
-    self.filename,
-    loop.coroutine(function(err)
-      if err then
-        console.debug.error(string.format('Error encountered while watching %s', self.filename))
-        return
-      end
+function Buffer:get_name()
+  return vim.api.nvim_buf_get_name(self.bufnr)
+end
 
-      loop.free_textlock()
-      if self and self:is_valid() and callback then
-        callback()
-      end
-    end)
-  )
+function Buffer:get_relative_name()
+  local name = self:get_name()
+  if not name and name == '' then return name end
+  return fs.relative_filename(name)
+end
 
+function Buffer:place_extmark_text(opts)
+  return self.text_extmark:text(opts)
+end
+
+function Buffer:place_extmark_sign(opts)
+  return self.sign_extmark:sign(opts)
+end
+
+function Buffer:place_extmark_lnum(opts)
+  return self.lnum_extmark:lnum(opts)
+end
+
+function Buffer:place_extmark_highlight(opts)
+  return self.highlight_extmark:highlight(opts)
+end
+
+function Buffer:clear_extmark_texts()
+  return self.text_extmark:clear()
+end
+
+function Buffer:clear_extmark_lnums()
+  return self.lnum_extmark:clear()
+end
+
+function Buffer:clear_extmark_signs()
+  return self.sign_extmark:clear()
+end
+
+function Buffer:clear_extmark_highlights()
+  self.highlight_extmark:clear()
   return self
 end
 
-function Buffer:unwatch()
-  self.watcher:unwatch()
-
-  return self
-end
-
-function Buffer:get_name() return vim.api.nvim_buf_get_name(self.bufnr) end
-
-function Buffer:add_highlight(hl, row, col_top, col_end)
-  self.namespace:add_highlight(self, hl, row, col_top, col_end)
-
-  return self
-end
-
-function Buffer:add_pattern_highlight(pattern, hl)
-  self.namespace:add_pattern_highlight(self, pattern, hl)
-
-  return self
-end
-
-function Buffer:clear_highlight(row_start, row_end)
-  self.namespace:clear(self, row_start, row_end)
-
-  return self
-end
-
-function Buffer:sign_place(lnum, sign_name)
-  self.namespace:sign_place(self, lnum, sign_name)
-
-  return self
-end
-
-function Buffer:sign_placelist(signs)
-  vim.fn.sign_placelist(signs)
-
-  return self
-end
-
-function Buffer:sign_unplace()
-  self.namespace:sign_unplace(self)
-
-  return self
-end
-
-function Buffer:transpose_virtual_text(text, hl, row, col, pos, priority)
-  self.namespace:transpose_virtual_text(self, text, hl, row, col, pos, priority)
-
-  return self
-end
-
-function Buffer:transpose_virtual_line(texts, col, pos, priority)
-  self.namespace:transpose_virtual_line(self, texts, col, pos, priority)
-
-  return self
-end
-
-function Buffer:clear_namespace()
-  self.namespace:clear(self)
-
-  return self
-end
-
-function Buffer:sync()
-  local bufname = vim.api.nvim_buf_get_name(self.bufnr)
-  self.filename = fs.relative_filename(bufname)
+function Buffer:clear_extmarks()
+  self:clear_extmark_texts()
+  self:clear_extmark_lnums()
+  self:clear_extmark_signs()
+  self:clear_extmark_highlights()
 
   return self
 end
@@ -185,16 +126,23 @@ end
 function Buffer:create(listed, scratch)
   listed = listed == nil and false or listed
   scratch = scratch == nil and true or scratch
-  self.bufnr = vim.api.nvim_create_buf(listed, scratch)
+  local bufnr = vim.api.nvim_create_buf(listed, scratch)
+
+  self.bufnr = bufnr
+  self.text_extmark = Extmark(bufnr)
+  self.lnum_extmark = Extmark(bufnr)
+  self.sign_extmark = Extmark(bufnr)
+  self.highlight_extmark = Extmark(bufnr)
 
   return self
 end
 
-function Buffer:is_current() return self.bufnr == vim.api.nvim_get_current_buf() end
+function Buffer:is_current()
+  return self.bufnr == vim.api.nvim_get_current_buf()
+end
 
 function Buffer:is_valid()
   local bufnr = self.bufnr
-
   return vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr)
 end
 
@@ -213,7 +161,9 @@ function Buffer:get_lines(top, bot)
   return vim.api.nvim_buf_get_lines(self.bufnr, top, bot, false)
 end
 
-function Buffer:get_option(key) return vim.api.nvim_buf_get_option(self.bufnr, key) end
+function Buffer:get_option(key)
+  return vim.api.nvim_buf_get_option(self.bufnr, key)
+end
 
 function Buffer:set_lines(lines, top, bot)
   top = top or 0
@@ -235,7 +185,6 @@ end
 
 function Buffer:set_option(key, value)
   pcall(vim.api.nvim_buf_set_option, self.bufnr, key, value)
-
   return self
 end
 
@@ -249,41 +198,25 @@ function Buffer:assign_options(options)
   return self
 end
 
-function Buffer:get_line_count() return vim.api.nvim_buf_line_count(self.bufnr) end
-
-function Buffer:edit()
-  return self:call(function()
-    local v = vim.fn.winsaveview()
-
-    vim.cmd('edit')
-    vim.fn.winrestview(v)
-  end)
+function Buffer:get_line_count()
+  return vim.api.nvim_buf_line_count(self.bufnr)
 end
 
-function Buffer:editing() return self:get_option('modified') end
-
-function Buffer:filetype() return fs.detect_filetype(self.filename) end
-
-function Buffer:list()
-  local bufnrs = vim.api.nvim_list_bufs()
-  local buffers = {}
-
-  for i = 1, #bufnrs do
-    buffers[#buffers + 1] = Buffer(bufnrs[i])
-  end
-
-  return buffers
+function Buffer:editing()
+  return self:get_option('modified')
 end
 
-function Buffer:set_keymap(mode, key, callback)
-  keymap.buffer_set(self, mode, key, callback)
+function Buffer:filetype()
+  return fs.detect_filetype(self:get_name())
+end
 
+function Buffer:set_keymap(opts, callback)
+  keymap.buffer_set(self, opts, callback)
   return self
 end
 
 function Buffer:set_var(name, value)
   vim.api.nvim_buf_set_var(self.bufnr, name, value)
-
   return self
 end
 

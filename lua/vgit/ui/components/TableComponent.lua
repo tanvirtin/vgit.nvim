@@ -21,7 +21,6 @@ function TableComponent:constructor(props)
       elements = {
         header = true,
         footer = true,
-        line_number = false,
       },
       win_options = {
         cursorline = true,
@@ -37,16 +36,21 @@ function TableComponent:paint(hls)
     local hl = hl_info.hl
     local range = hl_info.range
 
-    self.buffer:add_highlight(hl, hl_info.row - 1, range.top, range.bot)
+    self.buffer:place_extmark_highlight({
+      hl = hl,
+      row = hl_info.row - 1,
+      col_range = {
+        from = range.top,
+        to = range.bot,
+      },
+    })
   end
 
   return self
 end
 
 function TableComponent:set_lines(lines, force)
-  if self.locked and not force then
-    return self
-  end
+  if self.locked and not force then return self end
 
   local header = self.elements.header
   local buffer = self.buffer
@@ -60,7 +64,7 @@ function TableComponent:set_lines(lines, force)
   return self:paint(hls)
 end
 
-function TableComponent:make_rows(rows, format)
+function TableComponent:render_rows(rows, format)
   local formatted_row = {}
 
   for i = 1, #rows do
@@ -74,9 +78,7 @@ function TableComponent:make_rows(rows, format)
 end
 
 function TableComponent:mount()
-  if self.mounted then
-    return self
-  end
+  if self.mounted then return self end
 
   local config = self.config
   local plot = self.plot
@@ -86,9 +88,7 @@ function TableComponent:mount()
   self.window = Window:open(buffer, plot.win_plot):assign_options(config.win_options)
   self.elements.header = HeaderElement():mount(plot.header_win_plot)
 
-  if config.elements.footer then
-    self.elements.footer = FooterElement():mount(plot.footer_win_plot)
-  end
+  if config.elements.footer then self.elements.footer = FooterElement():mount(plot.footer_win_plot) end
 
   self.mounted = true
 
@@ -96,22 +96,15 @@ function TableComponent:mount()
 end
 
 function TableComponent:unmount()
-  if not self.mounted then
-    return self
-  end
+  if not self.mounted then return self end
 
   local header = self.elements.header
   local footer = self.elements.footer
 
   self.window:close()
 
-  if header then
-    header:unmount()
-  end
-
-  if footer then
-    footer:unmount()
-  end
+  if header then header:unmount() end
+  if footer then footer:unmount() end
 
   return self
 end

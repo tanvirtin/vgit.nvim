@@ -6,9 +6,7 @@ local Rgb = Object:extend()
 function Rgb:constructor(hex)
   local color
 
-  if hex then
-    color = hex:gsub('#', '')
-  end
+  if hex then color = hex:gsub('#', '') end
 
   return {
     hex = hex,
@@ -19,9 +17,7 @@ function Rgb:constructor(hex)
 end
 
 function Rgb:scale_up(percent)
-  if not self.hex then
-    return self
-  end
+  if not self.hex then return self end
 
   self.r, self.g, self.b =
     utils.math.scale_unit_up(self.r, percent),
@@ -32,9 +28,7 @@ function Rgb:scale_up(percent)
 end
 
 function Rgb:scale_down(percent)
-  if not self.hex then
-    return self
-  end
+  if not self.hex then return self end
 
   self.r, self.g, self.b =
     utils.math.scale_unit_down(self.r, percent),
@@ -45,9 +39,7 @@ function Rgb:scale_down(percent)
 end
 
 function Rgb:get()
-  if not self.hex then
-    return 'NONE'
-  end
+  if not self.hex then return 'NONE' end
 
   local r, g, b = self.r, self.g, self.b
 
