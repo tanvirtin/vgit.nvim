@@ -16,15 +16,34 @@ function loop.free_textlock(times)
   return loop
 end
 
-function loop.debounce(fn, ms)
+function loop.debounce(fn, ms, opts)
+  opts = opts or {}
+
+  local prolong = opts.prolong ~= nil and opts.prolong or true
+
+  local args, argc
+  local cooldown = false
   local timer = vim.loop.new_timer()
 
   return function(...)
-    local argv = { ... }
-    local argc = select('#', ...)
+    args = { ... }
+    argc = select('#', ...)
 
+    if not cooldown then
+      cooldown = true
+      fn(...)
+      timer:start(ms, 0, function()
+        cooldown = false
+      end)
+      return
+    end
+
+    if not prolong then return end
+
+    timer:stop()
     timer:start(ms, 0, function()
-      fn(unpack(argv, 1, argc))
+      cooldown = false
+      fn(unpack(args, 1, argc))
     end)
   end
 end

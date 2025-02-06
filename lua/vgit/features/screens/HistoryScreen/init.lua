@@ -68,7 +68,7 @@ end
 HistoryScreen.render_diff_view_debounced = loop.debounce_coroutine(function(self)
   self.diff_view:render()
   self.diff_view:move_to_hunk()
-end, 100)
+end, 200)
 
 function HistoryScreen:handle_list_move(lnum)
   self.model:set_entry_index(lnum)
