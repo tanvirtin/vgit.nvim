@@ -76,7 +76,7 @@ end
 ProjectStashScreen.render_diff_view_debounced = loop.debounce_coroutine(function(self)
   self.diff_view:render()
   self.diff_view:move_to_hunk()
-end, 100)
+end, 200)
 
 function ProjectStashScreen:handle_list_move(direction)
   local list_item = self.status_list_view:move(direction)
