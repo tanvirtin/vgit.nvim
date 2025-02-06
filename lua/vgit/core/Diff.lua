@@ -393,7 +393,6 @@ function Diff:generate_unified(hunks, lines)
       end
 
       marks[#marks].bot = top + #diff
-      marks[#marks] = marks[#marks]
     elseif type == 'change' then
       local removed_lines, added_lines = hunk:parse_diff()
       local s = top
@@ -449,7 +448,6 @@ function Diff:generate_unified(hunks, lines)
       end
 
       marks[#marks].bot = top + #diff - 1
-      marks[#marks] = marks[#marks]
     end
   end
 
@@ -557,7 +555,6 @@ function Diff:generate_split(hunks, lines)
 
       new_lines_added = new_lines_added + current_new_lines_added
       marks[#marks].bot = bot + current_new_lines_added
-      marks[#marks] = marks[#marks]
     elseif type == 'change' then
       marks[#marks + 1] = {
         type = type,
@@ -648,8 +645,6 @@ function Diff:generate_split(hunks, lines)
       else
         marks[#marks].bot = bot
       end
-
-      marks[#marks] = marks[#marks]
     end
   end
 
