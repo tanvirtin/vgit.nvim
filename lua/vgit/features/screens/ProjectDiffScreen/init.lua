@@ -7,8 +7,8 @@ local Object = require('vgit.core.Object')
 local Window = require('vgit.core.Window')
 local console = require('vgit.core.console')
 local DiffView = require('vgit.ui.views.DiffView')
+local KeyHelpPopup = require('vgit.ui.popups.KeyHelpPopup')
 local StatusListView = require('vgit.ui.views.StatusListView')
-local KeyHelpBarView = require('vgit.ui.views.KeyHelpBarView')
 local Model = require('vgit.features.screens.ProjectDiffScreen.Model')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
 
@@ -24,22 +24,6 @@ function ProjectDiffScreen:constructor(opts)
     name = 'Project Diff Screen',
     scene = scene,
     model = model,
-    app_bar_view = KeyHelpBarView(scene, {
-      keymaps = function()
-        local keymaps = project_diff_preview_setting:get('keymaps')
-        return {
-          { 'Stage', keymaps['buffer_stage'] },
-          { 'Unstage', keymaps['buffer_unstage'] },
-          { 'Reset', keymaps['buffer_reset'] },
-          { 'Stage hunk', keymaps['buffer_hunk_stage'] },
-          { 'Unstage hunk', keymaps['buffer_hunk_unstage'] },
-          { 'Stage all', keymaps['stage_all'] },
-          { 'Unstage all', keymaps['unstage_all'] },
-          { 'Reset all', keymaps['reset_all'] },
-          { 'Commit', keymaps['commit'] },
-        }
-      end,
-    }),
     diff_view = DiffView(scene, {
       layout_type = function()
         return model:get_layout_type()
@@ -54,7 +38,6 @@ function ProjectDiffScreen:constructor(opts)
         return model:get_diff()
       end,
     }, {
-      row = 1,
       col = '25vw',
       width = '75vw',
     }, {
@@ -67,16 +50,21 @@ function ProjectDiffScreen:constructor(opts)
       entries = function()
         return model:get_entries()
       end,
-    }, {
-      row = 1,
-      width = '25vw',
-    }, {
+    }, { width = '25vw' }, {
       elements = {
         header = false,
         footer = true,
       },
     }),
   }
+end
+
+function ProjectDiffScreen:help()
+  KeyHelpPopup({
+    config = {
+      keymaps = project_diff_preview_setting:get('keymaps')
+    }
+  }):mount()
 end
 
 function ProjectDiffScreen:hunk_up()
@@ -528,12 +516,10 @@ function ProjectDiffScreen:create()
     return false
   end
 
-  self.app_bar_view:define()
   self.diff_view:define()
   self.status_list_view:define()
 
   self.diff_view:mount()
-  self.app_bar_view:mount()
   self.status_list_view:mount({
     event_handlers = {
       on_enter = function()
@@ -545,7 +531,6 @@ function ProjectDiffScreen:create()
     },
   })
 
-  self.app_bar_view:render()
   self.status_list_view:render()
 
   self:setup_keymaps()
