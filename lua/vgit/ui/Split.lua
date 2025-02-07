@@ -68,7 +68,6 @@ end
 
 function Split:unmount()
   if self.window and self.window:is_valid() then self.window:close() end
-
   if self.buffer and self.buffer:is_valid() then self.buffer:delete({ force = true }) end
 
   self.mounted = false
