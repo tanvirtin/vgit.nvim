@@ -126,6 +126,7 @@ local toggle_tracing = loop.coroutine(function()
 end)
 
 local function help()
+  if screen_manager.help() then return end
   vim.cmd('h vgit')
 end
 
