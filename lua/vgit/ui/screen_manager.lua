@@ -14,6 +14,16 @@ local screen_manager = {
   active_screen = nil,
 }
 
+function screen_manager.help()
+  if screen_manager.has_active_screen() then
+    if screen_manager.has_action('help') then
+      screen_manager.active_screen['help'](screen_manager.active_screen)
+    end
+    return true
+  end
+  return false
+end
+
 function screen_manager.dispatch_action(action_name, ...)
   if screen_manager.has_active_screen() and screen_manager.has_action(action_name) then
     screen_manager.active_screen[action_name](screen_manager.active_screen, ...)
@@ -122,7 +132,8 @@ function screen_manager.create(screen_name, ...)
     scene:set_keymap({
       {
         mode = 'n',
-        key = scene_setting:get('keymaps').quit,
+        desc = 'Quit',
+        mapping = scene_setting:get('keymaps').quit,
         handler = function()
           screen_manager.destroy_active_screen()
         end
