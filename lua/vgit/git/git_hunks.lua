@@ -1,3 +1,4 @@
+local fs = require('vgit.core.fs')
 local utils = require('vgit.core.utils')
 local gitcli = require('vgit.git.gitcli')
 local GitHunk = require('vgit.git.GitHunk')
@@ -5,7 +6,24 @@ local git_setting = require('vgit.settings.git')
 
 local git_hunks = {}
 
-function git_hunks.live(original_lines, current_lines)
+function git_hunks.live(reponame, original_lines, current_lines)
+  local lines_limit = 5000
+
+  if #current_lines > lines_limit then
+    local temp_filename_b = fs.tmpname()
+    local temp_filename_a = fs.tmpname()
+
+    fs.write_file(temp_filename_a, original_lines)
+    fs.write_file(temp_filename_b, current_lines)
+
+    local hunks, hunks_err = git_hunks.list(reponame, { filenames = { temp_filename_a, temp_filename_b } })
+
+    fs.remove_file(temp_filename_a)
+    fs.remove_file(temp_filename_b)
+
+    return hunks, hunks_err
+  end
+
   local o_lines_tbl = {}
   local c_lines_tbl = {}
   local num_lines = math.max(#original_lines, #current_lines)
