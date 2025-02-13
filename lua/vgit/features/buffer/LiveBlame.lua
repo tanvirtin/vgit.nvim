@@ -56,7 +56,7 @@ function LiveBlame:register_events()
 
         loop.free_textlock()
         buffer:render_blames()
-      end, 200)
+      end, live_blame_setting:get('debounce_ms'))
     )
   end)
 
