@@ -33,7 +33,7 @@ end
 
 LiveGutter.fetch_debounced = loop.debounce_coroutine(function(self, buffer)
   self:fetch(buffer)
-end, 200)
+end, live_gutter_setting:get('debounce_ms'))
 
 function LiveGutter:toggle()
   git_buffer_store.for_each(function(buffer)
