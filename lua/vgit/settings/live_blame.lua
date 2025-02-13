@@ -2,6 +2,7 @@ local Config = require('vgit.core.Config')
 
 return Config({
   enabled = true,
+  debounce_ms = 200,
   format = function(blame, git_config)
     local config_author = git_config['user.name']
     local author = blame.author
