@@ -1,10 +1,10 @@
 local fs = require('vgit.core.fs')
 local Object = require('vgit.core.Object')
 local git_log = require('vgit.git.git_log')
-local git_show = require('vgit.libgit2.git_show')
-local git_repo = require('vgit.libgit2.git_repo')
+local git_show = require('vgit.git.git_show')
 local git_hunks = require('vgit.git.git_hunks')
 local git_blame = require('vgit.git.git_blame')
+local git_repo = require('vgit.libgit2.git_repo')
 local git_status = require('vgit.git.git_status')
 local git_stager = require('vgit.git.git_stager')
 local git_conflict = require('vgit.libgit2.git_conflict')
@@ -121,10 +121,10 @@ function GitFile:live_hunks(current_lines)
     return self.state.hunks
   end
 
-  local original_lines, original_lines_err = self:lines()
-  if original_lines_err then return nil, original_lines_err end
+  local original_lines, err = self:lines()
+  if err then return nil, err end
 
-  self.state.hunks = git_hunks.live(original_lines, current_lines)
+  self.state.hunks = git_hunks.live(self.reponame, original_lines, current_lines)
 
   return self.state.hunks
 end
