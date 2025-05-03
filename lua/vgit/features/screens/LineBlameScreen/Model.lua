@@ -48,7 +48,7 @@ function Model:fetch(filename, lnum, opts)
   if blame:is_uncommitted() then return nil, { 'Line is uncommitted' } end
 
   loop.free_textlock()
-  local reponame = git_repo.discover()
+  local reponame = git_repo.discover(filename)
   local log, log_err = git_log.get(reponame, blame.commit_hash)
   if log_err then return nil, log_err end
   if not log then return nil, { 'log not found' } end
