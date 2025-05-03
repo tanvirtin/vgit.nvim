@@ -13,53 +13,62 @@ describe('keymap', function()
   describe('define', function()
     it('should call vim api internally to define the given keys', function()
       local expected = {
-        { 'n', '<C-k>', '<Cmd>lua require("vgit").hunk_up()<CR>' },
-        { 'n', '<C-j>', '<Cmd>lua require("vgit").hunk_down()<CR>' },
+        { 'n', '<C-k>', '<Cmd>lua require("vgit").hunk_up()<CR>',   'VGit:hunk_up' },
+        { 'n', '<C-j>', '<Cmd>lua require("vgit").hunk_down()<CR>', 'VGit:hunk_down' },
         {
           'n',
           '<leader>gs',
           '<Cmd>lua require("vgit").buffer_hunk_stage()<CR>',
+          'VGit:buffer_hunk_stage',
         },
         {
           'n',
           '<leader>gr',
           '<Cmd>lua require("vgit").buffer_hunk_reset()<CR>',
+          'VGit:buffer_hunk_reset',
         },
         {
           'n',
           '<leader>gp',
           '<Cmd>lua require("vgit").buffer_hunk_preview()<CR>',
+          'VGit:buffer_hunk_preview',
         },
         {
           'n',
           '<leader>gb',
           '<Cmd>lua require("vgit").buffer_blame_preview()<CR>',
+          'VGit:buffer_blame_preview',
         },
         {
           'n',
           '<leader>gf',
           '<Cmd>lua require("vgit").buffer_diff_preview()<CR>',
+          'VGit:buffer_diff_preview',
         },
         {
           'n',
           '<leader>gh',
           '<Cmd>lua require("vgit").buffer_history_preview()<CR>',
+          'VGit:buffer_history_preview',
         },
-        { 'n', '<leader>gu', '<Cmd>lua require("vgit").buffer_reset()<CR>' },
+        { 'n', '<leader>gu', '<Cmd>lua require("vgit").buffer_reset()<CR>', 'VGit:buffer_reset' },
         {
           'n',
           '<leader>gg',
           '<Cmd>lua require("vgit").buffer_gutter_blame_preview()<CR>',
+          'VGit:buffer_gutter_blame_preview',
         },
         {
           'n',
           '<leader>gd',
           '<Cmd>lua require("vgit").project_diff_preview()<CR>',
+          'VGit:project_diff_preview',
         },
         {
           'n',
           '<leader>gx',
           '<Cmd>lua require("vgit").toggle_diff_preference()<CR>',
+          'VGit:toggle_diff_preference',
         },
       }
 
@@ -80,11 +89,12 @@ describe('keymap', function()
 
       for index in ipairs(expected) do
         assert
-          .stub(vim.api.nvim_set_keymap).was
-          .called_with(expected[index][1], expected[index][2], expected[index][3], {
-            noremap = true,
-            silent = true,
-          })
+            .stub(vim.api.nvim_set_keymap).was
+            .called_with(expected[index][1], expected[index][2], expected[index][3], {
+              noremap = true,
+              silent = true,
+              desc = expected[index][4],
+            })
       end
     end)
   end)
