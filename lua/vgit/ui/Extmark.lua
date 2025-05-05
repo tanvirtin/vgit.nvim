@@ -11,7 +11,7 @@ function Extmark:constructor(bufnr)
       sign = 100,
       lnum = 1000,
     },
-    ns_id = vim.api.nvim_create_namespace(''),
+    ns_id = vim.api.nvim_create_namespace('vgit.extmarks'),
   }
 end
 
