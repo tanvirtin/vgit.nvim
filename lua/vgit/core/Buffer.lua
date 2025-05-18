@@ -14,10 +14,10 @@ function Buffer:constructor(bufnr)
     bufnr = bufnr,
     on_render = function() end,
     is_attached_to_screen = false,
-    text_extmark = Extmark(bufnr),
-    lnum_extmark = Extmark(bufnr),
-    sign_extmark = Extmark(bufnr),
-    highlight_extmark = Extmark(bufnr),
+    text_extmark = Extmark(bufnr, 'text'),
+    lnum_extmark = Extmark(bufnr, 'lnum'),
+    sign_extmark = Extmark(bufnr, 'sign'),
+    highlight_extmark = Extmark(bufnr, 'highlight'),
   }
 end
 
@@ -129,10 +129,10 @@ function Buffer:create(listed, scratch)
   local bufnr = vim.api.nvim_create_buf(listed, scratch)
 
   self.bufnr = bufnr
-  self.text_extmark = Extmark(bufnr)
-  self.lnum_extmark = Extmark(bufnr)
-  self.sign_extmark = Extmark(bufnr)
-  self.highlight_extmark = Extmark(bufnr)
+  self.text_extmark = Extmark(bufnr, 'text')
+  self.lnum_extmark = Extmark(bufnr, 'lnum')
+  self.sign_extmark = Extmark(bufnr, 'sign')
+  self.highlight_extmark = Extmark(bufnr, 'highlight')
 
   return self
 end

@@ -14,15 +14,15 @@ function GitBuffer:constructor(...)
   local buffer = Buffer.constructor(self, ...)
   local bufnr = buffer.bufnr
 
-  buffer.blame_extmark = Extmark(bufnr)
-  buffer.gutter_extmark = Extmark(bufnr)
-  buffer.conflict_extmark = Extmark(bufnr)
   buffer.state = {
     signs = {},
     blames = {},
     config = nil,
     conflicts = {},
   }
+  buffer.blame_extmark = Extmark(bufnr, 'blame')
+  buffer.gutter_extmark = Extmark(bufnr, 'gutter')
+  buffer.conflict_extmark = Extmark(bufnr, 'conflict')
 
   return buffer
 end
@@ -30,9 +30,9 @@ end
 function GitBuffer:create(...)
   Buffer.create(self, ...)
 
-  self.blame_extmark = Extmark(self.bufnr)
-  self.gutter_extmark = Extmark(self.bufnr)
-  self.conflict_extmark = Extmark(self.bufnr)
+  self.blame_extmark = Extmark(self.bufnr, 'blame')
+  self.gutter_extmark = Extmark(self.bufnr, 'gutter')
+  self.conflict_extmark = Extmark(self.bufnr, 'conflict')
 
   return self
 end
