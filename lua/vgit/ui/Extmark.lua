@@ -3,7 +3,13 @@ local signs_setting = require('vgit.settings.signs')
 
 local Extmark = Object:extend()
 
-function Extmark:constructor(bufnr)
+function Extmark:constructor(bufnr, ns_name_extension)
+  local ns_name = 'vgit.extmarks'
+  if ns_name_extension then
+    ns_name = ns_name .. '.' .. ns_name_extension
+  end
+  local ns_id = vim.api.nvim_create_namespace(ns_name)
+
   return {
     bufnr = bufnr,
     groups = {
@@ -11,7 +17,7 @@ function Extmark:constructor(bufnr)
       sign = 100,
       lnum = 1000,
     },
-    ns_id = vim.api.nvim_create_namespace('vgit.extmarks'),
+    ns_id = ns_id,
   }
 end
 
