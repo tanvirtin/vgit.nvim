@@ -63,7 +63,7 @@ function assertion.assert_table(value)
 end
 
 function assertion.assert_list(value)
-  assertion.assert(vim.tbl_islist(value), 'type error :: expected list')
+  assertion.assert(vim.islist(value), 'type error :: expected list')
 
   return assertion
 end

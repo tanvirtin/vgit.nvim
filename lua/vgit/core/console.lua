@@ -86,7 +86,7 @@ function console.debug.get_source_logger(source)
 
     local new_msg = ''
 
-    if vim.tbl_islist(msg) then
+    if vim.islist(msg) then
       for i = 1, #msg do
         local m = msg[i]
         if i == 1 then
