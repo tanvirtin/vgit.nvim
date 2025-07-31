@@ -15,6 +15,7 @@ function FoldableListComponent:constructor(props)
       list = {},
       hls = {},
       shadow_list = {},
+      persistent_fold_states = {},
     },
     config = {
       elements = {
@@ -35,7 +36,30 @@ function FoldableListComponent:call(callback)
   return self
 end
 
+function FoldableListComponent:apply_fold_states_to_list(list)
+  local function apply_to_items(items)
+    if not items then return end
+
+    for _, item in ipairs(items) do
+      if item.items and item.entry and item.entry.path then
+        local saved_state = self.state.persistent_fold_states[item.entry.path]
+        if saved_state ~= nil then
+          item.open = saved_state
+        end
+        apply_to_items(item.items)
+      end
+    end
+  end
+
+  for _, section in ipairs(list) do
+    if section.items then
+      apply_to_items(section.items)
+    end
+  end
+end
+
 function FoldableListComponent:set_list(list)
+  self:apply_fold_states_to_list(list)
   self.state.list = list
   return self
 end
@@ -46,7 +70,14 @@ function FoldableListComponent:set_title(text)
 end
 
 function FoldableListComponent:toggle_list_item(item)
-  if item.items then item.open = not item.open end
+  if item.items then 
+    item.open = not item.open
+
+    if item.entry and item.entry.path then
+      self.state.persistent_fold_states[item.entry.path] = item.open
+    end
+  end
+
   return self
 end
 
