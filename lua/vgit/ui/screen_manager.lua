@@ -16,9 +16,7 @@ local screen_manager = {
 
 function screen_manager.help()
   if screen_manager.has_active_screen() then
-    if screen_manager.has_action('help') then
-      screen_manager.active_screen['help'](screen_manager.active_screen)
-    end
+    if screen_manager.has_action('help') then screen_manager.active_screen['help'](screen_manager.active_screen) end
     return true
   end
   return false
@@ -122,13 +120,13 @@ function screen_manager.create(screen_name, ...)
     screen_manager.active_screen = screen
     local scene = screen.scene
     scene
-        :on('BufWinLeave', function()
-          loop.free_textlock()
-          if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
-        end)
-        :on('QuitPre', function()
-          if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
-        end)
+      :on('BufWinLeave', function()
+        loop.free_textlock()
+        if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
+      end)
+      :on('QuitPre', function()
+        if screen_manager.has_active_screen() then return screen_manager.destroy_active_screen() end
+      end)
     scene:set_keymap({
       {
         mode = 'n',
@@ -136,8 +134,8 @@ function screen_manager.create(screen_name, ...)
         mapping = scene_setting:get('keymaps').quit,
         handler = function()
           screen_manager.destroy_active_screen()
-        end
-      }
+        end,
+      },
     })
   end
 

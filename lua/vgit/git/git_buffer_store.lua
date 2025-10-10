@@ -151,23 +151,23 @@ git_buffer_store.collect = function()
 
   loop.free_textlock()
   git_buffer
-      :attach_to_changes({
-        on_lines = loop.coroutine(function(_, _, _, _, p_lnum, n_lnum, byte_count)
-          if p_lnum == n_lnum and byte_count == 0 then return end
-          git_buffer_store.dispatch(git_buffer, 'change')
-        end),
+    :attach_to_changes({
+      on_lines = loop.coroutine(function(_, _, _, _, p_lnum, n_lnum, byte_count)
+        if p_lnum == n_lnum and byte_count == 0 then return end
+        git_buffer_store.dispatch(git_buffer, 'change')
+      end),
 
-        on_reload = loop.coroutine(function()
-          git_buffer_store.dispatch(git_buffer, 'reload')
-        end),
+      on_reload = loop.coroutine(function()
+        git_buffer_store.dispatch(git_buffer, 'reload')
+      end),
 
-        on_detach = loop.coroutine(function()
-          git_buffer_store.dispatch(git_buffer, 'detach')
-          git_buffer_store.remove(git_buffer)
-          git_buffer:detach_from_renderer()
-        end),
-      })
-      :attach_to_renderer()
+      on_detach = loop.coroutine(function()
+        git_buffer_store.dispatch(git_buffer, 'detach')
+        git_buffer_store.remove(git_buffer)
+        git_buffer:detach_from_renderer()
+      end),
+    })
+    :attach_to_renderer()
 
   git_buffer_store.dispatch(git_buffer, 'attach')
 end

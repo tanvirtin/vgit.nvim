@@ -158,13 +158,4 @@ describe('utils.object:', function()
       eq(result, a)
     end)
   end)
-
-  it('should iterate over each key-value pair in the table', function()
-    local a = { a = 1, b = 2 }
-    local result = {}
-    object.each(a, function(value, key)
-      result[key] = value
-    end)
-    eq(result, a)
-  end)
 end)

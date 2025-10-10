@@ -48,16 +48,13 @@ function KeyHelpPopup:calculate_content_dimensions()
 
   local content_height = #utils.object.keys(keymaps) + self.config.padding * 2
   local total_width = max_key_length + max_desc_length + 5
-  local content_width = math.min(
-    math.max(total_width, self.config.min_width),
-    self.config.max_width
-  )
+  local content_width = math.min(math.max(total_width, self.config.min_width), self.config.max_width)
 
   return content_height, content_width
 end
 
 function KeyHelpPopup:center_key_lines(lines, content_width)
-   local max_line_count = #lines[1]
+  local max_line_count = #lines[1]
   utils.list.each(lines, function(line)
     max_line_count = math.max(max_line_count, #line)
   end)
@@ -131,7 +128,7 @@ function KeyHelpPopup:mount()
 
   self:set_filetype('githelp')
 
-  vim.cmd [[
+  vim.cmd([[
     syntax match GitHelpKey /^\s*\zs\S\+/ contained
     syntax match GitHelpSeparator /│/ contained
     syntax match GitHelpDesc /│\s*\zs.*$/ contained
@@ -139,13 +136,15 @@ function KeyHelpPopup:mount()
     highlight default link GitHelpKey Identifier
     highlight default link GitHelpSeparator Comment
     highlight default link GitHelpDesc Statement
-  ]]
+  ]])
 
   self:set_keymap({
     mode = 'n',
     desc = 'Quit',
     key = '<enter>',
-  }, function() self:unmount() end)
+  }, function()
+    self:unmount()
+  end)
 
   return self
 end

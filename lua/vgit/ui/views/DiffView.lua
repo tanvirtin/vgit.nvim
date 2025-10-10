@@ -286,11 +286,11 @@ end
 function DiffView:clear_folds()
   if self.props.layout_type() == 'split' then
     self.scene:get('previous'):call(function()
-      vim.api.nvim_command("normal! zR")
+      vim.api.nvim_command('normal! zR')
     end)
   else
     self.scene:get('current'):call(function()
-      vim.api.nvim_command("normal! zR")
+      vim.api.nvim_command('normal! zR')
     end)
   end
 end
@@ -721,7 +721,7 @@ function DiffView:render()
     self:render_diff_partially()
   end)
 
-   if not ok then console.debug.error(msg) end
+  if not ok then console.debug.error(msg) end
 end
 
 return DiffView

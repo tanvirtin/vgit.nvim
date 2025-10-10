@@ -79,34 +79,38 @@ describe('Set:', function()
   end)
 
   describe('for_each', function()
-    local set = Set({ 'a', 'a', 'b', 'b', 'c', 'c', 'd' })
+    it('should iterate over each element', function()
+      local set = Set({ 'a', 'a', 'b', 'b', 'c', 'c', 'd' })
 
-    local count_map = {}
-    local count = 0
+      local count_map = {}
+      local count = 0
 
-    set:for_each(function(value, index)
-      count = count + index
-      if count_map[value] then
-        count_map[value] = count_map[value] + 1
-      else
-        count_map[value] = 1
-      end
+      set:for_each(function(value, index)
+        count = count + index
+        if count_map[value] then
+          count_map[value] = count_map[value] + 1
+        else
+          count_map[value] = 1
+        end
+      end)
+
+      local eq = assert.are.same
+
+      eq(count_map['a'], 1)
+      eq(count_map['b'], 1)
+      eq(count_map['c'], 1)
+      eq(count_map['d'], 1)
+      eq(count, 14)
     end)
-
-    local eq = assert.are.same
-
-    eq(count_map['a'], 1)
-    eq(count_map['b'], 1)
-    eq(count_map['c'], 1)
-    eq(count_map['d'], 1)
-    eq(count, 14)
   end)
 
-  it('should allow chaining side effect commands', function()
-    local set = Set({ 'a', 'a', 'b', 'b', 'c', 'c', 'd' })
+  describe('chaining', function()
+    it('should allow chaining side effect commands', function()
+      local set = Set({ 'a', 'a', 'b', 'b', 'c', 'c', 'd' })
 
-    local hasZ = set:add('z'):delete('z'):has('z')
+      local hasZ = set:add('z'):delete('z'):has('z')
 
-    assert.False(hasZ)
+      assert.False(hasZ)
+    end)
   end)
 end)

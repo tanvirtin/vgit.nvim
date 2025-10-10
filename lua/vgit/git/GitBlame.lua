@@ -14,7 +14,17 @@ function GitBlame:constructor(info)
 
   for i = 2, #info do
     local blame_info = utils.str.split(info[i], ' ')
-    blame[blame_info[1]] = blame_info[2]
+    local key = blame_info[1]
+
+    if key == 'previous' then
+      blame[key] = blame_info[2]
+    else
+      local value_parts = {}
+      for j = 2, #blame_info do
+        table.insert(value_parts, blame_info[j])
+      end
+      blame[key] = table.concat(value_parts, ' ')
+    end
   end
 
   local committed = true

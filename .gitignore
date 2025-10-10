@@ -25,5 +25,8 @@ luac.out
 *.x86_64
 *.hex
 *.sh
+!ops/*.sh
 .DS_Store
 doc/tags
+
+ops/*.md

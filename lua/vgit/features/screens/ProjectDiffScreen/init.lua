@@ -62,8 +62,8 @@ end
 function ProjectDiffScreen:help()
   KeyHelpPopup({
     config = {
-      keymaps = project_diff_preview_setting:get('keymaps')
-    }
+      keymaps = project_diff_preview_setting:get('keymaps'),
+    },
   }):mount()
 end
 
