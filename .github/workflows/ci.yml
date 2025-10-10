@@ -1,37 +1,77 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - run: date +%F > todays-date
-      - name: Restore cache for today's nightly.
-        uses: actions/cache@v2
-        with:
-          path: |
-            _neovim
-          key: ${{ runner.os }}-x64-${{ hashFiles('todays-date') }}
-
-      - name: Prepare
-        run: |
-          sudo apt install fd-find
-          mkdir -p ~/.local/share/nvim/site/pack/vendor/start
-          git clone --depth 1 https://github.com/nvim-lua/plenary.nvim ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
-          ln -s $(pwd) ~/.local/share/nvim/site/pack/vendor/start
-
-      - name: Run tests
-        run: |
-          curl -OL https://raw.githubusercontent.com/norcalli/bot-ci/master/scripts/github-actions-setup.sh
-          source github-actions-setup.sh nightly-x64
-          git config --global user.name "foo"
-          git config --global user.email "foo@bar.com"
-          nvim --headless -c "PlenaryBustedDirectory tests"
-
-  commit_lint:
+  luacheck:
+    name: luacheck
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+
+      - name: Install luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luarocks
+          sudo luarocks install luacheck
+
+      - name: Run luacheck
+        run: make lint
+
+  stylua:
+    name: stylua
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install stylua
+        run: |
+          wget -qO- https://github.com/JohnnyMorganz/StyLua/releases/latest/download/stylua-linux-x86_64.zip | funzip > stylua
+          chmod +x stylua
+          sudo mv stylua /usr/local/bin/
+
+      - name: Check formatting
+        run: make format-check
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+
+      - name: Cache plenary.nvim
+        uses: actions/cache@v3
+        with:
+          path: ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
+          key: plenary-${{ runner.os }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y fd-find lua5.3
+          sudo ln -sf /usr/bin/lua5.3 /usr/bin/lua
+          make install-deps
+          git config --global user.name "CI Bot"
+          git config --global user.email "ci@vgit.nvim"
+
+      - name: Run tests
+        run: make test
+
+  commit_lint:
+    name: commit-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - uses: webiny/action-conventional-commits@v1.0.3

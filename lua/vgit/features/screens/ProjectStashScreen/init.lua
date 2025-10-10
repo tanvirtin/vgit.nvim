@@ -60,8 +60,8 @@ end
 function ProjectStashScreen:help()
   KeyHelpPopup({
     config = {
-      keymaps = project_stash_preview_setting:get('keymaps')
-    }
+      keymaps = project_stash_preview_setting:get('keymaps'),
+    },
   }):mount()
 end
 

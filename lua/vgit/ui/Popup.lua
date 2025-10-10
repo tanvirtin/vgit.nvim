@@ -84,7 +84,7 @@ function Popup:calculate_position()
     end,
     center = function(height, width)
       return math.max(0, math.floor((screen_lines - height) / 2)), math.max(0, math.floor((screen_columns - width) / 2))
-    end
+    end,
   }
 
   local handler = position_handlers[position]
@@ -120,7 +120,7 @@ function Popup:mount()
       self.config.win_options.winhl = table.concat({
         self.config.win_options.winhl,
         'FloatBorder:' .. self.config.border.highlight,
-        'FloatTitle:' .. self.config.border.highlight
+        'FloatTitle:' .. self.config.border.highlight,
       }, ',')
     end
   end
@@ -133,19 +133,21 @@ function Popup:mount()
   if self.config.filetype then self:set_filetype(self.config.filetype) end
 
   self
-      :on('BufWinLeave', function()
-        loop.free_textlock()
-        self:unmount()
-      end)
-      :on('QuitPre', function()
-        self:unmount()
-      end)
+    :on('BufWinLeave', function()
+      loop.free_textlock()
+      self:unmount()
+    end)
+    :on('QuitPre', function()
+      self:unmount()
+    end)
 
-    self:set_keymap({
-      mode = 'n',
-      desc = 'Quit',
-      mapping = scene_setting:get('keymaps').quit,
-    }, function() self:unmount() end)
+  self:set_keymap({
+    mode = 'n',
+    desc = 'Quit',
+    mapping = scene_setting:get('keymaps').quit,
+  }, function()
+    self:unmount()
+  end)
 
   return self
 end

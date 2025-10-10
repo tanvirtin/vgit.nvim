@@ -1,5 +1,3 @@
-local utils = require('vgit.core.utils')
-
 local dimensions = {}
 
 function dimensions.global_width()

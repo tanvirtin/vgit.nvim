@@ -43,8 +43,8 @@ function Model:fetch(filename, opts)
   local entries, err = self.git_file:logs()
   if err then return nil, err end
 
-  local config, err = self.git_file:config()
-  if err then return nil, err end
+  local config, config_err = self.git_file:config()
+  if config_err then return nil, config_err end
 
   self.state.config = config
   self.state.entries = entries
