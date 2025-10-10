@@ -13,9 +13,17 @@ function GitBlame:constructor(info)
   }
 
   for i = 2, #info do
-    local field, value = info[i]:match("^(%S+)%s+(.+)")
-    if field ~= nil then
-      blame[field] = value
+    local blame_info = utils.str.split(info[i], ' ')
+    local key = blame_info[1]
+
+    if key == 'previous' then
+      blame[key] = blame_info[2]
+    else
+      local value_parts = {}
+      for j = 2, #blame_info do
+        table.insert(value_parts, blame_info[j])
+      end
+      blame[key] = table.concat(value_parts, ' ')
     end
   end
 

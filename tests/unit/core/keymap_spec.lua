@@ -13,7 +13,7 @@ describe('keymap', function()
   describe('define', function()
     it('should call vim api internally to define the given keys', function()
       local expected = {
-        { 'n', '<C-k>', '<Cmd>lua require("vgit").hunk_up()<CR>',   'VGit:hunk_up' },
+        { 'n', '<C-k>', '<Cmd>lua require("vgit").hunk_up()<CR>', 'VGit:hunk_up' },
         { 'n', '<C-j>', '<Cmd>lua require("vgit").hunk_down()<CR>', 'VGit:hunk_down' },
         {
           'n',
@@ -89,12 +89,12 @@ describe('keymap', function()
 
       for index in ipairs(expected) do
         assert
-            .stub(vim.api.nvim_set_keymap).was
-            .called_with(expected[index][1], expected[index][2], expected[index][3], {
-              noremap = true,
-              silent = true,
-              desc = expected[index][4],
-            })
+          .stub(vim.api.nvim_set_keymap).was
+          .called_with(expected[index][1], expected[index][2], expected[index][3], {
+            noremap = true,
+            silent = true,
+            desc = expected[index][4],
+          })
       end
     end)
   end)

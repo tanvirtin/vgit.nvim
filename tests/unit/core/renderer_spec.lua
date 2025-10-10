@@ -31,9 +31,16 @@ describe('renderer', function()
   end)
 
   describe('attach', function()
-    it('should attach a buffer', function()
+    it('should attach a buffer and track it', function()
       renderer.attach(buffer)
-      assert.is_not_nil(renderer.buffers[buffer.bufnr])
+
+      -- Verify buffer is tracked in the renderer
+      assert.is_truthy(renderer.buffers[buffer.bufnr], 'buffer should be tracked')
+      assert.is_table(renderer.buffers[buffer.bufnr], 'tracked buffer should be a table')
+
+      -- Verify we can retrieve the attached buffer
+      local attached = renderer.buffers[buffer.bufnr]
+      assert.equals(type(attached), 'table')
     end)
   end)
 

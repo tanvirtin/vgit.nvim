@@ -48,8 +48,8 @@ end
 function DiffScreen:help()
   KeyHelpPopup({
     config = {
-      keymaps = diff_preview_setting:get('keymaps')
-    }
+      keymaps = diff_preview_setting:get('keymaps'),
+    },
   }):mount()
 end
 
