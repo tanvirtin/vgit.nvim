@@ -149,7 +149,7 @@ function DiffView:render_word_diff(component_type, line_changes, lnum)
   })
 end
 
-function DiffView:render_line_diff(component_type, line_changes, lnum)
+function DiffView:render_line_diff(component_type, line_changes)
   local line_number_hl = 'GitLineNr'
   local signs_usage_setting = signs_setting:get('usage')
   local scene_signs = signs_usage_setting.scene
@@ -159,7 +159,7 @@ function DiffView:render_line_diff(component_type, line_changes, lnum)
   local lnum_change = line_changes.lnum_change
   if not lnum_change then return end
 
-  lnum = lnum_change.lnum
+  local lnum = lnum_change.lnum
   local change_type = lnum_change.type
   local sign_name = scene_signs[change_type]
 
@@ -193,7 +193,7 @@ function DiffView:render_diff(top, bot)
       local component_type = 'previous'
       local line_changes = previous_lines_changes[lnum]
 
-      self:render_line_diff(component_type, line_changes, lnum)
+      self:render_line_diff(component_type, line_changes)
       self:render_word_diff(component_type, line_changes, lnum)
     end
 
@@ -201,7 +201,7 @@ function DiffView:render_diff(top, bot)
       local component_type = 'current'
       local line_changes = current_lines_changes[lnum]
 
-      self:render_line_diff(component_type, line_changes, lnum)
+      self:render_line_diff(component_type, line_changes)
       self:render_word_diff(component_type, line_changes, lnum)
     end
   end
@@ -466,8 +466,8 @@ function DiffView:render_unified_line_numbers()
   end
 
   for i = 1, num_lines do
-    local line = ''
     local lnum_change = lnum_change_map[i]
+    local line
 
     if lnum_change and lnum_change.type == 'remove' then
       line = '  '
@@ -613,10 +613,8 @@ function DiffView:move_to_mark(marks, mark_index, position)
   if not lnum then
     if marks and marks[#marks] and marks[#marks].top then
       lnum = marks[#marks].top
-      mark_index = #marks
     else
       lnum = 1
-      mark_index = 1
     end
   end
 

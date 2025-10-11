@@ -1,5 +1,5 @@
 local fs = require('vgit.core.fs')
-local gitcli = require('vgit.git.gitcli')
+local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 local GitPatch = require('vgit.git.GitPatch')
 
 local git_stager = {}
@@ -7,28 +7,13 @@ local git_stager = {}
 function git_stager.stage(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
-  return gitcli.run({
-    '-C',
-    reponame,
-    '--no-pager',
-    'add',
-    '--',
-    filename or '.',
-  })
+  return GitQueryBuilder(reponame):raw_args('--no-pager', 'add', '--', filename or '.'):execute()
 end
 
 function git_stager.unstage(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
-  return gitcli.run({
-    '-C',
-    reponame,
-    'reset',
-    '-q',
-    'HEAD',
-    '--',
-    filename or '.',
-  })
+  return GitQueryBuilder(reponame):raw_args('reset', '-q', 'HEAD', '--', filename or '.'):execute()
 end
 
 function git_stager.stage_hunk(reponame, filename, hunk)
@@ -41,16 +26,9 @@ function git_stager.stage_hunk(reponame, filename, hunk)
 
   fs.write_file(patch_filename, patch)
 
-  local _, err = gitcli.run({
-    '-C',
-    reponame,
-    '--no-pager',
-    'apply',
-    '--cached',
-    '--whitespace=nowarn',
-    '--unidiff-zero',
-    patch_filename,
-  })
+  local _, err = GitQueryBuilder(reponame)
+    :raw_args('--no-pager', 'apply', '--cached', '--whitespace=nowarn', '--unidiff-zero', patch_filename)
+    :execute()
 
   fs.remove_file(patch_filename)
 
@@ -67,17 +45,10 @@ function git_stager.unstage_hunk(reponame, filename, hunk)
 
   fs.write_file(patch_filename, patch)
 
-  local _, err = gitcli.run({
-    '-C',
-    reponame,
-    '--no-pager',
-    'apply',
-    '--reverse',
-    '--cached',
-    '--whitespace=nowarn',
-    '--unidiff-zero',
-    patch_filename,
-  })
+  local _, err =
+    GitQueryBuilder(reponame)
+      :raw_args('--no-pager', 'apply', '--reverse', '--cached', '--whitespace=nowarn', '--unidiff-zero', patch_filename)
+      :execute()
 
   fs.remove_file(patch_filename)
 

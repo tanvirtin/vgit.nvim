@@ -32,9 +32,7 @@ function Model:get_layout_type()
   return self.state.layout_type
 end
 
-function Model:fetch(filename, lnum, opts)
-  opts = opts or {}
-
+function Model:fetch(filename, lnum, _)
   if not filename or filename == '' then return nil, { 'Buffer has no blame associated with it' } end
 
   self:reset()

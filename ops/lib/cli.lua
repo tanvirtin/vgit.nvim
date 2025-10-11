@@ -21,9 +21,7 @@ function M.parse_args(definitions)
             i = i + 1
           elseif def.type == 'string' then
             local value = arg[i + 1]
-            if not value then
-              error('Option ' .. current .. ' requires a value')
-            end
+            if not value then error('Option ' .. current .. ' requires a value') end
             parsed[def.name] = value
             i = i + 2
           elseif def.type == 'action' then

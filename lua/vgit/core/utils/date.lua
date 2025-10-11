@@ -30,12 +30,11 @@ function date.age(current_time)
 
   local counter = 1
   local time_division = time_divisions[counter]
-  local time_boundary = time_division[1]
   local time_postfix = time_division[2]
 
   while time < 1 and counter <= #time_divisions do
     time_division = time_divisions[counter]
-    time_boundary = time_division[1]
+    local time_boundary = time_division[1]
     time_postfix = time_division[2]
     time = time * time_boundary
     counter = counter + 1

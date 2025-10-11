@@ -37,9 +37,7 @@ local function main()
     os.exit(1)
   end
 
-  if verbose then
-    print('Command: ' .. cmd)
-  end
+  if verbose then print('Command: ' .. cmd) end
 
   local exit_code = os.execute(cmd)
   os.exit(shell.normalize_exit_code(exit_code))

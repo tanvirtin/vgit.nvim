@@ -38,9 +38,7 @@ function Model:get_layout_type()
   return self.state.layout_type
 end
 
-function Model:fetch(opts)
-  opts = opts or {}
-
+function Model:fetch()
   self:reset()
 
   local reponame = git_repo.discover()

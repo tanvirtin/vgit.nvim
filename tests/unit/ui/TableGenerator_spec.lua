@@ -427,7 +427,7 @@ describe('TableGenerator:', function()
       }
       local generator = TableGenerator(labels, rows, 2, 100)
 
-      local label_lines, row_lines, _ = generator:generate()
+      local _, row_lines, _ = generator:generate()
 
       -- All rows should have similar length (aligned)
       local first_len = #row_lines[1]

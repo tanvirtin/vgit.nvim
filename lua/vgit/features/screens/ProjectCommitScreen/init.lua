@@ -8,8 +8,7 @@ local project_commit_preview_setting = require('vgit.settings.project_commit_pre
 
 local ProjectCommitScreen = Object:extend()
 
-function ProjectCommitScreen:constructor(opts)
-  opts = opts or {}
+function ProjectCommitScreen:constructor()
   local scene = Scene()
   local model = Model()
 

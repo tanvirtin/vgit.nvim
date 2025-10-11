@@ -128,8 +128,8 @@ function TableGenerator:generate_paddings()
     assert(#labels == #items, 'number of columns should be the same as number of column_labels')
 
     for j = 1, #items do
-      local value = nil
       local item = items[j]
+      local value
 
       if type(item) == 'table' then
         value, _ = self:parse_item(item, i)

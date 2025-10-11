@@ -1,11 +1,11 @@
-local gitcli = require('vgit.git.gitcli')
+local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 
 local git_commit = {}
 
 function git_commit.create(reponame, description)
   if not reponame then return nil, { 'reponame is required' } end
 
-  local lines, err = gitcli.run({ '-C', reponame, 'commit', '-m', description })
+  local lines, err = GitQueryBuilder(reponame):raw_args('commit', '-m', description):execute()
   if err then return nil, err end
 
   local is_uncommitted = false
@@ -26,7 +26,7 @@ end
 
 function git_commit.dry_run(reponame)
   if not reponame then return nil, { 'reponame is required' } end
-  return gitcli.run({ '-C', reponame, 'commit', '--dry-run' })
+  return GitQueryBuilder(reponame):raw_args('commit', '--dry-run'):execute()
 end
 
 return git_commit

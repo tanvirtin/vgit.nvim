@@ -1,32 +1,30 @@
-local gitcli = require('vgit.git.gitcli')
+local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 local GitStatus = require('vgit.git.GitStatus')
 
 local git_status = {}
 
 function git_status.ls(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
-  local result, err = gitcli.run({
-    '-C',
-    reponame,
-    '--no-pager',
-    'status',
-    '-u',
-    '-s',
-    '--no-renames',
-    '--ignore-submodules',
-    '--',
-    filename or '.',
-  })
-  if err then return nil, err end
 
-  local files = {}
-  for i = 1, #result do
-    local line = result[i]
-    files[#files + 1] = GitStatus(line)
+  local query = GitQueryBuilder(reponame):status()
+
+  if filename then
+    query:file(filename)
+  else
+    query:file('.')
   end
 
-  if filename then return files[1] end
-  return files
+  local result, err = query:execute()
+  if err then return nil, err end
+
+  local result_len = #result
+  local files = {}
+  for i = 1, result_len do
+    files[i] = GitStatus(result[i])
+  end
+
+  if filename then return files[1], nil end
+  return files, nil
 end
 
 function git_status.tree(reponame, opts)
@@ -36,23 +34,16 @@ function git_status.tree(reponame, opts)
   local commit_hash = opts.commit_hash
   local parent_hash = opts.parent_hash
   local empty_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
-  local result, err = gitcli.run({
-    '-C',
-    reponame,
-    '--no-pager',
-    'diff-tree',
-    '--no-commit-id',
-    '--name-status',
-    '-r',
-    parent_hash == '' and empty_hash or parent_hash,
-    commit_hash,
-  })
+
+  local result, err =
+    GitQueryBuilder(reponame):diff_tree():refs(parent_hash == '' and empty_hash or parent_hash, commit_hash):execute()
   if err then return nil, err end
 
+  local result_len = #result
   local files = {}
-  for i = 1, #result do
+  for i = 1, result_len do
     local status, path = result[i]:match('(%w+)%s+(.+)')
-    files[#files + 1] = GitStatus(string.format('%s  %s', status, path))
+    files[i] = GitStatus(status .. '  ' .. path)
   end
 
   return files

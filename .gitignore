@@ -28,5 +28,3 @@ luac.out
 !ops/*.sh
 .DS_Store
 doc/tags
-
-ops/*.md

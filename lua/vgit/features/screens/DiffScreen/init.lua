@@ -406,9 +406,7 @@ function DiffScreen:setup_keymaps(buffer)
   })
 end
 
-function DiffScreen:create(opts)
-  opts = opts or {}
-
+function DiffScreen:create()
   local buffer = Buffer(0)
   local window = Window(0)
   local lnum = window:get_lnum()

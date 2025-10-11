@@ -33,13 +33,42 @@ end
 
 function M.capture(cmd)
   local handle = io.popen(cmd)
-  if not handle then
-    return nil, 'Could not execute command'
-  end
+  if not handle then return nil, 'Could not execute command' end
 
   local output = handle:read('*a')
   local success = handle:close()
   return output, success
+end
+
+function M.stream(cmd, callback)
+  -- Use script command to force unbuffered output (works on macOS and Linux)
+  -- On macOS: script -q /dev/null command
+  -- On Linux: script -qec "command" /dev/null
+  local uname = io.popen('uname'):read('*l')
+  local buffered_cmd
+
+  if uname == 'Darwin' then
+    -- macOS
+    buffered_cmd = 'script -q /dev/null ' .. cmd .. ' 2>&1'
+  else
+    -- Linux
+    buffered_cmd = 'script -qec "' .. cmd:gsub('"', '\\"') .. '" /dev/null 2>&1'
+  end
+
+  local handle = io.popen(buffered_cmd)
+  if not handle then return nil, 'Could not execute command' end
+
+  local output = {}
+  -- Set handle to line buffering
+  handle:setvbuf('line')
+
+  for line in handle:lines() do
+    table.insert(output, line)
+    if callback then callback(line) end
+  end
+
+  local success = handle:close()
+  return table.concat(output, '\n'), success
 end
 
 function M.tail(path, lines)

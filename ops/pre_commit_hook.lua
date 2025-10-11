@@ -15,14 +15,10 @@ local function run_check(opts)
     print('')
 
     local tail = shell.tail(opts.output_file, 20)
-    if tail then
-      print(tail)
-    end
+    if tail then print(tail) end
 
     print('')
-    if opts.help_text then
-      print(opts.help_text)
-    end
+    if opts.help_text then print(opts.help_text) end
     return false
   else
     terminal.print_status('success', opts.name .. ' passed')
@@ -46,9 +42,7 @@ local function main()
     help_text = 'Run: make format (to auto-fix formatting)\nRun: make check (to see all issues)',
   })
 
-  if not check_passed then
-    os.exit(1)
-  end
+  if not check_passed then os.exit(1) end
 
   print('')
 
@@ -59,9 +53,7 @@ local function main()
     help_text = 'Run: make test',
   })
 
-  if not tests_passed then
-    os.exit(1)
-  end
+  if not tests_passed then os.exit(1) end
 
   print('')
   terminal.print_status('success', 'All pre-commit checks passed!')

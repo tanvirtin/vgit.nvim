@@ -16,6 +16,8 @@ function GitPatch:constructor(filename, hunk)
     string.format('--- a/%s', filename),
     string.format('+++ a/%s', filename),
     header,
+    _filename = filename,
+    _hunk = hunk,
   }
 
   for i = 1, #hunk.diff do
