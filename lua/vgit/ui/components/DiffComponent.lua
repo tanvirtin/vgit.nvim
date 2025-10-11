@@ -54,9 +54,7 @@ function DiffComponent:position_cursor(placement)
   return self
 end
 
-function DiffComponent:mount(opts)
-  opts = opts or {}
-
+function DiffComponent:mount()
   if self.mounted then return self end
 
   local config = self.config

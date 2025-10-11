@@ -13,9 +13,7 @@ function Model:reset()
   self.state = { data = nil }
 end
 
-function Model:fetch(opts)
-  opts = opts or {}
-
+function Model:fetch()
   self:reset()
 
   local reponame = git_repo.discover()

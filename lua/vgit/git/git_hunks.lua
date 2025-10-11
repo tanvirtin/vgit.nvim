@@ -1,6 +1,6 @@
 local fs = require('vgit.core.fs')
 local utils = require('vgit.core.utils')
-local gitcli = require('vgit.git.gitcli')
+local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 local GitHunk = require('vgit.git.GitHunk')
 local git_setting = require('vgit.settings.git')
 
@@ -8,8 +8,9 @@ local git_hunks = {}
 
 function git_hunks.live(reponame, original_lines, current_lines)
   local lines_limit = 5000
+  local current_len = #current_lines
 
-  if #current_lines > lines_limit then
+  if current_len > lines_limit then
     local temp_filename_b = fs.tmpname()
     local temp_filename_a = fs.tmpname()
 
@@ -26,14 +27,15 @@ function git_hunks.live(reponame, original_lines, current_lines)
 
   local o_lines_tbl = {}
   local c_lines_tbl = {}
-  local num_lines = math.max(#original_lines, #current_lines)
+  local original_len = #original_lines
+  local num_lines = math.max(original_len, current_len)
 
   for i = 1, num_lines do
     local o_line = original_lines[i]
     local c_line = current_lines[i]
 
-    if o_line then o_lines_tbl[#o_lines_tbl + 1] = table.concat({ original_lines[i], '\n' }) end
-    if c_line then c_lines_tbl[#c_lines_tbl + 1] = table.concat({ current_lines[i], '\n' }) end
+    if o_line then o_lines_tbl[#o_lines_tbl + 1] = o_line .. '\n' end
+    if c_line then c_lines_tbl[#c_lines_tbl + 1] = c_line .. '\n' end
   end
 
   local live_hunks = {}
@@ -44,14 +46,14 @@ function git_hunks.live(reponame, original_lines, current_lines)
 
       if count_o > 0 then
         for i = start_o, start_o + count_o - 1 do
-          hunk.diff[#hunk.diff + 1] = table.concat({ '-', (original_lines[i] or '') })
+          hunk.diff[#hunk.diff + 1] = '-' .. (original_lines[i] or '')
           hunk.stat.removed = hunk.stat.removed + 1
         end
       end
 
       if count_c > 0 then
         for i = start_c, start_c + count_c - 1 do
-          hunk.diff[#hunk.diff + 1] = table.concat({ '+', (current_lines[i] or '') })
+          hunk.diff[#hunk.diff + 1] = '+' .. (current_lines[i] or '')
           hunk.stat.added = hunk.stat.added + 1
         end
       end
@@ -66,8 +68,9 @@ end
 
 function git_hunks.custom(lines, opts)
   local diff = {}
-  for i = 1, #lines do
-    diff[#diff + 1] = string.format('+%s', lines[i])
+  local line_count = #lines
+  for i = 1, line_count do
+    diff[i] = '+' .. lines[i]
   end
 
   local deleted = opts.deleted
@@ -107,8 +110,6 @@ function git_hunks.list(reponame, opts)
   if filenames and #filenames ~= 2 then error('incorrect number of files provided') end
 
   local args = {
-    '-C',
-    reponame,
     '--no-pager',
     '-c',
     'core.safecrlf=false',
@@ -144,18 +145,17 @@ function git_hunks.list(reponame, opts)
     filename,
   })
 
-  local lines, err = gitcli.run(args)
+  local lines, err = GitQueryBuilder(reponame):raw_args(unpack(args)):execute()
 
   local result = {}
+  local result_len = 0
   for i = 1, #lines do
     local line = lines[i]
     if vim.startswith(line, '@@') then
-      result[#result + 1] = GitHunk(line)
-    else
-      if #result > 0 then
-        local hunk = result[#result]
-        hunk:push(line)
-      end
+      result_len = result_len + 1
+      result[result_len] = GitHunk(line)
+    elseif result_len > 0 then
+      result[result_len]:push(line)
     end
   end
 

@@ -406,9 +406,6 @@ describe('RowLayout:', function()
       local layout = RowLayout(view1, view2)
       layout:build()
 
-      local plot1_before = component1:get_plot().win_plot.row
-      local plot2_before = component2:get_plot().win_plot.row
-
       layout:build()
 
       local plot1_after = component1:get_plot().win_plot.row

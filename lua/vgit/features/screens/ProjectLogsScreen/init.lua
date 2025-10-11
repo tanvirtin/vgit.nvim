@@ -10,8 +10,7 @@ local project_logs_preview_setting = require('vgit.settings.project_logs_preview
 
 local ProjectLogsScreen = Object:extend()
 
-function ProjectLogsScreen:constructor(opts)
-  opts = opts or {}
+function ProjectLogsScreen:constructor()
   local scene = Scene()
   local model = Model()
 

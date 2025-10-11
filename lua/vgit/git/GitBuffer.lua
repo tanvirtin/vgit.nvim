@@ -117,38 +117,34 @@ end
 
 function GitBuffer:stage_hunk(hunk)
   local _, err = self.git_file:stage_hunk(hunk)
-  if not err then
-    loop.free_textlock()
-    self:diff()
-  end
-  return _, err
+  if err then return _, err end
+
+  loop.free_textlock()
+  return self:diff()
 end
 
 function GitBuffer:unstage_hunk(hunk)
   local _, err = self.git_file:unstage_hunk(hunk)
-  if not err then
-    loop.free_textlock()
-    self:diff()
-  end
-  return _, err
+  if err then return _, err end
+
+  loop.free_textlock()
+  return self:diff()
 end
 
 function GitBuffer:stage()
   local _, err = self.git_file:stage()
-  if not err then
-    loop.free_textlock()
-    self:diff()
-  end
-  return _, err
+  if err then return _, err end
+
+  loop.free_textlock()
+  return self:diff()
 end
 
 function GitBuffer:unstage()
   local _, err = self.git_file:unstage()
-  if not err then
-    loop.free_textlock()
-    self:diff()
-  end
-  return _, err
+  if err then return _, err end
+
+  loop.free_textlock()
+  return self:diff()
 end
 
 function GitBuffer:get_hunks()
@@ -170,12 +166,16 @@ end
 
 function GitBuffer:get_conflict_marks()
   local conflicts = self:get_conflicts()
-  return utils.list.map(conflicts, function(conflict)
-    return {
+  local marks = {}
+  local marks_len = 0
+  for _, conflict in ipairs(conflicts) do
+    marks_len = marks_len + 1
+    marks[marks_len] = {
       top = conflict.current.top,
       bot = conflict.incoming.bot,
     }
-  end)
+  end
+  return marks
 end
 
 function GitBuffer:blame(lnum)
@@ -210,13 +210,17 @@ function GitBuffer:diff()
   local sign_types = signs_setting:get('usage').main
 
   local signs = {}
+  local signs_len = 0
   for i = 1, #hunks do
     local hunk = hunks[i]
+    local hunk_type = hunk.type
+    local sign_name = sign_types[hunk_type]
     for j = hunk.top, hunk.bot do
-      local lnum = (hunk.type == 'remove' and j == 0) and 1 or j
-      signs[#signs + 1] = {
+      local lnum = (hunk_type == 'remove' and j == 0) and 1 or j
+      signs_len = signs_len + 1
+      signs[signs_len] = {
         col = lnum - 1,
-        name = sign_types[hunk.type],
+        name = sign_name,
       }
     end
   end
@@ -361,10 +365,10 @@ function GitBuffer:render_conflicts(top, bot)
   self:clear_conflicts(top, bot)
 
   local conflicts = self:get_conflicts()
-  utils.list.each(conflicts, function(conflict)
+  for _, conflict in ipairs(conflicts) do
     self:render_conflict_help_text(conflict)
     self:render_conflict(conflict)
-  end)
+  end
 
   return self
 end

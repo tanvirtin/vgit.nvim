@@ -37,9 +37,7 @@ function Model:get_layout_type()
   return self.state.layout_type
 end
 
-function Model:fetch(commits, opts)
-  opts = opts or {}
-
+function Model:fetch(commits)
   self:reset()
 
   if not commits or #commits == 0 then return nil, { 'No commits specified' } end

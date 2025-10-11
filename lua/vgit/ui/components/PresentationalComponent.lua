@@ -24,10 +24,9 @@ function PresentationalComponent:call(callback)
   return self
 end
 
-function PresentationalComponent:mount(opts)
+function PresentationalComponent:mount()
   if self.mounted then return self end
 
-  opts = opts or {}
   local config = self.config
 
   local win_plot = config.win_plot

@@ -33,7 +33,7 @@ function git_conflict.has_conflict(reponame, filename)
   libgit2.cli.git_index_free(index_ptr[0])
   libgit2.cli.git_repository_free(repo_ptr[0])
 
-  return has_conflict
+  return has_conflict, nil
 end
 
 return git_conflict

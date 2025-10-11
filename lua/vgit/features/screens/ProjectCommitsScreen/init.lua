@@ -128,19 +128,12 @@ end
 
 function ProjectCommitsScreen:create(args)
   local commits = {}
-  local buffer = Buffer(0)
-  local filename = buffer:get_name()
 
   for i = 1, #args do
     local arg = args[i]
 
-    if vim.startswith(arg, '--filename') then
-      filename = arg:sub(#'--filename=' + 1, #arg)
-
-      if filename == '' then filename = nil end
-    else
-      commits[#commits + 1] = arg
-    end
+    -- Skip --filename parameter (not currently used)
+    if not vim.startswith(arg, '--filename') then commits[#commits + 1] = arg end
   end
 
   loop.free_textlock()

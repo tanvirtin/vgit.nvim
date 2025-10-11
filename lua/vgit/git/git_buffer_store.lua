@@ -69,7 +69,7 @@ git_buffer_store.on = function(event_types, handler)
   for i = 1, #event_types do
     local event_type = event_types[i]
     local handlers = events[event_type]
-    assertion.assert(handlers, 'invalid event -- ' .. '"' .. event_type .. '"')
+    assertion.assert(handlers, 'invalid event')
 
     handlers[#handlers + 1] = handler
   end
@@ -121,7 +121,7 @@ end
 
 git_buffer_store.dispatch = function(git_buffer, event_type, ...)
   local handlers = events[event_type]
-  assertion.assert(handlers, 'invalid event -- ' .. '"' .. event_type .. '"')
+  assertion.assert(handlers, 'invalid event')
 
   for _, handler in pairs(handlers) do
     handler(git_buffer, event_type, ...)

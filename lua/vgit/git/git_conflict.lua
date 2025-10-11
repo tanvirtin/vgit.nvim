@@ -1,5 +1,5 @@
 local fs = require('vgit.core.fs')
-local gitcli = require('vgit.git.gitcli')
+local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 
 local git_conflict = {}
 
@@ -96,17 +96,10 @@ function git_conflict.has_conflict(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
   if not filename then return nil, { 'filename is required' } end
 
-  local result, err = gitcli.run({
-    '-C',
-    reponame,
-    'ls-files',
-    '-u',
-    '--',
-    filename,
-  })
+  local result, err = GitQueryBuilder(reponame):raw_args('ls-files', '-u', '--', filename):execute()
 
   if err then return nil, err end
-  return result and #result ~= 0
+  return result and #result ~= 0, nil
 end
 
 return git_conflict
