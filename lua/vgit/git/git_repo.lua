@@ -12,16 +12,31 @@ function git_repo.config(reponame)
 end
 
 function git_repo.discover(filepath)
-  local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
-  local result, err = GitQueryBuilder(dirname):raw_args('rev-parse', '--show-toplevel'):execute()
+  local search_dir = filepath
 
-  local cached = discover_cache[dirname]
-  if cached then return cached end
+  -- If filepath is a file, get its directory
+  if filepath then
+    local stat = vim.loop.fs_stat(filepath)
+    if stat and not stat.is_directory then
+      search_dir = vim.fn.fnamemodify(filepath, ':p:h')
+    else
+      search_dir = vim.fn.fnamemodify(filepath, ':p')
+    end
+  else
+    -- Use current directory if filepath is nil
+    search_dir = vim.loop.cwd()
+  end
 
-  local result, err = gitcli.run({ '-C', dirname, 'rev-parse', '--show-toplevel' })
-  if err then return nil, err end
-  if #result == 0 then return nil, { 'not a git repository' } end
-  return result[1], nil
+  -- Use git -C to search for repo in the specified directory
+  local system_result = vim.fn.system('git -C "' .. search_dir .. '" rev-parse --show-toplevel')
+  local system_exit_code = vim.v.shell_error
+
+  if system_exit_code == 0 and system_result and system_result ~= '' then
+    local clean_result = system_result:gsub('\n', '')
+    return clean_result, nil
+  end
+
+  return nil, { 'not a git repository' }
 end
 
 function git_repo.dirname()
@@ -48,6 +63,8 @@ function git_repo.has(reponame, filename, commit)
   if not filename then return nil, { 'filename is required' } end
 
   commit = commit or 'HEAD'
+  -- Normalize 'index' to ':' for git reference
+  if commit == 'index' then commit = ':' end
 
   local result, err =
     GitQueryBuilder(reponame):raw_args('--no-pager', 'ls-files', '--exclude-standard', commit, filename):execute()

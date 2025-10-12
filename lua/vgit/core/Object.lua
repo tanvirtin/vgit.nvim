@@ -31,7 +31,9 @@ function Object:is(T)
 end
 
 function Object:__call(...)
-  return setmetatable(self:constructor(...) or self, self)
+  local instance = self:constructor(...) or self
+  setmetatable(instance, self)
+  return instance
 end
 
 return Object

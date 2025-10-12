@@ -8,6 +8,15 @@ GitCommit.EMPTY_HASH = '0000000000000000000000000000000000000000'
 function GitCommit:constructor(data)
   if not data then error('GitCommit requires data') end
 
+  local repo_path = nil
+  if data.repository then
+    if type(data.repository) == 'string' then
+      repo_path = data.repository
+    else
+      repo_path = data.repository:get_path()
+    end
+  end
+
   local commit = {
     id = data.id or utils.math.uuid(),
     hash = data.hash or data.commit_hash,
@@ -21,27 +30,21 @@ function GitCommit:constructor(data)
     committer_tz = data.committer_tz,
     message = data.message or data.commit_message or data.summary,
 
-    -- Internal fields for lazy loading
     _parent_hash = data.parent_hash,
-    _parent = nil, -- Cached parent GitCommit
-    _repository = data.repository, -- For lazy loading
+    _parent = nil,
+    _repo_path = repo_path,
 
-    -- Context metadata (how this commit was obtained)
     context = data.context or {},
   }
 
-  -- If parent_hash is empty string, set to nil
   if commit._parent_hash == '' then commit._parent_hash = nil end
 
-  -- Backward compatibility: expose fields with old names
-  -- These are virtual fields that map to new structure
   commit.commit_hash = commit.hash
   commit.parent_hash = commit._parent_hash -- Direct access to parent hash (string)
   commit.commit_message = commit.message
   commit.author_name = commit.author
   commit.author_email = commit.author_mail
   commit.timestamp = commit.author_time
-  -- Expose summary as both a field and a method for backward compatibility
   commit.summary = commit.message and commit.message:match('^([^\n]*)') or commit.message
   commit.lnum = commit.context.lnum
   commit.filename = commit.context.filename
@@ -86,44 +89,30 @@ function GitCommit:committer_signature()
   return self.committer
 end
 
--- Note: summary is exposed as a field (commit.summary), not a method
--- This contains the first line of the commit message
-
--- Lazy-loaded parent commit (backward linked list)
--- Returns the parent as a full GitCommit object
 function GitCommit:parent()
   if not self._parent_hash then return nil, nil end
 
-  -- Return cached parent if already loaded
   if self._parent then return self._parent, nil end
 
-  -- Lazy load parent commit if repository is available
-  if self._repository then
+  if self._repo_path then
     local git_log = require('vgit.git.git_log')
-    local parent_commit, err = git_log.get(
-      type(self._repository) == 'string' and self._repository or self._repository:get_path(),
-      self._parent_hash
-    )
+    local parent_commit, err = git_log.get(self._repo_path, self._parent_hash)
 
     if err then return nil, err end
 
     if parent_commit then
-      -- Cache the parent
       self._parent = parent_commit
       return parent_commit, nil
     end
   end
 
-  -- If no repository or failed to load, return nil
   return nil, { 'parent commit not available' }
 end
 
--- Check if this commit has a parent
 function GitCommit:has_parent()
   return self._parent_hash ~= nil
 end
 
--- Traverse parent chain with a callback
 function GitCommit:traverse(callback, max_depth)
   if not callback then return nil, { 'callback is required' } end
 
@@ -144,7 +133,6 @@ function GitCommit:traverse(callback, max_depth)
   return true, nil
 end
 
--- Get ancestor at specific depth (0 = self, 1 = parent, 2 = grandparent, etc)
 function GitCommit:ancestor(depth)
   if depth == 0 then return self, nil end
 
@@ -157,10 +145,6 @@ function GitCommit:ancestor(depth)
   end
 
   return current, nil
-end
-
-function GitCommit:__tostring()
-  return string.format('GitCommit(hash=%s, author=%s)', self:short_hash() or 'nil', self.author or 'nil')
 end
 
 function GitCommit:__eq(other)

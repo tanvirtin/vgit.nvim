@@ -59,7 +59,7 @@ function M.extract_failures(output)
   return failed
 end
 
-function M.print_report(summary, failed_tests, elapsed_time)
+function M.print_report(summary, failed_tests)
   local c = terminal.colors
 
   print('')
@@ -88,16 +88,6 @@ function M.print_report(summary, failed_tests, elapsed_time)
   print_stat({ label = '✓ Passed', color = c.green, value = summary.success })
   print_stat({ label = '✗ Failed', color = c.red, value = summary.failed })
   print_stat({ label = '⚠ Errors', color = c.yellow, value = summary.errors })
-
-  if elapsed_time then
-    local time_str
-    if elapsed_time < 1 then
-      time_str = string.format('%.0fms', elapsed_time * 1000)
-    else
-      time_str = string.format('%.3fs', elapsed_time)
-    end
-    print_stat({ label = '⏱ Time', color = c.cyan, value = time_str, is_string = true })
-  end
 
   print('')
 
@@ -135,92 +125,21 @@ function M.print_report(summary, failed_tests, elapsed_time)
   end
 end
 
--- Get high-resolution time using Python (available on macOS and most systems)
-local function get_time_seconds()
-  local handle = io.popen('python3 -c "import time; print(time.time())" 2>/dev/null')
-  if not handle then return nil end
-  local result = handle:read('*a')
-  handle:close()
-  return tonumber(result)
-end
-
 function M.run(path, opts)
   opts = opts or {}
   local cmd, err = M.build_command(path)
   if not cmd then return nil, err end
 
-  -- Get wall-clock start time for accurate total (only called once)
-  local wall_start
-  local get_total_elapsed
-
-  local socket_ok, socket = pcall(require, 'socket')
-  if socket_ok and socket.gettime then
-    -- LuaSocket available - fast high-resolution timer
-    wall_start = socket.gettime()
-    get_total_elapsed = function()
-      return socket.gettime() - wall_start
-    end
-  else
-    -- Fallback: Python for accurate wall-clock (only called at start/end)
-    wall_start = get_time_seconds()
-    if wall_start then
-      get_total_elapsed = function()
-        local end_time = get_time_seconds()
-        return end_time and (end_time - wall_start) or 0
-      end
-    else
-      -- Last resort: os.time (1-second resolution)
-      wall_start = os.time()
-      get_total_elapsed = function()
-        return os.difftime(os.time(), wall_start)
-      end
-    end
-  end
-
   local output
 
   if opts.stream then
-    -- Streaming with periodic time updates
-    local line_count = 0
-    local display_interval = 50 -- Show elapsed time every N lines
-    local should_show_time = false
-
     output = shell.stream(cmd, function(line)
       print(line)
-      line_count = line_count + 1
-
-      -- Check if we should show time at next separator
-      if line_count % display_interval == 0 then should_show_time = true end
-
-      -- Show elapsed time after separator lines (clean break point)
-      if should_show_time and line:match('^========') then
-        local elapsed = get_total_elapsed()
-        local time_str
-        if elapsed < 1 then
-          time_str = string.format('%dms', math.floor(elapsed * 1000))
-        else
-          time_str = string.format('%.2fs', elapsed)
-        end
-        print(
-          string.format(
-            '\n%s%s⏱  %s elapsed so far%s\n',
-            terminal.colors.cyan,
-            terminal.colors.bold,
-            time_str,
-            terminal.colors.reset
-          )
-        )
-        should_show_time = false
-      end
-
       io.stdout:flush()
     end)
   else
     output = shell.capture(cmd)
   end
-
-  -- Use wall-clock timer for accurate total time (only called once at end)
-  local total_time = get_total_elapsed()
 
   if not output then return nil, 'Could not run tests' end
 
@@ -228,7 +147,6 @@ function M.run(path, opts)
     output = output,
     summary = M.parse_summary(output),
     failed_tests = M.extract_failures(output),
-    elapsed_time = total_time,
   }
 end
 

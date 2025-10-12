@@ -83,14 +83,14 @@ function M.progress_bar(current, total, width)
   local empty = width - filled
 
   local bar = M.colors.cyan
-      .. '['
-      .. M.colors.green
-      .. string.rep('█', filled)
-      .. M.colors.dim
-      .. string.rep('░', empty)
-      .. M.colors.cyan
-      .. ']'
-      .. M.colors.reset
+    .. '['
+    .. M.colors.green
+    .. string.rep('█', filled)
+    .. M.colors.dim
+    .. string.rep('░', empty)
+    .. M.colors.cyan
+    .. ']'
+    .. M.colors.reset
 
   local text = string.format(' %d/%d (%.1f%%)', current, total, percentage)
 

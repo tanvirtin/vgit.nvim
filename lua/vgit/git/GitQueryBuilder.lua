@@ -323,8 +323,4 @@ function GitQueryBuilder:_add_arg(arg)
   if arg ~= nil then self._args[#self._args + 1] = arg end
 end
 
-function GitQueryBuilder:__tostring()
-  return self:to_command()
-end
-
 return GitQueryBuilder

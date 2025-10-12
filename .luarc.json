@@ -1,0 +1,24 @@
+{
+  "runtime": {
+    "version": "LuaJIT"
+  },
+  "diagnostics": {
+    "globals": [
+      "vim",
+      "describe",
+      "it",
+      "before_each",
+      "after_each",
+      "pending",
+      "loop",
+      "assert"
+    ]
+  },
+  "workspace": {
+    "library": [
+      "/usr/share/nvim/runtime/lua",
+      "/usr/share/nvim/runtime/lua/vim",
+      "/usr/share/nvim/runtime/lua/vim/lsp"
+    ]
+  }
+}

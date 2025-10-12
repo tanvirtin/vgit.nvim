@@ -53,6 +53,13 @@ return Config({
       override = false,
     }
   end,
+  VGitBorder = function()
+    return {
+      bg = Color({ name = 'StatusLine', attribute = 'bg' }):darken(90):get(),
+      fg = Color({ name = 'StatusLine', attribute = 'fg' }):darken(90):get(),
+      override = false,
+    }
+  end,
   GitLineNr = function()
     return {
       bg = Color({ name = 'LineNr', attribute = 'bg' }):darken(8):get(),

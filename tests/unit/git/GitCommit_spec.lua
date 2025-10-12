@@ -262,20 +262,6 @@ describe('GitCommit:', function()
     end)
   end)
 
-  describe('__tostring', function()
-    it('should return string representation', function()
-      local commit = GitCommit({
-        hash = 'abc1234567890',
-        author = 'John Doe',
-      })
-
-      local str = tostring(commit)
-      assert.is_not_nil(str:match('GitCommit'))
-      assert.is_not_nil(str:match('abc1234'))
-      assert.is_not_nil(str:match('John Doe'))
-    end)
-  end)
-
   describe('__eq', function()
     it('should return true for commits with same hash', function()
       local commit1 = GitCommit({
@@ -324,7 +310,6 @@ describe('GitCommit:', function()
         },
       })
 
-      -- Context fields should be accessible via backward compat
       eq(commit.lnum, 42)
       eq(commit.filename, 'parser.lua')
     end)

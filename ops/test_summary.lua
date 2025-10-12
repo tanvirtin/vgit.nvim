@@ -23,7 +23,7 @@ local function main()
   end
 
   -- Output already printed via streaming, just show summary
-  local all_passed = test_harness.print_report(results.summary, results.failed_tests, results.elapsed_time)
+  local all_passed = test_harness.print_report(results.summary, results.failed_tests)
 
   os.exit(all_passed and 0 or 1)
 end

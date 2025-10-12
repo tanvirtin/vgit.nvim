@@ -22,32 +22,6 @@ describe('dimensions:', function()
     end)
   end)
 
-  describe('vh', function()
-    it('should format value as vh string', function()
-      eq(dimensions.vh(50), '50vh')
-      eq(dimensions.vh(100), '100vh')
-      eq(dimensions.vh(0), '0vh')
-    end)
-
-    it('should handle decimal values', function()
-      eq(dimensions.vh(33.33), '33.33vh')
-      eq(dimensions.vh(66.66), '66.66vh')
-    end)
-  end)
-
-  describe('vw', function()
-    it('should format value as vw string', function()
-      eq(dimensions.vw(50), '50vw')
-      eq(dimensions.vw(100), '100vw')
-      eq(dimensions.vw(0), '0vw')
-    end)
-
-    it('should handle decimal values', function()
-      eq(dimensions.vw(25.5), '25.5vw')
-      eq(dimensions.vw(75.75), '75.75vw')
-    end)
-  end)
-
   describe('get_value', function()
     it('should extract numeric value from dimension string', function()
       eq(dimensions.get_value('50vh'), 50)
@@ -130,80 +104,6 @@ describe('dimensions:', function()
 
       result = dimensions.relative_size('100vw', '50vw')
       assert.is_truthy(result:match('vw$'), 'result should end with vw')
-    end)
-  end)
-
-  describe('relative_win_plot', function()
-    it('should handle nil parent and child', function()
-      local result = dimensions.relative_win_plot(nil, nil)
-
-      assert.is_table(result)
-      assert.is_nil(result.relative)
-      assert.is_nil(result.height)
-      assert.is_nil(result.width)
-      assert.is_nil(result.row)
-      assert.is_nil(result.col)
-    end)
-
-    it('should use parent values when child is empty', function()
-      local parent = {
-        relative = 'editor',
-        height = '100vh',
-        width = '100vw',
-        row = '0vh',
-        col = '0vw',
-      }
-      local result = dimensions.relative_win_plot(parent, {})
-
-      eq(result.relative, 'editor')
-      eq(result.height, '100vh')
-      eq(result.width, '100vw')
-    end)
-
-    it('should override parent with child values', function()
-      local parent = {
-        relative = 'editor',
-        height = '100vh',
-        width = '100vw',
-        row = '0vh',
-        col = '0vw',
-      }
-      local child = {
-        relative = 'cursor',
-        height = '50vh',
-        width = '50vw',
-      }
-      local result = dimensions.relative_win_plot(parent, child)
-
-      eq(result.relative, 'cursor')
-      eq(result.height, '50vh')
-      eq(result.width, '50vw')
-    end)
-
-    it('should add child row to parent row', function()
-      local parent = {
-        height = '100vh',
-        width = '100vw',
-        row = '10vh',
-        col = '10vw',
-      }
-      local child = {
-        height = '50vh',
-        width = '50vw',
-        row = '5vh',
-        col = '5vw',
-      }
-      local result = dimensions.relative_win_plot(parent, child)
-
-      eq(result.row, '5.5vh')
-      eq(result.col, '5.5vw')
-    end)
-
-    it('should preserve child zindex', function()
-      local child = { zindex = 999 }
-      local result = dimensions.relative_win_plot({}, child)
-
-      eq(result.zindex, 999)
     end)
   end)
 

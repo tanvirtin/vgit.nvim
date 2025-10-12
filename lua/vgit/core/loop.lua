@@ -44,7 +44,10 @@ function loop.debounce(fn, ms, opts)
     timer:stop()
     timer:start(ms, 0, function()
       cooldown = false
-      fn(unpack(args, 1, argc))
+      -- Schedule to avoid fast event context issues
+      vim.schedule(function()
+        fn(unpack(args, 1, argc))
+      end)
     end)
   end
 

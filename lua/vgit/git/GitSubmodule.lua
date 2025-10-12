@@ -9,16 +9,12 @@ function GitSubmodule:constructor(repository, path)
   if not path then error('GitSubmodule requires a path') end
 
   local submodule = {
-    _repository = repository,
+    _repo_path = repository:get_path(),
     _path = path,
     _info = nil,
   }
 
   return submodule
-end
-
-function GitSubmodule:repository()
-  return self._repository
 end
 
 function GitSubmodule:path()
@@ -27,7 +23,7 @@ end
 
 function GitSubmodule:info()
   if not self._info then
-    local submodules, err = git_submodule.list(self._repository:get_path())
+    local submodules, err = git_submodule.list(self._repo_path)
     if err then return nil, err end
 
     for _, submodule in ipairs(submodules) do
@@ -62,7 +58,7 @@ function GitSubmodule:ref()
 end
 
 function GitSubmodule:init()
-  local _, err = git_submodule.init(self._repository:get_path(), self._path)
+  local _, err = git_submodule.init(self._repo_path, self._path)
   if err then return nil, err end
 
   self._info = nil
@@ -70,7 +66,7 @@ function GitSubmodule:init()
 end
 
 function GitSubmodule:deinit(opts)
-  local _, err = git_submodule.deinit(self._repository:get_path(), self._path, opts)
+  local _, err = git_submodule.deinit(self._repo_path, self._path, opts)
   if err then return nil, err end
 
   self._info = nil
@@ -78,7 +74,7 @@ function GitSubmodule:deinit(opts)
 end
 
 function GitSubmodule:update(opts)
-  local _, err = git_submodule.update(self._repository:get_path(), self._path, opts)
+  local _, err = git_submodule.update(self._repo_path, self._path, opts)
   if err then return nil, err end
 
   self._info = nil
@@ -86,7 +82,7 @@ function GitSubmodule:update(opts)
 end
 
 function GitSubmodule:sync(opts)
-  local _, err = git_submodule.sync(self._repository:get_path(), self._path, opts)
+  local _, err = git_submodule.sync(self._repo_path, self._path, opts)
   if err then return nil, err end
 
   self._info = nil
@@ -94,7 +90,7 @@ function GitSubmodule:sync(opts)
 end
 
 function GitSubmodule:set_branch(branch, opts)
-  local _, err = git_submodule.set_branch(self._repository:get_path(), branch, self._path, opts)
+  local _, err = git_submodule.set_branch(self._repo_path, branch, self._path, opts)
   if err then return nil, err end
 
   self._info = nil
@@ -104,7 +100,7 @@ end
 function GitSubmodule:set_url(url)
   if not url then return nil, { 'url is required' } end
 
-  local _, err = git_submodule.set_url(self._repository:get_path(), self._path, url)
+  local _, err = git_submodule.set_url(self._repo_path, self._path, url)
   if err then return nil, err end
 
   self._info = nil

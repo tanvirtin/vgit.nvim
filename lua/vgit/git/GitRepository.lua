@@ -1,8 +1,9 @@
 local Object = require('vgit.core.Object')
 local git_repo = require('vgit.git.git_repo')
+local git_merge = require('vgit.git.git_merge')
+local assertion = require('vgit.core.assertion')
 local git_status = require('vgit.git.git_status')
 local git_remote = require('vgit.git.git_remote')
-local git_merge = require('vgit.git.git_merge')
 local git_rebase = require('vgit.git.git_rebase')
 local git_cherry = require('vgit.git.git_cherry')
 local git_revert = require('vgit.git.git_revert')
@@ -21,20 +22,34 @@ GitRepository.State = {
 function GitRepository:constructor(path)
   local repo = {
     _path = nil,
-    _git_dir = nil,
     _state = GitRepository.State.UNINITIALIZED,
     _is_bare = false,
-    _config = nil,
-
-    _index = nil,
-    _refs = nil,
-    _remotes = nil,
-    _submodules = nil,
   }
 
   if path then repo._path = path end
 
   return repo
+end
+
+function GitRepository:_ensure_initialized()
+  if self._state ~= GitRepository.State.UNINITIALIZED then return end
+
+  if not self._path then
+    local discovered_path, err = git_repo.discover()
+    if err then
+      self._state = GitRepository.State.INVALID
+      return
+    end
+    self._path = discovered_path
+  end
+
+  local exists, err = git_repo.exists(self._path)
+  if err or not exists then
+    self._state = GitRepository.State.INVALID
+    return
+  end
+
+  self._state = GitRepository.State.VALID
 end
 
 function GitRepository.discover(path)
@@ -88,56 +103,18 @@ function GitRepository:get_path()
   return self._path
 end
 
-function GitRepository:get_git_dir()
-  if not self._git_dir then
-    local dir, err = git_repo.dirname()
-    if err then return nil, err end
-    self._git_dir = dir
-  end
-  return self._git_dir, nil
-end
-
-function GitRepository:get_config()
-  if not self._config then
-    self:_ensure_initialized()
-    local config, err = git_repo.config(self._path)
-    if err then return nil, err end
-
-    local parsed_config = {}
-    for _, line in ipairs(config) do
-      local key, value = line:match('([^=]+)=(.*)')
-      if key and value then parsed_config[key] = value end
-    end
-    self._config = parsed_config
-  end
-  return self._config, nil
-end
-
-function GitRepository:status(filename)
-  self:_ensure_initialized()
-  return git_status.ls(self._path, filename)
-end
-
-function GitRepository:file_status(filename)
-  if not filename then return nil, { 'filename is required' } end
-  self:_ensure_initialized()
-  return git_status.ls(self._path, filename)
-end
-
-function GitRepository:has_file(filename, commit)
-  if not filename then return nil, { 'filename is required' } end
-  self:_ensure_initialized()
-  local result, err = git_repo.has(self._path, filename, commit)
-  if err then return nil, err end
-  return result, nil
-end
-
 function GitRepository:is_ignored(filename)
-  if not filename then return nil, { 'filename is required' } end
+  assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
   local result, err = git_repo.ignores(self._path, filename)
   if err then return nil, err end
   return result, nil
+end
+
+function GitRepository:has_file(filename, commit)
+  assertion.assert(filename, 'filename is required')
+  self:_ensure_initialized()
+  return git_repo.has(self._path, filename, commit)
 end
 
 function GitRepository:tree(commit)
@@ -149,24 +126,14 @@ end
 
 function GitRepository:index()
   self:_ensure_initialized()
-
-  if not self._index then
-    local GitIndex = require('vgit.git.GitIndex')
-    self._index = GitIndex(self)
-  end
-
-  return self._index, nil
+  local GitIndex = require('vgit.git.GitIndex')
+  return GitIndex(self), nil
 end
 
 function GitRepository:refs()
   self:_ensure_initialized()
-
-  if not self._refs then
-    local GitRef = require('vgit.git.GitRef')
-    self._refs = GitRef(self)
-  end
-
-  return self._refs, nil
+  local GitRef = require('vgit.git.GitRef')
+  return GitRef(self), nil
 end
 
 function GitRepository:history(opts)
@@ -183,10 +150,7 @@ function GitRepository:working_tree()
   return GitWorkingTree(self)
 end
 
--- Remote operations
 function GitRepository:remotes()
-  if self._remotes then return self._remotes, nil end
-
   self:_ensure_initialized()
 
   local remotes, err = git_remote.list(self._path, { verbose = true })
@@ -194,62 +158,49 @@ function GitRepository:remotes()
 
   local GitRemote = require('vgit.git.GitRemote')
   local remote_objects = {}
-  local remote_len = 0
-  for _, remote in ipairs(remotes) do
-    remote_len = remote_len + 1
-    remote_objects[remote_len] = GitRemote(self, remote.name)
+  for i, remote in ipairs(remotes) do
+    remote_objects[i] = GitRemote(self, remote.name)
   end
 
-  self._remotes = remote_objects
   return remote_objects, nil
 end
 
 function GitRepository:remote(name)
-  if not name then return nil, { 'remote name is required' } end
-
+  assertion.assert(name, 'remote name is required')
   self:_ensure_initialized()
-
   local GitRemote = require('vgit.git.GitRemote')
   return GitRemote(self, name), nil
 end
 
 function GitRepository:add_remote(name, url, opts)
-  if not name then return nil, { 'remote name is required' } end
-  if not url then return nil, { 'url is required' } end
-
+  assertion.assert(name, 'remote name is required').assert(url, 'url is required')
   self:_ensure_initialized()
   return git_remote.add(self._path, name, url, opts)
 end
 
 function GitRepository:remove_remote(name)
-  if not name then return nil, { 'remote name is required' } end
-
+  assertion.assert(name, 'remote name is required')
   self:_ensure_initialized()
   return git_remote.remove(self._path, name)
 end
 
--- Fetch from remotes
 function GitRepository:fetch(remote, refspec, opts)
   self:_ensure_initialized()
   return git_remote.fetch(self._path, remote, refspec, opts)
 end
 
--- Push to remotes
 function GitRepository:push(remote, refspec, opts)
   self:_ensure_initialized()
   return git_remote.push(self._path, remote, refspec, opts)
 end
 
--- Pull from remotes
 function GitRepository:pull(remote, refspec, opts)
   self:_ensure_initialized()
   return git_remote.pull(self._path, remote, refspec, opts)
 end
 
--- Merge operations
 function GitRepository:merge(commit, opts)
-  if not commit then return nil, { 'commit/branch is required' } end
-
+  assertion.assert(commit, 'commit/branch is required')
   self:_ensure_initialized()
   return git_merge.merge(self._path, commit, opts)
 end
@@ -265,23 +216,19 @@ function GitRepository:merge_continue()
 end
 
 function GitRepository:merge_base(commit1, commit2)
-  if not commit1 or not commit2 then return nil, { 'two commits are required' } end
-
+  assertion.assert(commit1, 'first commit is required').assert(commit2, 'second commit is required')
   self:_ensure_initialized()
   return git_merge.base(self._path, commit1, commit2)
 end
 
 function GitRepository:is_ancestor(ancestor, descendant)
-  if not ancestor or not descendant then return nil, { 'two commits are required' } end
-
+  assertion.assert(ancestor, 'ancestor commit is required').assert(descendant, 'descendant commit is required')
   self:_ensure_initialized()
   return git_merge.is_ancestor(self._path, ancestor, descendant)
 end
 
--- Rebase operations
 function GitRepository:rebase(upstream, opts)
-  if not upstream then return nil, { 'upstream is required' } end
-
+  assertion.assert(upstream, 'upstream is required')
   self:_ensure_initialized()
   return git_rebase.rebase(self._path, upstream, opts)
 end
@@ -306,10 +253,8 @@ function GitRepository:rebase_status()
   return git_rebase.status(self._path)
 end
 
--- Cherry-pick operations
 function GitRepository:cherry_pick(commits, opts)
-  if not commits then return nil, { 'commits are required' } end
-
+  assertion.assert(commits, 'commits are required')
   self:_ensure_initialized()
   return git_cherry.pick(self._path, commits, opts)
 end
@@ -329,10 +274,8 @@ function GitRepository:cherry_pick_abort()
   return git_cherry.abort(self._path)
 end
 
--- Revert operations
 function GitRepository:revert(commits, opts)
-  if not commits then return nil, { 'commits are required' } end
-
+  assertion.assert(commits, 'commits are required')
   self:_ensure_initialized()
   return git_revert.revert(self._path, commits, opts)
 end
@@ -352,7 +295,16 @@ function GitRepository:revert_abort()
   return git_revert.abort(self._path)
 end
 
--- Bisect operations
+function GitRepository:cherry_pick_status()
+  self:_ensure_initialized()
+  return git_cherry.status(self._path)
+end
+
+function GitRepository:revert_status()
+  self:_ensure_initialized()
+  return git_revert.status(self._path)
+end
+
 function GitRepository:bisect_start(opts)
   self:_ensure_initialized()
   return git_bisect.start(self._path, opts)
@@ -384,8 +336,7 @@ function GitRepository:bisect_log()
 end
 
 function GitRepository:bisect_run(command, args)
-  if not command then return nil, { 'command is required' } end
-
+  assertion.assert(command, 'command is required')
   self:_ensure_initialized()
   return git_bisect.run(self._path, command, args)
 end
@@ -395,10 +346,7 @@ function GitRepository:bisect_status()
   return git_bisect.status(self._path)
 end
 
--- Submodule operations
 function GitRepository:submodules()
-  if self._submodules then return self._submodules, nil end
-
   self:_ensure_initialized()
 
   local submodules, err = git_submodule.list(self._path)
@@ -406,29 +354,22 @@ function GitRepository:submodules()
 
   local GitSubmodule = require('vgit.git.GitSubmodule')
   local submodule_objects = {}
-  local submodule_len = 0
-  for _, submodule in ipairs(submodules) do
-    submodule_len = submodule_len + 1
-    submodule_objects[submodule_len] = GitSubmodule(self, submodule.path)
+  for i, submodule in ipairs(submodules) do
+    submodule_objects[i] = GitSubmodule(self, submodule.path)
   end
 
-  self._submodules = submodule_objects
   return submodule_objects, nil
 end
 
 function GitRepository:submodule(path)
-  if not path then return nil, { 'submodule path is required' } end
-
+  assertion.assert(path, 'submodule path is required')
   self:_ensure_initialized()
-
   local GitSubmodule = require('vgit.git.GitSubmodule')
   return GitSubmodule(self, path), nil
 end
 
 function GitRepository:add_submodule(url, path, opts)
-  if not url then return nil, { 'url is required' } end
-  if not path then return nil, { 'path is required' } end
-
+  assertion.assert(url, 'url is required').assert(path, 'path is required')
   self:_ensure_initialized()
   return git_submodule.add(self._path, url, path, opts)
 end
@@ -444,22 +385,20 @@ function GitRepository:sync_submodules(paths, opts)
 end
 
 function GitRepository:submodule_foreach(command, opts)
-  if not command then return nil, { 'command is required' } end
-
+  assertion.assert(command, 'command is required')
   self:_ensure_initialized()
   return git_submodule.foreach(self._path, command, opts)
 end
 
--- File-level operations
 function GitRepository:blame_file(filename, lnum)
-  if not filename then return nil, { 'filename is required' } end
+  assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
   local git_blame = require('vgit.git.git_blame')
   return git_blame.get(self._path, filename, lnum)
 end
 
 function GitRepository:file_content(filename, commit)
-  if not filename then return nil, { 'filename is required' } end
+  assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
   local GitBlob = require('vgit.git.GitBlob')
   local blob = GitBlob(self, filename, commit)
@@ -467,84 +406,171 @@ function GitRepository:file_content(filename, commit)
 end
 
 function GitRepository:file_lines(filename, commit)
-  if not filename then return nil, { 'filename is required' } end
+  assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
   local GitBlob = require('vgit.git.GitBlob')
   local blob = GitBlob(self, filename, commit)
   return blob:lines()
 end
 
-function GitRepository:has_file(filename, commit)
-  if not filename then return nil, { 'filename is required' } end
-  self:_ensure_initialized()
-  local git_repo_module = require('vgit.git.git_repo')
-  return git_repo_module.has(self._path, filename, commit)
-end
-
-function GitRepository:file_status(filename)
-  if not filename then return nil, { 'filename is required' } end
-  self:_ensure_initialized()
-  local git_status = require('vgit.git.git_status')
-  return git_status.ls(self._path, filename)
-end
-
--- Convenience staging methods (delegate to index)
 function GitRepository:stage_file(filename)
+  assertion.assert(filename, 'filename is required')
+  self:_ensure_initialized()
   local index, err = self:index()
   if err then return nil, err end
   return index:add(filename)
 end
 
 function GitRepository:unstage_file(filename)
+  assertion.assert(filename, 'filename is required')
+  self:_ensure_initialized()
   local index, err = self:index()
   if err then return nil, err end
   return index:remove(filename)
 end
 
 function GitRepository:stage_hunk(filename, hunk)
-  if not filename then return nil, { 'filename is required' } end
-  if not hunk then return nil, { 'hunk is required' } end
+  assertion.assert(filename, 'filename is required').assert(hunk, 'hunk is required')
   local index, err = self:index()
   if err then return nil, err end
   return index:add_hunk(filename, hunk)
 end
 
 function GitRepository:unstage_hunk(filename, hunk)
-  if not filename then return nil, { 'filename is required' } end
-  if not hunk then return nil, { 'hunk is required' } end
+  assertion.assert(filename, 'filename is required').assert(hunk, 'hunk is required')
   local index, err = self:index()
   if err then return nil, err end
   return index:remove_hunk(filename, hunk)
 end
 
-function GitRepository:reset()
-  self._config = nil
-  self._git_dir = nil
-  self._index = nil
-  self._refs = nil
-  self._remotes = nil
-  self._submodules = nil
+function GitRepository:commit(message)
+  assertion.assert(message and message ~= '', 'commit message is required')
+  local index, err = self:index()
+  if err then return nil, err end
+  return index:commit(message)
 end
 
-function GitRepository:_ensure_initialized()
-  if self._state ~= GitRepository.State.UNINITIALIZED then return end
+function GitRepository:reset(filename)
+  assertion.assert(filename, 'filename is required')
+  self:_ensure_initialized()
+  local working_tree = self:working_tree()
+  return working_tree:reset(filename)
+end
 
-  if not self._path then
-    local discovered_path, err = git_repo.discover()
-    if err then
-      self._state = GitRepository.State.INVALID
+function GitRepository:stage_all()
+  local index, err = self:index()
+  if err then return nil, err end
+  return index:add()
+end
+
+function GitRepository:unstage_all()
+  local index, err = self:index()
+  if err then return nil, err end
+  return index:reset()
+end
+
+function GitRepository:status(opts)
+  opts = opts or {}
+  assertion.assert(self:is_valid(), 'Project has no .git folder')
+
+  if opts.filename then
+    self:_ensure_initialized()
+    return git_status.ls(self._path, opts.filename)
+  end
+
+  local working_tree = self:working_tree()
+  assertion.assert(working_tree, 'No working tree found')
+
+  local statuses, err = working_tree:status()
+  if err then return nil, err end
+
+  local changed_files, staged_files, unmerged_files = self:partition_status(statuses)
+
+  local entries = {}
+  if #unmerged_files ~= 0 then
+    entries[#entries + 1] = {
+      title = 'Merge Changes',
+      entries = unmerged_files,
+    }
+  end
+  if #staged_files ~= 0 then entries[#entries + 1] = {
+    title = 'Staged Changes',
+    entries = staged_files,
+  } end
+  if #changed_files ~= 0 then entries[#entries + 1] = {
+    title = 'Changes',
+    entries = changed_files,
+  } end
+
+  return {
+    entries = entries,
+    reponame = self:get_path(),
+    layout_type = opts.layout_type or 'unified',
+  }
+end
+
+function GitRepository:partition_status(statuses)
+  local utils = require('vgit.core.utils')
+  local changed_files = {}
+  local staged_files = {}
+  local unmerged_files = {}
+  local list_entries = {}
+
+  utils.list.each(statuses, function(status)
+    if status:is_unmerged() then
+      local id = utils.math.uuid()
+      local data = { id = id, status = status, type = 'unmerged' }
+      list_entries[id] = data
+      table.insert(unmerged_files, data)
       return
     end
-    self._path = discovered_path
-  end
 
-  local exists, err = git_repo.exists(self._path)
-  if err or not exists then
-    self._state = GitRepository.State.INVALID
-    return
-  end
+    if status:is_staged() then
+      local id = utils.math.uuid()
+      local data = { id = id, status = status, type = 'staged' }
+      list_entries[id] = data
+      table.insert(staged_files, data)
+    end
 
-  self._state = GitRepository.State.VALID
+    if status:is_unstaged() then
+      local id = utils.math.uuid()
+      local data = { id = id, status = status, type = 'unstaged' }
+      list_entries[id] = data
+      table.insert(changed_files, data)
+    end
+  end)
+
+  return changed_files, staged_files, unmerged_files, list_entries
+end
+
+function GitRepository:get_file_lines(filename, is_staged, git_file)
+  local fs = require('vgit.core.fs')
+  local loop = require('vgit.core.loop')
+
+  if is_staged then return git_file:lines() end
+  loop.free_textlock()
+  return fs.read_file(filename)
+end
+
+function GitRepository:conflict_status()
+  local git_conflict = require('vgit.libgit2.git_conflict')
+  return git_conflict.status(self:get_path())
+end
+
+function GitRepository:diff(spec, opts)
+  local assertion = require('vgit.core.assertion')
+  local DiffBuilder = require('vgit.core.diff')
+
+  spec = spec or {}
+  opts = opts or {}
+
+  local type = spec.type
+
+  assertion.assert(spec, 'spec is required').assert(type, 'type is required')
+
+  local builder = DiffBuilder(self)
+  local diff_spec = vim.tbl_extend('force', spec, opts)
+  return builder:build(diff_spec)
 end
 
 return GitRepository

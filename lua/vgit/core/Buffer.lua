@@ -99,7 +99,6 @@ function Buffer:place_extmark_highlight(opts)
 end
 
 function Buffer:clear_extmark_texts()
-  loop.free_textlock()
   if not self:is_valid() then return end
   return self.text_extmark:clear()
 end

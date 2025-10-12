@@ -10,19 +10,15 @@ function GitIndex:constructor(repository)
   if not repository then error('GitIndex requires a repository') end
 
   local index = {
-    _repository = repository,
+    _repo_path = repository:get_path(),
     _staged_files = nil,
   }
 
   return index
 end
 
-function GitIndex:repository()
-  return self._repository
-end
-
 function GitIndex:add(filename)
-  local _, err = git_stager.stage(self._repository:get_path(), filename)
+  local _, err = git_stager.stage(self._repo_path, filename)
   if err then return nil, err end
 
   self._staged_files = nil
@@ -35,7 +31,7 @@ function GitIndex:add_all()
 end
 
 function GitIndex:remove(filename)
-  local _, err = git_stager.unstage(self._repository:get_path(), filename)
+  local _, err = git_stager.unstage(self._repo_path, filename)
   if err then return nil, err end
 
   self._staged_files = nil
@@ -52,7 +48,7 @@ function GitIndex:add_hunk(filename, hunk)
 
   if not hunk then return nil, { 'hunk is required' } end
 
-  local _, err = git_stager.stage_hunk(self._repository:get_path(), filename, hunk)
+  local _, err = git_stager.stage_hunk(self._repo_path, filename, hunk)
   if err then return nil, err end
 
   self._staged_files = nil
@@ -65,7 +61,7 @@ function GitIndex:remove_hunk(filename, hunk)
 
   if not hunk then return nil, { 'hunk is required' } end
 
-  local _, err = git_stager.unstage_hunk(self._repository:get_path(), filename, hunk)
+  local _, err = git_stager.unstage_hunk(self._repo_path, filename, hunk)
   if err then return nil, err end
 
   self._staged_files = nil
@@ -74,13 +70,13 @@ function GitIndex:remove_hunk(filename, hunk)
 end
 
 function GitIndex:status()
-  return git_status.ls(self._repository:get_path())
+  return git_status.ls(self._repo_path)
 end
 
 function GitIndex:file_status(filename)
   if not filename then return nil, { 'filename is required' } end
 
-  return git_status.ls(self._repository:get_path(), filename)
+  return git_status.ls(self._repo_path, filename)
 end
 
 function GitIndex:staged_files()
@@ -124,14 +120,14 @@ function GitIndex:unmerged_files()
 end
 
 function GitIndex:staged_hunks(filename)
-  return git_hunks.list(self._repository:get_path(), {
+  return git_hunks.list(self._repo_path, {
     staged = true,
     filename = filename,
   })
 end
 
 function GitIndex:unstaged_hunks(filename)
-  return git_hunks.list(self._repository:get_path(), {
+  return git_hunks.list(self._repo_path, {
     staged = false,
     filename = filename,
   })
@@ -162,7 +158,7 @@ function GitIndex:commit(message)
   if err then return nil, err end
   if not has_changes then return nil, { 'no staged changes to commit' } end
 
-  local success, commit_err = git_commit.create(self._repository:get_path(), message)
+  local success, commit_err = git_commit.create(self._repo_path, message)
   if commit_err then return nil, commit_err end
 
   self._staged_files = nil
@@ -177,7 +173,7 @@ function GitIndex:can_commit()
 end
 
 function GitIndex:commit_dry_run()
-  return git_commit.dry_run(self._repository:get_path())
+  return git_commit.dry_run(self._repo_path)
 end
 
 function GitIndex:reset_cache()

@@ -63,6 +63,12 @@ function fs.dirname(filepath)
   return vim.fn.fnamemodify(filepath, ':h') or ''
 end
 
+function fs.absolute_path(base_path, relative_path)
+  if relative_path:sub(1, 1) == '/' then return relative_path end
+  local path = Path:new(base_path) / relative_path
+  return tostring(path)
+end
+
 function fs.is_dir(filepath)
   return Path:new(filepath):is_dir()
 end

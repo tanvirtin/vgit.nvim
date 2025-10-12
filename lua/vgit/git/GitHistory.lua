@@ -9,7 +9,7 @@ function GitHistory:constructor(repository, opts)
   opts = opts or {}
 
   local history = {
-    _repository = repository,
+    _repo_path = repository:get_path(),
     _from = opts.from or 'HEAD',
     _count = opts.count,
     _path = opts.path,
@@ -28,7 +28,7 @@ function GitHistory:commits()
       skip = self._skip,
     } end
 
-    local logs, err = git_log.list(self._repository:get_path(), {
+    local logs, err = git_log.list(self._repo_path, {
       filename = self._path,
       pagination = pagination,
     })
@@ -179,7 +179,7 @@ function GitHistory:load_more(additional_count)
     skip = current_count,
   }
 
-  local logs, err = git_log.list(self._repository:get_path(), {
+  local logs, err = git_log.list(self._repo_path, {
     filename = self._path,
     pagination = pagination,
   })

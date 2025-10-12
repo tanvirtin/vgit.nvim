@@ -8,7 +8,7 @@ function GitRef:constructor(repository)
   if not repository then error('GitRef requires a repository') end
 
   local refs = {
-    _repository = repository,
+    _repo_path = repository:get_path(),
     _branches = nil,
     _tags = nil,
     _current = nil,
@@ -17,20 +17,15 @@ function GitRef:constructor(repository)
   return refs
 end
 
-function GitRef:repository()
-  return self._repository
-end
-
 function GitRef:current()
   if not self._current then
-    local result, err =
-      GitQueryBuilder(self._repository:get_path()):raw_args('rev-parse', '--abbrev-ref', 'HEAD'):execute()
+    local result, err = GitQueryBuilder(self._repo_path):raw_args('rev-parse', '--abbrev-ref', 'HEAD'):execute()
 
     if err then return nil, err end
 
     local branch_name = result[1]
 
-    local hash_result, hash_err = GitQueryBuilder(self._repository:get_path()):raw_args('rev-parse', 'HEAD'):execute()
+    local hash_result, hash_err = GitQueryBuilder(self._repo_path):raw_args('rev-parse', 'HEAD'):execute()
 
     if hash_err then return nil, hash_err end
 
@@ -65,11 +60,8 @@ end
 function GitRef:branches(opts)
   opts = opts or {}
 
-  local query = GitQueryBuilder(self._repository:get_path()):raw_args(
-    'branch',
-    '--list',
-    '--format=%(refname:short)\x1F%(objectname)'
-  )
+  local query =
+    GitQueryBuilder(self._repo_path):raw_args('branch', '--list', '--format=%(refname:short)\x1F%(objectname)')
 
   if opts.all then
     query:raw_arg('--all')
@@ -106,9 +98,8 @@ end
 
 function GitRef:tags()
   if not self._tags then
-    local result, err = GitQueryBuilder(self._repository:get_path())
-      :raw_args('tag', '--list', '--format=%(refname:short)\x1F%(objectname)')
-      :execute()
+    local result, err =
+      GitQueryBuilder(self._repo_path):raw_args('tag', '--list', '--format=%(refname:short)\x1F%(objectname)'):execute()
 
     if err then return nil, err end
 
@@ -130,7 +121,7 @@ end
 function GitRef:get(name)
   if not name then return nil, { 'name is required' } end
 
-  local result, err = GitQueryBuilder(self._repository:get_path()):raw_args('rev-parse', '--verify', name):execute()
+  local result, err = GitQueryBuilder(self._repo_path):raw_args('rev-parse', '--verify', name):execute()
 
   if err then return nil, err end
 
@@ -143,9 +134,8 @@ end
 function GitRef:branch_exists(name)
   if not name then return nil, { 'name is required' } end
 
-  local _, err = GitQueryBuilder(self._repository:get_path())
-    :raw_args('rev-parse', '--verify', string.format('refs/heads/%s', name))
-    :execute()
+  local _, err =
+    GitQueryBuilder(self._repo_path):raw_args('rev-parse', '--verify', string.format('refs/heads/%s', name)):execute()
 
   return err == nil, nil
 end
@@ -153,9 +143,8 @@ end
 function GitRef:tag_exists(name)
   if not name then return nil, { 'name is required' } end
 
-  local _, err = GitQueryBuilder(self._repository:get_path())
-    :raw_args('rev-parse', '--verify', string.format('refs/tags/%s', name))
-    :execute()
+  local _, err =
+    GitQueryBuilder(self._repo_path):raw_args('rev-parse', '--verify', string.format('refs/tags/%s', name)):execute()
 
   return err == nil, nil
 end
@@ -163,7 +152,7 @@ end
 function GitRef:create_branch(name, start_point)
   if not name then return nil, { 'branch name is required' } end
 
-  local query = GitQueryBuilder(self._repository:get_path()):raw_args('branch', name)
+  local query = GitQueryBuilder(self._repo_path):raw_args('branch', name)
 
   if start_point then query:raw_arg(start_point) end
 
@@ -178,7 +167,7 @@ end
 function GitRef:delete_branch(name, force)
   if not name then return nil, { 'branch name is required' } end
 
-  local _, err = GitQueryBuilder(self._repository:get_path()):raw_args('branch', force and '-D' or '-d', name):execute()
+  local _, err = GitQueryBuilder(self._repo_path):raw_args('branch', force and '-D' or '-d', name):execute()
 
   if err then return nil, err end
 
@@ -190,7 +179,7 @@ end
 function GitRef:checkout(name)
   if not name then return nil, { 'name is required' } end
 
-  local _, err = git_repo.checkout(self._repository:get_path(), name)
+  local _, err = git_repo.checkout(self._repo_path, name)
   if err then return nil, err end
 
   self._current = nil
@@ -201,7 +190,7 @@ end
 function GitRef:checkout_new_branch(name, start_point)
   if not name then return nil, { 'branch name is required' } end
 
-  local query = GitQueryBuilder(self._repository:get_path()):raw_args('checkout', '-b', name)
+  local query = GitQueryBuilder(self._repo_path):raw_args('checkout', '-b', name)
 
   if start_point then query:raw_arg(start_point) end
 
@@ -217,7 +206,7 @@ end
 function GitRef:create_tag(name, commit, message)
   if not name then return nil, { 'tag name is required' } end
 
-  local query = GitQueryBuilder(self._repository:get_path()):raw_arg('tag')
+  local query = GitQueryBuilder(self._repo_path):raw_arg('tag')
 
   if message then
     query:raw_arg('-a')
@@ -241,7 +230,7 @@ end
 function GitRef:delete_tag(name)
   if not name then return nil, { 'tag name is required' } end
 
-  local _, err = GitQueryBuilder(self._repository:get_path()):raw_args('tag', '-d', name):execute()
+  local _, err = GitQueryBuilder(self._repo_path):raw_args('tag', '-d', name):execute()
 
   if err then return nil, err end
 
