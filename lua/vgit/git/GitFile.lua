@@ -162,7 +162,7 @@ function GitFile:live_hunks(current_lines)
   end
 
   local GitBlob = require('vgit.git.GitBlob')
-  local blob = GitBlob(self.reponame, self.filename)
+  local blob = GitBlob(self.reponame, self.filename, 'index')
   local original_lines, err = blob:lines()
   if err then return nil, err end
 

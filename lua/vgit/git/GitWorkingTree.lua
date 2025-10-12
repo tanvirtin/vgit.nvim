@@ -10,7 +10,6 @@ function GitWorkingTree:constructor(repository)
   if not repository then error('GitWorkingTree requires a repository') end
 
   local tree = {
-    _repository = repository,
     _root_path = repository:get_path(),
   }
 
@@ -56,18 +55,18 @@ function GitWorkingTree:hunks(filename, commit)
 
   commit = commit or 'HEAD'
 
-  local original_lines, err = git_show.lines(self._repository:get_path(), filename, commit)
+  local original_lines, err = git_show.lines(self._root_path, filename, commit)
 
   if err then original_lines = {} end
 
   local current_lines = self:read(filename)
   if not current_lines then current_lines = {} end
 
-  return git_hunks.live(self._repository:get_path(), original_lines, current_lines)
+  return git_hunks.live(self._root_path, original_lines, current_lines)
 end
 
 function GitWorkingTree:all_hunks(filename)
-  return git_hunks.list(self._repository:get_path(), {
+  return git_hunks.list(self._root_path, {
     staged = false,
     filename = filename,
   })
@@ -101,14 +100,14 @@ function GitWorkingTree:compare(filename, commit)
 
   if not commit then return nil, { 'commit is required' } end
 
-  local original_lines, err = git_show.lines(self._repository:get_path(), filename, commit)
+  local original_lines, err = git_show.lines(self._root_path, filename, commit)
 
   if err then return nil, err end
 
   local current_lines, read_err = self:read(filename)
   if read_err then return nil, read_err end
 
-  local hunks, hunk_err = git_hunks.live(self._repository:get_path(), original_lines, current_lines)
+  local hunks, hunk_err = git_hunks.live(self._root_path, original_lines, current_lines)
 
   if hunk_err then return nil, hunk_err end
 
@@ -120,23 +119,23 @@ function GitWorkingTree:compare(filename, commit)
 end
 
 function GitWorkingTree:reset(filename)
-  return git_repo.reset(self._repository:get_path(), filename)
+  return git_repo.reset(self._root_path, filename)
 end
 
 function GitWorkingTree:clean(filename)
-  return git_repo.clean(self._repository:get_path(), filename)
+  return git_repo.clean(self._root_path, filename)
 end
 
 function GitWorkingTree:is_ignored(filename)
   if not filename then return nil, { 'filename is required' } end
 
-  return self._repository:is_ignored(filename)
+  return git_repo.ignores(self._root_path, filename)
 end
 
 function GitWorkingTree:is_tracked(filename)
   if not filename then return nil, { 'filename is required' } end
 
-  return self._repository:has_file(filename)
+  return git_repo.has(self._root_path, filename)
 end
 
 function GitWorkingTree:relative_path(absolute_path)
@@ -168,6 +167,11 @@ function GitWorkingTree:stat(filename)
 
   local stat = vim.loop.fs_stat(path)
   return stat, nil
+end
+
+function GitWorkingTree:status()
+  local git_status = require('vgit.git.git_status')
+  return git_status.ls(self._root_path)
 end
 
 return GitWorkingTree

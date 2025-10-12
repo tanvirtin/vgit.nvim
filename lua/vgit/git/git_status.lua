@@ -1,5 +1,5 @@
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 local GitStatus = require('vgit.git.GitStatus')
+local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 
 local git_status = {}
 
@@ -14,8 +14,20 @@ function git_status.ls(reponame, filename)
     query:file('.')
   end
 
-  local result, err = query:execute()
-  if err then return nil, err end
+  local cmd = 'git -C "' .. reponame .. '" --no-pager status -u -s --no-renames --ignore-submodules -- .'
+  local handle = io.popen(cmd)
+  if not handle then return nil, { 'Failed to execute git status command' } end
+
+  local system_result = handle:read('*a')
+  local success = handle:close()
+  local system_exit_code = success and 0 or 1
+
+  if system_exit_code ~= 0 then return nil, { 'git status failed with exit code ' .. system_exit_code } end
+
+  local result = vim.split(system_result, '\n')
+  result = vim.tbl_filter(function(line)
+    return line ~= ''
+  end, result)
 
   local result_len = #result
   local files = {}

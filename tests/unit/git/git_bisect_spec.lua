@@ -21,7 +21,6 @@ async.describe('git_bisect:', function()
 
   async.after_each(function()
     if repo then
-      -- Reset bisect if in progress to clean up
       git_bisect.reset(repo)
       test_repo.cleanup(repo)
     end
@@ -29,7 +28,6 @@ async.describe('git_bisect:', function()
 
   async.describe('start()', function()
     async.it('should start bisect session with good and bad commits', function()
-      -- Create commit history
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -44,7 +42,6 @@ async.describe('git_bisect:', function()
 
       local bad_commit = test_repo.get_head_commit(repo)
 
-      -- Start bisect
       local result, err = git_bisect.start(repo, {
         bad = bad_commit,
         good = good_commit,
@@ -53,7 +50,6 @@ async.describe('git_bisect:', function()
       assert(not err, 'Should not error: ' .. vim.inspect(err))
       assert(result)
 
-      -- Verify bisect is in progress
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true)
     end)
@@ -64,7 +60,6 @@ async.describe('git_bisect:', function()
       assert(not err)
       assert(result)
 
-      -- Should be in progress
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true)
     end)
@@ -135,7 +130,6 @@ async.describe('git_bisect:', function()
         commits[i] = test_repo.get_head_commit(repo)
       end
 
-      -- Need to specify a bad commit for bisect to work
       test_repo.create_commit(repo, {
         files = { ['bad.txt'] = { 'bad' } },
         message = 'Bad commit',
@@ -150,11 +144,9 @@ async.describe('git_bisect:', function()
       assert(not err, 'Should not error: ' .. vim.inspect(err))
       assert(result, 'Should return result')
 
-      -- Verify it started
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true)
 
-      -- Clean up
       git_bisect.reset(repo)
     end)
 
@@ -207,7 +199,6 @@ async.describe('git_bisect:', function()
     end)
 
     async.it('should error when marking invalid commits', function()
-      -- Start bisect first
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -222,21 +213,18 @@ async.describe('git_bisect:', function()
         good = good_commit,
       })
 
-      -- Try to mark an invalid commit - this should error
       local _, err = git_bisect.bad(repo, 'invalid_hash_12345')
 
       assert(err, 'Should error on invalid commit hash')
       assert(type(err) == 'table', 'Error should be a table')
       assert(#err > 0, 'Error should have messages')
 
-      -- Clean up
       git_bisect.reset(repo)
     end)
   end)
 
   async.describe('bad()', function()
     async.it('should mark current commit as bad', function()
-      -- Setup bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -256,15 +244,18 @@ async.describe('git_bisect:', function()
         good = good_commit,
       })
 
-      -- Mark additional commit as bad
       local result, err = git_bisect.bad(repo)
 
-      -- Should succeed or provide feedback
-      assert(result or err)
+      assert(not err, 'Should not error when marking commit as bad: ' .. vim.inspect(err))
+      assert(result, 'Should return result when marking commit as bad')
+      assert(type(result) == 'table' or type(result) == 'string', 'Result should be table or string')
+
+      -- Verify bisect is still in progress
+      local in_progress = git_bisect.in_progress(repo)
+      eq(in_progress, true, 'Bisect should remain in progress after marking bad commit')
     end)
 
     async.it('should mark specific commit as bad', function()
-      -- Setup bisect
       local commits = {}
       for i = 1, 5 do
         test_repo.create_commit(repo, {
@@ -279,10 +270,14 @@ async.describe('git_bisect:', function()
         good = commits[1],
       })
 
-      -- Mark specific commit as bad
       local result, err = git_bisect.bad(repo, commits[3])
 
-      assert(result or err)
+      assert(not err, 'Should not error when marking specific commit as bad: ' .. vim.inspect(err))
+      assert(result, 'Should return result when marking specific commit as bad')
+
+      -- Verify bisect is still in progress after marking a commit as bad
+      local in_progress = git_bisect.in_progress(repo)
+      eq(in_progress, true, 'Bisect should remain in progress after marking specific commit as bad')
     end)
 
     async.it('should error when bisect not started', function()
@@ -301,7 +296,6 @@ async.describe('git_bisect:', function()
     end)
 
     async.it('should handle invalid commit hash', function()
-      -- Start bisect first
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -325,7 +319,6 @@ async.describe('git_bisect:', function()
 
   async.describe('good()', function()
     async.it('should mark current commit as good', function()
-      -- Setup bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -345,14 +338,18 @@ async.describe('git_bisect:', function()
         good = good_commit,
       })
 
-      -- Mark additional commit as good
       local result, err = git_bisect.good(repo)
 
-      assert(result or err)
+      assert(not err, 'Should not error when marking commit as good: ' .. vim.inspect(err))
+      assert(result, 'Should return result when marking commit as good')
+      assert(type(result) == 'table' or type(result) == 'string', 'Result should be table or string')
+
+      -- Verify bisect is still in progress
+      local in_progress = git_bisect.in_progress(repo)
+      eq(in_progress, true, 'Bisect should remain in progress after marking good commit')
     end)
 
     async.it('should mark specific commit as good', function()
-      -- Setup bisect
       local commits = {}
       for i = 1, 5 do
         test_repo.create_commit(repo, {
@@ -367,14 +364,17 @@ async.describe('git_bisect:', function()
         good = commits[1],
       })
 
-      -- Mark specific commit as good
       local result, err = git_bisect.good(repo, commits[2])
 
-      assert(result or err)
+      assert(not err, 'Should not error when marking specific commit as good: ' .. vim.inspect(err))
+      assert(result, 'Should return result when marking specific commit as good')
+
+      -- Verify bisect is still in progress
+      local in_progress = git_bisect.in_progress(repo)
+      eq(in_progress, true, 'Bisect should remain in progress after marking specific commit as good')
     end)
 
     async.it('should mark multiple commits as good', function()
-      -- Setup bisect
       local commits = {}
       for i = 1, 5 do
         test_repo.create_commit(repo, {
@@ -388,10 +388,14 @@ async.describe('git_bisect:', function()
         bad = commits[5],
       })
 
-      -- Mark multiple commits as good
       local result, err = git_bisect.good(repo, { commits[1], commits[2] })
 
-      assert(result or err)
+      assert(not err, 'Should not error when marking multiple commits as good: ' .. vim.inspect(err))
+      assert(result, 'Should return result when marking multiple commits as good')
+
+      -- Verify bisect is still in progress
+      local in_progress = git_bisect.in_progress(repo)
+      eq(in_progress, true, 'Bisect should remain in progress after marking multiple commits as good')
     end)
 
     async.it('should error when bisect not started', function()
@@ -432,7 +436,12 @@ async.describe('git_bisect:', function()
       -- Skip current commit
       local result, err = git_bisect.skip(repo)
 
-      assert(result or err)
+      assert(not err, 'Should not error when skipping current commit: ' .. vim.inspect(err))
+      assert(result, 'Should return result when skipping commit')
+
+      -- Verify bisect is still in progress after skipping
+      local in_progress = git_bisect.in_progress(repo)
+      eq(in_progress, true, 'Bisect should remain in progress after skipping commit')
     end)
 
     async.it('should skip specific commits', function()
@@ -454,7 +463,12 @@ async.describe('git_bisect:', function()
       -- Skip specific commits
       local result, err = git_bisect.skip(repo, { commits[2], commits[3] })
 
-      assert(result or err)
+      assert(not err, 'Should not error when skipping specific commits: ' .. vim.inspect(err))
+      assert(result, 'Should return result when skipping specific commits')
+
+      -- Verify bisect is still in progress after skipping
+      local in_progress = git_bisect.in_progress(repo)
+      eq(in_progress, true, 'Bisect should remain in progress after skipping commits')
     end)
 
     async.it('should error when reponame is missing', function()
@@ -704,7 +718,6 @@ async.describe('git_bisect:', function()
 
   async.describe('terms()', function()
     async.it('should allow custom terms', function()
-      -- Start bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -719,11 +732,19 @@ async.describe('git_bisect:', function()
         good = good_commit,
       })
 
-      -- Use custom term (this might not work with all git versions)
       local result, err = git_bisect.terms(repo, 'old', good_commit)
 
-      -- Accept either success or error from git
-      assert(result or err)
+      -- terms() may succeed or fail depending on git version and state
+      if err then
+        assert(type(err) == 'table', 'Error should be a table')
+        assert(#err > 0, 'Error should have messages')
+      else
+        assert(result, 'Should return result when setting terms succeeds')
+      end
+
+      -- Verify bisect is still in progress
+      local in_progress = git_bisect.in_progress(repo)
+      eq(in_progress, true, 'Bisect should remain in progress after terms operation')
     end)
 
     async.it('should error when reponame is missing', function()
@@ -745,7 +766,6 @@ async.describe('git_bisect:', function()
 
   async.describe('integration workflows', function()
     async.it('should complete full bisect workflow', function()
-      -- Create commit history with a "bug" introduced at commit 3
       local commits = {}
       for i = 1, 5 do
         test_repo.create_commit(repo, {
@@ -755,7 +775,6 @@ async.describe('git_bisect:', function()
         commits[i] = test_repo.get_head_commit(repo)
       end
 
-      -- Start bisect: commits 1-2 are good, 3-5 are bad
       local result, err = git_bisect.start(repo, {
         bad = commits[5],
         good = commits[1],
@@ -764,11 +783,9 @@ async.describe('git_bisect:', function()
       assert(not err)
       assert(result)
 
-      -- Verify in progress
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true)
 
-      -- Clean up
       git_bisect.reset(repo)
 
       in_progress = git_bisect.in_progress(repo)
@@ -776,7 +793,6 @@ async.describe('git_bisect:', function()
     end)
 
     async.it('should handle bisect with path limiters', function()
-      -- Create commits affecting different files
       test_repo.create_commit(repo, {
         files = { ['file1.txt'] = { 'v1' } },
         message = 'File1 v1',
@@ -796,7 +812,6 @@ async.describe('git_bisect:', function()
 
       local bad_commit = test_repo.get_head_commit(repo)
 
-      -- Bisect only file1.txt
       local result, err = git_bisect.start(repo, {
         bad = bad_commit,
         good = good_commit,

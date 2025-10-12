@@ -1,6 +1,5 @@
 local fs = require('vgit.core.fs')
 local utils = require('vgit.core.utils')
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 local GitHunk = require('vgit.git.GitHunk')
 local git_setting = require('vgit.settings.git')
 
@@ -145,7 +144,16 @@ function git_hunks.list(reponame, opts)
     filename,
   })
 
-  local lines, err = GitQueryBuilder(reponame):raw_args(unpack(args)):execute()
+  local cmd = 'git -C "' .. reponame .. '" ' .. table.concat(args, ' ')
+  local system_result = vim.fn.system(cmd)
+  local system_exit_code = vim.v.shell_error
+
+  if system_exit_code ~= 0 then return nil, { 'git diff failed with exit code ' .. system_exit_code } end
+
+  local lines = vim.split(system_result, '\n')
+  lines = vim.tbl_filter(function(line)
+    return line ~= ''
+  end, lines)
 
   local result = {}
   local result_len = 0

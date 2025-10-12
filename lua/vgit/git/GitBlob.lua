@@ -60,8 +60,4 @@ function GitBlob:hash()
   return result, nil
 end
 
-function GitBlob:__tostring()
-  return string.format('GitBlob(%s @ %s)', self._filename, self._commit)
-end
-
 return GitBlob

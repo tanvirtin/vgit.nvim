@@ -9,11 +9,11 @@ function dimensions.global_height()
 end
 
 function dimensions.vh(value)
-  return string.format('%svh', value)
+  return string.format('%s%s', value, 'vh')
 end
 
 function dimensions.vw(value)
-  return string.format('%svw', value)
+  return string.format('%s%s', value, 'vw')
 end
 
 function dimensions.get_value(size)
@@ -29,9 +29,7 @@ function dimensions.relative_size(parent, child, op)
 
   if not parent then return child end
 
-  -- TODO: Can relativity be applied on integers?
   if type(child) == 'number' then return child end
-  -- TODO: Can relativity be applied on integers?
   if type(parent) == 'number' then return parent end
 
   local parent_value = dimensions.get_value(parent)
@@ -49,21 +47,6 @@ function dimensions.relative_size(parent, child, op)
   if op == 'remove' then value = child_value - value end
 
   return string.format('%s%s', value, unit)
-end
-
--- Get dimension of child in relation to parent.
-function dimensions.relative_win_plot(parent, child)
-  parent = parent or {}
-  child = child or {}
-
-  return {
-    relative = child.relative or parent.relative,
-    height = dimensions.relative_size(parent.height, child.height),
-    width = dimensions.relative_size(parent.width, child.width),
-    row = dimensions.relative_size(parent.row, child.row, 'add'),
-    col = dimensions.relative_size(parent.col, child.col, 'add'),
-    zindex = child.zindex,
-  }
 end
 
 function dimensions.convert(value)

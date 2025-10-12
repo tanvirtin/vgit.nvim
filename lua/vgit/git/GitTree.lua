@@ -3,6 +3,7 @@ local git_log = require('vgit.git.git_log')
 local git_show = require('vgit.git.git_show')
 local git_status = require('vgit.git.git_status')
 local git_hunks = require('vgit.git.git_hunks')
+local git_repo = require('vgit.git.git_repo')
 
 local GitTree = Object:extend()
 
@@ -12,7 +13,7 @@ function GitTree:constructor(repository, commit)
   if not commit then error('GitTree requires a commit reference') end
 
   local tree = {
-    _repository = repository,
+    _repo_path = repository:get_path(),
     _commit_ref = commit,
     _commit_data = nil,
     _parent_tree = nil,
@@ -32,7 +33,7 @@ end
 
 function GitTree:commit()
   if not self._commit_data then
-    local log, err = git_log.get(self._repository:get_path(), self._commit_ref)
+    local log, err = git_log.get(self._repo_path, self._commit_ref)
     if err then return nil, err end
     self._commit_data = log
   end
@@ -97,13 +98,13 @@ end
 function GitTree:file(filename)
   if not filename then return nil, { 'filename is required' } end
 
-  return git_show.lines(self._repository:get_path(), filename, self._commit_ref)
+  return git_show.lines(self._repo_path, filename, self._commit_ref)
 end
 
 function GitTree:has_file(filename)
   if not filename then return nil, { 'filename is required' } end
 
-  return self._repository:has_file(filename, self._commit_ref)
+  return git_repo.has(self._repo_path, filename, self._commit_ref)
 end
 
 function GitTree:files()
@@ -112,7 +113,7 @@ function GitTree:files()
     if err then return nil, err end
 
     local parent_hash = commit.parent_hash or ''
-    local files, status_err = git_status.tree(self._repository:get_path(), {
+    local files, status_err = git_status.tree(self._repo_path, {
       commit_hash = commit.commit_hash,
       parent_hash = parent_hash,
     })
@@ -139,7 +140,7 @@ function GitTree:diff(other_tree, opts)
   local current_hash, err = self:hash()
   if err then return nil, err end
 
-  return git_hunks.list(self._repository:get_path(), {
+  return git_hunks.list(self._repo_path, {
     current = current_hash,
     parent = other_ref,
     filename = opts.filename,
@@ -155,7 +156,7 @@ function GitTree:file_diff(filename)
     local current_hash, hash_err = self:hash()
     if hash_err then return nil, hash_err end
 
-    return git_hunks.list(self._repository:get_path(), {
+    return git_hunks.list(self._repo_path, {
       current = current_hash,
       parent = '',
       filename = filename,
@@ -169,7 +170,7 @@ function GitTree:diff_working_tree(filename)
   local current_hash, err = self:hash()
   if err then return nil, err end
 
-  return git_hunks.list(self._repository:get_path(), {
+  return git_hunks.list(self._repo_path, {
     parent = current_hash,
     filename = filename,
   })

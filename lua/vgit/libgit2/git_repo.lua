@@ -35,7 +35,9 @@ function git_repo.discover(filepath, opts)
   libgit2.cli.git_buf_free(buf)
 
   if git_dirname == true then return dirname end
-  return dirname:gsub('%.git/$', '')
+
+  local result = dirname:gsub('%.git/$', '')
+  return result
 end
 
 function git_repo.exists(filepath)

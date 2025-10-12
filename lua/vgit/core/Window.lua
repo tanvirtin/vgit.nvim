@@ -9,13 +9,35 @@ function Window:constructor(win_id)
   return { win_id = win_id }
 end
 
+function Window.open_screen(buffer, config)
+  local win_id = vim.api.nvim_get_current_win()
+  local window = Window(win_id)
+
+  vim.api.nvim_win_set_buf(win_id, buffer.bufnr)
+
+  if config.win_options then
+    for key, value in pairs(config.win_options) do
+      pcall(vim.api.nvim_win_set_option, win_id, key, value)
+    end
+  end
+
+  if config.width then window:set_width(config.width) end
+  if config.height then window:set_height(config.height) end
+
+  return window
+end
+
 function Window:open(buffer, opts)
   if not buffer then error('buffer is required') end
 
   opts = opts or {}
+  local mode = opts.mode or 'floating'
   local focus = opts.focus
 
+  if opts.mode ~= nil then opts.mode = nil end
   if opts.focus ~= nil then opts.focus = nil end
+
+  if mode == 'screen' then return Window.open_screen(buffer, opts) end
 
   local win_id = vim.api.nvim_open_win(buffer.bufnr, focus ~= nil and focus or false, opts)
 
@@ -88,12 +110,30 @@ function Window:assign_options(options)
   return self
 end
 
+function Window:get_options(option_names)
+  local options = {}
+  for _, name in ipairs(option_names) do
+    local ok, value = pcall(vim.api.nvim_win_get_option, self.win_id, name)
+    if ok then options[name] = value end
+  end
+  return options
+end
+
 function Window:is_valid()
   return vim.api.nvim_win_is_valid(self.win_id)
 end
 
 function Window:close()
-  pcall(vim.api.nvim_win_hide, self.win_id)
+  if not self:is_valid() then return self end
+
+  -- Check if this is the last window
+  local win_count = #vim.api.nvim_list_wins()
+  if win_count <= 1 then
+    return self -- Don't close the last window
+  end
+
+  -- Try to close the window (works for both splits and floating)
+  pcall(vim.api.nvim_win_close, self.win_id, true)
   return self
 end
 
