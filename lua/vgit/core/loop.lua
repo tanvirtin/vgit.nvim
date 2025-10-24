@@ -23,6 +23,7 @@ function loop.debounce(fn, ms)
     local argv = { ... }
     local argc = select('#', ...)
 
+    timer:stop()
     timer:start(ms, 0, function()
       fn(unpack(argv, 1, argc))
     end)
