@@ -76,6 +76,7 @@ function DiffScreen:constructor(opts)
     model = model,
     diff_view = DiffScreen:create_diff_view(scene, model),
     app_bar_view = DiffScreen:create_app_bar_view(scene, model),
+    keymaps = {}, -- Store debounced keymap handlers for cleanup
   }
 end
 
@@ -271,43 +272,60 @@ end
 function DiffScreen:setup_keymaps(buffer)
   local keymaps = diff_preview_setting:get('keymaps')
 
+  -- Create debounced handlers and store them for cleanup
+  local handlers = {
+    reset = loop.debounce_coroutine(function()
+      self:reset(buffer)
+    end, 100),
+    stage = loop.debounce_coroutine(function()
+      self:stage(buffer)
+      self:toggle_view(buffer)
+    end, 100),
+    unstage = loop.debounce_coroutine(function()
+      self:unstage(buffer)
+      self:toggle_view(buffer)
+    end, 100),
+    hunk_stage = loop.debounce_coroutine(function()
+      self:stage_hunk(buffer)
+    end, 100),
+    hunk_unstage = loop.debounce_coroutine(function()
+      self:unstage_hunk(buffer)
+    end, 100),
+    enter = loop.debounce_coroutine(function()
+      self:enter_view()
+    end, 100),
+    toggle = loop.debounce_coroutine(function()
+      self:toggle_view(buffer)
+    end, 100),
+  }
+
+  self.keymaps = handlers
+
   self.diff_view:set_keymap({
     {
       mode = 'n',
       mapping = keymaps.reset,
-      handler = loop.debounce_coroutine(function()
-        self:reset(buffer)
-      end, 100),
+      handler = handlers.reset,
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_stage,
-      handler = loop.debounce_coroutine(function()
-        self:stage(buffer)
-        self:toggle_view(buffer)
-      end, 100),
+      handler = handlers.stage,
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_unstage,
-      handler = loop.debounce_coroutine(function()
-        self:unstage(buffer)
-        self:toggle_view(buffer)
-      end, 100),
+      handler = handlers.unstage,
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_hunk_stage,
-      handler = loop.debounce_coroutine(function()
-        self:stage_hunk(buffer)
-      end, 100),
+      handler = handlers.hunk_stage,
     },
     {
       mode = 'n',
       mapping = keymaps.buffer_hunk_unstage,
-      handler = loop.debounce_coroutine(function()
-        self:unstage_hunk(buffer)
-      end, 100),
+      handler = handlers.hunk_unstage,
     },
     {
       mode = 'n',
@@ -315,16 +333,12 @@ function DiffScreen:setup_keymaps(buffer)
         key = '<enter>',
         desc = 'Open buffer',
       },
-      handler = loop.debounce_coroutine(function()
-        self:enter_view()
-      end, 100),
+      handler = handlers.enter,
     },
     {
       mode = 'n',
       mapping = keymaps.toggle_view,
-      handler = loop.debounce_coroutine(function()
-        self:toggle_view(buffer)
-      end, 100),
+      handler = handlers.toggle,
     },
   })
 end
@@ -365,6 +379,10 @@ function DiffScreen:create(opts)
 end
 
 function DiffScreen:destroy()
+  -- Clean up timer handles from debounced keymap handlers
+  loop.close_debounced_handlers(self.keymaps)
+  self.keymaps = {}
+
   self.scene:destroy()
 end
 
