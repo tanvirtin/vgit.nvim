@@ -94,10 +94,7 @@ function screen_manager.destroy_active_screen()
   local screen = screen_manager.active_screen
   if not screen then return screen_manager end
 
-  local scene = screen.scene
-  if not scene then return screen_manager end
-
-  scene:destroy()
+  screen:destroy()
   screen_manager.active_screen = nil
 
   return screen_manager
