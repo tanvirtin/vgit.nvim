@@ -1,3 +1,4 @@
+local event = require('vgit.core.event')
 local utils = require('vgit.core.utils')
 local Object = require('vgit.core.Object')
 local Buffer = require('vgit.core.Buffer')
@@ -239,17 +240,16 @@ end
 
 function Element:set_keymap(opts_or_mode, callback_or_key, handler, desc)
   if not self:is_valid() then return self end
-  local loop = require('vgit.core.loop')
-
+  
   if type(opts_or_mode) == 'table' then
-    self.buffer:set_keymap(opts_or_mode, loop.coroutine(callback_or_key))
+    self.buffer:set_keymap(opts_or_mode, event.async(callback_or_key))
   else
     local opts = {
       mode = opts_or_mode,
       key = callback_or_key,
       desc = desc or '',
     }
-    self.buffer:set_keymap(opts, loop.coroutine(handler))
+    self.buffer:set_keymap(opts, event.async(handler))
   end
 
   return self

@@ -1,12 +1,12 @@
-local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Spawn = require('vgit.core.Spawn')
 local console = require('vgit.core.console')
 local git_setting = require('vgit.settings.git')
 
 local gitcli = {}
 
-gitcli.run = loop.suspend(function(args, opts, callback)
-  local cmd = git_setting:get('cmd')
+gitcli.run = event.promisify(function(args, opts, callback)
+  local cmd = 'git'
 
   opts = opts or {}
   local debug = opts.debug

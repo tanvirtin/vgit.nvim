@@ -1,7 +1,7 @@
 local env = require('vgit.core.env')
-local loop = require('vgit.core.loop')
 local sign = require('vgit.core.sign')
 local libgit2 = require('vgit.libgit2')
+local event = require('vgit.core.event')
 local keymap = require('vgit.core.keymap')
 local console = require('vgit.core.console')
 local renderer = require('vgit.core.renderer')
@@ -30,12 +30,12 @@ local live_gutter = LiveGutter()
 local live_conflict = LiveConflict()
 
 local controls = {
-  hunk_up = loop.coroutine(function()
+  hunk_up = event.async(function()
     hunks:move_up()
     conflicts:move_up()
     return display_service.dispatch_action('hunk_up')
   end),
-  hunk_down = loop.coroutine(function()
+  hunk_down = event.async(function()
     hunks:move_down()
     conflicts:move_down()
     return display_service.dispatch_action('hunk_down')
@@ -43,51 +43,53 @@ local controls = {
 }
 
 local buffer = {
-  reset = loop.coroutine(function()
+  reset = event.async(function()
     hunks:reset_all()
   end),
-  stage = loop.coroutine(function()
+  stage = event.async(function()
     hunks:stage_all()
   end),
-  unstage = loop.coroutine(function()
+  unstage = event.async(function()
     hunks:unstage_all()
   end),
-  hunk_stage = loop.coroutine(function()
+  hunk_stage = event.async(function()
     hunks:cursor_stage()
   end),
-  hunk_reset = loop.coroutine(function()
+  hunk_reset = event.async(function()
     hunks:cursor_reset()
   end),
-  conflict_accept_both = loop.coroutine(function()
+  conflict_accept_both = event.async(function()
     conflicts:accept_both()
   end),
-  conflict_accept_current = loop.coroutine(function()
+  conflict_accept_current = event.async(function()
     conflicts:accept_current()
   end),
-  conflict_accept_incoming = loop.coroutine(function()
+  conflict_accept_incoming = event.async(function()
     conflicts:accept_incoming()
   end),
 }
 
-local toggle_diff_preference = loop.coroutine(function()
+local toggle_diff_preference = event.async(function()
   display_service.toggle_diff_preference()
 end)
 
-local toggle_live_blame = loop.coroutine(function()
+local toggle_live_blame = event.async(function()
   local blames_enabled = live_blame_setting:get('enabled')
+  if blames_enabled then live_blame:cleanup() end
 
   live_blame_setting:set('enabled', not blames_enabled)
   live_blame:reset()
 end)
 
-local toggle_live_gutter = loop.coroutine(function()
+local toggle_live_gutter = event.async(function()
   local live_gutter_enabled = live_gutter_setting:get('enabled')
+  if live_gutter_enabled then live_gutter:cleanup() end
 
   live_gutter_setting:set('enabled', not live_gutter_enabled)
   live_gutter:toggle()
 end)
 
-local toggle_tracing = loop.coroutine(function()
+local toggle_tracing = event.async(function()
   env.set('DEBUG', not env.get('DEBUG'))
 end)
 
@@ -102,8 +104,10 @@ local function register_modules()
   end)
   renderer.register_module()
 
-  local _, err = libgit2.register()
+  local _, err = libgit2.register_module()
   if err then console.error(err) end
+
+  event.register_module()
 end
 
 local function register_events()
@@ -112,6 +116,12 @@ local function register_events()
   highlight.register_events()
   git_buffer_store.register_events()
   live_conflict:register_events()
+
+  event.on({ 'VimLeavePre' }, function()
+    live_blame:cleanup()
+    live_gutter:cleanup()
+    live_conflict:cleanup()
+  end)
 end
 
 local function register_keymaps(config)
@@ -172,7 +182,7 @@ function controller.commands()
   }
 end
 
-controller.execute_command = loop.coroutine(function(args)
+controller.execute_command = event.async(function(args)
   if not args.fargs or #args.fargs == 0 then
     vim.notify('Vgit: No command provided', vim.log.levels.ERROR)
     return

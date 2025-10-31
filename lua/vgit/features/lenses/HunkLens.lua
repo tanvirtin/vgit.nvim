@@ -1,6 +1,6 @@
-local loop = require('vgit.core.loop')
 local Layout = require('vgit.ui.Layout')
 local Object = require('vgit.core.Object')
+local event = require('vgit.core.event')
 local console = require('vgit.core.console')
 local scene_setting = require('vgit.settings.scene')
 local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
@@ -19,6 +19,7 @@ function HunkLens:constructor()
     active = false,
     diff_component = nil,
     component_manager = nil,
+    debounce_cleanups = {},
   }
 end
 
@@ -66,27 +67,31 @@ function HunkLens:setup_keymaps()
 
   local hunk_up_key = self:get_key(diff_keymaps.hunk_up)
   if hunk_up_key then
+    local hunk_up_fn, hunk_up_cleanup = event.debounce_async(function()
+      self:hunk_up()
+    end, self.DEBOUNCE_MS)
+    table.insert(self.debounce_cleanups, hunk_up_cleanup)
     self.diff_component:set_keymap(
       {
         mode = 'n',
         key = hunk_up_key,
       },
-      loop.debounce_coroutine(function()
-        self:hunk_up()
-      end, self.DEBOUNCE_MS)
+      hunk_up_fn
     )
   end
 
   local hunk_down_key = self:get_key(diff_keymaps.hunk_down)
   if hunk_down_key then
+    local hunk_down_fn, hunk_down_cleanup = event.debounce_async(function()
+      self:hunk_down()
+    end, self.DEBOUNCE_MS)
+    table.insert(self.debounce_cleanups, hunk_down_cleanup)
     self.diff_component:set_keymap(
       {
         mode = 'n',
         key = hunk_down_key,
       },
-      loop.debounce_coroutine(function()
-        self:hunk_down()
-      end, self.DEBOUNCE_MS)
+      hunk_down_fn
     )
   end
 end
@@ -150,6 +155,11 @@ end
 
 function HunkLens:hide()
   if not self.active then return end
+
+  for _, cleanup in ipairs(self.debounce_cleanups) do
+    cleanup()
+  end
+  self.debounce_cleanups = {}
 
   self:emit_cleanup_events()
   self.component_manager:destroy()

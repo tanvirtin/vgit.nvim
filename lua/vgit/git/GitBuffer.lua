@@ -1,5 +1,5 @@
-local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
+local event = require('vgit.core.event')
 local keymap = require('vgit.core.keymap')
 local Buffer = require('vgit.core.Buffer')
 local Extmark = require('vgit.ui.Extmark')
@@ -119,7 +119,7 @@ function GitBuffer:stage_hunk(hunk)
   local _, err = self.git_file:stage_hunk(hunk)
   if err then return _, err end
 
-  loop.free_textlock()
+  event.await()
   return self:diff()
 end
 
@@ -127,7 +127,7 @@ function GitBuffer:unstage_hunk(hunk)
   local _, err = self.git_file:unstage_hunk(hunk)
   if err then return _, err end
 
-  loop.free_textlock()
+  event.await()
   return self:diff()
 end
 
@@ -135,7 +135,7 @@ function GitBuffer:stage()
   local _, err = self.git_file:stage()
   if err then return _, err end
 
-  loop.free_textlock()
+  event.await()
   return self:diff()
 end
 
@@ -143,7 +143,7 @@ function GitBuffer:unstage()
   local _, err = self.git_file:unstage()
   if err then return _, err end
 
-  loop.free_textlock()
+  event.await()
   return self:diff()
 end
 
@@ -194,7 +194,7 @@ function GitBuffer:conflicts()
     state.conflicts = {}
     return state.conflicts
   end
-  loop.free_textlock()
+  event.await()
   local lines = self:get_lines()
   local conflicts = self.git_file:conflicts(lines)
   self:set_state({ conflicts = conflicts })
@@ -231,19 +231,19 @@ function GitBuffer:diff()
 end
 
 function GitBuffer:exists()
-  loop.free_textlock()
+  event.await()
   if not self:is_valid() then return false end
 
-  loop.free_textlock()
+  event.await()
   if self:get_option('buftype') ~= '' then return false end
 
-  loop.free_textlock()
+  event.await()
   if not self:is_inside_git_dir() then return false end
 
-  loop.free_textlock()
+  event.await()
   if not self:is_in_disk() then return false end
 
-  loop.free_textlock()
+  event.await()
   if self:is_ignored() then return false end
 
   return true
@@ -361,7 +361,7 @@ function GitBuffer:render_conflicts(top, bot)
   top = top or 0
   bot = bot or -1
 
-  loop.free_textlock()
+  event.await()
   self:clear_conflicts(top, bot)
 
   local conflicts = self:get_conflicts()

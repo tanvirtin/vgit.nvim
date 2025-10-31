@@ -1,5 +1,5 @@
 local fs = require('vgit.core.fs')
-local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Buffer = require('vgit.core.Buffer')
 local GitFile = require('vgit.git.GitFile')
 local console = require('vgit.core.console')
@@ -36,7 +36,7 @@ function blame_command.parse_args(args)
   return opts
 end
 
-blame_command.execute = loop.coroutine(function(args)
+blame_command.execute = event.async(function(args)
   args = args or {}
 
   local opts = blame_command.parse_args(args)
@@ -62,7 +62,7 @@ blame_command.execute = loop.coroutine(function(args)
   local scene_setting = require('vgit.settings.scene')
   local layout_type = scene_setting:get('diff_preference')
 
-  loop.free_textlock()
+  event.await()
 
   local repo, repo_err = repository.current()
   if repo_err then
@@ -73,7 +73,7 @@ blame_command.execute = loop.coroutine(function(args)
   local repo_path = repo:get_path()
   local filename = normalize_file_path(opts.file, repo_path)
 
-  loop.free_textlock()
+  event.await()
 
   local git_file = GitFile(filename)
 
@@ -99,7 +99,7 @@ blame_command.execute = loop.coroutine(function(args)
       is_uncommitted = true,
     }
 
-    loop.free_textlock()
+    event.await()
     local display_service = require('vgit.ui.display_service')
     display_service.show_blame(data)
     return
@@ -107,12 +107,12 @@ blame_command.execute = loop.coroutine(function(args)
 
   local commit_hash = blame.hash or blame.commit_hash
 
-  loop.free_textlock()
+  event.await()
   local git_log = require('vgit.git.git_log')
   local log_result = git_log.get(repo:get_path(), commit_hash)
   local parent_hash = log_result and log_result.parent_hash or commit_hash .. '^'
 
-  loop.free_textlock()
+  event.await()
   local diff = repo:diff({
     type = 'blame',
     filename = filename,
@@ -126,7 +126,7 @@ blame_command.execute = loop.coroutine(function(args)
     return
   end
 
-  loop.free_textlock()
+  event.await()
 
   local data = {
     type = 'blame',

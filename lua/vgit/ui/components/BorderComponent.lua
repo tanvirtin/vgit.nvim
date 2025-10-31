@@ -8,10 +8,10 @@ function BorderComponent:constructor(props)
   return Component.constructor(self, props)
 end
 
-function BorderComponent:render()
+function BorderComponent:component_will_mount()
   local winhl = self.props.winhl or 'Normal:VGitBorder'
 
-  local element = Element({
+  self._element = Element({
     buf_options = {
       modifiable = false,
       buflisted = false,
@@ -26,10 +26,14 @@ function BorderComponent:render()
       focusable = false,
     },
   })
+end
 
-  self._element = element
+function BorderComponent:render() end
 
-  return LayoutSpec.view(element, { height = 1 })
+function BorderComponent:component_did_mount() self:render() end
+
+function BorderComponent:get_layout_spec()
+  return LayoutSpec.view(self._element, { height = 1 })
 end
 
 function BorderComponent:unmount()

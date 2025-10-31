@@ -1,6 +1,6 @@
-local loop = require('vgit.core.loop')
 local Window = require('vgit.core.Window')
 local Object = require('vgit.core.Object')
+local event = require('vgit.core.event')
 local console = require('vgit.core.console')
 local navigation = require('vgit.core.navigation')
 local git_buffer_store = require('vgit.git.git_buffer_store')
@@ -45,7 +45,7 @@ function Hunks:move_down()
 end
 
 function Hunks:cursor_hunk()
-  loop.free_textlock()
+  event.await()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
@@ -64,18 +64,15 @@ function Hunks:cursor_hunk()
 end
 
 function Hunks:stage_all()
-  loop.free_textlock()
+  event.await()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
-  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
-  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
-
-  loop.free_textlock()
+  event.await()
   local _, err = buffer:stage()
   if err then return console.debug.error(err) end
 
-  loop.free_textlock()
+  event.await()
 end
 
 function Hunks:cursor_stage()
@@ -97,41 +94,41 @@ function Hunks:cursor_stage()
   local hunk = self:cursor_hunk()
   if not hunk then return end
 
-  loop.free_textlock()
+  event.await()
   local _, err = buffer:stage_hunk(hunk)
   if err then return console.debug.error(err) end
 end
 
 function Hunks:unstage_all()
-  loop.free_textlock()
+  event.await()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
-  loop.free_textlock()
+  event.await()
   local _, err = buffer:unstage()
   if err then return console.debug.error(err) end
 end
 
 function Hunks:reset_all()
-  loop.free_textlock()
+  event.await()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
   local hunks = buffer:get_hunks()
   if not hunks and #hunks == 0 then return end
 
-  loop.free_textlock()
+  event.await()
   local lines, err = buffer.git_file:lines()
   if err then return console.debug.error(err) end
 
-  loop.free_textlock()
+  event.await()
   buffer:set_lines(lines)
 end
 
 function Hunks:cursor_reset()
   if not self:is_enabled() then return end
 
-  loop.free_textlock()
+  event.await()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 

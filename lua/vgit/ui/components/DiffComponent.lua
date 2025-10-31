@@ -50,14 +50,44 @@ function DiffComponent:should_component_update(next_props, next_state)
 end
 
 function DiffComponent:component_did_mount()
-  self:_render_diff_data()
+  self:render()
 end
 
 function DiffComponent:component_did_update(prev_state)
-  self:_render_diff_data()
+  self:render()
 end
 
-function DiffComponent:_render_diff_data()
+function DiffComponent:component_will_mount()
+  if not self._element then
+    local utils = require('vgit.core.utils')
+
+    local default_win_options = {
+      winhl = 'Normal:GitBackground',
+      signcolumn = 'auto',
+      wrap = false,
+      number = false,
+      cursorline = true,
+    }
+
+    local win_options = utils.object.assign(default_win_options, self.props.win_options or {})
+
+    local element_config = {
+      buf_options = {
+        modifiable = false,
+        buflisted = false,
+        bufhidden = 'wipe',
+        filetype = self.props.filetype or 'diff',
+      },
+      win_options = win_options,
+    }
+
+    if self.props.plot then element_config.plot = self.props.plot end
+
+    self._element = Element(element_config)
+  end
+end
+
+function DiffComponent:render()
   local diff = self.props.diff
 
   self:clear_extmarks()
@@ -108,47 +138,15 @@ function DiffComponent:_render_diff_data()
   self:render_diff_partially()
 end
 
-function DiffComponent:render()
-  if not self._element then
-    local utils = require('vgit.core.utils')
-
-    local default_win_options = {
-      winhl = 'Normal:GitBackground',
-      signcolumn = 'auto',
-      wrap = false,
-      number = false,
-      cursorline = true,
-    }
-
-    local win_options = utils.object.assign(default_win_options, self.props.win_options or {})
-
-    local element_config = {
-      buf_options = {
-        modifiable = false,
-        buflisted = false,
-        bufhidden = 'wipe',
-        filetype = self.props.filetype or 'diff',
-      },
-      win_options = win_options,
-    }
-
-    if self.props.plot then element_config.plot = self.props.plot end
-
-    self._element = Element(element_config)
-  end
-
+function DiffComponent:get_layout_spec()
   if #self.state.lines > 0 then self._element._lines = self.state.lines end
 
   return LayoutSpec.view(self._element, { id = 'body', flex = 1, focus = true })
 end
 
 function DiffComponent:set_lines(lines)
-  if not self.mounted then
-    self:set_state({ lines = lines })
-    return self
-  end
-  if self._element and self._element:is_valid() then self._element:set_lines(lines) end
   self:set_state({ lines = lines })
+  if self.mounted then self:render() end
   return self
 end
 

@@ -1,4 +1,4 @@
-local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 
 local Spawn = Object:extend()
@@ -104,7 +104,7 @@ function Spawn:start()
     self:process_chunk(chunk, self.stderr_buffer, self.spec.on_stderr)
   end
 
-  local on_exit = loop.coroutine(function(code, signal)
+  local on_exit = event.async(function(code, signal)
     stdout:read_stop()
     stderr:read_stop()
     stdout:close()

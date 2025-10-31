@@ -55,55 +55,11 @@ function SplitDiffComponent:should_component_update(next_props, next_state)
 end
 
 function SplitDiffComponent:component_did_mount()
-  self:_render_diff_data()
+  self:render()
 end
 
 function SplitDiffComponent:component_did_update(prev_state)
-  self:_render_diff_data()
-end
-
-function SplitDiffComponent:_render_diff_data()
-  local diff = self.props.diff
-
-  self:clear_extmarks()
-
-  if not diff then
-    self.state.previous_lines = {}
-    self.state.current_lines = {}
-    self:clear_lines()
-    self:reset_cursor()
-    return
-  end
-
-  local result = self:calculate_split_line_numbers(diff)
-
-  local previous_diff = vim.tbl_extend('force', diff, {
-    lines = diff.previous_lines or {},
-  })
-
-  local current_diff = vim.tbl_extend('force', diff, {
-    lines = diff.current_lines or {},
-  })
-
-  if self._previous_component then
-    self._previous_component:set_props({
-      diff = previous_diff,
-      filetype = self.props.filetype,
-      _split_line_numbers = result.previous.lines,
-      _split_lines_changes = result.previous.changes,
-    })
-  end
-  if self._current_component then
-    self._current_component:set_props({
-      diff = current_diff,
-      filetype = self.props.filetype,
-      _split_line_numbers = result.current.lines,
-      _split_lines_changes = result.current.changes,
-    })
-  end
-
-  self.state.previous_lines = diff.previous_lines or {}
-  self.state.current_lines = diff.current_lines or {}
+  self:render()
 end
 
 function SplitDiffComponent:component_will_mount()
@@ -187,6 +143,50 @@ function SplitDiffComponent:component_will_unmount()
 end
 
 function SplitDiffComponent:render()
+  local diff = self.props.diff
+
+  self:clear_extmarks()
+
+  if not diff then
+    self.state.previous_lines = {}
+    self.state.current_lines = {}
+    self:clear_lines()
+    self:reset_cursor()
+    return
+  end
+
+  local result = self:calculate_split_line_numbers(diff)
+
+  local previous_diff = vim.tbl_extend('force', diff, {
+    lines = diff.previous_lines or {},
+  })
+
+  local current_diff = vim.tbl_extend('force', diff, {
+    lines = diff.current_lines or {},
+  })
+
+  if self._previous_component then
+    self._previous_component:set_props({
+      diff = previous_diff,
+      filetype = self.props.filetype,
+      _split_line_numbers = result.previous.lines,
+      _split_lines_changes = result.previous.changes,
+    })
+  end
+  if self._current_component then
+    self._current_component:set_props({
+      diff = current_diff,
+      filetype = self.props.filetype,
+      _split_line_numbers = result.current.lines,
+      _split_lines_changes = result.current.changes,
+    })
+  end
+
+  self.state.previous_lines = diff.previous_lines or {}
+  self.state.current_lines = diff.current_lines or {}
+end
+
+function SplitDiffComponent:get_layout_spec()
   return LayoutSpec.horizontal({
     LayoutSpec.view(self._previous_component, { flex = 1 }),
     LayoutSpec.view(self._current_component, { flex = 1 }),
@@ -207,6 +207,8 @@ function SplitDiffComponent:set_lines(previous_lines, current_lines)
     previous_lines = previous_lines or {},
     current_lines = current_lines or {},
   })
+  if self.mounted then self:render() end
+  return self
 end
 
 function SplitDiffComponent:clear_lines()

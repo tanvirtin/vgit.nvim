@@ -1,11 +1,17 @@
-local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local console = require('vgit.core.console')
 local scene_setting = require('vgit.settings.scene')
 
-local display_service = {}
 local active_view = nil
+local display_service = {}
 
-display_service.show_diff = loop.coroutine(function(data)
+event.custom_on('VGitChange', function()
+  if active_view and active_view.on_git_change then
+    active_view:on_git_change()
+  end
+end)
+
+display_service.show_diff = event.async(function(data)
   if not data then
     console.error('No data provided')
     return
@@ -21,7 +27,7 @@ display_service.show_diff = loop.coroutine(function(data)
     return
   end
 
-  loop.free_textlock()
+  event.await()
 
   local view
   if data.type == 'file' then
@@ -44,7 +50,7 @@ display_service.show_diff = loop.coroutine(function(data)
   active_view = view
 end)
 
-display_service.show_hunk = loop.coroutine(function(data)
+display_service.show_hunk = event.async(function(data)
   if not data then
     console.error('No hunk data')
     return
@@ -55,7 +61,7 @@ display_service.show_hunk = loop.coroutine(function(data)
     active_view = nil
   end
 
-  loop.suspend_textlock()
+  event.await()
 
   local HunkLens = require('vgit.features.lenses.HunkLens')
   local lens = HunkLens()
@@ -64,7 +70,7 @@ display_service.show_hunk = loop.coroutine(function(data)
   active_view = lens
 end)
 
-display_service.show_blame = loop.coroutine(function(data)
+display_service.show_blame = event.async(function(data)
   if not data then
     console.error('No blame data')
     return
@@ -75,8 +81,8 @@ display_service.show_blame = loop.coroutine(function(data)
     active_view = nil
   end
 
-  loop.suspend_textlock()
-  loop.free_textlock()
+  event.await()
+  event.await()
 
   local BlameLens = require('vgit.features.lenses.BlameLens')
   local lens = BlameLens()
