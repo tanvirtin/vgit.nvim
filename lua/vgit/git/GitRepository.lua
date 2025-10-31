@@ -1,3 +1,4 @@
+local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local git_repo = require('vgit.git.git_repo')
 local git_merge = require('vgit.git.git_merge')
@@ -484,7 +485,31 @@ function GitRepository:status(opts)
   local statuses, err = working_tree:status()
   if err then return nil, err end
 
-  local changed_files, staged_files, unmerged_files = self:partition_status(statuses)
+  local utils = require('vgit.core.utils')
+  local staged_files = {}
+  local changed_files = {}
+  local unmerged_files = {}
+
+  utils.list.each(statuses, function(status)
+    if status:is_unmerged() then
+      local id = utils.math.uuid()
+      local data = { id = id, status = status, type = 'unmerged' }
+      table.insert(unmerged_files, data)
+      return
+    end
+
+    if status:is_staged() then
+      local id = utils.math.uuid()
+      local data = { id = id, status = status, type = 'staged' }
+      table.insert(staged_files, data)
+    end
+
+    if status:is_unstaged() then
+      local id = utils.math.uuid()
+      local data = { id = id, status = status, type = 'unstaged' }
+      table.insert(changed_files, data)
+    end
+  end)
 
   local entries = {}
   if #unmerged_files ~= 0 then
@@ -509,46 +534,10 @@ function GitRepository:status(opts)
   }
 end
 
-function GitRepository:partition_status(statuses)
-  local utils = require('vgit.core.utils')
-  local changed_files = {}
-  local staged_files = {}
-  local unmerged_files = {}
-  local list_entries = {}
-
-  utils.list.each(statuses, function(status)
-    if status:is_unmerged() then
-      local id = utils.math.uuid()
-      local data = { id = id, status = status, type = 'unmerged' }
-      list_entries[id] = data
-      table.insert(unmerged_files, data)
-      return
-    end
-
-    if status:is_staged() then
-      local id = utils.math.uuid()
-      local data = { id = id, status = status, type = 'staged' }
-      list_entries[id] = data
-      table.insert(staged_files, data)
-    end
-
-    if status:is_unstaged() then
-      local id = utils.math.uuid()
-      local data = { id = id, status = status, type = 'unstaged' }
-      list_entries[id] = data
-      table.insert(changed_files, data)
-    end
-  end)
-
-  return changed_files, staged_files, unmerged_files, list_entries
-end
-
 function GitRepository:get_file_lines(filename, is_staged, git_file)
   local fs = require('vgit.core.fs')
-  local loop = require('vgit.core.loop')
-
   if is_staged then return git_file:lines() end
-  loop.free_textlock()
+  event.await()
   return fs.read_file(filename)
 end
 

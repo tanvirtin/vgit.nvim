@@ -5,11 +5,11 @@ return Config({
   hunk_alignment = 'center',
   keymaps = {
     stage = {
-      key = 'S',
+      key = 's',
       desc = 'Stage file',
     },
     unstage = {
-      key = 'U',
+      key = 'u',
       desc = 'Unstage file',
     },
     reset = {
@@ -18,20 +18,20 @@ return Config({
     },
 
     stage_hunk = {
-      key = 's',
+      key = '<leader>s',
       desc = 'Stage hunk',
     },
     unstage_hunk = {
-      key = 'u',
+      key = '<leader>u',
       desc = 'Unstage hunk',
     },
 
     stage_all = {
-      key = '<leader>S',
+      key = 'S',
       desc = 'Stage all',
     },
     unstage_all = {
-      key = '<leader>U',
+      key = 'U',
       desc = 'Unstage all',
     },
     reset_all = {

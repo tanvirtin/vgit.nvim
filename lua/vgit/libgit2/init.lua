@@ -130,7 +130,7 @@ function libgit2.shutdown()
   return true
 end
 
-function libgit2.register(path)
+function libgit2.register_module(path)
   if not libgit2.is_enabled() then return false end
 
   path = path or libgit2_setting:get('path')

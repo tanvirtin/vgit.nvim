@@ -1,5 +1,5 @@
 local env = require('vgit.core.env')
-local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local utils = require('vgit.core.utils')
 
 local console = {
@@ -37,37 +37,37 @@ function console.format(msg)
   end)
 end
 
-console.log = loop.coroutine(function(msg, hi, is_persisted)
+console.log = event.async(function(msg, hi, is_persisted)
   if is_persisted == nil then is_persisted = false end
 
-  loop.free_textlock()
+  event.await()
 
   vim.api.nvim_echo({ { console.format(msg), hi } }, is_persisted, {})
 
   return console
 end)
 
-console.error = loop.coroutine(function(msg)
+console.error = event.async(function(msg)
   vim.notify(console.format(msg), vim.log.levels.ERROR)
 
   return console
 end)
 
-console.warn = loop.coroutine(function(msg)
+console.warn = event.async(function(msg)
   console.log(msg, 'WarningMsg')
 
   return console
 end)
 
-console.clear = loop.coroutine(function()
-  loop.free_textlock()
+console.clear = event.async(function()
+  event.await()
   vim.cmd('echo ""')
 
   return console
 end)
 
-console.info = loop.coroutine(function(msg)
-  loop.free_textlock()
+console.info = event.async(function(msg)
+  event.await()
   vim.notify(console.format(msg), vim.log.levels.INFO)
 
   return console

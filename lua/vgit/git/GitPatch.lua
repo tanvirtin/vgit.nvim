@@ -5,7 +5,11 @@ local GitPatch = Object:extend()
 function GitPatch:constructor(filename, hunk)
   local header = hunk.header
 
-  if hunk.type == 'add' then
+  -- Generate header if hunk doesn't have one
+  if not header then
+    -- Default: 1 line added at the end
+    header = string.format('@@ -1,0 +1,%d @@', #hunk.diff)
+  elseif hunk.type == 'add' then
     local previous, _ = hunk:parse_header(header)
     header = string.format('@@ -%s,%s +%s,%s @@', previous[1], previous[2], previous[1] + 1, #hunk.diff)
   end

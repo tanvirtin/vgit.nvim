@@ -1,5 +1,4 @@
 local fs = require('vgit.core.fs')
-local loop = require('vgit.core.loop')
 local event = require('vgit.core.event')
 local Extmark = require('vgit.ui.Extmark')
 local Object = require('vgit.core.Object')

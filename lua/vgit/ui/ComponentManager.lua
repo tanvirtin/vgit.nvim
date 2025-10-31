@@ -1,4 +1,4 @@
-local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local LayoutContext = require('vgit.ui.layout.LayoutContext')
 local ComponentGroup = require('vgit.ui.ComponentGroup')
@@ -23,20 +23,20 @@ function ComponentManager:parse_layout_spec(layout_spec)
   if layout_spec and layout_spec.type then
     if layout_spec.children then
       for i, child in ipairs(layout_spec.children) do
-        if child.view and type(child.view.render) == 'function' then
+        if child.view and type(child.view.get_layout_spec) == 'function' then
           if not child.view.mounted and type(child.view.mount) == 'function' then
             self.component_group:mount(child.view, self)
           end
-          local child_layout_spec = child.view:render()
+          local child_layout_spec = child.view:get_layout_spec()
           layout_spec.children[i] = self:parse_layout_spec(child_layout_spec)
         end
       end
     elseif layout_spec.child then
-      if layout_spec.child.view and type(layout_spec.child.view.render) == 'function' then
+      if layout_spec.child.view and type(layout_spec.child.view.get_layout_spec) == 'function' then
         if not layout_spec.child.view.mounted and type(layout_spec.child.view.mount) == 'function' then
           self.component_group:mount(layout_spec.child.view, self)
         end
-        local child_layout_spec = layout_spec.child.view:render()
+        local child_layout_spec = layout_spec.child.view:get_layout_spec()
         layout_spec.child = self:parse_layout_spec(child_layout_spec)
       end
     end
@@ -79,7 +79,7 @@ function ComponentManager:render(layout_config)
 
   self.component_group:mount(self.root_component, self)
 
-  local layout_spec = self.root_component:render()
+  local layout_spec = self.root_component:get_layout_spec()
   layout_spec = self:parse_layout_spec(layout_spec)
 
   self.layout_renderer = LayoutRenderer(self.context)
@@ -88,12 +88,12 @@ function ComponentManager:render(layout_config)
   self.component_group:call_did_mount()
 
   self:on('BufWinLeave', function()
-    loop.free_textlock()
+    event.await()
     self:destroy()
   end)
 
   self:on('QuitPre', function()
-    loop.free_textlock()
+    event.await()
     self:destroy()
   end)
 end

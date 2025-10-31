@@ -1,5 +1,5 @@
 local fs = require('vgit.core.fs')
-local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Buffer = require('vgit.core.Buffer')
 local GitFile = require('vgit.git.GitFile')
 local console = require('vgit.core.console')
@@ -109,7 +109,7 @@ local function normalize_refs(refs)
   end
 end
 
-diff_command.execute = loop.coroutine(function(args)
+diff_command.execute = event.async(function(args)
   args = args or {}
 
   local opts = diff_command.parse_args(args)
@@ -170,7 +170,7 @@ diff_command.execute = loop.coroutine(function(args)
     return
   end
 
-  loop.free_textlock()
+  event.await()
 
   local repo, repo_err = repository.current()
   if repo_err then
@@ -178,7 +178,7 @@ diff_command.execute = loop.coroutine(function(args)
     return
   end
 
-  loop.free_textlock()
+  event.await()
 
   -- Get layout preference from scene setting
   local scene_setting = require('vgit.settings.scene')
@@ -196,7 +196,7 @@ diff_command.execute = loop.coroutine(function(args)
     local git_file = GitFile(filename)
     local diff
 
-    loop.free_textlock()
+    event.await()
     -- Check if comparing refs or working tree
     if opts.base_ref and opts.compare_ref then
       -- Ref comparison: VGit diff <file> HEAD^2..HEAD or HEAD^2 HEAD

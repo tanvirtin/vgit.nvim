@@ -1,5 +1,5 @@
-local loop = require('vgit.core.loop')
 local utils = require('vgit.core.utils')
+local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
 local RootLayoutCalculator = require('vgit.ui.calculators.RootLayoutCalculator')
@@ -89,7 +89,7 @@ function LayoutRenderer:render_view_layout(layout)
   if view.mount then view:mount() end
 
   if self.context:is_screen_mode() and view.ensure_window_options then
-    loop.free_textlock()
+    event.await()
     view:ensure_window_options()
   end
 

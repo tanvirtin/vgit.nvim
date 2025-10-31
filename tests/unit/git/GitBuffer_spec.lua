@@ -1,7 +1,6 @@
 local async = require('plenary.async.tests')
 local GitBuffer = require('vgit.git.GitBuffer')
 local test_repo = require('tests.helpers.test_repo')
-local loop = require('vgit.core.loop')
 test_repo.use_driver('raw')
 
 async.describe('GitBuffer', function()
@@ -88,12 +87,12 @@ async.describe('GitBuffer', function()
       async.it('returns true for file in git repo', function()
         local bufnr = vim.fn.bufadd(test_file)
         vim.fn.bufload(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
 
         local git_buf = GitBuffer(bufnr)
         git_buf:sync()
 
-        loop.free_textlock()
+        event.free_textlock()
         local result, err = git_buf:is_inside_git_dir()
 
         assert.is_nil(err)
@@ -102,21 +101,21 @@ async.describe('GitBuffer', function()
 
       async.it('returns false for file not in git repo', function()
         local temp_file = '/tmp/not-in-repo-' .. os.time() .. '.txt'
-        loop.free_textlock()
+        event.free_textlock()
         vim.fn.writefile({ 'content' }, temp_file)
 
         local bufnr = vim.fn.bufadd(temp_file)
         vim.fn.bufload(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
 
         local git_buf = GitBuffer(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
 
         local result, _ = git_buf:is_inside_git_dir()
 
         assert.is_false(result)
 
-        loop.free_textlock()
+        event.free_textlock()
         vim.fn.delete(temp_file)
       end)
     end)
@@ -297,15 +296,15 @@ async.describe('GitBuffer', function()
       async.it('returns self for chaining', function()
         local bufnr = vim.fn.bufadd(test_file)
         vim.fn.bufload(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
         vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
-        loop.free_textlock()
+        event.free_textlock()
 
         local git_buf = GitBuffer(bufnr)
         git_buf:sync()
-        loop.free_textlock()
+        event.free_textlock()
         git_buf:diff() -- Generate hunks first
-        loop.free_textlock()
+        event.free_textlock()
 
         local result = git_buf:generate_status()
 
@@ -317,11 +316,11 @@ async.describe('GitBuffer', function()
       async.it('returns hunks from state', function()
         local bufnr = vim.fn.bufadd(test_file)
         vim.fn.bufload(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
 
         local git_buf = GitBuffer(bufnr)
         git_buf:sync()
-        loop.free_textlock()
+        event.free_textlock()
 
         -- GitBuffer:get_hunks() returns git_file.state.hunks
         git_buf.git_file.state.hunks = { { type = 'add' } }
@@ -334,11 +333,11 @@ async.describe('GitBuffer', function()
       async.it('returns empty table when no hunks', function()
         local bufnr = vim.fn.bufadd(test_file)
         vim.fn.bufload(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
 
         local git_buf = GitBuffer(bufnr)
         git_buf:sync()
-        loop.free_textlock()
+        event.free_textlock()
 
         -- git_file.state.hunks defaults to nil, get_hunks() returns it directly
         git_buf.git_file.state.hunks = {}
@@ -464,20 +463,20 @@ async.describe('GitBuffer', function()
     async.describe('stage_hunk', function()
       async.it('stages specific hunk', function()
         test_repo.write_file(repo, 'test.txt', { 'line 1', 'line 2', 'line 3' })
-        loop.free_textlock()
+        event.free_textlock()
 
         local bufnr = vim.fn.bufadd(test_file)
         vim.fn.bufload(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
         vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
-        loop.free_textlock()
+        event.free_textlock()
 
         local git_buf = GitBuffer(bufnr)
         git_buf:sync()
-        loop.free_textlock()
+        event.free_textlock()
 
         local hunks, _ = git_buf:diff()
-        loop.free_textlock()
+        event.free_textlock()
         if hunks and #hunks > 0 then
           local _, err = git_buf:stage_hunk(hunks[1])
           assert.is_nil(err)
@@ -567,13 +566,13 @@ async.describe('GitBuffer', function()
       async.it('computes diff for modified file', function()
         local bufnr = vim.fn.bufadd(test_file)
         vim.fn.bufload(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
         vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'modified 3' })
-        loop.free_textlock()
+        event.free_textlock()
 
         local git_buf = GitBuffer(bufnr)
         git_buf:sync()
-        loop.free_textlock()
+        event.free_textlock()
 
         local hunks, err = git_buf:diff()
 
@@ -584,13 +583,13 @@ async.describe('GitBuffer', function()
       async.it('updates signs state with hunks', function()
         local bufnr = vim.fn.bufadd(test_file)
         vim.fn.bufload(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
         vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
-        loop.free_textlock()
+        event.free_textlock()
 
         local git_buf = GitBuffer(bufnr)
         git_buf:sync()
-        loop.free_textlock()
+        event.free_textlock()
 
         git_buf:diff()
 
@@ -600,11 +599,11 @@ async.describe('GitBuffer', function()
       async.it('returns empty when no changes', function()
         local bufnr = vim.fn.bufadd(test_file)
         vim.fn.bufload(bufnr)
-        loop.free_textlock()
+        event.free_textlock()
 
         local git_buf = GitBuffer(bufnr)
         git_buf:sync()
-        loop.free_textlock()
+        event.free_textlock()
 
         local _, err = git_buf:diff()
 

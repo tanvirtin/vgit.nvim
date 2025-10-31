@@ -1,5 +1,5 @@
 local fs = require('vgit.core.fs')
-local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local Buffer = require('vgit.core.Buffer')
 local Window = require('vgit.core.Window')
 local GitFile = require('vgit.git.GitFile')
@@ -7,7 +7,7 @@ local console = require('vgit.core.console')
 
 local hunk_command = {}
 
-hunk_command.execute = loop.coroutine(function(args)
+hunk_command.execute = event.async(function(args)
   args = args or {}
 
   local buffer = Buffer(0)
@@ -24,35 +24,35 @@ hunk_command.execute = loop.coroutine(function(args)
   local scene_setting = require('vgit.settings.scene')
   local current_layout_type = scene_setting:get('diff_preference') or 'unified'
 
-  loop.free_textlock()
+  event.await()
 
   local git_file = GitFile(filename)
   local current_lines = fs.read_file(filename)
   if not current_lines then
-    loop.free_textlock()
+    event.await()
     console.error('Failed to read file')
     return
   end
 
   local hunks, hunks_err = git_file:live_hunks(current_lines)
   if hunks_err then
-    loop.free_textlock()
+    event.await()
     console.error(hunks_err)
     return
   end
 
-  loop.free_textlock()
+  event.await()
 
   local Diff = require('vgit.core.diff.Diff')
   local diff = Diff():generate(hunks, current_lines, current_layout_type)
 
   if not diff then
-    loop.free_textlock()
+    event.await()
     console.error('Failed to generate diff')
     return
   end
 
-  loop.free_textlock()
+  event.await()
 
   local target_hunk_index = nil
   if diff and diff.marks then
