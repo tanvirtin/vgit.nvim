@@ -59,6 +59,7 @@ function DiffScreen:create_app_bar_view(scene, model)
       return {
         { 'Stage',                  keymaps['buffer_stage'] },
         { 'Stage hunk',             keymaps['buffer_hunk_stage'] },
+        { 'Reset hunk',             keymaps['buffer_hunk_reset'] },
         { 'Reset',                  keymaps['reset'] },
         { 'Switch to Unstage View', keymaps['toggle_view'] },
       }
@@ -226,6 +227,41 @@ function DiffScreen:unstage_hunk(buffer)
   self.diff_view:move_to_hunk(index, 'center')
 end
 
+function DiffScreen:reset_hunk(buffer)
+  if self.model:is_hunk() then return end
+  if self.model:is_staged() then return end
+
+  loop.free_textlock()
+  local filename = self.model:get_filename()
+  if not filename then return end
+
+  loop.free_textlock()
+  local hunk, index = self.diff_view:get_hunk_under_cursor()
+  if not hunk then return end
+
+  loop.free_textlock()
+  local decision = console.input(
+    'Are you sure you want to discard this hunk? (y/N) '
+  ):lower()
+
+  if decision ~= 'yes' and decision ~= 'y' then return end
+
+  loop.free_textlock()
+  self.model:reset_hunk(filename, hunk)
+
+  loop.free_textlock()
+  local _, refetch_err = self.model:fetch(buffer:get_name())
+  loop.free_textlock()
+
+  if refetch_err then
+    console.debug.error(refetch_err).error(refetch_err)
+    return
+  end
+
+  self.diff_view:render()
+  self.diff_view:move_to_hunk(index, 'center')
+end
+
 function DiffScreen:stage(buffer)
   if self.model:is_hunk() then return end
   if self.model:is_staged() then return end
@@ -307,6 +343,13 @@ function DiffScreen:setup_keymaps(buffer)
       mapping = keymaps.buffer_hunk_unstage,
       handler = loop.debounce_coroutine(function()
         self:unstage_hunk(buffer)
+      end, 100),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_hunk_reset,
+      handler = loop.debounce_coroutine(function()
+        self:reset_hunk(buffer)
       end, 100),
     },
     {
