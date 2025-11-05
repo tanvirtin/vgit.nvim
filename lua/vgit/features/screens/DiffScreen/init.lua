@@ -59,6 +59,7 @@ function DiffScreen:create_app_bar_view(scene, model)
       return {
         { 'Stage',                  keymaps['buffer_stage'] },
         { 'Stage hunk',             keymaps['buffer_hunk_stage'] },
+        { 'Reset hunk',             keymaps['buffer_hunk_reset'] },
         { 'Reset',                  keymaps['reset'] },
         { 'Switch to Unstage View', keymaps['toggle_view'] },
       }
@@ -137,6 +138,10 @@ function DiffScreen:reset(buffer)
   local filename = self.model:get_filename()
   if not filename then return end
 
+  -- Performance: Suppress VGitSync during reset since we manually fetch below
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_for(200)
+
   loop.free_textlock()
   self.model:reset_file(filename)
 
@@ -184,6 +189,11 @@ function DiffScreen:stage_hunk(buffer)
   local hunk, index = self.diff_view:get_hunk_under_cursor()
   if not hunk then return end
 
+  -- Performance: Suppress VGitSync during staging since we manually fetch below
+  -- This prevents refreshing all tracked buffers unnecessarily
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_for(200)
+
   self.model:stage_hunk(filename, hunk)
 
   loop.free_textlock()
@@ -211,8 +221,51 @@ function DiffScreen:unstage_hunk(buffer)
   local hunk, index = self.diff_view:get_hunk_under_cursor()
   if not hunk then return end
 
+  -- Performance: Suppress VGitSync during unstaging since we manually fetch below
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_for(200)
+
   loop.free_textlock()
   self.model:unstage_hunk(filename, hunk)
+
+  loop.free_textlock()
+  local _, refetch_err = self.model:fetch(buffer:get_name())
+  loop.free_textlock()
+
+  if refetch_err then
+    console.debug.error(refetch_err).error(refetch_err)
+    return
+  end
+
+  self.diff_view:render()
+  self.diff_view:move_to_hunk(index, 'center')
+end
+
+function DiffScreen:reset_hunk(buffer)
+  if self.model:is_hunk() then return end
+  if self.model:is_staged() then return end
+
+  loop.free_textlock()
+  local filename = self.model:get_filename()
+  if not filename then return end
+
+  loop.free_textlock()
+  local hunk, index = self.diff_view:get_hunk_under_cursor()
+  if not hunk then return end
+
+  loop.free_textlock()
+  local decision = console.input(
+    'Are you sure you want to discard this hunk? (y/N) '
+  ):lower()
+
+  if decision ~= 'yes' and decision ~= 'y' then return end
+
+  -- Performance: Suppress VGitSync during reset since we manually fetch below
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_for(200)
+
+  loop.free_textlock()
+  self.model:reset_hunk(filename, hunk)
 
   loop.free_textlock()
   local _, refetch_err = self.model:fetch(buffer:get_name())
@@ -235,6 +288,10 @@ function DiffScreen:stage(buffer)
   local filename = self.model:get_filename()
   if not filename then return end
 
+  -- Performance: Suppress VGitSync during staging since we manually fetch below
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_for(200)
+
   loop.free_textlock()
   self.model:stage_file(filename)
 
@@ -255,6 +312,10 @@ function DiffScreen:unstage(buffer)
   loop.free_textlock()
   local filename = self.model:get_filename()
   if not filename then return end
+
+  -- Performance: Suppress VGitSync during unstaging since we manually fetch below
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_for(200)
 
   loop.free_textlock()
   self.model:unstage_file(filename)
@@ -326,6 +387,13 @@ function DiffScreen:setup_keymaps(buffer)
       mode = 'n',
       mapping = keymaps.buffer_hunk_unstage,
       handler = handlers.hunk_unstage,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_hunk_reset,
+      handler = loop.debounce_coroutine(function()
+        self:reset_hunk(buffer)
+      end, 100),
     },
     {
       mode = 'n',

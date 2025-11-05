@@ -16,6 +16,13 @@ local events = {
 }
 local is_registered = false
 
+-- Performance optimization: control VGitSync refresh behavior during staging
+local staging_state = {
+  active = false,           -- True when selective refresh mode is active
+  target_buffer = nil,      -- The specific buffer to refresh (nil = all buffers)
+  suppress_sync = false,    -- True to completely suppress VGitSync events
+}
+
 local git_buffer_store = {}
 
 git_buffer_store.register_events = loop.coroutine(function()
@@ -35,6 +42,32 @@ git_buffer_store.register_events = loop.coroutine(function()
 
   loop.free_textlock()
   local git_dirname = git_repo.dirname()
+
+  -- Register VGitSync handler once, outside the filesystem callback
+  -- Use vim.schedule to avoid "must not be called in a lua loop callback" error
+  vim.schedule(function()
+    event.custom_on('VGitSync', function()
+      -- Skip sync entirely if suppressed (e.g., during batch staging operations)
+      if staging_state.suppress_sync then
+        return
+      end
+
+      -- Selective refresh: only refresh specific buffer if configured
+      if staging_state.active and staging_state.target_buffer then
+        local target_buf = staging_state.target_buffer
+        if target_buf:is_valid() then
+          git_buffer_store.dispatch(target_buf, 'sync')
+        end
+        return
+      end
+
+      -- Default behavior: refresh all tracked buffers
+      git_buffer_store.for_each(function(buffer)
+        git_buffer_store.dispatch(buffer, 'sync')
+      end)
+    end)
+  end)
+
   local ok = handle:start(
     git_dirname,
     {},
@@ -44,16 +77,12 @@ git_buffer_store.register_events = loop.coroutine(function()
         loop.free_textlock()
         local git_dir = git_repo.dirname()
         loop.free_textlock()
+        -- Emit event to trigger the handler registered above
         event.emit('VGitSync', {
           git_dir = git_dir,
           filename = filename,
           event_name = event_name,
         })
-        event.custom_on('VGitSync', function()
-          git_buffer_store.for_each(function(buffer)
-            git_buffer_store.dispatch(buffer, 'sync')
-          end)
-        end)
       end
     end, 10)
   )
@@ -172,6 +201,45 @@ git_buffer_store.collect = function()
     :attach_to_renderer()
 
   git_buffer_store.dispatch(git_buffer, 'attach')
+end
+
+-- Performance: API for controlling VGitSync behavior during staging operations
+-- Reduces buffer refresh cascade by limiting which buffers get refreshed
+
+-- Suppress all VGitSync events for a specified duration
+-- Useful for batch operations where multiple git index changes occur
+-- Usage: git_buffer_store.suppress_sync_for(500)
+git_buffer_store.suppress_sync_for = function(ms)
+  staging_state.suppress_sync = true
+  vim.defer_fn(function()
+    staging_state.suppress_sync = false
+  end, ms)
+end
+
+-- Enable selective refresh mode - only refresh the specified buffer on VGitSync
+-- Usage: git_buffer_store.begin_selective_staging(buffer)
+git_buffer_store.begin_selective_staging = function(buffer)
+  staging_state.active = true
+  staging_state.target_buffer = buffer
+end
+
+-- Disable selective refresh mode, returning to default behavior
+git_buffer_store.end_selective_staging = function()
+  staging_state.active = false
+  staging_state.target_buffer = nil
+end
+
+-- Convenience wrapper: execute staging function with selective refresh
+-- Automatically enables selective mode, runs function, then restores after delay
+-- Usage: git_buffer_store.with_selective_staging(buffer, function() ... end)
+git_buffer_store.with_selective_staging = function(buffer, stage_fn)
+  git_buffer_store.begin_selective_staging(buffer)
+  local ok, err = pcall(stage_fn)
+  -- Keep selective mode active briefly to catch the filesystem watcher event
+  vim.defer_fn(function()
+    git_buffer_store.end_selective_staging()
+  end, 150)  -- Filesystem watcher has 10ms debounce, add margin
+  if not ok then error(err) end
 end
 
 return git_buffer_store
