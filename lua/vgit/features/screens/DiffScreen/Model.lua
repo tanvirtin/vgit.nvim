@@ -106,6 +106,11 @@ function Model:unstage_hunk(filename, hunk)
   return git_file:unstage_hunk(hunk)
 end
 
+function Model:reset_hunk(filename, hunk)
+  local git_file = GitFile(filename)
+  return git_file:reset_hunk(hunk)
+end
+
 function Model:stage_file(filename)
   local reponame = git_repo.discover()
   return git_stager.stage(reponame, filename)

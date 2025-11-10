@@ -11,7 +11,7 @@ return Config({
       desc = 'Unstage'
     },
     reset = {
-      key = 'r',
+      key = 'R',
       desc = 'Reset'
     },
     buffer_hunk_stage = {
@@ -21,6 +21,10 @@ return Config({
     buffer_hunk_unstage = {
       key = 'u',
       desc = 'Unstage hunk'
+    },
+    buffer_hunk_reset = {
+      key = 'r',
+      desc = 'Reset hunk'
     },
     toggle_view = 't',
   },
