@@ -10,20 +10,21 @@ end
 function Spawn:parse_result(output, callback)
   if not callback then return end
 
-  local line = {}
   output = table.concat(output)
 
-  for i = 1, #output do
-    local char = output:sub(i, i)
-    if char == '\n' then
-      callback(table.concat(line))
-      line = {}
-    else
-      line[#line + 1] = char
+  local start = 1
+  while true do
+    local newline_pos = output:find('\n', start, true)
+    if not newline_pos then
+      -- Last line without newline
+      if start <= #output then
+        callback(output:sub(start))
+      end
+      break
     end
+    callback(output:sub(start, newline_pos - 1))
+    start = newline_pos + 1
   end
-
-  if #line > 0 then callback(table.concat(line)) end
 end
 
 function Spawn:start()
