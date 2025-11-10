@@ -57,6 +57,10 @@ function GitFile:unstage_hunk(hunk)
   return git_stager.unstage_hunk(self.reponame, self.filename, hunk)
 end
 
+function GitFile:reset_hunk(hunk)
+  return git_stager.reset_hunk(self.reponame, self.filename, hunk)
+end
+
 function GitFile:stage()
   return git_stager.stage(self.reponame, self.filename)
 end
