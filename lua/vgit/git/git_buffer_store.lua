@@ -35,6 +35,17 @@ git_buffer_store.register_events = loop.coroutine(function()
 
   loop.free_textlock()
   local git_dirname = git_repo.dirname()
+
+  -- Register VGitSync handler once, outside the filesystem callback
+  -- Use vim.schedule to avoid "must not be called in a lua loop callback" error
+  vim.schedule(function()
+    event.custom_on('VGitSync', function()
+      git_buffer_store.for_each(function(buffer)
+        git_buffer_store.dispatch(buffer, 'sync')
+      end)
+    end)
+  end)
+
   local ok = handle:start(
     git_dirname,
     {},
@@ -44,16 +55,12 @@ git_buffer_store.register_events = loop.coroutine(function()
         loop.free_textlock()
         local git_dir = git_repo.dirname()
         loop.free_textlock()
+        -- Emit event to trigger the handler registered above
         event.emit('VGitSync', {
           git_dir = git_dir,
           filename = filename,
           event_name = event_name,
         })
-        event.custom_on('VGitSync', function()
-          git_buffer_store.for_each(function(buffer)
-            git_buffer_store.dispatch(buffer, 'sync')
-          end)
-        end)
       end
     end, 10)
   )
