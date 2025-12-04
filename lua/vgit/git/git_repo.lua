@@ -2,6 +2,10 @@ local gitcli = require('vgit.git.gitcli')
 
 local git_repo = {}
 
+-- Cache: directory path -> repo root. Stable within a session; only stale if
+-- user runs `git init` in a new location (rare, restart neovim to clear).
+local discover_cache = {}
+
 function git_repo.config(reponame)
   if not reponame then return nil, { 'reponame is required' } end
   return gitcli.run({ '-C', reponame, 'config', '--list' })
@@ -9,10 +13,15 @@ end
 
 function git_repo.discover(filepath)
   local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
-  local result, err = gitcli.run({ '-C', dirname, 'rev-parse', '--show-toplevel' })
 
+  local cached = discover_cache[dirname]
+  if cached then return cached end
+
+  local result, err = gitcli.run({ '-C', dirname, 'rev-parse', '--show-toplevel' })
   if err then return nil, err end
-  if #result==0 then return nil, {} end
+  if #result == 0 then return nil, {} end
+
+  discover_cache[dirname] = result[1]
   return result[1]
 end
 
