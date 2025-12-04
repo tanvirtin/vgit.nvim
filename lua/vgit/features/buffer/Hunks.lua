@@ -68,6 +68,9 @@ function Hunks:stage_all()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
+  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
+  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
+
   loop.free_textlock()
   local _, err = buffer:stage()
   if err then return console.debug.error(err) end
@@ -81,6 +84,9 @@ function Hunks:cursor_stage()
   local buffer = git_buffer_store.current()
   if not buffer then return end
   if buffer:editing() then return end
+
+  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
+  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
 
   if not buffer:is_tracked() then
     local _, err = buffer:stage()

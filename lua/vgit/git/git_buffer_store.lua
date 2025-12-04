@@ -16,6 +16,9 @@ local events = {
 }
 local is_registered = false
 
+-- When true, VGitSync events are suppressed (e.g., during staging operations)
+local suppress_sync = false
+
 local git_buffer_store = {}
 
 git_buffer_store.register_events = loop.coroutine(function()
@@ -40,6 +43,8 @@ git_buffer_store.register_events = loop.coroutine(function()
   -- Use vim.schedule to avoid "must not be called in a lua loop callback" error
   vim.schedule(function()
     event.custom_on('VGitSync', function()
+      if suppress_sync then return end
+
       git_buffer_store.for_each(function(buffer)
         git_buffer_store.dispatch(buffer, 'sync')
       end)
@@ -179,6 +184,27 @@ git_buffer_store.collect = function()
     :attach_to_renderer()
 
   git_buffer_store.dispatch(git_buffer, 'attach')
+end
+
+-- Suppress VGitSync broadcast and refresh only the specified buffer after delay.
+-- This prevents refreshing all tracked buffers when only one needs updating.
+--
+-- Note: External git operations during the suppression window won't trigger a
+-- refresh until the next VGitSync event. This is an acceptable tradeoff given
+-- the short window (typically 200ms).
+git_buffer_store.suppress_sync_and_refresh = function(buffer, ms)
+  local git_buffer = git_buffer_store.get(buffer)
+  if not git_buffer then return end
+
+  suppress_sync = true
+
+  vim.defer_fn(loop.coroutine(function()
+    suppress_sync = false
+
+    if git_buffer:is_valid() then
+      git_buffer_store.dispatch(git_buffer, 'sync')
+    end
+  end), ms)
 end
 
 return git_buffer_store

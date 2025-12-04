@@ -138,6 +138,10 @@ function DiffScreen:reset(buffer)
   local filename = self.model:get_filename()
   if not filename then return end
 
+  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
+
   loop.free_textlock()
   self.model:reset_file(filename)
 
@@ -185,6 +189,10 @@ function DiffScreen:stage_hunk(buffer)
   local hunk, index = self.diff_view:get_hunk_under_cursor()
   if not hunk then return end
 
+  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
+
   self.model:stage_hunk(filename, hunk)
 
   loop.free_textlock()
@@ -211,6 +219,10 @@ function DiffScreen:unstage_hunk(buffer)
   loop.free_textlock()
   local hunk, index = self.diff_view:get_hunk_under_cursor()
   if not hunk then return end
+
+  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
 
   loop.free_textlock()
   self.model:unstage_hunk(filename, hunk)
@@ -247,6 +259,10 @@ function DiffScreen:reset_hunk(buffer)
 
   if decision ~= 'yes' and decision ~= 'y' then return end
 
+  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
+
   loop.free_textlock()
   self.model:reset_hunk(filename, hunk)
 
@@ -271,6 +287,10 @@ function DiffScreen:stage(buffer)
   local filename = self.model:get_filename()
   if not filename then return end
 
+  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
+
   loop.free_textlock()
   self.model:stage_file(filename)
 
@@ -291,6 +311,10 @@ function DiffScreen:unstage(buffer)
   loop.free_textlock()
   local filename = self.model:get_filename()
   if not filename then return end
+
+  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
 
   loop.free_textlock()
   self.model:unstage_file(filename)
