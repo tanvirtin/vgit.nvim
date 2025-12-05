@@ -146,7 +146,7 @@ function DiffScreen:reset(buffer)
   self.model:reset_file(filename)
 
   loop.free_textlock()
-  local _, refetch_err = self.model:fetch(buffer:get_name())
+  local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
   loop.free_textlock()
 
   if refetch_err then
@@ -196,7 +196,7 @@ function DiffScreen:stage_hunk(buffer)
   self.model:stage_hunk(filename, hunk)
 
   loop.free_textlock()
-  local _, refetch_err = self.model:fetch(buffer:get_name())
+  local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
   loop.free_textlock()
 
   if refetch_err then
@@ -228,7 +228,7 @@ function DiffScreen:unstage_hunk(buffer)
   self.model:unstage_hunk(filename, hunk)
 
   loop.free_textlock()
-  local _, refetch_err = self.model:fetch(buffer:get_name())
+  local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
   loop.free_textlock()
 
   if refetch_err then
@@ -267,7 +267,7 @@ function DiffScreen:reset_hunk(buffer)
   self.model:reset_hunk(filename, hunk)
 
   loop.free_textlock()
-  local _, refetch_err = self.model:fetch(buffer:get_name())
+  local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
   loop.free_textlock()
 
   if refetch_err then
@@ -295,7 +295,7 @@ function DiffScreen:stage(buffer)
   self.model:stage_file(filename)
 
   loop.free_textlock()
-  local _, refetch_err = self.model:fetch(buffer:get_name())
+  local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
   loop.free_textlock()
 
   if refetch_err then
@@ -320,7 +320,7 @@ function DiffScreen:unstage(buffer)
   self.model:unstage_file(filename)
 
   loop.free_textlock()
-  local _, refetch_err = self.model:fetch(buffer:get_name())
+  local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
   loop.free_textlock()
 
   if refetch_err then
