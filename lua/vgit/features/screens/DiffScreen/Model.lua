@@ -50,6 +50,19 @@ function Model:get_hunks(lines)
   return self.git_file:live_hunks(lines)
 end
 
+-- Lightweight refresh that skips redundant checks (conflict, status).
+-- Use after staging/unstaging when we know the file state hasn't fundamentally changed.
+function Model:refresh_hunks(filename)
+  local lines, lines_err = self:get_lines(filename)
+  if lines_err then return nil, lines_err end
+
+  local hunks, hunks_err = self:get_hunks(lines)
+  if hunks_err then return nil, hunks_err end
+
+  self.state.diff = Diff():generate(hunks, lines, self:get_layout_type())
+  return self.state.diff
+end
+
 function Model:fetch(filename)
   if not fs.exists(filename) then return nil, { 'Buffer has no diff associated with it' } end
 
