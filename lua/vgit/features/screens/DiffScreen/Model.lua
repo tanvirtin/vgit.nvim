@@ -68,28 +68,35 @@ function Model:fetch(filename)
 
   self.git_file = GitFile(filename)
 
-  local has_conflict = self.git_file:has_conflict()
-  if has_conflict and self:is_staged() then
-    self.state.diff = nil
-    return
-  end
+  -- Fast filesystem check: are we in a merge/rebase/cherry-pick state?
+  -- Only run expensive per-file conflict checks if so.
+  local conflict_status = git_conflict.status(self.git_file.reponame)
+  if conflict_status then
+    local has_conflict = self.git_file:has_conflict()
+    if has_conflict and self:is_staged() then
+      self.state.diff = nil
+      return
+    end
 
-  local status = self.git_file:status()
+    local status = self.git_file:status()
+    if status and status:is_unmerged() then
+      local lines, lines_err = self:get_lines(filename)
+      if lines_err then return nil, lines_err end
+
+      local layout_type = self:get_layout_type()
+      local conflicts = git_conflict.parse(lines)
+      self.state.diff = Diff():generate(nil, lines, layout_type, { conflicts = conflicts })
+      return self.state.diff
+    end
+  end
 
   local lines, lines_err = self:get_lines(filename)
   if lines_err then return nil, lines_err end
 
-  local layout_type = self:get_layout_type()
-  if status and status:is_unmerged() then
-    local conflicts = git_conflict.parse(lines)
-    self.state.diff = Diff():generate(nil, lines, layout_type, { conflicts = conflicts })
-    return self.state.diff
-  end
   local hunks, hunks_err = self:get_hunks(lines)
   if hunks_err then return nil, hunks_err end
 
-  self.state.diff = Diff():generate(hunks, lines, layout_type)
-
+  self.state.diff = Diff():generate(hunks, lines, self:get_layout_type())
   return self.state.diff
 end
 
