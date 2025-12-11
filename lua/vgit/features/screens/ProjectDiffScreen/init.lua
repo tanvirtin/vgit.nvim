@@ -35,6 +35,8 @@ function ProjectDiffScreen:constructor(opts)
           { 'Stage hunk',   keymaps['buffer_hunk_stage'] },
           { 'Unstage hunk', keymaps['buffer_hunk_unstage'] },
           { 'Reset hunk',   keymaps['buffer_hunk_reset'] },
+          { 'Next',         keymaps['next'] },
+          { 'Previous',     keymaps['previous'] },
           { 'Stage all',    keymaps['stage_all'] },
           { 'Unstage all',  keymaps['unstage_all'] },
           { 'Reset all',    keymaps['reset_all'] },
@@ -79,16 +81,6 @@ function ProjectDiffScreen:constructor(opts)
       },
     }),
   }
-end
-
-function ProjectDiffScreen:hunk_up()
-  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
-  self.diff_view:prev(hunk_alignment)
-end
-
-function ProjectDiffScreen:hunk_down()
-  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
-  self.diff_view:next(hunk_alignment)
 end
 
 function ProjectDiffScreen:move_to(query_fn)
@@ -422,6 +414,100 @@ function ProjectDiffScreen:handle_list_move()
   self.diff_view:move_to_hunk(nil, hunk_alignment)
 end
 
+function ProjectDiffScreen:get_current_mark_index()
+  loop.free_textlock()
+  local diff = self.model:get_diff()
+  if not diff or not diff.marks or #diff.marks == 0 then
+    return nil, 0
+  end
+
+  local marks = diff.marks
+  local lnum = self.diff_view.scene:get('current'):get_lnum()
+
+  for i, mark in ipairs(marks) do
+    if lnum >= mark.top and lnum <= mark.bot then
+      return i, #marks
+    elseif mark.top > lnum then
+      return math.max(1, i - 1), #marks
+    end
+  end
+
+  return #marks, #marks
+end
+
+function ProjectDiffScreen:move_to_next_file()
+  loop.free_textlock()
+  local component = self.status_list_view.scene:get('list')
+  local current_lnum = component:get_lnum()
+  local count = component:get_line_count()
+
+  -- Find next file entry (skip folders)
+  for offset = 1, count do
+    local target_lnum = current_lnum + offset
+    if target_lnum > count then target_lnum = target_lnum - count end
+
+    local item = self.status_list_view:get_list_item(target_lnum)
+    if item and item.entry and item.entry.status then
+      component:unlock():set_lnum(target_lnum):lock()
+      return item
+    end
+  end
+  return nil
+end
+
+function ProjectDiffScreen:move_to_prev_file()
+  loop.free_textlock()
+  local component = self.status_list_view.scene:get('list')
+  local current_lnum = component:get_lnum()
+  local count = component:get_line_count()
+
+  -- Find previous file entry (skip folders)
+  for offset = 1, count do
+    local target_lnum = current_lnum - offset
+    if target_lnum < 1 then target_lnum = target_lnum + count end
+
+    local item = self.status_list_view:get_list_item(target_lnum)
+    if item and item.entry and item.entry.status then
+      component:unlock():set_lnum(target_lnum):lock()
+      return item
+    end
+  end
+  return nil
+end
+
+function ProjectDiffScreen:next_hunk()
+  local current_index, total_hunks = self:get_current_mark_index()
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+
+  if not current_index or total_hunks == 0 or current_index >= total_hunks then
+    -- At last hunk or no hunks - move to next file
+    local list_item = self:move_to_next_file()
+    if not list_item then return end
+    self.model:set_entry_id(list_item.id)
+    self.diff_view:render()
+    self.diff_view:move_to_hunk(1, hunk_alignment)
+  else
+    self.diff_view:next(hunk_alignment)
+  end
+end
+
+function ProjectDiffScreen:prev_hunk()
+  local current_index, total_hunks = self:get_current_mark_index()
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+
+  if not current_index or total_hunks == 0 or current_index <= 1 then
+    -- At first hunk or no hunks - move to previous file's last hunk
+    local list_item = self:move_to_prev_file()
+    if not list_item then return end
+    self.model:set_entry_id(list_item.id)
+    self.diff_view:render()
+    -- Pass 0 to go to last hunk (move_to_hunk clamps <1 to #marks)
+    self.diff_view:move_to_hunk(0, hunk_alignment)
+  else
+    self.diff_view:prev(hunk_alignment)
+  end
+end
+
 function ProjectDiffScreen:focus_relative_buffer_entry(buffer)
   local filename = buffer:get_relative_name()
 
@@ -523,6 +609,30 @@ function ProjectDiffScreen:setup_list_keymaps()
         self:toggle_focus()
       end,
     },
+    {
+      mode = 'n',
+      mapping = keymaps.next,
+      handler = loop.debounce_coroutine(function()
+        local list_item = self:move_to_next_file()
+        if not list_item then return end
+        self.model:set_entry_id(list_item.id)
+        local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+        self.diff_view:render()
+        self.diff_view:move_to_hunk(1, hunk_alignment)
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.previous,
+      handler = loop.debounce_coroutine(function()
+        local list_item = self:move_to_prev_file()
+        if not list_item then return end
+        self.model:set_entry_id(list_item.id)
+        local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+        self.diff_view:render()
+        self.diff_view:move_to_hunk(0, hunk_alignment)
+      end, 15),
+    },
   })
 end
 
@@ -564,6 +674,12 @@ function ProjectDiffScreen:setup_diff_keymaps()
     enter = loop.coroutine(function()
       self:enter_view()
     end),
+    next_hunk = loop.debounce_coroutine(function()
+      self:next_hunk()
+    end, 15),
+    prev_hunk = loop.debounce_coroutine(function()
+      self:prev_hunk()
+    end, 15),
   }
 
   self.diff_keymaps = handlers
@@ -625,6 +741,16 @@ function ProjectDiffScreen:setup_diff_keymaps()
       handler = function()
         self:toggle_focus()
       end,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.next,
+      handler = handlers.next_hunk,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.previous,
+      handler = handlers.prev_hunk,
     },
     {
       mode = 'n',
