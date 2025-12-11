@@ -346,21 +346,30 @@ end
 
 function ProjectDiffScreen:focus_relative_buffer_entry(buffer)
   local filename = buffer:get_relative_name()
-  if filename == '' then
+
+  -- Try to find current buffer's file, preferring unstaged
+  if filename ~= '' then
+    local list_item = self:move_to(function(status, entry_type)
+      return status.filename == filename and entry_type == 'unstaged'
+    end)
+    if list_item then return end
+
+    -- Fall back to staged entry for this file
+    list_item = self:move_to(function(status)
+      return status.filename == filename
+    end)
+    if list_item then return end
+  end
+
+  -- Fallback: prefer unstaged entries, then any entry
+  local found = self:move_to(function(_, entry_type)
+    return entry_type == 'unstaged'
+  end)
+  if not found then
     self:move_to(function()
       return true
     end)
-    return
   end
-
-  local list_item = self:move_to(function(status)
-    return status.filename == filename
-  end)
-  if list_item then return end
-
-  self:move_to(function()
-    return true
-  end)
 end
 
 function ProjectDiffScreen:toggle_focus()
@@ -590,6 +599,8 @@ function ProjectDiffScreen:create()
 
   self:setup_keymaps()
   self:focus_relative_buffer_entry(buffer)
+  self:handle_list_move()
+  self:toggle_focus()
 
   return true
 end
