@@ -67,6 +67,7 @@ function keymap.buffer_set(buffer, opts, callback)
     desc = desc,
     silent = silent,
     noremap = noremap,
+    nowait = true,
     buffer = buffer.bufnr,
   })
 
