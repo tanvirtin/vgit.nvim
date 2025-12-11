@@ -28,6 +28,10 @@ return Config({
       key = 'gu',
       desc = 'Unstage hunk'
     },
+    buffer_hunk_reset = {
+      key = 'gr',
+      desc = 'Reset hunk'
+    },
     stage_all = {
       key = 'S',
       desc = 'Stage all'

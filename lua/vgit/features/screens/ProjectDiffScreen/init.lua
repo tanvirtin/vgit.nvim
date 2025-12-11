@@ -34,6 +34,7 @@ function ProjectDiffScreen:constructor(opts)
           { 'Reset',        keymaps['buffer_reset'] },
           { 'Stage hunk',   keymaps['buffer_hunk_stage'] },
           { 'Unstage hunk', keymaps['buffer_hunk_unstage'] },
+          { 'Reset hunk',   keymaps['buffer_hunk_reset'] },
           { 'Stage all',    keymaps['stage_all'] },
           { 'Unstage all',  keymaps['unstage_all'] },
           { 'Reset all',    keymaps['reset_all'] },
@@ -170,6 +171,53 @@ function ProjectDiffScreen:unstage_hunk()
       -- File fully unstaged - jump to next staged file, else this file's unstaged
       local found = self:move_to(function(_, entry_type)
         return entry_type == 'staged'
+      end)
+      if not found then
+        self:move_to(function(status)
+          return status.filename == filename
+        end)
+      end
+    end
+  end)
+end
+
+function ProjectDiffScreen:reset_hunk()
+  local entry = self.model:get_entry()
+  if not entry then return end
+  if entry.type ~= 'unstaged' then return end
+
+  loop.free_textlock()
+  local hunk = self.diff_view:get_hunk_under_cursor()
+  if not hunk then return end
+
+  local filename = entry.status.filename
+  loop.free_textlock()
+  local decision = console.input('Are you sure you want to discard this hunk? (y/N) '):lower()
+  if decision ~= 'yes' and decision ~= 'y' then return end
+
+  loop.free_textlock()
+  local _, err = self.model:reset_hunk(filename, hunk)
+  if err then
+    console.debug.error(err)
+    return
+  end
+
+  self:render(function()
+    -- Stay on this file if it still has unstaged hunks, else jump to next
+    local has_unstaged = false
+    self.status_list_view:each_status(function(status, entry_type)
+      if entry_type == 'unstaged' and status.filename == filename then
+        has_unstaged = true
+      end
+    end)
+
+    if has_unstaged then
+      self:move_to(function(status, entry_type)
+        return status.filename == filename and entry_type == 'unstaged'
+      end)
+    else
+      local found = self:move_to(function(_, entry_type)
+        return entry_type == 'unstaged'
       end)
       if not found then
         self:move_to(function(status)
@@ -489,6 +537,9 @@ function ProjectDiffScreen:setup_diff_keymaps()
     hunk_unstage = loop.debounce_coroutine(function()
       self:unstage_hunk()
     end, 15),
+    hunk_reset = loop.debounce_coroutine(function()
+      self:reset_hunk()
+    end, 15),
     reset = loop.debounce_coroutine(function()
       self:reset_file()
     end, 15),
@@ -527,6 +578,11 @@ function ProjectDiffScreen:setup_diff_keymaps()
       mode = 'n',
       mapping = keymaps.buffer_hunk_unstage,
       handler = handlers.hunk_unstage,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_hunk_reset,
+      handler = handlers.hunk_reset,
     },
     {
       mode = 'n',
