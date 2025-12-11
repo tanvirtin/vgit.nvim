@@ -1,6 +1,8 @@
 local Config = require('vgit.core.Config')
 
 return Config({
+  -- Alignment when jumping to a hunk: 'top', 'center', or 'bottom'
+  hunk_alignment = 'center',
   keymaps = {
     commit = {
       key = 'C',
