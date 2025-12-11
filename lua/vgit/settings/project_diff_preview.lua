@@ -48,5 +48,13 @@ return Config({
       key = '<Tab>',
       desc = 'Switch focus between file list and diff preview'
     },
+    next = {
+      key = 'J',
+      desc = 'Next'
+    },
+    previous = {
+      key = 'K',
+      desc = 'Previous'
+    },
   },
 })
