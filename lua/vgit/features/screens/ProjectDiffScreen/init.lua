@@ -81,11 +81,13 @@ function ProjectDiffScreen:constructor(opts)
 end
 
 function ProjectDiffScreen:hunk_up()
-  self.diff_view:prev()
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+  self.diff_view:prev(hunk_alignment)
 end
 
 function ProjectDiffScreen:hunk_down()
-  self.diff_view:next()
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+  self.diff_view:next(hunk_alignment)
 end
 
 function ProjectDiffScreen:move_to(query_fn)
@@ -327,17 +329,19 @@ function ProjectDiffScreen:render(on_status_list_render)
   local list_item = self.status_list_view:get_current_list_item()
   self.model:set_entry_id(list_item.id)
 
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
   self.diff_view:render()
-  self.diff_view:move_to_hunk()
+  self.diff_view:move_to_hunk(nil, hunk_alignment)
 end
 
 function ProjectDiffScreen:handle_list_move()
   local list_item = self.status_list_view:move()
   if not list_item then return end
 
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
   self.model:set_entry_id(list_item.id)
   self.diff_view:render()
-  self.diff_view:move_to_hunk()
+  self.diff_view:move_to_hunk(nil, hunk_alignment)
 end
 
 function ProjectDiffScreen:focus_relative_buffer_entry(buffer)
@@ -364,8 +368,9 @@ function ProjectDiffScreen:toggle_focus()
   local diff_component = self.scene:get('current')
 
   if list_component:is_focused() then
+    local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
     diff_component:focus()
-    self.diff_view:move_to_hunk(1, 'center')
+    self.diff_view:move_to_hunk(1, hunk_alignment)
   else
     list_component:focus()
   end
