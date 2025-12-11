@@ -359,6 +359,18 @@ function ProjectDiffScreen:focus_relative_buffer_entry(buffer)
   end)
 end
 
+function ProjectDiffScreen:toggle_focus()
+  local list_component = self.scene:get('list')
+  local diff_component = self.scene:get('current')
+
+  if list_component:is_focused() then
+    diff_component:focus()
+    self.diff_view:move_to_hunk(1, 'center')
+  else
+    list_component:focus()
+  end
+end
+
 function ProjectDiffScreen:setup_list_keymaps()
   local keymaps = project_diff_preview_setting:get('keymaps')
 
@@ -411,6 +423,13 @@ function ProjectDiffScreen:setup_list_keymaps()
       handler = loop.coroutine(function()
         self:reset_all()
       end),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.toggle_focus,
+      handler = function()
+        self:toggle_focus()
+      end,
     },
   })
 end
@@ -499,6 +518,13 @@ function ProjectDiffScreen:setup_diff_keymaps()
       mode = 'n',
       mapping = keymaps.commit,
       handler = handlers.commit,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.toggle_focus,
+      handler = function()
+        self:toggle_focus()
+      end,
     },
     {
       mode = 'n',

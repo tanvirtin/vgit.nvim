@@ -38,5 +38,9 @@ return Config({
       key = 'R',
       desc = 'Reset all'
     },
+    toggle_focus = {
+      key = '<Tab>',
+      desc = 'Switch focus between file list and diff preview'
+    },
   },
 })
