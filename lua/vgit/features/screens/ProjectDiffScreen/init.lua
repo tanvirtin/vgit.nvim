@@ -156,12 +156,27 @@ function ProjectDiffScreen:unstage_hunk()
   self:render(function()
     local has_staged = false
     self.status_list_view:each_status(function(status, entry_type)
-      if entry_type == 'staged' and status.filename == entry.status.filename then has_staged = true end
+      if entry_type == 'staged' and status.filename == filename then
+        has_staged = true
+      end
     end)
-    self:move_to(function(status, entry_type)
-      if has_staged and entry_type == 'unstaged' then return false end
-      return status.filename == entry.status.filename
-    end)
+
+    if has_staged then
+      -- Stay on the staged entry for this file
+      self:move_to(function(status, entry_type)
+        return status.filename == filename and entry_type == 'staged'
+      end)
+    else
+      -- File fully unstaged - jump to next staged file, else this file's unstaged
+      local found = self:move_to(function(_, entry_type)
+        return entry_type == 'staged'
+      end)
+      if not found then
+        self:move_to(function(status)
+          return status.filename == filename
+        end)
+      end
+    end
   end)
 end
 
