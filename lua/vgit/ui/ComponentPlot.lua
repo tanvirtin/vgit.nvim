@@ -43,7 +43,9 @@ function ComponentPlot:configure_bounds()
 
       if has_footer then win_plot.row = win_plot.row - footer_element_height end
     else
-      local height = win_plot.height - win_plot.row
+      -- Calculate height to fill from current row to bottom of screen
+      -- The +1 compensates for the off-by-one when row > 0
+      local height = win_plot.height - win_plot.row + 1
 
       if height > 0 then win_plot.height = height end
     end
