@@ -112,37 +112,33 @@ function Model:get_filetype()
   return self.git_file:get_filetype()
 end
 
-function Model:stage_hunk(filename, hunk)
-  local git_file = GitFile(filename)
-  if not git_file:is_tracked() then return git_file:stage() end
+function Model:stage_hunk(hunk)
+  if not self.git_file:is_tracked() then return self.git_file:stage() end
 
-  return git_file:stage_hunk(hunk)
+  return self.git_file:stage_hunk(hunk)
 end
 
-function Model:unstage_hunk(filename, hunk)
-  local git_file = GitFile(filename)
-  if not git_file:is_tracked() then return git_file:unstage() end
+function Model:unstage_hunk(hunk)
+  if not self.git_file:is_tracked() then return self.git_file:unstage() end
 
-  return git_file:unstage_hunk(hunk)
+  return self.git_file:unstage_hunk(hunk)
 end
 
-function Model:reset_hunk(filename, hunk)
-  local git_file = GitFile(filename)
-  return git_file:reset_hunk(hunk)
+function Model:reset_hunk(hunk)
+  return self.git_file:reset_hunk(hunk)
 end
 
-function Model:stage_file(filename)
-  local reponame = git_repo.discover()
-  return git_stager.stage(reponame, filename)
+function Model:stage_file()
+  return self.git_file:stage()
 end
 
-function Model:unstage_file(filename)
-  local reponame = git_repo.discover()
-  return git_stager.unstage(reponame, filename)
+function Model:unstage_file()
+  return self.git_file:unstage()
 end
 
-function Model:reset_file(filename)
-  local reponame = git_repo.discover()
+function Model:reset_file()
+  local reponame = self.git_file.reponame
+  local filename = self.git_file.filename
   if git_repo.has(reponame, filename) then return git_repo.reset(reponame, filename) end
 
   return git_repo.clean(reponame, filename)
