@@ -58,7 +58,9 @@ function ProjectDiffScreen:constructor(opts)
         return model:get_diff()
       end,
     }, {
-      row = 1,
+      -- Account for tabline: when showtabline > 0, tabline takes row 0,
+      -- pushing content down by 1
+      row = vim.o.showtabline > 0 and 2 or 1,
       col = '25vw',
       width = '75vw',
     }, {
@@ -72,7 +74,9 @@ function ProjectDiffScreen:constructor(opts)
         return model:get_entries()
       end,
     }, {
-      row = 1,
+      -- Account for tabline: when showtabline > 0, tabline takes row 0,
+      -- pushing content down by 1
+      row = vim.o.showtabline > 0 and 2 or 1,
       width = '25vw',
     }, {
       elements = {
