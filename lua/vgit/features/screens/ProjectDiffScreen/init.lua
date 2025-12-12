@@ -817,6 +817,31 @@ function ProjectDiffScreen:create()
   return true
 end
 
+-- Called when quit key is pressed. Returns true if quit was handled.
+function ProjectDiffScreen:on_quit()
+  local diff_component = self.scene:get('current')
+  if not diff_component:is_focused() then
+    return false
+  end
+
+  local filepath = self.model:get_filepath()
+  if not filepath then
+    return false
+  end
+
+  local file_lnum = self.diff_view:get_file_lnum()
+  loop.free_textlock()
+
+  self:destroy()
+  fs.open(filepath)
+
+  if file_lnum then
+    Window(0):set_lnum(file_lnum):position_cursor('center')
+  end
+
+  return true
+end
+
 function ProjectDiffScreen:destroy()
   -- Clean up timer handles from debounced keymap handlers
   loop.close_debounced_handlers(self.diff_keymaps)
