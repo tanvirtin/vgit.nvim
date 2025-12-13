@@ -2,8 +2,9 @@ local fs = require('vgit.core.fs')
 local utils = require('vgit.core.utils')
 local gitcli = require('vgit.git.gitcli')
 local GitHunk = require('vgit.git.GitHunk')
+local git_setting = require('vgit.settings.git')
 
-local git_hunks = { algorithm = 'myers' }
+local git_hunks = {}
 
 function git_hunks.live(reponame, original_lines, current_lines)
   local lines_limit = 5000
@@ -36,6 +37,7 @@ function git_hunks.live(reponame, original_lines, current_lines)
   end
 
   local live_hunks = {}
+  local algorithm = git_setting:get('algorithm')
 
   vim.diff(o_lines_str, c_lines_str, {
     on_hunk = function(start_o, count_o, start_c, count_c)
@@ -57,7 +59,7 @@ function git_hunks.live(reponame, original_lines, current_lines)
 
       live_hunks[#live_hunks + 1] = hunk
     end,
-    algorithm = git_hunks.algorithm,
+    algorithm = algorithm,
   })
 
   return live_hunks
@@ -105,6 +107,7 @@ function git_hunks.list(reponame, opts)
   local filenames = opts.filenames
   if filenames and #filenames ~= 2 then error('incorrect number of files provided') end
 
+  local algorithm = git_setting:get('algorithm')
   local args = {
     '-C',
     reponame,
@@ -113,7 +116,7 @@ function git_hunks.list(reponame, opts)
     'core.safecrlf=false',
     'diff',
     '--color=never',
-    string.format('--diff-algorithm=%s', git_hunks.algorithm),
+    string.format('--diff-algorithm=%s', algorithm),
     '--patch-with-raw',
     '--unified=0',
   }
