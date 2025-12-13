@@ -43,7 +43,7 @@ function HeaderElement:mount(opts)
     style = 'minimal',
     focusable = false,
     relative = 'editor',
-    row = opts.row - HeaderElement:get_height(),
+    row = opts.row,
     col = opts.col,
     width = opts.width,
     height = 1,

@@ -34,6 +34,9 @@ function ProjectDiffScreen:constructor(opts)
           { 'Reset',        keymaps['buffer_reset'] },
           { 'Stage hunk',   keymaps['buffer_hunk_stage'] },
           { 'Unstage hunk', keymaps['buffer_hunk_unstage'] },
+          { 'Reset hunk',   keymaps['buffer_hunk_reset'] },
+          { 'Next',         keymaps['next'] },
+          { 'Previous',     keymaps['previous'] },
           { 'Stage all',    keymaps['stage_all'] },
           { 'Unstage all',  keymaps['unstage_all'] },
           { 'Reset all',    keymaps['reset_all'] },
@@ -55,7 +58,9 @@ function ProjectDiffScreen:constructor(opts)
         return model:get_diff()
       end,
     }, {
-      row = 1,
+      -- Account for tabline: when showtabline > 0, tabline takes row 0,
+      -- pushing content down by 1
+      row = vim.o.showtabline > 0 and 2 or 1,
       col = '25vw',
       width = '75vw',
     }, {
@@ -69,7 +74,9 @@ function ProjectDiffScreen:constructor(opts)
         return model:get_entries()
       end,
     }, {
-      row = 1,
+      -- Account for tabline: when showtabline > 0, tabline takes row 0,
+      -- pushing content down by 1
+      row = vim.o.showtabline > 0 and 2 or 1,
       width = '25vw',
     }, {
       elements = {
@@ -78,14 +85,6 @@ function ProjectDiffScreen:constructor(opts)
       },
     }),
   }
-end
-
-function ProjectDiffScreen:hunk_up()
-  self.diff_view:prev()
-end
-
-function ProjectDiffScreen:hunk_down()
-  self.diff_view:next()
 end
 
 function ProjectDiffScreen:move_to(query_fn)
@@ -111,12 +110,27 @@ function ProjectDiffScreen:stage_hunk()
   self:render(function()
     local has_unstaged = false
     self.status_list_view:each_status(function(status, entry_type)
-      if entry_type == 'unstaged' and status.filename == entry.status.filename then has_unstaged = true end
+      if entry_type == 'unstaged' and status.filename == filename then
+        has_unstaged = true
+      end
     end)
-    self:move_to(function(status, entry_type)
-      if has_unstaged and entry_type == 'staged' then return false end
-      return status.filename == entry.status.filename
-    end)
+
+    if has_unstaged then
+      -- Stay on the unstaged entry for this file
+      self:move_to(function(status, entry_type)
+        return status.filename == filename and entry_type == 'unstaged'
+      end)
+    else
+      -- File fully staged - jump to next unstaged file, else this file's staged
+      local found = self:move_to(function(_, entry_type)
+        return entry_type == 'unstaged'
+      end)
+      if not found then
+        self:move_to(function(status)
+          return status.filename == filename
+        end)
+      end
+    end
   end)
 end
 
@@ -139,12 +153,74 @@ function ProjectDiffScreen:unstage_hunk()
   self:render(function()
     local has_staged = false
     self.status_list_view:each_status(function(status, entry_type)
-      if entry_type == 'staged' and status.filename == entry.status.filename then has_staged = true end
+      if entry_type == 'staged' and status.filename == filename then
+        has_staged = true
+      end
     end)
-    self:move_to(function(status, entry_type)
-      if has_staged and entry_type == 'unstaged' then return false end
-      return status.filename == entry.status.filename
+
+    if has_staged then
+      -- Stay on the staged entry for this file
+      self:move_to(function(status, entry_type)
+        return status.filename == filename and entry_type == 'staged'
+      end)
+    else
+      -- File fully unstaged - jump to next staged file, else this file's unstaged
+      local found = self:move_to(function(_, entry_type)
+        return entry_type == 'staged'
+      end)
+      if not found then
+        self:move_to(function(status)
+          return status.filename == filename
+        end)
+      end
+    end
+  end)
+end
+
+function ProjectDiffScreen:reset_hunk()
+  local entry = self.model:get_entry()
+  if not entry then return end
+  if entry.type ~= 'unstaged' then return end
+
+  loop.free_textlock()
+  local hunk = self.diff_view:get_hunk_under_cursor()
+  if not hunk then return end
+
+  local filename = entry.status.filename
+  loop.free_textlock()
+  local decision = console.input('Are you sure you want to discard this hunk? (y/N) '):lower()
+  if decision ~= 'yes' and decision ~= 'y' then return end
+
+  loop.free_textlock()
+  local _, err = self.model:reset_hunk(filename, hunk)
+  if err then
+    console.debug.error(err)
+    return
+  end
+
+  self:render(function()
+    -- Stay on this file if it still has unstaged hunks, else jump to next
+    local has_unstaged = false
+    self.status_list_view:each_status(function(status, entry_type)
+      if entry_type == 'unstaged' and status.filename == filename then
+        has_unstaged = true
+      end
     end)
+
+    if has_unstaged then
+      self:move_to(function(status, entry_type)
+        return status.filename == filename and entry_type == 'unstaged'
+      end)
+    else
+      local found = self:move_to(function(_, entry_type)
+        return entry_type == 'unstaged'
+      end)
+      if not found then
+        self:move_to(function(status)
+          return status.filename == filename
+        end)
+      end
+    end
   end)
 end
 
@@ -327,36 +403,164 @@ function ProjectDiffScreen:render(on_status_list_render)
   local list_item = self.status_list_view:get_current_list_item()
   self.model:set_entry_id(list_item.id)
 
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
   self.diff_view:render()
-  self.diff_view:move_to_hunk()
+  self.diff_view:move_to_hunk(nil, hunk_alignment)
 end
 
 function ProjectDiffScreen:handle_list_move()
   local list_item = self.status_list_view:move()
   if not list_item then return end
 
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
   self.model:set_entry_id(list_item.id)
   self.diff_view:render()
-  self.diff_view:move_to_hunk()
+  self.diff_view:move_to_hunk(nil, hunk_alignment)
+end
+
+function ProjectDiffScreen:get_current_mark_index()
+  loop.free_textlock()
+  local diff = self.model:get_diff()
+  if not diff or not diff.marks or #diff.marks == 0 then
+    return nil, 0
+  end
+
+  local marks = diff.marks
+  local lnum = self.diff_view.scene:get('current'):get_lnum()
+
+  for i, mark in ipairs(marks) do
+    if lnum >= mark.top and lnum <= mark.bot then
+      return i, #marks
+    elseif mark.top > lnum then
+      return math.max(1, i - 1), #marks
+    end
+  end
+
+  return #marks, #marks
+end
+
+function ProjectDiffScreen:move_to_next_file()
+  loop.free_textlock()
+  local component = self.status_list_view.scene:get('list')
+  local current_lnum = component:get_lnum()
+  local count = component:get_line_count()
+
+  -- Find next file entry (skip folders)
+  for offset = 1, count do
+    local target_lnum = current_lnum + offset
+    if target_lnum > count then target_lnum = target_lnum - count end
+
+    local item = self.status_list_view:get_list_item(target_lnum)
+    if item and item.entry and item.entry.status then
+      component:unlock():set_lnum(target_lnum):lock()
+      return item
+    end
+  end
+  return nil
+end
+
+function ProjectDiffScreen:move_to_prev_file()
+  loop.free_textlock()
+  local component = self.status_list_view.scene:get('list')
+  local current_lnum = component:get_lnum()
+  local count = component:get_line_count()
+
+  -- Find previous file entry (skip folders)
+  for offset = 1, count do
+    local target_lnum = current_lnum - offset
+    if target_lnum < 1 then target_lnum = target_lnum + count end
+
+    local item = self.status_list_view:get_list_item(target_lnum)
+    if item and item.entry and item.entry.status then
+      component:unlock():set_lnum(target_lnum):lock()
+      return item
+    end
+  end
+  return nil
+end
+
+function ProjectDiffScreen:next_hunk()
+  local current_index, total_hunks = self:get_current_mark_index()
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+
+  if not current_index or total_hunks == 0 or current_index >= total_hunks then
+    -- At last hunk or no hunks - move to next file
+    local list_item = self:move_to_next_file()
+    if not list_item then return end
+    self.model:set_entry_id(list_item.id)
+    self.diff_view:render()
+    self.diff_view:move_to_hunk(1, hunk_alignment)
+  else
+    self.diff_view:next(hunk_alignment)
+  end
+end
+
+function ProjectDiffScreen:prev_hunk()
+  local current_index, total_hunks = self:get_current_mark_index()
+  local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+
+  if not current_index or total_hunks == 0 or current_index <= 1 then
+    -- At first hunk or no hunks - move to previous file's last hunk
+    local list_item = self:move_to_prev_file()
+    if not list_item then return end
+    self.model:set_entry_id(list_item.id)
+    self.diff_view:render()
+    -- Pass 0 to go to last hunk (move_to_hunk clamps <1 to #marks)
+    self.diff_view:move_to_hunk(0, hunk_alignment)
+  else
+    self.diff_view:prev(hunk_alignment)
+  end
 end
 
 function ProjectDiffScreen:focus_relative_buffer_entry(buffer)
   local filename = buffer:get_relative_name()
-  if filename == '' then
+  local last_entry_type = vim.b[buffer.bufnr].vgit_last_entry_type
+
+  -- Try to find current buffer's file
+  if filename ~= '' then
+    -- If we have a hint from last quit, prefer that entry type
+    if last_entry_type then
+      local list_item = self:move_to(function(status, entry_type)
+        return status.filename == filename and entry_type == last_entry_type
+      end)
+      if list_item then return end
+    end
+
+    -- Otherwise prefer unstaged
+    local list_item = self:move_to(function(status, entry_type)
+      return status.filename == filename and entry_type == 'unstaged'
+    end)
+    if list_item then return end
+
+    -- Fall back to any entry for this file
+    list_item = self:move_to(function(status)
+      return status.filename == filename
+    end)
+    if list_item then return end
+  end
+
+  -- Fallback: prefer unstaged entries, then any entry
+  local found = self:move_to(function(_, entry_type)
+    return entry_type == 'unstaged'
+  end)
+  if not found then
     self:move_to(function()
       return true
     end)
-    return
   end
+end
 
-  local list_item = self:move_to(function(status)
-    return status.filename == filename
-  end)
-  if list_item then return end
+function ProjectDiffScreen:toggle_focus()
+  local list_component = self.scene:get('list')
+  local diff_component = self.scene:get('current')
 
-  self:move_to(function()
-    return true
-  end)
+  if list_component:is_focused() then
+    local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+    diff_component:focus()
+    self.diff_view:move_to_hunk(1, hunk_alignment)
+  else
+    list_component:focus()
+  end
 end
 
 function ProjectDiffScreen:setup_list_keymaps()
@@ -412,6 +616,37 @@ function ProjectDiffScreen:setup_list_keymaps()
         self:reset_all()
       end),
     },
+    {
+      mode = 'n',
+      mapping = keymaps.toggle_focus,
+      handler = function()
+        self:toggle_focus()
+      end,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.next,
+      handler = loop.debounce_coroutine(function()
+        local list_item = self:move_to_next_file()
+        if not list_item then return end
+        self.model:set_entry_id(list_item.id)
+        local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+        self.diff_view:render()
+        self.diff_view:move_to_hunk(1, hunk_alignment)
+      end, 15),
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.previous,
+      handler = loop.debounce_coroutine(function()
+        local list_item = self:move_to_prev_file()
+        if not list_item then return end
+        self.model:set_entry_id(list_item.id)
+        local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+        self.diff_view:render()
+        self.diff_view:move_to_hunk(0, hunk_alignment)
+      end, 15),
+    },
   })
 end
 
@@ -425,6 +660,9 @@ function ProjectDiffScreen:setup_diff_keymaps()
     end, 15),
     hunk_unstage = loop.debounce_coroutine(function()
       self:unstage_hunk()
+    end, 15),
+    hunk_reset = loop.debounce_coroutine(function()
+      self:reset_hunk()
     end, 15),
     reset = loop.debounce_coroutine(function()
       self:reset_file()
@@ -450,6 +688,12 @@ function ProjectDiffScreen:setup_diff_keymaps()
     enter = loop.coroutine(function()
       self:enter_view()
     end),
+    next_hunk = loop.debounce_coroutine(function()
+      self:next_hunk()
+    end, 15),
+    prev_hunk = loop.debounce_coroutine(function()
+      self:prev_hunk()
+    end, 15),
   }
 
   self.diff_keymaps = handlers
@@ -464,6 +708,11 @@ function ProjectDiffScreen:setup_diff_keymaps()
       mode = 'n',
       mapping = keymaps.buffer_hunk_unstage,
       handler = handlers.hunk_unstage,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.buffer_hunk_reset,
+      handler = handlers.hunk_reset,
     },
     {
       mode = 'n',
@@ -499,6 +748,23 @@ function ProjectDiffScreen:setup_diff_keymaps()
       mode = 'n',
       mapping = keymaps.commit,
       handler = handlers.commit,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.toggle_focus,
+      handler = function()
+        self:toggle_focus()
+      end,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.next,
+      handler = handlers.next_hunk,
+    },
+    {
+      mode = 'n',
+      mapping = keymaps.previous,
+      handler = handlers.prev_hunk,
     },
     {
       mode = 'n',
@@ -559,6 +825,39 @@ function ProjectDiffScreen:create()
 
   self:setup_keymaps()
   self:focus_relative_buffer_entry(buffer)
+  self:handle_list_move()
+  self:toggle_focus()
+
+  return true
+end
+
+-- Called when quit key is pressed. Returns true if quit was handled.
+function ProjectDiffScreen:on_quit()
+  local diff_component = self.scene:get('current')
+  if not diff_component:is_focused() then
+    return false
+  end
+
+  local filepath = self.model:get_filepath()
+  if not filepath then
+    return false
+  end
+
+  local entry = self.model:get_entry()
+  local file_lnum = self.diff_view:get_file_lnum()
+  loop.free_textlock()
+
+  self:destroy()
+  fs.open(filepath)
+
+  -- Store entry type so re-opening returns to same entry
+  if entry then
+    vim.b.vgit_last_entry_type = entry.type
+  end
+
+  if file_lnum then
+    Window(0):set_lnum(file_lnum):position_cursor('center')
+  end
 
   return true
 end
