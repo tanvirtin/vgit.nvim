@@ -510,15 +510,25 @@ end
 
 function ProjectDiffScreen:focus_relative_buffer_entry(buffer)
   local filename = buffer:get_relative_name()
+  local last_entry_type = vim.b[buffer.bufnr].vgit_last_entry_type
 
-  -- Try to find current buffer's file, preferring unstaged
+  -- Try to find current buffer's file
   if filename ~= '' then
+    -- If we have a hint from last quit, prefer that entry type
+    if last_entry_type then
+      local list_item = self:move_to(function(status, entry_type)
+        return status.filename == filename and entry_type == last_entry_type
+      end)
+      if list_item then return end
+    end
+
+    -- Otherwise prefer unstaged
     local list_item = self:move_to(function(status, entry_type)
       return status.filename == filename and entry_type == 'unstaged'
     end)
     if list_item then return end
 
-    -- Fall back to staged entry for this file
+    -- Fall back to any entry for this file
     list_item = self:move_to(function(status)
       return status.filename == filename
     end)
@@ -829,11 +839,17 @@ function ProjectDiffScreen:on_quit()
     return false
   end
 
+  local entry = self.model:get_entry()
   local file_lnum = self.diff_view:get_file_lnum()
   loop.free_textlock()
 
   self:destroy()
   fs.open(filepath)
+
+  -- Store entry type so re-opening returns to same entry
+  if entry then
+    vim.b.vgit_last_entry_type = entry.type
+  end
 
   if file_lnum then
     Window(0):set_lnum(file_lnum):position_cursor('center')
