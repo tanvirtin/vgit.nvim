@@ -143,7 +143,7 @@ function DiffScreen:reset(buffer)
   git_buffer_store.suppress_sync_and_refresh(buffer, 200)
 
   loop.free_textlock()
-  self.model:reset_file(filename)
+  self.model:reset_file()
 
   loop.free_textlock()
   local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
@@ -193,7 +193,7 @@ function DiffScreen:stage_hunk(buffer)
   local git_buffer_store = require('vgit.git.git_buffer_store')
   git_buffer_store.suppress_sync_and_refresh(buffer, 200)
 
-  self.model:stage_hunk(filename, hunk)
+  self.model:stage_hunk(hunk)
 
   loop.free_textlock()
   local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
@@ -225,7 +225,7 @@ function DiffScreen:unstage_hunk(buffer)
   git_buffer_store.suppress_sync_and_refresh(buffer, 200)
 
   loop.free_textlock()
-  self.model:unstage_hunk(filename, hunk)
+  self.model:unstage_hunk(hunk)
 
   loop.free_textlock()
   local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
@@ -264,7 +264,7 @@ function DiffScreen:reset_hunk(buffer)
   git_buffer_store.suppress_sync_and_refresh(buffer, 200)
 
   loop.free_textlock()
-  self.model:reset_hunk(filename, hunk)
+  self.model:reset_hunk(hunk)
 
   loop.free_textlock()
   local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
@@ -292,7 +292,7 @@ function DiffScreen:stage(buffer)
   git_buffer_store.suppress_sync_and_refresh(buffer, 200)
 
   loop.free_textlock()
-  self.model:stage_file(filename)
+  self.model:stage_file()
 
   loop.free_textlock()
   local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
@@ -317,7 +317,7 @@ function DiffScreen:unstage(buffer)
   git_buffer_store.suppress_sync_and_refresh(buffer, 200)
 
   loop.free_textlock()
-  self.model:unstage_file(filename)
+  self.model:unstage_file()
 
   loop.free_textlock()
   local _, refetch_err = self.model:refresh_hunks(buffer:get_name())
