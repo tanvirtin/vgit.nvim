@@ -219,7 +219,9 @@ function Model:get_diff()
 end
 
 function Model:stage_hunk(filename, hunk)
-  local git_file = GitFile(filename)
+  -- Use absolute path to avoid issues when cwd differs from repo root
+  local filepath = self.state.reponame .. '/' .. filename
+  local git_file = GitFile(filepath)
   if not git_file:is_tracked() then return git_file:stage() end
 
   local file, err = git_file:status()
@@ -230,45 +232,43 @@ function Model:stage_hunk(filename, hunk)
 end
 
 function Model:unstage_hunk(filename, hunk)
-  local git_file = GitFile(filename)
+  -- Use absolute path to avoid issues when cwd differs from repo root
+  local filepath = self.state.reponame .. '/' .. filename
+  local git_file = GitFile(filepath)
   if not git_file:is_tracked() then return git_file:unstage() end
 
   local file, err = git_file:status()
   if err then return nil, err end
 
-  if file:has('D ') or file:has(' D') then return git_file:unstage(filename) end
+  if file:has('D ') or file:has(' D') then return git_file:unstage() end
   return git_file:unstage_hunk(hunk)
 end
 
 function Model:stage_file(filename)
-  local reponame = git_repo.discover()
-  return git_stager.stage(reponame, filename)
+  return git_stager.stage(self.state.reponame, filename)
 end
 
 function Model:unstage_file(filename)
-  local reponame = git_repo.discover()
-  return git_stager.unstage(reponame, filename)
+  return git_stager.unstage(self.state.reponame, filename)
 end
 
 function Model:reset_file(filename)
-  local reponame = git_repo.discover()
+  local reponame = self.state.reponame
   if git_repo.has(reponame, filename) then return git_repo.reset(reponame, filename) end
 
   return git_repo.clean(reponame, filename)
 end
 
 function Model:stage_all()
-  local reponame = git_repo.discover()
-  return git_stager.stage(reponame)
+  return git_stager.stage(self.state.reponame)
 end
 
 function Model:unstage_all()
-  local reponame = git_repo.discover()
-  return git_stager.unstage(reponame)
+  return git_stager.unstage(self.state.reponame)
 end
 
 function Model:reset_all()
-  local reponame = git_repo.discover()
+  local reponame = self.state.reponame
   local _, reset_err = git_repo.reset(reponame)
   if reset_err then return nil, reset_err end
 
