@@ -2,8 +2,9 @@ local fs = require('vgit.core.fs')
 local utils = require('vgit.core.utils')
 local gitcli = require('vgit.git.gitcli')
 local GitHunk = require('vgit.git.GitHunk')
+local git_setting = require('vgit.settings.git')
 
-local git_hunks = { algorithm = 'myers' }
+local git_hunks = {}
 
 function git_hunks.live(reponame, original_lines, current_lines)
   local lines_limit = 5000
@@ -57,7 +58,7 @@ function git_hunks.live(reponame, original_lines, current_lines)
 
       live_hunks[#live_hunks + 1] = hunk
     end,
-    algorithm = git_hunks.algorithm,
+    algorithm = git_setting:get('algorithm'),
   })
 
   return live_hunks
@@ -113,7 +114,7 @@ function git_hunks.list(reponame, opts)
     'core.safecrlf=false',
     'diff',
     '--color=never',
-    string.format('--diff-algorithm=%s', git_hunks.algorithm),
+    string.format('--diff-algorithm=%s', git_setting:get('algorithm')),
     '--patch-with-raw',
     '--unified=0',
   }
