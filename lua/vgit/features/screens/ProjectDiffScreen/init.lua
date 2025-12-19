@@ -93,7 +93,7 @@ function ProjectDiffScreen:stage_hunk()
   if entry.type ~= 'unstaged' then return end
 
   loop.free_textlock()
-  local hunk = self.diff_view:get_hunk_under_cursor()
+  local hunk, hunk_index = self.diff_view:get_hunk_under_cursor()
   if not hunk then return end
 
   local filename = entry.status.filename
@@ -128,6 +128,19 @@ function ProjectDiffScreen:stage_hunk()
       end
     end
   end)
+
+  -- If still on the same file, stay at same hunk index position
+  local new_entry = self.model:get_entry()
+  if new_entry
+      and new_entry.type == 'unstaged'
+      and new_entry.status.filename == filename then
+    local diff = self.model:get_diff()
+    if diff and diff.marks and #diff.marks > 0 then
+      local target = math.min(hunk_index, #diff.marks)
+      local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+      self.diff_view:move_to_hunk(target, hunk_alignment)
+    end
+  end
 end
 
 function ProjectDiffScreen:unstage_hunk()
@@ -136,7 +149,7 @@ function ProjectDiffScreen:unstage_hunk()
   if entry.type ~= 'staged' then return end
 
   loop.free_textlock()
-  local hunk = self.diff_view:get_hunk_under_cursor()
+  local hunk, hunk_index = self.diff_view:get_hunk_under_cursor()
   if not hunk then return end
 
   local filename = entry.status.filename
@@ -171,6 +184,19 @@ function ProjectDiffScreen:unstage_hunk()
       end
     end
   end)
+
+  -- If still on the same file, stay at same hunk index position
+  local new_entry = self.model:get_entry()
+  if new_entry
+      and new_entry.type == 'staged'
+      and new_entry.status.filename == filename then
+    local diff = self.model:get_diff()
+    if diff and diff.marks and #diff.marks > 0 then
+      local target = math.min(hunk_index, #diff.marks)
+      local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+      self.diff_view:move_to_hunk(target, hunk_alignment)
+    end
+  end
 end
 
 function ProjectDiffScreen:reset_hunk()
@@ -179,7 +205,7 @@ function ProjectDiffScreen:reset_hunk()
   if entry.type ~= 'unstaged' then return end
 
   loop.free_textlock()
-  local hunk = self.diff_view:get_hunk_under_cursor()
+  local hunk, hunk_index = self.diff_view:get_hunk_under_cursor()
   if not hunk then return end
 
   local filename = entry.status.filename
@@ -218,6 +244,19 @@ function ProjectDiffScreen:reset_hunk()
       end
     end
   end)
+
+  -- If still on the same file, stay at same hunk index position
+  local new_entry = self.model:get_entry()
+  if new_entry
+      and new_entry.type == 'unstaged'
+      and new_entry.status.filename == filename then
+    local diff = self.model:get_diff()
+    if diff and diff.marks and #diff.marks > 0 then
+      local target = math.min(hunk_index, #diff.marks)
+      local hunk_alignment = project_diff_preview_setting:get('hunk_alignment')
+      self.diff_view:move_to_hunk(target, hunk_alignment)
+    end
+  end
 end
 
 function ProjectDiffScreen:stage_file()
@@ -227,6 +266,21 @@ function ProjectDiffScreen:stage_file()
 
   loop.free_textlock()
   local filename = entry.status.filename
+
+  -- Find the next unstaged file after this one (before staging)
+  local next_unstaged_filename = nil
+  local found_current = false
+  self.status_list_view:each_status(function(status, entry_type)
+    if entry_type == 'unstaged' or entry_type == 'unmerged' then
+      if found_current and not next_unstaged_filename then
+        next_unstaged_filename = status.filename
+      end
+      if status.filename == filename then
+        found_current = true
+      end
+    end
+  end)
+
   local _, err = self.model:stage_file(filename)
   if err then
     console.debug.error(err)
@@ -234,17 +288,23 @@ function ProjectDiffScreen:stage_file()
   end
 
   self:render(function()
-    local has_unstaged = false
-    self.status_list_view:each_status(function(status)
-      if status:is_staged() then
-        has_unstaged = true
+    if next_unstaged_filename then
+      -- Go to the next unstaged file
+      self:move_to(function(status, entry_type)
+        return status.filename == next_unstaged_filename
+            and (entry_type == 'unstaged' or entry_type == 'unmerged')
+      end)
+    else
+      -- No next unstaged file - try first unstaged, then staged version
+      local found = self:move_to(function(_, entry_type)
+        return entry_type == 'unstaged' or entry_type == 'unmerged'
+      end)
+      if not found then
+        self:move_to(function(status)
+          return status.filename == filename
+        end)
       end
-    end)
-
-    self:move_to(function(status)
-      if has_unstaged then return status:is_unstaged() == true end
-      return status.filename == entry.status.filename
-    end)
+    end
   end)
 end
 
@@ -255,6 +315,21 @@ function ProjectDiffScreen:unstage_file()
 
   loop.free_textlock()
   local filename = entry.status.filename
+
+  -- Find the next staged file after this one (before unstaging)
+  local next_staged_filename = nil
+  local found_current = false
+  self.status_list_view:each_status(function(status, entry_type)
+    if entry_type == 'staged' then
+      if found_current and not next_staged_filename then
+        next_staged_filename = status.filename
+      end
+      if status.filename == filename then
+        found_current = true
+      end
+    end
+  end)
+
   local _, err = self.model:unstage_file(filename)
   if err then
     console.debug.error(err)
@@ -262,17 +337,22 @@ function ProjectDiffScreen:unstage_file()
   end
 
   self:render(function()
-    local has_staged = false
-    self.status_list_view:each_status(function(status)
-      if status:is_staged() then
-        has_staged = true
+    if next_staged_filename then
+      -- Go to the next staged file
+      self:move_to(function(status, entry_type)
+        return status.filename == next_staged_filename and entry_type == 'staged'
+      end)
+    else
+      -- No next staged file - try first staged, then unstaged version
+      local found = self:move_to(function(_, entry_type)
+        return entry_type == 'staged'
+      end)
+      if not found then
+        self:move_to(function(status)
+          return status.filename == filename
+        end)
       end
-    end)
-
-    self:move_to(function(status)
-      if has_staged then return status:is_staged() == true end
-      return status.filename == entry.status.filename
-    end)
+    end
   end)
 end
 
