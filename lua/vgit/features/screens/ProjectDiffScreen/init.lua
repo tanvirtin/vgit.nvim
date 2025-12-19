@@ -87,6 +87,23 @@ function ProjectDiffScreen:move_to(query_fn)
   return self.status_list_view:move_to(query_fn)
 end
 
+-- Find the next file of given entry_type after current filename
+function ProjectDiffScreen:find_next_file(filename, target_entry_type)
+  local next_filename = nil
+  local found_current = false
+  self.status_list_view:each_status(function(status, entry_type)
+    if entry_type == target_entry_type then
+      if found_current and not next_filename then
+        next_filename = status.filename
+      end
+      if status.filename == filename then
+        found_current = true
+      end
+    end
+  end)
+  return next_filename
+end
+
 function ProjectDiffScreen:stage_hunk()
   local entry = self.model:get_entry()
   if not entry then return end
@@ -97,6 +114,8 @@ function ProjectDiffScreen:stage_hunk()
   if not hunk then return end
 
   local filename = entry.status.filename
+  local next_file = self:find_next_file(filename, 'unstaged')
+
   local _, err = self.model:stage_hunk(filename, hunk)
   if err then
     console.debug.error(err)
@@ -112,12 +131,14 @@ function ProjectDiffScreen:stage_hunk()
     end)
 
     if has_unstaged then
-      -- Stay on the unstaged entry for this file
       self:move_to(function(status, entry_type)
         return status.filename == filename and entry_type == 'unstaged'
       end)
+    elseif next_file then
+      self:move_to(function(status, entry_type)
+        return status.filename == next_file and entry_type == 'unstaged'
+      end)
     else
-      -- File fully staged - jump to next unstaged file, else this file's staged
       local found = self:move_to(function(_, entry_type)
         return entry_type == 'unstaged'
       end)
@@ -153,6 +174,8 @@ function ProjectDiffScreen:unstage_hunk()
   if not hunk then return end
 
   local filename = entry.status.filename
+  local next_file = self:find_next_file(filename, 'staged')
+
   local _, err = self.model:unstage_hunk(filename, hunk)
   if err then
     console.debug.error(err)
@@ -168,12 +191,14 @@ function ProjectDiffScreen:unstage_hunk()
     end)
 
     if has_staged then
-      -- Stay on the staged entry for this file
       self:move_to(function(status, entry_type)
         return status.filename == filename and entry_type == 'staged'
       end)
+    elseif next_file then
+      self:move_to(function(status, entry_type)
+        return status.filename == next_file and entry_type == 'staged'
+      end)
     else
-      -- File fully unstaged - jump to next staged file, else this file's unstaged
       local found = self:move_to(function(_, entry_type)
         return entry_type == 'staged'
       end)
@@ -209,6 +234,8 @@ function ProjectDiffScreen:reset_hunk()
   if not hunk then return end
 
   local filename = entry.status.filename
+  local next_file = self:find_next_file(filename, 'unstaged')
+
   loop.free_textlock()
   local decision = console.input('Are you sure you want to discard this hunk? (y/N) '):lower()
   if decision ~= 'yes' and decision ~= 'y' then return end
@@ -232,6 +259,10 @@ function ProjectDiffScreen:reset_hunk()
     if has_unstaged then
       self:move_to(function(status, entry_type)
         return status.filename == filename and entry_type == 'unstaged'
+      end)
+    elseif next_file then
+      self:move_to(function(status, entry_type)
+        return status.filename == next_file and entry_type == 'unstaged'
       end)
     else
       local found = self:move_to(function(_, entry_type)
