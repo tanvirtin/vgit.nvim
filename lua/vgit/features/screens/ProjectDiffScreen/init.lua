@@ -10,6 +10,7 @@ local DiffView = require('vgit.ui.views.DiffView')
 local StatusListView = require('vgit.ui.views.StatusListView')
 local KeyHelpBarView = require('vgit.ui.views.KeyHelpBarView')
 local Model = require('vgit.features.screens.ProjectDiffScreen.Model')
+local git_buffer_store = require('vgit.git.git_buffer_store')
 local project_diff_preview_setting = require('vgit.settings.project_diff_preview')
 
 local ProjectDiffScreen = Object:extend()
@@ -476,6 +477,12 @@ function ProjectDiffScreen:enter_view()
 
   fs.open(filepath)
   Window(0):set_lnum(mark.top_relative):position_cursor('center')
+
+  -- Refresh gutter signs for the opened buffer
+  local git_buffer = git_buffer_store.current()
+  if git_buffer then
+    git_buffer_store.dispatch(git_buffer, 'sync')
+  end
 end
 
 function ProjectDiffScreen:open_file()
@@ -496,6 +503,12 @@ function ProjectDiffScreen:open_file()
   end
 
   Window(0):set_lnum(mark.top_relative):position_cursor('center')
+
+  -- Refresh gutter signs for the opened buffer
+  local git_buffer = git_buffer_store.current()
+  if git_buffer then
+    git_buffer_store.dispatch(git_buffer, 'sync')
+  end
 end
 
 function ProjectDiffScreen:render(on_status_list_render)
@@ -964,6 +977,12 @@ function ProjectDiffScreen:on_quit()
 
   if file_lnum then
     Window(0):set_lnum(file_lnum):position_cursor('center')
+  end
+
+  -- Refresh gutter signs for the opened buffer
+  local git_buffer = git_buffer_store.current()
+  if git_buffer then
+    git_buffer_store.dispatch(git_buffer, 'sync')
   end
 
   return true
