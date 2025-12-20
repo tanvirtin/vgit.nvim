@@ -1,6 +1,7 @@
 local fs = require('vgit.core.fs')
 local Scene = require('vgit.ui.Scene')
 local loop = require('vgit.core.loop')
+local event = require('vgit.core.event')
 local utils = require('vgit.core.utils')
 local Buffer = require('vgit.core.Buffer')
 local Object = require('vgit.core.Object')
@@ -443,6 +444,8 @@ function ProjectDiffScreen:enter_view()
 
   fs.open(filepath)
   Window(0):set_lnum(mark.top_relative):position_cursor('center')
+
+  event.emit('VGitSync')
 end
 
 function ProjectDiffScreen:open_file()
@@ -463,6 +466,8 @@ function ProjectDiffScreen:open_file()
   end
 
   Window(0):set_lnum(mark.top_relative):position_cursor('center')
+
+  event.emit('VGitSync')
 end
 
 function ProjectDiffScreen:render(on_status_list_render)
@@ -932,6 +937,8 @@ function ProjectDiffScreen:on_quit()
   if file_lnum then
     Window(0):set_lnum(file_lnum):position_cursor('center')
   end
+
+  event.emit('VGitSync')
 
   return true
 end
