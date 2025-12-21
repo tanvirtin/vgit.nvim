@@ -244,6 +244,12 @@ function Model:unstage_hunk(filename, hunk)
   return git_file:unstage_hunk(hunk)
 end
 
+function Model:reset_hunk(filename, hunk)
+  local filepath = self.state.reponame .. '/' .. filename
+  local git_file = GitFile(filepath)
+  return git_file:reset_hunk(hunk)
+end
+
 function Model:stage_file(filename)
   return git_stager.stage(self.state.reponame, filename)
 end

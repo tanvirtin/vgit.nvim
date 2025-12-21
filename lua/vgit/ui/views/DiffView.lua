@@ -9,6 +9,14 @@ local DiffComponent = require('vgit.ui.components.DiffComponent')
 
 local DiffView = Object:extend()
 
+-- Compensates for tabline taking screen space but not being accounted for
+-- in floating window positioning with relative='editor'. Needs 2 lines because
+-- the diff content is pushed down by the HeaderElement.
+function DiffView:get_tabline_padding()
+  if vim.o.showtabline > 0 then return 2 end
+  return 0
+end
+
 function DiffView:get_initial_state()
   return {
     current_lines_changes = {},
@@ -160,7 +168,7 @@ function DiffView:render_line_diff(component_type, line_changes, lnum)
   local lnum_change = line_changes.lnum_change
   if not lnum_change then return end
 
-  lnum = lnum_change.lnum
+  -- Use the passed lnum (already accounts for padding) instead of lnum_change.lnum
   local change_type = lnum_change.type
   local sign_name = scene_signs[change_type]
 
@@ -185,7 +193,8 @@ function DiffView:render_line_diff(component_type, line_changes, lnum)
 end
 
 function DiffView:render_diff(top, bot)
-  top = top or 1
+  local padding = self:get_tabline_padding()
+  top = top or 1 + padding
   bot = bot or #self.state.current_lines_changes
 
   local current_lines_changes = self.state.current_lines_changes
@@ -293,10 +302,17 @@ function DiffView:render_filetype()
 end
 
 function DiffView:render_split_current_line_numbers(diff, lnum_change_map)
+  local padding = self:get_tabline_padding()
   local lines = {}
   local line_count = 1
   local lines_changes = {}
   local num_lines = #diff.current_lines
+
+  -- Add padding entries
+  for _ = 1, padding do
+    lines[#lines + 1] = { '', 'GitLineNr' }
+    lines_changes[#lines_changes + 1] = { line_number = '', lnum_change = nil }
+  end
 
   for i = 1, num_lines do
     local line
@@ -330,10 +346,17 @@ function DiffView:render_split_current_line_numbers(diff, lnum_change_map)
 end
 
 function DiffView:render_split_previous_line_numbers(diff, lnum_change_map)
+  local padding = self:get_tabline_padding()
   local lines = {}
   local line_count = 1
   local lines_changes = {}
   local num_lines = #diff.previous_lines
+
+  -- Add padding entries
+  for _ = 1, padding do
+    lines[#lines + 1] = { '', 'GitLineNr' }
+    lines_changes[#lines_changes + 1] = { line_number = '', lnum_change = nil }
+  end
 
   for i = 1, num_lines do
     local line
@@ -392,6 +415,7 @@ function DiffView:render_unified_line_numbers()
   local diff = self.props.diff()
   if not diff then return end
 
+  local padding = self:get_tabline_padding()
   local lines_changes = {}
   local lines = {}
   local line_count = 1
@@ -402,6 +426,12 @@ function DiffView:render_unified_line_numbers()
   for i = 1, num_lnum_changes do
     local lnum_change = diff.lnum_changes[i]
     lnum_change_map[lnum_change.lnum] = lnum_change
+  end
+
+  -- Add padding entries
+  for _ = 1, padding do
+    lines[#lines + 1] = { '', 'GitLineNr' }
+    lines_changes[#lines_changes + 1] = { line_number = '', lnum_change = nil }
   end
 
   for i = 1, num_lines do
@@ -441,16 +471,30 @@ function DiffView:render_line_numbers()
   end
 end
 
+function DiffView:prepend_padding(lines)
+  local padding = self:get_tabline_padding()
+  if padding == 0 then return lines end
+
+  local padded = {}
+  for _ = 1, padding do
+    padded[#padded + 1] = ''
+  end
+  for _, line in ipairs(lines) do
+    padded[#padded + 1] = line
+  end
+  return padded
+end
+
 function DiffView:render_lines()
   local diff = self.props.diff()
   if not diff then return end
 
   if self.props.layout_type() == 'unified' then
-    return self.scene:get('current'):set_lines(diff.lines):enable_cursorline()
+    return self.scene:get('current'):set_lines(self:prepend_padding(diff.lines)):enable_cursorline()
   end
 
-  self.scene:get('previous'):set_lines(diff.previous_lines):enable_cursorline()
-  self.scene:get('current'):set_lines(diff.current_lines):enable_cursorline()
+  self.scene:get('previous'):set_lines(self:prepend_padding(diff.previous_lines)):enable_cursorline()
+  self.scene:get('current'):set_lines(self:prepend_padding(diff.current_lines)):enable_cursorline()
 end
 
 function DiffView:notify(msg)
@@ -471,8 +515,9 @@ function DiffView:get_current_mark_under_cursor()
   local diff = self.props.diff()
   if not diff then return end
 
+  local padding = self:get_tabline_padding()
   local marks = diff.marks
-  local lnum = self.scene:get('current'):get_lnum()
+  local lnum = self.scene:get('current'):get_lnum() - padding
 
   for i = 1, #marks do
     local mark = marks[i]
@@ -484,10 +529,11 @@ function DiffView:get_hunk_under_cursor()
   local diff = self.props.diff()
   if not diff then return end
 
+  local padding = self:get_tabline_padding()
   local selected
   local marks = diff.marks
   local hunks = diff.hunks
-  local lnum = self.scene:get('current'):get_lnum()
+  local lnum = self.scene:get('current'):get_lnum() - padding
 
   for i = 1, #marks do
     local mark = marks[i]
@@ -500,6 +546,28 @@ function DiffView:get_hunk_under_cursor()
   if selected then return hunks[selected], selected end
 end
 
+-- Returns the actual file line number for the current cursor position.
+-- For removed lines (which don't exist in the file), returns the closest
+-- valid line number above.
+function DiffView:get_file_lnum()
+  local lines_changes = self.state.current_lines_changes
+  if not lines_changes or #lines_changes == 0 then return nil end
+
+  local lnum = self.scene:get('current'):get_lnum()
+  if lnum > #lines_changes then lnum = #lines_changes end
+
+  -- Search current line and above for a valid line number
+  for i = lnum, 1, -1 do
+    local entry = lines_changes[i]
+    if entry and entry.line_number then
+      local file_lnum = tonumber(entry.line_number:match('%d+'))
+      if file_lnum then return file_lnum end
+    end
+  end
+
+  return nil
+end
+
 function DiffView:set_lnum(lnum, position)
   if self.props.layout_type() == 'split' then self.scene:get('previous'):set_lnum(lnum):position_cursor(position) end
   self.scene:get('current'):set_lnum(lnum):position_cursor(position)
@@ -508,6 +576,8 @@ end
 function DiffView:set_relative_lnum(lnum, position)
   local diff = self.props.diff()
   if not diff then return end
+
+  local padding = self:get_tabline_padding()
 
   for i = 1, #diff.lnum_changes do
     local lnum_change = diff.lnum_changes[i]
@@ -518,10 +588,11 @@ function DiffView:set_relative_lnum(lnum, position)
     if buftype == 'current' and (type == 'void' or type == 'remove') and lnum >= l then lnum = lnum + 1 end
   end
 
-  self:set_lnum(lnum, position)
+  self:set_lnum(lnum + padding, position)
 end
 
 function DiffView:move_to_mark(marks, mark_index, position)
+  local padding = self:get_tabline_padding()
   local lnum = nil
   local mark = marks[mark_index]
 
@@ -537,7 +608,8 @@ function DiffView:move_to_mark(marks, mark_index, position)
     end
   end
 
-  self:set_lnum(lnum, position)
+  -- Add padding offset to mark position
+  self:set_lnum(lnum + padding, position)
 
   return mark
 end
@@ -546,8 +618,9 @@ function DiffView:prev(pos)
   local diff = self.props.diff()
   if not diff then return end
 
+  local padding = self:get_tabline_padding()
   local marks = diff.marks
-  local lnum = self.scene:get('current'):get_lnum()
+  local lnum = self.scene:get('current'):get_lnum() - padding
   local mark_index = #marks
 
   for i = #marks, 1, -1 do
@@ -569,8 +642,9 @@ function DiffView:next(pos)
   local diff = self.props.diff()
   if not diff then return end
 
+  local padding = self:get_tabline_padding()
   local marks = diff.marks
-  local lnum = self.scene:get('current'):get_lnum()
+  local lnum = self.scene:get('current'):get_lnum() - padding
   local mark_index = 1
   local num_marks = #marks
 

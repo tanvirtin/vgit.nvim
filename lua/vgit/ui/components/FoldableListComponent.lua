@@ -221,7 +221,15 @@ function FoldableListComponent:generate_lines()
   return foldable_list_shadow
 end
 
+-- Compensates for tabline taking screen space but not being accounted for
+-- in floating window positioning with relative='editor'.
+function FoldableListComponent:get_tabline_padding()
+  if vim.o.showtabline > 0 then return 1 end
+  return 0
+end
+
 function FoldableListComponent:paint()
+  local padding = self:get_tabline_padding()
   local virtual_texts = self.state.virtual_texts
   for i = 1, #virtual_texts do
     local virtual_text = virtual_texts[i]
@@ -229,7 +237,7 @@ function FoldableListComponent:paint()
       self.buffer:place_extmark_text({
         text = virtual_text.text,
         hl = virtual_text.hl,
-        row = virtual_text.lnum - 1,
+        row = virtual_text.lnum - 1 + padding,
         col = 0,
       })
     end
@@ -237,7 +245,7 @@ function FoldableListComponent:paint()
       self.buffer:place_extmark_text({
         text = virtual_text.text,
         hl = virtual_text.hl,
-        row = virtual_text.lnum - 1,
+        row = virtual_text.lnum - 1 + padding,
         col = 0,
         pos = 'eol',
       })
@@ -253,7 +261,7 @@ function FoldableListComponent:paint()
 
     self.buffer:place_extmark_highlight({
       hl = hl,
-      row = lnum - 1,
+      row = lnum - 1 + padding,
       col_range = {
         from = range.top,
         to = range.bot,
@@ -266,7 +274,22 @@ end
 
 function FoldableListComponent:sync()
   self.buffer:clear_extmarks()
-  self.buffer:set_lines(self:generate_lines())
+
+  local lines = self:generate_lines()
+  local padding = self:get_tabline_padding()
+  if padding > 0 then
+    for _ = 1, padding do
+      table.insert(lines, 1, '')
+    end
+    -- Adjust shadow_list indices to account for padding
+    local adjusted = {}
+    for lnum, item in pairs(self.state.shadow_list) do
+      adjusted[lnum + padding] = item
+    end
+    self.state.shadow_list = adjusted
+  end
+
+  self.buffer:set_lines(lines)
 
   loop.free_textlock()
   self:paint()
