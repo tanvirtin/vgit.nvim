@@ -120,9 +120,10 @@ function screen_manager.create(screen_name, ...)
       {
         mode = 'n',
         key = scene_setting:get('keymaps').quit,
-        handler = function()
+        handler = loop.coroutine(function()
+          if screen.on_quit and screen:on_quit() then return end
           screen_manager.destroy_active_screen()
-        end
+        end)
       }
     })
   end

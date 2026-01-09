@@ -89,9 +89,9 @@ function ComponentPlot:configure_row()
   local has_footer = config.footer
   local footer_win_plot = self.footer_win_plot
 
-  -- Row
+  -- Row: Position header at current row, push content down by header height
   if has_header then
-    self.header_win_plot.row = win_plot.row + header_element_height
+    self.header_win_plot.row = win_plot.row
     win_plot.row = win_plot.row + header_element_height
   end
 

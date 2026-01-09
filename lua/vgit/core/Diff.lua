@@ -238,6 +238,11 @@ function Diff:generate_split_conflict(conflicts, lines)
 end
 
 function Diff:generate_unified_deleted(hunks, lines)
+  if #hunks == 0 then return utils.object.extend(self, {
+    lines = lines,
+    hunks = hunks,
+  }) end
+
   local hunk = hunks[1]
   local type = hunk.type
   local diff = hunk.diff
@@ -271,6 +276,12 @@ function Diff:generate_unified_deleted(hunks, lines)
 end
 
 function Diff:generate_split_deleted(hunks, lines)
+  if #hunks == 0 then return utils.object.extend(self, {
+    current_lines = {},
+    previous_lines = lines,
+    hunks = hunks,
+  }) end
+
   local hunk = hunks[1]
   local type = hunk.type
   local diff = hunk.diff

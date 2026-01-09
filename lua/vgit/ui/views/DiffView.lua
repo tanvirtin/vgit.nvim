@@ -500,6 +500,28 @@ function DiffView:get_hunk_under_cursor()
   if selected then return hunks[selected], selected end
 end
 
+-- Returns the actual file line number for the current cursor position.
+-- For removed lines (which don't exist in the file), returns the closest
+-- valid line number above.
+function DiffView:get_file_lnum()
+  local lines_changes = self.state.current_lines_changes
+  if not lines_changes or #lines_changes == 0 then return nil end
+
+  local lnum = self.scene:get('current'):get_lnum()
+  if lnum > #lines_changes then lnum = #lines_changes end
+
+  -- Search current line and above for a valid line number
+  for i = lnum, 1, -1 do
+    local entry = lines_changes[i]
+    if entry and entry.line_number then
+      local file_lnum = tonumber(entry.line_number:match('%d+'))
+      if file_lnum then return file_lnum end
+    end
+  end
+
+  return nil
+end
+
 function DiffView:set_lnum(lnum, position)
   if self.props.layout_type() == 'split' then self.scene:get('previous'):set_lnum(lnum):position_cursor(position) end
   self.scene:get('current'):set_lnum(lnum):position_cursor(position)
