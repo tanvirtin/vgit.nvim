@@ -1,6 +1,8 @@
 local Config = require('vgit.core.Config')
 
 return Config({
+  -- Alignment when jumping to a hunk: 'top', 'center', or 'bottom'
+  hunk_alignment = 'center',
   keymaps = {
     commit = {
       key = 'C',
@@ -26,6 +28,10 @@ return Config({
       key = 'gu',
       desc = 'Unstage hunk'
     },
+    buffer_hunk_reset = {
+      key = 'gr',
+      desc = 'Reset hunk'
+    },
     stage_all = {
       key = 'S',
       desc = 'Stage all'
@@ -37,6 +43,18 @@ return Config({
     reset_all = {
       key = 'R',
       desc = 'Reset all'
+    },
+    toggle_focus = {
+      key = '<Tab>',
+      desc = 'Switch focus between file list and diff preview'
+    },
+    next = {
+      key = 'J',
+      desc = 'Next'
+    },
+    previous = {
+      key = 'K',
+      desc = 'Previous'
     },
   },
 })
