@@ -115,7 +115,7 @@ function Hunks:reset_all()
   if not buffer then return end
 
   local hunks = buffer:get_hunks()
-  if not hunks and #hunks == 0 then return end
+  if not hunks or #hunks == 0 then return end
 
   event.await()
   local lines, err = buffer.git_file:lines()

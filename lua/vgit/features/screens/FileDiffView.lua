@@ -42,7 +42,7 @@ end
 
 function FileDiffView:_handle_git_error(err, operation_name)
   if err then
-    console.debug.error(string.format('[FileDiffView] %s failed: %s', operation_name, err)).error(err)
+    console.debug.error(string.format('[FileDiffView] %s failed: %s', operation_name, err))
     return false
   end
   return true

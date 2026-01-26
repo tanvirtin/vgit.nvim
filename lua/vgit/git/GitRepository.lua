@@ -444,6 +444,14 @@ function GitRepository:unstage_hunk(filename, hunk)
   return index:remove_hunk(filename, hunk)
 end
 
+function GitRepository:reset_hunk(filename, hunk)
+  assertion.assert(filename, 'filename is required').assert(hunk, 'hunk is required')
+  self:_ensure_initialized()
+  local GitFile = require('vgit.git.GitFile')
+  local git_file = GitFile(self.reponame .. '/' .. filename)
+  return git_file:reset_hunk(hunk)
+end
+
 function GitRepository:commit(message)
   assertion.assert(message and message ~= '', 'commit message is required')
   local index, err = self:index()

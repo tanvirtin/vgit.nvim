@@ -26,6 +26,7 @@ function ProjectDiffView:constructor()
       layout_type = self.LAYOUT_UNIFIED,
     },
     data = nil,
+    repo = nil,
     current_entry = nil,
     diff_component = nil,
     tree_component = nil,
@@ -57,10 +58,109 @@ function ProjectDiffView:hunk_down()
   self.diff_component:next('top')
 end
 
+function ProjectDiffView:reset_hunk()
+  event.await()
+
+  if not self:_is_valid_entry(self.current_entry) then return end
+  if self.current_entry.type ~= 'unstaged' then return end
+
+  local hunk, hunk_index = self.diff_component:get_hunk_under_cursor()
+  if not hunk then return end
+
+  -- Confirmation prompt
+  event.await()
+  local decision = console.input('Are you sure you want to discard this hunk? (y/N) '):lower()
+  if decision ~= 'y' and decision ~= 'yes' then return end
+
+  local filename = self.current_entry.status.filename
+  local next_file = self:find_next_file(filename, 'unstaged')
+
+  local repo, err = repository.current()
+  if err then return end
+
+  local _, reset_err = repo:reset_hunk(filename, hunk)
+  if reset_err then
+    console.debug.error(string.format('[ProjectDiffView] reset_hunk failed: %s', reset_err))
+    return
+  end
+
+  self:refresh_after_hunk_operation(filename, hunk_index, 'unstaged', next_file)
+end
+
+function ProjectDiffView:find_next_file(filename, target_type)
+  local next_filename = nil
+  local found_current = false
+
+  self.tree_component:each_item(function(item)
+    if item.type == target_type then
+      if found_current and not next_filename then next_filename = item.status.filename end
+      if item.status and item.status.filename == filename then found_current = true end
+    end
+  end)
+
+  return next_filename
+end
+
+function ProjectDiffView:move_to_entry(filename, entry_type)
+  self.tree_component:move_to(function(item)
+    return item.status and item.status.filename == filename and item.type == entry_type
+  end)
+end
+
+function ProjectDiffView:restore_hunk_position(hunk_index)
+  local hunk_alignment = diff_view_setting:get('hunk_alignment') or 'center'
+  event.await()
+
+  local marks = self.diff_component.state and self.diff_component.state.marks
+  if marks and #marks > 0 then
+    local target = math.min(hunk_index, #marks)
+    self.diff_component:move_to_hunk(target, hunk_alignment)
+  end
+end
+
+function ProjectDiffView:refresh_after_hunk_operation(filename, hunk_index, entry_type, next_file)
+  self:refresh_data()
+  event.await()
+
+  local still_has_entries = false
+  self.tree_component:each_item(function(item)
+    if item.type == entry_type and item.status and item.status.filename == filename then still_has_entries = true end
+  end)
+
+  if still_has_entries then
+    self:move_to_entry(filename, entry_type)
+    event.await()
+    self:_update_diff_component()
+    self:restore_hunk_position(hunk_index)
+  elseif next_file then
+    self:move_to_entry(next_file, entry_type)
+  else
+    self.tree_component:move_to(function(item)
+      return item.status ~= nil
+    end)
+  end
+end
+
+function ProjectDiffView:move_to_next_file()
+  self.tree_component:move('down')
+end
+
+function ProjectDiffView:move_to_prev_file()
+  self.tree_component:move('up')
+end
+
+function ProjectDiffView:navigate_next()
+  self:move_to_next_file()
+end
+
+function ProjectDiffView:navigate_previous()
+  self:move_to_prev_file()
+end
+
 function ProjectDiffView:_handle_git_error(err, operation_name)
   if err then
     event.await()
-    console.debug.error(string.format('[ProjectDiffView] %s failed: %s', operation_name, err)).error(err)
+    console.debug.error(string.format('[ProjectDiffView] %s failed: %s', operation_name, err))
     return false
   end
   return true
@@ -201,12 +301,22 @@ function ProjectDiffView:stage_hunk()
 
   local filename = self.current_entry.status.filename
 
-  local hunk, index = self.diff_component:get_hunk_under_cursor()
+  local hunk, hunk_index = self.diff_component:get_hunk_under_cursor()
   if not hunk then return end
+
+  -- Find next unstaged file before staging
+  local next_file = self:find_next_file(filename, 'unstaged')
 
   local repo, err = repository.current()
   if err then return end
-  repo:stage_hunk(filename, hunk)
+
+  local _, stage_err = repo:stage_hunk(filename, hunk)
+  if stage_err then
+    console.debug.error(string.format('[ProjectDiffView] stage_hunk failed: %s', stage_err))
+    return
+  end
+
+  self:refresh_after_hunk_operation(filename, hunk_index, 'unstaged', next_file)
 end
 
 function ProjectDiffView:unstage_hunk()
@@ -217,12 +327,21 @@ function ProjectDiffView:unstage_hunk()
 
   local filename = self.current_entry.status.filename
 
-  local hunk, index = self.diff_component:get_hunk_under_cursor()
+  local hunk, hunk_index = self.diff_component:get_hunk_under_cursor()
   if not hunk then return end
+
+  local next_file = self:find_next_file(filename, 'staged')
 
   local repo, err = repository.current()
   if err then return end
-  repo:unstage_hunk(filename, hunk)
+
+  local _, unstage_err = repo:unstage_hunk(filename, hunk)
+  if unstage_err then
+    console.debug.error(string.format('[ProjectDiffView] unstage_hunk failed: %s', unstage_err))
+    return
+  end
+
+  self:refresh_after_hunk_operation(filename, hunk_index, 'staged', next_file)
 end
 
 function ProjectDiffView:stage_entry()
@@ -368,7 +487,6 @@ function ProjectDiffView:reset_all()
 end
 
 function ProjectDiffView:refresh_data()
-  local event = require('vgit.core.event')
   event.await()
 
   local repo, err = repository.current()
@@ -395,7 +513,7 @@ function ProjectDiffView:refresh_data()
     }
   end
 
-    self.tree_component:set_list(file_groups)
+  self.tree_component:set_list(file_groups)
 end
 
 function ProjectDiffView:get_key(keymap)
@@ -433,32 +551,24 @@ function ProjectDiffView:setup_keymaps()
 
   local hunk_up_key = self:get_key(diff_keymaps.hunk_up)
   if hunk_up_key then
-    local hunk_up_fn, hunk_up_cleanup = event.debounce_async(function()
+    local hunk_up_fn = event.async(function()
       self:hunk_up()
-    end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, hunk_up_cleanup)
-    self.diff_component:set_keymap(
-      {
-        mode = 'n',
-        key = hunk_up_key,
-      },
-      hunk_up_fn
-    )
+    end)
+    self.diff_component:set_keymap({
+      mode = 'n',
+      key = hunk_up_key,
+    }, hunk_up_fn)
   end
 
   local hunk_down_key = self:get_key(diff_keymaps.hunk_down)
   if hunk_down_key then
-    local hunk_down_fn, hunk_down_cleanup = event.debounce_async(function()
+    local hunk_down_fn = event.async(function()
       self:hunk_down()
-    end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, hunk_down_cleanup)
-    self.diff_component:set_keymap(
-      {
-        mode = 'n',
-        key = hunk_down_key,
-      },
-      hunk_down_fn
-    )
+    end)
+    self.diff_component:set_keymap({
+      mode = 'n',
+      key = hunk_down_key,
+    }, hunk_down_fn)
   end
 
   local stage_hunk_key = self:get_key(diff_keymaps.stage_hunk)
@@ -467,13 +577,10 @@ function ProjectDiffView:setup_keymaps()
       self:stage_hunk()
     end, self.DEBOUNCE_MS)
     table.insert(self.debounce_cleanups, stage_hunk_cleanup)
-    self.diff_component:set_keymap(
-      {
-        mode = 'n',
-        key = stage_hunk_key,
-      },
-      stage_hunk_fn
-    )
+    self.diff_component:set_keymap({
+      mode = 'n',
+      key = stage_hunk_key,
+    }, stage_hunk_fn)
   end
 
   local unstage_hunk_key = self:get_key(diff_keymaps.unstage_hunk)
@@ -482,31 +589,68 @@ function ProjectDiffView:setup_keymaps()
       self:unstage_hunk()
     end, self.DEBOUNCE_MS)
     table.insert(self.debounce_cleanups, unstage_hunk_cleanup)
-    self.diff_component:set_keymap(
-      {
-        mode = 'n',
-        key = unstage_hunk_key,
-      },
-      unstage_hunk_fn
-    )
+    self.diff_component:set_keymap({
+      mode = 'n',
+      key = unstage_hunk_key,
+    }, unstage_hunk_fn)
+  end
+
+  -- Reset hunk keymap
+  local reset_hunk_key = self:get_key(diff_keymaps.reset_hunk)
+  if reset_hunk_key then
+    local reset_hunk_fn, reset_hunk_cleanup = event.debounce_async(function()
+      self:reset_hunk()
+    end, self.DEBOUNCE_MS)
+    table.insert(self.debounce_cleanups, reset_hunk_cleanup)
+    self.diff_component:set_keymap({
+      mode = 'n',
+      key = reset_hunk_key,
+    }, reset_hunk_fn)
+  end
+
+  local next_key = self:get_key(diff_keymaps.next)
+  if next_key then
+    local next_fn = event.async(function()
+      self:navigate_next()
+    end)
+
+    self.diff_component:set_keymap({
+      mode = 'n',
+      key = next_key,
+    }, next_fn)
+
+    if self.tree_component:is_valid() then self.tree_component:set_keymap('n', next_key, next_fn, 'Next') end
+  end
+
+  local prev_key = self:get_key(diff_keymaps.previous)
+  if prev_key then
+    local prev_fn = event.async(function()
+      self:navigate_previous()
+    end)
+
+    self.diff_component:set_keymap({
+      mode = 'n',
+      key = prev_key,
+    }, prev_fn)
+
+    if self.tree_component:is_valid() then self.tree_component:set_keymap('n', prev_key, prev_fn, 'Previous') end
   end
 
   local open_file_fn, open_file_cleanup = event.debounce_async(function()
     self:open_file()
   end, self.DEBOUNCE_MS)
   table.insert(self.debounce_cleanups, open_file_cleanup)
-  self.diff_component:set_keymap(
-    {
-      mode = 'n',
-      key = '<enter>',
-    },
-    open_file_fn
-  )
+  self.diff_component:set_keymap({
+    mode = 'n',
+    key = '<enter>',
+  }, open_file_fn)
 end
 
 function ProjectDiffView:_create_entries_view(data)
   local repo, err = repository.current()
   if err then return false end
+
+  self.repo = repo
 
   if repo:conflict_status() then
     event.await()
@@ -580,7 +724,9 @@ function ProjectDiffView:_create_entries_view(data)
     },
   })
 
-  self.tree_component:set_on_enter(function() self:open_file() end)
+  self.tree_component:set_on_enter(function()
+    self:open_file()
+  end)
 
   local on_move_fn, on_move_cleanup = event.debounce_async(function(item)
     self:_handle_file_selection_change(item)
