@@ -62,8 +62,6 @@ function Spawn:process_chunk(chunk, buffer, callback)
         end
       end
     end
-    callback(output:sub(start, newline_pos - 1))
-    start = newline_pos + 1
   end
 
   local compact = {}

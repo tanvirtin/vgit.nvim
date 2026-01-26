@@ -25,6 +25,10 @@ return Config({
       key = '<leader>u',
       desc = 'Unstage hunk',
     },
+    reset_hunk = {
+      key = '<leader>r',
+      desc = 'Reset hunk',
+    },
 
     stage_all = {
       key = 'S',
@@ -55,10 +59,6 @@ return Config({
     toggle_view = {
       key = 't',
       desc = 'Toggle between staged/unstaged',
-    },
-    toggle_focus = {
-      key = '<Tab>',
-      desc = 'Switch focus between file list and diff preview'
     },
     next = {
       key = 'J',

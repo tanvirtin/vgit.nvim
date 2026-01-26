@@ -159,7 +159,7 @@ git_buffer_store.suppress_sync_and_refresh = function(buffer, ms)
 
   suppress_sync = true
 
-  vim.defer_fn(loop.coroutine(function()
+  vim.defer_fn(event.async(function()
     suppress_sync = false
 
     if git_buffer:is_valid() then

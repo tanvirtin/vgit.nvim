@@ -67,16 +67,9 @@ function git_stager.reset_hunk(reponame, filename, hunk)
   fs.write_file(patch_filename, patch)
 
   -- Apply the patch in reverse to the working directory (not staged)
-  local _, err = gitcli.run({
-    '-C',
-    reponame,
-    '--no-pager',
-    'apply',
-    '--reverse',
-    '--whitespace=nowarn',
-    '--unidiff-zero',
-    patch_filename,
-  })
+  local _, err = GitQueryBuilder(reponame)
+    :raw_args('--no-pager', 'apply', '--reverse', '--whitespace=nowarn', '--unidiff-zero', patch_filename)
+    :execute()
 
   fs.remove_file(patch_filename)
 
