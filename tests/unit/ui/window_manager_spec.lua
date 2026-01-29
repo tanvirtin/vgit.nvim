@@ -101,9 +101,9 @@ describe('window_manager:', function()
     it('should return true when action exists', function()
       window_manager.active_screen = {
         name = 'test_screen',
-        hunk_up = function() end,
+        prev_hunk = function() end,
       }
-      assert.is_true(window_manager.has_action('hunk_up'))
+      assert.is_true(window_manager.has_action('prev_hunk'))
     end)
   end)
 end)

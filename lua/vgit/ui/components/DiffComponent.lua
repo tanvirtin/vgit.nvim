@@ -280,7 +280,7 @@ function DiffComponent:is_valid()
   return self._element and self._element:is_valid()
 end
 
-function DiffComponent:next(pos)
+function DiffComponent:hunk_down(pos)
   local marks = self.state.marks
   if #marks == 0 then return nil end
 
@@ -311,7 +311,7 @@ function DiffComponent:next(pos)
   return result
 end
 
-function DiffComponent:prev(pos)
+function DiffComponent:hunk_up(pos)
   local marks = self.state.marks
   if #marks == 0 then return nil end
 
@@ -342,7 +342,7 @@ function DiffComponent:prev(pos)
 end
 
 function DiffComponent:move_to_hunk(mark_index, pos)
-  pos = pos or 'top'
+  pos = pos or 'center'
   mark_index = mark_index or 1
 
   local marks = self.state.marks
@@ -391,6 +391,10 @@ function DiffComponent:get_current_mark_under_cursor()
   end
 
   return nil
+end
+
+function DiffComponent:get_marks()
+  return self.state.marks or {}
 end
 
 function DiffComponent:get_relative_mark_index(lnum)

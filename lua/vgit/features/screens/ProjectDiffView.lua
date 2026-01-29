@@ -6,169 +6,68 @@ local Object = require('vgit.core.Object')
 local console = require('vgit.core.console')
 local repository = require('vgit.git.repository')
 local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local diff_view_setting = require('vgit.settings.diff_view')
+local view_utils = require('vgit.features.screens.view_utils')
+local hunks_setting = require('vgit.settings.hunks')
+local project_diff_view_setting = require('vgit.settings.project_diff_view')
 local ComponentManager = require('vgit.ui.ComponentManager')
-local TreeComponent = require('vgit.ui.components.TreeComponent')
-local DiffComponent = require('vgit.ui.components.DiffComponent')
 local LayoutComponent = require('vgit.ui.components.LayoutComponent')
-local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
 
 local ProjectDiffView = Object:extend()
 
 ProjectDiffView.DEBOUNCE_MS = 100
-ProjectDiffView.TREE_WIDTH = 50
 ProjectDiffView.LAYOUT_SPLIT = 'split'
 ProjectDiffView.LAYOUT_UNIFIED = 'unified'
 
 function ProjectDiffView:constructor()
   return {
-    opts = {
-      layout_type = self.LAYOUT_UNIFIED,
-    },
     data = nil,
     repo = nil,
-    current_entry = nil,
-    diff_component = nil,
-    tree_component = nil,
+    layout_type = nil,
+    patch_component = nil,
+    previous_component = nil,
+    current_component = nil,
     component_manager = nil,
+    patch_entries = {},
+    line_to_file_map = {},
     debounce_cleanups = {},
   }
 end
 
-function ProjectDiffView:_is_valid_entry(entry)
-  if not entry then return false end
-  if not entry.status then return false end
-  if not entry.status.filename or type(entry.status.filename) ~= 'string' then return false end
-  return true
-end
-
-function ProjectDiffView:_set_current_entry(entry)
-  if self:_is_valid_entry(entry) then
-    self.current_entry = entry
-    return true
-  end
-  return false
-end
-
-function ProjectDiffView:hunk_up()
-  self.diff_component:prev('top')
-end
-
-function ProjectDiffView:hunk_down()
-  self.diff_component:next('top')
-end
-
-function ProjectDiffView:reset_hunk()
-  event.await()
-
-  if not self:_is_valid_entry(self.current_entry) then return end
-  if self.current_entry.type ~= 'unstaged' then return end
-
-  local hunk, hunk_index = self.diff_component:get_hunk_under_cursor()
-  if not hunk then return end
-
-  -- Confirmation prompt
-  event.await()
-  local decision = console.input('Are you sure you want to discard this hunk? (y/N) '):lower()
-  if decision ~= 'y' and decision ~= 'yes' then return end
-
-  local filename = self.current_entry.status.filename
-  local next_file = self:find_next_file(filename, 'unstaged')
-
-  local repo, err = repository.current()
-  if err then return end
-
-  local _, reset_err = repo:reset_hunk(filename, hunk)
-  if reset_err then
-    console.debug.error(string.format('[ProjectDiffView] reset_hunk failed: %s', reset_err))
-    return
-  end
-
-  self:refresh_after_hunk_operation(filename, hunk_index, 'unstaged', next_file)
-end
-
-function ProjectDiffView:find_next_file(filename, target_type)
-  local next_filename = nil
-  local found_current = false
-
-  self.tree_component:each_item(function(item)
-    if item.type == target_type then
-      if found_current and not next_filename then next_filename = item.status.filename end
-      if item.status and item.status.filename == filename then found_current = true end
-    end
-  end)
-
-  return next_filename
-end
-
-function ProjectDiffView:move_to_entry(filename, entry_type)
-  self.tree_component:move_to(function(item)
-    return item.status and item.status.filename == filename and item.type == entry_type
-  end)
-end
-
-function ProjectDiffView:restore_hunk_position(hunk_index)
-  local hunk_alignment = diff_view_setting:get('hunk_alignment') or 'center'
-  event.await()
-
-  local marks = self.diff_component.state and self.diff_component.state.marks
-  if marks and #marks > 0 then
-    local target = math.min(hunk_index, #marks)
-    self.diff_component:move_to_hunk(target, hunk_alignment)
-  end
-end
-
-function ProjectDiffView:refresh_after_hunk_operation(filename, hunk_index, entry_type, next_file)
-  self:refresh_data()
-  event.await()
-
-  local still_has_entries = false
-  self.tree_component:each_item(function(item)
-    if item.type == entry_type and item.status and item.status.filename == filename then still_has_entries = true end
-  end)
-
-  if still_has_entries then
-    self:move_to_entry(filename, entry_type)
-    event.await()
-    self:_update_diff_component()
-    self:restore_hunk_position(hunk_index)
-  elseif next_file then
-    self:move_to_entry(next_file, entry_type)
-  else
-    self.tree_component:move_to(function(item)
-      return item.status ~= nil
-    end)
-  end
-end
-
-function ProjectDiffView:move_to_next_file()
-  self.tree_component:move('down')
-end
-
-function ProjectDiffView:move_to_prev_file()
-  self.tree_component:move('up')
-end
-
-function ProjectDiffView:navigate_next()
-  self:move_to_next_file()
-end
-
-function ProjectDiffView:navigate_previous()
-  self:move_to_prev_file()
-end
-
 function ProjectDiffView:_handle_git_error(err, operation_name)
-  if err then
+  return view_utils.handle_git_error(err, operation_name, 'ProjectDiffView')
+end
+
+function ProjectDiffView:create(data)
+  if not data then
     event.await()
-    console.debug.error(string.format('[ProjectDiffView] %s failed: %s', operation_name, err))
+    console.error('[ProjectDiffView] No data provided to create()')
     return false
   end
-  return true
+
+  if type(data) ~= 'table' then
+    event.await()
+    console.error('[ProjectDiffView] Expected table, got ' .. type(data))
+    return false
+  end
+
+  if not data.entries then
+    event.await()
+    console.error('[ProjectDiffView] Invalid data: missing entries')
+    return false
+  end
+
+  if utils.object.is_empty(data.entries) then
+    event.await()
+    console.info('No changes to display')
+    return false
+  end
+
+  self.data = data
+  return self:_create_view(data)
 end
 
-function ProjectDiffView:_build_entry_diff(entry, repo)
-  if not self:_is_valid_entry(entry) then return nil, { 'entry is invalid' } end
-
+function ProjectDiffView:_get_diff_for_entry(repo, entry)
   local entry_type = entry.type
   local status = entry.status
   local filename = status.filename
@@ -195,556 +94,359 @@ function ProjectDiffView:_build_entry_diff(entry, repo)
     }
   end
 
-  local opts = {}
-  if self.opts.layout_type then opts.layout_type = self.opts.layout_type end
-
   event.await()
-  return repo:diff(diff_spec, opts)
-end
-
-function ProjectDiffView:create(data)
-  if not data then
-    event.await()
-    console.error('[ProjectDiffView] No data provided to create()')
-    return false
+  local diff_data, err = repo:diff(diff_spec, {})
+  if err then
+    console.debug.error(string.format('[ProjectDiffView] diff for %s failed: %s', filename, err))
+    return nil
   end
 
-  if type(data) ~= 'table' then
-    event.await()
-    console.error('[ProjectDiffView] Expected table, got ' .. type(data))
-    return false
+  if not diff_data then
+    console.debug.error(string.format('[ProjectDiffView] diff for %s returned nil', filename))
+    return nil
   end
 
-  if not data.entries then
-    event.await()
-    console.error('[ProjectDiffView] Invalid data: missing entries')
-    return false
-  end
-  if type(data.entries) ~= 'table' then
-    event.await()
-    console.error('[ProjectDiffView] Invalid data: entries must be a table')
-    return false
-  end
-  if utils.object.is_empty(data.entries) then
-    event.await()
-    console.error('[ProjectDiffView] Invalid data: entries list is empty')
-    return false
-  end
-
-  return self:_process_entries_data(data)
+  return diff_data
 end
 
-function ProjectDiffView:_process_entries_data(data)
-  self.opts = utils.object.defaults({
-    layout_type = data.layout_type,
-  }, self.opts)
+function ProjectDiffView:_build_patch_entries(repo, data)
+  local patch_entries = {}
+  local line_to_file_map = {}
+  local current_line = 1
+  local files_processed = 0
 
-  self.data = data
+  for _, section in ipairs(data.entries or {}) do
+    for _, file_entry in ipairs(section.entries or {}) do
+      local status = file_entry.status
+      if not status then
+        console.debug.error('[ProjectDiffView] file_entry has no status')
+        goto continue
+      end
 
-  local entries_data = {
-    entries = data.entries,
-    layout_type = self.opts.layout_type,
-  }
+      files_processed = files_processed + 1
 
-  return self:_create_entries_view(entries_data)
-end
+      -- Use pre-computed diff when available (for historical diffs),
+      -- otherwise generate diff for working tree changes
+      local diff_data
+      if file_entry.diff then
+        diff_data = file_entry.diff
+      else
+        diff_data = self:_get_diff_for_entry(repo, file_entry)
+      end
 
-function ProjectDiffView:move_to(query_fn)
-  return self.tree_component:move_to(query_fn)
-end
+      if not diff_data then
+        console.debug.error(string.format('[ProjectDiffView] no diff_data for %s', status.filename))
+        goto continue
+      end
 
-function ProjectDiffView:create_diff_component(opts)
-  opts = opts or {}
-  local layout_type = self.opts.layout_type or self.LAYOUT_UNIFIED
+      if not diff_data.hunks or #diff_data.hunks == 0 then
+        console.debug.error(
+          string.format(
+            '[ProjectDiffView] no hunks for %s (hunks=%s)',
+            status.filename,
+            diff_data.hunks and #diff_data.hunks or 'nil'
+          )
+        )
+        goto continue
+      end
 
-  local props = {
-    diff = opts.diff,
-    filename = opts.filename,
-    filetype = opts.filetype or 'text',
-  }
+      local hunks = diff_data.hunks
 
-  if layout_type == self.LAYOUT_SPLIT then return SplitDiffComponent(props) end
-  return DiffComponent(props)
-end
+      patch_entries[#patch_entries + 1] = {
+        type = 'file_header',
+        filename = status.filename,
+        filetype = status.filetype,
+        original_lines = diff_data.original_lines,
+        current_lines = diff_data.current_lines,
+      }
 
-function ProjectDiffView:_update_diff_component(hunk_index)
-  event.await()
-  if not self:_is_valid_entry(self.current_entry) then return false end
+      line_to_file_map[current_line] = { filename = status.filename, lnum = 1 }
+      current_line = current_line + 1
+      line_to_file_map[current_line] = { filename = status.filename, lnum = 1 }
+      current_line = current_line + 1
+      line_to_file_map[current_line] = { filename = status.filename, lnum = 1 }
+      current_line = current_line + 1
 
-  local repo, repo_err = repository.current()
-  if not self:_handle_git_error(repo_err, 'repository.current') then return false end
+      for _, hunk in ipairs(hunks) do
+        patch_entries[#patch_entries + 1] = {
+          type = 'hunk',
+          hunk = hunk,
+          filetype = status.filetype,
+          filename = status.filename,
+        }
 
-  event.await()
-  local diff_data, err = self:_build_entry_diff(self.current_entry, repo)
-  if not self:_handle_git_error(err, '_build_entry_diff') then return false end
+        if hunk.header then
+          line_to_file_map[current_line] = {
+            filename = status.filename,
+            lnum = hunk.top or 1,
+          }
+          current_line = current_line + 1
+        end
 
-  event.await()
-  self.diff_component:set_props({
-    diff = diff_data,
-    filename = self.current_entry.status.filename,
-    filetype = self.current_entry.status.filetype,
-  })
+        local diff_line_offset = 0
+        for _, line in ipairs(hunk.diff or {}) do
+          local target_lnum = (hunk.top or 1) + diff_line_offset
+          line_to_file_map[current_line] = {
+            filename = status.filename,
+            lnum = target_lnum,
+          }
+          current_line = current_line + 1
 
-  if hunk_index then
-    event.await()
-    self.diff_component:move_to_hunk(hunk_index, 'top')
-  end
+          local prefix = line:sub(1, 1)
+          if prefix ~= '-' then diff_line_offset = diff_line_offset + 1 end
+        end
 
-  return true
-end
+        line_to_file_map[current_line] = { filename = status.filename, lnum = hunk.top or 1 }
+        current_line = current_line + 1
+      end
 
-function ProjectDiffView:stage_hunk()
-  event.await()
-
-  if not self:_is_valid_entry(self.current_entry) then return end
-  if self.current_entry.type ~= 'unstaged' then return end
-
-  local filename = self.current_entry.status.filename
-
-  local hunk, hunk_index = self.diff_component:get_hunk_under_cursor()
-  if not hunk then return end
-
-  -- Find next unstaged file before staging
-  local next_file = self:find_next_file(filename, 'unstaged')
-
-  local repo, err = repository.current()
-  if err then return end
-
-  local _, stage_err = repo:stage_hunk(filename, hunk)
-  if stage_err then
-    console.debug.error(string.format('[ProjectDiffView] stage_hunk failed: %s', stage_err))
-    return
+      ::continue::
+    end
   end
 
-  self:refresh_after_hunk_operation(filename, hunk_index, 'unstaged', next_file)
+  console.debug.info(
+    string.format('[ProjectDiffView] processed %d files, got %d patch entries', files_processed, #patch_entries)
+  )
+  return patch_entries, line_to_file_map
 end
 
-function ProjectDiffView:unstage_hunk()
-  event.await()
-
-  if not self:_is_valid_entry(self.current_entry) then return end
-  if self.current_entry.type ~= 'staged' then return end
-
-  local filename = self.current_entry.status.filename
-
-  local hunk, hunk_index = self.diff_component:get_hunk_under_cursor()
-  if not hunk then return end
-
-  local next_file = self:find_next_file(filename, 'staged')
-
-  local repo, err = repository.current()
-  if err then return end
-
-  local _, unstage_err = repo:unstage_hunk(filename, hunk)
-  if unstage_err then
-    console.debug.error(string.format('[ProjectDiffView] unstage_hunk failed: %s', unstage_err))
-    return
-  end
-
-  self:refresh_after_hunk_operation(filename, hunk_index, 'staged', next_file)
+function ProjectDiffView:_get_active_component()
+  if self.layout_type == self.LAYOUT_SPLIT then return self.current_component end
+  return self.patch_component
 end
 
-function ProjectDiffView:stage_entry()
-  if not self:_is_valid_entry(self.current_entry) then return end
-
-  local filename = self.current_entry.status.filename
-
-  local repo, err = repository.current()
-  if err then return end
-  repo:stage_file(filename)
+function ProjectDiffView:get_hunk_alignment()
+  return view_utils.get_hunk_alignment()
 end
 
-function ProjectDiffView:unstage_entry()
-  if not self:_is_valid_entry(self.current_entry) then return end
-
-  local filename = self.current_entry.status.filename
-
-  local repo, err = repository.current()
-  if err then return end
-  repo:unstage_file(filename)
+function ProjectDiffView:hunk_up()
+  local component = self:_get_active_component()
+  if component and component:is_valid() then component:hunk_up(self:get_hunk_alignment()) end
 end
 
-function ProjectDiffView:reset_entry()
-  if not self:_is_valid_entry(self.current_entry) then return end
-
-  event.await()
-  local decision = console.input('Are you sure you want to discard changes? (y/N) '):lower()
-
-  if decision ~= 'yes' and decision ~= 'y' then return end
-
-  local filename = self.current_entry.status.filename
-
-  local repo, err = repository.current()
-  if err then return end
-  repo:reset(filename)
+function ProjectDiffView:hunk_down()
+  local component = self:_get_active_component()
+  if component and component:is_valid() then component:hunk_down(self:get_hunk_alignment()) end
 end
 
-function ProjectDiffView:commit()
-  event.await()
-  local message = console.input('Commit message: ')
+function ProjectDiffView:jump_to_file()
+  local component = self:_get_active_component()
+  if not component or not component:is_valid() then return end
 
-  if not message or message:match('^%s*$') then
-    console.info('Commit cancelled: empty message')
-    return
-  end
+  local lnum = component:get_lnum()
+  local file_info = self.line_to_file_map[lnum]
 
-  event.await()
-  local repo, repo_err = repository.current()
-  if not self:_handle_git_error(repo_err, 'repository.current') then return end
+  console.debug.info(string.format(
+    '[ProjectDiffView:jump_to_file] cursor_lnum=%d, mapped_lnum=%s, file=%s',
+    lnum,
+    file_info and file_info.lnum or 'nil',
+    file_info and file_info.filename or 'nil'
+  ))
 
-  local _, err = repo:commit(message)
-  if not self:_handle_git_error(err, 'commit') then return end
+  if not file_info or not file_info.filename then return end
 
-  console.info('Changes committed successfully')
-end
-
-function ProjectDiffView:open_file()
-  if not self:_is_valid_entry(self.current_entry) then return end
-
-  local filename = self.current_entry.status.filename
+  local filename = file_info.filename
+  local target_lnum = file_info.lnum or 1
 
   self:destroy()
   event.await()
+
   fs.open(filename)
-end
-
-function ProjectDiffView:_handle_file_selection_change(item)
-  if not self.component_manager then return end
-
-  if not item then
-    console.warn('[ProjectDiffView] file selection changed called with nil item')
-    return
-  end
-
-  local entry = item.entry or item
-
-  if not self:_set_current_entry(entry) then
-    console.warn('[ProjectDiffView] Invalid entry structure in file selection change')
-    if self.diff_component then
-      self.diff_component:clear_extmarks()
-      self.diff_component:clear_lines()
-      self.diff_component:clear_folds()
-      self.diff_component:reset_cursor()
-    end
-    return
-  end
-
-  local repo, repo_err = repository.current()
-  if not self:_handle_git_error(repo_err, 'repository.current') then return end
-
-  local diff_data, err = self:_build_entry_diff(entry, repo)
-  if not self:_handle_git_error(err, '_build_entry_diff') then return end
-
-  if self.diff_component then
-    local has_content = diff_data and diff_data.marks and #diff_data.marks > 0
-
-    if has_content then
-      event.await()
-      self.diff_component:set_props({
-        diff = diff_data,
-        filename = entry.status.filename,
-        filetype = entry.status.filetype or 'text',
-      })
-
-      if self.diff_component.call then
-        event.await()
-        self.diff_component:call(function()
-          self.diff_component:move_to_hunk(1, 'top')
-        end)
-      end
-    else
-      event.await()
-      self.diff_component:set_props({
-        diff = nil,
-        filename = nil,
-        filetype = nil,
-      })
-    end
-  end
-end
-
-function ProjectDiffView:stage_all()
-  local repo, err = repository.current()
-  if err then return end
-  repo:stage_all()
-end
-
-function ProjectDiffView:unstage_all()
-  local repo, err = repository.current()
-  if err then return end
-  repo:unstage_all()
-end
-
-function ProjectDiffView:reset_all()
-  event.await()
-  local decision = console.input('Are you sure you want to discard all changes? (y/N) '):lower()
-
-  if decision ~= 'yes' and decision ~= 'y' then return end
-
-  local repo, err = repository.current()
-  if err then return end
-  repo:reset()
-end
-
-function ProjectDiffView:refresh_data()
   event.await()
 
-  local repo, err = repository.current()
-  if err then return end
+  local Window = require('vgit.core.Window')
+  local window = Window(0)
+  window:set_lnum(target_lnum)
 
-  event.await()
-  event.await()
-
-  local data, status_err = repo:status(self.opts)
-  if not self:_handle_git_error(status_err, 'status') then return end
-
-  if not data or utils.object.is_empty(data.entries) then
-    console.warn('[ProjectDiffView] No data returned from refresh_data()')
-    return
-  end
-
-  local file_groups = {}
-  for _, entry in ipairs(data.entries) do
-    file_groups[#file_groups + 1] = {
-      open = true,
-      value = entry.title,
-      metadata = {},
-      items = entry.entries,
-    }
-  end
-
-  self.tree_component:set_list(file_groups)
+  console.debug.info(string.format(
+    '[ProjectDiffView:jump_to_file] opened file=%s, set lnum=%d',
+    filename,
+    target_lnum
+  ))
 end
 
 function ProjectDiffView:get_key(keymap)
-  if type(keymap) == 'string' then
-    return keymap
-  elseif type(keymap) == 'table' then
-    return keymap.key
+  return view_utils.get_key(keymap)
+end
+
+function ProjectDiffView:_set_keymap_on_component(component, mode, key, handler)
+  if component and component:is_valid() then component:set_keymap({
+    mode = mode,
+    key = key,
+  }, handler) end
+end
+
+function ProjectDiffView:_set_keymap_all_components(mode, key, handler)
+  if self.layout_type == self.LAYOUT_SPLIT then
+    self:_set_keymap_on_component(self.previous_component, mode, key, handler)
+    self:_set_keymap_on_component(self.current_component, mode, key, handler)
+  else
+    self:_set_keymap_on_component(self.patch_component, mode, key, handler)
   end
-  return nil
 end
 
 function ProjectDiffView:setup_keymaps()
   local scene_setting = require('vgit.settings.scene')
+  local display_service = require('vgit.ui.display_service')
+
   local scene_keymaps = scene_setting:get('keymaps')
-  local diff_keymaps = diff_view_setting:get('keymaps')
+  local project_diff_view_keymaps = project_diff_view_setting:get('keymaps')
+  local hunks_keymaps = hunks_setting:get('keymaps')
 
   if scene_keymaps and scene_keymaps.quit then
     local quit_key = self:get_key(scene_keymaps.quit)
     if quit_key then
-      event.await()
-      if self.tree_component:is_valid() then
-        self.tree_component:set_keymap('n', quit_key, function()
-          self.component_manager:destroy()
-        end, 'Quit')
-      end
-
-      self.diff_component:set_keymap({
-        mode = 'n',
-        key = quit_key,
-      }, function()
+      self:_set_keymap_all_components('n', quit_key, function()
         self.component_manager:destroy()
       end)
     end
   end
 
-  local hunk_up_key = self:get_key(diff_keymaps.hunk_up)
-  if hunk_up_key then
-    local hunk_up_fn = event.async(function()
-      self:hunk_up()
-    end)
-    self.diff_component:set_keymap({
-      mode = 'n',
-      key = hunk_up_key,
-    }, hunk_up_fn)
+  local jump_key = self:get_key(project_diff_view_keymaps.jump)
+  if jump_key then
+    local jump_fn, jump_cleanup = event.debounce_async(function()
+      self:jump_to_file()
+    end, self.DEBOUNCE_MS)
+    table.insert(self.debounce_cleanups, jump_cleanup)
+
+    self:_set_keymap_all_components('n', jump_key, jump_fn)
   end
 
-  local hunk_down_key = self:get_key(diff_keymaps.hunk_down)
-  if hunk_down_key then
-    local hunk_down_fn = event.async(function()
+  local toggle_key = self:get_key(project_diff_view_keymaps.toggle_diff_preference)
+  if toggle_key then
+    self:_set_keymap_all_components('n', toggle_key, function()
+      display_service.toggle_diff_preference()
+    end)
+  end
+
+  local down_key = self:get_key(hunks_keymaps.down)
+  if down_key then
+    local down_fn = event.async(function()
       self:hunk_down()
     end)
-    self.diff_component:set_keymap({
-      mode = 'n',
-      key = hunk_down_key,
-    }, hunk_down_fn)
+    self:_set_keymap_all_components('n', down_key, down_fn)
   end
 
-  local stage_hunk_key = self:get_key(diff_keymaps.stage_hunk)
-  if stage_hunk_key then
-    local stage_hunk_fn, stage_hunk_cleanup = event.debounce_async(function()
-      self:stage_hunk()
-    end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, stage_hunk_cleanup)
-    self.diff_component:set_keymap({
-      mode = 'n',
-      key = stage_hunk_key,
-    }, stage_hunk_fn)
-  end
-
-  local unstage_hunk_key = self:get_key(diff_keymaps.unstage_hunk)
-  if unstage_hunk_key then
-    local unstage_hunk_fn, unstage_hunk_cleanup = event.debounce_async(function()
-      self:unstage_hunk()
-    end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, unstage_hunk_cleanup)
-    self.diff_component:set_keymap({
-      mode = 'n',
-      key = unstage_hunk_key,
-    }, unstage_hunk_fn)
-  end
-
-  -- Reset hunk keymap
-  local reset_hunk_key = self:get_key(diff_keymaps.reset_hunk)
-  if reset_hunk_key then
-    local reset_hunk_fn, reset_hunk_cleanup = event.debounce_async(function()
-      self:reset_hunk()
-    end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, reset_hunk_cleanup)
-    self.diff_component:set_keymap({
-      mode = 'n',
-      key = reset_hunk_key,
-    }, reset_hunk_fn)
-  end
-
-  local next_key = self:get_key(diff_keymaps.next)
-  if next_key then
-    local next_fn = event.async(function()
-      self:navigate_next()
+  local up_key = self:get_key(hunks_keymaps.up)
+  if up_key then
+    local up_fn = event.async(function()
+      self:hunk_up()
     end)
-
-    self.diff_component:set_keymap({
-      mode = 'n',
-      key = next_key,
-    }, next_fn)
-
-    if self.tree_component:is_valid() then self.tree_component:set_keymap('n', next_key, next_fn, 'Next') end
+    self:_set_keymap_all_components('n', up_key, up_fn)
   end
-
-  local prev_key = self:get_key(diff_keymaps.previous)
-  if prev_key then
-    local prev_fn = event.async(function()
-      self:navigate_previous()
-    end)
-
-    self.diff_component:set_keymap({
-      mode = 'n',
-      key = prev_key,
-    }, prev_fn)
-
-    if self.tree_component:is_valid() then self.tree_component:set_keymap('n', prev_key, prev_fn, 'Previous') end
-  end
-
-  local open_file_fn, open_file_cleanup = event.debounce_async(function()
-    self:open_file()
-  end, self.DEBOUNCE_MS)
-  table.insert(self.debounce_cleanups, open_file_cleanup)
-  self.diff_component:set_keymap({
-    mode = 'n',
-    key = '<enter>',
-  }, open_file_fn)
 end
 
-function ProjectDiffView:_create_entries_view(data)
-  local repo, err = repository.current()
-  if err then return false end
+function ProjectDiffView:_build_split_patch_entries(patch_entries)
+  local prev_entries = {}
+  local curr_entries = {}
 
-  self.repo = repo
+  for _, entry in ipairs(patch_entries) do
+    if entry.type == 'file_header' then
+      prev_entries[#prev_entries + 1] = vim.tbl_extend('force', {}, entry)
+      curr_entries[#curr_entries + 1] = vim.tbl_extend('force', {}, entry)
+    elseif entry.type == 'hunk' then
+      local hunk = entry.hunk
+      local prev_diff = {}
+      local curr_diff = {}
 
-  if repo:conflict_status() then
-    event.await()
-    console.info('All conflicts fixed but you are still merging')
-    return false
-  end
+      for _, line in ipairs(hunk.diff or {}) do
+        local prefix = line:sub(1, 1)
+        if prefix == '-' then
+          prev_diff[#prev_diff + 1] = line
+          curr_diff[#curr_diff + 1] = ' '
+        elseif prefix == '+' then
+          prev_diff[#prev_diff + 1] = ' '
+          curr_diff[#curr_diff + 1] = line
+        else
+          prev_diff[#prev_diff + 1] = line
+          curr_diff[#curr_diff + 1] = line
+        end
+      end
 
-  local file_groups = {}
-  for _, entry in ipairs(data.entries) do
-    file_groups[#file_groups + 1] = {
-      open = true,
-      value = entry.title,
-      metadata = {},
-      items = entry.entries,
-    }
-  end
+      prev_entries[#prev_entries + 1] = {
+        type = 'hunk',
+        hunk = {
+          header = hunk.header,
+          diff = prev_diff,
+          top = hunk.top,
+          bot = hunk.bot,
+        },
+        filetype = entry.filetype,
+        filename = entry.filename,
+        original_lines = entry.original_lines,
+        current_lines = entry.current_lines,
+      }
 
-  local initial_entry = nil
-  for _, group in ipairs(file_groups) do
-    if group.items and #group.items > 0 then
-      initial_entry = group.items[1]
-      break
+      curr_entries[#curr_entries + 1] = {
+        type = 'hunk',
+        hunk = {
+          header = hunk.header,
+          diff = curr_diff,
+          top = hunk.top,
+          bot = hunk.bot,
+        },
+        filetype = entry.filetype,
+        filename = entry.filename,
+        original_lines = entry.original_lines,
+        current_lines = entry.current_lines,
+      }
     end
   end
 
-  if initial_entry then
-    if not self:_set_current_entry(initial_entry) then
-      console.warn('[ProjectDiffView] Initial entry failed validation')
-    end
-  end
+  return prev_entries, curr_entries
+end
 
-  local diff_keymaps = diff_view_setting:get('keymaps')
-  local tree_keymaps = {
-    buffer_stage = diff_keymaps.stage,
-    buffer_unstage = diff_keymaps.unstage,
-    buffer_reset = diff_keymaps.reset,
-    stage_all = diff_keymaps.stage_all,
-    unstage_all = diff_keymaps.unstage_all,
-    reset_all = diff_keymaps.reset_all,
-    commit = diff_keymaps.commit,
-  }
+function ProjectDiffView:_create_unified_view(patch_entries, line_to_file_map)
+  self.patch_entries = patch_entries
+  self.line_to_file_map = line_to_file_map
 
-  self.tree_component = TreeComponent({
-    list = file_groups,
-    title = '',
-    width = 50,
+  self.patch_component = PatchPreviewComponent({
+    patch_entries = patch_entries,
     focus = true,
-    keymaps = tree_keymaps,
-    keymap_handlers = {
-      commit = function()
-        self:commit()
-      end,
-      reset_file = function()
-        self:reset_entry()
-      end,
-      stage_file = function()
-        self:stage_entry()
-      end,
-      unstage_file = function()
-        self:unstage_entry()
-      end,
-      stage_all = function()
-        self:stage_all()
-      end,
-      unstage_all = function()
-        self:unstage_all()
-      end,
-      reset_all = function()
-        self:reset_all()
-      end,
+  })
+
+  self.component_manager = ComponentManager()
+  event.await()
+  self.component_manager:render(Layout.screen(self.patch_component, {
+    width = '100vw',
+    height = '100vh',
+  }))
+
+  self:setup_keymaps()
+
+  if self.patch_component and self.patch_component:is_valid() then self.patch_component:focus() end
+
+  return true
+end
+
+function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map)
+  self.patch_entries = patch_entries
+  self.line_to_file_map = line_to_file_map
+
+  local prev_entries, curr_entries = self:_build_split_patch_entries(patch_entries)
+
+  self.previous_component = PatchPreviewComponent({
+    patch_entries = prev_entries,
+    focus = false,
+    win_options = {
+      scrollbind = true,
+      cursorbind = true,
     },
   })
 
-  self.tree_component:set_on_enter(function()
-    self:open_file()
-  end)
-
-  local on_move_fn, on_move_cleanup = event.debounce_async(function(item)
-    self:_handle_file_selection_change(item)
-  end, self.DEBOUNCE_MS)
-
-  table.insert(self.debounce_cleanups, on_move_cleanup)
-  self.tree_component:set_on_move(on_move_fn)
-
-  self.diff_component = self:create_diff_component({
-    diff = nil,
-    filename = nil,
-    filetype = nil,
+  self.current_component = PatchPreviewComponent({
+    patch_entries = curr_entries,
+    focus = true,
+    win_options = {
+      scrollbind = true,
+      cursorbind = true,
+    },
   })
 
   local wrapper = LayoutComponent({
     spec = LayoutSpec.horizontal({
-      LayoutSpec.view(self.tree_component, { width = '30%' }),
-      LayoutSpec.view(self.diff_component, { expand = true }),
+      LayoutSpec.view(self.previous_component, { flex = 1 }),
+      LayoutSpec.view(self.current_component, { flex = 1 }),
     }),
   })
 
@@ -755,29 +457,46 @@ function ProjectDiffView:_create_entries_view(data)
     height = '100vh',
   }))
 
-  self.tree_component:component_did_mount()
-
   self:setup_keymaps()
 
-  if self.tree_component and self.tree_component:is_valid() then self.tree_component:focus() end
+  if self.current_component and self.current_component:is_valid() then self.current_component:focus() end
 
   return true
 end
 
-function ProjectDiffView:emit_cleanup_events()
-  self.diff_component:component_will_unmount()
-  self.tree_component:component_will_unmount()
+function ProjectDiffView:_create_view(data)
+  local scene_setting = require('vgit.settings.scene')
+  local layout_type = scene_setting:get('diff_preference') or self.LAYOUT_UNIFIED
+
+  self.layout_type = layout_type
+
+  local repo, err = repository.current()
+  if err then
+    console.debug.error(string.format('[ProjectDiffView] repository.current() failed: %s', err))
+    return false
+  end
+
+  self.repo = repo
+
+  local patch_entries, line_to_file_map = self:_build_patch_entries(repo, data)
+
+  if #patch_entries == 0 then
+    event.await()
+    console.info('No changes to display')
+    return false
+  end
+
+  if layout_type == self.LAYOUT_SPLIT then
+    return self:_create_split_view(patch_entries, line_to_file_map)
+  else
+    return self:_create_unified_view(patch_entries, line_to_file_map)
+  end
 end
 
-function ProjectDiffView:on_git_change()
-  event.await()
-  self:refresh_data()
-
-  event.await()
-  if self:_is_valid_entry(self.current_entry) then
-    event.await()
-    self:_update_diff_component()
-  end
+function ProjectDiffView:emit_cleanup_events()
+  if self.patch_component then self.patch_component:component_will_unmount() end
+  if self.previous_component then self.previous_component:component_will_unmount() end
+  if self.current_component then self.current_component:component_will_unmount() end
 end
 
 function ProjectDiffView:destroy()
@@ -786,7 +505,7 @@ function ProjectDiffView:destroy()
   end
   self.debounce_cleanups = {}
   self:emit_cleanup_events()
-  self.component_manager:destroy()
+  if self.component_manager then self.component_manager:destroy() end
 end
 
 return ProjectDiffView

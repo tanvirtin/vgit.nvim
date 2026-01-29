@@ -18,7 +18,7 @@ function Hunks:is_enabled()
   return live_gutter_setting:get('enabled') == true
 end
 
-function Hunks:move_up()
+function Hunks:hunk_up()
   if not self:is_enabled() then return end
 
   local buffer = git_buffer_store.current()
@@ -31,7 +31,7 @@ function Hunks:move_up()
   navigation.up(window, hunks)
 end
 
-function Hunks:move_down()
+function Hunks:hunk_down()
   if not self:is_enabled() then return end
 
   local buffer = git_buffer_store.current()

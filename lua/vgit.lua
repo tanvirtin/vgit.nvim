@@ -9,6 +9,7 @@ local highlight = require('vgit.core.highlight')
 local hls_setting = require('vgit.settings.hls')
 local git_setting = require('vgit.settings.git')
 local Hunks = require('vgit.features.buffer.Hunks')
+local hunks_setting = require('vgit.settings.hunks')
 local scene_setting = require('vgit.settings.scene')
 local signs_setting = require('vgit.settings.signs')
 local symbols_setting = require('vgit.settings.symbols')
@@ -16,11 +17,13 @@ local libgit2_setting = require('vgit.settings.libgit2')
 local display_service = require('vgit.ui.display_service')
 local Conflicts = require('vgit.features.buffer.Conflicts')
 local LiveBlame = require('vgit.features.buffer.LiveBlame')
-local diff_view_setting = require('vgit.settings.diff_view')
+local status_diff_view_setting = require('vgit.settings.status_diff_view')
 local git_buffer_store = require('vgit.git.git_buffer_store')
 local LiveGutter = require('vgit.features.buffer.LiveGutter')
 local live_blame_setting = require('vgit.settings.live_blame')
 local live_gutter_setting = require('vgit.settings.live_gutter')
+local file_diff_view_setting = require('vgit.settings.file_diff_view')
+local project_diff_view_setting = require('vgit.settings.project_diff_view')
 local LiveConflict = require('vgit.features.buffer.LiveConflict')
 
 local hunks = Hunks()
@@ -31,14 +34,12 @@ local live_conflict = LiveConflict()
 
 local controls = {
   hunk_up = event.async(function()
-    hunks:move_up()
-    conflicts:move_up()
-    return display_service.dispatch_action('hunk_up')
+    hunks:hunk_up()
+    conflicts:hunk_up()
   end),
   hunk_down = event.async(function()
-    hunks:move_down()
-    conflicts:move_down()
-    return display_service.dispatch_action('hunk_down')
+    hunks:hunk_down()
+    conflicts:hunk_down()
   end),
 }
 
@@ -132,18 +133,19 @@ end
 local function configure_settings(config)
   local config_settings = config and config.settings or {}
 
+  hunks_setting:assign(config_settings.hunks)
+
   git_setting:assign(config_settings.git)
   hls_setting:assign(config_settings.hls)
   signs_setting:assign(config_settings.signs)
   scene_setting:assign(config_settings.scene)
   libgit2_setting:assign(config_settings.libgit2)
   symbols_setting:assign(config_settings.symbols)
-  diff_view_setting:assign(config_settings.diff_view)
   live_blame_setting:assign(config_settings.live_blame)
   live_gutter_setting:assign(config_settings.live_gutter)
-
-  if config_settings.diff_preview then diff_view_setting:assign(config_settings.diff_preview) end
-  if config_settings.project_diff_preview then diff_view_setting:assign(config_settings.project_diff_preview) end
+  file_diff_view_setting:assign(config_settings.file_diff_view)
+  status_diff_view_setting:assign(config_settings.status_diff_view)
+  project_diff_view_setting:assign(config_settings.project_diff_view)
 end
 
 local controller = {}
@@ -223,7 +225,7 @@ function controller.autocomplete(arg_lead, cmd_line, _)
     local commands = controller.commands()
     local all_commands = vim.tbl_keys(commands)
 
-    vim.list_extend(all_commands, { 'diff', 'blame', 'hunk' })
+    vim.list_extend(all_commands, { 'diff', 'blame', 'hunk', 'status', 'show' })
 
     return vim.tbl_filter(function(cmd)
       return vim.startswith(cmd, arg_lead)

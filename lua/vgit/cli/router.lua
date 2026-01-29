@@ -1,14 +1,17 @@
+local console = require('vgit.core.console')
+
 local router = {}
 
 local COMMAND_MAP = {
   diff = 'vgit.cli.commands.diff',
   blame = 'vgit.cli.commands.blame',
   hunk = 'vgit.cli.commands.hunk',
+  status = 'vgit.cli.commands.status',
+  show = 'vgit.cli.commands.show',
 }
 
 function router.execute(args)
   if not args or #args == 0 then
-    local console = require('vgit.core.console')
     console.error('No command provided')
     return
   end
@@ -21,15 +24,13 @@ function router.execute(args)
 
   local handler_module = COMMAND_MAP[command]
   if not handler_module then
-    local console = require('vgit.core.console')
     console.error('Unknown command: ' .. command)
     return
   end
 
   local ok, handler = pcall(require, handler_module)
-  if not ok then
-    local console = require('vgit.core.console')
-    console.error('Failed to load command handler: ' .. command)
+  if not ok or not handler or type(handler.execute) ~= 'function' then
+    console.error('Failed to load command: ' .. command)
     return
   end
 

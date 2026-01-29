@@ -2,36 +2,36 @@ local describe = require('plenary.busted').describe
 local it = require('plenary.busted').it
 local assert = require('luassert')
 
-describe('ProjectDiffView', function()
-  local ProjectDiffView, repository, console
+describe('StatusDiffView', function()
+  local StatusDiffView, repository, console
 
   before_each(function()
-    ProjectDiffView = require('vgit.features.screens.ProjectDiffView')
+    StatusDiffView = require('vgit.features.screens.StatusDiffView')
     repository = require('vgit.git.repository')
     console = require('vgit.core.console')
   end)
 
   describe('create()', function()
     it('should reject when data is nil', function()
-      local view = ProjectDiffView()
+      local view = StatusDiffView()
       local result = view:create(nil)
       assert.is_false(result)
     end)
 
     it('should reject when data has no entries', function()
-      local view = ProjectDiffView()
+      local view = StatusDiffView()
       local result = view:create({})
       assert.is_false(result)
     end)
 
     it('should reject when entries is empty table', function()
-      local view = ProjectDiffView()
+      local view = StatusDiffView()
       local result = view:create({ entries = {} })
       assert.is_false(result)
     end)
 
     it('should accept when data has entries', function()
-      local view = ProjectDiffView()
+      local view = StatusDiffView()
       local result = view:create({
         entries = {
           {
@@ -55,25 +55,25 @@ describe('ProjectDiffView', function()
 
   describe('_validate_entries_data()', function()
     it('should return false when entries is missing', function()
-      local view = ProjectDiffView()
+      local view = StatusDiffView()
       local result = view:_validate_entries_data({})
       assert.is_false(result)
     end)
 
     it('should return false when entries is not a table', function()
-      local view = ProjectDiffView()
+      local view = StatusDiffView()
       local result = view:_validate_entries_data({ entries = 'not_a_table' })
       assert.is_false(result)
     end)
 
     it('should return false when entries is empty', function()
-      local view = ProjectDiffView()
+      local view = StatusDiffView()
       local result = view:_validate_entries_data({ entries = {} })
       assert.is_false(result)
     end)
 
     it('should return true when entries has content', function()
-      local view = ProjectDiffView()
+      local view = StatusDiffView()
       local result = view:_validate_entries_data({
         entries = {
           {

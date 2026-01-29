@@ -146,4 +146,50 @@ return Config({
       override = false,
     }
   end,
+  GitPatchHeader = function()
+    return {
+      bg = Color({ name = 'Normal', attribute = 'bg' }):darken(15):get(),
+      override = false,
+    }
+  end,
+  GitPatchHeaderMarker = function()
+    return {
+      fg = Color({ name = 'Comment', attribute = 'fg' }):get(),
+      bg = Color({ name = 'Normal', attribute = 'bg' }):darken(15):get(),
+      override = false,
+    }
+  end,
+  GitPatchHeaderRemove = function()
+    return {
+      fg = Color({ name = 'DiffDelete', attribute = 'bg' }):lighten(200):get(),
+      bg = Color({ name = 'Normal', attribute = 'bg' }):darken(15):get(),
+      override = false,
+    }
+  end,
+  GitPatchHeaderAdd = function()
+    return {
+      fg = Color({ name = 'DiffAdd', attribute = 'bg' }):lighten(200):get(),
+      bg = Color({ name = 'Normal', attribute = 'bg' }):darken(15):get(),
+      override = false,
+    }
+  end,
+  GitPatchContext = function()
+    return {
+      bg = Color({ name = 'Normal', attribute = 'bg' }):darken(5):get(),
+      override = false,
+    }
+  end,
+  GitPatchFileHeader = function()
+    return {
+      fg = Color({ name = 'Directory', attribute = 'fg' }):get(),
+      gui = 'bold',
+      override = false,
+    }
+  end,
+  GitPatchSeparator = function()
+    return {
+      fg = Color({ name = 'Comment', attribute = 'fg' }):darken(20):get(),
+      override = false,
+    }
+  end,
 })

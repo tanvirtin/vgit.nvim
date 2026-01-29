@@ -6,9 +6,7 @@ local active_view = nil
 local display_service = {}
 
 event.custom_on('VGitChange', function()
-  if active_view and active_view.on_git_change then
-    active_view:on_git_change()
-  end
+  if active_view and active_view.on_git_change then active_view:on_git_change() end
 end)
 
 display_service.show_diff = event.async(function(data)
@@ -46,7 +44,11 @@ display_service.show_diff = event.async(function(data)
     return
   end
 
-  view:create(data)
+  local success = view:create(data)
+  if not success then
+    console.error('Failed to create diff view')
+    return
+  end
   active_view = view
 end)
 
@@ -91,27 +93,38 @@ display_service.show_blame = event.async(function(data)
   active_view = lens
 end)
 
-function display_service.dispatch_action(action)
-  -- Dispatch actions to active views
-  if not active_view then return false end
-
-  if action == 'hunk_up' and active_view.hunk_up then
-    active_view:hunk_up()
-    return true
-  elseif action == 'hunk_down' and active_view.hunk_down then
-    active_view:hunk_down()
-    return true
+display_service.show_status = event.async(function(data)
+  if not data then
+    console.error('No status data')
+    return
   end
 
-  return false
-end
+  if active_view and active_view.destroy then
+    active_view:destroy()
+    active_view = nil
+  end
+
+  if not data.entries or #data.entries == 0 then
+    console.info('No changes to display')
+    return
+  end
+
+  event.await()
+
+  local StatusDiffView = require('vgit.features.screens.StatusDiffView')
+  local view = StatusDiffView()
+  local success = view:create(data)
+  if not success then
+    console.error('Failed to create status view')
+    return
+  end
+  active_view = view
+end)
 
 function display_service.toggle_diff_preference()
   local current = scene_setting:get('diff_preference')
   local new_pref = current == 'unified' and 'split' or 'unified'
   scene_setting:set('diff_preference', new_pref)
-
-  if active_view and active_view.refresh then active_view:refresh() end
 end
 
 function display_service.help()
