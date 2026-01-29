@@ -7,6 +7,14 @@ local repository = require('vgit.git.repository')
 
 local diff_command = {}
 
+local function format_ref_for_display(ref)
+  -- Only truncate if it looks like a full commit hash (40 hex chars)
+  if ref:match('^[a-f0-9]+$') and #ref == 40 then
+    return ref:sub(1, 7)
+  end
+  return ref
+end
+
 local function normalize_file_path(filepath, repo_path)
   if not filepath or filepath == '' then return filepath end
   local absolute = vim.fn.fnamemodify(filepath, ':p')
@@ -24,8 +32,7 @@ function diff_command.parse_args(args)
     explicit_files = false,
   }
 
-  local i = 1
-  while i <= #args do
+  for i = 1, #args do
     local arg = args[i]
 
     if arg == '--staged' or arg == '--cached' then
@@ -82,8 +89,6 @@ function diff_command.parse_args(args)
       -- Assume it's a file path
       table.insert(opts.files, arg)
     end
-
-    i = i + 1
   end
 
   return opts
@@ -218,8 +223,16 @@ diff_command.execute = event.async(function(args)
       })
     else
       -- Working tree diff: VGit diff <file> [--staged]
-      local from = opts.staged and 'HEAD' or 'index'
-      local to = 'disk'
+      local from, to
+      if opts.staged then
+        -- Staged changes: HEAD vs index (what's been git add'd)
+        from = 'HEAD'
+        to = 'index'
+      else
+        -- Unstaged changes: index vs disk (working tree changes)
+        from = 'index'
+        to = 'disk'
+      end
       diff = repo:diff({
         type = 'range',
         filename = filename,
@@ -230,20 +243,114 @@ diff_command.execute = event.async(function(args)
     end
 
     if diff then
+      -- is_live indicates whether staging/unstaging operations are allowed
+      -- Only true for working tree diffs (HEAD<>index or index<>disk)
+      local is_live = not opts.base_ref
+
       data = {
         type = 'file',
         diff = diff,
         filename = filename,
         filetype = git_file:get_filetype(),
         layout_type = opts.layout_type,
+        is_staged = opts.staged,
+        is_live = is_live,
       }
     end
+  elseif opts.base_ref then
+    -- Historical diff between refs with no specific file
+    -- VGit diff HEAD~1 or VGit diff HEAD~2..HEAD~1
+    local from_ref = opts.base_ref
+    local to_ref = opts.compare_ref or 'HEAD'
+
+    event.await()
+
+    -- Get files that changed between the refs using git diff-tree
+    local git_status = require('vgit.git.git_status')
+    local files, files_err = git_status.tree(repo:get_path(), {
+      commit_hash = to_ref,
+      parent_hash = from_ref,
+    })
+
+    if files_err then
+      console.error('Failed to get files between refs: ' .. tostring(files_err[1]))
+      return
+    end
+
+    if not files or #files == 0 then
+      console.info('No files changed between ' .. from_ref .. ' and ' .. to_ref)
+      return
+    end
+
+    -- Build entries for each changed file
+    local entries = {}
+    for _, file in ipairs(files) do
+      local filename = file.filename
+
+      event.await()
+
+      local diff = repo:diff({
+        type = 'range',
+        filename = filename,
+        from = from_ref,
+        to = to_ref,
+        layout_type = opts.layout_type,
+      })
+
+      if diff then
+        table.insert(entries, {
+          filename = filename,
+          filetype = file.filetype or 'text',
+          diff = diff,
+          status = file,
+        })
+      end
+    end
+
+    if #entries == 0 then
+      console.info('No diffs available between ' .. from_ref .. ' and ' .. to_ref)
+      return
+    end
+
+    data = {
+      type = 'files',
+      entries = {
+        {
+          title = string.format('Changes: %s..%s', format_ref_for_display(from_ref), format_ref_for_display(to_ref)),
+          entries = entries,
+        },
+      },
+      layout_type = opts.layout_type,
+    }
   else
     data, err = repo:status(opts)
     if not err and data then
+      -- Filter entries based on --staged flag
+      -- git diff: shows only unstaged changes
+      -- git diff --staged: shows only staged changes
+      local filtered_entries = {}
+      for _, entry in ipairs(data.entries) do
+        if opts.staged then
+          -- Only show staged changes
+          if entry.title == 'Staged Changes' then table.insert(filtered_entries, entry) end
+        else
+          -- Only show unstaged changes (and merge conflicts)
+          if entry.title == 'Changes' or entry.title == 'Merge Changes' then table.insert(filtered_entries, entry) end
+        end
+      end
+
+      if #filtered_entries == 0 then
+        local display_service = require('vgit.ui.display_service')
+        display_service.show_diff({
+          type = 'empty',
+          message = opts.staged and 'No staged changes' or 'No unstaged changes',
+        })
+        return
+      end
+
       data = {
         type = 'files',
-        entries = data.entries,
+        entries = filtered_entries,
         layout_type = opts.layout_type,
       }
     end

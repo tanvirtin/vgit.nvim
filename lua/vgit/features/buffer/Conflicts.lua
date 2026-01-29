@@ -12,7 +12,7 @@ function Conflicts:constructor()
   }
 end
 
-function Conflicts:move_up()
+function Conflicts:hunk_up()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
@@ -25,7 +25,7 @@ function Conflicts:move_up()
   navigation.up(window, marks)
 end
 
-function Conflicts:move_down()
+function Conflicts:hunk_down()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 

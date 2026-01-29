@@ -1,8 +1,8 @@
 local Config = require('vgit.core.Config')
 
+-- Note: hunk_alignment and keymaps.down/up are inherited from hunks setting
+-- Users can override them here for this view only
 return Config({
-  -- Alignment when jumping to a hunk: 'top', 'center', or 'bottom'
-  hunk_alignment = 'center',
   keymaps = {
     stage = {
       key = 's',
@@ -47,26 +47,9 @@ return Config({
       desc = 'Commit',
     },
 
-    hunk_up = {
-      key = '[c',
-      desc = 'Previous hunk',
-    },
-    hunk_down = {
-      key = ']c',
-      desc = 'Next hunk',
-    },
-
     toggle_view = {
       key = 't',
       desc = 'Toggle between staged/unstaged',
-    },
-    next = {
-      key = 'J',
-      desc = 'Next'
-    },
-    previous = {
-      key = 'K',
-      desc = 'Previous'
     },
   },
 })

@@ -278,13 +278,13 @@ function SplitDiffComponent:is_valid()
     or (self._current_component and self._current_component:is_valid())
 end
 
-function SplitDiffComponent:next(pos)
-  if self._current_component then return self._current_component:next(pos) end
+function SplitDiffComponent:hunk_down(pos)
+  if self._current_component then return self._current_component:hunk_down(pos) end
   return nil
 end
 
-function SplitDiffComponent:prev(pos)
-  if self._current_component then return self._current_component:prev(pos) end
+function SplitDiffComponent:hunk_up(pos)
+  if self._current_component then return self._current_component:hunk_up(pos) end
   return nil
 end
 
@@ -314,6 +314,11 @@ end
 function SplitDiffComponent:get_relative_mark_index(lnum)
   if self._current_component then return self._current_component:get_relative_mark_index(lnum) end
   return 1
+end
+
+function SplitDiffComponent:get_marks()
+  if self._current_component then return self._current_component:get_marks() end
+  return {}
 end
 
 function SplitDiffComponent:render_folds()

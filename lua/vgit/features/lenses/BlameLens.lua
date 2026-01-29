@@ -13,8 +13,6 @@ local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
 
 local BlameLens = Object:extend()
 
-BlameLens.DEBOUNCE_MS = 100
-
 function BlameLens:constructor()
   return {
     blame = nil,
@@ -22,17 +20,16 @@ function BlameLens:constructor()
     blame_info_component = nil,
     diff_component = nil,
     component_manager = nil,
-    _pending_quit_key = nil,
-    debounce_cleanups = {},
+    pending_quit_key = nil,
   }
 end
 
-function BlameLens:hunk_up()
-  self.diff_component:prev('top')
+function BlameLens:prev_hunk()
+  self.diff_component:hunk_up('top')
 end
 
-function BlameLens:hunk_down()
-  self.diff_component:next('top')
+function BlameLens:next_hunk()
+  self.diff_component:hunk_down('top')
 end
 
 function BlameLens:create(data)
@@ -124,51 +121,49 @@ function BlameLens:setup_keymaps()
           self.component_manager:destroy()
         end)
       else
-        self._pending_quit_key = {
+        self.pending_quit_key = {
           key = quit_key,
         }
       end
     end
   end
 
-  self:_setup_hunk_keymaps()
+  self:setup_hunk_keymaps()
 end
 
-function BlameLens:_setup_hunk_keymaps()
+function BlameLens:setup_hunk_keymaps()
   if not self.diff_component then return end
 
-  local diff_view_setting = require('vgit.settings.diff_view')
-  local keymaps = diff_view_setting:get('keymaps')
+  local status_diff_view_setting = require('vgit.settings.status_diff_view')
+  local keymaps = status_diff_view_setting:get('keymaps')
 
   if not keymaps then return end
 
-  local hunk_up_key = self:get_key(keymaps.hunk_up)
-  if hunk_up_key then
-    local hunk_up_fn, hunk_up_cleanup = event.debounce_async(function()
-      self:hunk_up()
-    end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, hunk_up_cleanup)
+  local prev_key = self:get_key(keymaps.previous)
+  if prev_key then
+    local prev_fn = event.async(function()
+      self:prev_hunk()
+    end)
     self.diff_component:set_keymap(
       {
         mode = 'n',
-        key = hunk_up_key,
+        key = prev_key,
       },
-      hunk_up_fn
+      prev_fn
     )
   end
 
-  local hunk_down_key = self:get_key(keymaps.hunk_down)
-  if hunk_down_key then
-    local hunk_down_fn, hunk_down_cleanup = event.debounce_async(function()
-      self:hunk_down()
-    end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, hunk_down_cleanup)
+  local next_key = self:get_key(keymaps.next)
+  if next_key then
+    local next_fn = event.async(function()
+      self:next_hunk()
+    end)
     self.diff_component:set_keymap(
       {
         mode = 'n',
-        key = hunk_down_key,
+        key = next_key,
       },
-      hunk_down_fn
+      next_fn
     )
   end
 end
@@ -207,10 +202,6 @@ function BlameLens:emit_cleanup_events()
 end
 
 function BlameLens:destroy()
-  for _, cleanup in ipairs(self.debounce_cleanups) do
-    cleanup()
-  end
-  self.debounce_cleanups = {}
   self:emit_cleanup_events()
   self.component_manager:destroy()
 end

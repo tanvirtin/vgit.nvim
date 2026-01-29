@@ -177,6 +177,9 @@ function DiffBuilder:build(spec)
     metadata = self:_get_metadata(spec),
   })
 
+  diff.original_lines = original_lines
+  diff.current_lines = current_lines
+
   return diff
 end
 

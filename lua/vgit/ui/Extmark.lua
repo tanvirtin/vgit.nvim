@@ -30,6 +30,8 @@ function Extmark:highlight(opts)
   local row = opts.row
   local pattern = opts.pattern
   local col_range = opts.col_range
+  local priority = opts.priority
+  local line_hl = opts.line_hl  -- For full line highlighting
 
   if pattern then
     local result = {}
@@ -63,10 +65,24 @@ function Extmark:highlight(opts)
     return true, result
   end
 
-  return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, col_range.from, {
+  -- Full line highlighting
+  if line_hl then
+    return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, 0, {
+      line_hl_group = hl,
+      priority = priority,
+    })
+  end
+
+  -- Column range highlighting
+  local extmark_opts = {
     end_col = col_range.to,
     hl_group = hl,
-  })
+  }
+  if priority then
+    extmark_opts.priority = priority
+  end
+
+  return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, col_range.from, extmark_opts)
 end
 
 function Extmark:text(opts)

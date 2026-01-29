@@ -12,23 +12,20 @@ local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
 
 local HunkLens = Object:extend()
 
-HunkLens.DEBOUNCE_MS = 100
-
 function HunkLens:constructor()
   return {
     active = false,
     diff_component = nil,
     component_manager = nil,
-    debounce_cleanups = {},
   }
 end
 
-function HunkLens:hunk_up()
-  self.diff_component:prev('center')
+function HunkLens:prev_hunk()
+  self.diff_component:hunk_up('center')
 end
 
-function HunkLens:hunk_down()
-  self.diff_component:next('center')
+function HunkLens:next_hunk()
+  self.diff_component:hunk_down('center')
 end
 
 function HunkLens:create_diff_component(diff_data, filename, filetype, layout_type)
@@ -51,9 +48,9 @@ function HunkLens:get_key(keymap)
 end
 
 function HunkLens:setup_keymaps()
-  local diff_view_setting = require('vgit.settings.diff_view')
+  local status_diff_view_setting = require('vgit.settings.status_diff_view')
   local scene_keymaps = scene_setting:get('keymaps')
-  local diff_keymaps = diff_view_setting:get('keymaps')
+  local diff_keymaps = status_diff_view_setting:get('keymaps')
 
   local quit_key = self:get_key(scene_keymaps.quit)
   if quit_key then
@@ -65,33 +62,31 @@ function HunkLens:setup_keymaps()
     end)
   end
 
-  local hunk_up_key = self:get_key(diff_keymaps.hunk_up)
-  if hunk_up_key then
-    local hunk_up_fn, hunk_up_cleanup = event.debounce_async(function()
-      self:hunk_up()
-    end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, hunk_up_cleanup)
+  local prev_key = self:get_key(diff_keymaps.previous)
+  if prev_key then
+    local prev_fn = event.async(function()
+      self:prev_hunk()
+    end)
     self.diff_component:set_keymap(
       {
         mode = 'n',
-        key = hunk_up_key,
+        key = prev_key,
       },
-      hunk_up_fn
+      prev_fn
     )
   end
 
-  local hunk_down_key = self:get_key(diff_keymaps.hunk_down)
-  if hunk_down_key then
-    local hunk_down_fn, hunk_down_cleanup = event.debounce_async(function()
-      self:hunk_down()
-    end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, hunk_down_cleanup)
+  local next_key = self:get_key(diff_keymaps.next)
+  if next_key then
+    local next_fn = event.async(function()
+      self:next_hunk()
+    end)
     self.diff_component:set_keymap(
       {
         mode = 'n',
-        key = hunk_down_key,
+        key = next_key,
       },
-      hunk_down_fn
+      next_fn
     )
   end
 end
@@ -155,11 +150,6 @@ end
 
 function HunkLens:hide()
   if not self.active then return end
-
-  for _, cleanup in ipairs(self.debounce_cleanups) do
-    cleanup()
-  end
-  self.debounce_cleanups = {}
 
   self:emit_cleanup_events()
   self.component_manager:destroy()

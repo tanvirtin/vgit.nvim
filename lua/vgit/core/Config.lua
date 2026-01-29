@@ -26,7 +26,20 @@ function Config:set(key, value)
 end
 
 function Config:assign(config)
-  self.data = utils.object.assign(self.data, config)
+  if config == nil then return self.data end
+
+  for key, value in pairs(config) do
+    if self.data[key] ~= nil then
+      if type(self.data[key]) == 'table' and type(value) == 'table' then
+        self.data[key] = utils.object.assign(self.data[key], value)
+      else
+        self.data[key] = value
+      end
+    else
+      local console = require('vgit.core.console')
+      console.debug.warning(string.format('Unknown config key "%s" will be ignored', key))
+    end
+  end
 
   return self.data
 end
