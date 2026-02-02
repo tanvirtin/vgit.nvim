@@ -5,9 +5,40 @@ vim.api.nvim_create_augroup('VGitGroup', { clear = false })
 
 local _is_registered = false
 
+local function safe_async_void(func)
+  local call_site_trace = debug.traceback('async function defined at:', 2)
+
+  return function(...)
+    local args = { ... }
+    local argc = select('#', ...)
+
+    local function error_handler(err)
+      local error_trace = debug.traceback('', 2)
+      local msg = string.format(
+        '[VGit] Async Error: %s\n\n--- Error Location ---\n%s\n--- Call Site ---\n%s',
+        tostring(err),
+        error_trace,
+        call_site_trace
+      )
+      vim.schedule(function()
+        vim.api.nvim_err_writeln(msg)
+      end)
+      return err
+    end
+
+    local function protected_func()
+      xpcall(function()
+        func(unpack(args, 1, argc))
+      end, error_handler)
+    end
+
+    async.void(protected_func)()
+  end
+end
+
 local event = {
   group = 'VGitGroup',
-  async = async.void,
+  async = safe_async_void,
   promisify = async.wrap,
   await = async.wrap(vim.schedule, 1),
 }
@@ -137,7 +168,7 @@ function event.register_module()
 
   _is_registered = true
 
-  event.on({ 'VimLeavePre' }, function ()
+  event.on({ 'VimLeavePre' }, function()
     handle:stop()
     handle:close()
   end)

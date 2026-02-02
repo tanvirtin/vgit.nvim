@@ -147,6 +147,7 @@ function DiffBuilder:build(spec)
 
   assertion.assert(spec, 'spec is required').assert(type, 'type is required')
 
+  if fs.is_dir(spec.filename) then return end
   if type == 'conflict' then return self:_build_conflict_diff(spec) end
 
   local original_lines, current_lines = self:_get_lines(spec)
