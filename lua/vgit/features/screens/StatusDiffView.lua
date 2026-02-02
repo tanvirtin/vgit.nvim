@@ -542,6 +542,10 @@ function StatusDiffView:_handle_file_selection_change(item)
       end
     else
       event.await()
+      self.diff_component:clear_extmarks()
+      self.diff_component:clear_lines()
+      self.diff_component:clear_folds()
+      self.diff_component:reset_cursor()
       self.diff_component:set_props({
         diff = nil,
         filename = nil,
