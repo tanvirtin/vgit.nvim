@@ -504,18 +504,13 @@ function StatusDiffView:_handle_file_selection_change(item)
     return
   end
 
-  local entry = item.entry or item
+  self.diff_component:clear_extmarks()
+  self.diff_component:clear_lines()
+  self.diff_component:clear_folds()
+  self.diff_component:reset_cursor()
 
-  if not self:_set_current_entry(entry) then
-    console.warn('[StatusDiffView] Invalid entry structure in file selection change')
-    if self.diff_component then
-      self.diff_component:clear_extmarks()
-      self.diff_component:clear_lines()
-      self.diff_component:clear_folds()
-      self.diff_component:reset_cursor()
-    end
-    return
-  end
+  local entry = item.entry or item
+  if not self:_set_current_entry(entry) then return end
 
   local repo, repo_err = repository.current()
   if not self:_handle_git_error(repo_err, 'repository.current') then return end
@@ -542,10 +537,6 @@ function StatusDiffView:_handle_file_selection_change(item)
       end
     else
       event.await()
-      self.diff_component:clear_extmarks()
-      self.diff_component:clear_lines()
-      self.diff_component:clear_folds()
-      self.diff_component:reset_cursor()
       self.diff_component:set_props({
         diff = nil,
         filename = nil,
@@ -836,12 +827,28 @@ end
 
 function StatusDiffView:on_git_change()
   event.await()
-  self:refresh_data()
+
+  local filename = self.current_entry and self.current_entry.status and self.current_entry.status.filename
+  local entry_type = self.current_entry and self.current_entry.type
 
   event.await()
-  if self:_is_valid_entry(self.current_entry) then
-    event.await()
-    self:_update_diff_component()
+  self:refresh_data()
+
+  if filename then
+    local found = false
+    self.tree_component:each_entry(function(status, et)
+      if not found and status.filename == filename and et == entry_type then found = true end
+    end)
+
+    if found then
+      self:move_to_entry(filename, entry_type)
+      event.await()
+      self:_update_diff_component()
+    else
+      self.tree_component:move_to(function(status)
+        return status ~= nil
+      end)
+    end
   end
 end
 
