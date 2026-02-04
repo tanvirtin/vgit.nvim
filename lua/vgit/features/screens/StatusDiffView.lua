@@ -780,8 +780,8 @@ function StatusDiffView:_create_entries_view(data)
     },
   })
 
-  self.tree_component:set_on_enter(function()
-    self:open_file()
+  self.tree_component:set_on_enter(function(item)
+    if item and item.entry and item.entry.status then self:open_file() end
   end)
 
   local on_move_fn, on_move_cleanup = event.debounce_async(function(item)
