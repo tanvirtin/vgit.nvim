@@ -74,8 +74,13 @@ console.info = event.async(function(msg)
 end)
 
 console.input = function(prompt)
-  local result = vim.fn.input(prompt)
+  local ok, result = pcall(vim.fn.input, prompt)
   console.clear()
+
+  -- Handle keyboard interrupt (Ctrl+C) gracefully
+  if not ok then
+    return nil
+  end
 
   return result
 end

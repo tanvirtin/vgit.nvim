@@ -233,8 +233,9 @@ function FileDiffView:reset_current()
   if self.opts.is_staged then return end
 
   event.await()
-  local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) '):lower()
-
+  local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) ')
+  if not decision then return end
+  decision = decision:lower()
   if decision ~= 'yes' and decision ~= 'y' then return end
 
   event.await()

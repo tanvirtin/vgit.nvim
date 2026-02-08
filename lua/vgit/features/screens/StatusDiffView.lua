@@ -127,7 +127,9 @@ function StatusDiffView:reset_hunk()
 
   -- Confirmation prompt
   event.await()
-  local decision = console.input('Are you sure you want to discard this hunk? (y/N) '):lower()
+  local decision = console.input('Are you sure you want to discard this hunk? (y/N) ')
+  if not decision then return end
+  decision = decision:lower()
   if decision ~= 'y' and decision ~= 'yes' then return end
 
   local filename = self.current_entry.status.filename
@@ -456,8 +458,9 @@ function StatusDiffView:reset_entry()
   if not self:_is_valid_entry(self.current_entry) then return end
 
   event.await()
-  local decision = console.input('Are you sure you want to discard changes? (y/N) '):lower()
-
+  local decision = console.input('Are you sure you want to discard changes? (y/N) ')
+  if not decision then return end
+  decision = decision:lower()
   if decision ~= 'yes' and decision ~= 'y' then return end
 
   local filename = self.current_entry.status.filename
@@ -560,8 +563,9 @@ end
 
 function StatusDiffView:reset_all()
   event.await()
-  local decision = console.input('Are you sure you want to discard all changes? (y/N) '):lower()
-
+  local decision = console.input('Are you sure you want to discard all changes? (y/N) ')
+  if not decision then return end
+  decision = decision:lower()
   if decision ~= 'yes' and decision ~= 'y' then return end
 
   local repo, err = repository.current()
