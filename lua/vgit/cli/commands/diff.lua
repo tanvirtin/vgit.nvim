@@ -183,8 +183,6 @@ diff_command.execute = event.async(function(args)
     return
   end
 
-  event.await()
-
   -- Get layout preference from scene setting
   local scene_setting = require('vgit.settings.scene')
   opts.layout_type = scene_setting:get('diff_preference') or 'unified'
@@ -201,7 +199,6 @@ diff_command.execute = event.async(function(args)
     local git_file = GitFile(filename)
     local diff
 
-    event.await()
     -- Check if comparing refs or working tree
     if opts.base_ref and opts.compare_ref then
       -- Ref comparison: VGit diff <file> HEAD^2..HEAD or HEAD^2 HEAD
@@ -263,8 +260,6 @@ diff_command.execute = event.async(function(args)
     local from_ref = opts.base_ref
     local to_ref = opts.compare_ref or 'HEAD'
 
-    event.await()
-
     -- Get files that changed between the refs using git diff-tree
     local git_status = require('vgit.git.git_status')
     local files, files_err = git_status.tree(repo:get_path(), {
@@ -286,8 +281,6 @@ diff_command.execute = event.async(function(args)
     local entries = {}
     for _, file in ipairs(files) do
       local filename = file.filename
-
-      event.await()
 
       local diff = repo:diff({
         type = 'range',

@@ -49,8 +49,6 @@ show_command.execute = event.async(function(args)
     return
   end
 
-  event.await()
-
   local tree = GitTree(repo, opts.commit)
 
   -- Get commit info
@@ -59,8 +57,6 @@ show_command.execute = event.async(function(args)
     console.error('Failed to get commit info: ' .. tostring(commit_err))
     return
   end
-
-  event.await()
 
   -- Get list of files changed in this commit
   local files, files_err = tree:files()
@@ -74,8 +70,6 @@ show_command.execute = event.async(function(args)
     return
   end
 
-  event.await()
-
   -- Get layout preference
   local scene_setting = require('vgit.settings.scene')
   local layout_type = scene_setting:get('diff_preference') or 'unified'
@@ -87,8 +81,6 @@ show_command.execute = event.async(function(args)
   local entries = {}
   for _, file in ipairs(files) do
     local filename = file.filename
-
-    event.await()
 
     -- Get diff for this file
     local diff = repo:diff({

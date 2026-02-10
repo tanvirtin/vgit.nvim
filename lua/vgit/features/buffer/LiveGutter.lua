@@ -27,16 +27,13 @@ function LiveGutter:fetch(buffer)
   event.await()
   if not buffer:is_valid() then return end
 
-  event.await()
   local _, err = buffer:diff()
 
   if err then
-    event.await()
     console.debug.error(err)
     return
   end
 
-  event.await()
   buffer:generate_status()
 end
 

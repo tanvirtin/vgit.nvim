@@ -15,8 +15,6 @@ status_command.execute = event.async(function()
     return
   end
 
-  event.await()
-
   local data, err = repo:status({})
 
   if err then

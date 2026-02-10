@@ -83,9 +83,7 @@ function StatusDiffView:hunk_down()
     -- At last hunk or no hunks - move to next file
     local item = self:move_to_next_file()
     if not item then return end
-    event.await()
     self:_update_diff_component()
-    event.await()
     if self.diff_component and self.diff_component:is_valid() then
       self.diff_component:move_to_hunk(1, hunk_alignment)
     end
@@ -104,9 +102,7 @@ function StatusDiffView:hunk_up()
     -- At first hunk or no hunks - move to previous file's last hunk
     local item = self:move_to_prev_file()
     if not item then return end
-    event.await()
     self:_update_diff_component()
-    event.await()
     -- Pass 0 to go to last hunk
     if self.diff_component and self.diff_component:is_valid() then
       self.diff_component:move_to_hunk(0, hunk_alignment)
@@ -126,7 +122,6 @@ function StatusDiffView:reset_hunk()
   if not hunk then return end
 
   -- Confirmation prompt
-  event.await()
   local decision = console.input('Are you sure you want to discard this hunk? (y/N) ')
   if not decision then return end
   decision = decision:lower()
@@ -168,8 +163,6 @@ function StatusDiffView:move_to_entry(filename, entry_type)
 end
 
 function StatusDiffView:restore_hunk_position(hunk_index)
-  event.await()
-
   local marks = self.diff_component.state and self.diff_component.state.marks
   if marks and #marks > 0 then
     local target = math.min(hunk_index, #marks)
@@ -179,7 +172,6 @@ end
 
 function StatusDiffView:refresh_after_hunk_operation(filename, hunk_index, entry_type, next_file)
   self:refresh_data()
-  event.await()
 
   local still_has_entries = false
   self.tree_component:each_entry(function(status, et)
@@ -188,7 +180,6 @@ function StatusDiffView:refresh_after_hunk_operation(filename, hunk_index, entry
 
   if still_has_entries then
     self:move_to_entry(filename, entry_type)
-    event.await()
     self:_update_diff_component()
     self:restore_hunk_position(hunk_index)
   elseif next_file then
@@ -288,7 +279,6 @@ function StatusDiffView:_build_entry_diff(entry, repo)
   local opts = {}
   if self.opts.layout_type then opts.layout_type = self.opts.layout_type end
 
-  event.await()
   return repo:diff(diff_spec, opts)
 end
 
@@ -364,11 +354,10 @@ function StatusDiffView:_update_diff_component(hunk_index)
   local repo, repo_err = repository.current()
   if not self:_handle_git_error(repo_err, 'repository.current') then return false end
 
-  event.await()
+
   local diff_data, err = self:_build_entry_diff(self.current_entry, repo)
   if not self:_handle_git_error(err, '_build_entry_diff') then return false end
 
-  event.await()
   self.diff_component:set_props({
     diff = diff_data,
     filename = self.current_entry.status.filename,
@@ -376,7 +365,6 @@ function StatusDiffView:_update_diff_component(hunk_index)
   })
 
   if hunk_index then
-    event.await()
     self.diff_component:move_to_hunk(hunk_index, self:get_hunk_alignment())
   end
 
@@ -479,7 +467,6 @@ function StatusDiffView:commit()
     return
   end
 
-  event.await()
   local repo, repo_err = repository.current()
   if not self:_handle_git_error(repo_err, 'repository.current') then return end
 
@@ -525,7 +512,6 @@ function StatusDiffView:_handle_file_selection_change(item)
     local has_content = diff_data and diff_data.marks and #diff_data.marks > 0
 
     if has_content then
-      event.await()
       self.diff_component:set_props({
         diff = diff_data,
         filename = entry.status.filename,
@@ -533,13 +519,11 @@ function StatusDiffView:_handle_file_selection_change(item)
       })
 
       if self.diff_component.call then
-        event.await()
         self.diff_component:call(function()
           self.diff_component:move_to_hunk(1, self:get_hunk_alignment())
         end)
       end
     else
-      event.await()
       self.diff_component:set_props({
         diff = nil,
         filename = nil,
@@ -579,14 +563,11 @@ function StatusDiffView:refresh_data()
   local repo, err = repository.current()
   if err then return end
 
-  event.await()
-
   local data, status_err = repo:status(self.opts)
   if not self:_handle_git_error(status_err, 'status') then return end
 
   if not data or utils.object.is_empty(data.entries) then
-    console.warn('[StatusDiffView] No data returned from refresh_data()')
-    return
+    return false
   end
 
   local file_groups = {}
@@ -830,13 +811,15 @@ function StatusDiffView:emit_cleanup_events()
 end
 
 function StatusDiffView:on_git_change()
-  event.await()
-
   local filename = self.current_entry and self.current_entry.status and self.current_entry.status.filename
   local entry_type = self.current_entry and self.current_entry.type
 
-  event.await()
-  self:refresh_data()
+  local has_data = self:refresh_data()
+
+  if has_data == false then
+    self:destroy()
+    return
+  end
 
   if filename then
     local found = false
@@ -846,7 +829,6 @@ function StatusDiffView:on_git_change()
 
     if found then
       self:move_to_entry(filename, entry_type)
-      event.await()
       self:_update_diff_component()
     else
       self.tree_component:move_to(function(status)
@@ -863,6 +845,7 @@ function StatusDiffView:destroy()
   self.debounce_cleanups = {}
   self:emit_cleanup_events()
   self.component_manager:destroy()
+  self.destroyed = true
 end
 
 return StatusDiffView
