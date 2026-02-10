@@ -1,6 +1,9 @@
 local Object = require('vgit.core.Object')
 local signs_setting = require('vgit.settings.signs')
 
+local _cached_priority = nil
+local _cached_definitions = nil
+
 local Extmark = Object:extend()
 
 function Extmark:constructor(bufnr, ns_name_extension)
@@ -35,27 +38,40 @@ function Extmark:highlight(opts)
 
   if pattern then
     local result = {}
-    local lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
-
-    for i = 1, #lines do
+    local lines
+    if row ~= nil then
+      lines = vim.api.nvim_buf_get_lines(self.bufnr, row, row + 1, false)
+      if #lines == 0 then return true, result end
       local j = 0
-      local line = lines[i]
-
-      if i - 1 == row or row == nil then
+      local line = lines[1]
+      while true do
+        local from, to = line:find(pattern, j + 1)
+        if from == nil then break end
+        local extmark_opts = {
+          end_col = to,
+          hl_group = hl,
+        }
+        if priority then extmark_opts.priority = priority end
+        local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, from - 1, extmark_opts)
+        if not ok then return false, value end
+        j = from
+        result[#result + 1] = value
+      end
+    else
+      lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
+      for i = 1, #lines do
+        local j = 0
+        local line = lines[i]
         while true do
           local from, to = line:find(pattern, j + 1)
           if from == nil then break end
-
-          local ok, value = self:highlight({
-            hl = hl,
-            row = i - 1,
-            col_range = {
-              from = from - 1,
-              to = to,
-            },
-          })
+          local extmark_opts = {
+            end_col = to,
+            hl_group = hl,
+          }
+          if priority then extmark_opts.priority = priority end
+          local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, i - 1, from - 1, extmark_opts)
           if not ok then return false, value end
-
           j = from
           result[#result + 1] = value
         end
@@ -125,11 +141,12 @@ end
 function Extmark:sign(sign)
   local col = sign.col
   local name = sign.name
-  local priority = sign.priority or signs_setting:get('priority')
+  if not _cached_priority then _cached_priority = signs_setting:get('priority') end
+  if not _cached_definitions then _cached_definitions = signs_setting:get('definitions') end
+  local priority = sign.priority or _cached_priority
 
   local id = self:derive_id(col, 'sign')
-  local definitions = signs_setting:get('definitions')
-  local sign_definition = definitions[name]
+  local sign_definition = _cached_definitions[name]
   local sign_text = sign_definition.text
 
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, col, 0, {

@@ -1,5 +1,6 @@
 local fs = require('vgit.core.fs')
 local utils = require('vgit.core.utils')
+local gitcli = require('vgit.git.gitcli')
 local GitHunk = require('vgit.git.GitHunk')
 local git_setting = require('vgit.settings.git')
 
@@ -10,17 +11,20 @@ function git_hunks.live(reponame, original_lines, current_lines)
   local current_len = #current_lines
 
   if current_len > lines_limit then
-    local temp_filename_b = fs.tmpname()
     local temp_filename_a = fs.tmpname()
+    local temp_filename_b = fs.tmpname()
 
     fs.write_file(temp_filename_a, original_lines)
     fs.write_file(temp_filename_b, current_lines)
 
-    local hunks, hunks_err = git_hunks.list(reponame, { filenames = { temp_filename_a, temp_filename_b } })
+    local ok, hunks, hunks_err = pcall(function()
+      return git_hunks.list(reponame, { filenames = { temp_filename_a, temp_filename_b } })
+    end)
 
     fs.remove_file(temp_filename_a)
     fs.remove_file(temp_filename_b)
 
+    if not ok then return nil, { hunks } end
     return hunks, hunks_err
   end
 
@@ -144,16 +148,11 @@ function git_hunks.list(reponame, opts)
     filename,
   })
 
-  local cmd = 'git -C "' .. reponame .. '" ' .. table.concat(args, ' ')
-  local system_result = vim.fn.system(cmd)
-  local system_exit_code = vim.v.shell_error
+  local git_args = { '-C', reponame }
+  utils.list.concat(git_args, args)
 
-  if system_exit_code ~= 0 then return nil, { 'git diff failed with exit code ' .. system_exit_code } end
-
-  local lines = vim.split(system_result, '\n')
-  lines = vim.tbl_filter(function(line)
-    return line ~= ''
-  end, lines)
+  local lines, err = gitcli.run(git_args)
+  if err then return nil, err end
 
   local result = {}
   local result_len = 0
@@ -167,7 +166,7 @@ function git_hunks.list(reponame, opts)
     end
   end
 
-  return result, err
+  return result
 end
 
 return git_hunks

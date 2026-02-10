@@ -11,14 +11,21 @@ end
 
 function Config:get(key)
   assert(type(key) == 'string', 'type error :: expected string')
-  assert(self.data[key] ~= nil, string.format('key "%s" does not exist', key))
+  local value = self.data[key]
+  if value == nil then
+    error(string.format('key "%s" does not exist', tostring(key)))
+  end
 
-  return self.data[key]
+  return value
 end
 
 function Config:set(key, value)
-  assert(self.data[key] ~= nil, string.format('key "%s" does not exist', key))
-  assert(type(self.data[key]) == type(value), string.format('type error :: expected %s', key))
+  if self.data[key] == nil then
+    error(string.format('key "%s" does not exist', tostring(key)))
+  end
+  if type(self.data[key]) ~= type(value) then
+    error(string.format('type error :: expected %s', type(self.data[key])))
+  end
 
   self.data[key] = value
 
@@ -31,7 +38,11 @@ function Config:assign(config)
   for key, value in pairs(config) do
     if self.data[key] ~= nil then
       if type(self.data[key]) == 'table' and type(value) == 'table' then
-        self.data[key] = utils.object.assign(self.data[key], value)
+        if vim.islist(value) then
+          self.data[key] = value
+        else
+          self.data[key] = utils.object.assign(self.data[key], value)
+        end
       else
         self.data[key] = value
       end
