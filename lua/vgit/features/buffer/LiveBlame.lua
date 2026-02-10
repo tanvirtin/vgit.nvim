@@ -48,20 +48,15 @@ function LiveBlame:register_events()
       local conflicts = buffer:get_conflicts()
       if #conflicts ~= 0 then return end
 
-      event.await()
       local _, config_err = buffer:config()
       if config_err then return console.debug.error(config_err) end
 
-      event.await()
       local window = Window(0)
-      event.await()
       local lnum = window:get_lnum()
 
-      event.await()
       local _, blame_err = buffer:blame(lnum)
       if blame_err then return console.debug.error(blame_err) end
 
-      event.await()
       buffer:render_blames()
     end, live_blame_setting:get('debounce_ms'))
 

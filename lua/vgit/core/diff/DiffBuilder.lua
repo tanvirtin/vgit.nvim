@@ -1,5 +1,4 @@
 local fs = require('vgit.core.fs')
-local event = require('vgit.core.event')
 local Object = require('vgit.core.Object')
 local assertion = require('vgit.core.assertion')
 local LiveHunkGenerator = require('vgit.core.diff.hunks.LiveHunkGenerator')
@@ -40,7 +39,6 @@ function DiffBuilder:_get_range_lines(spec)
   if to == 'disk' then
     local repo_path = self._repository:get_path()
     local full_path = fs.absolute_path(repo_path, filename)
-    event.await()
     current_lines = fs.read_file(full_path)
   else
     current_lines = self._repository:file_lines(filename, to)

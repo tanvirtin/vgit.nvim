@@ -44,7 +44,10 @@ local event = {
 }
 
 function event.on(event_names, callback)
-  vim.api.nvim_create_autocmd(event_names, { callback = event.async(callback) })
+  vim.api.nvim_create_autocmd(event_names, {
+    group = event.group,
+    callback = event.async(callback),
+  })
 
   return event
 end
@@ -52,10 +55,7 @@ end
 function event.buffer_on(buffer, event_name, callback)
   local group = event_name
   if type(event_name) == 'table' then
-    group = utils.list.reduce(event_name, '', function(acc, e)
-      acc = acc .. '::' .. e
-      return acc
-    end)
+    group = '::' .. table.concat(event_name, '::')
   end
   group = event.group .. '::' .. group .. '::' .. buffer.bufnr
   vim.api.nvim_create_augroup(group, { clear = true })
@@ -151,18 +151,19 @@ function event.register_module()
   local ok = handle:start(
     git_dirname,
     {},
-    event.async(function(err, filename, event_name)
+    function(err, filename, event_name)
       if err then return end
       if not filename then return end
       if filename:match('index%.lock$') then return end
 
-      event.await()
-      event.emit('VGitChange', {
-        git_dir = git_dirname,
-        filename = filename,
-        event_name = event_name,
-      })
-    end)
+      vim.schedule(function()
+        event.emit('VGitChange', {
+          git_dir = git_dirname,
+          filename = filename,
+          event_name = event_name,
+        })
+      end)
+    end
   )
   if not ok then return handle:close() end
 

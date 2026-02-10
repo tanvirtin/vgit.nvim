@@ -29,30 +29,23 @@ hunk_command.execute = event.async(function(args)
   local git_file = GitFile(filename)
   local current_lines = fs.read_file(filename)
   if not current_lines then
-    event.await()
     console.error('Failed to read file')
     return
   end
 
   local hunks, hunks_err = git_file:live_hunks(current_lines)
   if hunks_err then
-    event.await()
     console.error(hunks_err)
     return
   end
-
-  event.await()
 
   local Diff = require('vgit.core.diff.Diff')
   local diff = Diff():generate(hunks, current_lines, current_layout_type)
 
   if not diff then
-    event.await()
     console.error('Failed to generate diff')
     return
   end
-
-  event.await()
 
   local target_hunk_index = nil
   if diff and diff.marks then

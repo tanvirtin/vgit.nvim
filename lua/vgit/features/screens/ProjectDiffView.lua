@@ -94,7 +94,6 @@ function ProjectDiffView:_get_diff_for_entry(repo, entry)
     }
   end
 
-  event.await()
   local diff_data, err = repo:diff(diff_spec, {})
   if err then
     console.debug.error(string.format('[ProjectDiffView] diff for %s failed: %s', filename, err))
@@ -252,7 +251,6 @@ function ProjectDiffView:jump_to_file()
   event.await()
 
   fs.open(filename)
-  event.await()
 
   local Window = require('vgit.core.Window')
   local window = Window(0)

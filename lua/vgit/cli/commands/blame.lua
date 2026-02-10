@@ -73,8 +73,6 @@ blame_command.execute = event.async(function(args)
   local repo_path = repo:get_path()
   local filename = normalize_file_path(opts.file, repo_path)
 
-  event.await()
-
   local git_file = GitFile(filename)
 
   local blame, blame_err = git_file:blame(opts.line_number)
@@ -99,7 +97,6 @@ blame_command.execute = event.async(function(args)
       is_uncommitted = true,
     }
 
-    event.await()
     local display_service = require('vgit.ui.display_service')
     display_service.show_blame(data)
     return
@@ -107,12 +104,10 @@ blame_command.execute = event.async(function(args)
 
   local commit_hash = blame.hash or blame.commit_hash
 
-  event.await()
   local git_log = require('vgit.git.git_log')
   local log_result = git_log.get(repo:get_path(), commit_hash)
   local parent_hash = log_result and log_result.parent_hash or commit_hash .. '^'
 
-  event.await()
   local diff = repo:diff({
     type = 'blame',
     filename = filename,
@@ -125,8 +120,6 @@ blame_command.execute = event.async(function(args)
     console.error('Failed to generate blame diff')
     return
   end
-
-  event.await()
 
   local data = {
     type = 'blame',

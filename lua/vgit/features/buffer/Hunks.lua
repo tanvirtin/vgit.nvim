@@ -68,11 +68,8 @@ function Hunks:stage_all()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
-  event.await()
   local _, err = buffer:stage()
   if err then return console.debug.error(err) end
-
-  event.await()
 end
 
 function Hunks:cursor_stage()
@@ -82,8 +79,12 @@ function Hunks:cursor_stage()
   if not buffer then return end
   if buffer:editing() then return end
 
-  -- Performance: Suppress VGitSync broadcast; refresh only this buffer after delay
-  git_buffer_store.suppress_sync_and_refresh(buffer, 200)
+  -- Performance: Deferred sync of only the current buffer after staging
+  vim.defer_fn(event.async(function()
+    if buffer:is_valid() then
+      git_buffer_store.dispatch(buffer, 'sync')
+    end
+  end), 200)
 
   if not buffer:is_tracked() then
     local _, err = buffer:stage()
@@ -94,7 +95,6 @@ function Hunks:cursor_stage()
   local hunk = self:cursor_hunk()
   if not hunk then return end
 
-  event.await()
   local _, err = buffer:stage_hunk(hunk)
   if err then return console.debug.error(err) end
 end
@@ -104,7 +104,6 @@ function Hunks:unstage_all()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
-  event.await()
   local _, err = buffer:unstage()
   if err then return console.debug.error(err) end
 end
@@ -117,11 +116,9 @@ function Hunks:reset_all()
   local hunks = buffer:get_hunks()
   if not hunks or #hunks == 0 then return end
 
-  event.await()
   local lines, err = buffer.git_file:lines()
   if err then return console.debug.error(err) end
 
-  event.await()
   buffer:set_lines(lines)
 end
 

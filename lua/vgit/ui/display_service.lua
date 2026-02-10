@@ -6,7 +6,11 @@ local active_view = nil
 local display_service = {}
 
 event.custom_on('VGitChange', function()
-  if active_view and active_view.on_git_change then active_view:on_git_change() end
+  if active_view and active_view.on_git_change then
+    active_view:on_git_change()
+    -- View may have destroyed itself (e.g. no more changes after commit)
+    if active_view and active_view.destroyed then active_view = nil end
+  end
 end)
 
 display_service.show_diff = event.async(function(data)
@@ -83,7 +87,6 @@ display_service.show_blame = event.async(function(data)
     active_view = nil
   end
 
-  event.await()
   event.await()
 
   local BlameLens = require('vgit.features.lenses.BlameLens')

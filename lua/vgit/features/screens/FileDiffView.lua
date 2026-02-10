@@ -79,7 +79,6 @@ function FileDiffView:_refresh_diff_data()
     }
   end
 
-  event.await()
   local diff = repo:diff(diff_spec)
   if not diff then return end
 
@@ -186,11 +185,9 @@ function FileDiffView:_update_diff_component(hunk_index)
   event.await()
   if not self.diff_component or not self.diff_component:is_valid() then return false end
 
-  event.await()
   local data = self:_refresh_diff_data()
   if not data then return false end
 
-  event.await()
   if not self.diff_component or not self.diff_component:is_valid() then return false end
   self.diff_component:set_props({
     diff = data.diff,
@@ -198,7 +195,6 @@ function FileDiffView:_update_diff_component(hunk_index)
     filetype = data.filetype,
   })
 
-  event.await()
   if not self.diff_component or not self.diff_component:is_valid() then return false end
   if hunk_index then
     self.diff_component:move_to_hunk(hunk_index, self:get_hunk_alignment())
@@ -218,13 +214,11 @@ function FileDiffView:toggle_view()
       return
     end
 
-    event.await()
     self.diff_component:set_props({
       diff = data.diff,
       filename = data.filename,
       filetype = data.filetype,
     })
-    event.await()
     self.diff_component:move_to_hunk(1, self:get_hunk_alignment())
   end
 end
@@ -238,20 +232,16 @@ function FileDiffView:reset_current()
   decision = decision:lower()
   if decision ~= 'yes' and decision ~= 'y' then return end
 
-  event.await()
   local filename = self.opts.filename
   if not filename then return end
 
-  event.await()
   local repo, err = repository.current()
   if err then return end
   repo:reset(filename)
 
-  event.await()
   local data = self:_refresh_diff_data()
   if not data then return end
 
-  event.await()
   self.diff_component:set_props({
     diff = data.diff,
     filename = data.filename,
@@ -264,7 +254,6 @@ function FileDiffView:enter_view()
   local mark = self.diff_component:get_current_mark_under_cursor()
   if not mark then return end
 
-  event.await()
   local filename = self.opts.filename
   if not filename then return end
 
@@ -273,7 +262,6 @@ function FileDiffView:enter_view()
 
   fs.open(filename)
 
-  event.await()
   Window(0):set_lnum(mark.top_relative):position_cursor('center')
 end
 
@@ -287,11 +275,9 @@ function FileDiffView:stage_hunk()
   local hunk, index = self.diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  event.await()
   local repo, err = repository.current()
   if err then return end
 
-  event.await()
   repo:stage_hunk(filename, hunk)
 
   self:_update_diff_component(index)
@@ -307,11 +293,9 @@ function FileDiffView:unstage_hunk()
   local hunk, index = self.diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  event.await()
   local repo, err = repository.current()
   if err then return end
 
-  event.await()
   repo:unstage_hunk(filename, hunk)
 
   self:_update_diff_component(index)
@@ -324,11 +308,9 @@ function FileDiffView:stage_current()
   local filename = self.opts.filename
   if not filename then return end
 
-  event.await()
   local repo, err = repository.current()
   if err then return end
 
-  event.await()
   repo:stage_file(filename)
 
   self:_update_diff_component()
@@ -341,11 +323,9 @@ function FileDiffView:unstage_current()
   local filename = self.opts.filename
   if not filename then return end
 
-  event.await()
   local repo, err = repository.current()
   if err then return end
 
-  event.await()
   repo:unstage_file(filename)
 
   self:_update_diff_component()
