@@ -20,6 +20,7 @@ function GitBuffer:constructor(...)
     config = nil,
     conflicts = {},
   }
+  buffer.signs_dirty = false
   buffer.blame_extmark = Extmark(bufnr, 'blame')
   buffer.gutter_extmark = Extmark(bufnr, 'gutter')
   buffer.conflict_extmark = Extmark(bufnr, 'conflict')
@@ -45,6 +46,7 @@ function GitBuffer:sync()
     config = nil,
     conflicts = {},
   }
+  self.signs_dirty = false
   self.git_file = GitFile(self:get_name())
 
   return self
@@ -52,6 +54,7 @@ end
 
 function GitBuffer:reset_signs()
   self.state.signs = {}
+  self.signs_dirty = true
   return self
 end
 
@@ -119,7 +122,6 @@ function GitBuffer:stage_hunk(hunk)
   local _, err = self.git_file:stage_hunk(hunk)
   if err then return _, err end
 
-  event.await()
   return self:diff()
 end
 
@@ -127,7 +129,6 @@ function GitBuffer:unstage_hunk(hunk)
   local _, err = self.git_file:unstage_hunk(hunk)
   if err then return _, err end
 
-  event.await()
   return self:diff()
 end
 
@@ -135,7 +136,6 @@ function GitBuffer:stage()
   local _, err = self.git_file:stage()
   if err then return _, err end
 
-  event.await()
   return self:diff()
 end
 
@@ -143,7 +143,6 @@ function GitBuffer:unstage()
   local _, err = self.git_file:unstage()
   if err then return _, err end
 
-  event.await()
   return self:diff()
 end
 
@@ -194,7 +193,6 @@ function GitBuffer:conflicts()
     state.conflicts = {}
     return state.conflicts
   end
-  event.await()
   local lines = self:get_lines()
   local conflicts = self.git_file:conflicts(lines)
   self:set_state({ conflicts = conflicts })
@@ -226,6 +224,7 @@ function GitBuffer:diff()
   end
 
   self:set_state({ signs = signs })
+  self.signs_dirty = true
 
   return hunks
 end
@@ -234,16 +233,12 @@ function GitBuffer:exists()
   event.await()
   if not self:is_valid() then return false end
 
-  event.await()
   if self:get_option('buftype') ~= '' then return false end
 
-  event.await()
   if not self:is_inside_git_dir() then return false end
 
-  event.await()
   if not self:is_in_disk() then return false end
 
-  event.await()
   if self:is_ignored() then return false end
 
   return true
@@ -374,6 +369,9 @@ function GitBuffer:render_conflicts(top, bot)
 end
 
 function Buffer:render_signs(top, bot)
+  if not self.signs_dirty then return self end
+  self.signs_dirty = false
+
   top = top or 0
   bot = bot or -1
   self:clear_signs(top, bot)
