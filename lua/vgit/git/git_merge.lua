@@ -106,9 +106,9 @@ function git_merge.is_ancestor(reponame, ancestor, descendant)
   if not ancestor then return nil, { 'ancestor is required' } end
   if not descendant then return nil, { 'descendant is required' } end
 
-  local _, err = GitQueryBuilder(reponame):raw_args('merge-base', '--is-ancestor', ancestor, descendant):execute()
+  local _, _, code = GitQueryBuilder(reponame):raw_args('merge-base', '--is-ancestor', ancestor, descendant):execute()
 
-  return err == nil
+  return code == 0
 end
 
 return git_merge

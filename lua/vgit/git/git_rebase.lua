@@ -3,8 +3,8 @@ local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 local git_rebase = {}
 
 function git_rebase.rebase(reponame, upstream, opts)
-  if not reponame then return nil, { 'reponame is required' } end
-  if not upstream then return nil, { 'upstream is required' } end
+  if not reponame or reponame == '' then return nil, { 'reponame is required' } end
+  if not upstream or upstream == '' then return nil, { 'upstream is required' } end
 
   opts = opts or {}
   local query = GitQueryBuilder(reponame):raw_arg('rebase')
@@ -92,7 +92,7 @@ function git_rebase.show_current_patch(reponame)
 end
 
 function git_rebase.in_progress(reponame)
-  if not reponame then return nil, { 'reponame is required' } end
+  if not reponame or reponame == '' then return false end
 
   local fs = require('vgit.core.fs')
   local git_dir = string.format('%s/.git', reponame)

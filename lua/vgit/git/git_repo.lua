@@ -27,12 +27,15 @@ function git_repo.discover(filepath)
     search_dir = vim.loop.cwd()
   end
 
+  if discover_cache[search_dir] then return discover_cache[search_dir], nil end
+
   -- Use git -C to search for repo in the specified directory
   local system_result = vim.fn.system('git -C "' .. search_dir .. '" rev-parse --show-toplevel')
   local system_exit_code = vim.v.shell_error
 
   if system_exit_code == 0 and system_result and system_result ~= '' then
     local clean_result = system_result:gsub('\n', '')
+    discover_cache[search_dir] = clean_result
     return clean_result, nil
   end
 

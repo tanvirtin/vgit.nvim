@@ -3,8 +3,9 @@ local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 local git_revert = {}
 
 function git_revert.revert(reponame, commits, opts)
-  if not reponame then return nil, { 'reponame is required' } end
-  if not commits then return nil, { 'commits is required' } end
+  if not reponame or reponame == '' then return nil, { 'reponame is required' } end
+  if not commits or commits == '' then return nil, { 'commits is required' } end
+  if type(commits) == 'table' and #commits == 0 then return nil, { 'commits is required' } end
 
   opts = opts or {}
   local query = GitQueryBuilder(reponame):raw_arg('revert')
@@ -68,7 +69,7 @@ function git_revert.quit(reponame)
 end
 
 function git_revert.in_progress(reponame)
-  if not reponame then return nil, { 'reponame is required' } end
+  if not reponame or reponame == '' then return false end
 
   local fs = require('vgit.core.fs')
   local git_dir = string.format('%s/.git', reponame)

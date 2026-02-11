@@ -38,7 +38,7 @@ function Diff:generate_unified_conflict(conflicts, lines)
 
     marks_len = marks_len + 1
     marks[marks_len] = {
-      type = type,
+      type = 'conflict',
       top = top,
       bot = bot,
       top_relative = top,
@@ -135,7 +135,7 @@ function Diff:generate_split_conflict(conflicts, lines)
     local bot = incoming.bot
 
     marks[#marks + 1] = {
-      type = type,
+      type = 'conflict',
       top = top,
       bot = bot,
       top_relative = top,
@@ -286,11 +286,13 @@ function Diff:generate_unified_deleted(hunks, lines)
 end
 
 function Diff:generate_split_deleted(hunks, lines)
-  if #hunks == 0 then return utils.object.extend(self, {
-    current_lines = {},
-    previous_lines = lines,
-    hunks = hunks,
-  }) end
+  if #hunks == 0 then
+    return utils.object.extend(self, {
+      current_lines = {},
+      previous_lines = lines,
+      hunks = hunks,
+    })
+  end
 
   local hunk = hunks[1]
   local type = hunk.type
@@ -338,7 +340,10 @@ function Diff:generate_unified(hunks, lines)
     hunks = hunks,
   }) end
 
+  -- Build new_lines by appending segments instead of table.insert(tbl, pos, val)
+  -- which avoids O(n²) element shifting for large diffs.
   local new_lines = {}
+  local new_lines_len = 0
   local lnum_changes = {}
   local lnum_changes_len = 0
   local marks = {}
@@ -348,25 +353,32 @@ function Diff:generate_unified(hunks, lines)
     removed = 0,
   }
 
-  for key, value in pairs(lines) do
-    new_lines[key] = value
-  end
-
-  local new_lines_added = 0
+  local lines_len = #lines
   local hunks_len = #hunks
+  local new_lines_added = 0
+  local src_pos = 1 -- next original line to copy
 
   for i = 1, hunks_len do
     local hunk = hunks[i]
     local type = hunk.type
     local diff = hunk.diff
-    local top = hunk.top + new_lines_added
-    local bot = hunk.bot + new_lines_added
+    local orig_top = hunk.top
+    local orig_bot = hunk.bot
+    local top = orig_top + new_lines_added
+    local bot = orig_bot + new_lines_added
     local hunk_stat = hunk.stat
 
     stat.added = stat.added + hunk_stat.added
     stat.removed = stat.removed + hunk_stat.removed
 
     if type == 'add' then
+      -- Copy original lines up to and including bot (added lines are already in lines[])
+      for k = src_pos, orig_bot do
+        new_lines_len = new_lines_len + 1
+        new_lines[new_lines_len] = lines[k]
+      end
+      src_pos = orig_bot + 1
+
       marks_len = marks_len + 1
       marks[marks_len] = {
         type = type,
@@ -385,8 +397,14 @@ function Diff:generate_unified(hunks, lines)
         }
       end
     elseif type == 'remove' then
-      local s = top
       local diff_len = #diff
+
+      -- Copy original lines up to and including top (the line before removed content)
+      for k = src_pos, orig_top do
+        new_lines_len = new_lines_len + 1
+        new_lines[new_lines_len] = lines[k]
+      end
+      src_pos = orig_top + 1
 
       marks_len = marks_len + 1
       marks[marks_len] = {
@@ -397,11 +415,14 @@ function Diff:generate_unified(hunks, lines)
         bot_relative = bot - new_lines_added,
       }
 
+      -- Append the removed lines (no shifting needed)
+      local s = top
       for j = 1, diff_len do
         local line = diff[j]
         s = s + 1
         new_lines_added = new_lines_added + 1
-        table.insert(new_lines, s, line:sub(2, #line))
+        new_lines_len = new_lines_len + 1
+        new_lines[new_lines_len] = line:sub(2, #line)
         lnum_changes_len = lnum_changes_len + 1
         lnum_changes[lnum_changes_len] = {
           lnum = s,
@@ -413,8 +434,13 @@ function Diff:generate_unified(hunks, lines)
       marks[marks_len].bot = top + diff_len
     elseif type == 'change' then
       local removed_lines, added_lines = hunk:parse_diff()
-      local s = top
       local diff_len = #diff
+
+      -- Copy original lines up to but not including top (change replaces top..bot)
+      for k = src_pos, orig_top - 1 do
+        new_lines_len = new_lines_len + 1
+        new_lines[new_lines_len] = lines[k]
+      end
 
       marks_len = marks_len + 1
       marks[marks_len] = {
@@ -425,6 +451,8 @@ function Diff:generate_unified(hunks, lines)
         bot_relative = bot - new_lines_added,
       }
 
+      -- First pass: append '-' lines (removed content, inserted before existing)
+      local s = top
       for j = 1, diff_len do
         local line = diff[j]
         local cleaned_line = line:sub(2, #line)
@@ -434,7 +462,8 @@ function Diff:generate_unified(hunks, lines)
           local word_diff = nil
 
           new_lines_added = new_lines_added + 1
-          table.insert(new_lines, s, cleaned_line)
+          new_lines_len = new_lines_len + 1
+          new_lines[new_lines_len] = cleaned_line
 
           if #removed_lines == #added_lines and #added_lines < MAX_LINES then
             local d = dmp.diff_main(cleaned_line, diff[#removed_lines + j]:sub(2, #diff[#removed_lines + j]))
@@ -448,7 +477,24 @@ function Diff:generate_unified(hunks, lines)
             buftype = 'current',
             word_diff = word_diff,
           }
-        elseif line_type == '+' then
+          s = s + 1
+        end
+      end
+
+      -- Copy original lines for the '+' range (these ARE the added lines in the buffer)
+      for k = orig_top, orig_bot do
+        new_lines_len = new_lines_len + 1
+        new_lines[new_lines_len] = lines[k]
+      end
+      src_pos = orig_bot + 1
+
+      -- Second pass: record lnum_changes for '+' lines
+      for j = 1, diff_len do
+        local line = diff[j]
+        local cleaned_line = line:sub(2, #line)
+        local line_type = line:sub(1, 1)
+
+        if line_type == '+' then
           local word_diff = nil
 
           if #removed_lines == #added_lines and #added_lines < MAX_LINES then
@@ -464,13 +510,18 @@ function Diff:generate_unified(hunks, lines)
             buftype = 'current',
             word_diff = word_diff,
           }
+          s = s + 1
         end
-
-        s = s + 1
       end
 
       marks[marks_len].bot = top + diff_len - 1
     end
+  end
+
+  -- Copy remaining original lines after the last hunk
+  for k = src_pos, lines_len do
+    new_lines_len = new_lines_len + 1
+    new_lines[new_lines_len] = lines[k]
   end
 
   return utils.object.extend(self, {
@@ -491,11 +542,13 @@ function Diff:generate_split(hunks, lines)
     })
   end
 
-  -- Operations below will potentially add more lines to both current and
-  -- previous data, which means, the offset needs to be added to our hunks.
+  -- Build current_lines and previous_lines by appending segments instead of
+  -- table.insert(tbl, pos, val) which avoids O(n²) element shifting.
   local new_lines_added = 0
   local current_lines = {}
+  local current_len = 0
   local previous_lines = {}
+  local previous_len = 0
   local lnum_changes = {}
   local lnum_changes_len = 0
   local void_line = ''
@@ -506,17 +559,17 @@ function Diff:generate_split(hunks, lines)
     removed = 0,
   }
 
-  for key, value in pairs(lines) do
-    previous_lines[key] = value
-    current_lines[key] = value
-  end
-
+  local lines_len = #lines
   local hunks_len = #hunks
+  local src_pos = 1 -- next original line to copy
+
   for i = 1, hunks_len do
     local hunk = hunks[i]
     local type = hunk.type
-    local top = hunk.top + new_lines_added
-    local bot = hunk.bot + new_lines_added
+    local orig_top = hunk.top
+    local orig_bot = hunk.bot
+    local top = orig_top + new_lines_added
+    local bot = orig_bot + new_lines_added
     local diff = hunk.diff
     local hunk_stat = hunk.stat
 
@@ -524,6 +577,22 @@ function Diff:generate_split(hunks, lines)
     stat.removed = stat.removed + hunk_stat.removed
 
     if type == 'add' then
+      -- Copy original lines up to but not including top (added lines need void in previous)
+      for k = src_pos, orig_top - 1 do
+        current_len = current_len + 1
+        current_lines[current_len] = lines[k]
+        previous_len = previous_len + 1
+        previous_lines[previous_len] = lines[k]
+      end
+      -- Add the added lines: current gets the real lines, previous gets void
+      for k = orig_top, orig_bot do
+        current_len = current_len + 1
+        current_lines[current_len] = lines[k]
+        previous_len = previous_len + 1
+        previous_lines[previous_len] = void_line
+      end
+      src_pos = orig_bot + 1
+
       marks_len = marks_len + 1
       marks[marks_len] = {
         type = type,
@@ -533,9 +602,7 @@ function Diff:generate_split(hunks, lines)
         bot_relative = bot - new_lines_added,
       }
 
-      -- Remove the line indicating that these lines were inserted in current_lines.
       for j = top, bot do
-        previous_lines[j] = void_line
         lnum_changes_len = lnum_changes_len + 1
         lnum_changes[lnum_changes_len] = {
           lnum = j,
@@ -550,8 +617,16 @@ function Diff:generate_split(hunks, lines)
         }
       end
     elseif type == 'remove' then
-      local current_new_lines_added = 0
       local diff_len = #diff
+
+      -- Copy original lines up to and including orig_top (the line before removed content)
+      for k = src_pos, orig_top do
+        current_len = current_len + 1
+        current_lines[current_len] = lines[k]
+        previous_len = previous_len + 1
+        previous_lines[previous_len] = lines[k]
+      end
+      src_pos = orig_top + 1
 
       marks_len = marks_len + 1
       marks[marks_len] = {
@@ -562,32 +637,43 @@ function Diff:generate_split(hunks, lines)
         bot_relative = bot - new_lines_added,
       }
 
+      -- Append removed lines: current gets void, previous gets the removed line
+      local insert_top = top
       for j = 1, diff_len do
         local line = diff[j]
+        insert_top = insert_top + 1
+        new_lines_added = new_lines_added + 1
 
-        top = top + 1
-        current_new_lines_added = current_new_lines_added + 1
-
-        table.insert(current_lines, top, void_line)
-        table.insert(previous_lines, top, line:sub(2, #line))
+        current_len = current_len + 1
+        current_lines[current_len] = void_line
+        previous_len = previous_len + 1
+        previous_lines[previous_len] = line:sub(2, #line)
 
         lnum_changes_len = lnum_changes_len + 1
         lnum_changes[lnum_changes_len] = {
-          lnum = top,
+          lnum = insert_top,
           buftype = 'current',
           type = 'void',
         }
         lnum_changes_len = lnum_changes_len + 1
         lnum_changes[lnum_changes_len] = {
-          lnum = top,
+          lnum = insert_top,
           buftype = 'previous',
           type = 'remove',
         }
       end
 
-      new_lines_added = new_lines_added + current_new_lines_added
-      marks[marks_len].bot = bot + current_new_lines_added
+      marks[marks_len].bot = bot + diff_len
     elseif type == 'change' then
+      -- Copy original lines up to but not including orig_top
+      for k = src_pos, orig_top - 1 do
+        current_len = current_len + 1
+        current_lines[current_len] = lines[k]
+        previous_len = previous_len + 1
+        previous_lines[previous_len] = lines[k]
+      end
+      src_pos = orig_bot + 1
+
       marks_len = marks_len + 1
       marks[marks_len] = {
         type = type,
@@ -605,32 +691,34 @@ function Diff:generate_split(hunks, lines)
       else
         max_lines = #added_lines
       end
-      -- Hunk bot index does not indicate the total number of lines that may have a diff.
-      -- Which is why I am inserting empty lines into both the current and previous data arrays.
-      for j = bot + 1, (top + max_lines) - 1 do
-        new_lines_added = new_lines_added + 1
-        table.insert(current_lines, j, void_line)
-        table.insert(previous_lines, j, void_line)
-      end
-      -- With the new calculated range I simply loop over and add the removed
-      -- and added lines to their corresponding arrays that contain a buffer lines.
-      for j = top, top + max_lines - 1 do
-        local recalculated_index = (j - top) + 1
-        local added_line = added_lines[recalculated_index]
-        local removed_line = removed_lines[recalculated_index]
+
+      -- Track extra lines added for this change hunk
+      local extra = max_lines - (orig_bot - orig_top + 1)
+      if extra > 0 then new_lines_added = new_lines_added + extra end
+
+      -- Build the change region: max_lines rows for both sides
+      for j = 1, max_lines do
+        local added_line = added_lines[j]
+        local removed_line = removed_lines[j]
+        local out_lnum = top + j - 1
+
+        current_len = current_len + 1
+        current_lines[current_len] = added_line or void_line
+        previous_len = previous_len + 1
+        previous_lines[previous_len] = removed_line or void_line
 
         if removed_line then
           local word_diff = nil
 
           if #removed_lines == #added_lines and #added_lines < MAX_LINES then
-            local d = dmp.diff_main(removed_line, added_lines[recalculated_index])
+            local d = dmp.diff_main(removed_line, added_lines[j])
             dmp.diff_cleanupSemantic(d)
             word_diff = d
           end
 
           lnum_changes_len = lnum_changes_len + 1
           lnum_changes[lnum_changes_len] = {
-            lnum = j,
+            lnum = out_lnum,
             buftype = 'previous',
             type = 'remove',
             word_diff = word_diff,
@@ -641,14 +729,14 @@ function Diff:generate_split(hunks, lines)
           local word_diff = nil
 
           if #removed_lines == #added_lines and #added_lines < MAX_LINES then
-            local d = dmp.diff_main(added_line, removed_lines[recalculated_index])
+            local d = dmp.diff_main(added_line, removed_lines[j])
             dmp.diff_cleanupSemantic(d)
             word_diff = d
           end
 
           lnum_changes_len = lnum_changes_len + 1
           lnum_changes[lnum_changes_len] = {
-            lnum = j,
+            lnum = out_lnum,
             buftype = 'current',
             type = 'add',
             word_diff = word_diff,
@@ -658,7 +746,7 @@ function Diff:generate_split(hunks, lines)
         if added_line and not removed_line then
           lnum_changes_len = lnum_changes_len + 1
           lnum_changes[lnum_changes_len] = {
-            lnum = j,
+            lnum = out_lnum,
             buftype = 'previous',
             type = 'void',
           }
@@ -667,14 +755,11 @@ function Diff:generate_split(hunks, lines)
         if removed_line and not added_line then
           lnum_changes_len = lnum_changes_len + 1
           lnum_changes[lnum_changes_len] = {
-            lnum = j,
+            lnum = out_lnum,
             buftype = 'current',
             type = 'void',
           }
         end
-
-        previous_lines[j] = removed_line or void_line
-        current_lines[j] = added_line or void_line
       end
 
       if #removed_lines > #added_lines then
@@ -683,6 +768,14 @@ function Diff:generate_split(hunks, lines)
         marks[marks_len].bot = bot
       end
     end
+  end
+
+  -- Copy remaining original lines after the last hunk
+  for k = src_pos, lines_len do
+    current_len = current_len + 1
+    current_lines[current_len] = lines[k]
+    previous_len = previous_len + 1
+    previous_lines[previous_len] = lines[k]
   end
 
   return utils.object.extend(self, {
