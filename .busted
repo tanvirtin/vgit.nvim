@@ -1,0 +1,13 @@
+return {
+  _all = {
+    lpath = "lua/?.lua;lua/?/init.lua;?.lua;?/init.lua",
+    ROOT = { "lua/" },
+  },
+  default = {
+    verbose = true,
+    output = "gtest",
+    pattern = "_spec%.lua$",
+    ROOT = { "lua/" },
+    helper = "tests/helper.lua",
+  },
+}

@@ -40,10 +40,16 @@ function LiveHunkGenerator:generate(original_lines, current_lines, opts)
 
   local hunks = {}
 
-  vim.diff(table.concat(original_lines, '\n'), table.concat(current_lines, '\n'), {
+  -- Cache the original_lines concatenation since it doesn't change between renders
+  if self._cached_original_lines ~= original_lines then
+    self._cached_original_lines = original_lines
+    self._cached_original_str = table.concat(original_lines, '\n')
+  end
+
+  vim.diff(self._cached_original_str, table.concat(current_lines, '\n'), {
     on_hunk = function(start_o, count_o, start_c, count_c)
       local hunk = self:_create_hunk(start_o, count_o, start_c, count_c, original_lines, current_lines)
-      table.insert(hunks, hunk)
+      hunks[#hunks + 1] = hunk
     end,
     algorithm = opts.algorithm or 'myers',
   })

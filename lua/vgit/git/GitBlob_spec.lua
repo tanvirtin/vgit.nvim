@@ -1,0 +1,63 @@
+local GitBlob = require('vgit.git.GitBlob')
+
+describe('GitBlob', function()
+  describe('constructor', function()
+    it('should error when repo is nil', function()
+      assert.has_error(function()
+        GitBlob(nil, 'file.lua')
+      end, 'GitBlob: repo_path is required')
+    end)
+
+    it('should error when filename is nil', function()
+      assert.has_error(function()
+        GitBlob('/my/repo', nil)
+      end, 'GitBlob: filename is required')
+    end)
+
+    it('should error when filename is empty string', function()
+      assert.has_error(function()
+        GitBlob('/my/repo', '')
+      end, 'GitBlob: filename is required')
+    end)
+
+    it('should accept string repo path', function()
+      local blob = GitBlob('/my/repo', 'file.lua')
+      assert.is_not_nil(blob)
+    end)
+
+    it('should accept repo object with get_path', function()
+      local repo = { get_path = function() return '/my/repo' end }
+      local blob = GitBlob(repo, 'file.lua')
+      assert.is_not_nil(blob)
+    end)
+
+    it('should default commit to HEAD', function()
+      local blob = GitBlob('/my/repo', 'file.lua')
+      assert.are.equal('HEAD', blob:get_commit())
+    end)
+
+    it('should accept custom commit', function()
+      local blob = GitBlob('/my/repo', 'file.lua', 'abc123')
+      assert.are.equal('abc123', blob:get_commit())
+    end)
+  end)
+
+  describe('get_filename', function()
+    it('should return the filename', function()
+      local blob = GitBlob('/my/repo', 'src/main.lua')
+      assert.are.equal('src/main.lua', blob:get_filename())
+    end)
+  end)
+
+  describe('get_commit', function()
+    it('should return HEAD when no commit specified', function()
+      local blob = GitBlob('/my/repo', 'file.lua')
+      assert.are.equal('HEAD', blob:get_commit())
+    end)
+
+    it('should return specified commit', function()
+      local blob = GitBlob('/my/repo', 'file.lua', 'v1.0')
+      assert.are.equal('v1.0', blob:get_commit())
+    end)
+  end)
+end)

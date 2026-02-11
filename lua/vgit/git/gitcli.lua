@@ -5,7 +5,7 @@ local git_setting = require('vgit.settings.git')
 
 local gitcli = {}
 
-gitcli.run = event.promisify(function(args, opts, callback)
+local _run = event.promisify(function(args, opts, callback)
   local cmd = 'git'
 
   opts = opts or {}
@@ -25,11 +25,21 @@ gitcli.run = event.promisify(function(args, opts, callback)
     on_stdout = function(line)
       stdout[#stdout + 1] = line
     end,
-    on_exit = function()
-      if #err ~= 0 then return callback(nil, err) end
-      callback(stdout, nil)
+    on_exit = function(code)
+      if code == 0 then return callback(stdout, nil, code) end
+      if #err ~= 0 then return callback(nil, err, code) end
+      callback(stdout, nil, code)
     end,
   }):start()
 end, 3)
+
+-- Spawn's on_exit fires in a fast event context where Neovim API calls are
+-- forbidden. Schedule back to the main loop so every caller can safely use
+-- the Neovim API after a git operation without needing a manual event.await().
+function gitcli.run(args, opts)
+  local result, err, code = _run(args, opts)
+  event.await()
+  return result, err, code
+end
 
 return gitcli

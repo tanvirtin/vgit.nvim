@@ -369,6 +369,8 @@ function PatchPreviewComponent:calculate_line_numbers(lines, line_metadata)
   end
 
   local max_digits = math.max(3, string.len(tostring(max_lnum)))
+  local lnum_fmt = '%' .. max_digits .. 'd '
+  local empty_text = string.rep(' ', max_digits + 1)
 
   -- Second pass: build line number display
   current_orig_lnum = 1
@@ -379,10 +381,10 @@ function PatchPreviewComponent:calculate_line_numbers(lines, line_metadata)
 
     if not meta or meta.type == 'separator' or meta.type == 'blank' then
       -- No line number for separators, blank lines
-      line_numbers[#line_numbers + 1] = { text = string.rep(' ', max_digits + 1), hl = 'GitLineNr' }
+      line_numbers[#line_numbers + 1] = { text = empty_text, hl = 'GitLineNr' }
     elseif meta.type == 'filename' then
       -- No line number for filename
-      line_numbers[#line_numbers + 1] = { text = string.rep(' ', max_digits + 1), hl = 'GitLineNr' }
+      line_numbers[#line_numbers + 1] = { text = empty_text, hl = 'GitLineNr' }
     elseif meta.type == 'code' then
       if meta.is_header and meta.hunk_header then
         -- Parse hunk header to reset counters
@@ -390,7 +392,7 @@ function PatchPreviewComponent:calculate_line_numbers(lines, line_metadata)
         current_orig_lnum = orig_start
         current_curr_lnum = curr_start
         -- No line number for hunk headers
-        line_numbers[#line_numbers + 1] = { text = string.rep(' ', max_digits + 1), hl = 'GitPatchHeader' }
+        line_numbers[#line_numbers + 1] = { text = empty_text, hl = 'GitPatchHeader' }
       else
         local lnum_change = meta.lnum_change
         local lnum_text
@@ -398,17 +400,17 @@ function PatchPreviewComponent:calculate_line_numbers(lines, line_metadata)
 
         if lnum_change and lnum_change.type == 'remove' then
           -- Removed lines: show original file line number with delete highlight
-          lnum_text = string.format('%' .. max_digits .. 'd ', current_orig_lnum)
+          lnum_text = string.format(lnum_fmt, current_orig_lnum)
           hl_group = 'GitSignsDelete'
           current_orig_lnum = current_orig_lnum + 1
         elseif lnum_change and lnum_change.type == 'add' then
           -- Added lines: show current file line number with add highlight
-          lnum_text = string.format('%' .. max_digits .. 'd ', current_curr_lnum)
+          lnum_text = string.format(lnum_fmt, current_curr_lnum)
           hl_group = 'GitSignsAdd'
           current_curr_lnum = current_curr_lnum + 1
         else
           -- Context lines: show current file line number
-          lnum_text = string.format('%' .. max_digits .. 'd ', current_curr_lnum)
+          lnum_text = string.format(lnum_fmt, current_curr_lnum)
           hl_group = 'GitLineNr'
           current_orig_lnum = current_orig_lnum + 1
           current_curr_lnum = current_curr_lnum + 1
@@ -417,7 +419,7 @@ function PatchPreviewComponent:calculate_line_numbers(lines, line_metadata)
         line_numbers[#line_numbers + 1] = { text = lnum_text, hl = hl_group }
       end
     else
-      line_numbers[#line_numbers + 1] = { text = string.rep(' ', max_digits + 1), hl = 'GitLineNr' }
+      line_numbers[#line_numbers + 1] = { text = empty_text, hl = 'GitLineNr' }
     end
   end
 
