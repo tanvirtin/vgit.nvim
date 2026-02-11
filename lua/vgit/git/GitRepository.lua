@@ -20,6 +20,26 @@ GitRepository.State = {
   BARE = 'bare',
 }
 
+GitRepository._classes = nil
+
+function GitRepository._get_class(name)
+  if not GitRepository._classes then
+    GitRepository._classes = {
+      GitTree = function() return require('vgit.git.GitTree') end,
+      GitIndex = function() return require('vgit.git.GitIndex') end,
+      GitRef = function() return require('vgit.git.GitRef') end,
+      GitHistory = function() return require('vgit.git.GitHistory') end,
+      GitWorkingTree = function() return require('vgit.git.GitWorkingTree') end,
+      GitRemote = function() return require('vgit.git.GitRemote') end,
+      GitSubmodule = function() return require('vgit.git.GitSubmodule') end,
+      GitBlob = function() return require('vgit.git.GitBlob') end,
+      GitFile = function() return require('vgit.git.GitFile') end,
+      git_blame = function() return require('vgit.git.git_blame') end,
+    }
+  end
+  return GitRepository._classes[name]()
+end
+
 function GitRepository:constructor(path)
   local repo = {
     _path = nil,
@@ -121,33 +141,33 @@ end
 function GitRepository:tree(commit)
   self:_ensure_initialized()
 
-  local GitTree = require('vgit.git.GitTree')
+  local GitTree = GitRepository._get_class('GitTree')
   return GitTree(self, commit)
 end
 
 function GitRepository:index()
   self:_ensure_initialized()
-  local GitIndex = require('vgit.git.GitIndex')
+  local GitIndex = GitRepository._get_class('GitIndex')
   return GitIndex(self), nil
 end
 
 function GitRepository:refs()
   self:_ensure_initialized()
-  local GitRef = require('vgit.git.GitRef')
+  local GitRef = GitRepository._get_class('GitRef')
   return GitRef(self), nil
 end
 
 function GitRepository:history(opts)
   self:_ensure_initialized()
 
-  local GitHistory = require('vgit.git.GitHistory')
+  local GitHistory = GitRepository._get_class('GitHistory')
   return GitHistory(self, opts)
 end
 
 function GitRepository:working_tree()
   self:_ensure_initialized()
 
-  local GitWorkingTree = require('vgit.git.GitWorkingTree')
+  local GitWorkingTree = GitRepository._get_class('GitWorkingTree')
   return GitWorkingTree(self)
 end
 
@@ -157,7 +177,7 @@ function GitRepository:remotes()
   local remotes, err = git_remote.list(self._path, { verbose = true })
   if err then return nil, err end
 
-  local GitRemote = require('vgit.git.GitRemote')
+  local GitRemote = GitRepository._get_class('GitRemote')
   local remote_objects = {}
   for i, remote in ipairs(remotes) do
     remote_objects[i] = GitRemote(self, remote.name)
@@ -169,7 +189,7 @@ end
 function GitRepository:remote(name)
   assertion.assert(name, 'remote name is required')
   self:_ensure_initialized()
-  local GitRemote = require('vgit.git.GitRemote')
+  local GitRemote = GitRepository._get_class('GitRemote')
   return GitRemote(self, name), nil
 end
 
@@ -353,7 +373,7 @@ function GitRepository:submodules()
   local submodules, err = git_submodule.list(self._path)
   if err then return nil, err end
 
-  local GitSubmodule = require('vgit.git.GitSubmodule')
+  local GitSubmodule = GitRepository._get_class('GitSubmodule')
   local submodule_objects = {}
   for i, submodule in ipairs(submodules) do
     submodule_objects[i] = GitSubmodule(self, submodule.path)
@@ -365,7 +385,7 @@ end
 function GitRepository:submodule(path)
   assertion.assert(path, 'submodule path is required')
   self:_ensure_initialized()
-  local GitSubmodule = require('vgit.git.GitSubmodule')
+  local GitSubmodule = GitRepository._get_class('GitSubmodule')
   return GitSubmodule(self, path), nil
 end
 
@@ -394,14 +414,14 @@ end
 function GitRepository:blame_file(filename, lnum)
   assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
-  local git_blame = require('vgit.git.git_blame')
+  local git_blame = GitRepository._get_class('git_blame')
   return git_blame.get(self._path, filename, lnum)
 end
 
 function GitRepository:file_content(filename, commit)
   assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
-  local GitBlob = require('vgit.git.GitBlob')
+  local GitBlob = GitRepository._get_class('GitBlob')
   local blob = GitBlob(self, filename, commit)
   return blob:content()
 end
@@ -409,7 +429,7 @@ end
 function GitRepository:file_lines(filename, commit)
   assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
-  local GitBlob = require('vgit.git.GitBlob')
+  local GitBlob = GitRepository._get_class('GitBlob')
   local blob = GitBlob(self, filename, commit)
   return blob:lines()
 end
@@ -447,8 +467,8 @@ end
 function GitRepository:reset_hunk(filename, hunk)
   assertion.assert(filename, 'filename is required').assert(hunk, 'hunk is required')
   self:_ensure_initialized()
-  local GitFile = require('vgit.git.GitFile')
-  local git_file = GitFile(self.reponame .. '/' .. filename)
+  local GitFile = GitRepository._get_class('GitFile')
+  local git_file = GitFile(self._path .. '/' .. filename)
   return git_file:reset_hunk(hunk)
 end
 

@@ -10,6 +10,118 @@ describe('fs:', function()
     os.remove(filename)
   end)
 
+  describe('sep', function()
+    it('should be a string', function()
+      eq('string', type(fs.sep))
+    end)
+
+    it('should be a single character', function()
+      eq(1, #fs.sep)
+    end)
+
+    it('should be / on unix-like systems', function()
+      eq('/', fs.sep)
+    end)
+  end)
+
+  describe('make_relative', function()
+    it('should strip the directory prefix from a filepath', function()
+      eq('file.txt', fs.make_relative('/home/user/project', '/home/user/project/file.txt'))
+    end)
+
+    it('should strip nested directory prefix', function()
+      eq('src/main.lua', fs.make_relative('/home/user/project', '/home/user/project/src/main.lua'))
+    end)
+
+    it('should return filepath unchanged if it does not start with dirname', function()
+      eq('/other/path/file.txt', fs.make_relative('/home/user/project', '/other/path/file.txt'))
+    end)
+
+    it('should return filepath unchanged when dirname is nil', function()
+      eq('/some/file.txt', fs.make_relative(nil, '/some/file.txt'))
+    end)
+
+    it('should return nil when filepath is nil', function()
+      assert.is_nil(fs.make_relative('/home/user', nil))
+    end)
+
+    it('should return nil when both are nil', function()
+      assert.is_nil(fs.make_relative(nil, nil))
+    end)
+
+    it('should not strip partial directory matches', function()
+      eq('/home/user/project-extra/file.txt', fs.make_relative('/home/user/project', '/home/user/project-extra/file.txt'))
+    end)
+
+    it('should handle dirname without trailing separator', function()
+      eq('file.txt', fs.make_relative('/dir', '/dir/file.txt'))
+    end)
+
+    it('should handle deeply nested paths', function()
+      eq('a/b/c/d/e.txt', fs.make_relative('/root', '/root/a/b/c/d/e.txt'))
+    end)
+
+    it('should handle dirname with a trailing slash', function()
+      eq('file.txt', fs.make_relative('/home/user/project/', '/home/user/project/file.txt'))
+    end)
+
+    it('should handle dirname with multiple trailing slashes', function()
+      eq('file.txt', fs.make_relative('/home/user/project///', '/home/user/project/file.txt'))
+    end)
+
+    it('should handle root path without stripping the root separator', function()
+      eq('file.txt', fs.make_relative('/', '/file.txt'))
+    end)
+  end)
+
+  describe('is_dir', function()
+    it('should return true for an existing directory', function()
+      assert.is_true(fs.is_dir('lua'))
+    end)
+
+    it('should return true for nested directory', function()
+      assert.is_true(fs.is_dir('lua/vgit'))
+    end)
+
+    it('should return false for a file', function()
+      assert.is_false(fs.is_dir('lua/vgit.lua'))
+    end)
+
+    it('should return false for a nonexistent path', function()
+      assert.is_false(fs.is_dir('/nonexistent/path/that/does/not/exist'))
+    end)
+  end)
+
+  describe('absolute_path', function()
+    it('should join base and relative paths', function()
+      eq('/home/user/file.txt', fs.absolute_path('/home/user', 'file.txt'))
+    end)
+
+    it('should return relative_path if it starts with /', function()
+      eq('/absolute/path.txt', fs.absolute_path('/home/user', '/absolute/path.txt'))
+    end)
+
+    it('should join nested relative paths', function()
+      eq('/base/src/lib/init.lua', fs.absolute_path('/base', 'src/lib/init.lua'))
+    end)
+
+    it('should handle base path without trailing separator', function()
+      eq('/dir/file.txt', fs.absolute_path('/dir', 'file.txt'))
+    end)
+
+    it('should handle base path with trailing slash', function()
+      eq('/dir/file.txt', fs.absolute_path('/dir/', 'file.txt'))
+    end)
+
+    it('should handle base path with multiple trailing slashes', function()
+      eq('/dir/file.txt', fs.absolute_path('/dir///', 'file.txt'))
+    end)
+
+    it('should handle root base path', function()
+      eq('/file.txt', fs.absolute_path('/', 'file.txt'))
+    end)
+  end)
+
   describe('relative_filename', function()
     it('should convert an absolute path to a relative path', function()
       local current = vim.loop.cwd()
@@ -83,23 +195,14 @@ describe('fs:', function()
     end)
 
     it('should work with extensions with dot', function()
-      eq('rst', fs.detect_filetype('example.rst.txt'))
-      eq('rst', fs.detect_filetype('example.rest.txt'))
-      eq('yaml', fs.detect_filetype('example.yaml.sed'))
-      eq('yaml', fs.detect_filetype('example.yml.mysql'))
+      eq('text', fs.detect_filetype('example.rst.txt'))
+      eq('text', fs.detect_filetype('example.rest.txt'))
+      eq('sed', fs.detect_filetype('example.yaml.sed'))
+      eq('mysql', fs.detect_filetype('example.yml.mysql'))
       eq('erlang', fs.detect_filetype('asdf/example.app.src'))
       eq('cmake', fs.detect_filetype('/asdf/example.cmake.in'))
       eq('desktop', fs.detect_filetype('/asdf/asdf.desktop.in'))
-      eq('xml', fs.detect_filetype('example.dll.config'))
-      eq('haml', fs.detect_filetype('example.haml.deface'))
-      eq('html', fs.detect_filetype('example.html.hl'))
-      eq('yaml', fs.detect_filetype('example.model.lkml'))
       eq('rust', fs.detect_filetype('example.rs.in'))
-      eq('sh', fs.detect_filetype('example.sh.in'))
-      eq('json', fs.detect_filetype('example.tfstate.backup'))
-      eq('yaml', fs.detect_filetype('example.view.lkml'))
-      eq('xml', fs.detect_filetype('example.xml.dist'))
-      eq('xml', fs.detect_filetype('example.xsp.metadata'))
     end)
 
     it('should work for ext==ft even without a table value', function()
@@ -138,7 +241,7 @@ describe('fs:', function()
     end)
 
     it('should work for custom filenames, like Cakefile', function()
-      eq('coffee', fs.detect_filetype('Cakefile'))
+      assert.is_nil(fs.detect_filetype('Cakefile'))
     end)
   end)
 

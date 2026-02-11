@@ -9,8 +9,14 @@ local GitWorkingTree = Object:extend()
 function GitWorkingTree:constructor(repository)
   if not repository then error('GitWorkingTree requires a repository') end
 
+  local root_path = repository:get_path()
+  -- Strip trailing slashes to prevent double-slash in path concatenation
+  if root_path and #root_path > 1 then
+    root_path = root_path:gsub('/+$', '')
+  end
+
   local tree = {
-    _root_path = repository:get_path(),
+    _root_path = root_path,
   }
 
   return tree
@@ -141,13 +147,10 @@ end
 function GitWorkingTree:relative_path(absolute_path)
   if not absolute_path then return nil end
 
-  local root = self._root_path
-  if absolute_path:sub(1, #root) == root then
-    local relative = absolute_path:sub(#root + 2)
-    return relative
-  end
-
-  return nil
+  local relative = fs.make_relative(self._root_path, absolute_path)
+  -- make_relative returns absolute_path unchanged if it doesn't match
+  if relative == absolute_path then return nil end
+  return relative
 end
 
 function GitWorkingTree:contains(path)
@@ -156,7 +159,9 @@ function GitWorkingTree:contains(path)
   local absolute_path = path
   if not vim.startswith(path, '/') then absolute_path = self:path(path) end
 
-  return vim.startswith(absolute_path, self._root_path)
+  local root = self._root_path
+  return vim.startswith(absolute_path, root .. '/')
+    or absolute_path == root
 end
 
 function GitWorkingTree:stat(filename)

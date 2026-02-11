@@ -1,5 +1,74 @@
 local eq = assert.are.same
 
+local function make_git_file(overrides)
+  local GitFile = require('vgit.git.GitFile')
+  overrides = overrides or {}
+
+  local obj = {
+    reponame = overrides.reponame or '/tmp/test-repo',
+    filepath = overrides.filepath or '/tmp/test-repo/test.lua',
+    filename = overrides.filename or 'test.lua',
+    filetype = overrides.filetype or 'lua',
+    state = overrides.state or { hunks = nil },
+  }
+  setmetatable(obj, { __index = GitFile })
+  return obj
+end
+
+describe('GitFile', function()
+  describe('constructor fields', function()
+    it('should have reponame, filename, filetype set', function()
+      local file = make_git_file({
+        reponame = '/repo',
+        filename = 'src/main.lua',
+        filetype = 'lua',
+      })
+
+      eq('/repo', file.reponame)
+      eq('src/main.lua', file.filename)
+      eq('lua', file.filetype)
+    end)
+
+    it('should have state with hunks nil', function()
+      local file = make_git_file()
+
+      assert.is_table(file.state)
+      assert.is_nil(file.state.hunks)
+    end)
+  end)
+
+  describe('get_filename', function()
+    it('should return relative filename', function()
+      local file = make_git_file({ filename = 'src/parser.lua' })
+
+      eq('src/parser.lua', file:get_filename())
+    end)
+  end)
+
+  describe('get_filetype', function()
+    it('should return detected filetype', function()
+      local file = make_git_file({ filetype = 'python' })
+
+      eq('python', file:get_filetype())
+    end)
+  end)
+
+  describe('get_hunks', function()
+    it('should return nil initially', function()
+      local file = make_git_file()
+
+      assert.is_nil(file:get_hunks())
+    end)
+
+    it('should return hunks after being set', function()
+      local hunks = { { stat = { added = 1, removed = 0 } } }
+      local file = make_git_file({ state = { hunks = hunks } })
+
+      eq(hunks, file:get_hunks())
+    end)
+  end)
+end)
+
 describe('GitFile:generate_status', function()
   local GitFile_generate_status
 

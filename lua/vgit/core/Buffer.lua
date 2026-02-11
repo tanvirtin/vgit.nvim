@@ -77,7 +77,7 @@ end
 
 function Buffer:get_relative_name()
   local name = self:get_name()
-  if not name and name == '' then return name end
+  if not name or name == '' then return name end
   return fs.relative_filename(name)
 end
 

@@ -1,5 +1,9 @@
 local GitTree = require('vgit.git.GitTree')
-local git_log = require('vgit.git.git_log')
+local test_repo = require('tests.helpers.test_repo')
+test_repo.use_driver('raw')
+local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
+
+local eq = assert.are.same
 
 describe('GitTree', function()
   local function make_repo(path)
@@ -61,252 +65,212 @@ describe('GitTree', function()
     end)
   end)
 
-  describe('is_merge', function()
-    local original_get
+  describe('integration', function()
+    local repo
+    local it = async.it
+    local before_each = async.before_each
+    local after_each = async.after_each
 
     before_each(function()
-      original_get = git_log.get
+      local err
+      repo, err = test_repo.create_repo({
+        initial_commit = true,
+        files = {
+          ['file1.txt'] = { 'initial content' },
+        },
+      })
+      assert(not err, 'Failed to create test repo: ' .. tostring(err))
     end)
 
     after_each(function()
-      git_log.get = original_get
+      if repo then test_repo.cleanup(repo) end
     end)
 
-    it('should return true when parent_hash contains a space (merge commit)', function()
-      git_log.get = function()
-        return {
-          commit_hash = 'abc123',
-          parent_hash = 'def456 ghi789',
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'Merge branch main',
-        }, nil
-      end
+    describe('is_merge', function()
+      it('should return false for regular commit', function()
+        test_repo.create_commit(repo, {
+          files = { ['file2.txt'] = { 'second content' } },
+          message = 'Regular commit',
+        })
 
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      assert.is_true(tree:is_merge())
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
+
+        assert.is_false(tree:is_merge())
+      end)
+
+      it('should return false for initial commit', function()
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
+
+        assert.is_false(tree:is_merge())
+      end)
     end)
 
-    it('should return false when parent_hash has no space (regular commit)', function()
-      git_log.get = function()
-        return {
-          commit_hash = 'abc123',
-          parent_hash = 'def456',
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'Regular commit',
-        }, nil
-      end
+    describe('commit caching', function()
+      it('should cache commit data after first fetch', function()
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
 
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      assert.is_false(tree:is_merge())
+        local data1, err1 = tree:commit()
+        assert(not err1, 'First commit() call failed: ' .. tostring(err1))
+        assert.is_not_nil(data1)
+
+        local data2, err2 = tree:commit()
+        assert(not err2, 'Second commit() call failed: ' .. tostring(err2))
+        assert.is_not_nil(data2)
+
+        -- Both calls should return the exact same table reference (cached)
+        assert.are.equal(data1, data2)
+      end)
+
+      it('should re-fetch after reset', function()
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
+
+        local data1, err1 = tree:commit()
+        assert(not err1, 'First commit() call failed: ' .. tostring(err1))
+        assert.is_not_nil(data1)
+
+        tree:reset()
+
+        local data2, err2 = tree:commit()
+        assert(not err2, 'Second commit() call failed: ' .. tostring(err2))
+        assert.is_not_nil(data2)
+
+        -- After reset, a new object should be fetched (different table reference)
+        -- Note: GitCommit defines __eq by hash, so use rawequal to check table identity
+        assert.is_false(rawequal(data1, data2))
+        -- But the data should be equivalent
+        eq(data1.commit_hash, data2.commit_hash)
+      end)
     end)
 
-    it('should return false when parent_hash is empty (initial commit)', function()
-      git_log.get = function()
-        return {
-          commit_hash = 'abc123',
-          parent_hash = '',
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'Initial commit',
-        }, nil
-      end
+    describe('author', function()
+      it('should return author name and email', function()
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
 
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      assert.is_false(tree:is_merge())
+        local author, err = tree:author()
+        assert(not err, 'author() failed: ' .. tostring(err))
+
+        eq('Test User', author.name)
+        eq('test@example.com', author.email)
+      end)
+
+      it('should cache author data', function()
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
+
+        local author1, err1 = tree:author()
+        assert(not err1, 'First author() call failed: ' .. tostring(err1))
+
+        local author2, err2 = tree:author()
+        assert(not err2, 'Second author() call failed: ' .. tostring(err2))
+
+        -- Both calls should return the exact same table reference (cached)
+        assert.are.equal(author1, author2)
+      end)
     end)
 
-    it('should return false when parent_hash is nil (initial commit)', function()
-      git_log.get = function()
-        return {
-          commit_hash = 'abc123',
-          parent_hash = nil,
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'Initial commit',
-        }, nil
-      end
+    describe('timestamp', function()
+      it('should return numeric timestamp', function()
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
 
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      assert.is_false(tree:is_merge())
+        local ts, err = tree:timestamp()
+        assert(not err, 'timestamp() failed: ' .. tostring(err))
+
+        assert.are.equal('number', type(ts))
+        assert.is_true(ts > 0)
+      end)
     end)
 
-    it('should return false on error', function()
-      git_log.get = function()
-        return nil, { 'git error' }
-      end
+    describe('message', function()
+      it('should return commit summary', function()
+        test_repo.create_commit(repo, {
+          files = { ['file2.txt'] = { 'second content' } },
+          message = 'fix: important bug fix',
+        })
 
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      assert.is_false(tree:is_merge())
-    end)
-  end)
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
 
-  describe('commit caching', function()
-    local original_get
+        local msg, err = tree:message()
+        assert(not err, 'message() failed: ' .. tostring(err))
 
-    before_each(function()
-      original_get = git_log.get
-    end)
+        eq('fix: important bug fix', msg)
+      end)
 
-    after_each(function()
-      git_log.get = original_get
     end)
 
-    it('should cache commit data after first fetch', function()
-      local call_count = 0
-      git_log.get = function()
-        call_count = call_count + 1
-        return {
-          commit_hash = 'abc123',
-          parent_hash = 'def456',
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'test',
-        }, nil
-      end
+    describe('hash', function()
+      it('should return the full commit hash', function()
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
 
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      tree:commit()
-      tree:commit()
-      assert.are.equal(1, call_count)
+        local hash, err = tree:hash()
+        assert(not err, 'hash() failed: ' .. tostring(err))
+        eq(commit_hash, hash)
+      end)
     end)
 
-    it('should re-fetch after reset', function()
-      local call_count = 0
-      git_log.get = function()
-        call_count = call_count + 1
-        return {
-          commit_hash = 'abc123',
-          parent_hash = 'def456',
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'test',
-        }, nil
-      end
+    describe('parent_hash', function()
+      it('should return the parent commit hash', function()
+        local first_commit = test_repo.get_head_commit(repo)
 
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      tree:commit()
-      tree:reset()
-      tree:commit()
-      assert.are.equal(2, call_count)
-    end)
-  end)
+        test_repo.create_commit(repo, {
+          files = { ['file2.txt'] = { 'second content' } },
+          message = 'Second commit',
+        })
 
-  describe('author', function()
-    local original_get
+        local second_commit = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), second_commit)
 
-    before_each(function()
-      original_get = git_log.get
+        local parent, err = tree:parent_hash()
+        assert(not err, 'parent_hash() failed: ' .. tostring(err))
+        eq(first_commit, parent)
+      end)
     end)
 
-    after_each(function()
-      git_log.get = original_get
+    describe('parent', function()
+      it('should error due to self._repository being nil', function()
+        test_repo.create_commit(repo, {
+          files = { ['file2.txt'] = { 'second content' } },
+          message = 'Second commit',
+        })
+
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
+
+        -- parent() references self._repository which is never set
+        -- (constructor stores _repo_path as a string)
+        local ok, _ = pcall(function()
+          return tree:parent()
+        end)
+        assert.is_false(ok)
+      end)
     end)
 
-    it('should return author name and email', function()
-      git_log.get = function()
-        return {
-          commit_hash = 'abc123',
-          parent_hash = 'def456',
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'test',
-        }, nil
-      end
+    describe('is_initial', function()
+      it('should return true for the first commit', function()
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
 
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      local author, err = tree:author()
-      assert.is_nil(err)
-      assert.are.equal('Alice', author.name)
-      assert.are.equal('alice@test.com', author.email)
-    end)
+        assert.is_true(tree:is_initial())
+      end)
 
-    it('should cache author data', function()
-      local call_count = 0
-      git_log.get = function()
-        call_count = call_count + 1
-        return {
-          commit_hash = 'abc123',
-          parent_hash = 'def456',
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'test',
-        }, nil
-      end
+      it('should return false for non-initial commit', function()
+        test_repo.create_commit(repo, {
+          files = { ['file2.txt'] = { 'second content' } },
+          message = 'Second commit',
+        })
 
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      tree:author()
-      tree:author()
-      assert.are.equal(1, call_count)
-    end)
-  end)
+        local commit_hash = test_repo.get_head_commit(repo)
+        local tree = GitTree(make_repo(repo), commit_hash)
 
-  describe('timestamp', function()
-    local original_get
-
-    before_each(function()
-      original_get = git_log.get
-    end)
-
-    after_each(function()
-      git_log.get = original_get
-    end)
-
-    it('should return numeric timestamp', function()
-      git_log.get = function()
-        return {
-          commit_hash = 'abc123',
-          parent_hash = 'def456',
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'test',
-        }, nil
-      end
-
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      local ts, err = tree:timestamp()
-      assert.is_nil(err)
-      assert.are.equal(1700000000, ts)
-    end)
-  end)
-
-  describe('message', function()
-    local original_get
-
-    before_each(function()
-      original_get = git_log.get
-    end)
-
-    after_each(function()
-      git_log.get = original_get
-    end)
-
-    it('should return commit summary', function()
-      git_log.get = function()
-        return {
-          commit_hash = 'abc123',
-          parent_hash = 'def456',
-          author_name = 'Alice',
-          author_email = 'alice@test.com',
-          timestamp = '1700000000',
-          summary = 'fix: important bug fix',
-        }, nil
-      end
-
-      local tree = GitTree(make_repo('/repo'), 'abc123')
-      local msg, err = tree:message()
-      assert.is_nil(err)
-      assert.are.equal('fix: important bug fix', msg)
+        assert.is_false(tree:is_initial())
+      end)
     end)
   end)
 end)

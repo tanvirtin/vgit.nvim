@@ -17,7 +17,7 @@ function git_repo.discover(filepath)
   -- If filepath is a file, get its directory
   if filepath then
     local stat = vim.loop.fs_stat(filepath)
-    if stat and not stat.is_directory then
+    if stat and stat.type ~= 'directory' then
       search_dir = vim.fn.fnamemodify(filepath, ':p:h')
     else
       search_dir = vim.fn.fnamemodify(filepath, ':p')
@@ -105,6 +105,10 @@ function git_repo.clean(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
   return GitQueryBuilder(reponame):raw_args('--no-pager', 'clean', '-fd', '--', filename or '.'):execute()
+end
+
+function git_repo.clear_cache()
+  discover_cache = {}
 end
 
 return git_repo

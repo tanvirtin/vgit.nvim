@@ -101,7 +101,7 @@ Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
 ```lua
 use {
   'tanvirtin/vgit.nvim',
-  requires = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
+  requires = { 'nvim-tree/nvim-web-devicons' },
   -- Lazy loading on 'VimEnter' event is necessary.
   event = 'VimEnter',
   config = function() require("vgit").setup() end,
@@ -113,7 +113,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 ```lua
 {
   'tanvirtin/vgit.nvim',
-  dependencies = { 'nvim-lua/plenary.nvim', 'nvim-tree/nvim-web-devicons' },
+  dependencies = { 'nvim-tree/nvim-web-devicons' },
   -- Lazy loading on 'VimEnter' event is necessary.
   event = 'VimEnter',
   config = function() require("vgit").setup() end,

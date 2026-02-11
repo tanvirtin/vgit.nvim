@@ -114,6 +114,30 @@ function M.stage(repo, files)
   end
 end
 
+function M.create_tag(repo, name, opts)
+  return M.active_driver.create_tag(repo, name, opts)
+end
+
+function M.detach_head(repo, commit)
+  return M.active_driver.detach_head(repo, commit)
+end
+
+function M.create_merge_commit(repo, opts)
+  return M.active_driver.create_merge_commit(repo, opts)
+end
+
+function M.add_submodule(repo, source_path, submodule_path)
+  return M.active_driver.add_submodule(repo, source_path, submodule_path)
+end
+
+function M.init_submodules(repo)
+  return M.active_driver.init_submodules(repo)
+end
+
+function M.update_submodules(repo, opts)
+  return M.active_driver.update_submodules(repo, opts)
+end
+
 function M.cleanup(repo)
   return M.active_driver.cleanup(repo)
 end

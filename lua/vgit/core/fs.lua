@@ -1,13 +1,22 @@
-local Path = require('plenary.path')
-local plenary_filetype = require('plenary.filetype')
-
 local fs = {}
 
-fs.sep = Path.path.sep
-fs.detect_filetype = plenary_filetype.detect
+fs.sep = package.config:sub(1, 1)
+
+function fs.detect_filetype(filename)
+  return vim.filetype.match({ filename = filename })
+end
 
 function fs.make_relative(dirname, filepath)
-  return Path:new(filepath):make_relative(dirname)
+  if not dirname or not filepath then return filepath end
+  -- Strip trailing separators to handle paths from git_repo.discover()
+  while #dirname > 1 and dirname:sub(-1) == fs.sep do
+    dirname = dirname:sub(1, -2)
+  end
+  local prefix = dirname == fs.sep and fs.sep or (dirname .. fs.sep)
+  if filepath:sub(1, #prefix) == prefix then
+    return filepath:sub(#prefix + 1)
+  end
+  return filepath
 end
 
 function fs.relative_filename(filepath)
@@ -65,12 +74,19 @@ end
 
 function fs.absolute_path(base_path, relative_path)
   if relative_path:sub(1, 1) == '/' then return relative_path end
-  local path = Path:new(base_path) / relative_path
-  return tostring(path)
+  -- Strip trailing separators to prevent double-slash
+  while #base_path > 1 and base_path:sub(-1) == fs.sep do
+    base_path = base_path:sub(1, -2)
+  end
+  if base_path == fs.sep then
+    return fs.sep .. relative_path
+  end
+  return base_path .. fs.sep .. relative_path
 end
 
 function fs.is_dir(filepath)
-  return Path:new(filepath):is_dir()
+  local stat = vim.loop.fs_stat(filepath)
+  return stat ~= nil and stat.type == 'directory'
 end
 
 function fs.open(filepath)

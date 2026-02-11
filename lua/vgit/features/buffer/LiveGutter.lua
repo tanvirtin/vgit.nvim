@@ -7,9 +7,15 @@ local live_gutter_setting = require('vgit.settings.live_gutter')
 local LiveGutter = Object:extend()
 
 function LiveGutter:constructor()
+  local fetch_debounced_fn, fetch_debounced_cleanup = event.debounce_async(function(self_ref, buffer)
+    self_ref:fetch(buffer)
+  end, live_gutter_setting:get('debounce_ms'))
+
   return {
     name = 'Live Gutter',
     debounce_cleanups = {},
+    _fetch_debounced = fetch_debounced_fn,
+    _fetch_debounced_cleanup = fetch_debounced_cleanup,
   }
 end
 
@@ -18,8 +24,8 @@ function LiveGutter:is_enabled()
 end
 
 function LiveGutter:cleanup()
-  if LiveGutter.fetch_debounced_cleanup then
-    LiveGutter.fetch_debounced_cleanup()
+  if self._fetch_debounced_cleanup then
+    self._fetch_debounced_cleanup()
   end
 end
 
@@ -37,12 +43,9 @@ function LiveGutter:fetch(buffer)
   buffer:generate_status()
 end
 
-local fetch_debounced_fn, fetch_debounced_cleanup = event.debounce_async(function(self, buffer)
-  self:fetch(buffer)
-end, live_gutter_setting:get('debounce_ms'))
-
-LiveGutter.fetch_debounced = fetch_debounced_fn
-LiveGutter.fetch_debounced_cleanup = fetch_debounced_cleanup
+function LiveGutter:fetch_debounced(buffer)
+  self._fetch_debounced(self, buffer)
+end
 
 function LiveGutter:toggle()
   git_buffer_store.for_each(function(buffer)

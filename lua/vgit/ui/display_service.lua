@@ -3,15 +3,21 @@ local console = require('vgit.core.console')
 local scene_setting = require('vgit.settings.scene')
 
 local active_view = nil
+local _events_registered = false
 local display_service = {}
 
-event.custom_on('VGitChange', function()
-  if active_view and active_view.on_git_change then
-    active_view:on_git_change()
-    -- View may have destroyed itself (e.g. no more changes after commit)
-    if active_view and active_view.destroyed then active_view = nil end
-  end
-end)
+function display_service.register_events()
+  if _events_registered then return end
+  _events_registered = true
+
+  event.custom_on('VGitChange', function()
+    if active_view and active_view.on_git_change then
+      active_view:on_git_change()
+      -- View may have destroyed itself (e.g. no more changes after commit)
+      if active_view and active_view.destroyed then active_view = nil end
+    end
+  end)
+end
 
 display_service.show_diff = event.async(function(data)
   if not data then
@@ -136,6 +142,18 @@ function display_service.help()
     return true
   end
   return false
+end
+
+function display_service.get_active_view()
+  return active_view
+end
+
+function display_service.reset()
+  if active_view and active_view.destroy then
+    active_view:destroy()
+  end
+  active_view = nil
+  _events_registered = false
 end
 
 return display_service

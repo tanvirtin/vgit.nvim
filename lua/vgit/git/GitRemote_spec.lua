@@ -182,6 +182,25 @@ describe('GitRemote', function()
     end)
   end)
 
+  describe('fetch', function()
+    it('should return error for non-existent remote refspec', function()
+      local remote = GitRemote(repo, 'origin')
+      local _, err = remote:fetch('nonexistent-refspec-xyz')
+
+      -- fetch with a bad refspec should error
+      assert.is_not_nil(err)
+    end)
+  end)
+
+  describe('prune', function()
+    it('should not error on repo with no stale branches', function()
+      local remote = GitRemote(repo, 'origin')
+      local _, err = remote:prune()
+
+      assert.is_nil(err)
+    end)
+  end)
+
   describe('integration with GitRepository', function()
     it('should work through repository remotes() method', function()
       local remotes, err = repo:remotes()
