@@ -7,10 +7,34 @@ local console = require('vgit.core.console')
 
 local hunk_command = {}
 
+function hunk_command.find_target_hunk_index(diff, lnum)
+  if not diff or not diff.marks then return nil end
+
+  for idx, mark in ipairs(diff.marks) do
+    if mark.top_relative and mark.bot_relative and lnum >= mark.top_relative and lnum <= mark.bot_relative then
+      return idx
+    end
+  end
+
+  return nil
+end
+
+function hunk_command.compute_hunk_diff(filename, current_lines, layout_type)
+  local git_file = GitFile(filename)
+  local hunks, hunks_err = git_file:live_hunks(current_lines)
+  if hunks_err then return nil, nil, hunks_err end
+
+  local Diff = require('vgit.core.diff.Diff')
+  local diff = Diff():generate(hunks, current_lines, layout_type)
+  if not diff then return nil, nil, 'Failed to generate diff' end
+
+  return diff, git_file, nil
+end
+
 hunk_command.execute = event.async(function(args)
   args = args or {}
 
-  local buffer = Buffer(0)
+  local buffer = args.buffer or Buffer(0)
   local filename = buffer:get_name()
 
   if not filename or filename == '' then
@@ -18,7 +42,7 @@ hunk_command.execute = event.async(function(args)
     return
   end
 
-  local window = Window(0)
+  local window = args.window or Window(0)
   local lnum = window:get_lnum()
 
   local scene_setting = require('vgit.settings.scene')
@@ -26,36 +50,19 @@ hunk_command.execute = event.async(function(args)
 
   event.await()
 
-  local git_file = GitFile(filename)
   local current_lines = fs.read_file(filename)
   if not current_lines then
     console.error('Failed to read file')
     return
   end
 
-  local hunks, hunks_err = git_file:live_hunks(current_lines)
-  if hunks_err then
-    console.error(hunks_err)
+  local diff, git_file, err = hunk_command.compute_hunk_diff(filename, current_lines, current_layout_type)
+  if err then
+    console.error(err)
     return
   end
 
-  local Diff = require('vgit.core.diff.Diff')
-  local diff = Diff():generate(hunks, current_lines, current_layout_type)
-
-  if not diff then
-    console.error('Failed to generate diff')
-    return
-  end
-
-  local target_hunk_index = nil
-  if diff and diff.marks then
-    for idx, mark in ipairs(diff.marks) do
-      if mark.top_relative and mark.bot_relative and lnum >= mark.top_relative and lnum <= mark.bot_relative then
-        target_hunk_index = idx
-        break
-      end
-    end
-  end
+  local target_hunk_index = hunk_command.find_target_hunk_index(diff, lnum)
 
   local data = {
     type = 'hunk',

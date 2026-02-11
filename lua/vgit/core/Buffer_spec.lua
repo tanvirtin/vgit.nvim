@@ -106,6 +106,19 @@ describe('Buffer', function()
     end)
   end)
 
+  describe('get_relative_name', function()
+    it('should return empty string for unnamed buffer', function()
+      local unnamed_buf = Buffer(vim.api.nvim_create_buf(false, true))
+      assert.are.equal('', unnamed_buf:get_relative_name())
+    end)
+
+    it('should return relative name for named buffer', function()
+      local named_buf = Buffer(vim.api.nvim_create_buf(false, true))
+      vim.api.nvim_buf_set_name(named_buf.bufnr, vim.loop.cwd() .. '/lua/vgit/init.lua')
+      assert.are.equal('lua/vgit/init.lua', named_buf:get_relative_name())
+    end)
+  end)
+
   describe('create', function()
     it('should create a new buffer with valid bufnr', function()
       buffer = Buffer():create(false, true)
@@ -195,6 +208,65 @@ describe('Buffer', function()
     it('should get buffer line count', function()
       buffer:set_lines({ 'line1', 'line2' })
       assert.equals(buffer:get_line_count(), 2)
+    end)
+  end)
+
+  describe('editing', function()
+    it('should return false for non-modified buffer', function()
+      assert.is_false(buffer:editing())
+    end)
+  end)
+
+  describe('filetype', function()
+    it('should return a string for unnamed buffer', function()
+      local ft = buffer:filetype()
+      -- filetype detection may return empty string or a detected type
+      assert.is_true(type(ft) == 'string' or ft == nil)
+    end)
+  end)
+
+  describe('set_keymap', function()
+    it('should not error with valid keymap config', function()
+      assert.has_no.errors(function()
+        buffer:set_keymap({
+          mode = 'n',
+          key = '<leader>x',
+          desc = 'test',
+        }, function() end)
+      end)
+    end)
+  end)
+
+  describe('place_extmark_sign', function()
+    it('should place a sign on valid buffer', function()
+      buffer:set_lines({ 'test line' })
+
+      -- Use a sign name that's defined in vgit's signs settings
+      local ok, _ = pcall(function()
+        buffer:place_extmark_sign({
+          col = 0,
+          name = 'GitSignsAdd',
+        })
+      end)
+
+      -- Should succeed or at least not crash
+      assert.is_true(ok)
+    end)
+  end)
+
+  describe('clear_extmarks', function()
+    it('should not error on buffer with no extmarks', function()
+      assert.has_no.errors(function()
+        buffer:clear_extmarks()
+      end)
+    end)
+  end)
+
+  describe('clear_extmark_signs', function()
+    it('should not error on valid buffer', function()
+      assert.has_no.errors(function()
+        buffer:clear_extmark_signs()
+      end)
     end)
   end)
 

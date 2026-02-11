@@ -37,40 +37,53 @@ function console.format(msg)
   end)
 end
 
-console.log = event.async(function(msg, hi, is_persisted)
+function console._log(msg, hi, is_persisted)
   if is_persisted == nil then is_persisted = false end
-
-  event.await()
-
   vim.api.nvim_echo({ { console.format(msg), hi } }, is_persisted, {})
-
   return console
+end
+
+function console._error(msg)
+  vim.notify(console.format(msg), vim.log.levels.ERROR)
+  return console
+end
+
+function console._warn(msg)
+  console._log(msg, 'WarningMsg')
+  return console
+end
+
+function console._clear()
+  vim.cmd('echo ""')
+  return console
+end
+
+function console._info(msg)
+  vim.notify(console.format(msg), vim.log.levels.INFO)
+  return console
+end
+
+console.log = event.async(function(msg, hi, is_persisted)
+  event.await()
+  return console._log(msg, hi, is_persisted)
 end)
 
 console.error = event.async(function(msg)
-  vim.notify(console.format(msg), vim.log.levels.ERROR)
-
-  return console
+  return console._error(msg)
 end)
 
 console.warn = event.async(function(msg)
-  console.log(msg, 'WarningMsg')
-
-  return console
+  return console._warn(msg)
 end)
 
 console.clear = event.async(function()
   event.await()
-  vim.cmd('echo ""')
-
-  return console
+  return console._clear()
 end)
 
 console.info = event.async(function(msg)
   event.await()
-  vim.notify(console.format(msg), vim.log.levels.INFO)
-
-  return console
+  return console._info(msg)
 end)
 
 console.input = function(prompt)

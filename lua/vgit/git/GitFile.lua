@@ -10,6 +10,17 @@ local git_conflict = require('vgit.libgit2.git_conflict')
 
 local GitFile = Object:extend()
 
+GitFile._classes = nil
+
+function GitFile._get_class(name)
+  if not GitFile._classes then
+    GitFile._classes = {
+      GitBlob = function() return require('vgit.git.GitBlob') end,
+    }
+  end
+  return GitFile._classes[name]()
+end
+
 function GitFile:constructor(filepath)
   local reponame = git_repo.discover(filepath)
   local filename = fs.make_relative(reponame, filepath)
@@ -147,7 +158,7 @@ function GitFile:generate_status()
 end
 
 function GitFile:lines(commit_hash)
-  local GitBlob = require('vgit.git.GitBlob')
+  local GitBlob = GitFile._get_class('GitBlob')
   local blob = GitBlob(self.reponame, self.filename, commit_hash)
   return blob:lines()
 end
@@ -161,7 +172,7 @@ function GitFile:live_hunks(current_lines)
     return self.state.hunks, nil
   end
 
-  local GitBlob = require('vgit.git.GitBlob')
+  local GitBlob = GitFile._get_class('GitBlob')
   local blob = GitBlob(self.reponame, self.filename, 'index')
   local original_lines, err = blob:lines()
   if err then return nil, err end

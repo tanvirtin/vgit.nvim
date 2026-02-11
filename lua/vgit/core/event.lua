@@ -1,9 +1,14 @@
 local utils = require('vgit.core.utils')
-local async = require('plenary.async.async')
-
-vim.api.nvim_create_augroup('VGitGroup', { clear = false })
+local async = require('vgit.core.async')
 
 local _is_registered = false
+local _augroup_created = false
+
+local function ensure_augroup()
+  if _augroup_created then return end
+  _augroup_created = true
+  vim.api.nvim_create_augroup('VGitGroup', { clear = false })
+end
 
 local function safe_async_void(func)
   local call_site_trace = debug.traceback('async function defined at:', 2)
@@ -44,6 +49,7 @@ local event = {
 }
 
 function event.on(event_names, callback)
+  ensure_augroup()
   vim.api.nvim_create_autocmd(event_names, {
     group = event.group,
     callback = event.async(callback),
@@ -53,6 +59,7 @@ function event.on(event_names, callback)
 end
 
 function event.buffer_on(buffer, event_name, callback)
+  ensure_augroup()
   local group = event_name
   if type(event_name) == 'table' then
     group = '::' .. table.concat(event_name, '::')
@@ -173,6 +180,11 @@ function event.register_module()
     handle:stop()
     handle:close()
   end)
+end
+
+function event.reset()
+  _is_registered = false
+  _augroup_created = false
 end
 
 return event

@@ -547,4 +547,114 @@ describe('DiffComponent', function()
     end)
   end)
 
+  describe('get_initial_state', function()
+    it('should return expected default state', function()
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local instance = {
+        props = {},
+        state = {},
+        mounted = false,
+        _needs_update = false,
+      }
+      setmetatable(instance, DiffComponent)
+
+      local state = instance:get_initial_state()
+
+      eq({}, state.lines)
+      eq({}, state.line_numbers)
+      eq({}, state.lines_changes)
+      eq({}, state.folds)
+      eq({}, state.marks)
+      eq({}, state.hunks)
+    end)
+  end)
+
+  describe('get_marks', function()
+    it('should return marks from state', function()
+      local marks = {
+        { top = 1, bot = 5 },
+        { top = 10, bot = 15 },
+      }
+      local component = create_diff_component({
+        state = {
+          lines = {},
+          line_numbers = {},
+          lines_changes = {},
+          folds = {},
+          marks = marks,
+          hunks = {},
+        },
+      })
+
+      eq(marks, component:get_marks())
+    end)
+
+    it('should return empty table when no marks', function()
+      local component = create_diff_component({
+        state = {
+          lines = {},
+          line_numbers = {},
+          lines_changes = {},
+          folds = {},
+          marks = {},
+          hunks = {},
+        },
+      })
+
+      eq({}, component:get_marks())
+    end)
+  end)
+
+  describe('should_component_update edge cases', function()
+    it('should return false when both diff and filetype are same reference', function()
+      local diff_ref = { lines = { 'a', 'b' } }
+      local component = create_diff_component({
+        props = { diff = diff_ref, filetype = 'lua' },
+      })
+
+      local result = component:should_component_update({
+        diff = diff_ref,
+        filetype = 'lua',
+      }, {})
+      assert.is_false(result)
+    end)
+
+    it('should return true when only diff reference changes', function()
+      local diff1 = { lines = {} }
+      local diff2 = { lines = {} }
+      local component = create_diff_component({
+        props = { diff = diff1, filetype = 'lua' },
+      })
+
+      local result = component:should_component_update({
+        diff = diff2,
+        filetype = 'lua',
+      }, {})
+      assert.is_true(result)
+    end)
+  end)
+
+  describe('get_lnum', function()
+    it('should return lnum from element', function()
+      local component = create_diff_component({ lnum = 42 })
+      eq(42, component:get_lnum())
+    end)
+  end)
+
+  describe('get_cursor', function()
+    it('should return default cursor when element has no get_cursor', function()
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local instance = {
+        props = {},
+        state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
+        mounted = false,
+        _needs_update = false,
+        _element = nil,
+      }
+      setmetatable(instance, DiffComponent)
+
+      eq({ 1, 1 }, instance:get_cursor())
+    end)
+  end)
+
 end)

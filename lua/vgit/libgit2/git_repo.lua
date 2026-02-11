@@ -36,7 +36,7 @@ function git_repo.discover(filepath, opts)
 
   if git_dirname == true then return dirname end
 
-  local result = dirname:gsub('%.git/$', '')
+  local result = dirname:gsub('%.git/?$', ''):gsub('/+$', '')
   return result
 end
 

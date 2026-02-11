@@ -112,6 +112,7 @@ local function register_modules()
 end
 
 local function register_events()
+  display_service.register_events()
   live_blame:register_events()
   live_gutter:register_events()
   highlight.register_events()

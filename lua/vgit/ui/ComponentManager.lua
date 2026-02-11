@@ -56,7 +56,7 @@ function ComponentManager:parse_layout_spec(layout_spec)
   error('Unable to convert UI description to LayoutSpec')
 end
 
-function ComponentManager:render(layout_config)
+function ComponentManager:prepare_layout(layout_config)
   if not layout_config then error('ComponentManager:render() requires layout_config') end
 
   self.root_component = layout_config.component
@@ -76,9 +76,13 @@ function ComponentManager:render(layout_config)
 
   self.root_component.props = self.root_component.props or {}
   self.root_component.props.layout_config = layout_config
+end
 
+function ComponentManager:mount_components()
   self.component_group:mount(self.root_component, self)
+end
 
+function ComponentManager:render_layout()
   local layout_spec = self.root_component:get_layout_spec()
   layout_spec = self:parse_layout_spec(layout_spec)
 
@@ -86,7 +90,9 @@ function ComponentManager:render(layout_config)
   self.layout_renderer:render(layout_spec)
 
   self.component_group:call_did_mount()
+end
 
+function ComponentManager:register_lifecycle_events()
   self:on('BufWinLeave', function()
     event.await()
     self:destroy()
@@ -96,6 +102,13 @@ function ComponentManager:render(layout_config)
     event.await()
     self:destroy()
   end)
+end
+
+function ComponentManager:render(layout_config)
+  self:prepare_layout(layout_config)
+  self:mount_components()
+  self:render_layout()
+  self:register_lifecycle_events()
 end
 
 function ComponentManager:destroy()

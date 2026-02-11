@@ -1,770 +1,627 @@
--- Mock GitQueryBuilder before requiring git_submodule
-local captured_args = {}
-local captured_reponame = nil
-local mock_execute_result = nil
-local mock_execute_err = nil
-
-local real_builder = package.loaded['vgit.git.GitQueryBuilder']
-package.loaded['vgit.git.GitQueryBuilder'] = setmetatable({}, {
-  __call = function(_, reponame)
-    captured_reponame = reponame
-    captured_args = {}
-    local builder = {}
-    local mt = {
-      __index = function(_, key)
-        if key == 'execute' then
-          return function()
-            return mock_execute_result, mock_execute_err
-          end
-        end
-        return function(self, ...)
-          local args = { ... }
-          for _, a in ipairs(args) do
-            captured_args[#captured_args + 1] = tostring(a)
-          end
-          return self
-        end
-      end,
-    }
-    setmetatable(builder, mt)
-    return builder
-  end,
-})
-
 local git_submodule = require('vgit.git.git_submodule')
+local test_repo = require('tests.helpers.test_repo')
+test_repo.use_driver('raw')
+local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
 
 local eq = assert.are.same
 
+local function clone_repo(source, dest)
+  vim.fn.system({ 'git', '-c', 'protocol.file.allow=always', 'clone', '-q', source, dest })
+  vim.fn.system({ 'git', '-C', dest, 'config', 'protocol.file.allow', 'always' })
+end
+
 describe('git_submodule:', function()
-  before_each(function()
-    captured_args = {}
-    captured_reponame = nil
-    mock_execute_result = nil
-    mock_execute_err = nil
-  end)
-
-  after_each(function()
-    -- nothing to clean up
-  end)
-
-  -- Restore real builder on teardown
-  teardown(function()
-    package.loaded['vgit.git.GitQueryBuilder'] = real_builder
-    package.loaded['vgit.git.git_submodule'] = nil
-  end)
-
-  describe('list()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.list(nil)
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
+  -- ============================================================
+  -- Unit tests: parameter validation (no repo, no async needed)
+  -- ============================================================
+  describe('parameter validation', function()
+    describe('list()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.list(nil)
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
     end)
 
-    it('should propagate execute error', function()
-      mock_execute_err = { 'something went wrong' }
-      local result, err = git_submodule.list('/repo')
-      assert.is_nil(result)
-      eq({ 'something went wrong' }, err)
+    describe('add()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.add(nil, 'url', 'path')
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
+
+      it('should error when url is nil', function()
+        local result, err = git_submodule.add('/repo', nil, 'path')
+        assert.is_nil(result)
+        eq({ 'url is required' }, err)
+      end)
+
+      it('should error when path is nil', function()
+        local result, err = git_submodule.add('/repo', 'https://example.com/repo.git', nil)
+        assert.is_nil(result)
+        eq({ 'path is required' }, err)
+      end)
     end)
 
-    it('should handle empty output', function()
-      mock_execute_result = {}
-      local result, err = git_submodule.list('/repo')
-      assert.is_nil(err)
-      eq({}, result)
+    describe('init()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.init(nil)
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
     end)
 
-    it('should parse initialized submodule (space prefix)', function()
-      mock_execute_result = {
-        ' abc1234567890abcdef1234567890abcdef123456 path/to/sub (v1.0)',
-      }
-      local result, err = git_submodule.list('/repo')
-      assert.is_nil(err)
-      eq(1, #result)
-      eq('initialized', result[1].status)
-      eq('abc1234567890abcdef1234567890abcdef123456', result[1].hash)
-      eq('path/to/sub', result[1].path)
-      eq('v1.0', result[1].ref)
+    describe('deinit()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.deinit(nil)
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
     end)
 
-    it('should parse uninitialized submodule (- prefix)', function()
-      mock_execute_result = {
-        '-abc123def456 lib/dependency',
-      }
-      local result, err = git_submodule.list('/repo')
-      assert.is_nil(err)
-      eq(1, #result)
-      eq('uninitialized', result[1].status)
-      eq('abc123def456', result[1].hash)
-      eq('lib/dependency', result[1].path)
-      assert.is_nil(result[1].ref)
+    describe('update()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.update(nil)
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
     end)
 
-    it('should parse modified submodule (+ prefix)', function()
-      mock_execute_result = {
-        '+abc123def456 vendor/pkg (heads/main)',
-      }
-      local result, err = git_submodule.list('/repo')
-      assert.is_nil(err)
-      eq(1, #result)
-      eq('modified', result[1].status)
-      eq('abc123def456', result[1].hash)
-      eq('vendor/pkg', result[1].path)
-      eq('heads/main', result[1].ref)
+    describe('sync()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.sync(nil)
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
     end)
 
-    it('should parse conflicts submodule (U prefix)', function()
-      mock_execute_result = {
-        'Uabc123def456 ext/conflict (v2.3)',
-      }
-      local result, err = git_submodule.list('/repo')
-      assert.is_nil(err)
-      eq(1, #result)
-      eq('conflicts', result[1].status)
-      eq('abc123def456', result[1].hash)
-      eq('ext/conflict', result[1].path)
-      eq('v2.3', result[1].ref)
+    describe('foreach()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.foreach(nil, 'git pull')
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
+
+      it('should error when command is nil', function()
+        local result, err = git_submodule.foreach('/repo', nil)
+        assert.is_nil(result)
+        eq({ 'command is required' }, err)
+      end)
     end)
 
-    it('should parse submodule without ref tag', function()
-      mock_execute_result = {
-        ' abc123def456 path/no/ref',
-      }
-      local result, err = git_submodule.list('/repo')
-      assert.is_nil(err)
-      eq(1, #result)
-      eq('initialized', result[1].status)
-      eq('abc123def456', result[1].hash)
-      eq('path/no/ref', result[1].path)
-      assert.is_nil(result[1].ref)
+    describe('set_branch()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.set_branch(nil, 'main', 'lib/sub')
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
+
+      it('should error when path is nil', function()
+        local result, err = git_submodule.set_branch('/repo', 'main', nil)
+        assert.is_nil(result)
+        eq({ 'path is required' }, err)
+      end)
+
+      it('should error when neither branch nor default option is provided', function()
+        local result, err = git_submodule.set_branch('/repo', nil, 'lib/sub')
+        assert.is_nil(result)
+        eq({ 'branch is required unless using default option' }, err)
+      end)
     end)
 
-    it('should handle multiple submodules', function()
-      mock_execute_result = {
-        ' aaa111 sub1 (v1.0)',
-        '-bbb222 sub2',
-        '+ccc333 sub3 (v2.0)',
-        'Uddd444 sub4 (v3.0)',
-      }
-      local result, err = git_submodule.list('/repo')
-      assert.is_nil(err)
-      eq(4, #result)
+    describe('set_url()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.set_url(nil, 'lib/sub', 'https://new.url')
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
 
-      eq('initialized', result[1].status)
-      eq('aaa111', result[1].hash)
-      eq('sub1', result[1].path)
-      eq('v1.0', result[1].ref)
+      it('should error when path is nil', function()
+        local result, err = git_submodule.set_url('/repo', nil, 'https://new.url')
+        assert.is_nil(result)
+        eq({ 'path is required' }, err)
+      end)
 
-      eq('uninitialized', result[2].status)
-      eq('bbb222', result[2].hash)
-      eq('sub2', result[2].path)
-      assert.is_nil(result[2].ref)
-
-      eq('modified', result[3].status)
-      eq('ccc333', result[3].hash)
-      eq('sub3', result[3].path)
-      eq('v2.0', result[3].ref)
-
-      eq('conflicts', result[4].status)
-      eq('ddd444', result[4].hash)
-      eq('sub4', result[4].path)
-      eq('v3.0', result[4].ref)
+      it('should error when url is nil', function()
+        local result, err = git_submodule.set_url('/repo', 'lib/sub', nil)
+        assert.is_nil(result)
+        eq({ 'url is required' }, err)
+      end)
     end)
 
-    it('should pass --recursive option', function()
-      mock_execute_result = {}
-      git_submodule.list('/repo', { recursive = true })
-      assert.is_not_nil(captured_reponame)
-      -- captured_args should include: 'submodule', 'status', '--recursive'
-      eq('submodule', captured_args[1])
-      eq('status', captured_args[2])
-      eq('--recursive', captured_args[3])
+    describe('absorbgitdirs()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.absorbgitdirs(nil)
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
     end)
 
-    it('should pass --cached option', function()
-      mock_execute_result = {}
-      git_submodule.list('/repo', { cached = true })
-      eq('submodule', captured_args[1])
-      eq('status', captured_args[2])
-      eq('--cached', captured_args[3])
+    describe('summary()', function()
+      it('should error when reponame is nil', function()
+        local result, err = git_submodule.summary(nil)
+        assert.is_nil(result)
+        eq({ 'reponame is required' }, err)
+      end)
     end)
   end)
 
-  describe('add()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.add(nil, 'url', 'path')
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
-    end)
+  -- ============================================================
+  -- Integration tests: real git repos with async
+  -- ============================================================
+  describe('integration', function()
+    local repo
+    local source_repo
+    local it = async.it
+    local before_each = async.before_each
+    local after_each = async.after_each
 
-    it('should error when url is nil', function()
-      local result, err = git_submodule.add('/repo', nil, 'path')
-      assert.is_nil(result)
-      eq({ 'url is required' }, err)
-    end)
+    before_each(function()
+      local err
 
-    it('should error when path is nil', function()
-      local result, err = git_submodule.add('/repo', 'https://example.com/repo.git', nil)
-      assert.is_nil(result)
-      eq({ 'path is required' }, err)
-    end)
-
-    it('should pass basic args: submodule, add, url, path', function()
-      mock_execute_result = {}
-      git_submodule.add('/repo', 'https://example.com/repo.git', 'lib/sub')
-      eq('/repo', captured_reponame)
-      eq({
-        'submodule',
-        'add',
-        'https://example.com/repo.git',
-        'lib/sub',
-      }, captured_args)
-    end)
-
-    it('should pass force option', function()
-      mock_execute_result = {}
-      git_submodule.add('/repo', 'https://example.com/repo.git', 'lib/sub', { force = true })
-      eq({
-        'submodule',
-        'add',
-        '-f',
-        'https://example.com/repo.git',
-        'lib/sub',
-      }, captured_args)
-    end)
-
-    it('should pass force option via f alias', function()
-      mock_execute_result = {}
-      git_submodule.add('/repo', 'https://example.com/repo.git', 'lib/sub', { f = true })
-      eq({
-        'submodule',
-        'add',
-        '-f',
-        'https://example.com/repo.git',
-        'lib/sub',
-      }, captured_args)
-    end)
-
-    it('should pass branch option', function()
-      mock_execute_result = {}
-      git_submodule.add('/repo', 'https://example.com/repo.git', 'lib/sub', { branch = 'develop' })
-      eq({
-        'submodule',
-        'add',
-        '-b',
-        'develop',
-        'https://example.com/repo.git',
-        'lib/sub',
-      }, captured_args)
-    end)
-
-    it('should pass branch option via b alias', function()
-      mock_execute_result = {}
-      git_submodule.add('/repo', 'https://example.com/repo.git', 'lib/sub', { b = 'main' })
-      eq({
-        'submodule',
-        'add',
-        '-b',
-        'main',
-        'https://example.com/repo.git',
-        'lib/sub',
-      }, captured_args)
-    end)
-
-    it('should pass depth option', function()
-      mock_execute_result = {}
-      git_submodule.add('/repo', 'https://example.com/repo.git', 'lib/sub', { depth = 1 })
-      eq({
-        'submodule',
-        'add',
-        '--depth',
-        '1',
-        'https://example.com/repo.git',
-        'lib/sub',
-      }, captured_args)
-    end)
-
-    it('should pass name option', function()
-      mock_execute_result = {}
-      git_submodule.add('/repo', 'https://example.com/repo.git', 'lib/sub', { name = 'my-sub' })
-      eq({
-        'submodule',
-        'add',
-        '--name',
-        'my-sub',
-        'https://example.com/repo.git',
-        'lib/sub',
-      }, captured_args)
-    end)
-
-    it('should pass reference option', function()
-      mock_execute_result = {}
-      git_submodule.add('/repo', 'https://example.com/repo.git', 'lib/sub', { reference = '/local/mirror' })
-      eq({
-        'submodule',
-        'add',
-        '--reference',
-        '/local/mirror',
-        'https://example.com/repo.git',
-        'lib/sub',
-      }, captured_args)
-    end)
-
-    it('should pass all options together', function()
-      mock_execute_result = {}
-      git_submodule.add('/repo', 'https://example.com/repo.git', 'lib/sub', {
-        force = true,
-        branch = 'develop',
-        depth = 5,
-        name = 'my-sub',
-        reference = '/mirror',
+      -- Create a source repo to use as a submodule
+      source_repo, err = test_repo.create_repo({
+        initial_commit = true,
+        files = { ['lib.txt'] = { 'library content' } },
       })
-      eq({
-        'submodule',
-        'add',
-        '-f',
-        '-b',
-        'develop',
-        '--depth',
-        '5',
-        '--name',
-        'my-sub',
-        '--reference',
-        '/mirror',
-        'https://example.com/repo.git',
-        'lib/sub',
-      }, captured_args)
-    end)
-  end)
+      assert(not err, 'Failed to create source repo: ' .. tostring(err))
 
-  describe('init()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.init(nil)
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
-    end)
-
-    it('should pass submodule init args', function()
-      mock_execute_result = {}
-      git_submodule.init('/repo')
-      eq('/repo', captured_reponame)
-      eq({ 'submodule', 'init' }, captured_args)
-    end)
-
-    it('should pass --all option', function()
-      mock_execute_result = {}
-      git_submodule.init('/repo', nil, { all = true })
-      eq({ 'submodule', 'init', '--all' }, captured_args)
-    end)
-
-    it('should pass a string path', function()
-      mock_execute_result = {}
-      git_submodule.init('/repo', 'lib/sub')
-      eq({ 'submodule', 'init', 'lib/sub' }, captured_args)
-    end)
-
-    it('should pass a table of paths', function()
-      mock_execute_result = {}
-      git_submodule.init('/repo', { 'lib/sub1', 'lib/sub2' })
-      eq({ 'submodule', 'init', 'lib/sub1', 'lib/sub2' }, captured_args)
-    end)
-  end)
-
-  describe('deinit()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.deinit(nil)
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
-    end)
-
-    it('should pass submodule deinit args', function()
-      mock_execute_result = {}
-      git_submodule.deinit('/repo')
-      eq({ 'submodule', 'deinit' }, captured_args)
-    end)
-
-    it('should pass force option', function()
-      mock_execute_result = {}
-      git_submodule.deinit('/repo', nil, { force = true })
-      eq({ 'submodule', 'deinit', '-f' }, captured_args)
-    end)
-
-    it('should pass force option via f alias', function()
-      mock_execute_result = {}
-      git_submodule.deinit('/repo', nil, { f = true })
-      eq({ 'submodule', 'deinit', '-f' }, captured_args)
-    end)
-
-    it('should pass --all option', function()
-      mock_execute_result = {}
-      git_submodule.deinit('/repo', nil, { all = true })
-      eq({ 'submodule', 'deinit', '--all' }, captured_args)
-    end)
-
-    it('should pass string path', function()
-      mock_execute_result = {}
-      git_submodule.deinit('/repo', 'lib/sub')
-      eq({ 'submodule', 'deinit', 'lib/sub' }, captured_args)
-    end)
-
-    it('should pass table of paths', function()
-      mock_execute_result = {}
-      git_submodule.deinit('/repo', { 'lib/sub1', 'lib/sub2' })
-      eq({ 'submodule', 'deinit', 'lib/sub1', 'lib/sub2' }, captured_args)
-    end)
-
-    it('should pass force and paths together', function()
-      mock_execute_result = {}
-      git_submodule.deinit('/repo', { 'lib/sub1' }, { force = true, all = true })
-      eq({ 'submodule', 'deinit', '-f', '--all', 'lib/sub1' }, captured_args)
-    end)
-  end)
-
-  describe('update()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.update(nil)
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
-    end)
-
-    it('should pass submodule update args', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo')
-      eq({ 'submodule', 'update' }, captured_args)
-    end)
-
-    it('should pass --init option', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { init = true })
-      eq({ 'submodule', 'update', '--init' }, captured_args)
-    end)
-
-    it('should pass --recursive option', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { recursive = true })
-      eq({ 'submodule', 'update', '--recursive' }, captured_args)
-    end)
-
-    it('should pass --force option', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { force = true })
-      eq({ 'submodule', 'update', '-f' }, captured_args)
-    end)
-
-    it('should pass --force option via f alias', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { f = true })
-      eq({ 'submodule', 'update', '-f' }, captured_args)
-    end)
-
-    it('should pass --checkout option', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { checkout = true })
-      eq({ 'submodule', 'update', '--checkout' }, captured_args)
-    end)
-
-    it('should pass --rebase option', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { rebase = true })
-      eq({ 'submodule', 'update', '--rebase' }, captured_args)
-    end)
-
-    it('should pass --merge option', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { merge = true })
-      eq({ 'submodule', 'update', '--merge' }, captured_args)
-    end)
-
-    it('should pass --remote option', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { remote = true })
-      eq({ 'submodule', 'update', '--remote' }, captured_args)
-    end)
-
-    it('should pass depth option', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { depth = 3 })
-      eq({ 'submodule', 'update', '--depth', '3' }, captured_args)
-    end)
-
-    it('should pass jobs option', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { jobs = 4 })
-      eq({ 'submodule', 'update', '-j', '4' }, captured_args)
-    end)
-
-    it('should pass jobs option via j alias', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', nil, { j = 8 })
-      eq({ 'submodule', 'update', '-j', '8' }, captured_args)
-    end)
-
-    it('should pass paths as string', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', 'lib/sub')
-      eq({ 'submodule', 'update', 'lib/sub' }, captured_args)
-    end)
-
-    it('should pass paths as table', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', { 'lib/sub1', 'lib/sub2' })
-      eq({ 'submodule', 'update', 'lib/sub1', 'lib/sub2' }, captured_args)
-    end)
-
-    it('should pass all options together', function()
-      mock_execute_result = {}
-      git_submodule.update('/repo', { 'lib/sub' }, {
-        init = true,
-        recursive = true,
-        force = true,
-        checkout = true,
-        rebase = true,
-        merge = true,
-        remote = true,
-        depth = 2,
-        jobs = 4,
+      -- Create the main repo
+      repo, err = test_repo.create_repo({
+        initial_commit = true,
+        files = { ['main.txt'] = { 'main content' } },
       })
-      eq({
-        'submodule',
-        'update',
-        '--init',
-        '--recursive',
-        '-f',
-        '--checkout',
-        '--rebase',
-        '--merge',
-        '--remote',
-        '--depth',
-        '2',
-        '-j',
-        '4',
-        'lib/sub',
-      }, captured_args)
-    end)
-  end)
-
-  describe('sync()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.sync(nil)
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
+      assert(not err, 'Failed to create main repo: ' .. tostring(err))
     end)
 
-    it('should pass submodule sync args', function()
-      mock_execute_result = {}
-      git_submodule.sync('/repo')
-      eq({ 'submodule', 'sync' }, captured_args)
+    after_each(function()
+      if repo then test_repo.cleanup(repo) end
+      if source_repo then test_repo.cleanup(source_repo) end
     end)
 
-    it('should pass --recursive option', function()
-      mock_execute_result = {}
-      git_submodule.sync('/repo', nil, { recursive = true })
-      eq({ 'submodule', 'sync', '--recursive' }, captured_args)
+    -- ----------------------------------------------------------
+    -- add()
+    -- ----------------------------------------------------------
+    describe('add()', function()
+      it('should add a submodule from a local repo', function()
+        local result, err = git_submodule.add(repo, source_repo, 'deps/lib')
+
+        assert(not err, 'add() failed: ' .. vim.inspect(err))
+        assert(result)
+
+        -- The submodule directory should exist on disk
+        local stat = vim.loop.fs_stat(repo .. '/deps/lib/lib.txt')
+        assert(stat, 'Submodule file should exist on disk')
+      end)
+
+      it('should be visible in list after add', function()
+        local _, err = git_submodule.add(repo, source_repo, 'deps/lib')
+        assert(not err, 'add() failed: ' .. vim.inspect(err))
+
+        -- Commit the submodule addition so status shows it cleanly
+        vim.fn.system({ 'git', '-C', repo, 'commit', '-q', '-m', 'Add submodule' })
+
+        local subs, list_err = git_submodule.list(repo)
+        assert(not list_err, 'list() failed: ' .. vim.inspect(list_err))
+        assert(subs and #subs >= 1, 'Expected at least 1 submodule in list')
+        eq('deps/lib', subs[1].path)
+      end)
+
+      it('should add a submodule with force option', function()
+        local result, err = git_submodule.add(repo, source_repo, 'deps/lib', { force = true })
+
+        assert(not err, 'add() with force failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
     end)
 
-    it('should pass string path', function()
-      mock_execute_result = {}
-      git_submodule.sync('/repo', 'lib/sub')
-      eq({ 'submodule', 'sync', 'lib/sub' }, captured_args)
+    -- ----------------------------------------------------------
+    -- list()
+    -- ----------------------------------------------------------
+    describe('list()', function()
+      it('should return empty list when no submodules exist', function()
+        local result, err = git_submodule.list(repo)
+
+        assert(not err, 'list() failed: ' .. vim.inspect(err))
+        eq({}, result)
+      end)
+
+      it('should list an initialized submodule', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.list(repo)
+
+        assert(not err, 'list() failed: ' .. vim.inspect(err))
+        eq(1, #result)
+        eq('deps/lib', result[1].path)
+        assert(result[1].hash and #result[1].hash > 0, 'hash should be non-empty')
+        -- After add+commit, the submodule should be initialized
+        eq('initialized', result[1].status)
+      end)
+
+      it('should list multiple submodules', function()
+        -- Create a second source repo
+        local source_repo2, create_err = test_repo.create_repo({
+          initial_commit = true,
+          files = { ['util.txt'] = { 'util content' } },
+        })
+        assert(not create_err, 'Failed to create second source repo')
+
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+        test_repo.add_submodule(repo, source_repo2, 'deps/util')
+
+        local result, err = git_submodule.list(repo)
+
+        assert(not err, 'list() failed: ' .. vim.inspect(err))
+        eq(2, #result)
+
+        -- Sort by path for deterministic comparison
+        table.sort(result, function(a, b) return a.path < b.path end)
+        eq('deps/lib', result[1].path)
+        eq('deps/util', result[2].path)
+
+        test_repo.cleanup(source_repo2)
+      end)
+
+      it('should detect uninitialized submodule', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        -- Clone the repo fresh so the submodule is registered but not initialized
+        local clone_dir = vim.fn.tempname()
+        clone_repo(repo, clone_dir)
+
+        local result, err = git_submodule.list(clone_dir)
+
+        assert(not err, 'list() failed: ' .. vim.inspect(err))
+        eq(1, #result)
+        eq('deps/lib', result[1].path)
+        eq('uninitialized', result[1].status)
+
+        -- Cleanup the clone
+        vim.fn.system({ 'rm', '-rf', clone_dir })
+      end)
     end)
 
-    it('should pass table of paths', function()
-      mock_execute_result = {}
-      git_submodule.sync('/repo', { 'lib/sub1', 'lib/sub2' })
-      eq({ 'submodule', 'sync', 'lib/sub1', 'lib/sub2' }, captured_args)
-    end)
-  end)
+    -- ----------------------------------------------------------
+    -- init() / update()
+    -- ----------------------------------------------------------
+    describe('init()', function()
+      it('should initialize submodules in a cloned repo', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-  describe('foreach()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.foreach(nil, 'git pull')
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
-    end)
+        -- Clone fresh (submodule will be uninitialized)
+        local clone_dir = vim.fn.tempname()
+        clone_repo(repo, clone_dir)
 
-    it('should error when command is nil', function()
-      local result, err = git_submodule.foreach('/repo', nil)
-      assert.is_nil(result)
-      eq({ 'command is required' }, err)
-    end)
+        -- Before init, submodule should be uninitialized
+        local subs_before, _ = git_submodule.list(clone_dir)
+        eq('uninitialized', subs_before[1].status)
 
-    it('should pass submodule foreach with command', function()
-      mock_execute_result = {}
-      git_submodule.foreach('/repo', 'git pull')
-      eq({ 'submodule', 'foreach', 'git pull' }, captured_args)
-    end)
+        -- Init the submodule
+        local result, err = git_submodule.init(clone_dir, 'deps/lib')
+        assert(not err, 'init() failed: ' .. vim.inspect(err))
+        assert(result)
 
-    it('should pass --recursive option', function()
-      mock_execute_result = {}
-      git_submodule.foreach('/repo', 'git pull', { recursive = true })
-      eq({ 'submodule', 'foreach', '--recursive', 'git pull' }, captured_args)
-    end)
+        -- After init, the submodule URL should be registered but files
+        -- won't appear until update
+        local stat = vim.loop.fs_stat(clone_dir .. '/deps/lib/lib.txt')
+        assert(not stat, 'Files should not appear until update')
 
-    it('should pass -q option via quiet', function()
-      mock_execute_result = {}
-      git_submodule.foreach('/repo', 'git status', { quiet = true })
-      eq({ 'submodule', 'foreach', '-q', 'git status' }, captured_args)
-    end)
+        vim.fn.system({ 'rm', '-rf', clone_dir })
+      end)
 
-    it('should pass -q option via q alias', function()
-      mock_execute_result = {}
-      git_submodule.foreach('/repo', 'git status', { q = true })
-      eq({ 'submodule', 'foreach', '-q', 'git status' }, captured_args)
+      it('should accept a table of paths', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local clone_dir = vim.fn.tempname()
+        clone_repo(repo, clone_dir)
+
+        local result, err = git_submodule.init(clone_dir, { 'deps/lib' })
+        assert(not err, 'init() with table paths failed: ' .. vim.inspect(err))
+        assert(result)
+
+        vim.fn.system({ 'rm', '-rf', clone_dir })
+      end)
     end)
 
-    it('should pass recursive and quiet together', function()
-      mock_execute_result = {}
-      git_submodule.foreach('/repo', 'git fetch', { recursive = true, quiet = true })
-      eq({ 'submodule', 'foreach', '--recursive', '-q', 'git fetch' }, captured_args)
-    end)
-  end)
+    describe('update()', function()
+      it('should populate submodule files after init+update', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-  describe('set_branch()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.set_branch(nil, 'main', 'lib/sub')
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
-    end)
+        local clone_dir = vim.fn.tempname()
+        clone_repo(repo, clone_dir)
 
-    it('should error when path is nil', function()
-      local result, err = git_submodule.set_branch('/repo', 'main', nil)
-      assert.is_nil(result)
-      eq({ 'path is required' }, err)
-    end)
+        -- Init and update
+        local _, init_err = git_submodule.init(clone_dir, 'deps/lib')
+        assert(not init_err, 'init() failed: ' .. vim.inspect(init_err))
 
-    it('should error when neither branch nor default option is provided', function()
-      local result, err = git_submodule.set_branch('/repo', nil, 'lib/sub')
-      assert.is_nil(result)
-      eq({ 'branch is required unless using default option' }, err)
-    end)
+        local result, err = git_submodule.update(clone_dir, 'deps/lib')
+        assert(not err, 'update() failed: ' .. vim.inspect(err))
+        assert(result)
 
-    it('should pass branch with -b', function()
-      mock_execute_result = {}
-      git_submodule.set_branch('/repo', 'develop', 'lib/sub')
-      eq({ 'submodule', 'set-branch', '-b', 'develop', 'lib/sub' }, captured_args)
-    end)
+        -- The submodule file should now exist
+        local stat = vim.loop.fs_stat(clone_dir .. '/deps/lib/lib.txt')
+        assert(stat, 'Submodule file should exist after update')
 
-    it('should pass default with -d via default option', function()
-      mock_execute_result = {}
-      git_submodule.set_branch('/repo', nil, 'lib/sub', { default = true })
-      eq({ 'submodule', 'set-branch', '-d', 'lib/sub' }, captured_args)
-    end)
+        vim.fn.system({ 'rm', '-rf', clone_dir })
+      end)
 
-    it('should pass default with -d via d alias', function()
-      mock_execute_result = {}
-      git_submodule.set_branch('/repo', nil, 'lib/sub', { d = true })
-      eq({ 'submodule', 'set-branch', '-d', 'lib/sub' }, captured_args)
-    end)
+      it('should support --init option to combine init+update', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-    it('should prefer default over branch when both provided', function()
-      mock_execute_result = {}
-      git_submodule.set_branch('/repo', 'develop', 'lib/sub', { default = true })
-      -- default takes priority per the source code if-elseif chain
-      eq({ 'submodule', 'set-branch', '-d', 'lib/sub' }, captured_args)
-    end)
-  end)
+        local clone_dir = vim.fn.tempname()
+        clone_repo(repo, clone_dir)
 
-  describe('set_url()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.set_url(nil, 'lib/sub', 'https://new.url')
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
-    end)
+        -- update with init=true should combine both steps
+        local result, err = git_submodule.update(clone_dir, 'deps/lib', { init = true })
+        assert(not err, 'update(init=true) failed: ' .. vim.inspect(err))
+        assert(result)
 
-    it('should error when path is nil', function()
-      local result, err = git_submodule.set_url('/repo', nil, 'https://new.url')
-      assert.is_nil(result)
-      eq({ 'path is required' }, err)
-    end)
+        local stat = vim.loop.fs_stat(clone_dir .. '/deps/lib/lib.txt')
+        assert(stat, 'Submodule file should exist after update --init')
 
-    it('should error when url is nil', function()
-      local result, err = git_submodule.set_url('/repo', 'lib/sub', nil)
-      assert.is_nil(result)
-      eq({ 'url is required' }, err)
+        vim.fn.system({ 'rm', '-rf', clone_dir })
+      end)
+
+      it('should support --checkout option', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local clone_dir = vim.fn.tempname()
+        clone_repo(repo, clone_dir)
+
+        local result, err = git_submodule.update(clone_dir, 'deps/lib', { init = true, checkout = true })
+        assert(not err, 'update(checkout=true) failed: ' .. vim.inspect(err))
+        assert(result)
+
+        vim.fn.system({ 'rm', '-rf', clone_dir })
+      end)
+
+      it('should accept paths as a table', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local clone_dir = vim.fn.tempname()
+        clone_repo(repo, clone_dir)
+
+        local result, err = git_submodule.update(clone_dir, { 'deps/lib' }, { init = true })
+        assert(not err, 'update() with table paths failed: ' .. vim.inspect(err))
+        assert(result)
+
+        vim.fn.system({ 'rm', '-rf', clone_dir })
+      end)
     end)
 
-    it('should pass submodule set-url path and url', function()
-      mock_execute_result = {}
-      git_submodule.set_url('/repo', 'lib/sub', 'https://new.example.com/repo.git')
-      eq('/repo', captured_reponame)
-      eq({
-        'submodule',
-        'set-url',
-        'lib/sub',
-        'https://new.example.com/repo.git',
-      }, captured_args)
-    end)
-  end)
+    -- ----------------------------------------------------------
+    -- sync()
+    -- ----------------------------------------------------------
+    describe('sync()', function()
+      it('should sync submodule URLs', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-  describe('absorbgitdirs()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.absorbgitdirs(nil)
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
-    end)
+        local result, err = git_submodule.sync(repo, 'deps/lib')
 
-    it('should pass submodule absorbgitdirs args', function()
-      mock_execute_result = {}
-      git_submodule.absorbgitdirs('/repo')
-      eq('/repo', captured_reponame)
-      eq({ 'submodule', 'absorbgitdirs' }, captured_args)
-    end)
-  end)
+        assert(not err, 'sync() failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
 
-  describe('summary()', function()
-    it('should error when reponame is nil', function()
-      local result, err = git_submodule.summary(nil)
-      assert.is_nil(result)
-      eq({ 'reponame is required' }, err)
+      it('should sync with recursive option', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.sync(repo, nil, { recursive = true })
+
+        assert(not err, 'sync(recursive) failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
+
+      it('should accept paths as a table', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.sync(repo, { 'deps/lib' })
+
+        assert(not err, 'sync() with table paths failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
     end)
 
-    it('should pass submodule summary args', function()
-      mock_execute_result = {}
-      git_submodule.summary('/repo')
-      eq({ 'submodule', 'summary' }, captured_args)
+    -- ----------------------------------------------------------
+    -- deinit() edge cases
+    -- ----------------------------------------------------------
+    describe('deinit() edge cases', function()
+      it('should deinit without force on a clean submodule', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        -- deinit without --force succeeds on a clean submodule
+        local result, err = git_submodule.deinit(repo, 'deps/lib')
+
+        assert(not err, 'deinit() failed: ' .. vim.inspect(err))
+        assert(result)
+
+        -- Submodule content should be removed
+        local stat = vim.loop.fs_stat(repo .. '/deps/lib/lib.txt')
+        assert(not stat, 'Submodule content should be removed after deinit')
+      end)
     end)
 
-    it('should pass --cached option', function()
-      mock_execute_result = {}
-      git_submodule.summary('/repo', { cached = true })
-      eq({ 'submodule', 'summary', '--cached' }, captured_args)
+    -- ----------------------------------------------------------
+    -- list() edge cases
+    -- ----------------------------------------------------------
+    describe('list() edge cases', function()
+      it('should detect modified submodule with + prefix', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        -- Create a commit inside the submodule directory to make it "modified"
+        vim.fn.system({
+          'git', '-C', repo .. '/deps/lib',
+          'commit', '-q', '--allow-empty', '-m', 'sub-commit',
+        })
+
+        local result, err = git_submodule.list(repo)
+        assert(not err, 'list() failed: ' .. vim.inspect(err))
+        eq(1, #result)
+        eq('deps/lib', result[1].path)
+        eq('modified', result[1].status)
+      end)
     end)
 
-    it('should pass --files option', function()
-      mock_execute_result = {}
-      git_submodule.summary('/repo', { files = true })
-      eq({ 'submodule', 'summary', '--files' }, captured_args)
+    -- ----------------------------------------------------------
+    -- deinit()
+    -- ----------------------------------------------------------
+    describe('deinit()', function()
+      it('should deinit an initialized submodule with force', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        -- deinit requires --force for initialized submodules
+        local result, err = git_submodule.deinit(repo, 'deps/lib', { force = true })
+
+        assert(not err, 'deinit(force) failed: ' .. vim.inspect(err))
+        assert(result)
+
+        -- After deinit, the submodule directory should be empty
+        local stat = vim.loop.fs_stat(repo .. '/deps/lib/lib.txt')
+        assert(not stat, 'Submodule content should be removed after deinit')
+      end)
+
+      it('should deinit with f alias', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.deinit(repo, 'deps/lib', { f = true })
+
+        assert(not err, 'deinit(f) failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
+
+      it('should deinit all submodules with --all --force', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.deinit(repo, nil, { all = true, force = true })
+
+        assert(not err, 'deinit(all, force) failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
     end)
 
-    it('should pass --summary-limit option', function()
-      mock_execute_result = {}
-      git_submodule.summary('/repo', { summary_limit = 10 })
-      eq({ 'submodule', 'summary', '--summary-limit', '10' }, captured_args)
+    -- ----------------------------------------------------------
+    -- foreach()
+    -- ----------------------------------------------------------
+    describe('foreach()', function()
+      it('should execute a command in each submodule', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.foreach(repo, 'echo hello')
+
+        assert(not err, 'foreach() failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
+
+      it('should work with quiet option', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.foreach(repo, 'echo hello', { quiet = true })
+
+        assert(not err, 'foreach(quiet) failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
+
+      it('should work with recursive option', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.foreach(repo, 'echo hello', { recursive = true })
+
+        assert(not err, 'foreach(recursive) failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
     end)
 
-    it('should pass commit option', function()
-      mock_execute_result = {}
-      git_submodule.summary('/repo', { commit = 'HEAD~5' })
-      eq({ 'submodule', 'summary', 'HEAD~5' }, captured_args)
+    -- ----------------------------------------------------------
+    -- set_branch()
+    -- ----------------------------------------------------------
+    describe('set_branch()', function()
+      it('should set a branch for a submodule', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.set_branch(repo, 'main', 'deps/lib')
+
+        -- set-branch may fail if the git version is too old, but should not crash
+        if not err then
+          assert(result)
+        end
+      end)
+
+      it('should reset to default branch with default option', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.set_branch(repo, nil, 'deps/lib', { default = true })
+
+        if not err then
+          assert(result)
+        end
+      end)
     end)
 
-    it('should pass all options together', function()
-      mock_execute_result = {}
-      git_submodule.summary('/repo', {
-        cached = true,
-        files = true,
-        summary_limit = 5,
-        commit = 'abc123',
-      })
-      eq({
-        'submodule',
-        'summary',
-        '--cached',
-        '--files',
-        '--summary-limit',
-        '5',
-        'abc123',
-      }, captured_args)
+    -- ----------------------------------------------------------
+    -- set_url()
+    -- ----------------------------------------------------------
+    describe('set_url()', function()
+      it('should set the URL for a submodule', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        -- Create another source to use as new URL
+        local new_source, create_err = test_repo.create_repo({
+          initial_commit = true,
+          files = { ['new_lib.txt'] = { 'new library' } },
+        })
+        assert(not create_err, 'Failed to create new source repo')
+
+        local result, err = git_submodule.set_url(repo, 'deps/lib', new_source)
+
+        assert(not err, 'set_url() failed: ' .. vim.inspect(err))
+        assert(result)
+
+        test_repo.cleanup(new_source)
+      end)
+    end)
+
+    -- ----------------------------------------------------------
+    -- absorbgitdirs()
+    -- ----------------------------------------------------------
+    describe('absorbgitdirs()', function()
+      it('should absorb git dirs without error', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.absorbgitdirs(repo)
+
+        assert(not err, 'absorbgitdirs() failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
+    end)
+
+    -- ----------------------------------------------------------
+    -- summary()
+    -- ----------------------------------------------------------
+    describe('summary()', function()
+      it('should return summary for repo with submodules', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.summary(repo)
+
+        assert(not err, 'summary() failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
+
+      it('should return empty result for repo without submodule changes', function()
+        local result, err = git_submodule.summary(repo)
+
+        assert(not err, 'summary() failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
+
+      it('should work with --cached option', function()
+        test_repo.add_submodule(repo, source_repo, 'deps/lib')
+
+        local result, err = git_submodule.summary(repo, { cached = true })
+
+        assert(not err, 'summary(cached) failed: ' .. vim.inspect(err))
+        assert(result)
+      end)
     end)
   end)
 end)

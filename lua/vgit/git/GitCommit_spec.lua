@@ -290,6 +290,112 @@ describe('GitCommit:', function()
     end)
   end)
 
+  describe('has_parent', function()
+    it('should return true when parent_hash is set', function()
+      local commit = GitCommit({
+        hash = 'abc1234',
+        parent_hash = 'def5678',
+      })
+
+      assert.is_true(commit:has_parent())
+    end)
+
+    it('should return false when parent_hash is nil', function()
+      local commit = GitCommit({
+        hash = 'abc1234',
+      })
+
+      assert.is_false(commit:has_parent())
+    end)
+
+    it('should return false when parent_hash is empty string', function()
+      local commit = GitCommit({
+        hash = 'abc1234',
+        parent_hash = '',
+      })
+
+      assert.is_false(commit:has_parent())
+    end)
+  end)
+
+  describe('parent', function()
+    it('should return nil when no parent_hash', function()
+      local commit = GitCommit({
+        hash = 'abc1234',
+      })
+
+      local parent, err = commit:parent()
+      assert.is_nil(parent)
+      assert.is_nil(err)
+    end)
+  end)
+
+  describe('traverse', function()
+    it('should return error when callback is nil', function()
+      local commit = GitCommit({
+        hash = 'abc1234',
+      })
+
+      local result, err = commit:traverse(nil)
+      assert.is_nil(result)
+      assert.is_not_nil(err)
+    end)
+
+    it('should call callback with the commit at depth 0', function()
+      local commit = GitCommit({
+        hash = 'abc1234',
+      })
+
+      local visited = {}
+      commit:traverse(function(c, depth)
+        table.insert(visited, { hash = c.hash, depth = depth })
+      end)
+
+      eq(1, #visited)
+      eq('abc1234', visited[1].hash)
+      eq(0, visited[1].depth)
+    end)
+
+    it('should stop when callback returns false', function()
+      local commit = GitCommit({
+        hash = 'abc1234',
+      })
+
+      local count = 0
+      commit:traverse(function(c, depth)
+        count = count + 1
+        return false
+      end)
+
+      eq(1, count)
+    end)
+
+    it('should respect max_depth', function()
+      local commit = GitCommit({
+        hash = 'abc1234',
+      })
+
+      local count = 0
+      commit:traverse(function(c, depth)
+        count = count + 1
+      end, 0)
+
+      eq(0, count)
+    end)
+  end)
+
+  describe('ancestor', function()
+    it('should return self for depth 0', function()
+      local commit = GitCommit({
+        hash = 'abc1234',
+      })
+
+      local result, err = commit:ancestor(0)
+      assert.is_nil(err)
+      eq('abc1234', result.hash)
+    end)
+  end)
+
   describe('EMPTY_HASH constant', function()
     it('should be 40 zero characters', function()
       eq(GitCommit.EMPTY_HASH, '0000000000000000000000000000000000000000')

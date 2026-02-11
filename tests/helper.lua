@@ -1,1 +1,1 @@
-vim.opt.rtp:append(vim.fn.expand('~/.local/share/nvim/lazy/plenary.nvim'))
+-- test helper (no external dependencies required)

@@ -1,11 +1,11 @@
-local plenary_async = require('plenary.async.async')
+local async = require('vgit.core.async')
 
 local function run(fn)
   local finished = false
   local test_error = nil
 
   vim.schedule(function()
-    plenary_async.run(function()
+    async.run(function()
       local ok, err = pcall(fn)
       if not ok then
         test_error = err

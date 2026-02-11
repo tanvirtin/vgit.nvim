@@ -49,12 +49,6 @@ jobs:
           neovim: true
           version: stable
 
-      - name: Cache plenary.nvim
-        uses: actions/cache@v3
-        with:
-          path: ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
-          key: plenary-${{ runner.os }}
-
       - name: Install dependencies
         run: |
           sudo apt update

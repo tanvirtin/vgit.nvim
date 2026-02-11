@@ -79,8 +79,8 @@ git_buffer_store.get = function(buffer)
   return buffers[bufnr]
 end
 
-function git_buffer_store.current()
-  local bufnr = vim.api.nvim_get_current_buf()
+function git_buffer_store.current(bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
   bufnr = tostring(bufnr)
   return buffers[bufnr]
 end
@@ -102,24 +102,43 @@ git_buffer_store.dispatch = function(git_buffer, event_type, ...)
   end
 end
 
-git_buffer_store.collect = function()
-  local git_buffer = GitBuffer(0)
+git_buffer_store.reset = function()
+  buffers = {}
+  events = {
+    sync = {},
+    attach = {},
+    change = {},
+    reload = {},
+    detach = {},
+  }
+  is_registered = false
+end
+
+git_buffer_store.create_and_validate_buffer = function(bufnr)
+  local git_buffer = GitBuffer(bufnr or 0)
   git_buffer:sync()
 
   local ok, result = pcall(git_buffer.exists, git_buffer)
   if not ok then
     git_buffer_store.remove(git_buffer)
     console.debug.error(result)
-    return
+    return nil
   end
-  if ok and not result then return git_buffer_store.remove(git_buffer) end
+  if ok and not result then
+    git_buffer_store.remove(git_buffer)
+    return nil
+  end
 
+  return git_buffer
+end
+
+git_buffer_store.register_buffer = function(git_buffer)
   if git_buffer_store.contains(git_buffer) then
     local existing_git_buffer = git_buffer_store.get(git_buffer)
     return git_buffer_store.dispatch(existing_git_buffer, 'reload')
-  else
-    git_buffer_store.add(git_buffer)
   end
+
+  git_buffer_store.add(git_buffer)
 
   git_buffer
     :attach_to_changes({
@@ -141,6 +160,12 @@ git_buffer_store.collect = function()
     :attach_to_renderer()
 
   git_buffer_store.dispatch(git_buffer, 'attach')
+end
+
+git_buffer_store.collect = function(bufnr)
+  local git_buffer = git_buffer_store.create_and_validate_buffer(bufnr)
+  if not git_buffer then return end
+  git_buffer_store.register_buffer(git_buffer)
 end
 
 return git_buffer_store
