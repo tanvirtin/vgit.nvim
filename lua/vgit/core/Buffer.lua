@@ -1,9 +1,10 @@
-local fs = require('vgit.core.fs')
-local event = require('vgit.core.event')
-local Extmark = require('vgit.ui.Extmark')
-local Object = require('vgit.core.Object')
-local keymap = require('vgit.core.keymap')
-local renderer = require('vgit.core.renderer')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local event = lazy('vgit.core.event')
+local Extmark = lazy('vgit.ui.Extmark')
+local Object = lazy('vgit.core.Object')
+local keymap = lazy('vgit.core.keymap')
+local renderer = lazy('vgit.core.renderer')
 
 local Buffer = Object:extend()
 

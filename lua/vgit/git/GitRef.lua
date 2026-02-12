@@ -1,6 +1,7 @@
-local Object = require('vgit.core.Object')
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
-local git_repo = require('vgit.git.git_repo')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
+local git_repo = lazy('vgit.git.git_repo')
 
 local GitRef = Object:extend()
 

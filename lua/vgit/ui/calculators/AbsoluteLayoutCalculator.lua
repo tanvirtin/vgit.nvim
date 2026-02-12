@@ -1,5 +1,6 @@
-local LayoutBounds = require('vgit.ui.layout.LayoutBounds')
-local BaseLayoutCalculator = require('vgit.ui.calculators.BaseLayoutCalculator')
+local lazy = require('vgit.core.lazy')
+local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
+local BaseLayoutCalculator = lazy('vgit.ui.calculators.BaseLayoutCalculator')
 
 local AbsoluteLayoutCalculator = BaseLayoutCalculator:extend()
 

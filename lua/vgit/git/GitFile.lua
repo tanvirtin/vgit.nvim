@@ -1,25 +1,16 @@
-local fs = require('vgit.core.fs')
-local Object = require('vgit.core.Object')
-local git_log = require('vgit.git.git_log')
-local git_hunks = require('vgit.git.git_hunks')
-local git_blame = require('vgit.git.git_blame')
-local git_repo = require('vgit.libgit2.git_repo')
-local git_status = require('vgit.git.git_status')
-local git_stager = require('vgit.git.git_stager')
-local git_conflict = require('vgit.libgit2.git_conflict')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local Object = lazy('vgit.core.Object')
+local git_log = lazy('vgit.git.git_log')
+local git_hunks = lazy('vgit.git.git_hunks')
+local git_blame = lazy('vgit.git.git_blame')
+local git_repo = lazy('vgit.libgit2.git_repo')
+local git_status = lazy('vgit.git.git_status')
+local git_stager = lazy('vgit.git.git_stager')
+local git_conflict = lazy('vgit.libgit2.git_conflict')
+local GitBlob = lazy('vgit.git.GitBlob')
 
 local GitFile = Object:extend()
-
-GitFile._classes = nil
-
-function GitFile._get_class(name)
-  if not GitFile._classes then
-    GitFile._classes = {
-      GitBlob = function() return require('vgit.git.GitBlob') end,
-    }
-  end
-  return GitFile._classes[name]()
-end
 
 function GitFile:constructor(filepath)
   local reponame = git_repo.discover(filepath)
@@ -158,7 +149,6 @@ function GitFile:generate_status()
 end
 
 function GitFile:lines(commit_hash)
-  local GitBlob = GitFile._get_class('GitBlob')
   local blob = GitBlob(self.reponame, self.filename, commit_hash)
   return blob:lines()
 end
@@ -172,7 +162,6 @@ function GitFile:live_hunks(current_lines)
     return self.state.hunks, nil
   end
 
-  local GitBlob = GitFile._get_class('GitBlob')
   local blob = GitBlob(self.reponame, self.filename, 'index')
   local original_lines, err = blob:lines()
   if err then return nil, err end

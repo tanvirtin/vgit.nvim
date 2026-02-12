@@ -1,4 +1,6 @@
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
+local lazy = require('vgit.core.lazy')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
+local fs = lazy('vgit.core.fs')
 
 local git_rebase = {}
 
@@ -94,7 +96,6 @@ end
 function git_rebase.in_progress(reponame)
   if not reponame or reponame == '' then return false end
 
-  local fs = require('vgit.core.fs')
   local git_dir = string.format('%s/.git', reponame)
 
   return fs.exists(string.format('%s/rebase-merge', git_dir)) or fs.exists(string.format('%s/rebase-apply', git_dir))
@@ -103,7 +104,6 @@ end
 function git_rebase.status(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
-  local fs = require('vgit.core.fs')
   local git_dir = string.format('%s/.git', reponame)
 
   local status = {

@@ -1,8 +1,10 @@
-local utils = require('vgit.core.utils')
-local event = require('vgit.core.event')
-local Object = require('vgit.core.Object')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local RootLayoutCalculator = require('vgit.ui.calculators.RootLayoutCalculator')
+local lazy = require('vgit.core.lazy')
+local utils = lazy('vgit.core.utils')
+local event = lazy('vgit.core.event')
+local Object = lazy('vgit.core.Object')
+local Window = lazy('vgit.core.Window')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local RootLayoutCalculator = lazy('vgit.ui.calculators.RootLayoutCalculator')
 
 local LayoutRenderer = Object:extend()
 
@@ -116,7 +118,6 @@ function LayoutRenderer:create_screen_splits(layout)
 
   local function create_splits_for_layout(node, is_first)
     if node.spec.type == LayoutSpec.Type.VIEW then
-      local Window = require('vgit.core.Window')
       local current_window = Window(0)
       table.insert(self.windows, current_window)
       return

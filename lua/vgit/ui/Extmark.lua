@@ -1,5 +1,6 @@
-local Object = require('vgit.core.Object')
-local signs_setting = require('vgit.settings.signs')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local signs_setting = lazy('vgit.settings.signs')
 
 local _cached_priority = nil
 local _cached_definitions = nil

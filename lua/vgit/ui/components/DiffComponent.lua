@@ -1,9 +1,12 @@
-local Component = require('vgit.ui.Component')
-local Element = require('vgit.ui.elements.Element')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local DiffCalculator = require('vgit.ui.calculators.DiffCalculator')
-local FoldCalculator = require('vgit.ui.calculators.FoldCalculator')
-local LineNumberCalculator = require('vgit.ui.calculators.LineNumberCalculator')
+local lazy = require('vgit.core.lazy')
+local utils = lazy('vgit.core.utils')
+local Component = lazy('vgit.ui.Component')
+local Element = lazy('vgit.ui.elements.Element')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local DiffCalculator = lazy('vgit.ui.calculators.DiffCalculator')
+local FoldCalculator = lazy('vgit.ui.calculators.FoldCalculator')
+local LineNumberCalculator = lazy('vgit.ui.calculators.LineNumberCalculator')
+local symbols_setting = lazy('vgit.settings.symbols')
 
 local DiffComponent = Component:extend()
 
@@ -59,8 +62,6 @@ end
 
 function DiffComponent:component_will_mount()
   if not self._element then
-    local utils = require('vgit.core.utils')
-
     local default_win_options = {
       winhl = 'Normal:GitBackground',
       signcolumn = 'auto',
@@ -434,7 +435,6 @@ function DiffComponent:render_line_diff(line_changes)
   }) end
 
   if marks.void_text then
-    local symbols_setting = require('vgit.settings.symbols')
     local width = self._element:get_width()
     local text = string.rep(symbols_setting:get('void'), width)
     self._element:place_extmark_text({

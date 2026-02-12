@@ -1,15 +1,18 @@
-local Layout = require('vgit.ui.Layout')
-local Object = require('vgit.core.Object')
-local event = require('vgit.core.event')
-local Buffer = require('vgit.core.Buffer')
-local console = require('vgit.core.console')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local ComponentManager = require('vgit.ui.ComponentManager')
-local DiffComponent = require('vgit.ui.components.DiffComponent')
-local BorderComponent = require('vgit.ui.components.BorderComponent')
-local LayoutComponent = require('vgit.ui.components.LayoutComponent')
-local BlameInfoComponent = require('vgit.ui.components.BlameInfoComponent')
-local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+local lazy = require('vgit.core.lazy')
+local Layout = lazy('vgit.ui.Layout')
+local Object = lazy('vgit.core.Object')
+local event = lazy('vgit.core.event')
+local Buffer = lazy('vgit.core.Buffer')
+local console = lazy('vgit.core.console')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local ComponentManager = lazy('vgit.ui.ComponentManager')
+local DiffComponent = lazy('vgit.ui.components.DiffComponent')
+local BorderComponent = lazy('vgit.ui.components.BorderComponent')
+local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
+local BlameInfoComponent = lazy('vgit.ui.components.BlameInfoComponent')
+local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
+local scene_setting = lazy('vgit.settings.scene')
+local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
 
 local BlameLens = Object:extend()
 
@@ -107,7 +110,6 @@ function BlameLens:get_key(keymap)
 end
 
 function BlameLens:setup_keymaps()
-  local scene_setting = require('vgit.settings.scene')
   local scene_keymaps = scene_setting:get('keymaps')
 
   if scene_keymaps and scene_keymaps.quit then
@@ -134,7 +136,6 @@ end
 function BlameLens:setup_hunk_keymaps()
   if not self.diff_component then return end
 
-  local status_diff_view_setting = require('vgit.settings.status_diff_view')
   local keymaps = status_diff_view_setting:get('keymaps')
 
   if not keymaps then return end

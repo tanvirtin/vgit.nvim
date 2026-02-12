@@ -1,6 +1,7 @@
-local Object = require('vgit.core.Object')
-local event = require('vgit.core.event')
-local git_buffer_store = require('vgit.git.git_buffer_store')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local event = lazy('vgit.core.event')
+local git_buffer_store = lazy('vgit.git.git_buffer_store')
 
 local LiveConflict = Object:extend()
 

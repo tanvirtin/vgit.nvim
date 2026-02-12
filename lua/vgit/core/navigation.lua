@@ -1,4 +1,5 @@
-local live_gutter_setting = require('vgit.settings.live_gutter')
+local lazy = require('vgit.core.lazy')
+local live_gutter_setting = lazy('vgit.settings.live_gutter')
 
 local navigation = {}
 

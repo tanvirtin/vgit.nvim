@@ -1,4 +1,5 @@
-local Config = require('vgit.core.Config')
+local lazy = require('vgit.core.lazy')
+local Config = lazy('vgit.core.Config')
 
 -- Note: hunk_alignment and keymaps.down/up are inherited from hunks setting
 -- Users can override them here for this view only

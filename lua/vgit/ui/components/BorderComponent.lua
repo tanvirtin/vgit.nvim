@@ -1,6 +1,7 @@
-local Component = require('vgit.ui.Component')
-local Element = require('vgit.ui.elements.Element')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
+local lazy = require('vgit.core.lazy')
+local Component = lazy('vgit.ui.Component')
+local Element = lazy('vgit.ui.elements.Element')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 
 local BorderComponent = Component:extend()
 

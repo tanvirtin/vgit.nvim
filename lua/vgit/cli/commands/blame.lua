@@ -1,9 +1,13 @@
-local fs = require('vgit.core.fs')
-local event = require('vgit.core.event')
-local Buffer = require('vgit.core.Buffer')
-local GitFile = require('vgit.git.GitFile')
-local console = require('vgit.core.console')
-local repository = require('vgit.git.repository')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local event = lazy('vgit.core.event')
+local Buffer = lazy('vgit.core.Buffer')
+local GitFile = lazy('vgit.git.GitFile')
+local console = lazy('vgit.core.console')
+local repository = lazy('vgit.git.repository')
+local git_log = lazy('vgit.git.git_log')
+local scene_setting = lazy('vgit.settings.scene')
+local display_service = lazy('vgit.ui.display_service')
 
 local blame_command = {}
 
@@ -59,7 +63,6 @@ blame_command.execute = event.async(function(args)
 
   if not opts.line_number then opts.line_number = vim.api.nvim_win_get_cursor(0)[1] end
 
-  local scene_setting = require('vgit.settings.scene')
   local layout_type = scene_setting:get('diff_preference')
 
   event.await()
@@ -97,14 +100,12 @@ blame_command.execute = event.async(function(args)
       is_uncommitted = true,
     }
 
-    local display_service = require('vgit.ui.display_service')
     display_service.show_blame(data)
     return
   end
 
   local commit_hash = blame.hash or blame.commit_hash
 
-  local git_log = require('vgit.git.git_log')
   local log_result = git_log.get(repo:get_path(), commit_hash)
   local parent_hash = log_result and log_result.parent_hash or commit_hash .. '^'
 
@@ -134,7 +135,6 @@ blame_command.execute = event.async(function(args)
     is_uncommitted = false,
   }
 
-  local display_service = require('vgit.ui.display_service')
   display_service.show_blame(data)
 end)
 

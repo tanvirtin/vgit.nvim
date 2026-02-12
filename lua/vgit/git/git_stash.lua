@@ -1,5 +1,6 @@
-local GitCommit = require('vgit.git.GitCommit')
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
+local lazy = require('vgit.core.lazy')
+local GitCommit = lazy('vgit.git.GitCommit')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_stash = {}
 

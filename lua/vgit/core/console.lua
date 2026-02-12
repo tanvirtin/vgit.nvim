@@ -1,6 +1,7 @@
-local env = require('vgit.core.env')
-local event = require('vgit.core.event')
-local utils = require('vgit.core.utils')
+local lazy = require('vgit.core.lazy')
+local env = lazy('vgit.core.env')
+local event = lazy('vgit.core.event')
+local utils = lazy('vgit.core.utils')
 
 local console = {
   debug = {

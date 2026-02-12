@@ -1,11 +1,13 @@
-local utils = require('vgit.core.utils')
-local event = require('vgit.core.event')
-local icons = require('vgit.core.icons')
-local Component = require('vgit.ui.Component')
-local Element = require('vgit.ui.elements.Element')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local symbols_setting = require('vgit.settings.symbols')
-local DepthTree = require('vgit.ui.components.TreeComponent.DepthTree')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local utils = lazy('vgit.core.utils')
+local event = lazy('vgit.core.event')
+local icons = lazy('vgit.core.icons')
+local Component = lazy('vgit.ui.Component')
+local Element = lazy('vgit.ui.elements.Element')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local symbols_setting = lazy('vgit.settings.symbols')
+local DepthTree = lazy('vgit.ui.components.TreeComponent.DepthTree')
 
 local TreeComponent = Component:extend()
 
@@ -29,7 +31,7 @@ end
 
 function TreeComponent:get_display_name(filename)
   if not filename then return filename end
-  local path_parts = vim.split(filename, require('vgit.core.fs').sep)
+  local path_parts = vim.split(filename, fs.sep)
   return path_parts[#path_parts] or filename
 end
 

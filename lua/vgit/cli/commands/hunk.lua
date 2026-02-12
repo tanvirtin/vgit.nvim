@@ -1,9 +1,13 @@
-local fs = require('vgit.core.fs')
-local event = require('vgit.core.event')
-local Buffer = require('vgit.core.Buffer')
-local Window = require('vgit.core.Window')
-local GitFile = require('vgit.git.GitFile')
-local console = require('vgit.core.console')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local event = lazy('vgit.core.event')
+local Buffer = lazy('vgit.core.Buffer')
+local Window = lazy('vgit.core.Window')
+local GitFile = lazy('vgit.git.GitFile')
+local console = lazy('vgit.core.console')
+local Diff = lazy('vgit.core.diff.Diff')
+local scene_setting = lazy('vgit.settings.scene')
+local display_service = lazy('vgit.ui.display_service')
 
 local hunk_command = {}
 
@@ -24,7 +28,6 @@ function hunk_command.compute_hunk_diff(filename, current_lines, layout_type)
   local hunks, hunks_err = git_file:live_hunks(current_lines)
   if hunks_err then return nil, nil, hunks_err end
 
-  local Diff = require('vgit.core.diff.Diff')
   local diff = Diff():generate(hunks, current_lines, layout_type)
   if not diff then return nil, nil, 'Failed to generate diff' end
 
@@ -45,7 +48,6 @@ hunk_command.execute = event.async(function(args)
   local window = args.window or Window(0)
   local lnum = window:get_lnum()
 
-  local scene_setting = require('vgit.settings.scene')
   local current_layout_type = scene_setting:get('diff_preference') or 'unified'
 
   event.await()
@@ -75,7 +77,6 @@ hunk_command.execute = event.async(function(args)
     layout_type = current_layout_type,
   }
 
-  local display_service = require('vgit.ui.display_service')
   display_service.show_hunk(data)
 end)
 

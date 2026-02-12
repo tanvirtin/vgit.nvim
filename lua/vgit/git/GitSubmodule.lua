@@ -1,5 +1,6 @@
-local Object = require('vgit.core.Object')
-local git_submodule = require('vgit.git.git_submodule')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local git_submodule = lazy('vgit.git.git_submodule')
 
 local GitSubmodule = Object:extend()
 

@@ -1,4 +1,5 @@
-local GitRepository = require('vgit.git.GitRepository')
+local lazy = require('vgit.core.lazy')
+local GitRepository = lazy('vgit.git.GitRepository')
 
 local _instance = nil
 

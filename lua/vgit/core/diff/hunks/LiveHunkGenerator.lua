@@ -1,6 +1,7 @@
-local GitHunk = require('vgit.git.GitHunk')
-local assertion = require('vgit.core.assertion')
-local HunkGenerator = require('vgit.core.diff.hunks.HunkGenerator')
+local lazy = require('vgit.core.lazy')
+local GitHunk = lazy('vgit.git.GitHunk')
+local assertion = lazy('vgit.core.assertion')
+local HunkGenerator = lazy('vgit.core.diff.hunks.HunkGenerator')
 
 local LiveHunkGenerator = HunkGenerator:extend()
 

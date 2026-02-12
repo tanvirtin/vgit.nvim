@@ -1,5 +1,6 @@
-local fs = require('vgit.core.fs')
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_conflict = {}
 

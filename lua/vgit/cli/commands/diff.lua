@@ -1,9 +1,14 @@
-local fs = require('vgit.core.fs')
-local event = require('vgit.core.event')
-local Buffer = require('vgit.core.Buffer')
-local GitFile = require('vgit.git.GitFile')
-local console = require('vgit.core.console')
-local repository = require('vgit.git.repository')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local event = lazy('vgit.core.event')
+local Buffer = lazy('vgit.core.Buffer')
+local GitFile = lazy('vgit.git.GitFile')
+local console = lazy('vgit.core.console')
+local repository = lazy('vgit.git.repository')
+local Window = lazy('vgit.core.Window')
+local git_status = lazy('vgit.git.git_status')
+local scene_setting = lazy('vgit.settings.scene')
+local display_service = lazy('vgit.ui.display_service')
 
 local diff_command = {}
 
@@ -120,7 +125,6 @@ diff_command.execute = event.async(function(args)
   local opts = diff_command.parse_args(args)
 
   if opts.buffer_num ~= nil then
-    local Window = require('vgit.core.Window')
     local buffer = Buffer(opts.buffer_num)
     local filename = buffer:get_name()
 
@@ -184,7 +188,6 @@ diff_command.execute = event.async(function(args)
   end
 
   -- Get layout preference from scene setting
-  local scene_setting = require('vgit.settings.scene')
   opts.layout_type = scene_setting:get('diff_preference') or 'unified'
 
   local repo_path = repo:get_path()
@@ -261,7 +264,6 @@ diff_command.execute = event.async(function(args)
     local to_ref = opts.compare_ref or 'HEAD'
 
     -- Get files that changed between the refs using git diff-tree
-    local git_status = require('vgit.git.git_status')
     local files, files_err = git_status.tree(repo:get_path(), {
       commit_hash = to_ref,
       parent_hash = from_ref,
@@ -333,7 +335,6 @@ diff_command.execute = event.async(function(args)
       end
 
       if #filtered_entries == 0 then
-        local display_service = require('vgit.ui.display_service')
         display_service.show_diff({
           type = 'empty',
           message = opts.staged and 'No staged changes' or 'No unstaged changes',
@@ -354,7 +355,6 @@ diff_command.execute = event.async(function(args)
     return
   end
 
-  local display_service = require('vgit.ui.display_service')
   display_service.show_diff(data)
 end)
 

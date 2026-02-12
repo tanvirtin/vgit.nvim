@@ -1,17 +1,21 @@
-local fs = require('vgit.core.fs')
-local utils = require('vgit.core.utils')
-local Layout = require('vgit.ui.Layout')
-local event = require('vgit.core.event')
-local Object = require('vgit.core.Object')
-local console = require('vgit.core.console')
-local repository = require('vgit.git.repository')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local view_utils = require('vgit.features.screens.view_utils')
-local hunks_setting = require('vgit.settings.hunks')
-local project_diff_view_setting = require('vgit.settings.project_diff_view')
-local ComponentManager = require('vgit.ui.ComponentManager')
-local LayoutComponent = require('vgit.ui.components.LayoutComponent')
-local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local utils = lazy('vgit.core.utils')
+local Layout = lazy('vgit.ui.Layout')
+local event = lazy('vgit.core.event')
+local Object = lazy('vgit.core.Object')
+local console = lazy('vgit.core.console')
+local repository = lazy('vgit.git.repository')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local view_utils = lazy('vgit.features.screens.view_utils')
+local hunks_setting = lazy('vgit.settings.hunks')
+local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
+local ComponentManager = lazy('vgit.ui.ComponentManager')
+local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
+local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
+local Window = lazy('vgit.core.Window')
+local scene_setting = lazy('vgit.settings.scene')
+local display_service = lazy('vgit.ui.display_service')
 
 local ProjectDiffView = Object:extend()
 
@@ -252,7 +256,6 @@ function ProjectDiffView:jump_to_file()
 
   fs.open(filename)
 
-  local Window = require('vgit.core.Window')
   local window = Window(0)
   window:set_lnum(target_lnum)
 
@@ -284,9 +287,6 @@ function ProjectDiffView:_set_keymap_all_components(mode, key, handler)
 end
 
 function ProjectDiffView:setup_keymaps()
-  local scene_setting = require('vgit.settings.scene')
-  local display_service = require('vgit.ui.display_service')
-
   local scene_keymaps = scene_setting:get('keymaps')
   local project_diff_view_keymaps = project_diff_view_setting:get('keymaps')
   local hunks_keymaps = hunks_setting:get('keymaps')
@@ -463,7 +463,6 @@ function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map)
 end
 
 function ProjectDiffView:_create_view(data)
-  local scene_setting = require('vgit.settings.scene')
   local layout_type = scene_setting:get('diff_preference') or self.LAYOUT_UNIFIED
 
   self.layout_type = layout_type

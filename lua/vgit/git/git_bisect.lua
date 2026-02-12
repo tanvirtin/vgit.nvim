@@ -1,4 +1,6 @@
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
+local lazy = require('vgit.core.lazy')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
+local fs = lazy('vgit.core.fs')
 
 local git_bisect = {}
 
@@ -157,7 +159,6 @@ end
 function git_bisect.in_progress(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
-  local fs = require('vgit.core.fs')
   local git_dir = string.format('%s/.git', reponame)
 
   return fs.exists(string.format('%s/BISECT_LOG', git_dir))
@@ -167,7 +168,6 @@ end
 function git_bisect.status(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
-  local fs = require('vgit.core.fs')
   local git_dir = string.format('%s/.git', reponame)
 
   local status = {

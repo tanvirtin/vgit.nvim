@@ -1,4 +1,7 @@
-local Object = require('vgit.core.Object')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local Window = lazy('vgit.core.Window')
+local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
 
 local LayoutBounds = Object:extend()
 
@@ -24,7 +27,6 @@ function LayoutBounds.from_viewport()
 end
 
 function LayoutBounds.from_window(win_id)
-  local Window = require('vgit.core.Window')
   local win = win_id and Window(win_id) or Window(0)
 
   if not win:is_valid() then return LayoutBounds.from_viewport() end
@@ -43,7 +45,6 @@ function LayoutBounds.from_window(win_id)
 end
 
 function LayoutBounds:parse_dimension(value, parent_dimension)
-  local LayoutContext = require('vgit.ui.layout.LayoutContext')
   return LayoutContext.convert_dimension(value, parent_dimension)
 end
 

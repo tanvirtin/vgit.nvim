@@ -1,4 +1,8 @@
-local Object = require('vgit.core.Object')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local dimensions = lazy('vgit.ui.dimensions')
+local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
+local Window = lazy('vgit.core.Window')
 
 local LayoutContext = Object:extend()
 
@@ -50,8 +54,6 @@ function LayoutContext.convert_dimension(value, parent_dimension)
   if type(value) == 'number' then return math.floor(value) end
 
   if type(value) == 'string' then
-    local dimensions = require('vgit.ui.dimensions')
-
     if value:match('%%$') then
       local percent = tonumber(value:match('^(.-)%%$'))
       if percent and parent_dimension then return math.floor((percent / 100) * parent_dimension) end
@@ -113,7 +115,6 @@ function LayoutContext:get_props_for_component()
 end
 
 function LayoutContext:create_parent_bounds()
-  local LayoutBounds = require('vgit.ui.layout.LayoutBounds')
   local viewport_bounds = LayoutBounds.from_viewport()
 
   if self:is_lens_mode() then
@@ -124,7 +125,6 @@ function LayoutContext:create_parent_bounds()
 end
 
 function LayoutContext:create_lens_bounds(viewport_bounds)
-  local LayoutBounds = require('vgit.ui.layout.LayoutBounds')
   local cursor_row = vim.fn.winline() - 1 -- Convert to 0-based
 
   -- Position lens 1 row below cursor (not at cursor)
@@ -159,7 +159,6 @@ function LayoutContext:restore_window_options()
   local current_win = vim.api.nvim_get_current_win()
   if not current_win or not vim.api.nvim_win_is_valid(current_win) then return end
 
-  local Window = require('vgit.core.Window')
   pcall(function()
     local win = Window(current_win)
     win:assign_options(self.original_win_options)

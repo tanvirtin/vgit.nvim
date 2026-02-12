@@ -1,9 +1,10 @@
-local fs = require('vgit.core.fs')
-local Object = require('vgit.core.Object')
-local assertion = require('vgit.core.assertion')
-local LiveHunkGenerator = require('vgit.core.diff.hunks.LiveHunkGenerator')
-local DiffLayoutGenerator = require('vgit.core.diff.layout.DiffLayoutGenerator')
-local git_conflict = require('vgit.git.git_conflict')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local Object = lazy('vgit.core.Object')
+local assertion = lazy('vgit.core.assertion')
+local LiveHunkGenerator = lazy('vgit.core.diff.hunks.LiveHunkGenerator')
+local DiffLayoutGenerator = lazy('vgit.core.diff.layout.DiffLayoutGenerator')
+local git_conflict = lazy('vgit.git.git_conflict')
 
 local DiffBuilder = Object:extend()
 

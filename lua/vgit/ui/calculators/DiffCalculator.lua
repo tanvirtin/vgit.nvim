@@ -1,4 +1,6 @@
-local Object = require('vgit.core.Object')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local signs_setting = lazy('vgit.settings.signs')
 
 local DiffCalculator = Object:extend()
 
@@ -6,7 +8,6 @@ function DiffCalculator:calculate_line_diff_marks(line_changes)
   local lnum_change = line_changes.lnum_change
   if not lnum_change then return nil end
 
-  local signs_setting = require('vgit.settings.signs')
   local line_number_hl = 'GitLineNr'
   local signs_usage_setting = signs_setting:get('usage')
   local scene_signs = signs_usage_setting.scene

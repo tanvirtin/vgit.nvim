@@ -1,4 +1,5 @@
-local Object = require('vgit.core.Object')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
 
 local GitPatch = Object:extend()
 

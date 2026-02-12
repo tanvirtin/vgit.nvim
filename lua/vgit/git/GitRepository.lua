@@ -1,15 +1,30 @@
-local event = require('vgit.core.event')
-local Object = require('vgit.core.Object')
-local git_repo = require('vgit.git.git_repo')
-local git_merge = require('vgit.git.git_merge')
-local assertion = require('vgit.core.assertion')
-local git_status = require('vgit.git.git_status')
-local git_remote = require('vgit.git.git_remote')
-local git_rebase = require('vgit.git.git_rebase')
-local git_cherry = require('vgit.git.git_cherry')
-local git_revert = require('vgit.git.git_revert')
-local git_bisect = require('vgit.git.git_bisect')
-local git_submodule = require('vgit.git.git_submodule')
+local lazy = require('vgit.core.lazy')
+local event = lazy('vgit.core.event')
+local Object = lazy('vgit.core.Object')
+local git_repo = lazy('vgit.git.git_repo')
+local git_merge = lazy('vgit.git.git_merge')
+local assertion = lazy('vgit.core.assertion')
+local git_status = lazy('vgit.git.git_status')
+local git_remote = lazy('vgit.git.git_remote')
+local git_rebase = lazy('vgit.git.git_rebase')
+local git_cherry = lazy('vgit.git.git_cherry')
+local git_revert = lazy('vgit.git.git_revert')
+local git_bisect = lazy('vgit.git.git_bisect')
+local git_submodule = lazy('vgit.git.git_submodule')
+local GitTree = lazy('vgit.git.GitTree')
+local GitIndex = lazy('vgit.git.GitIndex')
+local GitRef = lazy('vgit.git.GitRef')
+local GitHistory = lazy('vgit.git.GitHistory')
+local GitWorkingTree = lazy('vgit.git.GitWorkingTree')
+local GitRemote_class = lazy('vgit.git.GitRemote')
+local GitSubmodule_class = lazy('vgit.git.GitSubmodule')
+local GitBlob = lazy('vgit.git.GitBlob')
+local GitFile = lazy('vgit.git.GitFile')
+local git_blame_mod = lazy('vgit.git.git_blame')
+local utils = lazy('vgit.core.utils')
+local fs = lazy('vgit.core.fs')
+local git_conflict_mod = lazy('vgit.libgit2.git_conflict')
+local DiffBuilder = lazy('vgit.core.diff')
 
 local GitRepository = Object:extend()
 
@@ -19,26 +34,6 @@ GitRepository.State = {
   INVALID = 'invalid',
   BARE = 'bare',
 }
-
-GitRepository._classes = nil
-
-function GitRepository._get_class(name)
-  if not GitRepository._classes then
-    GitRepository._classes = {
-      GitTree = function() return require('vgit.git.GitTree') end,
-      GitIndex = function() return require('vgit.git.GitIndex') end,
-      GitRef = function() return require('vgit.git.GitRef') end,
-      GitHistory = function() return require('vgit.git.GitHistory') end,
-      GitWorkingTree = function() return require('vgit.git.GitWorkingTree') end,
-      GitRemote = function() return require('vgit.git.GitRemote') end,
-      GitSubmodule = function() return require('vgit.git.GitSubmodule') end,
-      GitBlob = function() return require('vgit.git.GitBlob') end,
-      GitFile = function() return require('vgit.git.GitFile') end,
-      git_blame = function() return require('vgit.git.git_blame') end,
-    }
-  end
-  return GitRepository._classes[name]()
-end
 
 function GitRepository:constructor(path)
   local repo = {
@@ -141,33 +136,28 @@ end
 function GitRepository:tree(commit)
   self:_ensure_initialized()
 
-  local GitTree = GitRepository._get_class('GitTree')
   return GitTree(self, commit)
 end
 
 function GitRepository:index()
   self:_ensure_initialized()
-  local GitIndex = GitRepository._get_class('GitIndex')
   return GitIndex(self), nil
 end
 
 function GitRepository:refs()
   self:_ensure_initialized()
-  local GitRef = GitRepository._get_class('GitRef')
   return GitRef(self), nil
 end
 
 function GitRepository:history(opts)
   self:_ensure_initialized()
 
-  local GitHistory = GitRepository._get_class('GitHistory')
   return GitHistory(self, opts)
 end
 
 function GitRepository:working_tree()
   self:_ensure_initialized()
 
-  local GitWorkingTree = GitRepository._get_class('GitWorkingTree')
   return GitWorkingTree(self)
 end
 
@@ -177,10 +167,9 @@ function GitRepository:remotes()
   local remotes, err = git_remote.list(self._path, { verbose = true })
   if err then return nil, err end
 
-  local GitRemote = GitRepository._get_class('GitRemote')
   local remote_objects = {}
   for i, remote in ipairs(remotes) do
-    remote_objects[i] = GitRemote(self, remote.name)
+    remote_objects[i] = GitRemote_class(self, remote.name)
   end
 
   return remote_objects, nil
@@ -189,8 +178,7 @@ end
 function GitRepository:remote(name)
   assertion.assert(name, 'remote name is required')
   self:_ensure_initialized()
-  local GitRemote = GitRepository._get_class('GitRemote')
-  return GitRemote(self, name), nil
+  return GitRemote_class(self, name), nil
 end
 
 function GitRepository:add_remote(name, url, opts)
@@ -373,10 +361,9 @@ function GitRepository:submodules()
   local submodules, err = git_submodule.list(self._path)
   if err then return nil, err end
 
-  local GitSubmodule = GitRepository._get_class('GitSubmodule')
   local submodule_objects = {}
   for i, submodule in ipairs(submodules) do
-    submodule_objects[i] = GitSubmodule(self, submodule.path)
+    submodule_objects[i] = GitSubmodule_class(self, submodule.path)
   end
 
   return submodule_objects, nil
@@ -385,8 +372,7 @@ end
 function GitRepository:submodule(path)
   assertion.assert(path, 'submodule path is required')
   self:_ensure_initialized()
-  local GitSubmodule = GitRepository._get_class('GitSubmodule')
-  return GitSubmodule(self, path), nil
+  return GitSubmodule_class(self, path), nil
 end
 
 function GitRepository:add_submodule(url, path, opts)
@@ -414,14 +400,12 @@ end
 function GitRepository:blame_file(filename, lnum)
   assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
-  local git_blame = GitRepository._get_class('git_blame')
-  return git_blame.get(self._path, filename, lnum)
+  return git_blame_mod.get(self._path, filename, lnum)
 end
 
 function GitRepository:file_content(filename, commit)
   assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
-  local GitBlob = GitRepository._get_class('GitBlob')
   local blob = GitBlob(self, filename, commit)
   return blob:content()
 end
@@ -429,7 +413,6 @@ end
 function GitRepository:file_lines(filename, commit)
   assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
-  local GitBlob = GitRepository._get_class('GitBlob')
   local blob = GitBlob(self, filename, commit)
   return blob:lines()
 end
@@ -467,7 +450,6 @@ end
 function GitRepository:reset_hunk(filename, hunk)
   assertion.assert(filename, 'filename is required').assert(hunk, 'hunk is required')
   self:_ensure_initialized()
-  local GitFile = GitRepository._get_class('GitFile')
   local git_file = GitFile(self._path .. '/' .. filename)
   return git_file:reset_hunk(hunk)
 end
@@ -513,7 +495,6 @@ function GitRepository:status(opts)
   local statuses, err = working_tree:status()
   if err then return nil, err end
 
-  local utils = require('vgit.core.utils')
   local staged_files = {}
   local changed_files = {}
   local unmerged_files = {}
@@ -563,21 +544,16 @@ function GitRepository:status(opts)
 end
 
 function GitRepository:get_file_lines(filename, is_staged, git_file)
-  local fs = require('vgit.core.fs')
   if is_staged then return git_file:lines() end
   event.await()
   return fs.read_file(filename)
 end
 
 function GitRepository:conflict_status()
-  local git_conflict = require('vgit.libgit2.git_conflict')
-  return git_conflict.status(self:get_path())
+  return git_conflict_mod.status(self:get_path())
 end
 
 function GitRepository:diff(spec, opts)
-  local assertion = require('vgit.core.assertion')
-  local DiffBuilder = require('vgit.core.diff')
-
   spec = spec or {}
   opts = opts or {}
 

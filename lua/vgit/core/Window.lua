@@ -1,5 +1,6 @@
-local Object = require('vgit.core.Object')
-local assertion = require('vgit.core.assertion')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local assertion = lazy('vgit.core.assertion')
 
 local Window = Object:extend()
 

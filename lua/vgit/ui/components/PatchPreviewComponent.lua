@@ -1,7 +1,9 @@
-local Component = require('vgit.ui.Component')
-local Element = require('vgit.ui.elements.Element')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local PatchHighlighter = require('vgit.ui.highlighters.PatchHighlighter')
+local lazy = require('vgit.core.lazy')
+local utils = lazy('vgit.core.utils')
+local Component = lazy('vgit.ui.Component')
+local Element = lazy('vgit.ui.elements.Element')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local PatchHighlighter = lazy('vgit.ui.highlighters.PatchHighlighter')
 
 local PatchPreviewComponent = Component:extend()
 
@@ -68,8 +70,6 @@ end
 
 function PatchPreviewComponent:component_will_mount()
   if not self._element then
-    local utils = require('vgit.core.utils')
-
     local default_win_options = {
       winhl = 'Normal:GitBackground',
       signcolumn = 'no',

@@ -1,4 +1,6 @@
-local console = require('vgit.core.console')
+local lazy = require('vgit.core.lazy')
+local console = lazy('vgit.core.console')
+local hunks_setting = lazy('vgit.settings.hunks')
 
 local view_utils = {}
 
@@ -27,7 +29,6 @@ function view_utils.handle_git_error(err, operation_name, view_name)
 end
 
 function view_utils.get_hunk_alignment()
-  local hunks_setting = require('vgit.settings.hunks')
   local alignment = hunks_setting:get('hunk_alignment')
 
   if not VALID_HUNK_ALIGNMENTS[alignment] then

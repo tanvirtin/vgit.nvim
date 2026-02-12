@@ -1,8 +1,9 @@
-local event = require('vgit.core.event')
-local console = require('vgit.core.console')
-local repository = require('vgit.git.repository')
-local display_service = require('vgit.ui.display_service')
-local scene_setting = require('vgit.settings.scene')
+local lazy = require('vgit.core.lazy')
+local event = lazy('vgit.core.event')
+local console = lazy('vgit.core.console')
+local repository = lazy('vgit.git.repository')
+local display_service = lazy('vgit.ui.display_service')
+local scene_setting = lazy('vgit.settings.scene')
 
 local status_command = {}
 

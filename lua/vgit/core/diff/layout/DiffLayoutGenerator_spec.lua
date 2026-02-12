@@ -55,11 +55,15 @@ describe('DiffLayoutGenerator', function()
       }
 
       -- Mock the Diff module by replacing it in package.loaded
+      -- Must be a table with __call metamethod to work with lazy proxy
       original_require = package.loaded['vgit.core.diff.Diff']
-      package.loaded['vgit.core.diff.Diff'] = function(opts)
-        captured_constructor_opts = opts
-        return mock_diff_instance
-      end
+      local mock_diff = setmetatable({}, {
+        __call = function(_, opts)
+          captured_constructor_opts = opts
+          return mock_diff_instance
+        end,
+      })
+      package.loaded['vgit.core.diff.Diff'] = mock_diff
 
       -- Re-require to pick up the mock
       package.loaded['vgit.core.diff.layout.DiffLayoutGenerator'] = nil

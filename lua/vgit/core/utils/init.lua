@@ -1,11 +1,13 @@
 -- Standard utility functions used throughout the app.
 
+local lazy = require('vgit.core.lazy')
+
 local utils = {
-  str = require('vgit.core.utils.str'),
-  list = require('vgit.core.utils.list'),
-  date = require('vgit.core.utils.date'),
-  math = require('vgit.core.utils.math'),
-  object = require('vgit.core.utils.object'),
+  str = lazy('vgit.core.utils.str'),
+  list = lazy('vgit.core.utils.list'),
+  date = lazy('vgit.core.utils.date'),
+  math = lazy('vgit.core.utils.math'),
+  object = lazy('vgit.core.utils.object'),
 }
 
 return utils
