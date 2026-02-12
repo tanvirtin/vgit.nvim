@@ -1,4 +1,5 @@
-local assertion = require('vgit.core.assertion')
+local lazy = require('vgit.core.lazy')
+local assertion = lazy('vgit.core.assertion')
 
 local state = {}
 

@@ -1,9 +1,10 @@
-local Object = require('vgit.core.Object')
-local git_log = require('vgit.git.git_log')
-local git_show = require('vgit.git.git_show')
-local git_status = require('vgit.git.git_status')
-local git_hunks = require('vgit.git.git_hunks')
-local git_repo = require('vgit.git.git_repo')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local git_log = lazy('vgit.git.git_log')
+local git_show = lazy('vgit.git.git_show')
+local git_status = lazy('vgit.git.git_status')
+local git_hunks = lazy('vgit.git.git_hunks')
+local git_repo = lazy('vgit.git.git_repo')
 
 local GitTree = Object:extend()
 

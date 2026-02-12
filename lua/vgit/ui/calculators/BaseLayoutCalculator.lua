@@ -1,6 +1,7 @@
-local Object = require('vgit.core.Object')
-local LayoutBounds = require('vgit.ui.layout.LayoutBounds')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 
 local BaseLayoutCalculator = Object:extend()
 

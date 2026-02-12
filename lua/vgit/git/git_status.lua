@@ -1,5 +1,6 @@
-local GitStatus = require('vgit.git.GitStatus')
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
+local lazy = require('vgit.core.lazy')
+local GitStatus = lazy('vgit.git.GitStatus')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_status = {}
 

@@ -1,7 +1,10 @@
-local event = require('vgit.core.event')
-local console = require('vgit.core.console')
-local repository = require('vgit.git.repository')
-local GitTree = require('vgit.git.GitTree')
+local lazy = require('vgit.core.lazy')
+local event = lazy('vgit.core.event')
+local console = lazy('vgit.core.console')
+local repository = lazy('vgit.git.repository')
+local GitTree = lazy('vgit.git.GitTree')
+local scene_setting = lazy('vgit.settings.scene')
+local display_service = lazy('vgit.ui.display_service')
 
 local show_command = {}
 
@@ -71,7 +74,6 @@ show_command.execute = event.async(function(args)
   end
 
   -- Get layout preference
-  local scene_setting = require('vgit.settings.scene')
   local layout_type = scene_setting:get('diff_preference') or 'unified'
 
   -- Get parent hash for diff comparison
@@ -127,7 +129,6 @@ show_command.execute = event.async(function(args)
     commit_info = commit_info,
   }
 
-  local display_service = require('vgit.ui.display_service')
   display_service.show_diff(data)
 end)
 

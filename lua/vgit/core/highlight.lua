@@ -1,5 +1,6 @@
-local event = require('vgit.core.event')
-local hls_setting = require('vgit.settings.hls')
+local lazy = require('vgit.core.lazy')
+local event = lazy('vgit.core.event')
+local hls_setting = lazy('vgit.settings.hls')
 
 local highlight = {}
 

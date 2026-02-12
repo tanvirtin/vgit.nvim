@@ -1,5 +1,6 @@
-local Object = require('vgit.core.Object')
-local gitcli = require('vgit.git.gitcli')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local gitcli = lazy('vgit.git.gitcli')
 
 local GitQueryBuilder = Object:extend()
 

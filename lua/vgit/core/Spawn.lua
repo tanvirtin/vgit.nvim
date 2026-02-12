@@ -1,5 +1,6 @@
-local event = require('vgit.core.event')
-local Object = require('vgit.core.Object')
+local lazy = require('vgit.core.lazy')
+local event = lazy('vgit.core.event')
+local Object = lazy('vgit.core.Object')
 
 local Spawn = Object:extend()
 

@@ -1,6 +1,12 @@
-local event = require('vgit.core.event')
-local console = require('vgit.core.console')
-local scene_setting = require('vgit.settings.scene')
+local lazy = require('vgit.core.lazy')
+local event = lazy('vgit.core.event')
+local console = lazy('vgit.core.console')
+local scene_setting = lazy('vgit.settings.scene')
+local FileDiffView = lazy('vgit.features.screens.FileDiffView')
+local ProjectDiffView = lazy('vgit.features.screens.ProjectDiffView')
+local HunkLens = lazy('vgit.features.lenses.HunkLens')
+local BlameLens = lazy('vgit.features.lenses.BlameLens')
+local StatusDiffView = lazy('vgit.features.screens.StatusDiffView')
 
 local active_view = nil
 local _events_registered = false
@@ -39,7 +45,6 @@ display_service.show_diff = event.async(function(data)
 
   local view
   if data.type == 'file' then
-    local FileDiffView = require('vgit.features.screens.FileDiffView')
     view = FileDiffView()
   elseif data.type == 'files' then
     -- Check if there are any changes to display
@@ -47,7 +52,6 @@ display_service.show_diff = event.async(function(data)
       console.info('No changes to display')
       return
     end
-    local ProjectDiffView = require('vgit.features.screens.ProjectDiffView')
     view = ProjectDiffView()
   else
     console.error('Unknown data type: ' .. tostring(data.type))
@@ -75,7 +79,6 @@ display_service.show_hunk = event.async(function(data)
 
   event.await()
 
-  local HunkLens = require('vgit.features.lenses.HunkLens')
   local lens = HunkLens()
   lens:create(data)
 
@@ -95,7 +98,6 @@ display_service.show_blame = event.async(function(data)
 
   event.await()
 
-  local BlameLens = require('vgit.features.lenses.BlameLens')
   local lens = BlameLens()
   lens:create(data)
 
@@ -120,7 +122,6 @@ display_service.show_status = event.async(function(data)
 
   event.await()
 
-  local StatusDiffView = require('vgit.features.screens.StatusDiffView')
   local view = StatusDiffView()
   local success = view:create(data)
   if not success then

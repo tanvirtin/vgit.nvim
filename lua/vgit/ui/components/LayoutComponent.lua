@@ -1,4 +1,5 @@
-local Component = require('vgit.ui.Component')
+local lazy = require('vgit.core.lazy')
+local Component = lazy('vgit.ui.Component')
 
 local LayoutComponent = Component:extend()
 

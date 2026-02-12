@@ -1,4 +1,7 @@
-local Object = require('vgit.core.Object')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local git_repo = lazy('vgit.git.git_repo')
+local git_show = lazy('vgit.git.git_show')
 
 local GitBlob = Object:extend()
 
@@ -25,14 +28,12 @@ function GitBlob:get_commit()
 end
 
 function GitBlob:exists()
-  local git_repo = require('vgit.git.git_repo')
   local result, err = git_repo.has(self._repo_path, self._filename, self._commit)
   if err then return nil, err end
   return result, nil
 end
 
 function GitBlob:content()
-  local git_show = require('vgit.git.git_show')
   local content, err = git_show.content(self._repo_path, self._filename, self._commit)
 
   if err then return nil, err end
@@ -40,7 +41,6 @@ function GitBlob:content()
 end
 
 function GitBlob:lines()
-  local git_show = require('vgit.git.git_show')
   local result, err = git_show.lines(self._repo_path, self._filename, self._commit)
   if err then return nil, err end
   return result, nil
@@ -54,7 +54,6 @@ function GitBlob:size()
 end
 
 function GitBlob:hash()
-  local git_show = require('vgit.git.git_show')
   local result, err = git_show.hash(self._repo_path, self._filename, self._commit)
   if err then return nil, err end
   return result, nil

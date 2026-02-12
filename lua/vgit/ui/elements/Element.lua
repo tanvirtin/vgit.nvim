@@ -1,9 +1,11 @@
-local event = require('vgit.core.event')
-local utils = require('vgit.core.utils')
-local Object = require('vgit.core.Object')
-local Buffer = require('vgit.core.Buffer')
-local Window = require('vgit.core.Window')
-local renderer = require('vgit.core.renderer')
+local lazy = require('vgit.core.lazy')
+local event = lazy('vgit.core.event')
+local utils = lazy('vgit.core.utils')
+local Object = lazy('vgit.core.Object')
+local Buffer = lazy('vgit.core.Buffer')
+local Window = lazy('vgit.core.Window')
+local renderer = lazy('vgit.core.renderer')
+local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
 
 local Element = Object:extend()
 
@@ -41,8 +43,6 @@ end
 
 function Element:mount()
   if self.mounted then return self end
-
-  local LayoutContext = require('vgit.ui.layout.LayoutContext')
 
   self.buffer = Buffer():create()
   self.buffer:assign_options(self.config.buf_options)

@@ -1,8 +1,9 @@
-local Object = require('vgit.core.Object')
-local git_stager = require('vgit.git.git_stager')
-local git_status = require('vgit.git.git_status')
-local git_hunks = require('vgit.git.git_hunks')
-local git_commit = require('vgit.git.git_commit')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local git_stager = lazy('vgit.git.git_stager')
+local git_status = lazy('vgit.git.git_status')
+local git_hunks = lazy('vgit.git.git_hunks')
+local git_commit = lazy('vgit.git.git_commit')
 
 local GitIndex = Object:extend()
 

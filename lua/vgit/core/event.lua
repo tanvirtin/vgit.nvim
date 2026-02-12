@@ -1,5 +1,8 @@
-local utils = require('vgit.core.utils')
-local async = require('vgit.core.async')
+local lazy = require('vgit.core.lazy')
+local utils = lazy('vgit.core.utils')
+local async = lazy('vgit.core.async')
+local utils_math = lazy('vgit.core.utils.math')
+local git_repo = lazy('vgit.libgit2.git_repo')
 
 local _is_registered = false
 local _augroup_created = false
@@ -76,7 +79,7 @@ function event.buffer_on(buffer, event_name, callback)
 end
 
 function event.custom_on(event_name, callback)
-  local uuid = require('vgit.core.utils.math').uuid()
+  local uuid = utils_math.uuid()
   local group_name = event.group .. '::custom::' .. event_name .. '::' .. uuid
 
   vim.api.nvim_create_augroup(group_name, { clear = true })
@@ -146,7 +149,6 @@ end
 function event.register_module()
   if _is_registered then return end
 
-  local git_repo = require('vgit.libgit2.git_repo')
   if not git_repo.exists() then return end
 
   local git_dirname = git_repo.discover(nil, { git_dirname = true })

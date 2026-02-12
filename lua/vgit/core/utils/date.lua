@@ -1,5 +1,6 @@
-local math = require('vgit.core.utils.math')
-local assertion = require('vgit.core.assertion')
+local lazy = require('vgit.core.lazy')
+local math = lazy('vgit.core.utils.math')
+local assertion = lazy('vgit.core.assertion')
 
 local date = {}
 

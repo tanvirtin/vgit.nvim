@@ -1,17 +1,19 @@
-local fs = require('vgit.core.fs')
-local event = require('vgit.core.event')
-local utils = require('vgit.core.utils')
-local Layout = require('vgit.ui.Layout')
-local Object = require('vgit.core.Object')
-local Window = require('vgit.core.Window')
-local console = require('vgit.core.console')
-local repository = require('vgit.git.repository')
-local view_utils = require('vgit.features.screens.view_utils')
-local hunks_setting = require('vgit.settings.hunks')
-local file_diff_view_setting = require('vgit.settings.file_diff_view')
-local ComponentManager = require('vgit.ui.ComponentManager')
-local DiffComponent = require('vgit.ui.components.DiffComponent')
-local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+local lazy = require('vgit.core.lazy')
+local fs = lazy('vgit.core.fs')
+local event = lazy('vgit.core.event')
+local utils = lazy('vgit.core.utils')
+local Layout = lazy('vgit.ui.Layout')
+local Object = lazy('vgit.core.Object')
+local Window = lazy('vgit.core.Window')
+local console = lazy('vgit.core.console')
+local repository = lazy('vgit.git.repository')
+local view_utils = lazy('vgit.features.screens.view_utils')
+local hunks_setting = lazy('vgit.settings.hunks')
+local file_diff_view_setting = lazy('vgit.settings.file_diff_view')
+local ComponentManager = lazy('vgit.ui.ComponentManager')
+local DiffComponent = lazy('vgit.ui.components.DiffComponent')
+local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
+local scene_setting = lazy('vgit.settings.scene')
 
 local FileDiffView = Object:extend()
 
@@ -57,7 +59,6 @@ function FileDiffView:_refresh_diff_data()
   local repo, err = repository.current()
   if not self:_handle_git_error(err, 'repository.current') then return end
 
-  local scene_setting = require('vgit.settings.scene')
   local current_layout_type = scene_setting:get('diff_preference') or FileDiffView.LAYOUT_UNIFIED
 
   local diff_spec
@@ -336,7 +337,6 @@ function FileDiffView:get_key(keymap)
 end
 
 function FileDiffView:setup_keymaps()
-  local scene_setting = require('vgit.settings.scene')
   local scene_keymaps = scene_setting:get('keymaps')
   local diff_keymaps = file_diff_view_setting:get('keymaps')
   local hunks_keymaps = hunks_setting:get('keymaps')

@@ -1,4 +1,6 @@
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
+local lazy = require('vgit.core.lazy')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
+local fs = lazy('vgit.core.fs')
 
 local git_revert = {}
 
@@ -71,7 +73,6 @@ end
 function git_revert.in_progress(reponame)
   if not reponame or reponame == '' then return false end
 
-  local fs = require('vgit.core.fs')
   local git_dir = string.format('%s/.git', reponame)
 
   return fs.exists(string.format('%s/REVERT_HEAD', git_dir))

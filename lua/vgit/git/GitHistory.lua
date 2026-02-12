@@ -1,5 +1,6 @@
-local Object = require('vgit.core.Object')
-local git_log = require('vgit.git.git_log')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local git_log = lazy('vgit.git.git_log')
 
 local GitHistory = Object:extend()
 

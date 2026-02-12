@@ -1,8 +1,10 @@
 local vim = vim
-local Component = require('vgit.ui.Component')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local DiffComponent = require('vgit.ui.components.DiffComponent')
-local LineNumberCalculator = require('vgit.ui.calculators.LineNumberCalculator')
+local lazy = require('vgit.core.lazy')
+local Component = lazy('vgit.ui.Component')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
+local DiffComponent = lazy('vgit.ui.components.DiffComponent')
+local LineNumberCalculator = lazy('vgit.ui.calculators.LineNumberCalculator')
 
 local SplitDiffComponent = Component:extend()
 
@@ -63,8 +65,6 @@ function SplitDiffComponent:component_did_update(prev_state)
 end
 
 function SplitDiffComponent:component_will_mount()
-  local LayoutContext = require('vgit.ui.layout.LayoutContext')
-
   local child_win_options = {
     scrollbind = true,
     cursorbind = true,

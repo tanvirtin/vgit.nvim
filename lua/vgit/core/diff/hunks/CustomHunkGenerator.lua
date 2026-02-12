@@ -1,5 +1,6 @@
-local GitHunk = require('vgit.git.GitHunk')
-local HunkGenerator = require('vgit.core.diff.hunks.HunkGenerator')
+local lazy = require('vgit.core.lazy')
+local GitHunk = lazy('vgit.git.GitHunk')
+local HunkGenerator = lazy('vgit.core.diff.hunks.HunkGenerator')
 
 local CustomHunkGenerator = HunkGenerator:extend()
 

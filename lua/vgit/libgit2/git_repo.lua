@@ -1,6 +1,7 @@
 local ffi = require('ffi')
-local libgit2 = require('vgit.libgit2')
-local git_repo = require('vgit.git.git_repo')
+local lazy = require('vgit.core.lazy')
+local libgit2 = lazy('vgit.libgit2')
+local git_repo = lazy('vgit.git.git_repo')
 
 local git_has = git_repo.has
 local git_exists = git_repo.exists

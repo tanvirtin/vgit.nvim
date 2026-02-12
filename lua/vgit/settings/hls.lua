@@ -1,5 +1,6 @@
-local Color = require('vgit.core.Color')
-local Config = require('vgit.core.Config')
+local lazy = require('vgit.core.lazy')
+local Color = lazy('vgit.core.Color')
+local Config = lazy('vgit.core.Config')
 
 return Config({
   GitCount = 'Keyword',

@@ -1,5 +1,6 @@
-local GitCommit = require('vgit.git.GitCommit')
-local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
+local lazy = require('vgit.core.lazy')
+local GitCommit = lazy('vgit.git.GitCommit')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_log = { format = '"%H\x1F%P\x1F%at\x1F%an\x1F%ae\x1F%s"' }
 

@@ -1,5 +1,7 @@
-local utils = require('vgit.core.utils')
-local Object = require('vgit.core.Object')
+local lazy = require('vgit.core.lazy')
+local utils = lazy('vgit.core.utils')
+local Object = lazy('vgit.core.Object')
+local console = lazy('vgit.core.console')
 
 local Config = Object:extend()
 
@@ -47,7 +49,6 @@ function Config:assign(config)
         self.data[key] = value
       end
     else
-      local console = require('vgit.core.console')
       console.debug.warning(string.format('Unknown config key "%s" will be ignored', key))
     end
   end

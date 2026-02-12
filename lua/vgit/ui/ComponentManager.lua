@@ -1,9 +1,10 @@
-local event = require('vgit.core.event')
-local Object = require('vgit.core.Object')
-local LayoutContext = require('vgit.ui.layout.LayoutContext')
-local ComponentGroup = require('vgit.ui.ComponentGroup')
-local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local LayoutRenderer = require('vgit.ui.layout.LayoutRenderer')
+local lazy = require('vgit.core.lazy')
+local event = lazy('vgit.core.event')
+local Object = lazy('vgit.core.Object')
+local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
+local ComponentGroup = lazy('vgit.ui.ComponentGroup')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local LayoutRenderer = lazy('vgit.ui.layout.LayoutRenderer')
 
 local ComponentManager = Object:extend()
 

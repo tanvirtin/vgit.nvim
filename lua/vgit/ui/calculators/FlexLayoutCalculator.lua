@@ -1,4 +1,5 @@
-local BaseLayoutCalculator = require('vgit.ui.calculators.BaseLayoutCalculator')
+local lazy = require('vgit.core.lazy')
+local BaseLayoutCalculator = lazy('vgit.ui.calculators.BaseLayoutCalculator')
 
 local FlexLayoutCalculator = BaseLayoutCalculator:extend()
 

@@ -1,8 +1,9 @@
-local utils = require('vgit.core.utils')
-local Window = require('vgit.core.Window')
-local Object = require('vgit.core.Object')
-local navigation = require('vgit.core.navigation')
-local git_buffer_store = require('vgit.git.git_buffer_store')
+local lazy = require('vgit.core.lazy')
+local utils = lazy('vgit.core.utils')
+local Window = lazy('vgit.core.Window')
+local Object = lazy('vgit.core.Object')
+local navigation = lazy('vgit.core.navigation')
+local git_buffer_store = lazy('vgit.git.git_buffer_store')
 
 local Conflicts = Object:extend()
 

@@ -1,6 +1,7 @@
-local dmp = require('vgit.vendor.dmp')
-local utils = require('vgit.core.utils')
-local Object = require('vgit.core.Object')
+local lazy = require('vgit.core.lazy')
+local dmp = lazy('vgit.vendor.dmp')
+local utils = lazy('vgit.core.utils')
+local Object = lazy('vgit.core.Object')
 
 local MAX_LINES = 4
 

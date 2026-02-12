@@ -1,5 +1,7 @@
-local utils = require('vgit.core.utils')
-local Object = require('vgit.core.Object')
+local lazy = require('vgit.core.lazy')
+local utils = lazy('vgit.core.utils')
+local Object = lazy('vgit.core.Object')
+local git_log = lazy('vgit.git.git_log')
 
 local GitCommit = Object:extend()
 
@@ -95,7 +97,6 @@ function GitCommit:parent()
   if self._parent then return self._parent, nil end
 
   if self._repo_path then
-    local git_log = require('vgit.git.git_log')
     local parent_commit, err = git_log.get(self._repo_path, self._parent_hash)
 
     if err then return nil, err end

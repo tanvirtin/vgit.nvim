@@ -1,8 +1,10 @@
-local Object = require('vgit.core.Object')
-local fs = require('vgit.core.fs')
-local git_repo = require('vgit.git.git_repo')
-local git_show = require('vgit.git.git_show')
-local git_hunks = require('vgit.git.git_hunks')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local fs = lazy('vgit.core.fs')
+local git_repo = lazy('vgit.git.git_repo')
+local git_show = lazy('vgit.git.git_show')
+local git_hunks = lazy('vgit.git.git_hunks')
+local git_status = lazy('vgit.git.git_status')
 
 local GitWorkingTree = Object:extend()
 
@@ -81,10 +83,6 @@ end
 function GitWorkingTree:live_hunks(filename, current_lines)
   if not filename then return nil, { 'filename is required' } end
   if not current_lines then return nil, { 'current_lines is required' } end
-
-  local git_repo = require('vgit.git.git_repo')
-  local git_hunks = require('vgit.git.git_hunks')
-  local git_show = require('vgit.git.git_show')
 
   local has_file, has_err = git_repo.has(self._root_path, filename)
   if has_err then return nil, has_err end
@@ -175,7 +173,6 @@ function GitWorkingTree:stat(filename)
 end
 
 function GitWorkingTree:status()
-  local git_status = require('vgit.git.git_status')
   return git_status.ls(self._root_path)
 end
 

@@ -1,6 +1,7 @@
 local ffi = require('ffi')
-local libgit2 = require('vgit.libgit2')
-local git_conflict = require('vgit.git.git_conflict')
+local lazy = require('vgit.core.lazy')
+local libgit2 = lazy('vgit.libgit2')
+local git_conflict = lazy('vgit.git.git_conflict')
 
 local git_has_conflict = git_conflict.has_conflict
 

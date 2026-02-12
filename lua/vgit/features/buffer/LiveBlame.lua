@@ -1,9 +1,10 @@
-local Object = require('vgit.core.Object')
-local event = require('vgit.core.event')
-local Window = require('vgit.core.Window')
-local console = require('vgit.core.console')
-local git_buffer_store = require('vgit.git.git_buffer_store')
-local live_blame_setting = require('vgit.settings.live_blame')
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local event = lazy('vgit.core.event')
+local Window = lazy('vgit.core.Window')
+local console = lazy('vgit.core.console')
+local git_buffer_store = lazy('vgit.git.git_buffer_store')
+local live_blame_setting = lazy('vgit.settings.live_blame')
 
 local LiveBlame = Object:extend()
 
