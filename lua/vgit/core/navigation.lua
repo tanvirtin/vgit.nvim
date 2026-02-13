@@ -1,13 +1,27 @@
 local lazy = require('vgit.core.lazy')
 local live_gutter_setting = lazy('vgit.settings.live_gutter')
+local hunks_setting = lazy('vgit.settings.hunks')
 
 local navigation = {}
+
+local VALID_HUNK_ALIGNMENTS = {
+  center = true,
+  top = true,
+  bottom = true,
+}
+
+local function get_hunk_alignment()
+  local alignment = hunks_setting:get('hunk_alignment')
+  if not VALID_HUNK_ALIGNMENTS[alignment] then return 'top' end
+  return alignment
+end
 
 function navigation.up(window, marks)
   local new_lnum = nil
   local selected = nil
   local lnum = window:get_lnum()
   local is_edge_navigation = live_gutter_setting:get('edge_navigation')
+  local alignment = get_hunk_alignment()
 
   -- We loop backwards, to find the most immediate mark before the current lnum.
   for i = #marks, 1, -1 do
@@ -32,7 +46,7 @@ function navigation.up(window, marks)
   if new_lnum and new_lnum < 1 then new_lnum = 1 end
 
   if new_lnum and lnum ~= new_lnum then
-    window:set_lnum(new_lnum):position_cursor('center')
+    window:set_lnum(new_lnum):position_cursor(alignment)
 
     return selected
   else
@@ -46,7 +60,7 @@ function navigation.up(window, marks)
       selected = 1
     end
 
-    window:set_lnum(new_lnum):position_cursor('center')
+    window:set_lnum(new_lnum):position_cursor(alignment)
     return selected
   end
 end
@@ -56,6 +70,7 @@ function navigation.down(window, marks)
   local selected = nil
   local lnum = window:get_lnum()
   local is_edge_navigation = live_gutter_setting:get('edge_navigation')
+  local alignment = get_hunk_alignment()
 
   for i = 1, #marks do
     local mark = marks[i]
@@ -80,7 +95,7 @@ function navigation.down(window, marks)
   if new_lnum and new_lnum < 1 then new_lnum = 1 end
 
   if new_lnum then
-    window:set_lnum(new_lnum):position_cursor('center')
+    window:set_lnum(new_lnum):position_cursor(alignment)
 
     return selected
   else
@@ -93,7 +108,7 @@ function navigation.down(window, marks)
       selected = 1
     end
 
-    window:set_lnum(new_lnum):position_cursor('center')
+    window:set_lnum(new_lnum):position_cursor(alignment)
 
     return selected
   end

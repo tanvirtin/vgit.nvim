@@ -9,7 +9,7 @@ local VALID_HUNK_ALIGNMENTS = {
   top = true,
   bottom = true,
 }
-local DEFAULT_HUNK_ALIGNMENT = 'center'
+local DEFAULT_HUNK_ALIGNMENT = 'top'
 
 function view_utils.get_key(keymap)
   if type(keymap) == 'string' then
@@ -28,8 +28,8 @@ function view_utils.handle_git_error(err, operation_name, view_name)
   return true
 end
 
-function view_utils.get_hunk_alignment()
-  local alignment = hunks_setting:get('hunk_alignment')
+function view_utils.get_hunk_alignment(override)
+  local alignment = override or hunks_setting:get('hunk_alignment')
 
   if not VALID_HUNK_ALIGNMENTS[alignment] then
     console.debug.warning(string.format(

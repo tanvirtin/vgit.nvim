@@ -32,7 +32,7 @@ local function lazy(mod_path)
       local mt = getmetatable(mod)
       if mt then
         local call_fn = rawget(mt, '__call')
-        if call_fn then return call_fn(proxy, ...) end
+        if call_fn then return call_fn(mod, ...) end
       end
     end,
   })

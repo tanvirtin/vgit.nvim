@@ -38,5 +38,21 @@ describe('view_utils', function()
       local valid = { center = true, top = true, bottom = true }
       assert.is_true(valid[alignment] ~= nil)
     end)
+
+    it('should use override when provided', function()
+      local alignment = view_utils.get_hunk_alignment('bottom')
+      assert.are.same('bottom', alignment)
+    end)
+
+    it('should fall back to default when override is invalid', function()
+      local alignment = view_utils.get_hunk_alignment('invalid')
+      assert.are.same('top', alignment)
+    end)
+
+    it('should fall back to global setting when override is nil', function()
+      local alignment = view_utils.get_hunk_alignment(nil)
+      local valid = { center = true, top = true, bottom = true }
+      assert.is_true(valid[alignment] ~= nil)
+    end)
   end)
 end)
