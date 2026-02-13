@@ -23,6 +23,7 @@ function GitFile:constructor(filepath)
     filename = filename,
     filetype = filetype,
     state = { hunks = nil },
+    _blob_cache = {},
   }
 end
 
@@ -57,12 +58,14 @@ end
 function GitFile:stage_hunk(hunk)
   local result, err = git_stager.stage_hunk(self.reponame, self.filename, hunk)
   if err then return nil, err end
+  self._blob_cache['index'] = nil
   return result, nil
 end
 
 function GitFile:unstage_hunk(hunk)
   local result, err = git_stager.unstage_hunk(self.reponame, self.filename, hunk)
   if err then return nil, err end
+  self._blob_cache['index'] = nil
   return result, nil
 end
 
@@ -73,12 +76,14 @@ end
 function GitFile:stage()
   local result, err = git_stager.stage(self.reponame, self.filename)
   if err then return nil, err end
+  self._blob_cache['index'] = nil
   return result, nil
 end
 
 function GitFile:unstage()
   local result, err = git_stager.unstage(self.reponame, self.filename)
   if err then return nil, err end
+  self._blob_cache['index'] = nil
   return result, nil
 end
 
@@ -133,19 +138,33 @@ end
 function GitFile:generate_status()
   local hunks = self.state.hunks or {}
   local status = { added = 0, changed = 0, removed = 0 }
-  local math_min = math.min
-  local math_abs = math.abs
 
   for _, h in ipairs(hunks) do
     local h_added = h.stat.added
     local h_removed = h.stat.removed
-    local changed = math_min(h_added, h_removed)
-    status.added = status.added + math_abs(h_added - changed)
-    status.removed = status.removed + math_abs(h_removed - changed)
+    local changed = math.min(h_added, h_removed)
+    status.added = status.added + math.abs(h_added - changed)
+    status.removed = status.removed + math.abs(h_removed - changed)
     status.changed = status.changed + changed
   end
 
   return status
+end
+
+function GitFile:clear_blob_cache()
+  self._blob_cache = {}
+end
+
+function GitFile:_cached_blob_lines(commit_hash)
+  local cached = self._blob_cache[commit_hash]
+  if cached then return cached, nil end
+
+  local blob = GitBlob(self.reponame, self.filename, commit_hash)
+  local lines, err = blob:lines()
+  if err then return nil, err end
+
+  self._blob_cache[commit_hash] = lines
+  return lines, nil
 end
 
 function GitFile:lines(commit_hash)
@@ -162,8 +181,7 @@ function GitFile:live_hunks(current_lines)
     return self.state.hunks, nil
   end
 
-  local blob = GitBlob(self.reponame, self.filename, 'index')
-  local original_lines, err = blob:lines()
+  local original_lines, err = self:_cached_blob_lines('index')
   if err then return nil, err end
 
   local hunks, hunks_err = git_hunks.live(self.reponame, original_lines, current_lines)

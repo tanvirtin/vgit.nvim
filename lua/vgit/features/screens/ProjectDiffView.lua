@@ -219,6 +219,8 @@ function ProjectDiffView:_get_active_component()
 end
 
 function ProjectDiffView:get_hunk_alignment()
+  local alignment = project_diff_view_setting:get('hunk_alignment')
+  if alignment ~= '' then return view_utils.get_hunk_alignment(alignment) end
   return view_utils.get_hunk_alignment()
 end
 

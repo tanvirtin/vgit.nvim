@@ -23,7 +23,6 @@ function LayoutContext:constructor(config)
   config = config or {}
 
   return {
-    _cached_dims = nil,
     mode = config.mode or 'popup', -- 'screen', 'lens', 'popup'
     width = config.width,
     height = config.height,
@@ -80,17 +79,10 @@ function LayoutContext:is_floating_mode()
 end
 
 function LayoutContext:get_dimensions()
-  if not self._cached_dims then
-    local width = LayoutContext.convert_dimension(self.width)
-    local height = LayoutContext.convert_dimension(self.height)
-
-    self._cached_dims = {
-      width = width,
-      height = height,
-    }
-  end
-
-  return self._cached_dims
+  return {
+    width = LayoutContext.convert_dimension(self.width),
+    height = LayoutContext.convert_dimension(self.height),
+  }
 end
 
 function LayoutContext:derive(overrides)

@@ -4,9 +4,7 @@ local Object = lazy('vgit.core.Object')
 local PatchHighlighter = Object:extend()
 
 function PatchHighlighter:constructor()
-  return {
-    _parser_cache = {},
-  }
+  return {}
 end
 
 -- Determine the diff line type from line content or metadata

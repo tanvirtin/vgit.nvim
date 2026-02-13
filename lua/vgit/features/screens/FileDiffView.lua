@@ -38,6 +38,8 @@ function FileDiffView:constructor()
 end
 
 function FileDiffView:get_hunk_alignment()
+  local alignment = file_diff_view_setting:get('hunk_alignment')
+  if alignment ~= '' then return view_utils.get_hunk_alignment(alignment) end
   return view_utils.get_hunk_alignment()
 end
 
@@ -182,8 +184,10 @@ function FileDiffView:_create_file_view(data)
   return true
 end
 
-function FileDiffView:_update_diff_component(hunk_index)
+function FileDiffView:_reconcile(opts)
+  opts = opts or {}
   event.await()
+
   if not self.diff_component or not self.diff_component:is_valid() then return false end
 
   local data = self:_refresh_diff_data()
@@ -197,8 +201,8 @@ function FileDiffView:_update_diff_component(hunk_index)
   })
 
   if not self.diff_component or not self.diff_component:is_valid() then return false end
-  if hunk_index then
-    self.diff_component:move_to_hunk(hunk_index, self:get_hunk_alignment())
+  if opts.hunk_index then
+    self.diff_component:move_to_hunk(opts.hunk_index, self:get_hunk_alignment())
   end
 
   return true
@@ -206,21 +210,11 @@ end
 
 function FileDiffView:toggle_view()
   event.await()
-  if self.opts.filename then
+  if not self.opts.filename then return end
+
+  self.opts.is_staged = not self.opts.is_staged
+  if not self:_reconcile({ hunk_index = 1 }) then
     self.opts.is_staged = not self.opts.is_staged
-
-    local data = self:_refresh_diff_data()
-    if not data then
-      self.opts.is_staged = not self.opts.is_staged
-      return
-    end
-
-    self.diff_component:set_props({
-      diff = data.diff,
-      filename = data.filename,
-      filetype = data.filetype,
-    })
-    self.diff_component:move_to_hunk(1, self:get_hunk_alignment())
   end
 end
 
@@ -240,14 +234,7 @@ function FileDiffView:reset_current()
   if err then return end
   repo:reset(filename)
 
-  local data = self:_refresh_diff_data()
-  if not data then return end
-
-  self.diff_component:set_props({
-    diff = data.diff,
-    filename = data.filename,
-    filetype = data.filetype,
-  })
+  self:_reconcile()
 end
 
 function FileDiffView:enter_view()
@@ -281,7 +268,7 @@ function FileDiffView:stage_hunk()
 
   repo:stage_hunk(filename, hunk)
 
-  self:_update_diff_component(index)
+  self:_reconcile({ hunk_index = index })
 end
 
 function FileDiffView:unstage_hunk()
@@ -299,7 +286,7 @@ function FileDiffView:unstage_hunk()
 
   repo:unstage_hunk(filename, hunk)
 
-  self:_update_diff_component(index)
+  self:_reconcile({ hunk_index = index })
 end
 
 function FileDiffView:stage_current()
@@ -314,7 +301,7 @@ function FileDiffView:stage_current()
 
   repo:stage_file(filename)
 
-  self:_update_diff_component()
+  self:_reconcile()
 end
 
 function FileDiffView:unstage_current()
@@ -329,7 +316,7 @@ function FileDiffView:unstage_current()
 
   repo:unstage_file(filename)
 
-  self:_update_diff_component()
+  self:_reconcile()
 end
 
 function FileDiffView:get_key(keymap)

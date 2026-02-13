@@ -3,6 +3,7 @@ local event = lazy('vgit.core.event')
 local utils = lazy('vgit.core.utils')
 local console = lazy('vgit.core.console')
 local GitBuffer = lazy('vgit.git.GitBuffer')
+local git_repo = lazy('vgit.git.git_repo')
 local assertion = lazy('vgit.core.assertion')
 
 local buffers = {}
@@ -26,7 +27,9 @@ git_buffer_store.register_events = event.async(function()
   end)
 
   event.custom_on('VGitChange', function()
+    git_repo.clear_cache()
     git_buffer_store.for_each(function(buffer)
+      if buffer.git_file then buffer.git_file:clear_blob_cache() end
       git_buffer_store.dispatch(buffer, 'sync')
     end)
   end)
