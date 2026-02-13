@@ -5,17 +5,18 @@ local Layout = lazy('vgit.ui.Layout')
 local event = lazy('vgit.core.event')
 local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
+local statusline = lazy('vgit.core.statusline_state')
 local repository = lazy('vgit.git.repository')
-local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local view_utils = lazy('vgit.features.screens.view_utils')
+local scene_setting = lazy('vgit.settings.scene')
 local hunks_setting = lazy('vgit.settings.hunks')
-local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
+local view_utils = lazy('vgit.features.screens.view_utils')
 local TreeComponent = lazy('vgit.ui.components.TreeComponent')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
+local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
 local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
-local scene_setting = lazy('vgit.settings.scene')
 
 local StatusDiffView = Object:extend()
 
@@ -35,6 +36,8 @@ function StatusDiffView:constructor()
     diff_component = nil,
     tree_component = nil,
     component_manager = nil,
+    commit_buf = nil,
+    commit_win = nil,
     debounce_cleanups = {},
   }
 end
@@ -92,6 +95,9 @@ function StatusDiffView:hunk_down()
   else
     self.diff_component:hunk_down(hunk_alignment)
   end
+
+  local idx, count = self:get_current_mark_index()
+  if idx then statusline.set_hunk(idx, count) end
 end
 
 function StatusDiffView:hunk_up()
@@ -112,6 +118,9 @@ function StatusDiffView:hunk_up()
   else
     self.diff_component:hunk_up(hunk_alignment)
   end
+
+  local idx, count = self:get_current_mark_index()
+  if idx then statusline.set_hunk(idx, count) end
 end
 
 function StatusDiffView:reset_hunk()
@@ -326,6 +335,8 @@ function StatusDiffView:_process_entries_data(data)
   local entries_data = {
     entries = data.entries,
     layout_type = self.opts.layout_type,
+    current_filename = data.current_filename,
+    cursor_lnum = data.cursor_lnum,
   }
 
   return self:_create_entries_view(entries_data)
@@ -356,7 +367,6 @@ function StatusDiffView:_update_diff_component(hunk_index)
   local repo, repo_err = repository.current()
   if not self:_handle_git_error(repo_err, 'repository.current') then return false end
 
-
   local diff_data, err = self:_build_entry_diff(self.current_entry, repo)
   if not self:_handle_git_error(err, '_build_entry_diff') then return false end
 
@@ -366,9 +376,7 @@ function StatusDiffView:_update_diff_component(hunk_index)
     filetype = self.current_entry.status.filetype,
   })
 
-  if hunk_index then
-    self.diff_component:move_to_hunk(hunk_index, self:get_hunk_alignment())
-  end
+  if hunk_index then self.diff_component:move_to_hunk(hunk_index, self:get_hunk_alignment()) end
 
   return true
 end
@@ -460,11 +468,40 @@ function StatusDiffView:reset_entry()
   repo:reset(filename)
 end
 
-function StatusDiffView:commit()
-  event.await()
-  local message = console.input('Commit message: ')
+function StatusDiffView:_is_commit_split_open()
+  return self.commit_buf
+    and vim.api.nvim_buf_is_valid(self.commit_buf)
+    and self.commit_win
+    and vim.api.nvim_win_is_valid(self.commit_win)
+end
 
-  if not message or message:match('^%s*$') then
+function StatusDiffView:_close_commit_split()
+  if self.commit_win and vim.api.nvim_win_is_valid(self.commit_win) then
+    vim.api.nvim_win_close(self.commit_win, true)
+  end
+  if self.commit_buf and vim.api.nvim_buf_is_valid(self.commit_buf) then
+    vim.api.nvim_buf_delete(self.commit_buf, { force = true })
+  end
+  self.commit_buf = nil
+  self.commit_win = nil
+end
+
+function StatusDiffView:_confirm_commit()
+  if not self.commit_buf or not vim.api.nvim_buf_is_valid(self.commit_buf) then return end
+
+  local lines = vim.api.nvim_buf_get_lines(self.commit_buf, 0, -1, false)
+
+  local message_lines = {}
+  for _, line in ipairs(lines) do
+    if not vim.startswith(line, '#') then message_lines[#message_lines + 1] = line end
+  end
+
+  self:_close_commit_split()
+
+  local message = table.concat(message_lines, '\n')
+  message = message:match('^%s*(.-)%s*$') or ''
+
+  if message == '' then
     console.info('Commit cancelled: empty message')
     return
   end
@@ -476,6 +513,86 @@ function StatusDiffView:commit()
   if not self:_handle_git_error(err, 'commit') then return end
 
   console.info('Changes committed successfully')
+end
+
+function StatusDiffView:commit()
+  event.await()
+
+  if self:_is_commit_split_open() then
+    vim.api.nvim_set_current_win(self.commit_win)
+    return
+  end
+
+  local buf = vim.api.nvim_create_buf(false, true)
+
+  local diff_keymaps = status_diff_view_setting:get('keymaps')
+  local confirm_key = self:get_key(diff_keymaps.commit_confirm) or '<C-s>'
+  local cancel_key = self:get_key(diff_keymaps.commit_cancel) or 'q'
+
+  local lines = { '' }
+  lines[#lines + 1] = '# Press ' .. confirm_key .. ' to confirm, ' .. cancel_key .. ' to cancel.'
+  lines[#lines + 1] = '# Lines starting with # will be ignored.'
+
+  local refs = self.repo:refs()
+  if refs then
+    local branch = refs:current_branch()
+    if branch then
+      lines[#lines + 1] = '#'
+      lines[#lines + 1] = '# On branch ' .. branch
+    end
+  end
+
+  if self.data and self.data.entries then
+    for _, group in ipairs(self.data.entries) do
+      if group.entries and #group.entries > 0 then
+        lines[#lines + 1] = '#'
+        lines[#lines + 1] = '# ' .. group.title .. ':'
+        for _, entry in ipairs(group.entries) do
+          if entry.status then lines[#lines + 1] = '#   ' .. entry.status.value .. ' ' .. entry.status.filename end
+        end
+      end
+    end
+  end
+
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+  vim.cmd('botright 20split')
+  local win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(win, buf)
+
+  vim.api.nvim_set_option_value('buftype', 'nofile', { buf = buf })
+  vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf })
+  vim.api.nvim_set_option_value('filetype', 'gitcommit', { buf = buf })
+
+  vim.api.nvim_set_option_value('number', false, { win = win })
+  vim.api.nvim_set_option_value('relativenumber', false, { win = win })
+  vim.api.nvim_set_option_value('signcolumn', 'no', { win = win })
+  vim.api.nvim_set_option_value('wrap', true, { win = win })
+  vim.api.nvim_set_option_value('cursorline', true, { win = win })
+
+  self.commit_buf = buf
+  self.commit_win = win
+
+  vim.keymap.set({ 'n', 'i' }, confirm_key, event.async(function()
+    self:_confirm_commit()
+  end), { buffer = buf, desc = 'Confirm commit' })
+
+  vim.keymap.set('n', cancel_key, function()
+    self:_close_commit_split()
+    console.info('Commit cancelled')
+  end, { buffer = buf, desc = 'Cancel commit' })
+
+  vim.api.nvim_create_autocmd('BufWipeout', {
+    buffer = buf,
+    once = true,
+    callback = function()
+      self.commit_buf = nil
+      self.commit_win = nil
+    end,
+  })
+
+  vim.api.nvim_win_set_cursor(win, { 1, 0 })
+  vim.cmd('startinsert')
 end
 
 function StatusDiffView:open_file()
@@ -520,9 +637,24 @@ function StatusDiffView:_handle_file_selection_change(item)
         filetype = entry.status.filetype or 'text',
       })
 
+      local target_hunk = 1
+      if self._initial_cursor_lnum then
+        local cursor_lnum = self._initial_cursor_lnum
+        self._initial_cursor_lnum = nil
+        local hunks = self.diff_component.state and self.diff_component.state.hunks
+        if hunks then
+          for i, hunk in ipairs(hunks) do
+            if cursor_lnum >= hunk.top and cursor_lnum <= hunk.bot then
+              target_hunk = i
+              break
+            end
+          end
+        end
+      end
+
       if self.diff_component.call then
         self.diff_component:call(function()
-          self.diff_component:move_to_hunk(1, self:get_hunk_alignment())
+          self.diff_component:move_to_hunk(target_hunk, self:get_hunk_alignment())
         end)
       end
     else
@@ -568,9 +700,7 @@ function StatusDiffView:refresh_data()
   local data, status_err = repo:status(self.opts)
   if not self:_handle_git_error(status_err, 'status') then return end
 
-  if not data or utils.object.is_empty(data.entries) then
-    return false
-  end
+  if not data or utils.object.is_empty(data.entries) then return false end
 
   local file_groups = {}
   for _, entry in ipairs(data.entries) do
@@ -710,20 +840,6 @@ function StatusDiffView:_create_entries_view(data)
     }
   end
 
-  local initial_entry = nil
-  for _, group in ipairs(file_groups) do
-    if group.items and #group.items > 0 then
-      initial_entry = group.items[1]
-      break
-    end
-  end
-
-  if initial_entry then
-    if not self:_set_current_entry(initial_entry) then
-      console.warn('[StatusDiffView] Initial entry failed validation')
-    end
-  end
-
   local diff_keymaps = status_diff_view_setting:get('keymaps')
   local tree_keymaps = {
     buffer_stage = diff_keymaps.stage,
@@ -801,7 +917,30 @@ function StatusDiffView:_create_entries_view(data)
 
   self:setup_keymaps()
 
-  if self.tree_component and self.tree_component:is_valid() then self.tree_component:focus() end
+  self._initial_cursor_lnum = data.cursor_lnum
+
+  if self.tree_component and self.tree_component:is_valid() then
+    self.tree_component:focus()
+
+    local moved = false
+    if data.current_filename then
+      moved = self.tree_component:move_to(function(status, entry_type)
+        return status.filename == data.current_filename and entry_type == 'unstaged'
+      end)
+      if not moved then
+        moved = self.tree_component:move_to(function(status)
+          return status.filename == data.current_filename
+        end)
+      end
+    end
+
+    if not moved then
+      self._initial_cursor_lnum = nil
+      self.tree_component:move_to(function(status)
+        return status ~= nil
+      end)
+    end
+  end
 
   return true
 end
@@ -840,6 +979,7 @@ function StatusDiffView:on_git_change()
 end
 
 function StatusDiffView:destroy()
+  self:_close_commit_split()
   for _, cleanup in ipairs(self.debounce_cleanups) do
     cleanup()
   end

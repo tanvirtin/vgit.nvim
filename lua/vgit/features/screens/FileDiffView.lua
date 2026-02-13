@@ -6,14 +6,15 @@ local Layout = lazy('vgit.ui.Layout')
 local Object = lazy('vgit.core.Object')
 local Window = lazy('vgit.core.Window')
 local console = lazy('vgit.core.console')
+local statusline = lazy('vgit.core.statusline_state')
 local repository = lazy('vgit.git.repository')
-local view_utils = lazy('vgit.features.screens.view_utils')
 local hunks_setting = lazy('vgit.settings.hunks')
-local file_diff_view_setting = lazy('vgit.settings.file_diff_view')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
-local DiffComponent = lazy('vgit.ui.components.DiffComponent')
-local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
 local scene_setting = lazy('vgit.settings.scene')
+local ComponentManager = lazy('vgit.ui.ComponentManager')
+local view_utils = lazy('vgit.features.screens.view_utils')
+local DiffComponent = lazy('vgit.ui.components.DiffComponent')
+local file_diff_view_setting = lazy('vgit.settings.file_diff_view')
+local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
 
 local FileDiffView = Object:extend()
 
@@ -43,14 +44,35 @@ function FileDiffView:get_hunk_alignment()
   return view_utils.get_hunk_alignment()
 end
 
+function FileDiffView:get_current_mark_index()
+  local marks = self.diff_component:get_marks()
+  if not marks or #marks == 0 then return nil, 0 end
+
+  local lnum = self.diff_component:get_lnum()
+
+  for i, mark in ipairs(marks) do
+    if lnum >= mark.top and lnum <= mark.bot then
+      return i, #marks
+    elseif mark.top > lnum then
+      return math.max(1, i - 1), #marks
+    end
+  end
+
+  return #marks, #marks
+end
+
 function FileDiffView:hunk_up()
   if not self.diff_component or not self.diff_component:is_valid() then return end
   self.diff_component:hunk_up(self:get_hunk_alignment())
+  local index, count = self:get_current_mark_index()
+  if index then statusline.set_hunk(index, count) end
 end
 
 function FileDiffView:hunk_down()
   if not self.diff_component or not self.diff_component:is_valid() then return end
   self.diff_component:hunk_down(self:get_hunk_alignment())
+  local index, count = self:get_current_mark_index()
+  if index then statusline.set_hunk(index, count) end
 end
 
 function FileDiffView:_handle_git_error(err, operation_name)
@@ -201,9 +223,7 @@ function FileDiffView:_reconcile(opts)
   })
 
   if not self.diff_component or not self.diff_component:is_valid() then return false end
-  if opts.hunk_index then
-    self.diff_component:move_to_hunk(opts.hunk_index, self:get_hunk_alignment())
-  end
+  if opts.hunk_index then self.diff_component:move_to_hunk(opts.hunk_index, self:get_hunk_alignment()) end
 
   return true
 end
@@ -213,9 +233,7 @@ function FileDiffView:toggle_view()
   if not self.opts.filename then return end
 
   self.opts.is_staged = not self.opts.is_staged
-  if not self:_reconcile({ hunk_index = 1 }) then
-    self.opts.is_staged = not self.opts.is_staged
-  end
+  if not self:_reconcile({ hunk_index = 1 }) then self.opts.is_staged = not self.opts.is_staged end
 end
 
 function FileDiffView:reset_current()
