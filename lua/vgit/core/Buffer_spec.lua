@@ -128,7 +128,7 @@ describe('Buffer:', function()
       -- Verify buffer was created with a valid ID
       assert.is_number(buffer.bufnr, 'bufnr should be a number')
       assert.is_true(buffer.bufnr > 0, 'bufnr should be positive')
-      assert.is_not.same(buffer.bufnr, bufnr, 'new buffer should have different ID')
+      assert.are_not.same(buffer.bufnr, bufnr, 'new buffer should have different ID')
 
       -- Verify the buffer actually exists in Neovim
       assert.is_true(vim.api.nvim_buf_is_valid(buffer.bufnr), 'buffer should exist in Neovim')

@@ -1,4 +1,4 @@
-local GitPorcelain = require('vgit.cli.git_porcelain')
+local GitPorcelain = require('vgit.cli.GitPorcelain')
 
 local eq = assert.are.same
 

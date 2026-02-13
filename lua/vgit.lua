@@ -152,7 +152,12 @@ end
 
 local controller = {}
 
+local setup_done = false
+
 function controller.setup(config)
+  if setup_done then return end
+  setup_done = true
+
   configure_settings(config)
 
   vim.api.nvim_create_user_command('VGit', controller.execute_command, {
@@ -236,7 +241,7 @@ function controller.autocomplete(arg_lead, cmd_line, _)
 
   local cmd = split_cmd[2]
   if cmd == 'diff' or cmd == 'blame' or cmd == 'hunk' then
-    local git_porcelain = require('vgit.cli.git_porcelain')
+    local git_porcelain = require('vgit.cli.GitPorcelain')
     local porcelain = git_porcelain()
     local command_def = porcelain:get_command(cmd)
     if command_def and command_def.options then
