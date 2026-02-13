@@ -1,6 +1,6 @@
 local eq = assert.are.same
 
-describe('LayoutContext', function()
+describe('LayoutContext:', function()
   local LayoutContext
 
   before_each(function()

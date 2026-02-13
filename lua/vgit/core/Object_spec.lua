@@ -1,5 +1,7 @@
 local Object = require('vgit.core.Object')
 
+local eq = assert.are.same
+
 describe('Object:', function()
   describe('is', function()
     it('should return true if a child object instance is of type parent object', function()
@@ -64,8 +66,8 @@ describe('Object:', function()
       local test = TestObject()
 
       assert(getmetatable(test) == TestObject)
-      assert.are.same(test.x, 3)
-      assert.are.same(test.y, 4)
+      eq(test.x, 3)
+      eq(test.y, 4)
     end)
 
     it('returns a table of newly extended type when constructor returns a table', function()
@@ -81,8 +83,8 @@ describe('Object:', function()
       local test = TestObject()
 
       assert(getmetatable(test) == TestObject)
-      assert.are.same(test.x, 3)
-      assert.are.same(test.y, 4)
+      eq(test.x, 3)
+      eq(test.y, 4)
     end)
   end)
 end)

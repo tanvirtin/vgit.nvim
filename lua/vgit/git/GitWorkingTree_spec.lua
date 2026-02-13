@@ -1,6 +1,8 @@
 local GitWorkingTree = require('vgit.git.GitWorkingTree')
 
-describe('GitWorkingTree', function()
+local eq = assert.are.same
+
+describe('GitWorkingTree:', function()
   local function make_repo(path)
     return { get_path = function() return path end }
   end

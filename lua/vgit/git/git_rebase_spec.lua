@@ -6,7 +6,9 @@ local it = async.it
 local before_each = async.before_each
 local after_each = async.after_each
 
-describe('git_rebase', function()
+local eq = assert.are.same
+
+describe('git_rebase:', function()
   local repo
 
   before_each(function()

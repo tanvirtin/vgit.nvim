@@ -1,6 +1,6 @@
 local eq = assert.are.same
 
-describe('BorderComponent', function()
+describe('BorderComponent:', function()
   local BorderComponent
 
   before_each(function()

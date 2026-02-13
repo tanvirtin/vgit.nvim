@@ -18,7 +18,7 @@ local function create_split_component(overrides)
   return instance
 end
 
-describe('SplitDiffComponent', function()
+describe('SplitDiffComponent:', function()
   describe('calculate_split_line_numbers', function()
     it('should separate lnum_changes by buftype', function()
       local component = create_split_component({})

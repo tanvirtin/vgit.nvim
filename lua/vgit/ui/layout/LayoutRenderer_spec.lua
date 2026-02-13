@@ -1,7 +1,7 @@
 local eq = assert.are.same
 local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
 
-describe('LayoutRenderer', function()
+describe('LayoutRenderer:', function()
   local LayoutRenderer
 
   before_each(function()

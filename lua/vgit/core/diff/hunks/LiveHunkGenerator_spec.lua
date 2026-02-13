@@ -3,7 +3,7 @@ local eq = assert.are.same
 local GitHunk = require('vgit.git.GitHunk')
 local LiveHunkGenerator = require('vgit.core.diff.hunks.LiveHunkGenerator')
 
-describe('LiveHunkGenerator', function()
+describe('LiveHunkGenerator:', function()
   local gen
 
   before_each(function()

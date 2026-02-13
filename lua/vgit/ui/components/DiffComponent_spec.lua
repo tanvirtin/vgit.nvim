@@ -35,7 +35,7 @@ local function create_diff_component(overrides)
   return instance
 end
 
-describe('DiffComponent', function()
+describe('DiffComponent:', function()
   describe('should_component_update', function()
     it('should return true when diff changes', function()
       local diff_ref = { lines = {} }

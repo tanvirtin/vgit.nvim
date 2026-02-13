@@ -3,7 +3,7 @@ local LayoutBounds = require('vgit.ui.layout.LayoutBounds')
 
 local eq = assert.are.same
 
-describe('AbsoluteLayoutCalculator', function()
+describe('AbsoluteLayoutCalculator:', function()
   local calculator
   local mock_view
 

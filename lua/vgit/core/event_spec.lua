@@ -1,7 +1,9 @@
 local event = require('vgit.core.event')
 local Buffer = require('vgit.core.Buffer')
 
-describe('event', function()
+local eq = assert.are.same
+
+describe('event:', function()
   describe('on', function()
     it('should create an autocmd for the specified event', function()
       local callback_called = false

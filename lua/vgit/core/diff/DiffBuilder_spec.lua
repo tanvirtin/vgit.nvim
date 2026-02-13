@@ -1,7 +1,9 @@
 local DiffBuilder = require('vgit.core.diff.DiffBuilder')
 local fs = require('vgit.core.fs')
 
-describe('DiffBuilder', function()
+local eq = assert.are.same
+
+describe('DiffBuilder:', function()
   local repository
   local builder
   local original_absolute_path
@@ -890,7 +892,7 @@ describe('DiffBuilder', function()
 
       builder:build(spec)
 
-      assert.are.same(spec, spec_copy)
+      eq(spec, spec_copy)
     end)
   end)
 

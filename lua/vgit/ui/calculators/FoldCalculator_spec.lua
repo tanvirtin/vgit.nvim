@@ -1,6 +1,8 @@
 local FoldCalculator = require('vgit.ui.calculators.FoldCalculator')
 
-describe('FoldCalculator', function()
+local eq = assert.are.same
+
+describe('FoldCalculator:', function()
   local calc
 
   before_each(function()
@@ -10,13 +12,13 @@ describe('FoldCalculator', function()
   describe('calculate_folds', function()
     it('should return empty folds when marks is empty', function()
       local folds = calc:calculate_folds({}, 200)
-      assert.are.same({}, folds)
+      eq({}, folds)
     end)
 
     it('should return empty folds when line_count is too small', function()
       -- Default num_focus_lines=7, threshold is 7*4=28
       local folds = calc:calculate_folds({ { top = 5, bot = 10 } }, 27)
-      assert.are.same({}, folds)
+      eq({}, folds)
     end)
 
     it('should create fold before first mark when enough space', function()

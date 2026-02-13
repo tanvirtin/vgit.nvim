@@ -2,7 +2,7 @@ local PatchHighlighter = require('vgit.ui.highlighters.PatchHighlighter')
 
 local eq = assert.are.same
 
-describe('PatchHighlighter', function()
+describe('PatchHighlighter:', function()
   local highlighter
 
   before_each(function()

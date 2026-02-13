@@ -1,6 +1,8 @@
 local LineNumberCalculator = require('vgit.ui.calculators.LineNumberCalculator')
 
-describe('LineNumberCalculator Refactor Tests', function()
+local eq = assert.are.same
+
+describe('LineNumberCalculator:', function()
   local calculator
 
   before_each(function()

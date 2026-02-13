@@ -1,6 +1,8 @@
 local LayoutBounds = require('vgit.ui.layout.LayoutBounds')
 
-describe('LayoutBounds', function()
+local eq = assert.are.same
+
+describe('LayoutBounds:', function()
   describe('constructor', function()
     it('should set defaults when no opts given', function()
       local b = LayoutBounds()

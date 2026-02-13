@@ -6,7 +6,9 @@ local it = async.it
 local before_each = async.before_each
 local after_each = async.after_each
 
-describe('GitRemote', function()
+local eq = assert.are.same
+
+describe('GitRemote:', function()
   local repo
   local remote_repo
 

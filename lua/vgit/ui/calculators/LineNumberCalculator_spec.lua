@@ -1,7 +1,9 @@
 local LineNumberCalculator = require('vgit.ui.calculators.LineNumberCalculator')
 local symbols_setting = require('vgit.settings.symbols')
 
-describe('LineNumberCalculator', function()
+local eq = assert.are.same
+
+describe('LineNumberCalculator:', function()
   local calc
 
   before_each(function()

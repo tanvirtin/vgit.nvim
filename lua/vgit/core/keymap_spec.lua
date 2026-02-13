@@ -1,7 +1,9 @@
 local mock = require('luassert.mock')
 local keymap = require('vgit.core.keymap')
 
-describe('keymap', function()
+local eq = assert.are.same
+
+describe('keymap:', function()
   before_each(function()
     vim.api = mock(vim.api, true)
   end)

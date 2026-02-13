@@ -1,6 +1,8 @@
 local TreeComponent = require('vgit.ui.components.TreeComponent')
 
-describe('TreeComponent - Core Functionality', function()
+local eq = assert.are.same
+
+describe('TreeComponent:', function()
   local component
 
   before_each(function()

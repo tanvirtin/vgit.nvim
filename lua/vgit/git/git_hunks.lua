@@ -25,7 +25,7 @@ function git_hunks.live(reponame, original_lines, current_lines)
     fs.remove_file(temp_filename_a)
     fs.remove_file(temp_filename_b)
 
-    if not ok then return nil, { hunks } end
+    if not ok then return nil, { tostring(hunks) } end
     return hunks, hunks_err
   end
 

@@ -1,6 +1,6 @@
 local eq = assert.are.same
 
-describe('LayoutComponent', function()
+describe('LayoutComponent:', function()
   local LayoutComponent
 
   before_each(function()

@@ -1,6 +1,8 @@
 local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 
+local eq = assert.are.same
+
 describe('Window:', function()
   local buffer, win
 
@@ -85,7 +87,7 @@ describe('Window:', function()
       win = Window(-1) -- Invalid window
 
       local cursor = win:get_cursor()
-      assert.are.same({ 1, 1 }, cursor)
+      eq({ 1, 1 }, cursor)
     end)
   end)
 
@@ -134,7 +136,7 @@ describe('Window:', function()
       win:set_cursor({ 2, 0 })
       local cursor = win:get_cursor()
 
-      assert.are.same({ 2, 0 }, cursor)
+      eq({ 2, 0 }, cursor)
     end)
   end)
 
@@ -144,7 +146,7 @@ describe('Window:', function()
       win:set_cursor({ 1, 2 })
       win:set_lnum(2)
 
-      assert.are.same({ 2, 2 }, win:get_cursor())
+      eq({ 2, 2 }, win:get_cursor())
     end)
   end)
 
@@ -182,10 +184,10 @@ describe('Window:', function()
       win:set_win_plot(config)
       local new_config = win:get_win_plot()
 
-      assert.are.same(6, new_config.row)
-      assert.are.same(11, new_config.col)
-      assert.are.same(31, new_config.width)
-      assert.are.same(16, new_config.height)
+      eq(6, new_config.row)
+      eq(11, new_config.col)
+      eq(31, new_config.width)
+      eq(16, new_config.height)
     end)
   end)
 

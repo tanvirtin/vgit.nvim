@@ -1,7 +1,9 @@
 local spy = require('luassert.spy')
 local Component = require('vgit.ui.Component')
 
-describe('Component', function()
+local eq = assert.are.same
+
+describe('Component:', function()
   local TestComponent
   local component
 
@@ -27,12 +29,12 @@ describe('Component', function()
 
   describe('constructor', function()
     it('should initialize with props', function()
-      assert.are.same(component.props.initial_prop, 'value')
+      eq(component.props.initial_prop, 'value')
     end)
 
     it('should initialize with initial state', function()
-      assert.are.same(component.state.count, 0)
-      assert.are.same(component.state.name, 'test')
+      eq(component.state.count, 0)
+      eq(component.state.name, 'test')
     end)
 
     it('should not be mounted initially', function()
@@ -47,11 +49,11 @@ describe('Component', function()
   describe('get_initial_state', function()
     it('should return empty table by default', function()
       local BaseComponent = Component()
-      assert.are.same(BaseComponent.state, {})
+      eq(BaseComponent.state, {})
     end)
 
     it('should be overridable in subclass', function()
-      assert.are.same(component.state.count, 0)
+      eq(component.state.count, 0)
     end)
   end)
 
@@ -62,8 +64,8 @@ describe('Component', function()
       -- Use vim.schedule to let the update process
       vim.wait(10)
 
-      assert.are.same(component.state.count, 5)
-      assert.are.same(component.state.name, 'test') -- unchanged
+      eq(component.state.count, 5)
+      eq(component.state.name, 'test') -- unchanged
     end)
 
     it('should mark component as needing update', function()
@@ -82,7 +84,7 @@ describe('Component', function()
       local prev_state = vim.deepcopy(component.state)
       component:set_state(nil)
 
-      assert.are.same(component.state, prev_state)
+      eq(component.state, prev_state)
     end)
 
     it('should respect should_component_update', function()
@@ -93,11 +95,11 @@ describe('Component', function()
 
       component:set_state({ count = 3 })
       vim.wait(10)
-      assert.are.same(component.state.count, 0) -- not updated
+      eq(component.state.count, 0) -- not updated
 
       component:set_state({ count = 4 })
       vim.wait(10)
-      assert.are.same(component.state.count, 4) -- updated
+      eq(component.state.count, 4) -- updated
     end)
   end)
 
@@ -293,7 +295,7 @@ describe('Component', function()
       vim.wait(20)
 
       -- All updates should be batched
-      assert.are.same(component.state.count, 3)
+      eq(component.state.count, 3)
     end)
 
     it('should maintain state across updates', function()
@@ -303,8 +305,8 @@ describe('Component', function()
       component:set_state({ name = 'updated' })
       vim.wait(10)
 
-      assert.are.same(component.state.count, 5)
-      assert.are.same(component.state.name, 'updated')
+      eq(component.state.count, 5)
+      eq(component.state.name, 'updated')
     end)
 
     it('should complete full lifecycle', function()
@@ -324,7 +326,7 @@ describe('Component', function()
       table.insert(lifecycle, 'unmounted')
 
       -- Note: component_did_mount is called by Renderer after windows are created
-      assert.are.same(lifecycle, {
+      eq(lifecycle, {
         'will_mount',
         'mounted',
         'will_unmount',

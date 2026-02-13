@@ -3,6 +3,8 @@ local highlight = require('vgit.core.highlight')
 local mock = require('luassert.mock')
 local spy = require('luassert.spy')
 
+local eq = assert.are.same
+
 describe('highlight:', function()
   before_each(function()
     vim.api = mock(vim.api, true)

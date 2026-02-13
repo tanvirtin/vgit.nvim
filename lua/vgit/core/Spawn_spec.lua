@@ -1,5 +1,7 @@
 local Spawn = require('vgit.core.Spawn')
 
+local eq = assert.are.same
+
 describe('Spawn:', function()
   describe('constructor', function()
     it('should construct Spawn with specifications', function()
@@ -35,7 +37,7 @@ describe('Spawn:', function()
         table.insert(output, line)
       end)
 
-      assert.are.same(output, {
+      eq(output, {
         'line1',
         'line2',
         'line3',

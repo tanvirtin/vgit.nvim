@@ -10,7 +10,9 @@ local it = async.it
 local before_each = async.before_each
 local after_each = async.after_each
 
-describe('GitBuffer', function()
+local eq = assert.are.same
+
+describe('GitBuffer:', function()
   local repo
   local test_file
 

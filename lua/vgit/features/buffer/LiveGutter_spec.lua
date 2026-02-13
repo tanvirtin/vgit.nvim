@@ -1,6 +1,6 @@
 local eq = assert.are.same
 
-describe('LiveGutter', function()
+describe('LiveGutter:', function()
   local LiveGutter
   local live_gutter_setting
 

@@ -6,7 +6,7 @@ local it = async.it
 local before_each = async.before_each
 local after_each = async.after_each
 
-describe('gitcli', function()
+describe('gitcli:', function()
   local gitcli = require('vgit.git.gitcli')
   local repo
 

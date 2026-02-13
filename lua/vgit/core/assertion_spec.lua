@@ -1,5 +1,7 @@
 local assertion = require('vgit.core.assertion')
 
+local eq = assert.are.same
+
 describe('assertion:', function()
   describe('assert', function()
     it('should not throw error if conditions are met', function()

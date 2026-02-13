@@ -1,11 +1,13 @@
 local blame_command = require('vgit.cli.commands.blame')
 
-describe('blame_command.parse_args', function()
+local eq = assert.are.same
+
+describe('blame_command:', function()
   it('should return defaults for empty args', function()
     local opts = blame_command.parse_args({})
     assert.is_nil(opts.file)
     assert.is_nil(opts.line_number)
-    assert.are.same({}, opts.flags)
+    eq({}, opts.flags)
   end)
 
   it('should detect file path', function()
@@ -20,7 +22,7 @@ describe('blame_command.parse_args', function()
 
   it('should detect flags', function()
     local opts = blame_command.parse_args({ '-w', '-C' })
-    assert.are.same({ '-w', '-C' }, opts.flags)
+    eq({ '-w', '-C' }, opts.flags)
   end)
 
   it('should parse file and line number together', function()
@@ -33,7 +35,7 @@ describe('blame_command.parse_args', function()
     local opts = blame_command.parse_args({ '-w', 'file.lua', '25' })
     assert.are.equal('file.lua', opts.file)
     assert.are.equal(25, opts.line_number)
-    assert.are.same({ '-w' }, opts.flags)
+    eq({ '-w' }, opts.flags)
   end)
 
   it('should use last file if multiple non-numeric, non-flag args given', function()
@@ -43,6 +45,6 @@ describe('blame_command.parse_args', function()
 
   it('should handle long flags', function()
     local opts = blame_command.parse_args({ '--show-email' })
-    assert.are.same({ '--show-email' }, opts.flags)
+    eq({ '--show-email' }, opts.flags)
   end)
 end)
