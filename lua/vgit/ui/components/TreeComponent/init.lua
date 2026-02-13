@@ -12,21 +12,19 @@ local DepthTree = lazy('vgit.ui.components.TreeComponent.DepthTree')
 local TreeComponent = Component:extend()
 
 function TreeComponent:constructor(props)
-  return {
-    props = props or {},
-    mounted = false,
-    state = {
-      list = props.list or {},
-      title = props.title or '',
-      hls = {},
-      virtual_texts = {},
-      shadow_list = {},
-    },
-    _element = nil,
-    _on_enter_callback = nil,
-    _on_move_callback = nil,
-    _keymaps_setup = false,
+  local instance = Component.constructor(self, props)
+  instance.state = {
+    list = props and props.list or {},
+    title = props and props.title or '',
+    hls = {},
+    virtual_texts = {},
+    shadow_list = {},
   }
+  instance._element = nil
+  instance._on_enter_callback = nil
+  instance._on_move_callback = nil
+  instance._keymaps_setup = false
+  return instance
 end
 
 function TreeComponent:get_display_name(filename)

@@ -75,7 +75,7 @@ function StatusDiffView:get_current_mark_index()
 end
 
 function StatusDiffView:get_hunk_alignment()
-  return view_utils.get_hunk_alignment()
+  return status_diff_view_setting:get('hunk_alignment')
 end
 
 function StatusDiffView:hunk_down()
@@ -573,9 +573,14 @@ function StatusDiffView:commit()
   self.commit_buf = buf
   self.commit_win = win
 
-  vim.keymap.set({ 'n', 'i' }, confirm_key, event.async(function()
-    self:_confirm_commit()
-  end), { buffer = buf, desc = 'Confirm commit' })
+  vim.keymap.set(
+    { 'n', 'i' },
+    confirm_key,
+    event.async(function()
+      self:_confirm_commit()
+    end),
+    { buffer = buf, desc = 'Confirm commit' }
+  )
 
   vim.keymap.set('n', cancel_key, function()
     self:_close_commit_split()

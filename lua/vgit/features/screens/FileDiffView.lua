@@ -39,9 +39,7 @@ function FileDiffView:constructor()
 end
 
 function FileDiffView:get_hunk_alignment()
-  local alignment = file_diff_view_setting:get('hunk_alignment')
-  if alignment ~= '' then return view_utils.get_hunk_alignment(alignment) end
-  return view_utils.get_hunk_alignment()
+  return file_diff_view_setting:get('hunk_alignment')
 end
 
 function FileDiffView:get_current_mark_index()
