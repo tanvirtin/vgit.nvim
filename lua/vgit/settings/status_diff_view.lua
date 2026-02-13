@@ -46,6 +46,14 @@ return Config({
       key = 'C',
       desc = 'Commit',
     },
+    commit_confirm = {
+      key = '<C-s>',
+      desc = 'Confirm commit',
+    },
+    commit_cancel = {
+      key = 'q',
+      desc = 'Cancel commit',
+    },
 
     toggle_view = {
       key = 't',

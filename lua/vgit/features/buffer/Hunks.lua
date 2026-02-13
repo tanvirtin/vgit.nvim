@@ -4,6 +4,7 @@ local Object = lazy('vgit.core.Object')
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
 local navigation = lazy('vgit.core.navigation')
+local statusline = lazy('vgit.core.statusline_state')
 local git_buffer_store = lazy('vgit.git.git_buffer_store')
 local live_gutter_setting = lazy('vgit.settings.live_gutter')
 
@@ -29,7 +30,8 @@ function Hunks:hunk_up()
   if not hunks or #hunks == 0 then return end
 
   local window = Window(0)
-  navigation.up(window, hunks)
+  local selected = navigation.up(window, hunks)
+  statusline.set_hunk(selected, #hunks)
 end
 
 function Hunks:hunk_down()
@@ -42,7 +44,8 @@ function Hunks:hunk_down()
   if not hunks or #hunks == 0 then return end
 
   local window = Window(0)
-  navigation.down(window, hunks)
+  local selected = navigation.down(window, hunks)
+  statusline.set_hunk(selected, #hunks)
 end
 
 function Hunks:cursor_hunk()
@@ -81,11 +84,12 @@ function Hunks:cursor_stage()
   if buffer:editing() then return end
 
   -- Performance: Deferred sync of only the current buffer after staging
-  vim.defer_fn(event.async(function()
-    if buffer:is_valid() then
-      git_buffer_store.dispatch(buffer, 'sync')
-    end
-  end), 200)
+  vim.defer_fn(
+    event.async(function()
+      if buffer:is_valid() then git_buffer_store.dispatch(buffer, 'sync') end
+    end),
+    200
+  )
 
   if not buffer:is_tracked() then
     local _, err = buffer:stage()

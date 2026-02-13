@@ -1327,40 +1327,47 @@ describe('StatusDiffView', function()
     end)
 
     describe('commit', function()
-      it('should prompt for commit message', function()
-        local prompted = false
-        package.loaded['vgit.core.console'].input = function()
-          prompted = true
-          return ''
-        end
+      it('should cancel on empty message via _confirm_commit', function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+          '',
+          '# comment line',
+        })
+        view.commit_buf = buf
+        view.commit_win = nil
 
-        view:commit()
-        assert.is_true(prompted)
-      end)
-
-      it('should cancel on empty message', function()
-        package.loaded['vgit.core.console'].input = function() return '' end
-
-        view:commit()
+        view:_confirm_commit()
 
         eq(0, #repo_calls)
         assert.is_true(#info_messages > 0)
       end)
 
-      it('should cancel on whitespace-only message', function()
-        package.loaded['vgit.core.console'].input = function() return '   \t  ' end
+      it('should filter out comment lines', function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+          'feat: add new feature',
+          '# This is a comment',
+          'More details here',
+        })
+        view.commit_buf = buf
+        view.commit_win = nil
 
-        view:commit()
+        view:_confirm_commit()
 
-        eq(0, #repo_calls)
+        eq(1, #repo_calls)
+        eq('commit', repo_calls[1][1])
+        eq('feat: add new feature\nMore details here', repo_calls[1][2])
       end)
 
-      it('should call repo:commit with message', function()
-        package.loaded['vgit.core.console'].input = function()
-          return 'feat: add new feature'
-        end
+      it('should call repo:commit with message via _confirm_commit', function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+          'feat: add new feature',
+        })
+        view.commit_buf = buf
+        view.commit_win = nil
 
-        view:commit()
+        view:_confirm_commit()
 
         eq(1, #repo_calls)
         eq('commit', repo_calls[1][1])
@@ -1368,14 +1375,16 @@ describe('StatusDiffView', function()
       end)
 
       it('should show success message after commit', function()
-        package.loaded['vgit.core.console'].input = function()
-          return 'test commit'
-        end
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+          'test commit',
+        })
+        view.commit_buf = buf
+        view.commit_win = nil
 
-        view:commit()
+        view:_confirm_commit()
 
         assert.is_true(#info_messages > 0)
-        -- One info for success
       end)
     end)
   end)

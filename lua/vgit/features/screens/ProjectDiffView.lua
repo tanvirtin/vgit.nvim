@@ -3,19 +3,20 @@ local fs = lazy('vgit.core.fs')
 local utils = lazy('vgit.core.utils')
 local Layout = lazy('vgit.ui.Layout')
 local event = lazy('vgit.core.event')
+local Window = lazy('vgit.core.Window')
 local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
+local statusline = lazy('vgit.core.statusline_state')
 local repository = lazy('vgit.git.repository')
-local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local view_utils = lazy('vgit.features.screens.view_utils')
-local hunks_setting = lazy('vgit.settings.hunks')
-local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
-local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
-local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
-local Window = lazy('vgit.core.Window')
 local scene_setting = lazy('vgit.settings.scene')
+local hunks_setting = lazy('vgit.settings.hunks')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local display_service = lazy('vgit.ui.display_service')
+local ComponentManager = lazy('vgit.ui.ComponentManager')
+local view_utils = lazy('vgit.features.screens.view_utils')
+local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
+local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
+local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
 
 local ProjectDiffView = Object:extend()
 
@@ -224,14 +225,39 @@ function ProjectDiffView:get_hunk_alignment()
   return view_utils.get_hunk_alignment()
 end
 
+function ProjectDiffView:_get_current_mark_index(component)
+  local marks = component.state and component.state.marks
+  if not marks or #marks == 0 then return nil, 0 end
+
+  local lnum = component:get_lnum()
+
+  for i, mark in ipairs(marks) do
+    if lnum >= mark.top and lnum <= mark.bot then
+      return i, #marks
+    elseif mark.top > lnum then
+      return math.max(1, i - 1), #marks
+    end
+  end
+
+  return #marks, #marks
+end
+
 function ProjectDiffView:hunk_up()
   local component = self:_get_active_component()
-  if component and component:is_valid() then component:hunk_up(self:get_hunk_alignment()) end
+  if component and component:is_valid() then
+    component:hunk_up(self:get_hunk_alignment())
+    local index, count = self:_get_current_mark_index(component)
+    if index then statusline.set_hunk(index, count) end
+  end
 end
 
 function ProjectDiffView:hunk_down()
   local component = self:_get_active_component()
-  if component and component:is_valid() then component:hunk_down(self:get_hunk_alignment()) end
+  if component and component:is_valid() then
+    component:hunk_down(self:get_hunk_alignment())
+    local index, count = self:_get_current_mark_index(component)
+    if index then statusline.set_hunk(index, count) end
+  end
 end
 
 function ProjectDiffView:jump_to_file()
@@ -241,12 +267,14 @@ function ProjectDiffView:jump_to_file()
   local lnum = component:get_lnum()
   local file_info = self.line_to_file_map[lnum]
 
-  console.debug.info(string.format(
-    '[ProjectDiffView:jump_to_file] cursor_lnum=%d, mapped_lnum=%s, file=%s',
-    lnum,
-    file_info and file_info.lnum or 'nil',
-    file_info and file_info.filename or 'nil'
-  ))
+  console.debug.info(
+    string.format(
+      '[ProjectDiffView:jump_to_file] cursor_lnum=%d, mapped_lnum=%s, file=%s',
+      lnum,
+      file_info and file_info.lnum or 'nil',
+      file_info and file_info.filename or 'nil'
+    )
+  )
 
   if not file_info or not file_info.filename then return end
 
@@ -261,11 +289,7 @@ function ProjectDiffView:jump_to_file()
   local window = Window(0)
   window:set_lnum(target_lnum)
 
-  console.debug.info(string.format(
-    '[ProjectDiffView:jump_to_file] opened file=%s, set lnum=%d',
-    filename,
-    target_lnum
-  ))
+  console.debug.info(string.format('[ProjectDiffView:jump_to_file] opened file=%s, set lnum=%d', filename, target_lnum))
 end
 
 function ProjectDiffView:get_key(keymap)

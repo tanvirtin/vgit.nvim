@@ -2,9 +2,11 @@ local lazy = require('vgit.core.lazy')
 local event = lazy('vgit.core.event')
 local utils = lazy('vgit.core.utils')
 local console = lazy('vgit.core.console')
-local GitBuffer = lazy('vgit.git.GitBuffer')
+local statusline = lazy('vgit.core.statusline_state')
 local git_repo = lazy('vgit.git.git_repo')
+local GitBuffer = lazy('vgit.git.GitBuffer')
 local assertion = lazy('vgit.core.assertion')
+local repository = lazy('vgit.git.repository')
 
 local buffers = {}
 local events = {
@@ -32,6 +34,15 @@ git_buffer_store.register_events = event.async(function()
       if buffer.git_file then buffer.git_file:clear_blob_cache() end
       git_buffer_store.dispatch(buffer, 'sync')
     end)
+
+    local repo = repository.get_cached()
+    if repo then
+      local refs = repo:refs()
+      if refs then
+        local branch = refs:current_branch()
+        if branch then statusline.set_branch(branch) end
+      end
+    end
   end)
 end)
 
