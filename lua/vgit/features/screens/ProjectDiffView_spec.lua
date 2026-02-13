@@ -1,6 +1,6 @@
 local eq = assert.are.same
 
-describe('ProjectDiffView', function()
+describe('ProjectDiffView:', function()
   local ProjectDiffView
 
   before_each(function()

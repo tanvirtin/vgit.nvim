@@ -15,7 +15,7 @@ local function make_git_file(overrides)
   return obj
 end
 
-describe('GitFile', function()
+describe('GitFile:', function()
   describe('constructor fields', function()
     it('should have reponame, filename, filetype set', function()
       local file = make_git_file({

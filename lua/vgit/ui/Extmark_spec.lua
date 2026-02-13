@@ -1,6 +1,8 @@
 local Extmark = require('vgit.ui.Extmark')
 
-describe('Extmark', function()
+local eq = assert.are.same
+
+describe('Extmark:', function()
   describe('constructor', function()
     it('should create with buffer number and namespace', function()
       local extmark = Extmark(0)

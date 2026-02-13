@@ -1,6 +1,8 @@
 local Diff = require('vgit.core.diff.Diff')
 local GitHunk = require('vgit.git.GitHunk')
 
+local eq = assert.are.same
+
 -- Helper to create a hunk with diff lines
 local function make_hunk(header, diff_lines)
   local hunk = GitHunk(header)
@@ -10,15 +12,15 @@ local function make_hunk(header, diff_lines)
   return hunk
 end
 
-describe('Diff', function()
+describe('Diff:', function()
   describe('constructor', function()
     it('should set defaults', function()
       local diff = Diff()
-      assert.are.same({}, diff.hunks)
-      assert.are.same({}, diff.marks)
-      assert.are.same({}, diff.lines)
-      assert.are.same({}, diff.lnum_changes)
-      assert.are.same({ added = 0, removed = 0 }, diff.stat)
+      eq({}, diff.hunks)
+      eq({}, diff.marks)
+      eq({}, diff.lines)
+      eq({}, diff.lnum_changes)
+      eq({ added = 0, removed = 0 }, diff.stat)
     end)
 
     it('should accept opts', function()
@@ -46,29 +48,29 @@ describe('Diff', function()
       local diff = Diff()
       local lines = { 'line1', 'line2' }
       local result = diff:generate({}, lines, 'unified')
-      assert.are.same(lines, result.lines)
+      eq(lines, result.lines)
     end)
 
     it('should dispatch to split', function()
       local diff = Diff()
       local lines = { 'line1', 'line2' }
       local result = diff:generate({}, lines, 'split')
-      assert.are.same(lines, result.current_lines)
-      assert.are.same(lines, result.previous_lines)
+      eq(lines, result.current_lines)
+      eq(lines, result.previous_lines)
     end)
 
     it('should dispatch to unified_deleted when is_deleted', function()
       local diff = Diff()
       local lines = { 'old1', 'old2' }
       local result = diff:generate({}, lines, 'unified', { is_deleted = true })
-      assert.are.same(lines, result.lines)
+      eq(lines, result.lines)
     end)
 
     it('should dispatch to split_deleted when is_deleted', function()
       local diff = Diff()
       local lines = { 'old1', 'old2' }
       local result = diff:generate({}, lines, 'split', { is_deleted = true })
-      assert.are.same(lines, result.previous_lines)
+      eq(lines, result.previous_lines)
     end)
   end)
 
@@ -77,8 +79,8 @@ describe('Diff', function()
       local diff = Diff()
       local lines = { 'a', 'b', 'c' }
       local result = diff:generate_unified({}, lines)
-      assert.are.same(lines, result.lines)
-      assert.are.same({}, result.hunks)
+      eq(lines, result.lines)
+      eq({}, result.hunks)
     end)
 
     it('should handle add hunk', function()
@@ -157,8 +159,8 @@ describe('Diff', function()
       local diff = Diff()
       local lines = { 'a', 'b' }
       local result = diff:generate_split({}, lines)
-      assert.are.same(lines, result.current_lines)
-      assert.are.same(lines, result.previous_lines)
+      eq(lines, result.current_lines)
+      eq(lines, result.previous_lines)
     end)
 
     it('should handle add hunk with void in previous', function()
@@ -236,7 +238,7 @@ describe('Diff', function()
       local diff = Diff()
       local lines = { 'a', 'b' }
       local result = diff:generate_unified_deleted({}, lines)
-      assert.are.same(lines, result.lines)
+      eq(lines, result.lines)
     end)
 
     it('should mark all lines as remove', function()
@@ -269,8 +271,8 @@ describe('Diff', function()
       local diff = Diff()
       local lines = { 'a', 'b' }
       local result = diff:generate_split_deleted({}, lines)
-      assert.are.same(lines, result.previous_lines)
-      assert.are.same({}, result.current_lines)
+      eq(lines, result.previous_lines)
+      eq({}, result.current_lines)
     end)
 
     it('should mark previous as remove and current as void', function()
@@ -395,7 +397,7 @@ describe('Diff', function()
       local lines = { '<<<', 'c', '===', 'i', '>>>' }
       local result = diff:generate_unified_conflict(conflicts, lines)
 
-      assert.are.same({ added = 0, removed = 0 }, result.stat)
+      eq({ added = 0, removed = 0 }, result.stat)
     end)
   end)
 
@@ -458,7 +460,7 @@ describe('Diff', function()
       local lines = { '<<<', 'c', '===', 'i', '>>>' }
       local result = diff:generate_split_conflict(conflicts, lines)
 
-      assert.are.same({ added = 0, removed = 0 }, result.stat)
+      eq({ added = 0, removed = 0 }, result.stat)
     end)
   end)
 

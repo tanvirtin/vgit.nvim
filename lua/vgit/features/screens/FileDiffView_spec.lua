@@ -17,7 +17,7 @@ local mock_event = {
 
 package.loaded['vgit.core.event'] = mock_event
 
-describe('FileDiffView', function()
+describe('FileDiffView:', function()
   local FileDiffView
   local original_packages = {}
 

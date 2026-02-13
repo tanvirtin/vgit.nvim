@@ -9,7 +9,7 @@ local function make_repo(path)
   return { get_path = function() return path end }
 end
 
-describe('GitHistory', function()
+describe('GitHistory:', function()
   describe('unit', function()
     describe('constructor', function()
       it('should error when repository is nil', function()

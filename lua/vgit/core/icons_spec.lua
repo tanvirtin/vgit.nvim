@@ -1,4 +1,6 @@
-describe('icons', function()
+local eq = assert.are.same
+
+describe('icons:', function()
   local icons
 
   before_each(function()

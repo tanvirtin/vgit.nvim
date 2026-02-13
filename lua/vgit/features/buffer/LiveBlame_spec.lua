@@ -1,6 +1,6 @@
 local eq = assert.are.same
 
-describe('LiveBlame', function()
+describe('LiveBlame:', function()
   local LiveBlame
 
   before_each(function()

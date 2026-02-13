@@ -22,7 +22,7 @@ local mock_event = {
 -- Install the mock before any other modules load
 package.loaded['vgit.core.event'] = mock_event
 
-describe('StatusDiffView', function()
+describe('StatusDiffView:', function()
   local StatusDiffView
   local original_packages = {}
 

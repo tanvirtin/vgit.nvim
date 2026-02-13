@@ -1,6 +1,6 @@
 local eq = assert.are.same
 
-describe('BlameInfoComponent', function()
+describe('BlameInfoComponent:', function()
   local BlameInfoComponent
 
   before_each(function()

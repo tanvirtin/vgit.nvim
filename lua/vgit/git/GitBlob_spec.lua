@@ -5,7 +5,7 @@ local async = require('tests.helpers.async')({ it = it, before_each = before_eac
 
 local eq = assert.are.same
 
-describe('GitBlob', function()
+describe('GitBlob:', function()
   -- Unit tests (no repo needed)
   describe('constructor', function()
     it('should error when repo is nil', function()

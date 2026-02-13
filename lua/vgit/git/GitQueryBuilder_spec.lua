@@ -1,6 +1,8 @@
 local GitQueryBuilder = require('vgit.git.GitQueryBuilder')
 
-describe('GitQueryBuilder', function()
+local eq = assert.are.same
+
+describe('GitQueryBuilder:', function()
   describe('constructor', function()
     it('should error when repository is nil', function()
       assert.has_error(function()

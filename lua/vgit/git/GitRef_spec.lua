@@ -9,7 +9,7 @@ local function make_repo(path)
   return { get_path = function() return path end }
 end
 
-describe('GitRef', function()
+describe('GitRef:', function()
   -- Unit tests (no repo needed)
   describe('constructor', function()
     it('should error when repository is nil', function()

@@ -1,6 +1,6 @@
 local eq = assert.are.same
 
-describe('repository', function()
+describe('repository:', function()
   local repository
   local original_git_repository
 

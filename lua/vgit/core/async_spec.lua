@@ -2,7 +2,7 @@ local async = require('vgit.core.async')
 
 local eq = assert.are.same
 
-describe('async', function()
+describe('async:', function()
   describe('wrap', function()
     it('should return a function', function()
       local wrapped = async.wrap(function(cb) cb() end, 1)

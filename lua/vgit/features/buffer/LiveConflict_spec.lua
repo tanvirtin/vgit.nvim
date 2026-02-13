@@ -1,6 +1,6 @@
 local eq = assert.are.same
 
-describe('LiveConflict', function()
+describe('LiveConflict:', function()
   local LiveConflict
 
   before_each(function()

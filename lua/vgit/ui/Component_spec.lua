@@ -1,5 +1,7 @@
 local Component = require('vgit.ui.Component')
 
+local eq = assert.are.same
+
 -- TestComponent that tracks lifecycle calls via a log table
 local TestComponent = Component:extend()
 
@@ -51,7 +53,7 @@ function GatedComponent:should_component_update(next_props, next_state)
   return self._allow_update
 end
 
-describe('Component', function()
+describe('Component:', function()
   local component
 
   before_each(function()
@@ -61,16 +63,16 @@ describe('Component', function()
   describe('constructor', function()
     it('should set initial props from argument', function()
       local c = TestComponent({ foo = 'bar' })
-      assert.are.same({ foo = 'bar' }, c.props)
+      eq({ foo = 'bar' }, c.props)
     end)
 
     it('should default props to empty table when nil', function()
       local c = TestComponent()
-      assert.are.same({}, c.props)
+      eq({}, c.props)
     end)
 
     it('should set initial state from get_initial_state', function()
-      assert.are.same({ count = 0 }, component.state)
+      eq({ count = 0 }, component.state)
     end)
 
     it('should start unmounted', function()
@@ -90,14 +92,14 @@ describe('Component', function()
 
     it('should call component_will_mount before setting mounted', function()
       component:mount()
-      assert.are.same({ 'will_mount' }, component._log)
+      eq({ 'will_mount' }, component._log)
     end)
 
     it('should be idempotent - second mount is a no-op', function()
       component:mount()
       component._log = {}
       component:mount()
-      assert.are.same({}, component._log)
+      eq({}, component._log)
       assert.is_true(component.mounted)
     end)
   end)
@@ -113,7 +115,7 @@ describe('Component', function()
       component:mount()
       component._log = {}
       component:unmount()
-      assert.are.same({ 'will_unmount' }, component._log)
+      eq({ 'will_unmount' }, component._log)
     end)
 
     it('should reset _needs_update', function()
@@ -125,7 +127,7 @@ describe('Component', function()
 
     it('should be idempotent - unmount when not mounted is a no-op', function()
       component:unmount()
-      assert.are.same({}, component._log)
+      eq({}, component._log)
       assert.is_false(component.mounted)
     end)
   end)
@@ -158,12 +160,12 @@ describe('Component', function()
       component:mount()
       component._log = {}
       component:set_props({ color = 'red' })
-      assert.are.same({ 'will_update', 'render', 'did_update' }, component._log)
+      eq({ 'will_update', 'render', 'did_update' }, component._log)
     end)
 
     it('should not trigger update cycle when not mounted', function()
       component:set_props({ color = 'red' })
-      assert.are.same({}, component._log)
+      eq({}, component._log)
       assert.are.equal('red', component.props.color)
     end)
 
@@ -171,7 +173,7 @@ describe('Component', function()
       component:mount()
       component._log = {}
       component:set_props(nil)
-      assert.are.same({}, component._log)
+      eq({}, component._log)
     end)
 
     it('should call callback after update', function()
@@ -191,7 +193,7 @@ describe('Component', function()
       component:mount()
       component._log = {}
       component:set_props({ x = 1 })
-      assert.are.same({ count = 0 }, component._prev_state_from_hook)
+      eq({ count = 0 }, component._prev_state_from_hook)
     end)
   end)
 
@@ -206,12 +208,12 @@ describe('Component', function()
       component:mount()
       component._log = {}
       component:set_state({ count = 1 })
-      assert.are.same({ 'will_update', 'render', 'did_update' }, component._log)
+      eq({ 'will_update', 'render', 'did_update' }, component._log)
     end)
 
     it('should not trigger update cycle when not mounted', function()
       component:set_state({ count = 1 })
-      assert.are.same({}, component._log)
+      eq({}, component._log)
       assert.are.equal(1, component.state.count)
     end)
 
@@ -219,7 +221,7 @@ describe('Component', function()
       component:mount()
       component._log = {}
       component:set_state(nil)
-      assert.are.same({}, component._log)
+      eq({}, component._log)
     end)
 
     it('should call callback after update', function()
@@ -233,7 +235,7 @@ describe('Component', function()
       component:mount()
       component._log = {}
       component:set_state({ count = 42 })
-      assert.are.same({ count = 0 }, component._prev_state_from_hook)
+      eq({ count = 0 }, component._prev_state_from_hook)
     end)
   end)
 
@@ -244,7 +246,7 @@ describe('Component', function()
       c._log = {}
       c._allow_update = false
       c:set_props({ x = 1 })
-      assert.are.same({}, c._log)
+      eq({}, c._log)
     end)
 
     it('should skip update when should_component_update returns false (set_state)', function()
@@ -253,7 +255,7 @@ describe('Component', function()
       c._log = {}
       c._allow_update = false
       c:set_state({ count = 99 })
-      assert.are.same({}, c._log)
+      eq({}, c._log)
       -- State should not be updated when gate returns false
       assert.are.equal(0, c.state.count)
     end)
@@ -272,7 +274,7 @@ describe('Component', function()
     it('should not run when not mounted', function()
       component._needs_update = true
       component:update(component.state)
-      assert.are.same({}, component._log)
+      eq({}, component._log)
     end)
 
     it('should not run when _needs_update is false', function()
@@ -280,7 +282,7 @@ describe('Component', function()
       component._log = {}
       component._needs_update = false
       component:update(component.state)
-      assert.are.same({}, component._log)
+      eq({}, component._log)
     end)
 
     it('should call will_update -> render -> did_update in order', function()
@@ -288,7 +290,7 @@ describe('Component', function()
       component._log = {}
       component._needs_update = true
       component:update({ count = 0 })
-      assert.are.same({ 'will_update', 'render', 'did_update' }, component._log)
+      eq({ 'will_update', 'render', 'did_update' }, component._log)
     end)
 
     it('should reset _needs_update after update', function()
@@ -345,14 +347,14 @@ describe('Component', function()
   describe('lifecycle ordering', function()
     it('should follow mount -> will_mount sequence', function()
       component:mount()
-      assert.are.same({ 'will_mount' }, component._log)
+      eq({ 'will_mount' }, component._log)
       assert.is_true(component.mounted)
     end)
 
     it('should follow full mount -> set_props cycle', function()
       component:mount()
       component:set_props({ x = 1 })
-      assert.are.same({
+      eq({
         'will_mount',
         'will_update',
         'render',
@@ -364,7 +366,7 @@ describe('Component', function()
       component:mount()
       component:set_state({ count = 10 })
       component:unmount()
-      assert.are.same({
+      eq({
         'will_mount',
         'will_update',
         'render',

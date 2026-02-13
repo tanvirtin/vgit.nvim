@@ -1,5 +1,7 @@
 local Color = require('vgit.core.Color')
 
+local eq = assert.are.same
+
 describe('Color:', function()
   describe('constructor', function()
     it('should initialize Color object with spec', function()

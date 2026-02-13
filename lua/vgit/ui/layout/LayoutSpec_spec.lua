@@ -2,7 +2,7 @@ local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
 
 local eq = assert.are.same
 
-describe('LayoutSpec', function()
+describe('LayoutSpec:', function()
   local mock_view
 
   before_each(function()

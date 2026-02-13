@@ -8,6 +8,8 @@ local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
 local Object = require('vgit.core.Object')
 local ComponentGroup = require('vgit.ui.ComponentGroup')
 
+local eq = assert.are.same
+
 -- Create a minimal ComponentManager-like object that has parse_layout_spec
 -- but avoids requiring the full module (which imports LayoutRenderer/LayoutContext at load time).
 local function create_manager()
@@ -36,7 +38,7 @@ local function mock_child_component(layout_spec, opts)
   }
 end
 
-describe('ComponentManager', function()
+describe('ComponentManager:', function()
   local mgr
 
   before_each(function()
@@ -52,7 +54,7 @@ describe('ComponentManager', function()
       }
       local result = mgr:parse_layout_spec(spec)
       assert.are.equal(LayoutSpec.Type.FLEX, result.type)
-      assert.are.same({}, result.children)
+      eq({}, result.children)
     end)
 
     it('should mount child components found in children array', function()

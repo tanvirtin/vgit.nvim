@@ -1,6 +1,8 @@
 local DiffCalculator = require('vgit.ui.calculators.DiffCalculator')
 
-describe('DiffCalculator', function()
+local eq = assert.are.same
+
+describe('DiffCalculator:', function()
   local calc
 
   before_each(function()
@@ -81,8 +83,8 @@ describe('DiffCalculator', function()
       assert.are.equal(1, result.row) -- lnum - 1
       assert.are.equal(0, result.col)
       assert.are.equal(2, #result.texts)
-      assert.are.same({ 'hello ', nil }, result.texts[1])
-      assert.are.same({ 'world', 'GitWordAdd' }, result.texts[2])
+      eq({ 'hello ', nil }, result.texts[1])
+      eq({ 'world', 'GitWordAdd' }, result.texts[2])
     end)
 
     it('should use GitWordDelete for remove type', function()
@@ -96,8 +98,8 @@ describe('DiffCalculator', function()
           },
         },
       }, 3)
-      assert.are.same({ 'deleted', 'GitWordDelete' }, result.texts[1])
-      assert.are.same({ ' text', nil }, result.texts[2])
+      eq({ 'deleted', 'GitWordDelete' }, result.texts[1])
+      eq({ ' text', nil }, result.texts[2])
     end)
 
     it('should skip operation 1 (insertions in other side)', function()
@@ -114,8 +116,8 @@ describe('DiffCalculator', function()
       }, 1)
       -- Operation 1 should be skipped
       assert.are.equal(2, #result.texts)
-      assert.are.same({ 'same', nil }, result.texts[1])
-      assert.are.same({ 'changed', 'GitWordAdd' }, result.texts[2])
+      eq({ 'same', nil }, result.texts[1])
+      eq({ 'changed', 'GitWordAdd' }, result.texts[2])
     end)
 
     it('should handle empty word_diff', function()

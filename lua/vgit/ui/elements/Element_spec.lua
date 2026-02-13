@@ -1,5 +1,7 @@
 local Element = require('vgit.ui.elements.Element')
 
+local eq = assert.are.same
+
 -- Helper to create an element with valid floating window config
 local function create_element(overrides)
   overrides = overrides or {}
@@ -25,7 +27,7 @@ local function create_element(overrides)
   }, overrides))
 end
 
-describe('Element', function()
+describe('Element:', function()
   after_each(function()
     -- Clean up all buffers/windows created during tests
     pcall(function()
@@ -64,7 +66,7 @@ describe('Element', function()
 
     it('should default props to empty table', function()
       local el = Element()
-      assert.are.same({}, el.props)
+      eq({}, el.props)
     end)
   end)
 
@@ -104,7 +106,7 @@ describe('Element', function()
       el._lines = { 'hello', 'world' }
       el:mount()
       local lines = el:get_lines()
-      assert.are.same({ 'hello', 'world' }, lines)
+      eq({ 'hello', 'world' }, lines)
       assert.is_nil(el._lines)
     end)
   end)
@@ -158,7 +160,7 @@ describe('Element', function()
       el:mount()
       el:set_lines({ 'line1', 'line2', 'line3' })
       local lines = el:get_lines()
-      assert.are.same({ 'line1', 'line2', 'line3' }, lines)
+      eq({ 'line1', 'line2', 'line3' }, lines)
     end)
 
     it('should clear lines', function()
@@ -167,7 +169,7 @@ describe('Element', function()
       el:set_lines({ 'line1', 'line2' })
       el:clear_lines()
       local lines = el:get_lines()
-      assert.are.same({ '' }, lines)
+      eq({ '' }, lines)
     end)
 
     it('should get line count', function()
@@ -179,7 +181,7 @@ describe('Element', function()
 
     it('should return empty table for get_lines when not valid', function()
       local el = create_element()
-      assert.are.same({}, el:get_lines())
+      eq({}, el:get_lines())
     end)
 
     it('should return 0 for get_line_count when not valid', function()
@@ -226,7 +228,7 @@ describe('Element', function()
     it('should return default cursor when not valid', function()
       local el = create_element()
       local cursor = el:get_cursor()
-      assert.are.same({ 1, 1 }, cursor)
+      eq({ 1, 1 }, cursor)
     end)
 
     it('should return 1 for get_lnum when not valid', function()

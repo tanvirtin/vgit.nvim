@@ -9,7 +9,9 @@ package.loaded['vgit.core.console'] = {
 
 local router = require('vgit.cli.router')
 
-describe('router', function()
+local eq = assert.are.same
+
+describe('router:', function()
   before_each(function()
     last_error = nil
   end)
@@ -57,19 +59,19 @@ describe('router', function()
         it('should dispatch to the handler with no extra args', function()
           router.execute({ cmd })
           assert.is_nil(last_error)
-          assert.are.same({}, captured_args)
+          eq({}, captured_args)
         end)
 
         it('should forward extra args to the handler', function()
           router.execute({ cmd, '--cached', 'file.lua' })
           assert.is_nil(last_error)
-          assert.are.same({ '--cached', 'file.lua' }, captured_args)
+          eq({ '--cached', 'file.lua' }, captured_args)
         end)
 
         it('should forward a single extra arg to the handler', function()
           router.execute({ cmd, '--staged' })
           assert.is_nil(last_error)
-          assert.are.same({ '--staged' }, captured_args)
+          eq({ '--staged' }, captured_args)
         end)
       end)
     end

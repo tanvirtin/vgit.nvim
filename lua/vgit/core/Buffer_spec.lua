@@ -4,7 +4,9 @@ local Window = require('vgit.core.Window')
 local Buffer = require('vgit.core.Buffer')
 local renderer = require('vgit.core.renderer')
 
-describe('Buffer', function()
+local eq = assert.are.same
+
+describe('Buffer:', function()
   local bufnr
   local buffer
 
@@ -15,7 +17,7 @@ describe('Buffer', function()
 
   describe('constructor', function()
     it('should initialize buffer with a buffer number', function()
-      assert.are.same(buffer.bufnr, bufnr)
+      eq(buffer.bufnr, bufnr)
     end)
   end)
 
@@ -47,7 +49,7 @@ describe('Buffer', function()
       local on_render = function() end
       buffer:attach_to_renderer(on_render)
 
-      assert.are.same(on_render, buffer.on_render)
+      eq(on_render, buffer.on_render)
       assert.is_true(buffer.is_attached_to_screen)
       assert.is_true(renderer.buffers[bufnr] ~= nil)
     end)
@@ -58,7 +60,7 @@ describe('Buffer', function()
       buffer:attach_to_renderer(function() end)
       buffer:detach_from_renderer()
 
-      assert.are.same(renderer.buffers[bufnr], nil)
+      eq(renderer.buffers[bufnr], nil)
     end)
   end)
 
@@ -168,14 +170,14 @@ describe('Buffer', function()
   describe('get_lines', function()
     it('should get buffer lines', function()
       vim.api.nvim_buf_set_lines(buffer.bufnr, 0, -1, false, { 'line1', 'line2' })
-      assert.are.same(buffer:get_lines(), { 'line1', 'line2' })
+      eq(buffer:get_lines(), { 'line1', 'line2' })
     end)
   end)
 
   describe('set_lines', function()
     it('should set buffer lines', function()
       buffer:set_lines({ 'line1', 'line2' })
-      assert.are.same(buffer:get_lines(), { 'line1', 'line2' })
+      eq(buffer:get_lines(), { 'line1', 'line2' })
     end)
   end)
 
@@ -277,7 +279,7 @@ describe('Buffer', function()
         changed = 0,
         removed = 0,
       })
-      assert.are.same(vim.api.nvim_buf_get_var(buffer.bufnr, 'vgit_status'), {
+      eq(vim.api.nvim_buf_get_var(buffer.bufnr, 'vgit_status'), {
         added = 0,
         changed = 0,
         removed = 0,

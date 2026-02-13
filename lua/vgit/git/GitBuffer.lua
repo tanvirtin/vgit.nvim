@@ -67,7 +67,7 @@ function GitBuffer:clear_conflicts(top, bot)
   return self
 end
 
-function Buffer:clear_blames(top, bot)
+function GitBuffer:clear_blames(top, bot)
   top = top or 0
   bot = bot or -1
 
@@ -75,7 +75,7 @@ function Buffer:clear_blames(top, bot)
   return self
 end
 
-function Buffer:clear_signs(top, bot)
+function GitBuffer:clear_signs(top, bot)
   top = top or 0
   bot = bot or -1
 
@@ -369,7 +369,7 @@ function GitBuffer:render_conflicts(top, bot)
   return self
 end
 
-function Buffer:render_signs(top, bot)
+function GitBuffer:render_signs(top, bot)
   if not self.signs_dirty then return self end
   self.signs_dirty = false
 
@@ -386,7 +386,7 @@ function Buffer:render_signs(top, bot)
   return self
 end
 
-function Buffer:render_blames(top, bot)
+function GitBuffer:render_blames(top, bot)
   top = top or 0
   bot = bot or -1
 

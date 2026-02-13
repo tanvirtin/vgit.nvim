@@ -2,7 +2,7 @@ local eq = assert.are.same
 
 local DiffLayoutGenerator = require('vgit.core.diff.layout.DiffLayoutGenerator')
 
-describe('DiffLayoutGenerator', function()
+describe('DiffLayoutGenerator:', function()
   describe('assert_layout_type', function()
     local gen
 

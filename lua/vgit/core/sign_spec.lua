@@ -2,6 +2,8 @@ local sign = require('vgit.core.sign')
 local mock = require('luassert.mock')
 local spy = require('luassert.spy')
 
+local eq = assert.are.same
+
 describe('sign:', function()
   before_each(function()
     vim.fn.sign_define = mock(vim.fn.sign_define, true)

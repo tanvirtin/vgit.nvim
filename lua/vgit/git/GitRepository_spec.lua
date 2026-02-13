@@ -5,7 +5,7 @@ local async = require('tests.helpers.async')({ it = it, before_each = before_eac
 
 local eq = assert.are.same
 
-describe('GitRepository', function()
+describe('GitRepository:', function()
   -- ================================================================
   -- Unit tests (no repo needed)
   -- ================================================================

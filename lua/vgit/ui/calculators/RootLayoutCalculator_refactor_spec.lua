@@ -2,7 +2,9 @@ local RootLayoutCalculator = require('vgit.ui.calculators.RootLayoutCalculator')
 local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
 local LayoutBounds = require('vgit.ui.layout.LayoutBounds')
 
-describe('RootLayoutCalculator Refactor Tests', function()
+local eq = assert.are.same
+
+describe('RootLayoutCalculator:', function()
   local calculator
   local parent_bounds
 

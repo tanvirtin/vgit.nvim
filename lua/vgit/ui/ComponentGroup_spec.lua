@@ -1,5 +1,7 @@
 local ComponentGroup = require('vgit.ui.ComponentGroup')
 
+local eq = assert.are.same
+
 local function mock_component(name)
   return {
     name = name,
@@ -36,7 +38,7 @@ local function mock_renderer_with_context(context_props)
   }
 end
 
-describe('ComponentGroup', function()
+describe('ComponentGroup:', function()
   local group
 
   before_each(function()
@@ -48,7 +50,7 @@ describe('ComponentGroup', function()
       local c = mock_component('a')
       group:mount(c, {})
       assert.is_true(c.mounted)
-      assert.are.same({ 'mount' }, c._log)
+      eq({ 'mount' }, c._log)
       assert.are.equal(1, #group:get_mounted_components())
     end)
 
@@ -56,7 +58,7 @@ describe('ComponentGroup', function()
       local c = mock_component('a')
       c.mounted = true
       group:mount(c, {})
-      assert.are.same({}, c._log)
+      eq({}, c._log)
       assert.are.equal(0, #group:get_mounted_components())
     end)
 
@@ -103,8 +105,8 @@ describe('ComponentGroup', function()
       group:mount(a, {})
       group:mount(b, {})
       group:call_did_mount()
-      assert.are.same({ 'mount', 'did_mount' }, a._log)
-      assert.are.same({ 'mount', 'did_mount' }, b._log)
+      eq({ 'mount', 'did_mount' }, a._log)
+      eq({ 'mount', 'did_mount' }, b._log)
     end)
 
     it('should handle components without component_did_mount method', function()
@@ -156,8 +158,8 @@ describe('ComponentGroup', function()
       group:mount(a, {})
       group:mount(b, {})
       group:on('BufEnter', function() end)
-      assert.are.same({ 'mount', 'on:BufEnter' }, a._log)
-      assert.are.same({ 'mount', 'on:BufEnter' }, b._log)
+      eq({ 'mount', 'on:BufEnter' }, a._log)
+      eq({ 'mount', 'on:BufEnter' }, b._log)
     end)
   end)
 
@@ -171,8 +173,8 @@ describe('ComponentGroup', function()
         { key = 'q', handler = function() end },
         { key = 'j', handler = function() end },
       })
-      assert.are.same({ 'mount', 'set_keymap:q', 'set_keymap:j' }, a._log)
-      assert.are.same({ 'mount', 'set_keymap:q', 'set_keymap:j' }, b._log)
+      eq({ 'mount', 'set_keymap:q', 'set_keymap:j' }, a._log)
+      eq({ 'mount', 'set_keymap:q', 'set_keymap:j' }, b._log)
     end)
   end)
 end)

@@ -1,7 +1,9 @@
 local DepthTree = require('vgit.ui.components.TreeComponent.DepthTree')
 local fs = require('vgit.core.fs')
 
-describe('DepthTree', function()
+local eq = assert.are.same
+
+describe('DepthTree:', function()
   local sep = fs.sep
 
   describe('get_parent_folder', function()
@@ -55,7 +57,7 @@ describe('DepthTree', function()
         current = 'src',
       }
       local node = tree:create_node(entry)
-      assert.are.same({}, node.items)
+      eq({}, node.items)
       assert.is_true(node.open)
       assert.are.equal('src', node.value)
     end)

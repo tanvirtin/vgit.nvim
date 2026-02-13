@@ -1,6 +1,8 @@
 local CustomHunkGenerator = require('vgit.core.diff.hunks.CustomHunkGenerator')
 
-describe('CustomHunkGenerator', function()
+local eq = assert.are.same
+
+describe('CustomHunkGenerator:', function()
   local generator
 
   before_each(function()
@@ -10,7 +12,7 @@ describe('CustomHunkGenerator', function()
   describe('generate', function()
     it('should return empty for no opts', function()
       local result = generator:generate({ 'a', 'b' })
-      assert.are.same({}, result)
+      eq({}, result)
     end)
 
     it('should dispatch to untracked when opts.untracked', function()
@@ -29,12 +31,12 @@ describe('CustomHunkGenerator', function()
   describe('_generate_untracked', function()
     it('should return empty for nil lines', function()
       local result = generator:_generate_untracked(nil)
-      assert.are.same({}, result)
+      eq({}, result)
     end)
 
     it('should return empty for empty lines', function()
       local result = generator:_generate_untracked({})
-      assert.are.same({}, result)
+      eq({}, result)
     end)
 
     it('should create add hunk spanning all lines', function()
@@ -65,12 +67,12 @@ describe('CustomHunkGenerator', function()
   describe('_generate_deleted', function()
     it('should return empty for nil lines', function()
       local result = generator:_generate_deleted(nil)
-      assert.are.same({}, result)
+      eq({}, result)
     end)
 
     it('should return empty for empty lines', function()
       local result = generator:_generate_deleted({})
-      assert.are.same({}, result)
+      eq({}, result)
     end)
 
     it('should create remove hunk spanning all lines', function()

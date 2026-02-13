@@ -1,7 +1,9 @@
 local spy = require('luassert.spy')
 local renderer = require('vgit.core.renderer')
 
-describe('renderer', function()
+local eq = assert.are.same
+
+describe('renderer:', function()
   local buffer = { bufnr = 1, on_render = function() end }
 
   before_each(function()

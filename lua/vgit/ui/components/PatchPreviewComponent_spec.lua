@@ -23,7 +23,7 @@ local function create_patch_preview(overrides)
   return instance
 end
 
-describe('PatchPreviewComponent', function()
+describe('PatchPreviewComponent:', function()
   describe('build_patch_lines_from_entries', function()
     it('should build lines from file_header entries', function()
       local component = create_patch_preview({})

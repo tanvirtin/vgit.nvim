@@ -1,7 +1,7 @@
-local cache = {}
+local module_cache = {}
 
 local function lazy(mod_path)
-  if cache[mod_path] then return cache[mod_path] end
+  if module_cache[mod_path] then return module_cache[mod_path] end
 
   local proxy = {}
   local resolved = false
@@ -37,7 +37,7 @@ local function lazy(mod_path)
     end,
   })
 
-  cache[mod_path] = proxy
+  module_cache[mod_path] = proxy
 
   return proxy
 end

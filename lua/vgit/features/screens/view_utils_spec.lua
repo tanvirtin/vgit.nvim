@@ -2,7 +2,7 @@ local view_utils = require('vgit.features.screens.view_utils')
 
 local eq = assert.are.same
 
-describe('view_utils', function()
+describe('view_utils:', function()
   describe('get_key', function()
     it('should return string keymap as-is', function()
       eq('q', view_utils.get_key('q'))
@@ -41,12 +41,12 @@ describe('view_utils', function()
 
     it('should use override when provided', function()
       local alignment = view_utils.get_hunk_alignment('bottom')
-      assert.are.same('bottom', alignment)
+      eq('bottom', alignment)
     end)
 
     it('should fall back to default when override is invalid', function()
       local alignment = view_utils.get_hunk_alignment('invalid')
-      assert.are.same('top', alignment)
+      eq('top', alignment)
     end)
 
     it('should fall back to global setting when override is nil', function()
