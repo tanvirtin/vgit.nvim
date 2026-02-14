@@ -7,9 +7,20 @@ local GitStatus = Object:extend()
 
 function GitStatus:constructor(status)
   local value = status:sub(1, 2)
-  local filename = status:sub(4, #status):gsub('"', '')
+  local raw_path = status:sub(4, #status):gsub('"', '')
 
   local first, second = GitStatus:parse(value)
+
+  local old_filename = nil
+  local filename = raw_path
+
+  -- Renames and copies use "old -> new" format
+  local arrow_pos = raw_path:find(' -> ', 1, true)
+  if arrow_pos then
+    old_filename = raw_path:sub(1, arrow_pos - 1)
+    filename = raw_path:sub(arrow_pos + 4)
+  end
+
   local filetype = fs.detect_filetype(filename)
 
   return {
@@ -18,6 +29,7 @@ function GitStatus:constructor(status)
     first = first,
     second = second,
     filename = filename,
+    old_filename = old_filename,
     filetype = filetype,
   }
 end

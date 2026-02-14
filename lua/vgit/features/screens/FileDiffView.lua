@@ -26,6 +26,7 @@ function FileDiffView:constructor()
   return {
     opts = {
       filename = nil,
+      old_filename = nil,
       is_staged = false,
       is_live = true,
       cursor_line = false,
@@ -88,6 +89,7 @@ function FileDiffView:_refresh_diff_data()
     diff_spec = {
       type = 'range',
       filename = self.opts.filename,
+      old_filename = self.opts.old_filename,
       from = 'HEAD',
       to = 'index',
       layout_type = current_layout_type,
@@ -117,6 +119,7 @@ end
 function FileDiffView:_process_file_data(data)
   self.opts = utils.object.defaults({
     filename = data.filename,
+    old_filename = data.old_filename,
     is_staged = data.is_staged,
     is_live = data.is_live,
     cursor_line = data.cursor_line,

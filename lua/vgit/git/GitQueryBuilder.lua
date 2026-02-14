@@ -120,7 +120,6 @@ function GitQueryBuilder:status()
   self:_add_arg('status')
   self:_add_arg('-u')
   self:_add_arg('-s')
-  self:_add_arg('--no-renames')
   self:_add_arg('--ignore-submodules')
   return self
 end
@@ -133,6 +132,7 @@ function GitQueryBuilder:diff_tree()
   self:_add_arg('--no-commit-id')
   self:_add_arg('--name-status')
   self:_add_arg('-r')
+  self:_add_arg('-M')
   return self
 end
 

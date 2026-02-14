@@ -201,6 +201,7 @@ diff_command.execute = event.async(function(args)
     local filename = opts.files[1]
     local git_file = GitFile(filename)
     local diff
+    local old_filename = nil
 
     -- Check if comparing refs or working tree
     if opts.base_ref and opts.compare_ref then
@@ -228,6 +229,11 @@ diff_command.execute = event.async(function(args)
         -- Staged changes: HEAD vs index (what's been git add'd)
         from = 'HEAD'
         to = 'index'
+        -- Look up old_filename from git status for renames
+        local file_status = git_status.ls(repo:get_path(), filename)
+        if file_status and file_status.old_filename then
+          old_filename = file_status.old_filename
+        end
       else
         -- Unstaged changes: index vs disk (working tree changes)
         from = 'index'
@@ -236,6 +242,7 @@ diff_command.execute = event.async(function(args)
       diff = repo:diff({
         type = 'range',
         filename = filename,
+        old_filename = old_filename,
         from = from,
         to = to,
         layout_type = opts.layout_type,
@@ -251,6 +258,7 @@ diff_command.execute = event.async(function(args)
         type = 'file',
         diff = diff,
         filename = filename,
+        old_filename = old_filename,
         filetype = git_file:get_filetype(),
         layout_type = opts.layout_type,
         is_staged = opts.staged,
@@ -283,22 +291,25 @@ diff_command.execute = event.async(function(args)
     local entries = {}
     for _, file in ipairs(files) do
       local filename = file.filename
+      local file_old_filename = file.old_filename
 
       local diff = repo:diff({
         type = 'range',
         filename = filename,
+        old_filename = file_old_filename,
         from = from_ref,
         to = to_ref,
         layout_type = opts.layout_type,
       })
 
       if diff then
+        local from_filename = file_old_filename or filename
         table.insert(entries, {
           filename = filename,
           filetype = file.filetype or 'text',
           diff = diff,
           status = file,
-          original_lines = repo:file_lines(filename, from_ref) or {},
+          original_lines = repo:file_lines(from_filename, from_ref) or {},
           current_lines = repo:file_lines(filename, to_ref) or {},
         })
       end

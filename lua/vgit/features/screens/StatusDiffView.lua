@@ -291,11 +291,14 @@ function StatusDiffView:_build_entry_diff(entry, repo)
   local status = entry.status
   local filename = status.filename
 
+  local old_filename = status.old_filename
+
   local diff_spec
   if entry_type == 'staged' then
     diff_spec = {
       type = 'range',
       filename = filename,
+      old_filename = old_filename,
       from = 'HEAD',
       to = 'index',
     }
