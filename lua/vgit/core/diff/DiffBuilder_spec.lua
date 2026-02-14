@@ -711,6 +711,11 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.lines)
+      assert.is_not_nil(diff.hunks)
+      assert.is_not_nil(diff.lnum_changes)
+      assert.is_not_nil(diff.marks)
+      assert.is_not_nil(diff.stat)
     end)
 
     it('should build range diff for staged changes', function()
@@ -724,6 +729,7 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.hunks)
     end)
 
     it('should build range diff with defaults', function()
@@ -735,6 +741,7 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.hunks)
     end)
 
     it('should build range diff with custom refs', function()
@@ -748,6 +755,7 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.hunks)
     end)
 
     it('should build blame diff', function()
@@ -760,6 +768,7 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.hunks)
     end)
 
     it('should build blame diff with custom parent', function()
@@ -773,6 +782,7 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.hunks)
     end)
 
     it('should build range diff with branch comparison', function()
@@ -786,6 +796,7 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.hunks)
     end)
 
     it('should build conflict diff', function()
@@ -807,9 +818,26 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.marks)
     end)
 
-    it('should use custom layout_type', function()
+    it('should produce unified diff with display lines', function()
+      local spec = {
+        type = 'range',
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'disk',
+        layout_type = 'unified',
+      }
+
+      local diff = builder:build(spec)
+
+      assert.is_not_nil(diff)
+      assert.is_not_nil(diff.lines)
+      assert.is_true(#diff.lines > 0)
+    end)
+
+    it('should produce split diff with equal-length current_lines and previous_lines', function()
       local spec = {
         type = 'range',
         filename = 'test.lua',
@@ -821,6 +849,74 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.current_lines)
+      assert.is_not_nil(diff.previous_lines)
+      assert.are.equal(#diff.current_lines, #diff.previous_lines)
+    end)
+
+    it('should produce split diff with equal-length lines for staged changes', function()
+      local spec = {
+        type = 'range',
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'index',
+        layout_type = 'split',
+      }
+
+      local diff = builder:build(spec)
+
+      assert.is_not_nil(diff)
+      assert.are.equal(#diff.current_lines, #diff.previous_lines)
+    end)
+
+    it('should produce split diff with equal-length lines for branch comparison', function()
+      local spec = {
+        type = 'range',
+        filename = 'test.lua',
+        from = 'main',
+        to = 'feature',
+        layout_type = 'split',
+      }
+
+      local diff = builder:build(spec)
+
+      assert.is_not_nil(diff)
+      assert.are.equal(#diff.current_lines, #diff.previous_lines)
+    end)
+
+    it('should produce split diff with equal-length lines for version tags', function()
+      local spec = {
+        type = 'range',
+        filename = 'test.lua',
+        from = 'v1.0',
+        to = 'v2.0',
+        layout_type = 'split',
+      }
+
+      local diff = builder:build(spec)
+
+      assert.is_not_nil(diff)
+      assert.are.equal(#diff.current_lines, #diff.previous_lines)
+    end)
+
+    it('should not place raw source lines on the diff object', function()
+      local spec = {
+        type = 'range',
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'disk',
+        layout_type = 'split',
+      }
+
+      local diff = builder:build(spec)
+
+      -- DiffBuilder should not attach raw source lines to the diff.
+      -- current_lines/previous_lines are split-aligned display lines set by Diff:generate_split.
+      -- Raw source lines are the concern of the caller, not the diff object.
+      assert.is_not_nil(diff.current_lines)
+      assert.is_not_nil(diff.previous_lines)
+      -- Verify they are the split-aligned versions (equal length), not raw source
+      assert.are.equal(#diff.current_lines, #diff.previous_lines)
     end)
 
     it('should support all valid layout types', function()
@@ -837,6 +933,7 @@ describe('DiffBuilder:', function()
 
         local diff = builder:build(spec)
         assert.is_not_nil(diff)
+        assert.is_not_nil(diff.hunks)
       end
     end)
 
@@ -897,7 +994,7 @@ describe('DiffBuilder:', function()
   end)
 
   describe('integration scenarios', function()
-    it('should handle complete workflow for unstaged changes', function()
+    it('should handle complete workflow for unstaged changes (unified)', function()
       local spec = {
         type = 'range',
         filename = 'test.lua',
@@ -909,9 +1006,12 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.lines)
+      assert.is_true(#diff.lines > 0)
+      assert.is_not_nil(diff.hunks)
     end)
 
-    it('should handle complete workflow for staged changes', function()
+    it('should handle complete workflow for staged changes (split)', function()
       local spec = {
         type = 'range',
         filename = 'test.lua',
@@ -923,6 +1023,8 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.are.equal(#diff.current_lines, #diff.previous_lines)
+      assert.is_not_nil(diff.hunks)
     end)
 
     it('should handle version comparison workflow', function()
@@ -937,6 +1039,7 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.lines)
     end)
 
     it('should handle blame investigation workflow', function()
@@ -951,9 +1054,10 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.lines)
     end)
 
-    it('should handle branch comparison workflow', function()
+    it('should handle branch comparison workflow (split)', function()
       local spec = {
         type = 'range',
         filename = 'src/main.lua',
@@ -965,6 +1069,7 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.are.equal(#diff.current_lines, #diff.previous_lines)
     end)
 
     it('should handle conflict resolution workflow', function()
@@ -989,6 +1094,32 @@ describe('DiffBuilder:', function()
       local diff = builder:build(spec)
 
       assert.is_not_nil(diff)
+      assert.is_not_nil(diff.marks)
+    end)
+
+    it('should handle split conflict resolution workflow', function()
+      fs.read_file = function(path)
+        return {
+          'normal line 1',
+          '<<<<<<< HEAD',
+          'our version',
+          '=======',
+          'their version',
+          '>>>>>>> feature',
+          'normal line 2',
+        }
+      end
+
+      local spec = {
+        type = 'conflict',
+        filename = 'src/conflict.lua',
+        layout_type = 'split',
+      }
+
+      local diff = builder:build(spec)
+
+      assert.is_not_nil(diff)
+      assert.are.equal(#diff.current_lines, #diff.previous_lines)
     end)
   end)
 

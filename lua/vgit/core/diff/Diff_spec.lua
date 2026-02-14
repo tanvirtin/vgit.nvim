@@ -161,6 +161,7 @@ describe('Diff:', function()
       local result = diff:generate_split({}, lines)
       eq(lines, result.current_lines)
       eq(lines, result.previous_lines)
+      assert.are.equal(#result.current_lines, #result.previous_lines)
     end)
 
     it('should handle add hunk with void in previous', function()
@@ -169,6 +170,7 @@ describe('Diff:', function()
       local lines = { 'new1', 'new2' }
       local result = diff:generate_split({ hunk }, lines)
 
+      assert.are.equal(#result.current_lines, #result.previous_lines)
       assert.are.equal(1, #result.marks)
       assert.are.equal('add', result.marks[1].type)
 
@@ -188,6 +190,7 @@ describe('Diff:', function()
       local lines = { 'a', 'b', 'c', 'd' }
       local result = diff:generate_split({ hunk }, lines)
 
+      assert.are.equal(#result.current_lines, #result.previous_lines)
       assert.are.equal(1, #result.marks)
       assert.are.equal('remove', result.marks[1].type)
 
@@ -207,6 +210,7 @@ describe('Diff:', function()
       local lines = { 'a', 'new', 'c' }
       local result = diff:generate_split({ hunk }, lines)
 
+      assert.are.equal(#result.current_lines, #result.previous_lines)
       assert.are.equal(1, #result.marks)
       assert.are.equal('change', result.marks[1].type)
 
@@ -221,6 +225,16 @@ describe('Diff:', function()
       assert.is_true(has_remove)
     end)
 
+    it('should handle change hunk with unequal added/removed lines', function()
+      -- 1 line removed, 3 lines added — max_lines = 3, must pad
+      local hunk = make_hunk('@@ -2,1 +2,3 @@', { '-old', '+new1', '+new2', '+new3' })
+      local diff = Diff()
+      local lines = { 'a', 'new1', 'new2', 'new3', 'c' }
+      local result = diff:generate_split({ hunk }, lines)
+
+      assert.are.equal(#result.current_lines, #result.previous_lines)
+    end)
+
     it('should accumulate stats from multiple hunks', function()
       local hunk1 = make_hunk('@@ -0,0 +1,1 @@', { '+added' })
       local hunk2 = make_hunk('@@ -0,0 +3,1 @@', { '+another' })
@@ -228,8 +242,48 @@ describe('Diff:', function()
       local lines = { 'added', 'middle', 'another' }
       local result = diff:generate_split({ hunk1, hunk2 }, lines)
 
+      assert.are.equal(#result.current_lines, #result.previous_lines)
       assert.are.equal(2, result.stat.added)
       assert.are.equal(2, #result.marks)
+    end)
+
+    it('should maintain equal line count with mixed hunk types', function()
+      local hunk1 = make_hunk('@@ -0,0 +1,2 @@', { '+new1', '+new2' })
+      local hunk2 = make_hunk('@@ -4,2 +6,0 @@', { '-removed1', '-removed2' })
+      local hunk3 = make_hunk('@@ -7,1 +7,2 @@', { '-old', '+changed1', '+changed2' })
+      local diff = Diff()
+      local lines = { 'new1', 'new2', 'a', 'b', 'c', 'd', 'changed1', 'changed2' }
+      local result = diff:generate_split({ hunk1, hunk2, hunk3 }, lines)
+
+      assert.are.equal(#result.current_lines, #result.previous_lines)
+    end)
+
+    it('should maintain equal line count with large add hunk', function()
+      local diff_lines = {}
+      local lines = {}
+      for i = 1, 50 do
+        diff_lines[i] = '+line' .. i
+        lines[i] = 'line' .. i
+      end
+      local hunk = make_hunk('@@ -0,0 +1,50 @@', diff_lines)
+      local diff = Diff()
+      local result = diff:generate_split({ hunk }, lines)
+
+      assert.are.equal(#result.current_lines, #result.previous_lines)
+      assert.are.equal(50, #result.current_lines)
+    end)
+
+    it('should maintain equal line count with large remove hunk', function()
+      local diff_lines = {}
+      for i = 1, 30 do
+        diff_lines[i] = '-removed' .. i
+      end
+      local hunk = make_hunk('@@ -3,30 +3,0 @@', diff_lines)
+      local diff = Diff()
+      local lines = { 'a', 'b', 'c' }
+      local result = diff:generate_split({ hunk }, lines)
+
+      assert.are.equal(#result.current_lines, #result.previous_lines)
     end)
   end)
 
@@ -281,6 +335,8 @@ describe('Diff:', function()
       local lines = { 'a', 'b' }
       local result = diff:generate_split_deleted({ hunk }, lines)
 
+      assert.are.equal(#result.current_lines, #result.previous_lines)
+
       local remove_count = 0
       local void_count = 0
       for _, lc in ipairs(result.lnum_changes) do
@@ -295,6 +351,7 @@ describe('Diff:', function()
       local hunk = make_hunk('@@ -1,3 +0,0 @@', { '-a', '-b', '-c' })
       local diff = Diff()
       local result = diff:generate_split_deleted({ hunk }, { 'a', 'b', 'c' })
+      assert.are.equal(#result.current_lines, #result.previous_lines)
       assert.are.equal(3, #result.current_lines)
       for _, line in ipairs(result.current_lines) do
         assert.are.equal('', line)
@@ -415,6 +472,7 @@ describe('Diff:', function()
       local lines = { '<<<', 'cur1', 'cur2', '===', 'inc1', 'inc2', '>>>' }
       local result = diff:generate_split_conflict(conflicts, lines)
 
+      assert.are.equal(#result.current_lines, #result.previous_lines)
       assert.are.equal(1, #result.marks)
       assert.are.equal('conflict', result.marks[1].type)
       assert.is_not_nil(result.previous_lines)
@@ -441,6 +499,7 @@ describe('Diff:', function()
       local lines = { '<<<', 'c1', '|||', 'anc', '===', 'i1', '>>>' }
       local result = diff:generate_split_conflict(conflicts, lines)
 
+      assert.are.equal(#result.current_lines, #result.previous_lines)
       assert.are.equal(1, #result.marks)
       assert.are.equal('conflict', result.marks[1].type)
       assert.are.equal(1, result.marks[1].top)
@@ -460,6 +519,7 @@ describe('Diff:', function()
       local lines = { '<<<', 'c', '===', 'i', '>>>' }
       local result = diff:generate_split_conflict(conflicts, lines)
 
+      assert.are.equal(#result.current_lines, #result.previous_lines)
       eq({ added = 0, removed = 0 }, result.stat)
     end)
   end)

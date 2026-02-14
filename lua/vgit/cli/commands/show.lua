@@ -94,11 +94,15 @@ show_command.execute = event.async(function(args)
     })
 
     if diff then
+      local from_ref = parent_hash ~= '' and parent_hash or nil
+      local to_ref = commit.commit_hash or commit.hash
       table.insert(entries, {
         filename = filename,
         filetype = file.get_filetype and file:get_filetype() or 'text',
         diff = diff,
         status = file,
+        original_lines = repo:file_lines(filename, from_ref) or {},
+        current_lines = repo:file_lines(filename, to_ref) or {},
       })
     end
   end
