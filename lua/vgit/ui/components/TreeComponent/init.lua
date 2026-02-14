@@ -24,6 +24,7 @@ function TreeComponent:constructor(props)
   instance._on_enter_callback = nil
   instance._on_move_callback = nil
   instance._keymaps_setup = false
+  instance._rendering = false
   return instance
 end
 
@@ -166,6 +167,12 @@ function TreeComponent:get_current_list_item()
     local lnum = el:get_lnum()
     return self:get_list_item(lnum)
   end)
+end
+
+function TreeComponent:get_selected_entry()
+  local item = self:get_current_list_item()
+  if item and item.entry then return item.entry end
+  return nil
 end
 
 function TreeComponent:move(direction)
@@ -464,8 +471,10 @@ end
 function TreeComponent:render()
   self:with_element(function(el)
     local buffer = el.buffer
+    self._rendering = true
     buffer:clear_extmarks()
     buffer:set_lines(self:generate_lines())
+    self._rendering = false
     self:paint()
   end)
 end
@@ -499,6 +508,7 @@ function TreeComponent:component_did_mount()
         vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
           buffer = bufnr,
           callback = function()
+            if self._rendering then return end
             local item = self:get_current_list_item()
             if self._on_move_callback then self._on_move_callback(item) end
           end,

@@ -39,10 +39,14 @@ describe('SplitDiffComponent:', function()
 
       assert.is_not_nil(result.previous)
       assert.is_not_nil(result.current)
-      assert.is_not_nil(result.previous.lines)
-      assert.is_not_nil(result.previous.changes)
-      assert.is_not_nil(result.current.lines)
-      assert.is_not_nil(result.current.changes)
+      -- Line number arrays must match the line count of their respective sides
+      assert.are.equal(#diff.previous_lines, #result.previous.lines)
+      assert.are.equal(#diff.current_lines, #result.current.lines)
+      -- Both sides must produce equal-length line number arrays
+      assert.are.equal(#result.previous.lines, #result.current.lines)
+      -- Changes arrays must match too
+      assert.are.equal(#diff.previous_lines, #result.previous.changes)
+      assert.are.equal(#diff.current_lines, #result.current.changes)
     end)
 
     it('should handle empty lnum_changes', function()
@@ -59,6 +63,30 @@ describe('SplitDiffComponent:', function()
 
       assert.is_not_nil(result.previous)
       assert.is_not_nil(result.current)
+      assert.are.equal(0, #result.previous.lines)
+      assert.are.equal(0, #result.current.lines)
+    end)
+
+    it('should produce equal-length results when sides have equal lines', function()
+      local component = create_split_component({})
+      local lines = { 'a', 'b', 'c', 'd', 'e' }
+      local diff = {
+        lines = lines,
+        current_lines = lines,
+        previous_lines = lines,
+        marks = {},
+        lnum_changes = {
+          { buftype = 'current', lnum = 2, type = 'add' },
+          { buftype = 'previous', lnum = 2, type = 'void' },
+          { buftype = 'current', lnum = 4, type = 'void' },
+          { buftype = 'previous', lnum = 4, type = 'remove' },
+        },
+      }
+
+      local result = component:calculate_split_line_numbers(diff)
+
+      assert.are.equal(#result.previous.lines, #result.current.lines)
+      assert.are.equal(5, #result.current.lines)
     end)
   end)
 

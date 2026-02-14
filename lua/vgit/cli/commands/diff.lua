@@ -298,6 +298,8 @@ diff_command.execute = event.async(function(args)
           filetype = file.filetype or 'text',
           diff = diff,
           status = file,
+          original_lines = repo:file_lines(filename, from_ref) or {},
+          current_lines = repo:file_lines(filename, to_ref) or {},
         })
       end
     end

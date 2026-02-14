@@ -72,31 +72,28 @@ function ProjectDiffView:create(data)
   return self:_create_view(data)
 end
 
+function ProjectDiffView:_get_file_lines(repo, filename, ref)
+  if ref == 'disk' then
+    return fs.read_file(fs.absolute_path(repo:get_path(), filename)) or {}
+  end
+  return repo:file_lines(filename, ref) or {}
+end
+
 function ProjectDiffView:_get_diff_for_entry(repo, entry)
   local entry_type = entry.type
   local status = entry.status
   local filename = status.filename
 
   local diff_spec
+  local from, to
   if entry_type == 'staged' then
-    diff_spec = {
-      type = 'range',
-      filename = filename,
-      from = 'HEAD',
-      to = 'index',
-    }
+    from, to = 'HEAD', 'index'
+    diff_spec = { type = 'range', filename = filename, from = from, to = to }
   elseif entry_type == 'unmerged' then
-    diff_spec = {
-      type = 'conflict',
-      filename = filename,
-    }
+    diff_spec = { type = 'conflict', filename = filename }
   else
-    diff_spec = {
-      type = 'range',
-      filename = filename,
-      from = 'index',
-      to = 'disk',
-    }
+    from, to = 'index', 'disk'
+    diff_spec = { type = 'range', filename = filename, from = from, to = to }
   end
 
   local diff_data, err = repo:diff(diff_spec, {})
@@ -110,7 +107,13 @@ function ProjectDiffView:_get_diff_for_entry(repo, entry)
     return nil
   end
 
-  return diff_data
+  local original_lines, current_lines
+  if from and to then
+    original_lines = self:_get_file_lines(repo, filename, from)
+    current_lines = self:_get_file_lines(repo, filename, to)
+  end
+
+  return diff_data, original_lines, current_lines
 end
 
 function ProjectDiffView:_build_patch_entries(repo, data)
@@ -129,13 +132,13 @@ function ProjectDiffView:_build_patch_entries(repo, data)
 
       files_processed = files_processed + 1
 
-      -- Use pre-computed diff when available (for historical diffs),
-      -- otherwise generate diff for working tree changes
-      local diff_data
+      local diff_data, original_lines, current_lines
       if file_entry.diff then
         diff_data = file_entry.diff
+        original_lines = file_entry.original_lines
+        current_lines = file_entry.current_lines
       else
-        diff_data = self:_get_diff_for_entry(repo, file_entry)
+        diff_data, original_lines, current_lines = self:_get_diff_for_entry(repo, file_entry)
       end
 
       if not diff_data then
@@ -160,8 +163,8 @@ function ProjectDiffView:_build_patch_entries(repo, data)
         type = 'file_header',
         filename = status.filename,
         filetype = status.filetype,
-        original_lines = diff_data.original_lines,
-        current_lines = diff_data.current_lines,
+        original_lines = original_lines,
+        current_lines = current_lines,
       }
 
       line_to_file_map[current_line] = { filename = status.filename, lnum = 1 }
