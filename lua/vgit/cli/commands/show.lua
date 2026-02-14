@@ -83,11 +83,13 @@ show_command.execute = event.async(function(args)
   local entries = {}
   for _, file in ipairs(files) do
     local filename = file.filename
+    local file_old_filename = file.old_filename
 
     -- Get diff for this file
     local diff = repo:diff({
       type = 'range',
       filename = filename,
+      old_filename = file_old_filename,
       from = parent_hash ~= '' and parent_hash or nil,
       to = commit.commit_hash or commit.hash,
       layout_type = layout_type,
@@ -96,12 +98,13 @@ show_command.execute = event.async(function(args)
     if diff then
       local from_ref = parent_hash ~= '' and parent_hash or nil
       local to_ref = commit.commit_hash or commit.hash
+      local from_filename = file_old_filename or filename
       table.insert(entries, {
         filename = filename,
         filetype = file.get_filetype and file:get_filetype() or 'text',
         diff = diff,
         status = file,
-        original_lines = repo:file_lines(filename, from_ref) or {},
+        original_lines = repo:file_lines(from_filename, from_ref) or {},
         current_lines = repo:file_lines(filename, to_ref) or {},
       })
     end

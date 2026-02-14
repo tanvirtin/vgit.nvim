@@ -59,11 +59,37 @@ describe('GitStatus:', function()
     end)
 
     it('should parse renamed file', function()
-      local status = GitStatus('R  renamed.lua')
+      local status = GitStatus('R  old.lua -> new.lua')
 
       eq(status.first, 'R')
       eq(status.second, ' ')
-      eq(status.filename, 'renamed.lua')
+      eq(status.filename, 'new.lua')
+      eq(status.old_filename, 'old.lua')
+    end)
+
+    it('should parse renamed file in nested path', function()
+      local status = GitStatus('R  dir/old.lua -> dir/new.lua')
+
+      eq(status.first, 'R')
+      eq(status.second, ' ')
+      eq(status.filename, 'dir/new.lua')
+      eq(status.old_filename, 'dir/old.lua')
+    end)
+
+    it('should parse copied file', function()
+      local status = GitStatus('C  source.lua -> copy.lua')
+
+      eq(status.first, 'C')
+      eq(status.second, ' ')
+      eq(status.filename, 'copy.lua')
+      eq(status.old_filename, 'source.lua')
+    end)
+
+    it('should not set old_filename for non-rename status', function()
+      local status = GitStatus('M  file.lua')
+
+      eq(status.filename, 'file.lua')
+      assert.is_nil(status.old_filename)
     end)
 
     it('should parse merge conflict', function()
@@ -252,12 +278,12 @@ describe('GitStatus:', function()
     end)
 
     it('should return true for staged renamed file', function()
-      local status = GitStatus('R  file.lua')
+      local status = GitStatus('R  old.lua -> new.lua')
       assert.is_true(status:is_staged())
     end)
 
     it('should return true for staged copied file', function()
-      local status = GitStatus('C  file.lua')
+      local status = GitStatus('C  source.lua -> copy.lua')
       assert.is_true(status:is_staged())
     end)
 
@@ -294,12 +320,12 @@ describe('GitStatus:', function()
     end)
 
     it('should return true for unstaged rename', function()
-      local status = GitStatus(' R file.lua')
+      local status = GitStatus(' R old.lua -> new.lua')
       assert.is_true(status:is_unstaged())
     end)
 
     it('should return true for unstaged copy', function()
-      local status = GitStatus(' C file.lua')
+      local status = GitStatus(' C source.lua -> copy.lua')
       assert.is_true(status:is_unstaged())
     end)
 

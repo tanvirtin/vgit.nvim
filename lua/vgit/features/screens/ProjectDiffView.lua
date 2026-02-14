@@ -83,12 +83,13 @@ function ProjectDiffView:_get_diff_for_entry(repo, entry)
   local entry_type = entry.type
   local status = entry.status
   local filename = status.filename
+  local old_filename = status.old_filename
 
   local diff_spec
   local from, to
   if entry_type == 'staged' then
     from, to = 'HEAD', 'index'
-    diff_spec = { type = 'range', filename = filename, from = from, to = to }
+    diff_spec = { type = 'range', filename = filename, old_filename = old_filename, from = from, to = to }
   elseif entry_type == 'unmerged' then
     diff_spec = { type = 'conflict', filename = filename }
   else
@@ -109,7 +110,8 @@ function ProjectDiffView:_get_diff_for_entry(repo, entry)
 
   local original_lines, current_lines
   if from and to then
-    original_lines = self:_get_file_lines(repo, filename, from)
+    local from_filename = (entry_type == 'staged' and old_filename) or filename
+    original_lines = self:_get_file_lines(repo, from_filename, from)
     current_lines = self:_get_file_lines(repo, filename, to)
   end
 
@@ -159,9 +161,14 @@ function ProjectDiffView:_build_patch_entries(repo, data)
 
       local hunks = diff_data.hunks
 
+      local display_filename = status.filename
+      if status.old_filename then
+        display_filename = status.old_filename .. ' -> ' .. status.filename
+      end
+
       patch_entries[#patch_entries + 1] = {
         type = 'file_header',
-        filename = status.filename,
+        filename = display_filename,
         filetype = status.filetype,
         original_lines = original_lines,
         current_lines = current_lines,

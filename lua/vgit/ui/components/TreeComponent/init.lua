@@ -94,7 +94,12 @@ function TreeComponent:create_node(entry)
   local node = depth_tree:create_node(entry)
 
   if node.entry and node.entry.status and not node.items then
-    node.value = self:get_display_name(node.entry.status.filename)
+    local status = node.entry.status
+    if status.old_filename then
+      node.value = string.format('%s -> %s', self:get_display_name(status.old_filename), self:get_display_name(status.filename))
+    else
+      node.value = self:get_display_name(status.filename)
+    end
   end
 
   return node
@@ -247,6 +252,14 @@ function TreeComponent:generate_lines()
         local filename = status.filename
         local filetype = status.filetype
         local icon, icon_hl = icons.get(filename, filetype)
+
+        if status.old_filename then
+          item.value = string.format(
+            '%s -> %s',
+            self:get_display_name(status.old_filename),
+            self:get_display_name(status.filename)
+          )
+        end
 
         if icon then
           item.icon_before = {

@@ -297,6 +297,52 @@ describe('DiffBuilder:', function()
       assert.is_not_nil(current)
       assert.are.equal(original[1], 'ancient line 1')
     end)
+
+    it('should use old_filename for the from side when provided', function()
+      local called_filenames = {}
+      local original_file_lines = repository.file_lines
+      repository.file_lines = function(self, filename, ref)
+        called_filenames[#called_filenames + 1] = { filename = filename, ref = ref }
+        return original_file_lines(self, filename, ref)
+      end
+
+      local spec = {
+        filename = 'new_name.lua',
+        old_filename = 'old_name.lua',
+        from = 'HEAD',
+        to = 'index',
+      }
+
+      builder:_get_range_lines(spec)
+
+      -- The from side should use old_filename
+      assert.are.equal(called_filenames[1].filename, 'old_name.lua')
+      assert.are.equal(called_filenames[1].ref, 'HEAD')
+      -- The to side should use filename
+      assert.are.equal(called_filenames[2].filename, 'new_name.lua')
+      assert.are.equal(called_filenames[2].ref, 'index')
+    end)
+
+    it('should use filename for the from side when old_filename is nil', function()
+      local called_filenames = {}
+      local original_file_lines = repository.file_lines
+      repository.file_lines = function(self, filename, ref)
+        called_filenames[#called_filenames + 1] = { filename = filename, ref = ref }
+        return original_file_lines(self, filename, ref)
+      end
+
+      local spec = {
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'index',
+      }
+
+      builder:_get_range_lines(spec)
+
+      -- Both sides should use filename
+      assert.are.equal(called_filenames[1].filename, 'test.lua')
+      assert.are.equal(called_filenames[2].filename, 'test.lua')
+    end)
   end)
 
   describe('_get_conflict_lines', function()

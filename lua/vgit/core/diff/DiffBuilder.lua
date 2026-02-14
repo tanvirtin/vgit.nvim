@@ -8,6 +8,17 @@ local git_conflict = lazy('vgit.git.git_conflict')
 
 local DiffBuilder = Object:extend()
 
+local function has_binary_content(lines)
+  if not lines then return false end
+  for i = 1, math.min(#lines, 100) do
+    local line = lines[i]
+    -- Check for NUL bytes (git show preserves them) and embedded newlines
+    -- (vim.fn.readfile converts NUL to \n in text mode)
+    if line:find('\0', 1, true) or line:find('\n', 1, true) then return true end
+  end
+  return false
+end
+
 function DiffBuilder:constructor(repository)
   self._repository = repository
 end
@@ -31,10 +42,11 @@ function DiffBuilder:_get_range_lines(spec)
   local from = spec.from or 'HEAD~1'
   local to = spec.to or 'HEAD'
   local filename = spec.filename
+  local old_filename = spec.old_filename
 
   assertion.assert(filename, 'filename is required')
 
-  local original_lines = self._repository:file_lines(filename, from)
+  local original_lines = self._repository:file_lines(old_filename or filename, from)
   local current_lines
 
   if to == 'disk' then
@@ -150,6 +162,8 @@ function DiffBuilder:build(spec)
   if type == 'conflict' then return self:_build_conflict_diff(spec) end
 
   local original_lines, current_lines = self:_get_lines(spec)
+
+  if has_binary_content(original_lines) or has_binary_content(current_lines) then return end
 
   local is_deleted = false
   local display_lines = current_lines
