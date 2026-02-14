@@ -186,6 +186,14 @@ describe('Buffer:', function()
       vim.api.nvim_buf_set_option(buffer.bufnr, 'ft', 'lua')
       assert.equals(buffer:get_option('ft'), 'lua')
     end)
+
+    it('should track modifiable state', function()
+      buffer:set_option('modifiable', false)
+      assert.is_false(buffer._modifiable)
+
+      buffer:set_option('modifiable', true)
+      assert.is_true(buffer._modifiable)
+    end)
   end)
 
   describe('get_option', function()
@@ -203,6 +211,42 @@ describe('Buffer:', function()
       })
       assert.equals(buffer:get_option('ft'), 'lua')
       assert.equals(buffer:get_option('bufhidden'), 'wipe')
+    end)
+
+    it('should track modifiable when assigned', function()
+      buffer:assign_options({ modifiable = false })
+      assert.is_false(buffer._modifiable)
+    end)
+  end)
+
+  describe('modifiable caching in set_lines', function()
+    it('should use cached modifiable state', function()
+      -- Set modifiable to true explicitly
+      buffer:set_option('modifiable', true)
+      assert.is_true(buffer._modifiable)
+
+      -- set_lines should work without calling nvim_buf_get_option
+      buffer:set_lines({ 'test' })
+      eq({ 'test' }, buffer:get_lines())
+    end)
+
+    it('should handle non-modifiable buffer via cache', function()
+      buffer:set_option('modifiable', false)
+      assert.is_false(buffer._modifiable)
+
+      -- set_lines should toggle modifiable around the set_lines call
+      buffer:set_lines({ 'test' })
+      eq({ 'test' }, buffer:get_lines())
+    end)
+
+    it('should lazily determine modifiable when not cached', function()
+      -- _modifiable starts as nil
+      assert.is_nil(buffer._modifiable)
+
+      -- set_lines should query and cache
+      buffer:set_lines({ 'hello' })
+      assert.is_not_nil(buffer._modifiable)
+      eq({ 'hello' }, buffer:get_lines())
     end)
   end)
 

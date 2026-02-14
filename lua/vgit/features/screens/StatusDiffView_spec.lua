@@ -356,11 +356,9 @@ describe('StatusDiffView:', function()
       mock_items = items or {}
       local lnum = current_lnum or 1
       mock_tree = {
-        _element = {
-          get_lnum = function() return lnum end,
-          set_lnum = function(_, new_lnum) lnum = new_lnum end,
-          get_line_count = function() return #mock_items end,
-        },
+        get_lnum = function() return lnum end,
+        set_lnum = function(_, new_lnum) lnum = new_lnum end,
+        get_line_count = function() return #mock_items end,
         is_valid = function() return true end,
         get_list_item = function(_, l) return mock_items[l] end,
         each_entry = function(_, cb)
@@ -575,6 +573,7 @@ describe('StatusDiffView:', function()
       mock_diff = {
         is_valid = function() return true end,
         get_marks = function() return marks end,
+        get_hunks = function() return {} end,
         get_lnum = function() return cursor_lnum end,
         get_hunk_under_cursor = function() return nil, nil end,
         move_to_hunk = function() end,
@@ -588,7 +587,6 @@ describe('StatusDiffView:', function()
         call = function(_, cb) cb() end,
         set_keymap = function() end,
         component_will_unmount = function() end,
-        state = { marks = marks },
       }
       view.diff_component = mock_diff
     end
@@ -759,7 +757,7 @@ describe('StatusDiffView:', function()
       it('should not move if no marks', function()
         local called = false
         setup_mock_diff({}, 1)
-        mock_diff.state.marks = {}
+        mock_diff.get_marks = function() return {} end
         mock_diff.move_to_hunk = function() called = true end
 
         view:restore_hunk_position(1)
@@ -801,6 +799,7 @@ describe('StatusDiffView:', function()
         is_valid = function() return true end,
         get_hunk_under_cursor = function() return { start = 1, count = 5 }, 1 end,
         get_marks = function() return {} end,
+        get_hunks = function() return {} end,
         get_lnum = function() return 1 end,
         move_to_hunk = function() end,
         hunk_down = function() end,
@@ -813,15 +812,12 @@ describe('StatusDiffView:', function()
         call = function(_, cb) cb() end,
         set_keymap = function() end,
         component_will_unmount = function() end,
-        state = { marks = {} },
       }
 
       mock_tree = {
-        _element = {
-          get_lnum = function() return 1 end,
-          set_lnum = function() end,
-          get_line_count = function() return 1 end,
-        },
+        get_lnum = function() return 1 end,
+        set_lnum = function() end,
+        get_line_count = function() return 1 end,
         is_valid = function() return true end,
         get_list_item = function() return nil end,
         each_entry = function() end,
@@ -1415,6 +1411,7 @@ describe('StatusDiffView:', function()
       mock_diff = {
         is_valid = function() return true end,
         get_marks = function() return {} end,
+        get_hunks = function() return {} end,
         get_lnum = function() return 1 end,
         get_hunk_under_cursor = function() return nil, nil end,
         move_to_hunk = function() end,
@@ -1428,15 +1425,12 @@ describe('StatusDiffView:', function()
         call = function(_, cb) cb() end,
         set_keymap = function() end,
         component_will_unmount = function() end,
-        state = { marks = {} },
       }
 
       mock_tree = {
-        _element = {
-          get_lnum = function() return 1 end,
-          set_lnum = function() end,
-          get_line_count = function() return 1 end,
-        },
+        get_lnum = function() return 1 end,
+        set_lnum = function() end,
+        get_line_count = function() return 1 end,
         is_valid = function() return true end,
         get_list_item = function() return nil end,
         each_entry = function() end,
@@ -1756,11 +1750,9 @@ describe('StatusDiffView:', function()
         }
 
         mock_tree = {
-          _element = {
-            get_lnum = function() return 1 end,
-            set_lnum = function() end,
-            get_line_count = function() return 1 end,
-          },
+          get_lnum = function() return 1 end,
+          set_lnum = function() end,
+          get_line_count = function() return 1 end,
           is_valid = function() return true end,
           get_list_item = function() return nil end,
           each_entry = function(_, cb)

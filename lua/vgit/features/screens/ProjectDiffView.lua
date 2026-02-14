@@ -224,8 +224,8 @@ function ProjectDiffView:get_hunk_alignment()
 end
 
 function ProjectDiffView:_get_current_mark_index(component)
-  local marks = component.state and component.state.marks
-  if not marks or #marks == 0 then return nil, 0 end
+  local marks = component:get_marks()
+  if #marks == 0 then return nil, 0 end
 
   local lnum = component:get_lnum()
 

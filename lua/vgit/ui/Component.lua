@@ -3,6 +3,15 @@ local Object = lazy('vgit.core.Object')
 
 local Component = Object:extend()
 
+function Component.forward(Class, target_getter, methods)
+  for _, method in ipairs(methods) do
+    Class[method] = function(self, ...)
+      local target = target_getter(self)
+      if target then return target[method](target, ...) end
+    end
+  end
+end
+
 function Component:constructor(props)
   return {
     props = props or {},
@@ -104,6 +113,12 @@ end
 
 function Component:is_mounted()
   return self.mounted
+end
+
+function Component:with_element(fn)
+  if self._element and self._element:is_valid() then
+    return fn(self._element)
+  end
 end
 
 function Component:on(event_name, callback)

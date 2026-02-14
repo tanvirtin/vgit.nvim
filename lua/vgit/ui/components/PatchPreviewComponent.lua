@@ -1,16 +1,20 @@
 local lazy = require('vgit.core.lazy')
 local utils = lazy('vgit.core.utils')
 local Component = lazy('vgit.ui.Component')
+local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local PatchHighlighter = lazy('vgit.ui.highlighters.PatchHighlighter')
 
-local PatchPreviewComponent = Component:extend()
+local separator = string.rep('─', 60)
+
+local PatchPreviewComponent = ViewportComponent:extend()
 
 function PatchPreviewComponent:constructor(props)
-  local instance = Component.constructor(self, props)
+  local instance = ViewportComponent.constructor(self, props)
   instance._element = nil
   instance._patch_highlighter = PatchHighlighter()
+  instance._render_gen = 0
   return instance
 end
 
@@ -19,38 +23,10 @@ function PatchPreviewComponent:get_initial_state()
     lines = {},
     line_metadata = {},
     marks = {},
+    _diff_hl_map = {},
+    _syntax_hl_map = {},
+    _line_numbers = {},
   }
-end
-
-function PatchPreviewComponent:is_element_valid()
-  return self._element and self._element:is_valid()
-end
-
-function PatchPreviewComponent:apply_highlights(highlights, priority, col_priority)
-  if not self:is_element_valid() then return end
-
-  col_priority = col_priority or priority
-
-  for _, hl in ipairs(highlights) do
-    if hl.line then
-      self._element:place_extmark_highlight({
-        hl = hl.hl_group,
-        row = hl.row,
-        line_hl = true,
-        priority = priority,
-      })
-    elseif hl.col_start ~= nil and hl.col_end ~= nil then
-      self._element:place_extmark_highlight({
-        hl = hl.hl_group,
-        row = hl.row,
-        col_range = {
-          from = hl.col_start,
-          to = hl.col_end > 0 and hl.col_end or nil,
-        },
-        priority = col_priority,
-      })
-    end
-  end
 end
 
 function PatchPreviewComponent:should_component_update(next_props, next_state)
@@ -111,7 +87,6 @@ function PatchPreviewComponent:build_patch_lines_from_entries(patch_entries)
         file_sections[#file_sections + 1] = current_file_section
       end
 
-      local separator = string.rep('─', 60)
       lines[#lines + 1] = separator
       line_metadata[#lines] = { type = 'separator' }
 
@@ -255,7 +230,14 @@ function PatchPreviewComponent:build_patch_lines(hunks, selected_hunk_index)
 end
 
 function PatchPreviewComponent:render()
-  self:clear_extmarks()
+  self:mark_viewport_dirty()
+  self._render_gen = self._render_gen + 1
+
+  -- Full clear of highlights since data is changing;
+  -- viewport renderer will use ranged clear for scroll-only updates
+  self:with_element(function(el)
+    el:clear_extmark_highlights()
+  end)
 
   local patch_entries = self.props.patch_entries
   local hunks = self.props.hunks
@@ -277,60 +259,64 @@ function PatchPreviewComponent:render()
       return
     end
 
-    if self:is_element_valid() then
-      self._element:set_lines(lines)
-      self._element:enable_cursorline()
-    end
+    self:with_element(function(el)
+      el:set_lines(lines)
+      el:enable_cursorline()
+    end)
 
-    -- 1. Render diff backgrounds (priority 5 - below syntax)
-    self:render_diff_backgrounds_with_metadata(lines, line_metadata)
+    -- Compute highlights and cache in state for viewport rendering
+    local diff_highlights = self._patch_highlighter:get_diff_line_highlights_with_metadata(lines, line_metadata)
+    self.state._diff_hl_map = self:_build_highlight_map(diff_highlights)
 
-    -- 2. Render line numbers
     local line_numbers = self:calculate_line_numbers(lines, line_metadata)
-    self:render_line_numbers(line_numbers)
+    self.state._line_numbers = line_numbers
 
-    -- 3. Render syntax highlights using full-file approach (priority 20)
-    self:render_syntax_highlights_from_full_files(file_sections)
+    self.state._syntax_hl_map = {}
+    local sections = file_sections
+    local gen = self._render_gen
+    vim.schedule(function()
+      if not self.mounted or self._render_gen ~= gen then return end
+      local syntax_highlights = self:_compute_syntax_highlights_from_full_files(sections)
+      self.state._syntax_hl_map = self:_build_highlight_map(syntax_highlights)
+      self:mark_viewport_dirty()
+    end)
+
+    self:_ensure_renderer_attached()
   elseif hunks and #hunks > 0 then
     local patch_lines = self:build_patch_lines(hunks, selected_hunk)
     self.state.lines = patch_lines
     self.state.line_metadata = {}
     self.state.marks = {}
 
-    if self:is_element_valid() then
-      self._element:set_lines(patch_lines)
-      self._element:enable_cursorline()
+    self:with_element(function(el)
+      el:set_lines(patch_lines)
+      el:enable_cursorline()
+    end)
+
+    -- Compute highlights and cache in state for viewport rendering
+    local diff_highlights = self._patch_highlighter:get_diff_line_highlights(patch_lines)
+    self.state._diff_hl_map = self:_build_highlight_map(diff_highlights)
+
+    self.state._syntax_hl_map = {}
+    self.state._line_numbers = {}
+    if filetype and filetype ~= '' and filetype ~= 'text' then
+      local pl, ft = patch_lines, filetype
+      local gen = self._render_gen
+      vim.schedule(function()
+        if not self.mounted or self._render_gen ~= gen then return end
+        local syntax_highlights = self._patch_highlighter:highlight(pl, ft)
+        self.state._syntax_hl_map = self:_build_highlight_map(syntax_highlights)
+        self:mark_viewport_dirty()
+      end)
     end
 
-    self:render_diff_backgrounds(patch_lines)
-    self:render_syntax_highlights(patch_lines, filetype)
+    self:_ensure_renderer_attached()
   else
     self.state.lines = {}
     self.state.line_metadata = {}
     self:clear_lines()
     self:reset_cursor()
   end
-end
-
-function PatchPreviewComponent:render_diff_backgrounds(patch_lines)
-  local highlights = self._patch_highlighter:get_diff_line_highlights(patch_lines)
-  self:apply_highlights(highlights, 5, 10)
-end
-
-function PatchPreviewComponent:render_diff_backgrounds_with_metadata(lines, line_metadata)
-  local highlights = self._patch_highlighter:get_diff_line_highlights_with_metadata(lines, line_metadata)
-  self:apply_highlights(highlights, 5, 10)
-end
-
-function PatchPreviewComponent:render_syntax_highlights(patch_lines, filetype)
-  if not filetype or filetype == '' or filetype == 'text' then return end
-  local highlights = self._patch_highlighter:highlight(patch_lines, filetype)
-  self:apply_highlights(highlights, 20)
-end
-
-function PatchPreviewComponent:render_syntax_highlights_with_metadata(lines, line_metadata)
-  local highlights = self._patch_highlighter:highlight_with_metadata(lines, line_metadata)
-  self:apply_highlights(highlights, 20)
 end
 
 -- Calculate line numbers for delta-style display
@@ -426,51 +412,122 @@ function PatchPreviewComponent:calculate_line_numbers(lines, line_metadata)
   return line_numbers
 end
 
--- Render line numbers using extmark virtual text
-function PatchPreviewComponent:render_line_numbers(line_numbers)
-  if not self:is_element_valid() then return end
-
-  for i, ln in ipairs(line_numbers) do
-    self._element:place_extmark_lnum({
-      row = i - 1,
-      hl = ln.hl,
-      text = ln.text,
-    })
-  end
-end
-
--- Render syntax highlights using full-file TreeSitter approach
-function PatchPreviewComponent:render_syntax_highlights_from_full_files(file_sections)
-  if not self:is_element_valid() then return end
+-- Compute syntax highlights from full files without placing extmarks
+function PatchPreviewComponent:_compute_syntax_highlights_from_full_files(file_sections)
+  local all_highlights = {}
 
   for _, section in ipairs(file_sections or {}) do
     local filetype = section.filetype
     local hunks = section.hunks
 
     if filetype and filetype ~= '' and filetype ~= 'text' and hunks and #hunks > 0 then
-      -- Use full-file TreeSitter approach for accurate highlighting
       local highlights = self._patch_highlighter:highlight_from_full_files({
         original_lines = section.original_lines,
         current_lines = section.current_lines,
         filetype = filetype,
         hunks = hunks,
-        strip_prefix = true, -- We stripped +/- prefixes when building lines
+        strip_prefix = true,
       })
 
-      -- Apply highlights to the buffer
       for _, hl in ipairs(highlights) do
-        self._element:place_extmark_highlight({
-          hl = hl.hl_group,
-          row = hl.row,
-          col_range = {
-            from = hl.col_start,
-            to = hl.col_end > 0 and hl.col_end or nil,
-          },
-          priority = 20,
-        })
+        all_highlights[#all_highlights + 1] = hl
       end
     end
   end
+
+  return all_highlights
+end
+
+function PatchPreviewComponent:_build_highlight_map(highlights)
+  local map = {}
+  for _, hl in ipairs(highlights) do
+    local row = hl.row
+    if not map[row] then map[row] = {} end
+    map[row][#map[row] + 1] = hl
+  end
+  return map
+end
+
+function PatchPreviewComponent:_render_viewport(top, bot)
+  if self:is_viewport_unchanged(top, bot) then return end
+
+  -- Single with_element call for entire viewport — avoids per-row validity checks
+  local rendered = self:with_element(function(el)
+    -- Ranged clear: only remove highlights in the viewport being re-rendered.
+    -- Full clear already happened in render() on data change.
+    el:clear_extmark_highlights(top, bot)
+
+    local diff_hl_map = self.state._diff_hl_map
+    local syntax_hl_map = self.state._syntax_hl_map
+    local line_numbers = self.state._line_numbers
+
+    for row = top, bot do
+      -- Render line number for this row
+      local ln = line_numbers[row + 1] -- 1-indexed
+      if ln then
+        el:place_extmark_lnum({
+          row = row,
+          hl = ln.hl,
+          text = ln.text,
+        })
+      end
+
+      -- Render diff background highlights for this row
+      local diff_hls = diff_hl_map[row]
+      if diff_hls then
+        for _, hl in ipairs(diff_hls) do
+          if hl.line then
+            el:place_extmark_highlight({
+              hl = hl.hl_group,
+              row = hl.row,
+              line_hl = true,
+              priority = hl.priority or 5,
+            })
+          elseif hl.col_start ~= nil and hl.col_end ~= nil then
+            el:place_extmark_highlight({
+              hl = hl.hl_group,
+              row = hl.row,
+              col_range = {
+                from = hl.col_start,
+                to = hl.col_end > 0 and hl.col_end or nil,
+              },
+              priority = hl.col_priority or hl.priority or 10,
+            })
+          end
+        end
+      end
+
+      -- Render syntax highlights for this row
+      local syntax_hls = syntax_hl_map[row]
+      if syntax_hls then
+        for _, hl in ipairs(syntax_hls) do
+          el:place_extmark_highlight({
+            hl = hl.hl_group,
+            row = hl.row,
+            col_range = {
+              from = hl.col_start,
+              to = hl.col_end > 0 and hl.col_end or nil,
+            },
+            priority = 20,
+          })
+        end
+      end
+    end
+
+    return true
+  end)
+
+  if rendered then self:commit_viewport(top, bot) end
+end
+
+function PatchPreviewComponent:_ensure_renderer_attached()
+  self:ensure_renderer_attached(function()
+    self:with_element(function(el)
+      el:attach_to_renderer(function(top, bot)
+        self:_render_viewport(top, bot)
+      end)
+    end)
+  end)
 end
 
 function PatchPreviewComponent:get_layout_spec()
@@ -481,40 +538,41 @@ function PatchPreviewComponent:get_layout_spec()
   })
 end
 
+function PatchPreviewComponent:get_marks()
+  return self.state.marks or {}
+end
+
 function PatchPreviewComponent:get_line_metadata(lnum)
   return self.state.line_metadata[lnum]
 end
 
 function PatchPreviewComponent:get_lines()
-  if self:is_element_valid() then return self._element:get_lines() end
-  return self.state.lines
+  return self:with_element(function(el) return el:get_lines() end) or self.state.lines
 end
 
 function PatchPreviewComponent:clear_lines()
-  if self:is_element_valid() then self._element:clear_lines() end
+  self:with_element(function(el) el:clear_lines() end)
   self.state.lines = {}
   self.state.line_metadata = {}
   return self
 end
 
 function PatchPreviewComponent:set_cursor(cursor)
-  if self:is_element_valid() then self._element:set_cursor(cursor) end
+  self:with_element(function(el) el:set_cursor(cursor) end)
   return self
 end
 
 function PatchPreviewComponent:get_cursor()
-  if self:is_element_valid() then return self._element:get_cursor() end
-  return { 1, 1 }
+  return self:with_element(function(el) return el:get_cursor() end) or { 1, 1 }
 end
 
 function PatchPreviewComponent:set_lnum(lnum)
-  if self:is_element_valid() then self._element:set_lnum(lnum) end
+  self:with_element(function(el) el:set_lnum(lnum) end)
   return self
 end
 
 function PatchPreviewComponent:get_lnum()
-  if self:is_element_valid() then return self._element:get_lnum() end
-  return 1
+  return self:with_element(function(el) return el:get_lnum() end) or 1
 end
 
 function PatchPreviewComponent:reset_cursor()
@@ -522,43 +580,39 @@ function PatchPreviewComponent:reset_cursor()
 end
 
 function PatchPreviewComponent:enable_cursorline()
-  if self:is_element_valid() then self._element:enable_cursorline() end
+  self:with_element(function(el) el:enable_cursorline() end)
   return self
 end
 
 function PatchPreviewComponent:disable_cursorline()
-  if self:is_element_valid() then self._element:disable_cursorline() end
+  self:with_element(function(el) el:disable_cursorline() end)
   return self
 end
 
 function PatchPreviewComponent:get_line_count()
-  if self:is_element_valid() then return self._element:get_line_count() end
-  return 0
+  return self:with_element(function(el) return el:get_line_count() end) or 0
 end
 
 function PatchPreviewComponent:position_cursor(pos)
-  if not self:is_element_valid() then return self end
+  self:with_element(function(el)
+    pos = pos or 'center'
+    local win_id = el:get_win_id()
+    if not win_id then return end
 
-  pos = pos or 'center'
-  local win_id = self._element:get_win_id()
-  if not win_id then return self end
-
-  local lnum = self:get_lnum()
-  local win_height = vim.api.nvim_win_get_height(win_id)
-
-  if pos == 'top' then
-    vim.api.nvim_win_call(win_id, function()
-      vim.cmd('normal! zt')
-    end)
-  elseif pos == 'center' then
-    vim.api.nvim_win_call(win_id, function()
-      vim.cmd('normal! zz')
-    end)
-  elseif pos == 'bottom' then
-    vim.api.nvim_win_call(win_id, function()
-      vim.cmd('normal! zb')
-    end)
-  end
+    if pos == 'top' then
+      vim.api.nvim_win_call(win_id, function()
+        vim.cmd('normal! zt')
+      end)
+    elseif pos == 'center' then
+      vim.api.nvim_win_call(win_id, function()
+        vim.cmd('normal! zz')
+      end)
+    elseif pos == 'bottom' then
+      vim.api.nvim_win_call(win_id, function()
+        vim.cmd('normal! zb')
+      end)
+    end
+  end)
 
   return self
 end
@@ -628,26 +682,27 @@ function PatchPreviewComponent:hunk_up(pos)
   return self:move_to_hunk(mark_index, pos)
 end
 
-function PatchPreviewComponent:place_extmark_highlight(opts)
-  if self:is_element_valid() then return self._element:place_extmark_highlight(opts) end
-  return nil
-end
+Component.forward(PatchPreviewComponent, function(self)
+  return self._element and self._element:is_valid() and self._element
+end, {
+  'place_extmark_highlight',
+})
 
 function PatchPreviewComponent:clear_extmarks()
-  if self:is_element_valid() then
-    self._element:clear_extmarks()
-    self._element:clear_extmark_lnums()
-  end
+  self:with_element(function(el)
+    el:clear_extmarks()
+    el:clear_extmark_lnums()
+  end)
   return self
 end
 
 function PatchPreviewComponent:set_keymap(config, handler)
-  if self:is_element_valid() then self._element:set_keymap(config, handler) end
+  self:with_element(function(el) el:set_keymap(config, handler) end)
   return self
 end
 
 function PatchPreviewComponent:is_valid()
-  return self:is_element_valid()
+  return self:with_element(function() return true end) or false
 end
 
 function PatchPreviewComponent:focus()
@@ -655,7 +710,7 @@ function PatchPreviewComponent:focus()
 end
 
 function PatchPreviewComponent:call(callback)
-  if self:is_element_valid() and callback then self._element:call(callback) end
+  if callback then self:with_element(function(el) el:call(callback) end) end
   return self
 end
 
@@ -665,7 +720,7 @@ function PatchPreviewComponent:unmount()
   self._element:unmount()
   self._element = nil
 
-  Component.unmount(self)
+  ViewportComponent.unmount(self)
 end
 
 return PatchPreviewComponent

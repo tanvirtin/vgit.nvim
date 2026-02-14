@@ -232,9 +232,9 @@ function Element:clear_extmark_signs()
   return self
 end
 
-function Element:clear_extmark_highlights()
+function Element:clear_extmark_highlights(from, to)
   if not self:is_valid() then return self end
-  self.buffer:clear_extmark_highlights()
+  self.buffer:clear_extmark_highlights(from, to)
   return self
 end
 

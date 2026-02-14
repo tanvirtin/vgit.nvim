@@ -16,6 +16,11 @@ function SplitDiffComponent:constructor(props)
   return instance
 end
 
+function SplitDiffComponent:_for_both(fn)
+  if self._previous_component then fn(self._previous_component) end
+  if self._current_component then fn(self._current_component) end
+end
+
 function SplitDiffComponent:calculate_split_line_numbers(diff)
   local current_lnum_change_map = {}
   local previous_lnum_change_map = {}
@@ -138,14 +143,11 @@ function SplitDiffComponent:component_will_mount()
 end
 
 function SplitDiffComponent:component_will_unmount()
-  if self._previous_component then self._previous_component:unmount() end
-  if self._current_component then self._current_component:unmount() end
+  self:_for_both(function(c) c:unmount() end)
 end
 
 function SplitDiffComponent:render()
   local diff = self.props.diff
-
-  self:clear_extmarks()
 
   if not diff then
     self.state.previous_lines = {}
@@ -212,25 +214,15 @@ function SplitDiffComponent:set_lines(previous_lines, current_lines)
 end
 
 function SplitDiffComponent:clear_lines()
-  if self._previous_component then self._previous_component:clear_lines():disable_cursorline() end
-  if self._current_component then self._current_component:clear_lines():disable_cursorline() end
+  self:_for_both(function(c) c:clear_lines():disable_cursorline() end)
   self:set_state({ previous_lines = {}, current_lines = {} })
 end
 
-function SplitDiffComponent:render_line_numbers(previous_lines, current_lines)
-  if self._previous_component then self._previous_component:render_line_numbers(previous_lines) end
-  if self._current_component then self._current_component:render_line_numbers(current_lines) end
-end
-
 function SplitDiffComponent:set_lnum(lnum, position)
-  if self._previous_component then
-    self._previous_component:set_lnum(lnum)
-    if position then self._previous_component:position_cursor(position) end
-  end
-  if self._current_component then
-    self._current_component:set_lnum(lnum)
-    if position then self._current_component:position_cursor(position) end
-  end
+  self:_for_both(function(c)
+    c:set_lnum(lnum)
+    if position then c:position_cursor(position) end
+  end)
 end
 
 function SplitDiffComponent:get_lnum()
@@ -239,23 +231,19 @@ function SplitDiffComponent:get_lnum()
 end
 
 function SplitDiffComponent:reset_cursor()
-  if self._previous_component then self._previous_component:reset_cursor() end
-  if self._current_component then self._current_component:reset_cursor() end
+  self:_for_both(function(c) c:reset_cursor() end)
 end
 
 function SplitDiffComponent:enable_cursorline()
-  if self._previous_component then self._previous_component:enable_cursorline() end
-  if self._current_component then self._current_component:enable_cursorline() end
+  self:_for_both(function(c) c:enable_cursorline() end)
 end
 
 function SplitDiffComponent:disable_cursorline()
-  if self._previous_component then self._previous_component:disable_cursorline() end
-  if self._current_component then self._current_component:disable_cursorline() end
+  self:_for_both(function(c) c:disable_cursorline() end)
 end
 
 function SplitDiffComponent:set_filetype(filetype)
-  if self._previous_component then self._previous_component:set_filetype(filetype) end
-  if self._current_component then self._current_component:set_filetype(filetype) end
+  self:_for_both(function(c) c:set_filetype(filetype) end)
 end
 
 function SplitDiffComponent:get_filetype()
@@ -264,13 +252,11 @@ function SplitDiffComponent:get_filetype()
 end
 
 function SplitDiffComponent:clear_extmarks()
-  if self._previous_component then self._previous_component:clear_extmarks() end
-  if self._current_component then self._current_component:clear_extmarks() end
+  self:_for_both(function(c) c:clear_extmarks() end)
 end
 
 function SplitDiffComponent:attach_to_renderer(callback)
-  if self._previous_component then self._previous_component:attach_to_renderer(callback) end
-  if self._current_component then self._current_component:attach_to_renderer(callback) end
+  self:_for_both(function(c) c:attach_to_renderer(callback) end)
 end
 
 function SplitDiffComponent:is_valid()
@@ -322,13 +308,11 @@ function SplitDiffComponent:get_marks()
 end
 
 function SplitDiffComponent:render_folds()
-  if self._previous_component then self._previous_component:render_folds() end
-  if self._current_component then self._current_component:render_folds() end
+  self:_for_both(function(c) c:render_folds() end)
 end
 
 function SplitDiffComponent:clear_folds()
-  if self._previous_component then self._previous_component:clear_folds() end
-  if self._current_component then self._current_component:clear_folds() end
+  self:_for_both(function(c) c:clear_folds() end)
 end
 
 function SplitDiffComponent:call(callback)
@@ -338,18 +322,15 @@ function SplitDiffComponent:call(callback)
 end
 
 function SplitDiffComponent:on(event_name, callback)
-  if self._previous_component then self._previous_component:on(event_name, callback) end
-  if self._current_component then self._current_component:on(event_name, callback) end
+  self:_for_both(function(c) c:on(event_name, callback) end)
 end
 
 function SplitDiffComponent:set_keymap(mode_or_opts, key_or_callback, handler, desc)
-  if self._previous_component then self._previous_component:set_keymap(mode_or_opts, key_or_callback, handler, desc) end
-  if self._current_component then self._current_component:set_keymap(mode_or_opts, key_or_callback, handler, desc) end
+  self:_for_both(function(c) c:set_keymap(mode_or_opts, key_or_callback, handler, desc) end)
 end
 
 function SplitDiffComponent:unmount()
-  if self._previous_component then self._previous_component:unmount() end
-  if self._current_component then self._current_component:unmount() end
+  self:_for_both(function(c) c:unmount() end)
 end
 
 return SplitDiffComponent

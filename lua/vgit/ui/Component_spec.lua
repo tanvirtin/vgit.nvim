@@ -344,6 +344,91 @@ describe('Component:', function()
     end)
   end)
 
+  describe('with_element', function()
+    it('should return nil when _element is nil', function()
+      local called = false
+      local result = component:with_element(function() called = true; return 42 end)
+      assert.is_false(called)
+      assert.is_nil(result)
+    end)
+
+    it('should return nil when _element is_valid returns false', function()
+      component._element = { is_valid = function() return false end }
+      local called = false
+      local result = component:with_element(function() called = true; return 42 end)
+      assert.is_false(called)
+      assert.is_nil(result)
+    end)
+
+    it('should call fn with element when valid', function()
+      local mock_element = { is_valid = function() return true end }
+      component._element = mock_element
+      local received_element
+      component:with_element(function(el)
+        received_element = el
+      end)
+      assert.are.equal(mock_element, received_element)
+    end)
+
+    it('should forward return value', function()
+      component._element = { is_valid = function() return true end }
+      local result = component:with_element(function() return 'hello' end)
+      assert.are.equal('hello', result)
+    end)
+  end)
+
+  describe('forward', function()
+    it('should create delegating methods on a class', function()
+      local MyComponent = Component:extend()
+      local target = {
+        get_value = function(self) return 42 end,
+      }
+      Component.forward(MyComponent, function(self) return target end, { 'get_value' })
+      local instance = MyComponent()
+      assert.are.equal(42, instance:get_value())
+    end)
+
+    it('should return nil when target is nil', function()
+      local MyComponent = Component:extend()
+      Component.forward(MyComponent, function(self) return nil end, { 'get_value' })
+      local instance = MyComponent()
+      assert.is_nil(instance:get_value())
+    end)
+
+    it('should forward multiple methods', function()
+      local MyComponent = Component:extend()
+      local target = {
+        get_a = function(self) return 'a' end,
+        get_b = function(self) return 'b' end,
+      }
+      Component.forward(MyComponent, function(self) return target end, { 'get_a', 'get_b' })
+      local instance = MyComponent()
+      assert.are.equal('a', instance:get_a())
+      assert.are.equal('b', instance:get_b())
+    end)
+
+    it('should pass arguments to target method', function()
+      local MyComponent = Component:extend()
+      local target = {
+        add = function(self, a, b) return a + b end,
+      }
+      Component.forward(MyComponent, function(self) return target end, { 'add' })
+      local instance = MyComponent()
+      assert.are.equal(5, instance:add(2, 3))
+    end)
+
+    it('should be overrideable by explicit method', function()
+      local MyComponent = Component:extend()
+      local target = {
+        get_value = function(self) return 'from_target' end,
+      }
+      Component.forward(MyComponent, function(self) return target end, { 'get_value' })
+      function MyComponent:get_value() return 'overridden' end
+      local instance = MyComponent()
+      assert.are.equal('overridden', instance:get_value())
+    end)
+  end)
+
   describe('lifecycle ordering', function()
     it('should follow mount -> will_mount sequence', function()
       component:mount()

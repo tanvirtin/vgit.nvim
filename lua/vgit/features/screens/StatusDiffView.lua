@@ -174,8 +174,8 @@ function StatusDiffView:move_to_entry(filename, entry_type)
 end
 
 function StatusDiffView:restore_hunk_position(hunk_index)
-  local marks = self.diff_component.state and self.diff_component.state.marks
-  if marks and #marks > 0 then
+  local marks = self.diff_component:get_marks()
+  if #marks > 0 then
     local target = math.min(hunk_index, #marks)
     self.diff_component:move_to_hunk(target, self:get_hunk_alignment())
   end
@@ -205,8 +205,8 @@ end
 function StatusDiffView:move_to_next_file()
   if not self.tree_component or not self.tree_component:is_valid() then return nil end
 
-  local current_lnum = self.tree_component._element:get_lnum()
-  local count = self.tree_component._element:get_line_count()
+  local current_lnum = self.tree_component:get_lnum()
+  local count = self.tree_component:get_line_count()
 
   -- Find next file entry (skip folders)
   for offset = 1, count do
@@ -215,7 +215,7 @@ function StatusDiffView:move_to_next_file()
 
     local item = self.tree_component:get_list_item(target_lnum)
     if item and item.entry and item.entry.status then
-      self.tree_component._element:set_lnum(target_lnum)
+      self.tree_component:set_lnum(target_lnum)
       self:_set_current_entry(item.entry)
       return item
     end
@@ -227,8 +227,8 @@ end
 function StatusDiffView:move_to_prev_file()
   if not self.tree_component or not self.tree_component:is_valid() then return nil end
 
-  local current_lnum = self.tree_component._element:get_lnum()
-  local count = self.tree_component._element:get_line_count()
+  local current_lnum = self.tree_component:get_lnum()
+  local count = self.tree_component:get_line_count()
 
   -- Find previous file entry (skip folders)
   for offset = 1, count do
@@ -237,7 +237,7 @@ function StatusDiffView:move_to_prev_file()
 
     local item = self.tree_component:get_list_item(target_lnum)
     if item and item.entry and item.entry.status then
-      self.tree_component._element:set_lnum(target_lnum)
+      self.tree_component:set_lnum(target_lnum)
       self:_set_current_entry(item.entry)
       return item
     end
@@ -646,13 +646,11 @@ function StatusDiffView:_handle_file_selection_change(item)
       if self._initial_cursor_lnum then
         local cursor_lnum = self._initial_cursor_lnum
         self._initial_cursor_lnum = nil
-        local hunks = self.diff_component.state and self.diff_component.state.hunks
-        if hunks then
-          for i, hunk in ipairs(hunks) do
-            if cursor_lnum >= hunk.top and cursor_lnum <= hunk.bot then
-              target_hunk = i
-              break
-            end
+        local hunks = self.diff_component:get_hunks()
+        for i, hunk in ipairs(hunks) do
+          if cursor_lnum >= hunk.top and cursor_lnum <= hunk.bot then
+            target_hunk = i
+            break
           end
         end
       end
