@@ -100,14 +100,12 @@ function TreeComponent:create_node(entry)
 end
 
 function TreeComponent:set_list(list)
-  self.state.list = list
-  if self.mounted then self:render() end
+  self:set_state({ list = list })
   return self
 end
 
 function TreeComponent:set_title(text)
-  self.state.title = text
-  if self.mounted then self:render() end
+  self:set_state({ title = text })
   return self
 end
 
@@ -158,47 +156,49 @@ function TreeComponent:move_to(callback)
   local status, lnum = self:find_entry(callback)
   if not status then return end
 
-  if self._element and self._element:is_valid() then self._element:set_lnum(lnum) end
+  self:with_element(function(el) el:set_lnum(lnum) end)
 
   return status
 end
 
 function TreeComponent:get_current_list_item()
-  if not self._element or not self._element:is_valid() then return nil end
-
-  local lnum = self._element:get_lnum()
-  return self:get_list_item(lnum)
+  return self:with_element(function(el)
+    local lnum = el:get_lnum()
+    return self:get_list_item(lnum)
+  end)
 end
 
 function TreeComponent:move(direction)
-  if not self._element or not self._element:is_valid() then return nil end
+  return self:with_element(function(el)
+    local lnum = el:get_lnum()
+    local count = el:get_line_count()
 
-  local lnum = self._element:get_lnum()
-  local count = self._element:get_line_count()
+    if direction == 'down' then lnum = lnum + 1 end
+    if direction == 'up' then lnum = lnum - 1 end
 
-  if direction == 'down' then lnum = lnum + 1 end
-  if direction == 'up' then lnum = lnum - 1 end
+    if lnum < 1 then
+      lnum = count
+    elseif lnum > count then
+      lnum = 1
+    end
 
-  if lnum < 1 then
-    lnum = count
-  elseif lnum > count then
-    lnum = 1
-  end
+    el:set_lnum(lnum)
 
-  self._element:set_lnum(lnum)
-
-  return self:get_list_item(lnum)
+    return self:get_list_item(lnum)
+  end)
 end
 
 function TreeComponent:toggle_current_list_item()
-  if not self._element or not self._element:is_valid() then return end
+  self:with_element(function(el)
+    local lnum = el:get_lnum()
+    local item = self:get_list_item(lnum)
 
-  local lnum = self._element:get_lnum()
-  local item = self:get_list_item(lnum)
+    if item and item.open ~= nil then item.open = not item.open end
 
-  if item and item.open ~= nil then item.open = not item.open end
-
-  self:render()
+    -- Force re-render through lifecycle (list reference unchanged, but tree structure mutated)
+    self._needs_update = true
+    self:update(self.state)
+  end)
 end
 
 function TreeComponent:generate_lines()
@@ -462,12 +462,12 @@ function TreeComponent:paint()
 end
 
 function TreeComponent:render()
-  if not self._element or not self._element:is_valid() then return end
-
-  local buffer = self._element.buffer
-  buffer:clear_extmarks()
-  buffer:set_lines(self:generate_lines())
-  self:paint()
+  self:with_element(function(el)
+    local buffer = el.buffer
+    buffer:clear_extmarks()
+    buffer:set_lines(self:generate_lines())
+    self:paint()
+  end)
 end
 
 function TreeComponent:get_layout_spec()
@@ -483,78 +483,94 @@ end
 function TreeComponent:component_did_mount()
   self:render()
 
-  if not self._keymaps_setup and self._element and self._element:is_valid() then
-    self._element:set_keymap('n', '<enter>', function()
-      local item = self:get_current_list_item()
-      if not item then return end
-      self:toggle_current_list_item()
-      if self._on_enter_callback then self._on_enter_callback(item) end
-    end, 'Enter item')
+  self:with_element(function(el)
+    if not self._keymaps_setup then
+      el:set_keymap('n', '<enter>', function()
+        local item = self:get_current_list_item()
+        if not item then return end
+        self:toggle_current_list_item()
+        if self._on_enter_callback then self._on_enter_callback(item) end
+      end, 'Enter item')
 
-    if self.props.keymaps then self:setup_keymaps(self.props.keymaps, self.props.keymap_handlers) end
+      if self.props.keymaps then self:setup_keymaps(self.props.keymaps, self.props.keymap_handlers) end
 
-    local bufnr = self._element:get_bufnr()
-    if bufnr then
-      vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
-        buffer = bufnr,
-        callback = function()
-          local item = self:get_current_list_item()
-          if self._on_move_callback then self._on_move_callback(item) end
-        end,
-      })
+      local bufnr = el:get_bufnr()
+      if bufnr then
+        vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
+          buffer = bufnr,
+          callback = function()
+            local item = self:get_current_list_item()
+            if self._on_move_callback then self._on_move_callback(item) end
+          end,
+        })
+      end
+
+      self._keymaps_setup = true
     end
-
-    self._keymaps_setup = true
-  end
+  end)
 end
 
 function TreeComponent:setup_keymaps(keymaps, handlers)
-  if not self._element or not self._element:is_valid() then return end
-  if not keymaps or not handlers then return end
+  self:with_element(function(el)
+    if not keymaps or not handlers then return end
 
-  local function set_safe_keymap(mode, key_config, handler, desc)
-    if not key_config then return end
+    local function set_safe_keymap(mode, key_config, handler, desc)
+      if not key_config then return end
 
-    local key = nil
-    local key_desc = desc or ''
+      local key = nil
+      local key_desc = desc or ''
 
-    if type(key_config) == 'string' then
-      key = key_config
-    elseif type(key_config) == 'table' then
-      key = key_config.key
-      key_desc = key_config.desc or desc or ''
+      if type(key_config) == 'string' then
+        key = key_config
+      elseif type(key_config) == 'table' then
+        key = key_config.key
+        key_desc = key_config.desc or desc or ''
+      end
+
+      if not key then return end
+
+      el:set_keymap(mode, key, handler, key_desc)
     end
 
-    if not key then return end
+    if keymaps.commit and handlers.commit then
+      set_safe_keymap('n', keymaps.commit, handlers.commit, 'Commit')
+    end
+    if keymaps.buffer_reset and handlers.reset_file then
+      set_safe_keymap('n', keymaps.buffer_reset, handlers.reset_file, 'Reset')
+    end
+    if keymaps.buffer_stage and handlers.stage_file then
+      set_safe_keymap('n', keymaps.buffer_stage, handlers.stage_file, 'Stage')
+    end
+    if keymaps.buffer_unstage and handlers.unstage_file then
+      set_safe_keymap('n', keymaps.buffer_unstage, handlers.unstage_file, 'Unstage')
+    end
+    if keymaps.stage_all and handlers.stage_all then
+      set_safe_keymap('n', keymaps.stage_all, handlers.stage_all, 'Stage all')
+    end
+    if keymaps.unstage_all and handlers.unstage_all then
+      set_safe_keymap('n', keymaps.unstage_all, handlers.unstage_all, 'Unstage all')
+    end
+    if keymaps.reset_all and handlers.reset_all then
+      set_safe_keymap('n', keymaps.reset_all, handlers.reset_all, 'Reset all')
+    end
+  end)
+end
 
-    self._element:set_keymap(mode, key, handler, key_desc)
-  end
+function TreeComponent:get_lnum()
+  return self:with_element(function(el) return el:get_lnum() end) or 1
+end
 
-  if keymaps.commit and handlers.commit then
-    set_safe_keymap('n', keymaps.commit, handlers.commit, 'Commit')
-  end
-  if keymaps.buffer_reset and handlers.reset_file then
-    set_safe_keymap('n', keymaps.buffer_reset, handlers.reset_file, 'Reset')
-  end
-  if keymaps.buffer_stage and handlers.stage_file then
-    set_safe_keymap('n', keymaps.buffer_stage, handlers.stage_file, 'Stage')
-  end
-  if keymaps.buffer_unstage and handlers.unstage_file then
-    set_safe_keymap('n', keymaps.buffer_unstage, handlers.unstage_file, 'Unstage')
-  end
-  if keymaps.stage_all and handlers.stage_all then
-    set_safe_keymap('n', keymaps.stage_all, handlers.stage_all, 'Stage all')
-  end
-  if keymaps.unstage_all and handlers.unstage_all then
-    set_safe_keymap('n', keymaps.unstage_all, handlers.unstage_all, 'Unstage all')
-  end
-  if keymaps.reset_all and handlers.reset_all then
-    set_safe_keymap('n', keymaps.reset_all, handlers.reset_all, 'Reset all')
-  end
+function TreeComponent:set_lnum(lnum)
+  self:with_element(function(el) el:set_lnum(lnum) end)
+  return self
+end
+
+function TreeComponent:get_line_count()
+  return self:with_element(function(el) return el:get_line_count() end) or 0
 end
 
 function TreeComponent:is_valid()
-  return self._element and self._element:is_valid()
+  return self:with_element(function() return true end) or false
 end
 
 function TreeComponent:focus()

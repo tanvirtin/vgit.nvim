@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 local utils = lazy('vgit.core.utils')
 local Component = lazy('vgit.ui.Component')
+local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local DiffCalculator = lazy('vgit.ui.calculators.DiffCalculator')
@@ -8,10 +9,10 @@ local FoldCalculator = lazy('vgit.ui.calculators.FoldCalculator')
 local LineNumberCalculator = lazy('vgit.ui.calculators.LineNumberCalculator')
 local symbols_setting = lazy('vgit.settings.symbols')
 
-local DiffComponent = Component:extend()
+local DiffComponent = ViewportComponent:extend()
 
 function DiffComponent:constructor(props)
-  local instance = Component.constructor(self, props)
+  local instance = ViewportComponent.constructor(self, props)
   instance._element = nil
   instance._line_number_calculator = LineNumberCalculator()
   instance._diff_calculator = DiffCalculator()
@@ -91,7 +92,13 @@ end
 function DiffComponent:render()
   local diff = self.props.diff
 
-  self:clear_extmarks()
+  self:mark_viewport_dirty()
+
+  -- Only clear signs; line numbers and text extmarks use stable IDs
+  -- and get overwritten in-place by the viewport renderer
+  self:with_element(function(el)
+    el:clear_extmark_signs()
+  end)
 
   if not diff then
     self.state.lines = {}
@@ -110,15 +117,15 @@ function DiffComponent:render()
 
   if self.props.filetype then self:set_filetype(self.props.filetype) end
 
-  if self._element and self._element:is_valid() then
-    self._element:set_lines(diff.lines)
-    self._element:enable_cursorline()
-  end
+  self:with_element(function(el)
+    el:set_lines(diff.lines)
+    el:enable_cursorline()
+  end)
 
   self.state.lines = diff.lines
 
-  if self._element and self._element:is_valid() then
-    local buffer_line_count = self._element:get_line_count()
+  self:with_element(function(el)
+    local buffer_line_count = el:get_line_count()
     if buffer_line_count > 0 then
       local line_numbers = self.props._split_line_numbers
       local lines_changes = self.props._split_lines_changes
@@ -127,16 +134,30 @@ function DiffComponent:render()
         line_numbers, lines_changes = self:calculate_unified_line_numbers(diff)
       end
 
+      -- Pre-pad line number text so viewport renderer just reads them
+      if #line_numbers > 0 then
+        local max_digits = string.len(tostring(#line_numbers)) + 1
+        for i = 1, #line_numbers do
+          local ln = line_numbers[i]
+          if ln then
+            local text = ln[1]
+            local text_len = string.len(text)
+            if text_len < max_digits then
+              ln[1] = string.format('%s%s', string.rep(' ', max_digits - text_len), text)
+            end
+          end
+        end
+      end
+
       self.state.line_numbers = line_numbers
       self.state.lines_changes = lines_changes
 
       self.state.folds = self:calculate_folds(diff, buffer_line_count)
-
-      self:render_line_numbers(line_numbers)
     end
-  end
+  end)
 
-  self:render_diff_partially()
+  -- Attach once — the callback reads from self.state which we just updated
+  self:_ensure_renderer_attached()
 end
 
 function DiffComponent:get_layout_spec()
@@ -152,55 +173,31 @@ function DiffComponent:set_lines(lines)
 end
 
 function DiffComponent:get_lines()
-  if self._element and self._element:is_valid() then return self._element:get_lines() end
-  return self.state.lines
+  return self:with_element(function(el) return el:get_lines() end) or self.state.lines
 end
 
 function DiffComponent:clear_lines()
-  if self._element and self._element:is_valid() then self._element:clear_lines() end
+  self:with_element(function(el) el:clear_lines() end)
   self:set_state({ lines = {} })
   return self
 end
 
-function DiffComponent:render_line_numbers(lines)
-  if not self._element or not self._element:is_valid() then return self end
-
-  local offset = 1
-  local max_digits = string.len(tostring(#lines)) + offset
-
-  for i = 1, #lines do
-    local hl = lines[i][2]
-    local text = lines[i][1]
-    local text_len = string.len(text)
-    if text_len < max_digits then text = string.format('%s%s', string.rep(' ', max_digits - text_len), text) end
-    self._element:place_extmark_lnum({
-      row = i - 1,
-      hl = hl,
-      text = text,
-    })
-  end
-
-  return self
-end
-
 function DiffComponent:set_cursor(cursor)
-  if self._element and self._element:is_valid() then self._element:set_cursor(cursor) end
+  self:with_element(function(el) el:set_cursor(cursor) end)
   return self
 end
 
 function DiffComponent:get_cursor()
-  if self._element and self._element:is_valid() then return self._element:get_cursor() end
-  return { 1, 1 }
+  return self:with_element(function(el) return el:get_cursor() end) or { 1, 1 }
 end
 
 function DiffComponent:set_lnum(lnum)
-  if self._element and self._element:is_valid() then self._element:set_lnum(lnum) end
+  self:with_element(function(el) el:set_lnum(lnum) end)
   return self
 end
 
 function DiffComponent:get_lnum()
-  if self._element and self._element:is_valid() then return self._element:get_lnum() end
-  return 1
+  return self:with_element(function(el) return el:get_lnum() end) or 1
 end
 
 function DiffComponent:reset_cursor()
@@ -208,78 +205,61 @@ function DiffComponent:reset_cursor()
 end
 
 function DiffComponent:position_cursor(placement)
-  if not self._element or not self._element:is_valid() then return self end
-  self._element:position_cursor(placement)
+  self:with_element(function(el) el:position_cursor(placement) end)
   return self
 end
 
 function DiffComponent:call(callback)
-  if self._element and self._element:is_valid() and callback then self._element:call(callback) end
+  if callback then self:with_element(function(el) el:call(callback) end) end
   return self
 end
 
 function DiffComponent:enable_cursorline()
-  if self._element and self._element:is_valid() then self._element:enable_cursorline() end
+  self:with_element(function(el) el:enable_cursorline() end)
   return self
 end
 
 function DiffComponent:disable_cursorline()
-  if self._element and self._element:is_valid() then self._element:disable_cursorline() end
+  self:with_element(function(el) el:disable_cursorline() end)
   return self
 end
 
 function DiffComponent:get_line_count()
-  if self._element and self._element:is_valid() then return self._element:get_line_count() end
-  return 0
-end
-
-function DiffComponent:set_filetype(filetype)
-  if self._element and self._element:is_valid() then self._element:set_filetype(filetype) end
+  return self:with_element(function(el) return el:get_line_count() end) or 0
 end
 
 function DiffComponent:get_filetype()
-  if self._element and self._element:is_valid() then return self._element:get_filetype() end
-  return ''
-end
-
-function DiffComponent:place_extmark_text(opts)
-  if self._element and self._element:is_valid() then return self._element:place_extmark_text(opts) end
-  return nil
-end
-
-function DiffComponent:place_extmark_sign(opts)
-  if self._element and self._element:is_valid() then return self._element:place_extmark_sign(opts) end
-  return nil
-end
-
-function DiffComponent:place_extmark_lnum(opts)
-  if self._element and self._element:is_valid() then return self._element:place_extmark_lnum(opts) end
-  return nil
-end
-
-function DiffComponent:place_extmark_highlight(opts)
-  if self._element and self._element:is_valid() then return self._element:place_extmark_highlight(opts) end
-  return nil
+  return self:with_element(function(el) return el:get_filetype() end) or ''
 end
 
 function DiffComponent:clear_extmarks()
-  if self._element and self._element:is_valid() then self._element:clear_extmarks() end
+  self:with_element(function(el) el:clear_extmarks() end)
   return self
 end
 
 function DiffComponent:set_keymap(config, handler)
-  if self._element and self._element:is_valid() then self._element:set_keymap(config, handler) end
+  self:with_element(function(el) el:set_keymap(config, handler) end)
   return self
 end
 
 function DiffComponent:attach_to_renderer(callback)
-  if self._element and self._element:is_valid() then self._element:attach_to_renderer(callback) end
+  self:with_element(function(el) el:attach_to_renderer(callback) end)
   return self
 end
 
 function DiffComponent:is_valid()
-  return self._element and self._element:is_valid()
+  return self:with_element(function() return true end) or false
 end
+
+Component.forward(DiffComponent, function(self)
+  return self._element and self._element:is_valid() and self._element
+end, {
+  'place_extmark_text',
+  'place_extmark_sign',
+  'place_extmark_lnum',
+  'place_extmark_highlight',
+  'set_filetype',
+})
 
 function DiffComponent:hunk_down(pos)
   local marks = self.state.marks
@@ -398,6 +378,10 @@ function DiffComponent:get_marks()
   return self.state.marks or {}
 end
 
+function DiffComponent:get_hunks()
+  return self.state.hunks or {}
+end
+
 function DiffComponent:get_relative_mark_index(lnum)
   local marks = self.state.marks
   if #marks == 0 then return 1 end
@@ -410,61 +394,88 @@ function DiffComponent:get_relative_mark_index(lnum)
   return 1
 end
 
-function DiffComponent:render_word_diff(line_changes, lnum)
-  if not self._element or not self._element:is_valid() then return end
-
-  local marks = self:calculate_word_diff_marks(line_changes, lnum)
-  if not marks then return end
-
-  self._element:place_extmark_text({
-    row = marks.row,
-    col = marks.col,
-    texts = marks.texts,
-  })
-end
-
-function DiffComponent:render_line_diff(line_changes)
-  if not self._element or not self._element:is_valid() then return end
-
-  local marks = self:calculate_line_diff_marks(line_changes)
-  if not marks then return end
-
-  if marks.sign then self._element:place_extmark_sign({
-    col = marks.sign.col,
-    name = marks.sign.name,
-  }) end
-
-  if marks.void_text then
-    local width = self._element:get_width()
-    local text = string.rep(symbols_setting:get('void'), width)
-    self._element:place_extmark_text({
-      row = marks.void_text.row,
-      col = marks.void_text.col,
-      text = text,
-      hl = marks.void_text.hl,
-    })
-  end
-end
-
 function DiffComponent:render_diff(top, bot)
   top = top or 1
   bot = bot or #self.state.lines_changes
 
-  local lines_changes = self.state.lines_changes
+  if self:is_viewport_unchanged(top, bot) then return end
 
-  for lnum = top, bot do
-    if lines_changes and lines_changes[lnum] then
-      local line_changes = lines_changes[lnum]
-      self:render_line_diff(line_changes)
-      self:render_word_diff(line_changes, lnum)
+  -- Single with_element call for entire viewport — avoids per-line validity checks
+  local rendered = self:with_element(function(el)
+    local lines_changes = self.state.lines_changes
+    local line_numbers = self.state.line_numbers
+
+    -- Render pre-padded line numbers for visible range
+    if line_numbers and #line_numbers > 0 then
+      for i = top, math.min(bot, #line_numbers) do
+        local ln = line_numbers[i]
+        if ln then
+          el:place_extmark_lnum({
+            row = i - 1,
+            hl = ln[2],
+            text = ln[1],
+          })
+        end
+      end
     end
-  end
+
+    -- Hoist void text computation — same for all void lines in this viewport
+    local void_text
+
+    -- Render diff marks for visible range
+    for lnum = top, bot do
+      if lines_changes and lines_changes[lnum] then
+        local line_changes = lines_changes[lnum]
+
+        local line_marks = self._diff_calculator:calculate_line_diff_marks(line_changes)
+        if line_marks then
+          if line_marks.sign then
+            el:place_extmark_sign({
+              col = line_marks.sign.col,
+              name = line_marks.sign.name,
+            })
+          end
+
+          if line_marks.void_text then
+            if not void_text then
+              void_text = string.rep(symbols_setting:get('void'), el:get_width())
+            end
+            el:place_extmark_text({
+              row = line_marks.void_text.row,
+              col = line_marks.void_text.col,
+              text = void_text,
+              hl = line_marks.void_text.hl,
+            })
+          end
+        end
+
+        local word_marks = self._diff_calculator:calculate_word_diff_marks(line_changes, lnum)
+        if word_marks then
+          el:place_extmark_text({
+            row = word_marks.row,
+            col = word_marks.col,
+            texts = word_marks.texts,
+          })
+        end
+      end
+    end
+
+    return true
+  end)
+
+  if rendered then self:commit_viewport(top, bot) end
+end
+
+function DiffComponent:_ensure_renderer_attached()
+  self:ensure_renderer_attached(function()
+    self:attach_to_renderer(function(top, bot)
+      self:render_diff(top, bot + 1)
+    end)
+  end)
 end
 
 function DiffComponent:render_diff_partially()
-  self:attach_to_renderer(function(top, bot)
-    self:render_diff(top, bot + 1)
-  end)
+  self:_ensure_renderer_attached()
   return self
 end
 
@@ -481,7 +492,7 @@ function DiffComponent:clear_folds()
 end
 
 function DiffComponent:ensure_window_options()
-  if self._element and self._element:is_valid() then self._element:reapply_window_options() end
+  self:with_element(function(el) el:reapply_window_options() end)
   return self
 end
 
@@ -491,7 +502,7 @@ function DiffComponent:unmount()
   self._element:unmount()
   self._element = nil
 
-  Component.unmount(self)
+  ViewportComponent.unmount(self)
 end
 
 return DiffComponent

@@ -4,7 +4,37 @@ local Object = lazy('vgit.core.Object')
 local PatchHighlighter = Object:extend()
 
 function PatchHighlighter:constructor()
-  return {}
+  return {
+    _cache = {},
+    _cache_max = 50,
+    _cache_order = {},
+  }
+end
+
+function PatchHighlighter:_cache_key(lines, filetype)
+  local n = #lines
+  if n == 0 then return nil end
+  local q1 = lines[math.floor(n * 0.25) + 1] or ''
+  local q2 = lines[math.floor(n * 0.50) + 1] or ''
+  local q3 = lines[math.floor(n * 0.75) + 1] or ''
+  return string.format('%s:%d:%s:%s:%s:%s:%s',
+    filetype or '', n, lines[1] or '', q1, q2, q3, lines[n] or '')
+end
+
+function PatchHighlighter:_cache_put(key, value)
+  if not self._cache[key] then
+    self._cache_order[#self._cache_order + 1] = key
+  end
+  self._cache[key] = value
+  while #self._cache_order > self._cache_max do
+    local oldest = table.remove(self._cache_order, 1)
+    self._cache[oldest] = nil
+  end
+end
+
+function PatchHighlighter:clear_cache()
+  self._cache = {}
+  self._cache_order = {}
 end
 
 -- Determine the diff line type from line content or metadata
@@ -146,6 +176,9 @@ function PatchHighlighter:highlight(patch_lines, filetype)
     return {}
   end
 
+  local key = self:_cache_key(patch_lines, filetype)
+  if key and self._cache[key] then return self._cache[key] end
+
   local code_lines, line_mapping = self:extract_code_lines(patch_lines)
 
   if #code_lines == 0 then
@@ -163,6 +196,8 @@ function PatchHighlighter:highlight(patch_lines, filetype)
       vim.api.nvim_buf_delete(bufnr, { force = true })
     end
   end)
+
+  if key then self:_cache_put(key, adjusted_highlights) end
 
   return adjusted_highlights
 end
@@ -417,6 +452,15 @@ function PatchHighlighter:highlight_from_full_files(params)
     return {}
   end
 
+  -- Build cache key from both file contents
+  local orig_key = self:_cache_key(original_lines, filetype .. ':orig')
+  local curr_key = self:_cache_key(current_lines, filetype .. ':curr')
+  local combined_key = orig_key and curr_key and (orig_key .. '|' .. curr_key .. '|' .. #hunks)
+
+  if combined_key and self._cache[combined_key] then
+    return self._cache[combined_key]
+  end
+
   local all_highlights = {}
 
   -- Create scratch buffer with FULL original file and get TreeSitter highlights
@@ -474,6 +518,8 @@ function PatchHighlighter:highlight_from_full_files(params)
       patch_row = patch_row + 1
     end
   end
+
+  if combined_key then self:_cache_put(combined_key, all_highlights) end
 
   return all_highlights
 end

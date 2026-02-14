@@ -6,7 +6,6 @@ local eq = assert.are.same
 -- a minimal object with just the fields those methods need, avoiding
 -- the full Component lifecycle (which requires Neovim UI).
 local function create_patch_preview(overrides)
-  local Component = require('vgit.ui.Component')
   local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
 
   -- Create a minimal instance that bypasses Element creation
@@ -15,8 +14,13 @@ local function create_patch_preview(overrides)
     state = overrides.state or { lines = {}, line_metadata = {}, marks = {} },
     mounted = false,
     _needs_update = false,
+    _viewport_dirty = true,
+    _last_top = nil,
+    _last_bot = nil,
+    _renderer_attached = false,
     _element = nil,
     _patch_highlighter = PatchHighlighter(),
+    _render_gen = 0,
   }
 
   setmetatable(instance, PatchPreviewComponent)
@@ -554,6 +558,254 @@ describe('PatchPreviewComponent:', function()
     end)
   end)
 
+  describe('get_initial_state', function()
+    it('should include viewport rendering state fields', function()
+      local component = create_patch_preview({})
+      local state = component:get_initial_state()
+
+      eq({}, state._diff_hl_map)
+      eq({}, state._syntax_hl_map)
+      eq({}, state._line_numbers)
+    end)
+  end)
+
+  describe('_build_highlight_map', function()
+    it('should build a row-indexed map from highlights', function()
+      local component = create_patch_preview({})
+      local highlights = {
+        { row = 0, hl_group = 'A', line = true },
+        { row = 0, hl_group = 'B', col_start = 0, col_end = 5 },
+        { row = 2, hl_group = 'C', line = true },
+      }
+
+      local map = component:_build_highlight_map(highlights)
+
+      eq(2, #map[0])
+      eq('A', map[0][1].hl_group)
+      eq('B', map[0][2].hl_group)
+      eq(1, #map[2])
+      eq('C', map[2][1].hl_group)
+      eq(nil, map[1])
+    end)
+
+    it('should return empty map for empty highlights', function()
+      local component = create_patch_preview({})
+      local map = component:_build_highlight_map({})
+      eq({}, map)
+    end)
+  end)
+
+  describe('_render_viewport', function()
+    it('should render line numbers and highlights for visible range', function()
+      local lnum_calls = {}
+      local hl_calls = {}
+      local component = create_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {},
+          _diff_hl_map = {
+            [0] = { { row = 0, hl_group = 'GitSignsAddLn', line = true } },
+            [1] = { { row = 1, hl_group = 'GitSignsDeleteLn', line = true } },
+          },
+          _syntax_hl_map = {
+            [0] = { { row = 0, hl_group = '@keyword', col_start = 0, col_end = 5 } },
+          },
+          _line_numbers = {
+            { text = '  1 ', hl = 'GitLineNr' },
+            { text = '  2 ', hl = 'GitSignsDelete' },
+            { text = '  3 ', hl = 'GitSignsAdd' },
+          },
+        },
+      })
+
+      component._element = {
+        is_valid = function() return true end,
+        place_extmark_lnum = function(_, opts)
+          lnum_calls[#lnum_calls + 1] = opts
+        end,
+        place_extmark_highlight = function(_, opts)
+          hl_calls[#hl_calls + 1] = opts
+        end,
+        clear_extmark_highlights = function() end,
+      }
+
+      -- Render rows 0-1 (visible viewport)
+      component:_render_viewport(0, 1)
+
+      -- Should render 2 line numbers (rows 0 and 1)
+      eq(2, #lnum_calls)
+      eq(0, lnum_calls[1].row)
+      eq('  1 ', lnum_calls[1].text)
+      eq(1, lnum_calls[2].row)
+      eq('  2 ', lnum_calls[2].text)
+
+      -- Should render 1 diff hl (row 0 line) + 1 diff hl (row 1 line) + 1 syntax hl (row 0)
+      eq(3, #hl_calls)
+    end)
+
+    it('should handle empty state gracefully', function()
+      local component = create_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {},
+          _diff_hl_map = {},
+          _syntax_hl_map = {},
+          _line_numbers = {},
+        },
+      })
+
+      component._element = {
+        is_valid = function() return true end,
+        place_extmark_lnum = function() end,
+        place_extmark_highlight = function() end,
+        clear_extmark_highlights = function() end,
+      }
+
+      -- Should not error
+      component:_render_viewport(0, 10)
+    end)
+  end)
+
+  describe('viewport dirty tracking', function()
+    it('should skip _render_viewport when viewport is unchanged', function()
+      local hl_calls = {}
+      local component = create_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {},
+          _diff_hl_map = {
+            [0] = { { row = 0, hl_group = 'GitSignsAddLn', line = true } },
+          },
+          _syntax_hl_map = {},
+          _line_numbers = {
+            { text = '  1 ', hl = 'GitLineNr' },
+          },
+        },
+      })
+
+      component._element = {
+        is_valid = function() return true end,
+        place_extmark_lnum = function() end,
+        place_extmark_highlight = function(_, opts)
+          hl_calls[#hl_calls + 1] = opts
+        end,
+        clear_extmark_highlights = function() end,
+      }
+
+      -- First call should render
+      component:_render_viewport(0, 0)
+      local first_count = #hl_calls
+
+      -- Second call with same range should skip
+      component:_render_viewport(0, 0)
+      eq(first_count, #hl_calls)
+    end)
+
+    it('should re-render when viewport range changes', function()
+      local hl_calls = {}
+      local component = create_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {},
+          _diff_hl_map = {
+            [0] = { { row = 0, hl_group = 'GitSignsAddLn', line = true } },
+            [1] = { { row = 1, hl_group = 'GitSignsDeleteLn', line = true } },
+          },
+          _syntax_hl_map = {},
+          _line_numbers = {
+            { text = '  1 ', hl = 'GitLineNr' },
+            { text = '  2 ', hl = 'GitLineNr' },
+          },
+        },
+      })
+
+      component._element = {
+        is_valid = function() return true end,
+        place_extmark_lnum = function() end,
+        place_extmark_highlight = function(_, opts)
+          hl_calls[#hl_calls + 1] = opts
+        end,
+        clear_extmark_highlights = function() end,
+      }
+
+      component:_render_viewport(0, 0)
+      local first_count = #hl_calls
+
+      -- Different range should render
+      component:_render_viewport(0, 1)
+      assert.is_true(#hl_calls > first_count)
+    end)
+
+    it('should re-render after _viewport_dirty is set', function()
+      local hl_calls = {}
+      local component = create_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {},
+          _diff_hl_map = {
+            [0] = { { row = 0, hl_group = 'GitSignsAddLn', line = true } },
+          },
+          _syntax_hl_map = {},
+          _line_numbers = {
+            { text = '  1 ', hl = 'GitLineNr' },
+          },
+        },
+      })
+
+      component._element = {
+        is_valid = function() return true end,
+        place_extmark_lnum = function() end,
+        place_extmark_highlight = function(_, opts)
+          hl_calls[#hl_calls + 1] = opts
+        end,
+        clear_extmark_highlights = function() end,
+      }
+
+      component:_render_viewport(0, 0)
+      local first_count = #hl_calls
+
+      -- Mark dirty, same range should re-render
+      component._viewport_dirty = true
+      component:_render_viewport(0, 0)
+      assert.is_true(#hl_calls > first_count)
+    end)
+
+    it('should clear highlights before re-rendering viewport', function()
+      local clear_called = 0
+      local component = create_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {},
+          _diff_hl_map = {},
+          _syntax_hl_map = {},
+          _line_numbers = {},
+        },
+      })
+
+      component._element = {
+        is_valid = function() return true end,
+        place_extmark_lnum = function() end,
+        place_extmark_highlight = function() end,
+        clear_extmark_highlights = function()
+          clear_called = clear_called + 1
+        end,
+      }
+
+      component:_render_viewport(0, 5)
+      eq(1, clear_called)
+
+      -- Change range to trigger re-render
+      component:_render_viewport(0, 10)
+      eq(2, clear_called)
+    end)
+  end)
+
   describe('should_component_update', function()
     it('should return true when patch_entries change', function()
       local component = create_patch_preview({
@@ -607,6 +859,75 @@ describe('PatchPreviewComponent:', function()
         filetype = 'lua',
       }, {})
       assert.is_false(result)
+    end)
+  end)
+
+  describe('forward', function()
+    it('should delegate place_extmark_highlight to element when valid', function()
+      local called_with = nil
+      local component = create_patch_preview({})
+      component._element = {
+        is_valid = function() return true end,
+        place_extmark_highlight = function(_, opts)
+          called_with = opts
+          return 99
+        end,
+      }
+
+      local result = component:place_extmark_highlight({ hl = 'Test', row = 0 })
+      eq(99, result)
+      eq({ hl = 'Test', row = 0 }, called_with)
+    end)
+
+    it('should return nil for place_extmark_highlight when element is nil', function()
+      local component = create_patch_preview({})
+      local result = component:place_extmark_highlight({ hl = 'Test' })
+      assert.is_nil(result)
+    end)
+  end)
+
+  describe('with_element', function()
+    it('should return default for get_lines when element is nil', function()
+      local component = create_patch_preview({
+        state = { lines = { 'x', 'y' }, line_metadata = {}, marks = {} },
+      })
+
+      eq({ 'x', 'y' }, component:get_lines())
+    end)
+
+    it('should return default for get_cursor when element is nil', function()
+      local component = create_patch_preview({})
+      eq({ 1, 1 }, component:get_cursor())
+    end)
+
+    it('should return default for get_lnum when element is nil', function()
+      local component = create_patch_preview({})
+      eq(1, component:get_lnum())
+    end)
+
+    it('should return default for get_line_count when element is nil', function()
+      local component = create_patch_preview({})
+      eq(0, component:get_line_count())
+    end)
+
+    it('should return false for is_valid when element is nil', function()
+      local component = create_patch_preview({})
+      assert.is_false(component:is_valid())
+    end)
+
+    it('should return true for is_valid when element is valid', function()
+      local component = create_patch_preview({})
+      component._element = {
+        is_valid = function() return true end,
+      }
+      assert.is_truthy(component:is_valid())
+    end)
+
+    it('should return self for chaining on void methods', function()
+      local component = create_patch_preview({})
+      eq(component, component:set_cursor({ 1, 0 }))
+      eq(component, component:enable_cursorline())
+      eq(component, component:disable_cursorline())
     end)
   end)
 

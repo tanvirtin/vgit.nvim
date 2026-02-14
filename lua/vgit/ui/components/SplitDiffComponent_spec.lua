@@ -103,4 +103,91 @@ describe('SplitDiffComponent:', function()
     end)
   end)
 
+  describe('_for_both', function()
+    it('should apply operation to both child components', function()
+      local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+      local prev_called = false
+      local curr_called = false
+
+      local instance = {
+        props = {},
+        state = { previous_lines = {}, current_lines = {} },
+        mounted = false,
+        _needs_update = false,
+        _previous_component = {
+          test_method = function() prev_called = true end,
+        },
+        _current_component = {
+          test_method = function() curr_called = true end,
+        },
+        _line_number_calculator = require('vgit.ui.calculators.LineNumberCalculator')(),
+      }
+      setmetatable(instance, SplitDiffComponent)
+
+      instance:_for_both(function(c) c:test_method() end)
+      assert.is_true(prev_called)
+      assert.is_true(curr_called)
+    end)
+
+    it('should handle nil previous component gracefully', function()
+      local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+      local curr_called = false
+
+      local instance = {
+        props = {},
+        state = { previous_lines = {}, current_lines = {} },
+        mounted = false,
+        _needs_update = false,
+        _previous_component = nil,
+        _current_component = {
+          test_method = function() curr_called = true end,
+        },
+        _line_number_calculator = require('vgit.ui.calculators.LineNumberCalculator')(),
+      }
+      setmetatable(instance, SplitDiffComponent)
+
+      instance:_for_both(function(c) c:test_method() end)
+      assert.is_true(curr_called)
+    end)
+
+    it('should handle nil current component gracefully', function()
+      local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+      local prev_called = false
+
+      local instance = {
+        props = {},
+        state = { previous_lines = {}, current_lines = {} },
+        mounted = false,
+        _needs_update = false,
+        _previous_component = {
+          test_method = function() prev_called = true end,
+        },
+        _current_component = nil,
+        _line_number_calculator = require('vgit.ui.calculators.LineNumberCalculator')(),
+      }
+      setmetatable(instance, SplitDiffComponent)
+
+      instance:_for_both(function(c) c:test_method() end)
+      assert.is_true(prev_called)
+    end)
+
+    it('should handle both nil gracefully', function()
+      local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+
+      local instance = {
+        props = {},
+        state = { previous_lines = {}, current_lines = {} },
+        mounted = false,
+        _needs_update = false,
+        _previous_component = nil,
+        _current_component = nil,
+        _line_number_calculator = require('vgit.ui.calculators.LineNumberCalculator')(),
+      }
+      setmetatable(instance, SplitDiffComponent)
+
+      -- Should not error
+      instance:_for_both(function(c) c:test_method() end)
+    end)
+  end)
+
 end)

@@ -221,6 +221,30 @@ describe('TreeComponent:', function()
     end)
   end)
 
+  describe('with_element', function()
+    it('should return nil for get_current_list_item when element is nil', function()
+      local result = component:get_current_list_item()
+      assert.is_nil(result)
+    end)
+
+    it('should return nil for move when element is nil', function()
+      local result = component:move('down')
+      assert.is_nil(result)
+    end)
+
+    it('should return false for is_valid when element is nil', function()
+      assert.is_false(component:is_valid())
+    end)
+
+    it('should return true for is_valid when element is valid', function()
+      component._element = {
+        is_valid = function() return true end,
+      }
+      assert.is_truthy(component:is_valid())
+      component._element = nil
+    end)
+  end)
+
   describe('create_node - folder nodes', function()
     local function create_folder_entry(segment_name)
       return {

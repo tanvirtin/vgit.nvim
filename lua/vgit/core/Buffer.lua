@@ -13,6 +13,7 @@ function Buffer:constructor(bufnr)
 
   return {
     bufnr = bufnr,
+    _modifiable = nil,
     on_render = function() end,
     is_attached_to_screen = false,
     text_extmark = Extmark(bufnr, 'text'),
@@ -111,8 +112,8 @@ function Buffer:clear_extmark_signs()
   return self.sign_extmark:clear()
 end
 
-function Buffer:clear_extmark_highlights()
-  self.highlight_extmark:clear()
+function Buffer:clear_extmark_highlights(from, to)
+  self.highlight_extmark:clear(from, to)
   return self
 end
 
@@ -168,6 +169,7 @@ function Buffer:get_option(key)
 end
 
 function Buffer:set_option(key, value)
+  if key == 'modifiable' then self._modifiable = value end
   pcall(vim.api.nvim_buf_set_option, self.bufnr, key, value)
   return self
 end
@@ -176,16 +178,21 @@ function Buffer:set_lines(lines, top, bot)
   top = top or 0
   bot = bot or -1
   local bufnr = self.bufnr
-  local modifiable = vim.api.nvim_buf_get_option(bufnr, 'modifiable')
+
+  local modifiable = self._modifiable
+  if modifiable == nil then
+    modifiable = vim.api.nvim_buf_get_option(bufnr, 'modifiable')
+    self._modifiable = modifiable
+  end
 
   if modifiable then
     pcall(vim.api.nvim_buf_set_lines, bufnr, top, bot, false, lines)
     return self
   end
 
-  self:set_option('modifiable', true)
+  vim.api.nvim_buf_set_option(bufnr, 'modifiable', true)
   vim.api.nvim_buf_set_lines(bufnr, top, bot, false, lines)
-  self:set_option('modifiable', false)
+  vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
 
   return self
 end
@@ -194,6 +201,7 @@ function Buffer:assign_options(options)
   local bufnr = self.bufnr
 
   for key, value in pairs(options) do
+    if key == 'modifiable' then self._modifiable = value end
     vim.api.nvim_buf_set_option(bufnr, key, value)
   end
 

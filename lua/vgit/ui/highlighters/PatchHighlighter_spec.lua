@@ -9,6 +9,103 @@ describe('PatchHighlighter:', function()
     highlighter = PatchHighlighter()
   end)
 
+  describe('_cache_key', function()
+    it('should generate key from filetype and content', function()
+      local key = highlighter:_cache_key({ 'line1', 'line2', 'line3' }, 'lua')
+      assert.is_truthy(key)
+      assert.is_truthy(key:match('lua'))
+      assert.is_truthy(key:match('3'))
+    end)
+
+    it('should return nil for empty lines', function()
+      local key = highlighter:_cache_key({}, 'lua')
+      eq(nil, key)
+    end)
+
+    it('should generate different keys for different content', function()
+      local key1 = highlighter:_cache_key({ 'aaa', 'bbb' }, 'lua')
+      local key2 = highlighter:_cache_key({ 'xxx', 'yyy' }, 'lua')
+      assert.are_not.equal(key1, key2)
+    end)
+
+    it('should generate different keys for different filetypes', function()
+      local key1 = highlighter:_cache_key({ 'line1' }, 'lua')
+      local key2 = highlighter:_cache_key({ 'line1' }, 'python')
+      assert.are_not.equal(key1, key2)
+    end)
+
+    it('should sample quartile lines for collision resistance', function()
+      -- Two files with same first/last lines but different middle content
+      local lines1 = { 'start', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'end' }
+      local lines2 = { 'start', 'x', 'y', 'z', 'w', 'v', 'u', 't', 'end' }
+      local key1 = highlighter:_cache_key(lines1, 'lua')
+      local key2 = highlighter:_cache_key(lines2, 'lua')
+      assert.are_not.equal(key1, key2)
+    end)
+
+    it('should handle single-line input', function()
+      local key = highlighter:_cache_key({ 'only line' }, 'lua')
+      assert.is_truthy(key)
+      assert.is_truthy(key:match('lua'))
+    end)
+  end)
+
+  describe('clear_cache', function()
+    it('should clear the cache and order', function()
+      highlighter:_cache_put('key1', { 'data' })
+      highlighter:_cache_put('key2', { 'data2' })
+      highlighter:clear_cache()
+      eq({}, highlighter._cache)
+      eq({}, highlighter._cache_order)
+    end)
+  end)
+
+  describe('_cache_put', function()
+    it('should store value in cache', function()
+      highlighter:_cache_put('key1', { 'highlights' })
+      eq({ 'highlights' }, highlighter._cache['key1'])
+    end)
+
+    it('should evict oldest entry when cache exceeds max (FIFO)', function()
+      highlighter._cache_max = 2
+      highlighter:_cache_put('key1', { 'a' })
+      highlighter:_cache_put('key2', { 'b' })
+      -- Cache has 2 entries, at max
+      eq({ 'a' }, highlighter._cache['key1'])
+      eq({ 'b' }, highlighter._cache['key2'])
+
+      -- Adding third should evict only the oldest (key1)
+      highlighter:_cache_put('key3', { 'c' })
+      eq(nil, highlighter._cache['key1'])
+      eq({ 'b' }, highlighter._cache['key2'])
+      eq({ 'c' }, highlighter._cache['key3'])
+    end)
+
+    it('should not duplicate key in order when updating existing entry', function()
+      highlighter._cache_max = 3
+      highlighter:_cache_put('key1', { 'a' })
+      highlighter:_cache_put('key2', { 'b' })
+      -- Update existing key
+      highlighter:_cache_put('key1', { 'a_updated' })
+
+      eq({ 'a_updated' }, highlighter._cache['key1'])
+      eq(2, #highlighter._cache_order)
+    end)
+
+    it('should maintain FIFO order across multiple evictions', function()
+      highlighter._cache_max = 2
+      highlighter:_cache_put('key1', { 'a' })
+      highlighter:_cache_put('key2', { 'b' })
+      highlighter:_cache_put('key3', { 'c' }) -- evicts key1
+      highlighter:_cache_put('key4', { 'd' }) -- evicts key2
+
+      eq(nil, highlighter._cache['key1'])
+      eq(nil, highlighter._cache['key2'])
+      eq({ 'c' }, highlighter._cache['key3'])
+      eq({ 'd' }, highlighter._cache['key4'])
+    end)
+  end)
+
   describe('strip_patch_prefix', function()
     it('should strip + prefix from added line', function()
       local code, prefix = highlighter:strip_patch_prefix('+added line')
