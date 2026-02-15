@@ -38,9 +38,13 @@ function SearchComponent:_apply_filter()
     filtered_items = self._filter:filter(items, query)
   end
 
+  filtered_items = filtered_items or {}
+  local page_size = self.props.page_size
+
   self:set_state({
-    filtered_items = filtered_items or {},
+    filtered_items = filtered_items,
     selected_index = 1,
+    visible_count = page_size and math.min(page_size, #filtered_items) or #filtered_items,
   })
 end
 
@@ -48,14 +52,26 @@ function SearchComponent:move(direction)
   local items = self.state.filtered_items
   if #items == 0 then return end
 
+  local visible_count = math.min(self.state.visible_count or #items, #items)
+  if visible_count == 0 then return end
+
   local index = self.state.selected_index
 
   if direction == 'down' then
     index = index + 1
-    if index > #items then index = 1 end
+    if index > visible_count then
+      if visible_count < #items then
+        local page_size = self.props.page_size or visible_count
+        local new_visible = math.min(visible_count + page_size, #items)
+        self:set_state({ visible_count = new_visible, selected_index = index })
+        return
+      else
+        index = 1
+      end
+    end
   elseif direction == 'up' then
     index = index - 1
-    if index < 1 then index = #items end
+    if index < 1 then index = visible_count end
   end
 
   self:set_state({ selected_index = index })
@@ -65,9 +81,7 @@ function SearchComponent:select()
   local items = self.state.filtered_items
 
   if #items == 0 then
-    if self.props.on_no_match then
-      self.props.on_no_match(self.state.query)
-    end
+    if self.props.on_no_match then self.props.on_no_match(self.state.query) end
     return
   end
 
@@ -76,15 +90,11 @@ function SearchComponent:select()
 
   local value = item.value ~= nil and item.value or item
 
-  if self.props.on_select then
-    self.props.on_select(value)
-  end
+  if self.props.on_select then self.props.on_select(value) end
 end
 
 function SearchComponent:close()
-  if self.props.on_close then
-    self.props.on_close()
-  end
+  if self.props.on_close then self.props.on_close() end
 
   self:unmount()
 end
@@ -109,12 +119,16 @@ end
 function SearchComponent:component_will_mount()
   local width = self:_get_width()
   local col = self:_get_col()
+  local row = 0
   local zindex = self.props.zindex or 50
-  local border = self.props.border or { '╭', '─', '╮', '│', '╯', '─', '╰', '│' }
   local border_hl = self.props.border_hl or 'GitBorder'
   local winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl
-  -- Input takes 1 row of content; border adds 2 rows (top + bottom).
-  local list_row = border and 3 or 1
+  local list_winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl .. ',CursorLine:GitSelected'
+
+  local input_border = self.props.border or { '', '', '', '│', '', '', '', '│' }
+  local list_border = { '├', '─', '┤', '│', '╯', '─', '╰', '│' }
+
+  local list_row = row + 1
 
   if not self._input_element then
     self._input_element = Element({
@@ -132,7 +146,7 @@ function SearchComponent:component_will_mount()
       },
       win_plot = {
         relative = 'editor',
-        row = 0,
+        row = row,
         col = col,
         width = width,
         height = 1,
@@ -140,7 +154,7 @@ function SearchComponent:component_will_mount()
         focusable = true,
         focus = true,
         zindex = zindex + 1,
-        border = border,
+        border = input_border,
       },
     })
   end
@@ -157,7 +171,7 @@ function SearchComponent:component_will_mount()
         number = false,
         relativenumber = false,
         wrap = false,
-        winhl = winhl,
+        winhl = list_winhl,
       },
       win_plot = {
         relative = 'editor',
@@ -168,7 +182,7 @@ function SearchComponent:component_will_mount()
         style = 'minimal',
         focusable = false,
         zindex = zindex,
-        border = border,
+        border = list_border,
       },
     })
   end
@@ -192,7 +206,6 @@ function SearchComponent:mount()
   self:_apply_filter()
 
   self._input_element:focus()
-
   vim.cmd('startinsert!')
 end
 
@@ -299,9 +312,7 @@ function SearchComponent:_setup_close_autocmds()
         if not self.mounted then return end
 
         local current_win = vim.api.nvim_get_current_win()
-        if current_win ~= input_win_id and current_win ~= list_win_id then
-          self:close()
-        end
+        if current_win ~= input_win_id and current_win ~= list_win_id then self:close() end
       end, 50)
     end,
   })
@@ -313,13 +324,29 @@ function SearchComponent:render()
 
   local items = self.state.filtered_items
   local max_height = self.props.max_height or 20
+  local visible_count = math.min(self.state.visible_count or #items, #items)
+  local padding = ' '
 
   local lines = {}
   local description_hls = {}
+  local icon_hls = {}
 
-  for i = 1, #items do
+  for i = 1, visible_count do
     local item = items[i]
-    local line = item.label or ''
+    local line = padding
+
+    if item.icon then
+      local icon_start = #line
+      line = line .. item.icon .. ' '
+      icon_hls[#icon_hls + 1] = {
+        row = i - 1,
+        col_from = icon_start,
+        col_to = icon_start + #item.icon,
+        hl = item.icon_hl or 'GitSignsAdd',
+      }
+    end
+
+    line = line .. (item.label or '')
 
     if item.description then
       local desc_start = #line
@@ -332,6 +359,17 @@ function SearchComponent:render()
     end
 
     lines[#lines + 1] = line
+  end
+
+  if visible_count < #items then
+    local remaining = #items - visible_count
+    local more_line = padding .. string.format('... %d more', remaining)
+    lines[#lines + 1] = more_line
+    description_hls[#description_hls + 1] = {
+      row = #lines - 1,
+      col_from = 0,
+      col_to = #more_line,
+    }
   end
 
   local list_height = math.min(max_height, math.max(1, #lines))
@@ -350,11 +388,23 @@ function SearchComponent:render()
     })
   end
 
+  for i = 1, #icon_hls do
+    local hl = icon_hls[i]
+    self._list_element.buffer:place_extmark_highlight({
+      hl = hl.hl,
+      row = hl.row,
+      col_range = {
+        from = hl.col_from,
+        to = hl.col_to,
+      },
+    })
+  end
+
   if self._list_element.window and self._list_element.window:is_valid() then
     self._list_element.window:set_height(list_height)
 
     local selected = self.state.selected_index
-    if selected >= 1 and selected <= #lines then
+    if selected >= 1 and selected <= visible_count then
       pcall(vim.api.nvim_win_set_cursor, self._list_element.window.win_id, { selected, 0 })
     end
   end
@@ -363,7 +413,7 @@ function SearchComponent:render()
     local placeholder = self.props.placeholder or 'Search...'
     self._list_element.buffer:set_lines({ '' })
     self._list_element.buffer:place_extmark_text({
-      text = placeholder,
+      text = padding .. placeholder,
       hl = 'GitComment',
       row = 0,
       col = 0,
