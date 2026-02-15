@@ -18,9 +18,12 @@ function BranchView:_build_items(branches, current_branch)
 
   for i = 1, #branches do
     local branch = branches[i]
+    local is_current = branch.name == current_branch
     items[#items + 1] = {
       label = branch.name,
-      description = branch.name == current_branch and '(current)' or nil,
+      icon = is_current and '' or nil,
+      icon_hl = is_current and 'GitSignsAdd' or nil,
+      description = is_current and '(current)' or nil,
       value = branch.name,
     }
   end
@@ -39,6 +42,7 @@ function BranchView:create(data)
     items = items,
     width = '40vw',
     max_height = 10,
+    page_size = 25,
     placeholder = 'No branches found',
     on_select = function(value)
       self:_on_select(value)

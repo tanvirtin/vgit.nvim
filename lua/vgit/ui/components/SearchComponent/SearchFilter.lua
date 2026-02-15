@@ -12,17 +12,24 @@ function SearchFilter:filter(items, query)
   if not query or query == '' then return items end
 
   local lower_query = query:lower()
-  local filtered = {}
+  local lookup = {}
 
   for i = 1, #items do
     local item = items[i]
-    local label = item.label
-    if label and label:lower():find(lower_query, 1, true) then
-      filtered[#filtered + 1] = item
-    end
+    lookup[#lookup + 1] = {
+      _original = item,
+      label = item.label and item.label:lower() or '',
+    }
   end
 
-  return filtered
+  local matched = vim.fn.matchfuzzy(lookup, lower_query, { key = 'label' })
+  local result = {}
+
+  for i = 1, #matched do
+    result[#result + 1] = matched[i]._original
+  end
+
+  return result
 end
 
 return SearchFilter
