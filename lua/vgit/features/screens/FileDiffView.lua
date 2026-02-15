@@ -85,6 +85,8 @@ function FileDiffView:_refresh_diff_data()
   local current_layout_type = scene_setting:get('diff_preference') or FileDiffView.LAYOUT_UNIFIED
 
   local diff_spec
+  local index = repo:index()
+
   if self.opts.is_staged then
     diff_spec = {
       type = 'range',
@@ -93,6 +95,7 @@ function FileDiffView:_refresh_diff_data()
       from = 'HEAD',
       to = 'index',
       layout_type = current_layout_type,
+      hunks = index:staged_hunks(self.opts.filename),
     }
   else
     diff_spec = {
@@ -101,6 +104,7 @@ function FileDiffView:_refresh_diff_data()
       from = 'index',
       to = 'disk',
       layout_type = current_layout_type,
+      hunks = index:unstaged_hunks(self.opts.filename),
     }
   end
 
@@ -288,6 +292,9 @@ function FileDiffView:stage_hunk()
   repo:stage_hunk(filename, hunk)
 
   self:_reconcile({ hunk_index = index })
+
+  local idx, count = self:get_current_mark_index()
+  if idx then statusline.set_hunk(idx, count) end
 end
 
 function FileDiffView:unstage_hunk()
@@ -306,6 +313,9 @@ function FileDiffView:unstage_hunk()
   repo:unstage_hunk(filename, hunk)
 
   self:_reconcile({ hunk_index = index })
+
+  local idx, count = self:get_current_mark_index()
+  if idx then statusline.set_hunk(idx, count) end
 end
 
 function FileDiffView:stage_current()
