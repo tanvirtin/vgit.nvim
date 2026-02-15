@@ -1,0 +1,121 @@
+local lazy = require('vgit.core.lazy')
+local Object = lazy('vgit.core.Object')
+local console = lazy('vgit.core.console')
+local repository = lazy('vgit.git.repository')
+local SearchComponent = lazy('vgit.ui.components.SearchComponent')
+
+local BranchView = Object:extend()
+
+function BranchView:constructor()
+  return {
+    search_component = nil,
+    destroyed = false,
+  }
+end
+
+function BranchView:_build_items(branches, current_branch)
+  local items = {}
+
+  for i = 1, #branches do
+    local branch = branches[i]
+    items[#items + 1] = {
+      label = branch.name,
+      description = branch.name == current_branch and '(current)' or nil,
+      value = branch.name,
+    }
+  end
+
+  return items
+end
+
+function BranchView:create(data)
+  if not data then return false end
+  if type(data) ~= 'table' then return false end
+  if not data.branches or #data.branches == 0 then return false end
+
+  local items = self:_build_items(data.branches, data.current_branch)
+
+  self.search_component = SearchComponent({
+    items = items,
+    width = '40vw',
+    max_height = 10,
+    placeholder = 'No branches found',
+    on_select = function(value)
+      self:_on_select(value)
+    end,
+    on_no_match = function(query)
+      self:_on_no_match(query)
+    end,
+    on_close = function()
+      self.destroyed = true
+      self.search_component = nil
+    end,
+  })
+
+  self.search_component:mount()
+
+  return true
+end
+
+function BranchView:_on_select(value)
+  self:destroy()
+
+  if not value then return end
+
+  local repo, repo_err = repository.current()
+  if repo_err then
+    console.error(repo_err)
+    return
+  end
+
+  local refs = repo:refs()
+  local _, err = refs:checkout(value)
+
+  if err then
+    console.error(err)
+    return
+  end
+
+  console.info('Switched to branch ' .. value)
+end
+
+function BranchView:_on_no_match(query)
+  if not query or query == '' then return end
+
+  self:destroy()
+
+  local decision = console.input(string.format("Branch '%s' does not exist. Create it? (y/N) ", query))
+  if not decision then return end
+
+  decision = decision:lower()
+  if decision ~= 'y' and decision ~= 'yes' then return end
+
+  local repo, repo_err = repository.current()
+  if repo_err then
+    console.error(repo_err)
+    return
+  end
+
+  local refs = repo:refs()
+  local _, err = refs:checkout_new_branch(query)
+
+  if err then
+    console.error(err)
+    return
+  end
+
+  console.info('Created and switched to branch ' .. query)
+end
+
+function BranchView:destroy()
+  if self.destroyed then return end
+
+  self.destroyed = true
+
+  if self.search_component then
+    self.search_component:close()
+    self.search_component = nil
+  end
+end
+
+return BranchView
