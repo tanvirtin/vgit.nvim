@@ -206,6 +206,7 @@ controller.execute_command = event.async(function(args)
     log = true,
     show = true,
     status = true,
+    branch = true,
   }
 
   if porcelain_commands[cmd] then
@@ -232,7 +233,7 @@ function controller.autocomplete(arg_lead, cmd_line, _)
     local commands = controller.commands()
     local all_commands = vim.tbl_keys(commands)
 
-    vim.list_extend(all_commands, { 'diff', 'blame', 'hunk', 'status', 'show' })
+    vim.list_extend(all_commands, { 'diff', 'blame', 'hunk', 'status', 'show', 'branch' })
 
     return vim.tbl_filter(function(cmd)
       return vim.startswith(cmd, arg_lead)

@@ -9,6 +9,7 @@ local COMMAND_MAP = {
   hunk = 'vgit.cli.commands.hunk',
   status = 'vgit.cli.commands.status',
   show = 'vgit.cli.commands.show',
+  branch = 'vgit.cli.commands.branch',
 }
 
 function router.execute(args)

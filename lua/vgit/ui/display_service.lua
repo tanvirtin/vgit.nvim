@@ -7,6 +7,7 @@ local ProjectDiffView = lazy('vgit.features.screens.ProjectDiffView')
 local HunkLens = lazy('vgit.features.lenses.HunkLens')
 local BlameLens = lazy('vgit.features.lenses.BlameLens')
 local StatusDiffView = lazy('vgit.features.screens.StatusDiffView')
+local BranchView = lazy('vgit.features.screens.BranchView')
 
 local active_view = nil
 local _events_registered = false
@@ -126,6 +127,28 @@ display_service.show_status = event.async(function(data)
   local success = view:create(data)
   if not success then
     console.error('Failed to create status view')
+    return
+  end
+  active_view = view
+end)
+
+display_service.show_branch = event.async(function(data)
+  if not data then
+    console.error('No branch data')
+    return
+  end
+
+  if active_view and active_view.destroy then
+    active_view:destroy()
+    active_view = nil
+  end
+
+  event.await()
+
+  local view = BranchView()
+  local success = view:create(data)
+  if not success then
+    console.error('Failed to create branch view')
     return
   end
   active_view = view
