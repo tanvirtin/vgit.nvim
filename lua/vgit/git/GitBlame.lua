@@ -13,8 +13,10 @@ function GitBlame:constructor(info)
   }
 
   for i = 2, #info do
-    local blame_info = utils.str.split(info[i], ' ')
-    blame[blame_info[1]] = blame_info[2]
+    local field, value = info[i]:match("^(%S+)%s+(.+)")
+    if field ~= nil then
+      blame[field] = value
+    end
   end
 
   local committed = true
