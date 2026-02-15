@@ -168,7 +168,9 @@ function DiffBuilder:build(spec)
   local is_deleted = false
   local display_lines = current_lines
 
-  if not original_lines and current_lines then
+  if not original_lines and not current_lines then
+    return
+  elseif not original_lines and current_lines then
     original_lines = {}
   elseif original_lines and not current_lines then
     current_lines = {}
@@ -176,11 +178,7 @@ function DiffBuilder:build(spec)
     display_lines = original_lines
   end
 
-  assertion
-    .assert(original_lines, 'failed to retrieve original lines')
-    .assert(current_lines, 'failed to retrieve current lines')
-
-  local hunks = hunk_generator:generate(original_lines, current_lines, spec)
+  local hunks = (spec.hunks and #spec.hunks > 0) and spec.hunks or hunk_generator:generate(original_lines, current_lines, spec)
   assertion.assert(hunks, 'hunk generator returned nil')
 
   local layout_generator = DiffLayoutGenerator()

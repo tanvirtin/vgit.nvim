@@ -233,6 +233,16 @@ describe('StatusDiffView:', function()
           diff = function(_, diff_spec, opts)
             return { diff_spec = diff_spec, opts = opts }, nil
           end,
+          index = function()
+            return {
+              staged_hunks = function()
+                return { { header = '@@ -1,3 +1,3 @@', top = 1, bot = 3, type = 'change' } }
+              end,
+              unstaged_hunks = function()
+                return {}
+              end,
+            }
+          end,
         }
       end)
 
@@ -260,6 +270,7 @@ describe('StatusDiffView:', function()
         eq('staged.lua', result.diff_spec.filename)
         eq('HEAD', result.diff_spec.from)
         eq('index', result.diff_spec.to)
+        assert.is_not_nil(result.diff_spec.hunks)
       end)
 
       it('should build unstaged entry diff spec (index->disk)', function()
@@ -271,6 +282,7 @@ describe('StatusDiffView:', function()
         eq('unstaged.lua', result.diff_spec.filename)
         eq('index', result.diff_spec.from)
         eq('disk', result.diff_spec.to)
+        assert.is_not_nil(result.diff_spec.hunks)
       end)
 
       it('should build unmerged entry diff spec (conflict type)', function()
@@ -565,6 +577,87 @@ describe('StatusDiffView:', function()
         assert.is_false(called_with({ filename = 'other.lua' }, 'unstaged'))
       end)
     end)
+
+    describe('_move_to_first_entry_of_type', function()
+      it('should return true when entry of target type exists', function()
+        setup_mock_tree({}, 1)
+        mock_tree.move_to = function(_, predicate)
+          -- Simulate finding an entry
+          if predicate({ filename = 'file1.lua' }, 'staged') then
+            return { filename = 'file1.lua' }
+          end
+          return nil
+        end
+
+        assert.is_true(view:_move_to_first_entry_of_type('staged'))
+      end)
+
+      it('should return false when no entry of target type exists', function()
+        setup_mock_tree({}, 1)
+        mock_tree.move_to = function() return nil end
+
+        assert.is_false(view:_move_to_first_entry_of_type('staged'))
+      end)
+
+      it('should pass correct predicate requiring both status and entry_type', function()
+        local predicate_received = nil
+        setup_mock_tree({}, 1)
+        mock_tree.move_to = function(_, predicate)
+          predicate_received = predicate
+          return nil
+        end
+
+        view:_move_to_first_entry_of_type('unstaged')
+
+        assert.is_not_nil(predicate_received)
+        assert.is_true(predicate_received({ filename = 'test.lua' }, 'unstaged'))
+        assert.is_false(predicate_received({ filename = 'test.lua' }, 'staged'))
+        assert.is_false(predicate_received(nil, 'unstaged'))
+      end)
+    end)
+
+    describe('refresh_and_navigate', function()
+      it('should set _refreshing during navigation', function()
+        setup_mock_tree({}, 1)
+        local refreshing_during_nav = nil
+
+        view.refresh_data = function() end
+        view._update_diff_component = function() end
+
+        view:refresh_and_navigate(function()
+          refreshing_during_nav = view._refreshing
+        end)
+
+        assert.is_true(refreshing_during_nav)
+        assert.is_false(view._refreshing)
+      end)
+
+      it('should call refresh_data before navigate_fn', function()
+        setup_mock_tree({}, 1)
+        local call_order = {}
+
+        view.refresh_data = function() table.insert(call_order, 'refresh') end
+        view._update_diff_component = function() table.insert(call_order, 'update_diff') end
+
+        view:refresh_and_navigate(function()
+          table.insert(call_order, 'navigate')
+        end)
+
+        eq({ 'refresh', 'navigate', 'update_diff' }, call_order)
+      end)
+
+      it('should call _update_diff_component after navigate_fn', function()
+        setup_mock_tree({}, 1)
+        local update_called = false
+
+        view.refresh_data = function() end
+        view._update_diff_component = function() update_called = true end
+
+        view:refresh_and_navigate(function() end)
+
+        assert.is_true(update_called)
+      end)
+    end)
   end)
 
   -- ============================================================================
@@ -798,6 +891,15 @@ describe('StatusDiffView:', function()
         end,
         status = function()
           return { entries = {} }, nil
+        end,
+        diff = function()
+          return { lines = {}, marks = {} }, nil
+        end,
+        index = function()
+          return {
+            staged_hunks = function() return {} end,
+            unstaged_hunks = function() return {} end,
+          }
         end,
       }
 
@@ -1068,8 +1170,13 @@ describe('StatusDiffView:', function()
       view.tree_component = {
         each_entry = function() end,
         get_selected_entry = function() return nil end,
+        move_to = function() end,
       }
-      view.refresh_after_entry_operation = function() end
+      view.refresh_and_navigate = function(_, fn) fn() end
+      view._move_to_first_entry_of_type = function() return false end
+      view._move_to_first_entry = function() end
+      view.move_to_entry = function() end
+      view.find_next_file = function() return nil end
     end
 
     before_each(function()
@@ -1157,6 +1264,62 @@ describe('StatusDiffView:', function()
 
         eq(1, #repo_calls)
         eq('reset', repo_calls[1][1])
+      end)
+    end)
+
+    describe('stage_entry_from_diff', function()
+      it('should return early if entry is invalid', function()
+        view.tree_component.get_selected_entry = function() return nil end
+        view:stage_entry_from_diff()
+        eq(0, #repo_calls)
+      end)
+
+      it('should return early if entry type is not unstaged', function()
+        view.tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'test.lua' }) end
+        view:stage_entry_from_diff()
+        eq(0, #repo_calls)
+      end)
+
+      it('should call repo:stage_file with filename', function()
+        view.tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'diff_stage.lua' }) end
+        view:stage_entry_from_diff()
+
+        eq(1, #repo_calls)
+        eq('stage_file', repo_calls[1][1])
+        eq('diff_stage.lua', repo_calls[1][2])
+      end)
+    end)
+
+    describe('unstage_entry_from_diff', function()
+      it('should return early if entry is invalid', function()
+        view.tree_component.get_selected_entry = function() return nil end
+        view:unstage_entry_from_diff()
+        eq(0, #repo_calls)
+      end)
+
+      it('should return early if entry type is not staged', function()
+        view.tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'test.lua' }) end
+        view:unstage_entry_from_diff()
+        eq(0, #repo_calls)
+      end)
+
+      it('should call repo:unstage_file with filename', function()
+        view.tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'diff_unstage.lua' }) end
+        view:unstage_entry_from_diff()
+
+        eq(1, #repo_calls)
+        eq('unstage_file', repo_calls[1][1])
+        eq('diff_unstage.lua', repo_calls[1][2])
+      end)
+    end)
+
+    describe('reset_entry_from_diff', function()
+      it('should delegate to reset_entry', function()
+        local reset_entry_called = false
+        view.reset_entry = function() reset_entry_called = true end
+
+        view:reset_entry_from_diff()
+        assert.is_true(reset_entry_called)
       end)
     end)
 
@@ -1428,6 +1591,12 @@ describe('StatusDiffView:', function()
               },
             },
           }, nil
+        end,
+        index = function()
+          return {
+            staged_hunks = function() return {} end,
+            unstaged_hunks = function() return {} end,
+          }
         end,
       }
 
@@ -1772,6 +1941,12 @@ describe('StatusDiffView:', function()
           end,
           diff = function()
             return { lines = {}, marks = {} }, nil
+          end,
+          index = function()
+            return {
+              staged_hunks = function() return {} end,
+              unstaged_hunks = function() return {} end,
+            }
           end,
         }
 
