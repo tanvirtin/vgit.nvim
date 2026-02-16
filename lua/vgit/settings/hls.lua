@@ -193,4 +193,16 @@ return Config({
       override = false,
     }
   end,
+  GitBlameEven = function()
+    return {
+      bg = Color({ name = 'Normal', attribute = 'bg' }):darken(4):get(),
+      override = false,
+    }
+  end,
+  GitBlameOdd = function()
+    return {
+      bg = Color({ name = 'Normal', attribute = 'bg' }):darken(12):get(),
+      override = false,
+    }
+  end,
 })

@@ -15,6 +15,8 @@ function SearchComponent:constructor(props)
   instance._list_element = nil
   instance._filter = SearchFilter()
   instance._autocmd_ids = {}
+  instance._loading = false
+  instance._exhausted = false
 
   return instance
 end
@@ -27,9 +29,29 @@ function SearchComponent:get_initial_state()
   }
 end
 
+function SearchComponent:set_items(items)
+  self.props.items = items or {}
+  self._exhausted = false
+
+  local filtered_items = self.props.items
+  local page_size = self.props.page_size
+
+  self:set_state({
+    filtered_items = filtered_items,
+    selected_index = 1,
+    visible_count = page_size and math.min(page_size, #filtered_items) or #filtered_items,
+  })
+end
+
 function SearchComponent:_apply_filter()
   local items = self.props.items or {}
   local query = self.state.query
+
+  if self.props.on_search_async then
+    self._exhausted = false
+    self.props.on_search_async(query)
+    return
+  end
 
   local filtered_items
   if self.props.on_search then
@@ -41,11 +63,50 @@ function SearchComponent:_apply_filter()
   filtered_items = filtered_items or {}
   local page_size = self.props.page_size
 
+  self._exhausted = false
+
   self:set_state({
     filtered_items = filtered_items,
     selected_index = 1,
     visible_count = page_size and math.min(page_size, #filtered_items) or #filtered_items,
   })
+end
+
+function SearchComponent:_load_more_items()
+  if self._loading or self._exhausted then return end
+  if not self.props.on_load_more then return end
+
+  self._loading = true
+  self:render()
+
+  event.async(function()
+    local new_items = self.props.on_load_more()
+
+    vim.schedule(function()
+      self._loading = false
+
+      if not self.mounted then return end
+
+      if not new_items or #new_items == 0 then
+        self._exhausted = true
+        self:render()
+        return
+      end
+
+      local items = self.props.items or {}
+      for i = 1, #new_items do
+        items[#items + 1] = new_items[i]
+      end
+
+      local prev_visible = self.state.visible_count or 0
+      local prev_index = self.state.selected_index
+
+      self:_apply_filter()
+      local filtered = self.state.filtered_items
+      local new_visible = math.min(prev_visible + #new_items, #filtered)
+      self:set_state({ visible_count = new_visible, selected_index = prev_index })
+    end)
+  end)()
 end
 
 function SearchComponent:move(direction)
@@ -64,6 +125,11 @@ function SearchComponent:move(direction)
         local page_size = self.props.page_size or visible_count
         local new_visible = math.min(visible_count + page_size, #items)
         self:set_state({ visible_count = new_visible, selected_index = index })
+        return
+      elseif self.props.on_load_more and not self._exhausted then
+        if not self._loading then
+          self:_load_more_items()
+        end
         return
       else
         index = 1
@@ -361,7 +427,15 @@ function SearchComponent:render()
     lines[#lines + 1] = line
   end
 
-  if visible_count < #items then
+  if self._loading then
+    local loading_line = padding .. 'Loading...'
+    lines[#lines + 1] = loading_line
+    description_hls[#description_hls + 1] = {
+      row = #lines - 1,
+      col_from = 0,
+      col_to = #loading_line,
+    }
+  elseif visible_count < #items then
     local remaining = #items - visible_count
     local more_line = padding .. string.format('... %d more', remaining)
     lines[#lines + 1] = more_line
@@ -417,6 +491,17 @@ function SearchComponent:render()
       hl = 'GitComment',
       row = 0,
       col = 0,
+    })
+  end
+
+  if self._input_element and self._input_element:is_valid() then
+    local count_text = tostring(#(self.props.items or {}))
+    self._input_element.buffer:place_extmark_text({
+      text = count_text,
+      hl = 'GitComment',
+      row = 0,
+      col = 0,
+      pos = 'right_align',
     })
   end
 end

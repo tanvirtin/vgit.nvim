@@ -253,6 +253,210 @@ describe('async:', function()
     end)
   end)
 
+  describe('all', function()
+    it('should return empty table for empty funcs', function()
+      local result = nil
+
+      async.run(function()
+        result = async.all({})
+      end)
+
+      eq({}, result)
+    end)
+
+    it('should run a single function and return its result', function()
+      local result = nil
+
+      async.run(function()
+        result = async.all({
+          function() return 42 end,
+        })
+      end)
+
+      eq({ 42 }, result)
+    end)
+
+    it('should run multiple functions and collect results in order', function()
+      local result = nil
+
+      async.run(function()
+        result = async.all({
+          function() return 'a' end,
+          function() return 'b' end,
+          function() return 'c' end,
+        })
+      end)
+
+      eq({ 'a', 'b', 'c' }, result)
+    end)
+
+    it('should handle nil results from functions', function()
+      local result = nil
+
+      async.run(function()
+        result = async.all({
+          function() return 'first' end,
+          function() return nil end,
+          function() return 'third' end,
+        })
+      end)
+
+      eq('first', result[1])
+      assert.is_nil(result[2])
+      eq('third', result[3])
+    end)
+
+    it('should work with async-wrapped functions', function()
+      local result = nil
+      local double = async.wrap(function(x, cb)
+        cb(x * 2)
+      end, 2)
+
+      async.run(function()
+        result = async.all({
+          function() return double(5) end,
+          function() return double(10) end,
+          function() return double(15) end,
+        })
+      end)
+
+      eq({ 10, 20, 30 }, result)
+    end)
+
+    it('should work with vim.schedule-based async functions', function()
+      local result = nil
+      local async_compute = async.wrap(function(val, cb)
+        vim.schedule(function()
+          cb(val * 3)
+        end)
+      end, 2)
+
+      async.run(function()
+        result = async.all({
+          function() return async_compute(1) end,
+          function() return async_compute(2) end,
+          function() return async_compute(3) end,
+        })
+      end)
+
+      vim.wait(1000, function() return result ~= nil end, 10)
+
+      eq({ 3, 6, 9 }, result)
+    end)
+
+    it('should preserve result ordering regardless of completion order', function()
+      local result = nil
+      -- Simulate different completion times using vim.defer_fn
+      local delayed = function(val, delay_ms)
+        return async.wrap(function(cb)
+          vim.defer_fn(function() cb(val) end, delay_ms)
+        end, 1)
+      end
+
+      async.run(function()
+        result = async.all({
+          function() return delayed('slow', 30)() end,
+          function() return delayed('fast', 5)() end,
+          function() return delayed('medium', 15)() end,
+        })
+      end)
+
+      vim.wait(1000, function() return result ~= nil end, 10)
+
+      eq({ 'slow', 'fast', 'medium' }, result)
+    end)
+
+    it('should handle errors in functions without hanging', function()
+      local result = nil
+
+      async.run(function()
+        result = async.all({
+          function() return 'ok' end,
+          function() error('boom') end,
+          function() return 'also ok' end,
+        })
+      end)
+
+      eq('ok', result[1])
+      assert.is_nil(result[2])
+      eq('also ok', result[3])
+    end)
+
+    it('should handle errors in async functions without hanging', function()
+      local result = nil
+      local async_op = async.wrap(function(val, cb)
+        vim.schedule(function()
+          cb(val)
+        end)
+      end, 2)
+
+      async.run(function()
+        result = async.all({
+          function() return async_op('first') end,
+          function()
+            async_op('before error')
+            error('async boom')
+          end,
+          function() return async_op('third') end,
+        })
+      end)
+
+      vim.wait(1000, function() return result ~= nil end, 10)
+
+      eq('first', result[1])
+      assert.is_nil(result[2])
+      eq('third', result[3])
+    end)
+
+    it('should respect max_concurrent option', function()
+      local peak_concurrent = 0
+      local current_concurrent = 0
+      local result = nil
+
+      local async_op = async.wrap(function(val, cb)
+        current_concurrent = current_concurrent + 1
+        if current_concurrent > peak_concurrent then
+          peak_concurrent = current_concurrent
+        end
+        vim.schedule(function()
+          current_concurrent = current_concurrent - 1
+          cb(val)
+        end)
+      end, 2)
+
+      async.run(function()
+        result = async.all({
+          function() return async_op(1) end,
+          function() return async_op(2) end,
+          function() return async_op(3) end,
+          function() return async_op(4) end,
+          function() return async_op(5) end,
+        }, { max_concurrent = 2 })
+      end)
+
+      vim.wait(1000, function() return result ~= nil end, 10)
+
+      eq({ 1, 2, 3, 4, 5 }, result)
+      assert.is_true(peak_concurrent <= 2)
+    end)
+
+    it('should process all items even when max_concurrent is smaller than total', function()
+      local result = nil
+
+      async.run(function()
+        result = async.all({
+          function() return 'a' end,
+          function() return 'b' end,
+          function() return 'c' end,
+          function() return 'd' end,
+          function() return 'e' end,
+        }, { max_concurrent = 2 })
+      end)
+
+      eq({ 'a', 'b', 'c', 'd', 'e' }, result)
+    end)
+  end)
+
   describe('integration', function()
     it('should support void calling wrapped functions that use vim.schedule', function()
       local result = nil

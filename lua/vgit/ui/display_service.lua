@@ -8,6 +8,8 @@ local HunkLens = lazy('vgit.features.lenses.HunkLens')
 local BlameLens = lazy('vgit.features.lenses.BlameLens')
 local StatusDiffView = lazy('vgit.features.screens.StatusDiffView')
 local BranchView = lazy('vgit.features.screens.BranchView')
+local CommitPickerView = lazy('vgit.features.screens.CommitPickerView')
+local BlameView = lazy('vgit.features.screens.BlameView')
 
 local active_view = nil
 local _events_registered = false
@@ -149,6 +151,50 @@ display_service.show_branch = event.async(function(data)
   local success = view:create(data)
   if not success then
     console.error('Failed to create branch view')
+    return
+  end
+  active_view = view
+end)
+
+display_service.show_log = event.async(function(data)
+  if not data then
+    console.error('No log data')
+    return
+  end
+
+  if active_view and active_view.destroy then
+    active_view:destroy()
+    active_view = nil
+  end
+
+  event.await()
+
+  local view = CommitPickerView()
+  local success = view:create(data)
+  if not success then
+    console.error('Failed to create log view')
+    return
+  end
+  active_view = view
+end)
+
+display_service.show_blame_view = event.async(function(data)
+  if not data then
+    console.error('No blame view data')
+    return
+  end
+
+  if active_view and active_view.destroy then
+    active_view:destroy()
+    active_view = nil
+  end
+
+  event.await()
+
+  local view = BlameView()
+  local success = view:create(data)
+  if not success then
+    console.error('Failed to create blame view')
     return
   end
   active_view = view

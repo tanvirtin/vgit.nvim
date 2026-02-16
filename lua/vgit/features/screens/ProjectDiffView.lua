@@ -8,6 +8,8 @@ local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
 local statusline = lazy('vgit.core.statusline_state')
 local repository = lazy('vgit.git.repository')
+local git_blame = lazy('vgit.git.git_blame')
+local git_show = lazy('vgit.git.git_show')
 local scene_setting = lazy('vgit.settings.scene')
 local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
@@ -300,6 +302,42 @@ function ProjectDiffView:jump_to_file()
   console.debug.info(string.format('[ProjectDiffView:jump_to_file] opened file=%s, set lnum=%d', filename, target_lnum))
 end
 
+function ProjectDiffView:show_blame_view()
+  local component = self:_get_active_component()
+  if not component or not component:is_valid() then return end
+
+  local lnum = component:get_lnum()
+  local file_info = self.line_to_file_map[lnum]
+  if not file_info or not file_info.filename then return end
+
+  local filename = file_info.filename
+
+  local repo, err = repository.current()
+  if not self:_handle_git_error(err, 'repository.current') then return end
+
+  local repo_path = repo:get_path()
+  local filetype = fs.detect_filetype(filename)
+
+  local blames, blame_err = git_blame.list(repo_path, filename)
+  if blame_err or not blames or #blames == 0 then
+    console.info('No blame information available for this file')
+    return
+  end
+
+  local lines, lines_err = git_show.lines(repo_path, filename, 'HEAD')
+  if lines_err or not lines then
+    lines = {}
+  end
+
+  display_service.show_blame_view({
+    filename = filename,
+    filetype = filetype,
+    reponame = repo_path,
+    blames = blames,
+    lines = lines,
+  })
+end
+
 function ProjectDiffView:get_key(keymap)
   return view_utils.get_key(keymap)
 end
@@ -366,6 +404,12 @@ function ProjectDiffView:setup_keymaps()
     end)
     self:_set_keymap_all_components('n', up_key, up_fn)
   end
+
+  local blame_fn, blame_cleanup = event.debounce_async(function()
+    self:show_blame_view()
+  end, self.DEBOUNCE_MS)
+  table.insert(self.debounce_cleanups, blame_cleanup)
+  self:_set_keymap_all_components('n', 'b', blame_fn)
 end
 
 function ProjectDiffView:_build_split_patch_entries(patch_entries)
