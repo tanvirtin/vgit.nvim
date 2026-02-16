@@ -78,35 +78,45 @@ show_command.execute = event.async(function(args)
 
   -- Get parent hash for diff comparison
   local parent_hash = commit.parent_hash or ''
+  local from_ref = parent_hash ~= '' and parent_hash or nil
+  local to_ref = commit.commit_hash or commit.hash
 
-  -- Build entries for ProjectDiffView
-  local entries = {}
+  -- Build entries for ProjectDiffView (parallel)
+  local funcs = {}
   for _, file in ipairs(files) do
     local filename = file.filename
     local file_old_filename = file.old_filename
 
-    -- Get diff for this file
-    local diff = repo:diff({
-      type = 'range',
-      filename = filename,
-      old_filename = file_old_filename,
-      from = parent_hash ~= '' and parent_hash or nil,
-      to = commit.commit_hash or commit.hash,
-      layout_type = layout_type,
-    })
+    table.insert(funcs, function()
+      local diff = repo:diff({
+        type = 'range',
+        filename = filename,
+        old_filename = file_old_filename,
+        from = from_ref,
+        to = to_ref,
+        layout_type = layout_type,
+      })
 
-    if diff then
-      local from_ref = parent_hash ~= '' and parent_hash or nil
-      local to_ref = commit.commit_hash or commit.hash
+      if not diff then return nil end
+
       local from_filename = file_old_filename or filename
-      table.insert(entries, {
+      return {
         filename = filename,
         filetype = file.get_filetype and file:get_filetype() or 'text',
         diff = diff,
         status = file,
         original_lines = repo:file_lines(from_filename, from_ref) or {},
         current_lines = repo:file_lines(filename, to_ref) or {},
-      })
+      }
+    end)
+  end
+
+  local results = event.all(funcs)
+
+  local entries = {}
+  for i = 1, #funcs do
+    if results[i] then
+      table.insert(entries, results[i])
     end
   end
 

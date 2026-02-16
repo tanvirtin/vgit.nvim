@@ -1,39 +1,31 @@
 local co = coroutine
 
-local M = {}
+local async = {}
 
 local function is_callable(fn)
-  return type(fn) == 'function'
-    or (type(fn) == 'table' and type(getmetatable(fn).__call) == 'function')
+  return type(fn) == 'function' or (type(fn) == 'table' and type(getmetatable(fn).__call) == 'function')
 end
 
 local function rotate(nargs, ...)
   if not nargs or nargs < 1 then return end
+
   local args = { ... }
   local first = args[1]
+
   for i = 1, nargs - 1 do
     args[i] = args[i + 1]
   end
   args[nargs] = first
+
   return unpack(args, 1, nargs)
 end
 
 local function callback_or_next(step, thread, callback, ...)
   local stat = select(1, ...)
-
-  if not stat then
-    error(
-      string.format(
-        'The coroutine failed with this message: %s',
-        tostring(select(2, ...))
-      )
-    )
-  end
+  if not stat then error(string.format('The coroutine failed with this message: %s', tostring(select(2, ...)))) end
 
   if co.status(thread) == 'dead' then
-    if callback then
-      callback(select(2, ...))
-    end
+    if callback then callback(select(2, ...)) end
   else
     local returned_function = select(2, ...)
     local nargs = select(3, ...)
@@ -56,12 +48,9 @@ local function execute(async_function, callback, ...)
   step(...)
 end
 
-M.wrap = function(func, argc)
+async.wrap = function(func, argc)
   assert(is_callable(func), 'type error :: expected func, got ' .. type(func))
-  assert(
-    type(argc) == 'number',
-    'type error :: expected number, got ' .. type(argc)
-  )
+  assert(type(argc) == 'number', 'type error :: expected number, got ' .. type(argc))
 
   return function(...)
     if select('#', ...) == argc then
@@ -72,14 +61,44 @@ M.wrap = function(func, argc)
   end
 end
 
-M.run = function(async_function, callback)
+async.run = function(async_function, callback)
   execute(async_function, callback)
 end
 
-M.void = function(func)
+async.void = function(func)
   return function(...)
     execute(func, nil, ...)
   end
 end
 
-return M
+local function run_batch(funcs, from, to, results)
+  local remaining = to - from + 1
+
+  async.wrap(function(done)
+    for i = from, to do
+      execute(function()
+        local ok, result = pcall(funcs[i])
+        if ok then return result end
+      end, function(result)
+        results[i] = result
+        remaining = remaining - 1
+        if remaining == 0 then done() end
+      end)
+    end
+  end, 1)()
+end
+
+async.all = function(funcs, opts)
+  if #funcs == 0 then return {} end
+
+  local results = {}
+  local max = opts and opts.max_concurrent or #funcs
+
+  for i = 1, #funcs, max do
+    run_batch(funcs, i, math.min(i + max - 1, #funcs), results)
+  end
+
+  return results
+end
+
+return async

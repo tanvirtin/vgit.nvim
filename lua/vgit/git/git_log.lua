@@ -46,6 +46,11 @@ function git_log.list(reponame, opts)
 
   local query = GitQueryBuilder(reponame):log():pretty(git_log.format)
 
+  if opts.grep then
+    query:option('grep', opts.grep)
+    query:option('regexp-ignore-case')
+  end
+
   if pagination then query:paginate(pagination.count, pagination.skip) end
 
   if filename then query:file(filename) end

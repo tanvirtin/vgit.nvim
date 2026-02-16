@@ -20,6 +20,13 @@ local function parse_blame(blame_lines, filename)
 
     if key == 'previous' then
       blame_data[key] = parts[2]
+      if #parts >= 3 then
+        local filename_parts = {}
+        for k = 3, #parts do
+          filename_parts[#filename_parts + 1] = parts[k]
+        end
+        blame_data['previous_filename'] = table.concat(filename_parts, ' ')
+      end
     else
       local value_parts = {}
       local parts_len = #parts
@@ -64,6 +71,7 @@ local function parse_blame(blame_lines, filename)
     context = {
       lnum = blame_data.lnum,
       filename = filename or blame_data.filename,
+      previous_filename = blame_data.previous_filename,
     },
   })
 end

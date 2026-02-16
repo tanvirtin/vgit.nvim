@@ -51,6 +51,14 @@ local event = {
   await = async.wrap(vim.schedule, 1),
 }
 
+function event.all(funcs, opts)
+  opts = opts or {}
+  if not opts.max_concurrent then
+    opts.max_concurrent = 20
+  end
+  return async.all(funcs, opts)
+end
+
 function event.on(event_names, callback)
   ensure_augroup()
   vim.api.nvim_create_autocmd(event_names, {
