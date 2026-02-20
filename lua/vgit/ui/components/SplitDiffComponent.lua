@@ -307,6 +307,11 @@ function SplitDiffComponent:get_marks()
   return {}
 end
 
+function SplitDiffComponent:get_hunks()
+  if self._current_component then return self._current_component:get_hunks() end
+  return {}
+end
+
 function SplitDiffComponent:render_folds()
   self:_for_both(function(c) c:render_folds() end)
 end

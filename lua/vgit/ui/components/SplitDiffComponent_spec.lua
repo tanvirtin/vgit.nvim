@@ -218,4 +218,218 @@ describe('SplitDiffComponent:', function()
     end)
   end)
 
+  describe('get_hunks', function()
+    it('should delegate to _current_component', function()
+      local hunks = {
+        { header = '@@ -1,3 +1,4 @@', diff = {}, top = 1, bot = 4 },
+        { header = '@@ -10,2 +10,3 @@', diff = {}, top = 10, bot = 12 },
+      }
+      local component = create_split_component({})
+      component._current_component = {
+        get_hunks = function() return hunks end,
+      }
+
+      eq(hunks, component:get_hunks())
+    end)
+
+    it('should return empty table when _current_component is nil', function()
+      local component = create_split_component({})
+      component._current_component = nil
+
+      eq({}, component:get_hunks())
+    end)
+
+    it('should return empty table when _current_component has no hunks', function()
+      local component = create_split_component({})
+      component._current_component = {
+        get_hunks = function() return {} end,
+      }
+
+      eq({}, component:get_hunks())
+    end)
+  end)
+
+  describe('get_marks', function()
+    it('should delegate to _current_component', function()
+      local marks = {
+        { top = 5, bot = 10 },
+        { top = 15, bot = 20 },
+      }
+      local component = create_split_component({})
+      component._current_component = {
+        get_marks = function() return marks end,
+      }
+
+      eq(marks, component:get_marks())
+    end)
+
+    it('should return empty table when _current_component is nil', function()
+      local component = create_split_component({})
+      component._current_component = nil
+
+      eq({}, component:get_marks())
+    end)
+  end)
+
+  describe('get_hunk_under_cursor', function()
+    it('should delegate to _current_component', function()
+      local hunk = { header = '@@ -1,3 +1,4 @@', diff = {} }
+      local component = create_split_component({})
+      component._current_component = {
+        get_hunk_under_cursor = function() return hunk end,
+      }
+
+      eq(hunk, component:get_hunk_under_cursor())
+    end)
+
+    it('should return nil when _current_component is nil', function()
+      local component = create_split_component({})
+      component._current_component = nil
+
+      assert.is_nil(component:get_hunk_under_cursor())
+    end)
+  end)
+
+  describe('get_current_mark_under_cursor', function()
+    it('should delegate to _current_component', function()
+      local mark = { top = 5, bot = 10 }
+      local component = create_split_component({})
+      component._current_component = {
+        get_current_mark_under_cursor = function() return mark end,
+      }
+
+      eq(mark, component:get_current_mark_under_cursor())
+    end)
+
+    it('should return nil when _current_component is nil', function()
+      local component = create_split_component({})
+      component._current_component = nil
+
+      assert.is_nil(component:get_current_mark_under_cursor())
+    end)
+  end)
+
+  describe('get_relative_mark_index', function()
+    it('should delegate to _current_component', function()
+      local component = create_split_component({})
+      component._current_component = {
+        get_relative_mark_index = function(_, lnum) return lnum < 10 and 1 or 2 end,
+      }
+
+      eq(1, component:get_relative_mark_index(5))
+      eq(2, component:get_relative_mark_index(15))
+    end)
+
+    it('should return 1 when _current_component is nil', function()
+      local component = create_split_component({})
+      component._current_component = nil
+
+      eq(1, component:get_relative_mark_index(5))
+    end)
+  end)
+
+  describe('get_lnum', function()
+    it('should delegate to _current_component', function()
+      local component = create_split_component({})
+      component._current_component = {
+        get_lnum = function() return 42 end,
+      }
+
+      eq(42, component:get_lnum())
+    end)
+
+    it('should return 1 when _current_component is nil', function()
+      local component = create_split_component({})
+      component._current_component = nil
+
+      eq(1, component:get_lnum())
+    end)
+  end)
+
+  describe('is_valid', function()
+    it('should return true when _current_component is valid', function()
+      local component = create_split_component({})
+      component._current_component = {
+        is_valid = function() return true end,
+      }
+      component._previous_component = nil
+
+      assert.is_truthy(component:is_valid())
+    end)
+
+    it('should return true when _previous_component is valid', function()
+      local component = create_split_component({})
+      component._previous_component = {
+        is_valid = function() return true end,
+      }
+      component._current_component = nil
+
+      assert.is_truthy(component:is_valid())
+    end)
+
+    it('should return false when both components are nil', function()
+      local component = create_split_component({})
+      component._previous_component = nil
+      component._current_component = nil
+
+      assert.is_falsy(component:is_valid())
+    end)
+  end)
+
+  describe('hunk_down', function()
+    it('should delegate to _current_component', function()
+      local mark = { top = 15, bot = 20 }
+      local component = create_split_component({})
+      component._current_component = {
+        hunk_down = function() return mark end,
+      }
+
+      eq(mark, component:hunk_down())
+    end)
+
+    it('should return nil when _current_component is nil', function()
+      local component = create_split_component({})
+      component._current_component = nil
+
+      assert.is_nil(component:hunk_down())
+    end)
+  end)
+
+  describe('hunk_up', function()
+    it('should delegate to _current_component', function()
+      local mark = { top = 5, bot = 10 }
+      local component = create_split_component({})
+      component._current_component = {
+        hunk_up = function() return mark end,
+      }
+
+      eq(mark, component:hunk_up())
+    end)
+
+    it('should return nil when _current_component is nil', function()
+      local component = create_split_component({})
+      component._current_component = nil
+
+      assert.is_nil(component:hunk_up())
+    end)
+  end)
+
+  describe('get_filetype', function()
+    it('should delegate to _current_component', function()
+      local component = create_split_component({})
+      component._current_component = {
+        get_filetype = function() return 'lua' end,
+      }
+
+      eq('lua', component:get_filetype())
+    end)
+
+    it('should return empty string when _current_component is nil', function()
+      local component = create_split_component({})
+      component._current_component = nil
+
+      eq('', component:get_filetype())
+    end)
+  end)
+
 end)

@@ -75,9 +75,7 @@ function ProjectDiffView:create(data)
 end
 
 function ProjectDiffView:_get_file_lines(repo, filename, ref)
-  if ref == 'disk' then
-    return fs.read_file(fs.absolute_path(repo:get_path(), filename)) or {}
-  end
+  if ref == 'disk' then return fs.read_file(fs.absolute_path(repo:get_path(), filename)) or {} end
   return repo:file_lines(filename, ref) or {}
 end
 
@@ -121,6 +119,31 @@ function ProjectDiffView:_get_diff_for_entry(repo, entry)
 end
 
 function ProjectDiffView:_build_patch_entries(repo, data)
+  local funcs = {}
+  local func_entries = {}
+  for _, section in ipairs(data.entries or {}) do
+    for _, file_entry in ipairs(section.entries or {}) do
+      if not file_entry.diff and file_entry.status then
+        table.insert(funcs, function()
+          return { self:_get_diff_for_entry(repo, file_entry) }
+        end)
+        table.insert(func_entries, file_entry)
+      end
+    end
+  end
+
+  if #funcs > 0 then
+    local results = event.all(funcs)
+    for i = 1, #funcs do
+      local result = results[i]
+      if result and result[1] then
+        func_entries[i].diff = result[1]
+        func_entries[i].original_lines = result[2]
+        func_entries[i].current_lines = result[3]
+      end
+    end
+  end
+
   local patch_entries = {}
   local line_to_file_map = {}
   local current_line = 1
@@ -136,14 +159,9 @@ function ProjectDiffView:_build_patch_entries(repo, data)
 
       files_processed = files_processed + 1
 
-      local diff_data, original_lines, current_lines
-      if file_entry.diff then
-        diff_data = file_entry.diff
-        original_lines = file_entry.original_lines
-        current_lines = file_entry.current_lines
-      else
-        diff_data, original_lines, current_lines = self:_get_diff_for_entry(repo, file_entry)
-      end
+      local diff_data = file_entry.diff
+      local original_lines = file_entry.original_lines
+      local current_lines = file_entry.current_lines
 
       if not diff_data then
         console.debug.error(string.format('[ProjectDiffView] no diff_data for %s', status.filename))
@@ -164,9 +182,7 @@ function ProjectDiffView:_build_patch_entries(repo, data)
       local hunks = diff_data.hunks
 
       local display_filename = status.filename
-      if status.old_filename then
-        display_filename = status.old_filename .. ' -> ' .. status.filename
-      end
+      if status.old_filename then display_filename = status.old_filename .. ' -> ' .. status.filename end
 
       patch_entries[#patch_entries + 1] = {
         type = 'file_header',
@@ -325,9 +341,7 @@ function ProjectDiffView:show_blame_view()
   end
 
   local lines, lines_err = git_show.lines(repo_path, filename, 'HEAD')
-  if lines_err or not lines then
-    lines = {}
-  end
+  if lines_err or not lines then lines = {} end
 
   display_service.show_blame_view({
     filename = filename,

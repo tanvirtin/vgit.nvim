@@ -2,6 +2,20 @@ local lazy = require('vgit.core.lazy')
 local Object = lazy('vgit.core.Object')
 local signs_setting = lazy('vgit.settings.signs')
 
+-- Cache sign settings at module level — these never change after setup
+local _sign_priority
+local _sign_definitions
+
+local function get_sign_priority()
+  if not _sign_priority then _sign_priority = signs_setting:get('priority') end
+  return _sign_priority
+end
+
+local function get_sign_definition(name)
+  if not _sign_definitions then _sign_definitions = signs_setting:get('definitions') end
+  return _sign_definitions[name]
+end
+
 local Extmark = Object:extend()
 
 function Extmark:constructor(bufnr, ns_name_extension)
@@ -139,10 +153,10 @@ end
 function Extmark:sign(sign)
   local col = sign.col
   local name = sign.name
-  local priority = sign.priority or signs_setting:get('priority')
+  local priority = sign.priority or get_sign_priority()
 
   local id = self:derive_id(col, 'sign')
-  local sign_definition = signs_setting:get('definitions')[name]
+  local sign_definition = get_sign_definition(name)
   local sign_text = sign_definition.text
 
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, col, 0, {

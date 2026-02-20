@@ -77,6 +77,8 @@ end
 function Element:unmount()
   if not self.mounted then return self end
 
+  self:detach_from_renderer()
+
   if self.window and self.window:is_valid() then self.window:close() end
 
   if self.buffer and self.buffer:is_valid() then self.buffer:delete({ force = true }) end

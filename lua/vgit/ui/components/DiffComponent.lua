@@ -137,14 +137,11 @@ function DiffComponent:render()
       -- Pre-pad line number text so viewport renderer just reads them
       if #line_numbers > 0 then
         local max_digits = string.len(tostring(#line_numbers)) + 1
+        local pad_fmt = '%' .. max_digits .. 's'
         for i = 1, #line_numbers do
           local ln = line_numbers[i]
           if ln then
-            local text = ln[1]
-            local text_len = string.len(text)
-            if text_len < max_digits then
-              ln[1] = string.format('%s%s', string.rep(' ', max_digits - text_len), text)
-            end
+            ln[1] = string.format(pad_fmt, ln[1])
           end
         end
       end
