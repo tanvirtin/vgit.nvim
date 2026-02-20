@@ -14,48 +14,31 @@ describe('LiveConflict:', function()
       eq('Conflict', instance.name)
     end)
 
-    it('should initialize empty debounce_cleanups', function()
+    it('should initialize debounced conflicts function and cleanup', function()
       local instance = LiveConflict()
 
-      assert.is_table(instance.debounce_cleanups)
-      eq(0, #instance.debounce_cleanups)
+      assert.is_function(instance._debounced_conflicts)
+      assert.is_function(instance._debounced_conflicts_cleanup)
     end)
   end)
 
   describe('cleanup', function()
-    it('should call each cleanup function and reset list', function()
+    it('should call the debounce cleanup function', function()
       local instance = LiveConflict()
-      local called = { false, false }
+      local called = false
 
-      instance.debounce_cleanups = {
-        function() called[1] = true end,
-        function() called[2] = true end,
-      }
+      instance._debounced_conflicts_cleanup = function() called = true end
 
       instance:cleanup()
 
-      assert.is_true(called[1])
-      assert.is_true(called[2])
-      eq(0, #instance.debounce_cleanups)
+      assert.is_true(called)
     end)
 
-    it('should handle empty debounce_cleanups', function()
+    it('should handle nil cleanup gracefully', function()
       local instance = LiveConflict()
-
-      -- Should not error
-      instance:cleanup()
-
-      eq(0, #instance.debounce_cleanups)
-    end)
-
-    it('should reset debounce_cleanups to empty table', function()
-      local instance = LiveConflict()
-      instance.debounce_cleanups = { function() end }
+      instance._debounced_conflicts_cleanup = nil
 
       instance:cleanup()
-
-      assert.is_table(instance.debounce_cleanups)
-      eq(0, #instance.debounce_cleanups)
     end)
   end)
 end)

@@ -9,9 +9,32 @@ local live_blame_setting = lazy('vgit.settings.live_blame')
 local LiveBlame = Object:extend()
 
 function LiveBlame:constructor()
+  local debounced_blame, debounced_blame_cleanup = event.debounce_async(function(buffer)
+    if not live_blame_setting:get('enabled') then return end
+
+    buffer = buffer or git_buffer_store.current()
+    if not buffer then return end
+
+    event.await()
+    local conflicts = buffer:get_conflicts()
+    if #conflicts ~= 0 then return end
+
+    local _, config_err = buffer:config()
+    if config_err then return console.debug.error(config_err) end
+
+    local window = Window(0)
+    local lnum = window:get_lnum()
+
+    local _, blame_err = buffer:blame(lnum)
+    if blame_err then return console.debug.error(blame_err) end
+
+    buffer:render_blames()
+  end, live_blame_setting:get('debounce_ms'))
+
   return {
     name = 'Live Blame',
-    debounce_cleanups = {},
+    _debounced_blame = debounced_blame,
+    _debounced_blame_cleanup = debounced_blame_cleanup,
   }
 end
 
@@ -22,10 +45,9 @@ function LiveBlame:reset()
 end
 
 function LiveBlame:cleanup()
-  for _, cleanup in ipairs(self.debounce_cleanups) do
-    cleanup()
+  if self._debounced_blame_cleanup then
+    self._debounced_blame_cleanup()
   end
-  self.debounce_cleanups = {}
 end
 
 function LiveBlame:register_events()
@@ -39,30 +61,9 @@ function LiveBlame:register_events()
       buffer:clear_blames()
     end)
 
-    local debounced_blame, cleanup = event.debounce_async(function()
-      if not live_blame_setting:get('enabled') then return end
-
-      buffer = buffer or git_buffer_store.current()
-      if not buffer then return end
-
-      event.await()
-      local conflicts = buffer:get_conflicts()
-      if #conflicts ~= 0 then return end
-
-      local _, config_err = buffer:config()
-      if config_err then return console.debug.error(config_err) end
-
-      local window = Window(0)
-      local lnum = window:get_lnum()
-
-      local _, blame_err = buffer:blame(lnum)
-      if blame_err then return console.debug.error(blame_err) end
-
-      buffer:render_blames()
-    end, live_blame_setting:get('debounce_ms'))
-
-    table.insert(self.debounce_cleanups, cleanup)
-    buffer:on('CursorHold', debounced_blame)
+    buffer:on('CursorHold', function()
+      self._debounced_blame(buffer)
+    end)
   end)
 
   return self

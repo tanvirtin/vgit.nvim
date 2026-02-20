@@ -6,33 +6,31 @@ local git_buffer_store = lazy('vgit.git.git_buffer_store')
 local LiveConflict = Object:extend()
 
 function LiveConflict:constructor()
-  return {
-    name = 'Conflict',
-    debounce_cleanups = {},
-  }
-end
-
-function LiveConflict:register_events()
-  local debounced_conflicts, cleanup = event.debounce_async(function(buffer)
+  local debounced_conflicts, debounced_conflicts_cleanup = event.debounce_async(function(buffer)
     buffer:conflicts()
     buffer:render_conflicts()
   end, 100)
 
-  table.insert(self.debounce_cleanups, cleanup)
+  return {
+    name = 'Conflict',
+    _debounced_conflicts = debounced_conflicts,
+    _debounced_conflicts_cleanup = debounced_conflicts_cleanup,
+  }
+end
 
+function LiveConflict:register_events()
   git_buffer_store.on(
     { 'attach', 'reload', 'change', 'sync' },
-    debounced_conflicts
+    self._debounced_conflicts
   )
 
   return self
 end
 
 function LiveConflict:cleanup()
-  for _, cleanup in ipairs(self.debounce_cleanups) do
-    cleanup()
+  if self._debounced_conflicts_cleanup then
+    self._debounced_conflicts_cleanup()
   end
-  self.debounce_cleanups = {}
 end
 
 return LiveConflict
