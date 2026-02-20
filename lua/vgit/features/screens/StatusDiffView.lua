@@ -568,6 +568,7 @@ end
 function StatusDiffView:reset_entry()
   local entry = self:get_current_entry()
   if not self:_is_valid_entry(entry) then return end
+  if entry.type ~= 'unstaged' and entry.type ~= 'staged' then return end
 
   event.await()
   local decision = console.input('Are you sure you want to discard changes? (y/N) ')
@@ -576,15 +577,20 @@ function StatusDiffView:reset_entry()
   if decision ~= 'yes' and decision ~= 'y' then return end
 
   local filename = entry.status.filename
-  local next_file = self:find_next_file(filename, 'unstaged')
+  local entry_type = entry.type
+  local next_file = self:find_next_file(filename, entry_type)
 
   local repo, err = repository.current()
   if err then return end
+
+  if entry_type == 'staged' then
+    repo:unstage_file(filename)
+  end
   repo:reset(filename)
 
   self:refresh_and_navigate(function()
     if next_file then
-      self:move_to_entry(next_file, 'unstaged')
+      self:move_to_entry(next_file, entry_type)
     elseif not self:_move_to_first_entry_of_type('unstaged') then
       if not self:_move_to_first_entry_of_type('staged') then
         self:_move_to_first_entry()
