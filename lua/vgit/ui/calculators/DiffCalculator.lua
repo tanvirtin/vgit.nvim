@@ -4,14 +4,25 @@ local signs_setting = lazy('vgit.settings.signs')
 
 local DiffCalculator = Object:extend()
 
+-- Cache sign usage settings at module level — these never change after setup
+local _scene_signs
+local _main_signs
+
+local function get_scene_signs()
+  if not _scene_signs then
+    local usage = signs_setting:get('usage')
+    _scene_signs = usage.scene
+    _main_signs = usage.main
+  end
+  return _scene_signs, _main_signs
+end
+
 function DiffCalculator:calculate_line_diff_marks(line_changes)
   local lnum_change = line_changes.lnum_change
   if not lnum_change then return nil end
 
   local line_number_hl = 'GitLineNr'
-  local signs_usage_setting = signs_setting:get('usage')
-  local scene_signs = signs_usage_setting.scene
-  local main_signs = signs_usage_setting.main
+  local scene_signs, main_signs = get_scene_signs()
 
   local lnum = lnum_change.lnum
   local change_type = lnum_change.type

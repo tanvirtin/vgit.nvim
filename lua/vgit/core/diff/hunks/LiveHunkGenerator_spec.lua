@@ -238,5 +238,71 @@ describe('LiveHunkGenerator:', function()
 
       assert.is_true(#hunks > 0)
     end)
+
+    it('should produce correct results when called multiple times with different original_lines', function()
+      local curr = { 'a', 'b', 'c' }
+
+      -- First call: original identical to current (no hunks)
+      local hunks1 = gen:generate({ 'a', 'b', 'c' }, curr)
+      eq({}, hunks1)
+
+      -- Second call: different original (should detect changes)
+      local hunks2 = gen:generate({ 'a', 'x', 'c' }, curr)
+      assert.is_true(#hunks2 > 0)
+      eq('change', hunks2[1].type)
+
+      -- Third call: back to identical (should be no hunks again)
+      local hunks3 = gen:generate({ 'a', 'b', 'c' }, curr)
+      eq({}, hunks3)
+    end)
+
+    it('should produce correct results when called multiple times with different current_lines', function()
+      local orig = { 'a', 'b', 'c' }
+
+      local hunks1 = gen:generate(orig, { 'a', 'b', 'c' })
+      eq({}, hunks1)
+
+      local hunks2 = gen:generate(orig, { 'a', 'b', 'c', 'd' })
+      assert.is_true(#hunks2 > 0)
+
+      local total_added = 0
+      for _, h in ipairs(hunks2) do
+        total_added = total_added + h.stat.added
+      end
+      assert.is_true(total_added > 0)
+    end)
+
+    it('should produce consistent results across repeated identical calls', function()
+      local orig = { 'hello', 'world' }
+      local curr = { 'hello', 'there', 'world' }
+
+      local hunks1 = gen:generate(orig, curr)
+      local hunks2 = gen:generate(orig, curr)
+
+      eq(#hunks1, #hunks2)
+      for i = 1, #hunks1 do
+        eq(hunks1[i].header, hunks2[i].header)
+        eq(hunks1[i].type, hunks2[i].type)
+        eq(hunks1[i].top, hunks2[i].top)
+        eq(hunks1[i].bot, hunks2[i].bot)
+        eq(hunks1[i].diff, hunks2[i].diff)
+      end
+    end)
+
+    it('should work correctly with a fresh instance per call', function()
+      -- Simulates the DiffBuilder pattern where a new instance is created each time
+      local orig = { 'a', 'b', 'c' }
+      local curr = { 'a', 'x', 'c' }
+
+      local gen1 = LiveHunkGenerator()
+      local hunks1 = gen1:generate(orig, curr)
+
+      local gen2 = LiveHunkGenerator()
+      local hunks2 = gen2:generate(orig, curr)
+
+      eq(#hunks1, #hunks2)
+      eq(hunks1[1].header, hunks2[1].header)
+      eq(hunks1[1].type, hunks2[1].type)
+    end)
   end)
 end)

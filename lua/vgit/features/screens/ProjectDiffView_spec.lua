@@ -227,6 +227,246 @@ describe('ProjectDiffView:', function()
     end)
   end)
 
+  describe('_build_patch_entries', function()
+    local mock_repo
+
+    before_each(function()
+      mock_repo = {}
+    end)
+
+    it('should build patch entries from pre-computed diffs', function()
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'a.lua', filetype = 'lua' },
+                diff = {
+                  hunks = {
+                    { header = '@@ -1,1 +1,1 @@', diff = { '-old', '+new' }, top = 1, bot = 1 },
+                  },
+                },
+                original_lines = { 'old' },
+                current_lines = { 'new' },
+              },
+            },
+          },
+        },
+      }
+
+      local patch_entries, line_to_file_map = view:_build_patch_entries(mock_repo, data)
+
+      assert.is_true(#patch_entries > 0)
+      eq('file_header', patch_entries[1].type)
+      eq('a.lua', patch_entries[1].filename)
+      eq('hunk', patch_entries[2].type)
+      eq('a.lua', patch_entries[2].filename)
+      assert.is_not_nil(line_to_file_map[1])
+      eq('a.lua', line_to_file_map[1].filename)
+    end)
+
+    it('should skip entries without status', function()
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              { diff = { hunks = { { header = '@@', diff = { '+x' }, top = 1, bot = 1 } } } },
+            },
+          },
+        },
+      }
+
+      local patch_entries = view:_build_patch_entries(mock_repo, data)
+      eq(0, #patch_entries)
+    end)
+
+    it('should skip entries where diff has no hunks after population', function()
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'a.lua' },
+                diff = { hunks = nil },
+              },
+            },
+          },
+        },
+      }
+
+      local patch_entries = view:_build_patch_entries(mock_repo, data)
+      eq(0, #patch_entries)
+    end)
+
+    it('should skip entries with empty hunks', function()
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'a.lua' },
+                diff = { hunks = {} },
+              },
+            },
+          },
+        },
+      }
+
+      local patch_entries = view:_build_patch_entries(mock_repo, data)
+      eq(0, #patch_entries)
+    end)
+
+    it('should handle empty data entries', function()
+      local view = ProjectDiffView()
+      local data = { entries = {} }
+
+      local patch_entries, line_to_file_map = view:_build_patch_entries(mock_repo, data)
+      eq(0, #patch_entries)
+      eq(0, vim.tbl_count(line_to_file_map))
+    end)
+
+    it('should handle nil data entries', function()
+      local view = ProjectDiffView()
+      local data = {}
+
+      local patch_entries, line_to_file_map = view:_build_patch_entries(mock_repo, data)
+      eq(0, #patch_entries)
+      eq(0, vim.tbl_count(line_to_file_map))
+    end)
+
+    it('should build correct line_to_file_map for multi-file data', function()
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'first.lua', filetype = 'lua' },
+                diff = {
+                  hunks = {
+                    { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
+                  },
+                },
+              },
+              {
+                status = { filename = 'second.lua', filetype = 'lua' },
+                diff = {
+                  hunks = {
+                    { header = '@@ -1,1 +1,1 @@', diff = { '-x', '+y' }, top = 1, bot = 1 },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }
+
+      local patch_entries, line_to_file_map = view:_build_patch_entries(mock_repo, data)
+
+      -- Should have entries for both files
+      assert.is_true(#patch_entries >= 4) -- 2 file_headers + 2 hunks
+
+      -- line_to_file_map should reference both files
+      local filenames_seen = {}
+      for _, info in pairs(line_to_file_map) do
+        filenames_seen[info.filename] = true
+      end
+      assert.is_true(filenames_seen['first.lua'] == true)
+      assert.is_true(filenames_seen['second.lua'] == true)
+    end)
+
+    it('should include original_lines and current_lines in file_header entries', function()
+      local view = ProjectDiffView()
+      local orig = { 'old_line' }
+      local curr = { 'new_line' }
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'a.lua', filetype = 'lua' },
+                diff = {
+                  hunks = {
+                    { header = '@@ -1,1 +1,1 @@', diff = { '-old_line', '+new_line' }, top = 1, bot = 1 },
+                  },
+                },
+                original_lines = orig,
+                current_lines = curr,
+              },
+            },
+          },
+        },
+      }
+
+      local patch_entries = view:_build_patch_entries(mock_repo, data)
+
+      eq('file_header', patch_entries[1].type)
+      eq(orig, patch_entries[1].original_lines)
+      eq(curr, patch_entries[1].current_lines)
+    end)
+
+    it('should display renamed files correctly', function()
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'new_name.lua', old_filename = 'old_name.lua', filetype = 'lua' },
+                diff = {
+                  hunks = {
+                    { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }
+
+      local patch_entries = view:_build_patch_entries(mock_repo, data)
+
+      eq('file_header', patch_entries[1].type)
+      eq('old_name.lua -> new_name.lua', patch_entries[1].filename)
+    end)
+
+    it('should track line numbers correctly across hunks', function()
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'a.lua', filetype = 'lua' },
+                diff = {
+                  hunks = {
+                    { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
+                    { header = '@@ -5,1 +5,1 @@', diff = { '-x', '+y' }, top = 5, bot = 5 },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }
+
+      local _, line_to_file_map = view:_build_patch_entries(mock_repo, data)
+
+      -- All mapped lines should reference a.lua
+      for _, info in pairs(line_to_file_map) do
+        eq('a.lua', info.filename)
+      end
+
+      -- Should have line mappings (3 header lines + hunk header + 2 diff lines + separator + hunk header + 2 diff lines + separator)
+      local count = vim.tbl_count(line_to_file_map)
+      assert.is_true(count > 0)
+    end)
+  end)
+
   describe('_get_active_component', function()
     it('should return current_component for split layout', function()
       local view = ProjectDiffView()
