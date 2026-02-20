@@ -96,8 +96,8 @@ end
 function git_repo.reset(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
-  local _, err = GitQueryBuilder(reponame):raw_args('--no-pager', 'checkout', '-q', '--', filename or '.'):execute()
-  if err then return nil, err end
+  -- checkout may fail for untracked files, but clean should still run
+  GitQueryBuilder(reponame):raw_args('--no-pager', 'checkout', '-q', '--', filename or '.'):execute()
 
   return GitQueryBuilder(reponame):raw_args('--no-pager', 'clean', '-fd', '--', filename or '.'):execute()
 end
