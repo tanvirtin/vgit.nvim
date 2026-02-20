@@ -14,11 +14,11 @@ describe('LiveBlame:', function()
       eq('Live Blame', instance.name)
     end)
 
-    it('should initialize empty debounce_cleanups', function()
+    it('should initialize debounced blame function and cleanup', function()
       local instance = LiveBlame()
 
-      assert.is_table(instance.debounce_cleanups)
-      eq(0, #instance.debounce_cleanups)
+      assert.is_function(instance._debounced_blame)
+      assert.is_function(instance._debounced_blame_cleanup)
     end)
   end)
 
@@ -45,28 +45,22 @@ describe('LiveBlame:', function()
   end)
 
   describe('cleanup', function()
-    it('should call each cleanup function and reset list', function()
+    it('should call the debounce cleanup function', function()
       local instance = LiveBlame()
-      local called = { false, false }
+      local called = false
 
-      instance.debounce_cleanups = {
-        function() called[1] = true end,
-        function() called[2] = true end,
-      }
+      instance._debounced_blame_cleanup = function() called = true end
 
       instance:cleanup()
 
-      assert.is_true(called[1])
-      assert.is_true(called[2])
-      eq(0, #instance.debounce_cleanups)
+      assert.is_true(called)
     end)
 
-    it('should handle empty debounce_cleanups', function()
+    it('should handle nil cleanup gracefully', function()
       local instance = LiveBlame()
+      instance._debounced_blame_cleanup = nil
 
       instance:cleanup()
-
-      eq(0, #instance.debounce_cleanups)
     end)
   end)
 end)

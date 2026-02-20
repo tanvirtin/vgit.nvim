@@ -1,4 +1,5 @@
-local PatchHighlighter = require('vgit.ui.highlighters.PatchHighlighter')
+local DiffStyleAnnotator = require('vgit.ui.annotators.DiffStyleAnnotator')
+local SyntaxMappingAnnotator = require('vgit.ui.annotators.SyntaxMappingAnnotator')
 
 local eq = assert.are.same
 
@@ -19,7 +20,8 @@ local function create_patch_preview(overrides)
     _last_bot = nil,
     _renderer_attached = false,
     _element = nil,
-    _patch_highlighter = PatchHighlighter(),
+    _diff_style_annotator = DiffStyleAnnotator(),
+    _syntax_mapping_annotator = SyntaxMappingAnnotator(),
     _render_gen = 0,
   }
 
@@ -241,111 +243,36 @@ describe('PatchPreviewComponent:', function()
     end)
   end)
 
-  describe('build_patch_lines', function()
-    it('should build all hunks when no selected index', function()
+  describe('line numbers from build_patch_lines_from_entries', function()
+    it('should compute line numbers for unified diff', function()
       local component = create_patch_preview({})
-      local hunks = {
+      local entries = {
         {
-          header = '@@ -1,2 +1,2 @@',
-          diff = { ' line1', '-old', '+new' },
+          type = 'file_header',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = {},
+          current_lines = {},
         },
         {
-          header = '@@ -10,1 +10,1 @@',
-          diff = { '-a', '+b' },
-        },
-      }
-
-      local patch_lines = component:build_patch_lines(hunks, nil)
-
-      -- Should include both hunks
-      assert.is_true(#patch_lines > 0)
-      local found_first_header = false
-      local found_second_header = false
-      for _, line in ipairs(patch_lines) do
-        if line:match('@@ %-1') then found_first_header = true end
-        if line:match('@@ %-10') then found_second_header = true end
-      end
-      assert.is_true(found_first_header)
-      assert.is_true(found_second_header)
-    end)
-
-    it('should build only selected hunk', function()
-      local component = create_patch_preview({})
-      local hunks = {
-        {
-          header = '@@ -1,2 +1,2 @@',
-          diff = { ' line1', '-old', '+new' },
-        },
-        {
-          header = '@@ -10,1 +10,1 @@',
-          diff = { '-a', '+b' },
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,3 +1,4 @@',
+            diff = {
+              ' context',
+              '-removed',
+              '+added',
+              '+new_added',
+            },
+          },
+          filetype = 'lua',
+          filename = 'test.lua',
         },
       }
 
-      local patch_lines = component:build_patch_lines(hunks, 2)
+      local lines, _, _, _, line_numbers = component:build_patch_lines_from_entries(entries)
 
-      -- Should only include second hunk
-      local found_first_header = false
-      local found_second_header = false
-      for _, line in ipairs(patch_lines) do
-        if line:match('@@ %-1,2') then found_first_header = true end
-        if line:match('@@ %-10') then found_second_header = true end
-      end
-      assert.is_false(found_first_header)
-      assert.is_true(found_second_header)
-    end)
-
-    it('should handle empty hunks', function()
-      local component = create_patch_preview({})
-      local patch_lines = component:build_patch_lines({}, nil)
-      eq(0, #patch_lines)
-    end)
-
-    it('should handle nil hunks', function()
-      local component = create_patch_preview({})
-      local patch_lines = component:build_patch_lines(nil, nil)
-      eq(0, #patch_lines)
-    end)
-
-    it('should strip trailing empty line from multi-hunk output', function()
-      local component = create_patch_preview({})
-      local hunks = {
-        { header = '@@ -1,1 +1,1 @@', diff = { '-a' } },
-        { header = '@@ -5,1 +5,1 @@', diff = { '-b' } },
-      }
-
-      local patch_lines = component:build_patch_lines(hunks, nil)
-      assert.are_not.equal('', patch_lines[#patch_lines])
-    end)
-  end)
-
-  describe('calculate_line_numbers', function()
-    it('should calculate line numbers for unified diff', function()
-      local component = create_patch_preview({})
-      local lines = {
-        '────────────────',
-        'test.lua',
-        '────────────────',
-        '@@ -1,3 +1,4 @@',
-        'context',
-        'removed',
-        'added',
-        'new_added',
-      }
-      local line_metadata = {
-        [1] = { type = 'separator' },
-        [2] = { type = 'filename' },
-        [3] = { type = 'separator' },
-        [4] = { type = 'code', is_header = true, hunk_header = '@@ -1,3 +1,4 @@' },
-        [5] = { type = 'code' }, -- context
-        [6] = { type = 'code', lnum_change = { type = 'remove' } },
-        [7] = { type = 'code', lnum_change = { type = 'add' } },
-        [8] = { type = 'code', lnum_change = { type = 'add' } },
-      }
-
-      local line_numbers = component:calculate_line_numbers(lines, line_metadata)
-
-      eq(8, #line_numbers)
+      eq(#lines, #line_numbers)
 
       -- Separators and filename: no line number (just spaces)
       eq('GitLineNr', line_numbers[1].hl)
@@ -367,39 +294,60 @@ describe('PatchPreviewComponent:', function()
       eq('GitSignsAdd', line_numbers[8].hl)
     end)
 
-    it('should handle empty lines', function()
+    it('should return empty line numbers for empty entries', function()
       local component = create_patch_preview({})
-      local line_numbers = component:calculate_line_numbers({}, {})
+      local _, _, _, _, line_numbers = component:build_patch_lines_from_entries({})
       eq(0, #line_numbers)
     end)
 
     it('should reset counters at each hunk header', function()
       local component = create_patch_preview({})
-      local lines = {
-        '@@ -10,1 +20,1 @@',
-        'context',
-      }
-      local line_metadata = {
-        [1] = { type = 'code', is_header = true, hunk_header = '@@ -10,1 +20,1 @@' },
-        [2] = { type = 'code' }, -- context
+      local entries = {
+        {
+          type = 'file_header',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = {},
+          current_lines = {},
+        },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -10,1 +20,1 @@',
+            diff = {
+              ' context',
+            },
+          },
+          filetype = 'lua',
+          filename = 'test.lua',
+        },
       }
 
-      local line_numbers = component:calculate_line_numbers(lines, line_metadata)
+      local _, _, _, _, line_numbers = component:build_patch_lines_from_entries(entries)
 
-      -- Context line should show line 20 (current start from hunk header)
-      assert.is_truthy(line_numbers[2].text:match('20'))
+      -- Context line is at index 5 (3 file header lines + 1 hunk header + 1 context)
+      -- Should show line 20 (current start from hunk header)
+      assert.is_truthy(line_numbers[5].text:match('20'))
     end)
 
-    it('should handle blank metadata type', function()
+    it('should produce GitLineNr for non-code lines', function()
       local component = create_patch_preview({})
-      local lines = { '' }
-      local line_metadata = {
-        [1] = { type = 'blank' },
+      local entries = {
+        {
+          type = 'file_header',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = {},
+          current_lines = {},
+        },
       }
 
-      local line_numbers = component:calculate_line_numbers(lines, line_metadata)
-      eq(1, #line_numbers)
-      eq('GitLineNr', line_numbers[1].hl)
+      local _, _, _, _, line_numbers = component:build_patch_lines_from_entries(entries)
+
+      -- All 3 file header lines should be GitLineNr
+      for i = 1, #line_numbers do
+        eq('GitLineNr', line_numbers[i].hl)
+      end
     end)
   end)
 
@@ -809,54 +757,23 @@ describe('PatchPreviewComponent:', function()
   describe('should_component_update', function()
     it('should return true when patch_entries change', function()
       local component = create_patch_preview({
-        props = { patch_entries = { 'a' }, hunks = nil, filetype = 'lua' },
+        props = { patch_entries = { 'a' } },
       })
 
       local result = component:should_component_update({
         patch_entries = { 'b' },
-        hunks = nil,
-        filetype = 'lua',
-      }, {})
-      assert.is_true(result)
-    end)
-
-    it('should return true when hunks change', function()
-      local component = create_patch_preview({
-        props = { patch_entries = nil, hunks = { 'a' }, filetype = 'lua' },
-      })
-
-      local result = component:should_component_update({
-        patch_entries = nil,
-        hunks = { 'b' },
-        filetype = 'lua',
-      }, {})
-      assert.is_true(result)
-    end)
-
-    it('should return true when filetype changes', function()
-      local component = create_patch_preview({
-        props = { patch_entries = nil, hunks = nil, filetype = 'lua' },
-      })
-
-      local result = component:should_component_update({
-        patch_entries = nil,
-        hunks = nil,
-        filetype = 'python',
       }, {})
       assert.is_true(result)
     end)
 
     it('should return false when nothing changes', function()
       local entries = { 'same' }
-      local hunks = { 'same' }
       local component = create_patch_preview({
-        props = { patch_entries = entries, hunks = hunks, filetype = 'lua' },
+        props = { patch_entries = entries },
       })
 
       local result = component:should_component_update({
         patch_entries = entries,
-        hunks = hunks,
-        filetype = 'lua',
       }, {})
       assert.is_false(result)
     end)

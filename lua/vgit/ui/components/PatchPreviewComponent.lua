@@ -4,16 +4,202 @@ local Component = lazy('vgit.ui.Component')
 local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local PatchHighlighter = lazy('vgit.ui.highlighters.PatchHighlighter')
+local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
+local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
 
 local separator = string.rep('─', 60)
+
+local function parse_hunk_header(header)
+  if not header then return 1, 1 end
+  local orig_start, curr_start = header:match('@@ %-(%d+),?%d* %+(%d+),?%d* @@')
+  if not orig_start then
+    orig_start, curr_start = header:match('@@ %-(%d+) %+(%d+) @@')
+  end
+  return tonumber(orig_start) or 1, tonumber(curr_start) or 1
+end
+
+local function flush_file_section(ctx)
+  local section = ctx.file_section
+  if
+    section
+    and (section.line_count > 0 or (section.syntax_mappings and #section.syntax_mappings > 0))
+  then
+    section.end_row = #ctx.lines - 1
+    ctx.file_sections[#ctx.file_sections + 1] = section
+  end
+end
+
+local function track_lnum(ctx, change_type, syntax_mapping)
+  if change_type == 'remove' then
+    if ctx.orig_lnum > ctx.max_lnum then ctx.max_lnum = ctx.orig_lnum end
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = ctx.orig_lnum, hl = 'GitSignsDelete' }
+    if syntax_mapping and ctx.file_section then
+      local sm = ctx.file_section.syntax_mappings
+      sm[#sm + 1] = syntax_mapping
+    end
+    ctx.orig_lnum = ctx.orig_lnum + 1
+  elseif change_type == 'add' then
+    if ctx.curr_lnum > ctx.max_lnum then ctx.max_lnum = ctx.curr_lnum end
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = ctx.curr_lnum, hl = 'GitSignsAdd' }
+    if syntax_mapping and ctx.file_section then
+      local sm = ctx.file_section.syntax_mappings
+      sm[#sm + 1] = syntax_mapping
+    end
+    ctx.curr_lnum = ctx.curr_lnum + 1
+  else
+    if ctx.curr_lnum > ctx.max_lnum then ctx.max_lnum = ctx.curr_lnum end
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = ctx.curr_lnum, hl = 'GitLineNr' }
+    if syntax_mapping and ctx.file_section then
+      local sm = ctx.file_section.syntax_mappings
+      sm[#sm + 1] = syntax_mapping
+    end
+    ctx.orig_lnum = ctx.orig_lnum + 1
+    ctx.curr_lnum = ctx.curr_lnum + 1
+  end
+end
+
+local function process_file_header(ctx, entry)
+  flush_file_section(ctx)
+
+  ctx.lines[#ctx.lines + 1] = separator
+  ctx.line_metadata[#ctx.lines] = { type = 'separator' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+
+  ctx.lines[#ctx.lines + 1] = entry.filename or 'unknown'
+  ctx.line_metadata[#ctx.lines] = { type = 'filename', filename = entry.filename }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+
+  ctx.lines[#ctx.lines + 1] = separator
+  ctx.line_metadata[#ctx.lines] = { type = 'separator' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+
+  ctx.file_section = {
+    filetype = entry.filetype,
+    original_lines = entry.original_lines or {},
+    current_lines = entry.current_lines or {},
+    start_row = #ctx.lines,
+    end_row = nil,
+    line_count = 0,
+    syntax_mappings = {},
+  }
+end
+
+local function process_diff_content(ctx, entry)
+  local diff_lines = entry.lines or {}
+  local lnum_change_map = entry.lnum_change_map or {}
+  local filetype = entry.filetype
+
+  if ctx.file_section then ctx.file_section.start_row = #ctx.lines end
+
+  for i, line in ipairs(diff_lines) do
+    ctx.lines[#ctx.lines + 1] = line
+    local lnum_change = lnum_change_map[i]
+    ctx.line_metadata[#ctx.lines] = {
+      type = 'code',
+      filetype = filetype,
+      lnum_change = lnum_change,
+      original_lnum = i,
+    }
+
+    local change_type = lnum_change and lnum_change.type or nil
+    track_lnum(ctx, change_type)
+  end
+
+  if ctx.file_section then ctx.file_section.line_count = #diff_lines end
+
+  ctx.lines[#ctx.lines + 1] = ''
+  ctx.line_metadata[#ctx.lines] = { type = 'blank' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+end
+
+local function process_hunk(ctx, entry)
+  local hunk = entry.hunk
+  local filetype = entry.filetype
+
+  local hunk_start_row = #ctx.lines
+
+  if hunk.header then
+    local orig_start, curr_start = parse_hunk_header(hunk.header)
+    ctx.orig_lnum = orig_start
+    ctx.curr_lnum = curr_start
+
+    ctx.lines[#ctx.lines + 1] = hunk.header
+    ctx.line_metadata[#ctx.lines] = { type = 'code', filetype = filetype, is_header = true, hunk_header = hunk.header }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitPatchHeader' }
+  end
+
+  for _, diff_line in ipairs(hunk.diff or {}) do
+    local prefix = diff_line:sub(1, 1)
+    local cleaned_line = diff_line:sub(2)
+
+    ctx.lines[#ctx.lines + 1] = cleaned_line
+    local display_row = #ctx.lines - 1
+
+    local change_type = nil
+    if prefix == '+' then
+      change_type = 'add'
+    elseif prefix == '-' then
+      change_type = 'remove'
+    end
+
+    ctx.line_metadata[#ctx.lines] = {
+      type = 'code',
+      filetype = filetype,
+      lnum_change = change_type and { type = change_type } or nil,
+    }
+
+    local syntax_mapping = nil
+    if change_type == 'remove' then
+      syntax_mapping = { source = 'original', source_line = ctx.orig_lnum, display_row = display_row }
+    else
+      syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
+    end
+
+    track_lnum(ctx, change_type, syntax_mapping)
+  end
+
+  local hunk_end_row = #ctx.lines
+
+  ctx.marks[#ctx.marks + 1] = {
+    top = hunk_start_row + 1,
+    bot = hunk_end_row,
+  }
+
+  if ctx.file_section then
+    ctx.file_section.line_count = (ctx.file_section.line_count or 0)
+      + #(hunk.diff or {})
+      + (hunk.header and 1 or 0)
+  end
+
+  ctx.lines[#ctx.lines + 1] = ''
+  ctx.line_metadata[#ctx.lines] = { type = 'blank' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+end
+
+local function format_line_numbers(raw_lnums, max_lnum)
+  local max_digits = math.max(3, string.len(tostring(max_lnum)))
+  local lnum_fmt = '%' .. max_digits .. 'd '
+  local empty_text = string.rep(' ', max_digits + 1)
+
+  local line_numbers = {}
+  for _, entry in ipairs(raw_lnums) do
+    if entry.lnum then
+      line_numbers[#line_numbers + 1] = { text = string.format(lnum_fmt, entry.lnum), hl = entry.hl }
+    else
+      line_numbers[#line_numbers + 1] = { text = empty_text, hl = entry.hl }
+    end
+  end
+
+  return line_numbers
+end
 
 local PatchPreviewComponent = ViewportComponent:extend()
 
 function PatchPreviewComponent:constructor(props)
   local instance = ViewportComponent.constructor(self, props)
   instance._element = nil
-  instance._patch_highlighter = PatchHighlighter()
+  instance._diff_style_annotator = DiffStyleAnnotator()
+  instance._syntax_mapping_annotator = SyntaxMappingAnnotator()
   instance._render_gen = 0
   return instance
 end
@@ -29,10 +215,8 @@ function PatchPreviewComponent:get_initial_state()
   }
 end
 
-function PatchPreviewComponent:should_component_update(next_props, next_state)
+function PatchPreviewComponent:should_component_update(next_props)
   if self.props.patch_entries ~= next_props.patch_entries then return true end
-  if self.props.hunks ~= next_props.hunks then return true end
-  if self.props.filetype ~= next_props.filetype then return true end
   return false
 end
 
@@ -40,7 +224,7 @@ function PatchPreviewComponent:component_did_mount()
   self:render()
 end
 
-function PatchPreviewComponent:component_did_update(prev_state)
+function PatchPreviewComponent:component_did_update()
   self:render()
 end
 
@@ -69,370 +253,114 @@ function PatchPreviewComponent:component_will_mount()
 end
 
 function PatchPreviewComponent:build_patch_lines_from_entries(patch_entries)
-  local lines = {}
-  local line_metadata = {}
-  local file_sections = {} -- For native TreeSitter highlighting
-  local marks = {} -- Hunk markers for navigation
-
-  local current_file_section = nil
+  local ctx = {
+    lines = {},
+    line_metadata = {},
+    file_sections = {},
+    marks = {},
+    raw_lnums = {},
+    file_section = nil,
+    orig_lnum = 1,
+    curr_lnum = 1,
+    max_lnum = 0,
+  }
 
   for _, entry in ipairs(patch_entries or {}) do
     if entry.type == 'file_header' then
-      -- Save previous file section if exists
-      if
-        current_file_section
-        and (current_file_section.line_count > 0 or (current_file_section.hunks and #current_file_section.hunks > 0))
-      then
-        current_file_section.end_row = #lines - 1
-        file_sections[#file_sections + 1] = current_file_section
-      end
-
-      lines[#lines + 1] = separator
-      line_metadata[#lines] = { type = 'separator' }
-
-      lines[#lines + 1] = entry.filename or 'unknown'
-      line_metadata[#lines] = { type = 'filename', filename = entry.filename }
-
-      lines[#lines + 1] = separator
-      line_metadata[#lines] = { type = 'separator' }
-
-      -- Start new file section
-      current_file_section = {
-        filetype = entry.filetype,
-        original_lines = entry.original_lines or {},
-        current_lines = entry.current_lines or {},
-        start_row = #lines,
-        end_row = nil,
-        line_count = 0,
-        hunks = {},
-      }
+      process_file_header(ctx, entry)
     elseif entry.type == 'diff_content' then
-      -- Unified diff content (actual code without +/- prefixes)
-      local diff_lines = entry.lines or {}
-      local lnum_change_map = entry.lnum_change_map or {}
-      local filetype = entry.filetype
-
-      if current_file_section then current_file_section.start_row = #lines end
-
-      for i, line in ipairs(diff_lines) do
-        lines[#lines + 1] = line
-        local lnum_change = lnum_change_map[i]
-        line_metadata[#lines] = {
-          type = 'code',
-          filetype = filetype,
-          lnum_change = lnum_change,
-          original_lnum = i,
-        }
-      end
-
-      if current_file_section then current_file_section.line_count = #diff_lines end
-
-      lines[#lines + 1] = ''
-      line_metadata[#lines] = { type = 'blank' }
+      process_diff_content(ctx, entry)
     elseif entry.type == 'hunk' then
-      local hunk = entry.hunk
-      local filetype = entry.filetype
-
-      -- Track hunk start for full-file highlighting (0-indexed for internal use)
-      local hunk_start_row = #lines
-
-      if hunk.header then
-        lines[#lines + 1] = hunk.header
-        line_metadata[#lines] = { type = 'code', filetype = filetype, is_header = true, hunk_header = hunk.header }
-      end
-
-      for _, diff_line in ipairs(hunk.diff or {}) do
-        local prefix = diff_line:sub(1, 1)
-        local cleaned_line = diff_line:sub(2) -- STRIP THE PREFIX
-
-        lines[#lines + 1] = cleaned_line
-
-        local change_type = nil
-        if prefix == '+' then
-          change_type = 'add'
-        elseif prefix == '-' then
-          change_type = 'remove'
-        end
-
-        line_metadata[#lines] = {
-          type = 'code',
-          filetype = filetype,
-          lnum_change = change_type and { type = change_type } or nil,
-        }
-      end
-
-      -- Track hunk end (1-indexed for cursor positioning)
-      local hunk_end_row = #lines
-
-      -- Add mark for hunk navigation (1-indexed line numbers)
-      marks[#marks + 1] = {
-        top = hunk_start_row + 1, -- 1-indexed
-        bot = hunk_end_row, -- 1-indexed
-      }
-
-      -- Store hunk info for full-file highlighting
-      if current_file_section then
-        current_file_section.hunks = current_file_section.hunks or {}
-        current_file_section.hunks[#current_file_section.hunks + 1] = {
-          header = hunk.header,
-          diff = hunk.diff or {},
-          patch_start_row = hunk_start_row,
-        }
-        current_file_section.line_count = (current_file_section.line_count or 0)
-          + #(hunk.diff or {})
-          + (hunk.header and 1 or 0)
-      end
-
-      lines[#lines + 1] = ''
-      line_metadata[#lines] = { type = 'blank' }
+      process_hunk(ctx, entry)
     end
   end
 
-  -- Save last file section
-  if
-    current_file_section
-    and (current_file_section.line_count > 0 or (current_file_section.hunks and #current_file_section.hunks > 0))
-  then
-    current_file_section.end_row = #lines - 1
-    file_sections[#file_sections + 1] = current_file_section
+  flush_file_section(ctx)
+
+  if #ctx.lines > 0 and ctx.lines[#ctx.lines] == '' then
+    table.remove(ctx.lines)
+    ctx.line_metadata[#ctx.lines + 1] = nil
+    table.remove(ctx.raw_lnums)
   end
 
-  if #lines > 0 and lines[#lines] == '' then
-    table.remove(lines)
-    line_metadata[#lines + 1] = nil
-  end
-
-  return lines, line_metadata, file_sections, marks
-end
-
-function PatchPreviewComponent:build_patch_lines(hunks, selected_hunk_index)
-  local patch_lines = {}
-
-  if selected_hunk_index and hunks[selected_hunk_index] then
-    local hunk = hunks[selected_hunk_index]
-    if hunk.header then patch_lines[#patch_lines + 1] = hunk.header end
-    for _, line in ipairs(hunk.diff or {}) do
-      patch_lines[#patch_lines + 1] = line
-    end
-  else
-    for _, hunk in ipairs(hunks or {}) do
-      if hunk.header then patch_lines[#patch_lines + 1] = hunk.header end
-      for _, line in ipairs(hunk.diff or {}) do
-        patch_lines[#patch_lines + 1] = line
-      end
-      patch_lines[#patch_lines + 1] = ''
-    end
-
-    if #patch_lines > 0 and patch_lines[#patch_lines] == '' then table.remove(patch_lines) end
-  end
-
-  return patch_lines
+  return ctx.lines, ctx.line_metadata, ctx.file_sections, ctx.marks, format_line_numbers(ctx.raw_lnums, ctx.max_lnum)
 end
 
 function PatchPreviewComponent:render()
   self:mark_viewport_dirty()
   self._render_gen = self._render_gen + 1
 
-  -- Full clear of highlights since data is changing;
-  -- viewport renderer will use ranged clear for scroll-only updates
   self:with_element(function(el)
     el:clear_extmark_highlights()
   end)
 
   local patch_entries = self.props.patch_entries
-  local hunks = self.props.hunks
-  local filetype = self.props.filetype
-  local selected_hunk = self.props.selected_hunk
 
-  local lines, line_metadata
-
-  if patch_entries and #patch_entries > 0 then
-    local file_sections, marks
-    lines, line_metadata, file_sections, marks = self:build_patch_lines_from_entries(patch_entries)
-    self.state.lines = lines
-    self.state.line_metadata = line_metadata
-    self.state.marks = marks or {}
-
-    if #lines == 0 then
-      self:clear_lines()
-      self:reset_cursor()
-      return
-    end
-
-    self:with_element(function(el)
-      el:set_lines(lines)
-      el:enable_cursorline()
-    end)
-
-    -- Compute highlights and cache in state for viewport rendering
-    local diff_highlights = self._patch_highlighter:get_diff_line_highlights_with_metadata(lines, line_metadata)
-    self.state._diff_hl_map = self:_build_highlight_map(diff_highlights)
-
-    local line_numbers = self:calculate_line_numbers(lines, line_metadata)
-    self.state._line_numbers = line_numbers
-
-    self.state._syntax_hl_map = {}
-    local sections = file_sections
-    local gen = self._render_gen
-    vim.schedule(function()
-      if not self.mounted or self._render_gen ~= gen then return end
-      local syntax_highlights = self:_compute_syntax_highlights_from_full_files(sections)
-      self.state._syntax_hl_map = self:_build_highlight_map(syntax_highlights)
-      self:mark_viewport_dirty()
-    end)
-
-    self:_ensure_renderer_attached()
-  elseif hunks and #hunks > 0 then
-    local patch_lines = self:build_patch_lines(hunks, selected_hunk)
-    self.state.lines = patch_lines
-    self.state.line_metadata = {}
-    self.state.marks = {}
-
-    self:with_element(function(el)
-      el:set_lines(patch_lines)
-      el:enable_cursorline()
-    end)
-
-    -- Compute highlights and cache in state for viewport rendering
-    local diff_highlights = self._patch_highlighter:get_diff_line_highlights(patch_lines)
-    self.state._diff_hl_map = self:_build_highlight_map(diff_highlights)
-
-    self.state._syntax_hl_map = {}
-    self.state._line_numbers = {}
-    if filetype and filetype ~= '' and filetype ~= 'text' then
-      local pl, ft = patch_lines, filetype
-      local gen = self._render_gen
-      vim.schedule(function()
-        if not self.mounted or self._render_gen ~= gen then return end
-        local syntax_highlights = self._patch_highlighter:highlight(pl, ft)
-        self.state._syntax_hl_map = self:_build_highlight_map(syntax_highlights)
-        self:mark_viewport_dirty()
-      end)
-    end
-
-    self:_ensure_renderer_attached()
-  else
+  if not patch_entries or #patch_entries == 0 then
     self.state.lines = {}
     self.state.line_metadata = {}
     self:clear_lines()
     self:reset_cursor()
+    return
+  end
+
+  local lines, line_metadata, file_sections, marks, line_numbers = self:build_patch_lines_from_entries(patch_entries)
+  self.state.lines = lines
+  self.state.line_metadata = line_metadata
+  self.state.marks = marks or {}
+  self.state._line_numbers = line_numbers or {}
+
+  if #lines == 0 then
+    self:clear_lines()
+    self:reset_cursor()
+    return
+  end
+
+  self:with_element(function(el)
+    el:set_lines(lines)
+    el:enable_cursorline()
+  end)
+
+  local diff_highlights = self._diff_style_annotator:annotate(lines, line_metadata)
+  self.state._diff_hl_map = self:_build_highlight_map(diff_highlights)
+
+  self.state._syntax_hl_map = {}
+  local sections = file_sections
+  local gen = self._render_gen
+  vim.schedule(function()
+    if not self.mounted or self._render_gen ~= gen then return end
+    local syntax_highlights = self:_compute_syntax_highlights_from_full_files(sections)
+    self.state._syntax_hl_map = self:_build_highlight_map(syntax_highlights)
+    self:mark_viewport_dirty()
+  end)
+
+  self:_ensure_renderer_attached()
+end
+
+function PatchPreviewComponent:_resolve_section_syntax(result, section)
+  local filetype = section.filetype
+  local syntax_mappings = section.syntax_mappings
+
+  if not filetype or filetype == '' or filetype == 'text' then return end
+  if not syntax_mappings or #syntax_mappings == 0 then return end
+
+  local highlights = self._syntax_mapping_annotator:annotate({
+    original_lines = section.original_lines,
+    current_lines = section.current_lines,
+    filetype = filetype,
+    syntax_mappings = syntax_mappings,
+  })
+
+  for _, hl in ipairs(highlights) do
+    result[#result + 1] = hl
   end
 end
 
--- Calculate line numbers for delta-style display
--- Returns: { { text = ' 5 ', hl = 'GitSignsAdd' }, ... }
-function PatchPreviewComponent:calculate_line_numbers(lines, line_metadata)
-  local line_numbers = {}
-  local max_lnum = 0
-
-  -- Track line numbers based on hunk headers
-  local current_orig_lnum = 1
-  local current_curr_lnum = 1
-
-  -- First pass: find max line number for padding
-  for i, _ in ipairs(lines) do
-    local meta = line_metadata[i]
-    if meta and meta.type == 'code' then
-      if meta.is_header and meta.hunk_header then
-        local orig_start, curr_start = self._patch_highlighter:parse_hunk_header(meta.hunk_header)
-        current_orig_lnum = orig_start
-        current_curr_lnum = curr_start
-      else
-        local lnum_change = meta.lnum_change
-        if lnum_change and lnum_change.type == 'remove' then
-          if current_orig_lnum > max_lnum then max_lnum = current_orig_lnum end
-          current_orig_lnum = current_orig_lnum + 1
-        elseif lnum_change and lnum_change.type == 'add' then
-          if current_curr_lnum > max_lnum then max_lnum = current_curr_lnum end
-          current_curr_lnum = current_curr_lnum + 1
-        else
-          if current_curr_lnum > max_lnum then max_lnum = current_curr_lnum end
-          current_orig_lnum = current_orig_lnum + 1
-          current_curr_lnum = current_curr_lnum + 1
-        end
-      end
-    end
-  end
-
-  local max_digits = math.max(3, string.len(tostring(max_lnum)))
-  local lnum_fmt = '%' .. max_digits .. 'd '
-  local empty_text = string.rep(' ', max_digits + 1)
-
-  -- Second pass: build line number display
-  current_orig_lnum = 1
-  current_curr_lnum = 1
-
-  for i, _ in ipairs(lines) do
-    local meta = line_metadata[i]
-
-    if not meta or meta.type == 'separator' or meta.type == 'blank' then
-      -- No line number for separators, blank lines
-      line_numbers[#line_numbers + 1] = { text = empty_text, hl = 'GitLineNr' }
-    elseif meta.type == 'filename' then
-      -- No line number for filename
-      line_numbers[#line_numbers + 1] = { text = empty_text, hl = 'GitLineNr' }
-    elseif meta.type == 'code' then
-      if meta.is_header and meta.hunk_header then
-        -- Parse hunk header to reset counters
-        local orig_start, curr_start = self._patch_highlighter:parse_hunk_header(meta.hunk_header)
-        current_orig_lnum = orig_start
-        current_curr_lnum = curr_start
-        -- No line number for hunk headers
-        line_numbers[#line_numbers + 1] = { text = empty_text, hl = 'GitPatchHeader' }
-      else
-        local lnum_change = meta.lnum_change
-        local lnum_text
-        local hl_group
-
-        if lnum_change and lnum_change.type == 'remove' then
-          -- Removed lines: show original file line number with delete highlight
-          lnum_text = string.format(lnum_fmt, current_orig_lnum)
-          hl_group = 'GitSignsDelete'
-          current_orig_lnum = current_orig_lnum + 1
-        elseif lnum_change and lnum_change.type == 'add' then
-          -- Added lines: show current file line number with add highlight
-          lnum_text = string.format(lnum_fmt, current_curr_lnum)
-          hl_group = 'GitSignsAdd'
-          current_curr_lnum = current_curr_lnum + 1
-        else
-          -- Context lines: show current file line number
-          lnum_text = string.format(lnum_fmt, current_curr_lnum)
-          hl_group = 'GitLineNr'
-          current_orig_lnum = current_orig_lnum + 1
-          current_curr_lnum = current_curr_lnum + 1
-        end
-
-        line_numbers[#line_numbers + 1] = { text = lnum_text, hl = hl_group }
-      end
-    else
-      line_numbers[#line_numbers + 1] = { text = empty_text, hl = 'GitLineNr' }
-    end
-  end
-
-  return line_numbers
-end
-
--- Compute syntax highlights from full files without placing extmarks
 function PatchPreviewComponent:_compute_syntax_highlights_from_full_files(file_sections)
   local all_highlights = {}
 
   for _, section in ipairs(file_sections or {}) do
-    local filetype = section.filetype
-    local hunks = section.hunks
-
-    if filetype and filetype ~= '' and filetype ~= 'text' and hunks and #hunks > 0 then
-      local highlights = self._patch_highlighter:highlight_from_full_files({
-        original_lines = section.original_lines,
-        current_lines = section.current_lines,
-        filetype = filetype,
-        hunks = hunks,
-        strip_prefix = true,
-      })
-
-      for _, hl in ipairs(highlights) do
-        all_highlights[#all_highlights + 1] = hl
-      end
-    end
+    self:_resolve_section_syntax(all_highlights, section)
   end
 
   return all_highlights
@@ -451,10 +379,7 @@ end
 function PatchPreviewComponent:_render_viewport(top, bot)
   if self:is_viewport_unchanged(top, bot) then return end
 
-  -- Single with_element call for entire viewport — avoids per-row validity checks
   local rendered = self:with_element(function(el)
-    -- Ranged clear: only remove highlights in the viewport being re-rendered.
-    -- Full clear already happened in render() on data change.
     el:clear_extmark_highlights(top, bot)
 
     local diff_hl_map = self.state._diff_hl_map
@@ -462,17 +387,13 @@ function PatchPreviewComponent:_render_viewport(top, bot)
     local line_numbers = self.state._line_numbers
 
     for row = top, bot do
-      -- Render line number for this row
-      local ln = line_numbers[row + 1] -- 1-indexed
-      if ln then
-        el:place_extmark_lnum({
-          row = row,
-          hl = ln.hl,
-          text = ln.text,
-        })
-      end
+      local ln = line_numbers[row + 1]
+      if ln then el:place_extmark_lnum({
+        row = row,
+        hl = ln.hl,
+        text = ln.text,
+      }) end
 
-      -- Render diff background highlights for this row
       local diff_hls = diff_hl_map[row]
       if diff_hls then
         for _, hl in ipairs(diff_hls) do
@@ -497,7 +418,6 @@ function PatchPreviewComponent:_render_viewport(top, bot)
         end
       end
 
-      -- Render syntax highlights for this row
       local syntax_hls = syntax_hl_map[row]
       if syntax_hls then
         for _, hl in ipairs(syntax_hls) do
@@ -547,32 +467,44 @@ function PatchPreviewComponent:get_line_metadata(lnum)
 end
 
 function PatchPreviewComponent:get_lines()
-  return self:with_element(function(el) return el:get_lines() end) or self.state.lines
+  return self:with_element(function(el)
+    return el:get_lines()
+  end) or self.state.lines
 end
 
 function PatchPreviewComponent:clear_lines()
-  self:with_element(function(el) el:clear_lines() end)
+  self:with_element(function(el)
+    el:clear_lines()
+  end)
   self.state.lines = {}
   self.state.line_metadata = {}
   return self
 end
 
 function PatchPreviewComponent:set_cursor(cursor)
-  self:with_element(function(el) el:set_cursor(cursor) end)
+  self:with_element(function(el)
+    el:set_cursor(cursor)
+  end)
   return self
 end
 
 function PatchPreviewComponent:get_cursor()
-  return self:with_element(function(el) return el:get_cursor() end) or { 1, 1 }
+  return self:with_element(function(el)
+    return el:get_cursor()
+  end) or { 1, 1 }
 end
 
 function PatchPreviewComponent:set_lnum(lnum)
-  self:with_element(function(el) el:set_lnum(lnum) end)
+  self:with_element(function(el)
+    el:set_lnum(lnum)
+  end)
   return self
 end
 
 function PatchPreviewComponent:get_lnum()
-  return self:with_element(function(el) return el:get_lnum() end) or 1
+  return self:with_element(function(el)
+    return el:get_lnum()
+  end) or 1
 end
 
 function PatchPreviewComponent:reset_cursor()
@@ -580,17 +512,23 @@ function PatchPreviewComponent:reset_cursor()
 end
 
 function PatchPreviewComponent:enable_cursorline()
-  self:with_element(function(el) el:enable_cursorline() end)
+  self:with_element(function(el)
+    el:enable_cursorline()
+  end)
   return self
 end
 
 function PatchPreviewComponent:disable_cursorline()
-  self:with_element(function(el) el:disable_cursorline() end)
+  self:with_element(function(el)
+    el:disable_cursorline()
+  end)
   return self
 end
 
 function PatchPreviewComponent:get_line_count()
-  return self:with_element(function(el) return el:get_line_count() end) or 0
+  return self:with_element(function(el)
+    return el:get_line_count()
+  end) or 0
 end
 
 function PatchPreviewComponent:position_cursor(pos)
@@ -697,12 +635,16 @@ function PatchPreviewComponent:clear_extmarks()
 end
 
 function PatchPreviewComponent:set_keymap(config, handler)
-  self:with_element(function(el) el:set_keymap(config, handler) end)
+  self:with_element(function(el)
+    el:set_keymap(config, handler)
+  end)
   return self
 end
 
 function PatchPreviewComponent:is_valid()
-  return self:with_element(function() return true end) or false
+  return self:with_element(function()
+    return true
+  end) or false
 end
 
 function PatchPreviewComponent:focus()
@@ -710,7 +652,9 @@ function PatchPreviewComponent:focus()
 end
 
 function PatchPreviewComponent:call(callback)
-  if callback then self:with_element(function(el) el:call(callback) end) end
+  if callback then self:with_element(function(el)
+    el:call(callback)
+  end) end
   return self
 end
 

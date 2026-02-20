@@ -8,6 +8,9 @@ local GitFile = lazy('vgit.git.GitFile')
 local git_repo = lazy('vgit.libgit2.git_repo')
 local signs_setting = lazy('vgit.settings.signs')
 local live_blame_setting = lazy('vgit.settings.live_blame')
+local BlameAnnotator = lazy('vgit.ui.annotators.BlameAnnotator')
+local ConflictAnnotator = lazy('vgit.ui.annotators.ConflictAnnotator')
+local GutterSignAnnotator = lazy('vgit.ui.annotators.GutterSignAnnotator')
 
 local GitBuffer = Buffer:extend()
 
@@ -25,6 +28,9 @@ function GitBuffer:constructor(...)
   buffer.blame_extmark = Extmark(bufnr, 'blame')
   buffer.gutter_extmark = Extmark(bufnr, 'gutter')
   buffer.conflict_extmark = Extmark(bufnr, 'conflict')
+  buffer._gutter_sign_annotator = GutterSignAnnotator()
+  buffer._conflict_annotator = ConflictAnnotator()
+  buffer._blame_annotator = BlameAnnotator()
 
   return buffer
 end
@@ -35,6 +41,9 @@ function GitBuffer:create(...)
   self.blame_extmark = Extmark(self.bufnr, 'blame')
   self.gutter_extmark = Extmark(self.bufnr, 'gutter')
   self.conflict_extmark = Extmark(self.bufnr, 'conflict')
+  self._gutter_sign_annotator = GutterSignAnnotator()
+  self._conflict_annotator = ConflictAnnotator()
+  self._blame_annotator = BlameAnnotator()
 
   return self
 end
@@ -207,22 +216,7 @@ function GitBuffer:diff()
   if not hunks then return nil end
 
   local sign_types = signs_setting:get('usage').main
-
-  local signs = {}
-  local signs_len = 0
-  for i = 1, #hunks do
-    local hunk = hunks[i]
-    local hunk_type = hunk.type
-    local sign_name = sign_types[hunk_type]
-    for j = hunk.top, hunk.bot do
-      local lnum = (hunk_type == 'remove' and j == 0) and 1 or j
-      signs_len = signs_len + 1
-      signs[signs_len] = {
-        col = lnum - 1,
-        name = sign_name,
-      }
-    end
-  end
+  local signs = self._gutter_sign_annotator:annotate(hunks, sign_types)
 
   self:set_state({ signs = signs })
   self.signs_dirty = true
@@ -286,69 +280,13 @@ function GitBuffer:render_conflict_help_text(conflict)
 end
 
 function GitBuffer:render_conflict(conflict)
-  local current = conflict.current
-  local ancestor = conflict.ancestor
-  local middle = conflict.middle
-  local incoming = conflict.incoming
-
-  self.conflict_extmark:sign({
-    col = current.top - 1,
-    name = 'GitConflictCurrentMark',
-  })
-  self.conflict_extmark:text({
-    text = '(Current Change)',
-    hl = 'GitComment',
-    row = current.top - 1,
-    col = 0,
-    pos = 'eol',
-  })
-
-  for lnum = current.top + 1, current.bot do
-    self.conflict_extmark:sign({
-      col = lnum - 1,
-      name = 'GitConflictCurrent',
-    })
+  local annotation = self._conflict_annotator:annotate(conflict)
+  for _, sign in ipairs(annotation.signs) do
+    self.conflict_extmark:sign(sign)
   end
-
-  if ancestor and not utils.list.is_empty(ancestor) then
-    self.conflict_extmark:sign({
-      col = ancestor.top - 1,
-      name = 'GitConflictAncestorMark',
-    })
-    for lnum = ancestor.top + 1, ancestor.bot do
-      self.conflict_extmark:sign({
-        col = lnum - 1,
-        name = 'GitConflictAncestor',
-      })
-    end
+  for _, text in ipairs(annotation.texts) do
+    self.conflict_extmark:text(text)
   end
-
-  for lnum = middle.top, middle.bot do
-    self.conflict_extmark:sign({
-      col = lnum - 1,
-      name = 'GitConflictMiddle',
-    })
-  end
-
-  for lnum = incoming.top, incoming.bot - 1 do
-    self.conflict_extmark:sign({
-      col = lnum - 1,
-      name = 'GitConflictIncoming',
-    })
-  end
-
-  self.conflict_extmark:sign({
-    col = incoming.bot - 1,
-    name = 'GitConflictIncomingMark',
-  })
-
-  self.conflict_extmark:text({
-    text = '(Incoming Change)',
-    hl = 'GitComment',
-    row = incoming.bot - 1,
-    col = 0,
-    pos = 'eol',
-  })
 
   return self
 end
@@ -393,17 +331,12 @@ function GitBuffer:render_blames(top, bot)
   self:clear_blames(top, bot)
 
   local blames = self.state.blames or {}
+  local format_fn = live_blame_setting:get('format')
   for lnum, blame in pairs(blames) do
     if blame and lnum >= top and (bot == -1 or lnum <= bot) then
-      local text = live_blame_setting:get('format')(blame, self.state.config)
-      if type(text) == 'string' then
-        self.blame_extmark:text({
-          text = text,
-          hl = 'GitComment',
-          row = lnum - 1,
-          col = 0,
-          pos = 'eol',
-        })
+      local annotation = self._blame_annotator:annotate(blame, lnum, self.state.config, format_fn)
+      if annotation then
+        self.blame_extmark:text(annotation)
       end
     end
   end
