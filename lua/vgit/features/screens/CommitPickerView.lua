@@ -9,9 +9,9 @@ local CommitPickerView = Object:extend()
 
 function CommitPickerView:constructor()
   return {
-    search_component = nil,
-    destroyed = false,
-    history = nil,
+    _search_component = nil,
+    _destroyed = false,
+    _history = nil,
     _repo_path = nil,
     _search_query = '',
     _search_skip = 0,
@@ -50,7 +50,7 @@ function CommitPickerView:create(data)
   if not data.commits or #data.commits == 0 then return false end
   if not data.history then return false end
 
-  self.history = data.history
+  self._history = data.history
   self._repo_path = data.repo_path
 
   local debounced_search, cleanup = event.debounce(function(query)
@@ -60,7 +60,7 @@ function CommitPickerView:create(data)
 
   local items = self:_build_items(data.commits)
 
-  self.search_component = SearchComponent({
+  self._search_component = SearchComponent({
     items = items,
     width = '60vw',
     max_height = 15,
@@ -74,12 +74,12 @@ function CommitPickerView:create(data)
       return self:_on_load_more()
     end,
     on_close = function()
-      self.destroyed = true
-      self.search_component = nil
+      self._destroyed = true
+      self._search_component = nil
     end,
   })
 
-  self.search_component:mount()
+  self._search_component:mount()
 
   return true
 end
@@ -90,17 +90,17 @@ function CommitPickerView:_on_search(query)
   self._search_version = self._search_version + 1
 
   if self._search_query == '' then
-    local commits = self.history:commits()
+    local commits = self._history:commits()
     if commits then
-      self.search_component:set_items(self:_build_items(commits))
+      self._search_component:set_items(self:_build_items(commits))
     else
-      self.search_component:set_items({})
+      self._search_component:set_items({})
     end
     return
   end
 
   local version = self._search_version
-  local sc = self.search_component
+  local sc = self._search_component
 
   sc._loading = true
   sc:render()
@@ -112,7 +112,7 @@ function CommitPickerView:_on_search(query)
     })
 
     vim.schedule(function()
-      if not sc.mounted then return end
+      if not sc._mounted then return end
       if self._search_version ~= version then return end
 
       sc._loading = false
@@ -138,7 +138,7 @@ end
 
 function CommitPickerView:_on_load_more()
   if self._search_query == '' then
-    local new_commits, err = self.history:load_more(100)
+    local new_commits, err = self._history:load_more(100)
 
     if err then return nil end
     if not new_commits or #new_commits == 0 then return nil end
@@ -160,18 +160,18 @@ function CommitPickerView:_on_load_more()
 end
 
 function CommitPickerView:destroy()
-  if self.destroyed then return end
+  if self._destroyed then return end
 
-  self.destroyed = true
+  self._destroyed = true
 
   if self._search_cleanup then
     self._search_cleanup()
     self._search_cleanup = nil
   end
 
-  if self.search_component then
-    self.search_component:close()
-    self.search_component = nil
+  if self._search_component then
+    self._search_component:close()
+    self._search_component = nil
   end
 end
 

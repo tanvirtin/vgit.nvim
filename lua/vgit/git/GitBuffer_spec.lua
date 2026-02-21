@@ -47,9 +47,9 @@ describe('GitBuffer:', function()
       local bufnr = vim.fn.bufadd(test_file)
       local git_buf = GitBuffer(bufnr)
 
-      assert.is_not_nil(git_buf.blame_extmark)
-      assert.is_not_nil(git_buf.gutter_extmark)
-      assert.is_not_nil(git_buf.conflict_extmark)
+      assert.is_not_nil(git_buf._blame_extmark)
+      assert.is_not_nil(git_buf._gutter_extmark)
+      assert.is_not_nil(git_buf._conflict_extmark)
     end)
 
     it('creates buffer using create method', function()
@@ -57,7 +57,7 @@ describe('GitBuffer:', function()
 
       assert.is_not_nil(git_buf)
       assert.is_not_nil(git_buf.bufnr)
-      assert.is_not_nil(git_buf.blame_extmark)
+      assert.is_not_nil(git_buf._blame_extmark)
     end)
   end)
 
@@ -69,7 +69,7 @@ describe('GitBuffer:', function()
 
       git_buf:sync()
 
-      assert.is_not_nil(git_buf.git_file)
+      assert.is_not_nil(git_buf._git_file)
       assert.is_table(git_buf.state.signs)
       assert.is_table(git_buf.state.blames)
     end)
@@ -320,7 +320,7 @@ describe('GitBuffer:', function()
         git_buf:sync()
 
         -- GitBuffer:get_hunks() returns git_file.state.hunks
-        git_buf.git_file.state.hunks = { { type = 'add' } }
+        git_buf._git_file.state.hunks = { { type = 'add' } }
         local hunks = git_buf:get_hunks()
 
         assert.is_table(hunks)
@@ -335,7 +335,7 @@ describe('GitBuffer:', function()
         git_buf:sync()
 
         -- git_file.state.hunks defaults to nil, get_hunks() returns it directly
-        git_buf.git_file.state.hunks = {}
+        git_buf._git_file.state.hunks = {}
         local hunks = git_buf:get_hunks()
 
         assert.is_table(hunks)
@@ -430,7 +430,7 @@ describe('GitBuffer:', function()
       it('returns error tuple on failure', function()
         local bufnr = vim.fn.bufadd('/nonexistent/file.txt')
         local git_buf = GitBuffer(bufnr)
-        git_buf.git_file = require('vgit.git.GitFile')('/nonexistent/file.txt')
+        git_buf._git_file = require('vgit.git.GitFile')('/nonexistent/file.txt')
 
         local _, err = git_buf:stage()
 
@@ -636,7 +636,7 @@ describe('GitBuffer:', function()
         local git_buf = GitBuffer(bufnr)
 
         git_buf.state.signs = { { col = 0, name = 'GitSignsAdd' } }
-        git_buf.signs_dirty = true
+        git_buf._signs_dirty = true
         local result = git_buf:render_signs()
 
         assert.equals(git_buf, result)
@@ -648,7 +648,7 @@ describe('GitBuffer:', function()
         local git_buf = GitBuffer(bufnr)
 
         git_buf.state.signs = { { col = 5, name = 'GitSignsAdd' }, { col = 15, name = 'GitSignsAdd' } }
-        git_buf.signs_dirty = true
+        git_buf._signs_dirty = true
         local result = git_buf:render_signs(0, 10)
 
         assert.equals(git_buf, result)
@@ -660,7 +660,7 @@ describe('GitBuffer:', function()
         local git_buf = GitBuffer(bufnr)
 
         git_buf.state.signs = { { col = 0, name = 'GitSignsAdd' } }
-        git_buf.signs_dirty = false
+        git_buf._signs_dirty = false
         local result = git_buf:render_signs()
 
         assert.equals(git_buf, result)

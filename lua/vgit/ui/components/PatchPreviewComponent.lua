@@ -328,7 +328,7 @@ function PatchPreviewComponent:render()
   local sections = file_sections
   local gen = self._render_gen
   vim.schedule(function()
-    if not self.mounted or self._render_gen ~= gen then return end
+    if not self._mounted or self._render_gen ~= gen then return end
     local syntax_highlights = self:_compute_syntax_highlights_from_full_files(sections)
     self.state._syntax_hl_map = self:_build_highlight_map(syntax_highlights)
     self:mark_viewport_dirty()
@@ -659,7 +659,7 @@ function PatchPreviewComponent:call(callback)
 end
 
 function PatchPreviewComponent:unmount()
-  if not self.mounted then return end
+  if not self._mounted then return end
 
   self._element:unmount()
   self._element = nil

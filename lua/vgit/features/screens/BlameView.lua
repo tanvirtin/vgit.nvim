@@ -51,7 +51,7 @@ function BlameGutterComponent:get_layout_spec()
 end
 
 function BlameGutterComponent:unmount()
-  if not self.mounted then return end
+  if not self._mounted then return end
   if self._element then
     self._element:unmount()
     self._element = nil
@@ -92,7 +92,7 @@ function BlameContentComponent:get_layout_spec()
 end
 
 function BlameContentComponent:unmount()
-  if not self.mounted then return end
+  if not self._mounted then return end
   if self._element then
     self._element:unmount()
     self._element = nil
@@ -108,7 +108,7 @@ function BlameView:constructor()
   return {
     _gutter_component = nil,
     _content_component = nil,
-    component_manager = nil,
+    _component_manager = nil,
     _history_stack = {},
     _current_commit = nil,
     _current_blames = {},
@@ -117,8 +117,8 @@ function BlameView:constructor()
       filetype = nil,
       reponame = nil,
     },
-    destroyed = false,
-    debounce_cleanups = {},
+    _destroyed = false,
+    _debounce_cleanups = {},
   }
 end
 
@@ -166,9 +166,9 @@ function BlameView:_create_view(data)
     }),
   })
 
-  self.component_manager = ComponentManager()
+  self._component_manager = ComponentManager()
   event.await()
-  self.component_manager:render(Layout.screen(wrapper, {
+  self._component_manager:render(Layout.screen(wrapper, {
     width = '100vw',
     height = '100vh',
   }))
@@ -667,22 +667,22 @@ function BlameView:_setup_keymaps()
   local enter_fn, enter_cleanup = event.debounce_async(function()
     self:enter_parent()
   end, self.DEBOUNCE_MS)
-  table.insert(self.debounce_cleanups, enter_cleanup)
+  table.insert(self._debounce_cleanups, enter_cleanup)
 
   local back_fn, back_cleanup = event.debounce_async(function()
     self:go_back()
   end, self.DEBOUNCE_MS)
-  table.insert(self.debounce_cleanups, back_cleanup)
+  table.insert(self._debounce_cleanups, back_cleanup)
 
   local diff_fn, diff_cleanup = event.debounce_async(function()
     self:show_commit_diff()
   end, self.DEBOUNCE_MS)
-  table.insert(self.debounce_cleanups, diff_cleanup)
+  table.insert(self._debounce_cleanups, diff_cleanup)
 
   local project_diff_fn, project_diff_cleanup = event.debounce_async(function()
     self:show_commit_project_diff()
   end, self.DEBOUNCE_MS)
-  table.insert(self.debounce_cleanups, project_diff_cleanup)
+  table.insert(self._debounce_cleanups, project_diff_cleanup)
 
   for _, component in ipairs(components) do
     component:set_keymap({
@@ -708,16 +708,16 @@ function BlameView:_setup_keymaps()
 end
 
 function BlameView:destroy()
-  if self.destroyed then return end
-  self.destroyed = true
+  if self._destroyed then return end
+  self._destroyed = true
 
-  for _, cleanup in ipairs(self.debounce_cleanups) do
+  for _, cleanup in ipairs(self._debounce_cleanups) do
     cleanup()
   end
-  self.debounce_cleanups = {}
+  self._debounce_cleanups = {}
 
-  if self.component_manager then
-    self.component_manager:destroy()
+  if self._component_manager then
+    self._component_manager:destroy()
   end
 end
 

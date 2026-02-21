@@ -49,8 +49,8 @@ describe('Buffer:', function()
       local on_render = function() end
       buffer:attach_to_renderer(on_render)
 
-      eq(on_render, buffer.on_render)
-      assert.is_true(buffer.is_attached_to_screen)
+      eq(on_render, buffer._on_render)
+      assert.is_true(buffer._is_attached_to_screen)
       assert.is_true(renderer.buffers[bufnr] ~= nil)
     end)
   end)
@@ -87,9 +87,9 @@ describe('Buffer:', function()
   describe('on_render', function()
     it('should call on_render function with correct parameters', function()
       local top, bot = 1, 10
-      buffer.on_render = spy.new(function() end)
+      buffer._on_render = spy.new(function() end)
       buffer:render(top, bot)
-      assert.spy(buffer.on_render).was.called_with(top, bot)
+      assert.spy(buffer._on_render).was.called_with(top, bot)
     end)
   end)
 

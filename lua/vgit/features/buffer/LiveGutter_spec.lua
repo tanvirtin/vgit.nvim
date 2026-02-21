@@ -13,14 +13,14 @@ describe('LiveGutter:', function()
     it('should set name to Live Gutter', function()
       local instance = LiveGutter()
 
-      eq('Live Gutter', instance.name)
+      eq('Live Gutter', instance._name)
     end)
 
-    it('should initialize empty debounce_cleanups', function()
+    it('should initialize debounced fetch function and cleanup', function()
       local instance = LiveGutter()
 
-      assert.is_table(instance.debounce_cleanups)
-      eq(0, #instance.debounce_cleanups)
+      assert.is_function(instance._fetch_debounced)
+      assert.is_function(instance._fetch_debounced_cleanup)
     end)
   end)
 

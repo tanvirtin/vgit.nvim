@@ -1,35 +1,50 @@
-local DiffStyleAnnotator = require('vgit.ui.annotators.DiffStyleAnnotator')
-local SyntaxMappingAnnotator = require('vgit.ui.annotators.SyntaxMappingAnnotator')
+local ui_helper = require('tests.helpers.ui')
 
 local eq = assert.are.same
 
--- We test the pure logic methods of PatchPreviewComponent by constructing
--- a minimal object with just the fields those methods need, avoiding
--- the full Component lifecycle (which requires Neovim UI).
+-- Unmounted helper: uses the real constructor which sets up annotators, viewport tracking, etc.
+-- Supports optional state overrides applied after construction.
 local function create_patch_preview(overrides)
   local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
+  overrides = overrides or {}
 
-  -- Create a minimal instance that bypasses Element creation
-  local instance = {
-    props = overrides.props or {},
-    state = overrides.state or { lines = {}, line_metadata = {}, marks = {} },
-    mounted = false,
-    _needs_update = false,
-    _viewport_dirty = true,
-    _last_top = nil,
-    _last_bot = nil,
-    _renderer_attached = false,
-    _element = nil,
-    _diff_style_annotator = DiffStyleAnnotator(),
-    _syntax_mapping_annotator = SyntaxMappingAnnotator(),
-    _render_gen = 0,
-  }
+  local component = PatchPreviewComponent(overrides.props or {})
+  for k, v in pairs(overrides.state or {}) do
+    component.state[k] = v
+  end
+  return component
+end
 
-  setmetatable(instance, PatchPreviewComponent)
-  return instance
+-- Mounted helper for tests that interact with the real element
+local function create_mounted_patch_preview(overrides)
+  local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
+  local ComponentManager = require('vgit.ui.ComponentManager')
+  overrides = overrides or {}
+
+  local component = PatchPreviewComponent(overrides.props or {})
+  ComponentManager():render({ component = component, mode = 'popup', width = 80, height = 40 })
+
+  -- Apply state overrides
+  for k, v in pairs(overrides.state or {}) do
+    component.state[k] = v
+  end
+
+  -- Populate buffer with dummy lines so extmarks work
+  local dummy = {}
+  for i = 1, 30 do dummy[i] = '' end
+  component._element:set_lines(dummy)
+
+  -- Reset viewport state for a clean test baseline
+  component._viewport_dirty = true
+  component._last_top = nil
+  component._last_bot = nil
+
+  return component
 end
 
 describe('PatchPreviewComponent:', function()
+  after_each(ui_helper.cleanup_ui)
+
   describe('build_patch_lines_from_entries', function()
     it('should build lines from file_header entries', function()
       local component = create_patch_preview({})
@@ -353,7 +368,7 @@ describe('PatchPreviewComponent:', function()
 
   describe('find_adjacent_mark_index', function()
     it('should find next mark when cursor is before first mark', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -363,15 +378,14 @@ describe('PatchPreviewComponent:', function()
           },
         },
       })
-      -- Mock get_lnum to return cursor at line 1
-      component.get_lnum = function() return 1 end
+      component:set_lnum(1)
 
       local idx = component:find_adjacent_mark_index('next')
       eq(1, idx)
     end)
 
     it('should find next mark when cursor is inside a mark', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -381,14 +395,14 @@ describe('PatchPreviewComponent:', function()
           },
         },
       })
-      component.get_lnum = function() return 7 end
+      component:set_lnum(7)
 
       local idx = component:find_adjacent_mark_index('next')
       eq(2, idx) -- next after current mark (index 1)
     end)
 
     it('should wrap to 1 when at last mark going next', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -398,14 +412,14 @@ describe('PatchPreviewComponent:', function()
           },
         },
       })
-      component.get_lnum = function() return 25 end
+      component:set_lnum(25)
 
       local idx = component:find_adjacent_mark_index('next')
       eq(1, idx) -- wraps to first
     end)
 
     it('should find previous mark when cursor is after last mark', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -415,14 +429,14 @@ describe('PatchPreviewComponent:', function()
           },
         },
       })
-      component.get_lnum = function() return 25 end
+      component:set_lnum(25)
 
       local idx = component:find_adjacent_mark_index('prev')
       eq(2, idx) -- last mark
     end)
 
     it('should find previous mark when cursor is inside a mark', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -432,14 +446,14 @@ describe('PatchPreviewComponent:', function()
           },
         },
       })
-      component.get_lnum = function() return 17 end
+      component:set_lnum(17)
 
       local idx = component:find_adjacent_mark_index('prev')
       eq(1, idx) -- previous mark (index 2 - 1)
     end)
 
     it('should wrap to last mark when before first mark going prev', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -449,28 +463,28 @@ describe('PatchPreviewComponent:', function()
           },
         },
       })
-      component.get_lnum = function() return 1 end
+      component:set_lnum(1)
 
       local idx = component:find_adjacent_mark_index('prev')
       eq(2, idx) -- wraps to last
     end)
 
     it('should return nil for empty marks', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
           marks = {},
         },
       })
-      component.get_lnum = function() return 1 end
+      component:set_lnum(1)
 
       local idx = component:find_adjacent_mark_index('next')
       eq(nil, idx)
     end)
 
     it('should find next mark when cursor is between marks', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -481,14 +495,14 @@ describe('PatchPreviewComponent:', function()
           },
         },
       })
-      component.get_lnum = function() return 12 end
+      component:set_lnum(12)
 
       local idx = component:find_adjacent_mark_index('next')
       eq(2, idx) -- next mark after gap
     end)
 
     it('should find prev mark when cursor is between marks', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -499,7 +513,7 @@ describe('PatchPreviewComponent:', function()
           },
         },
       })
-      component.get_lnum = function() return 22 end
+      component:set_lnum(22)
 
       local idx = component:find_adjacent_mark_index('prev')
       eq(2, idx)
@@ -547,7 +561,7 @@ describe('PatchPreviewComponent:', function()
     it('should render line numbers and highlights for visible range', function()
       local lnum_calls = {}
       local hl_calls = {}
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -567,16 +581,17 @@ describe('PatchPreviewComponent:', function()
         },
       })
 
-      component._element = {
-        is_valid = function() return true end,
-        place_extmark_lnum = function(_, opts)
-          lnum_calls[#lnum_calls + 1] = opts
-        end,
-        place_extmark_highlight = function(_, opts)
-          hl_calls[#hl_calls + 1] = opts
-        end,
-        clear_extmark_highlights = function() end,
-      }
+      local orig_lnum = component._element.place_extmark_lnum
+      component._element.place_extmark_lnum = function(self_el, opts)
+        lnum_calls[#lnum_calls + 1] = opts
+        return orig_lnum(self_el, opts)
+      end
+
+      local orig_hl = component._element.place_extmark_highlight
+      component._element.place_extmark_highlight = function(self_el, opts)
+        hl_calls[#hl_calls + 1] = opts
+        return orig_hl(self_el, opts)
+      end
 
       -- Render rows 0-1 (visible viewport)
       component:_render_viewport(0, 1)
@@ -593,7 +608,7 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should handle empty state gracefully', function()
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -604,13 +619,6 @@ describe('PatchPreviewComponent:', function()
         },
       })
 
-      component._element = {
-        is_valid = function() return true end,
-        place_extmark_lnum = function() end,
-        place_extmark_highlight = function() end,
-        clear_extmark_highlights = function() end,
-      }
-
       -- Should not error
       component:_render_viewport(0, 10)
     end)
@@ -619,7 +627,7 @@ describe('PatchPreviewComponent:', function()
   describe('viewport dirty tracking', function()
     it('should skip _render_viewport when viewport is unchanged', function()
       local hl_calls = {}
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -634,14 +642,11 @@ describe('PatchPreviewComponent:', function()
         },
       })
 
-      component._element = {
-        is_valid = function() return true end,
-        place_extmark_lnum = function() end,
-        place_extmark_highlight = function(_, opts)
-          hl_calls[#hl_calls + 1] = opts
-        end,
-        clear_extmark_highlights = function() end,
-      }
+      local orig_hl = component._element.place_extmark_highlight
+      component._element.place_extmark_highlight = function(self_el, opts)
+        hl_calls[#hl_calls + 1] = opts
+        return orig_hl(self_el, opts)
+      end
 
       -- First call should render
       component:_render_viewport(0, 0)
@@ -654,7 +659,7 @@ describe('PatchPreviewComponent:', function()
 
     it('should re-render when viewport range changes', function()
       local hl_calls = {}
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -671,14 +676,11 @@ describe('PatchPreviewComponent:', function()
         },
       })
 
-      component._element = {
-        is_valid = function() return true end,
-        place_extmark_lnum = function() end,
-        place_extmark_highlight = function(_, opts)
-          hl_calls[#hl_calls + 1] = opts
-        end,
-        clear_extmark_highlights = function() end,
-      }
+      local orig_hl = component._element.place_extmark_highlight
+      component._element.place_extmark_highlight = function(self_el, opts)
+        hl_calls[#hl_calls + 1] = opts
+        return orig_hl(self_el, opts)
+      end
 
       component:_render_viewport(0, 0)
       local first_count = #hl_calls
@@ -690,7 +692,7 @@ describe('PatchPreviewComponent:', function()
 
     it('should re-render after _viewport_dirty is set', function()
       local hl_calls = {}
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -705,14 +707,11 @@ describe('PatchPreviewComponent:', function()
         },
       })
 
-      component._element = {
-        is_valid = function() return true end,
-        place_extmark_lnum = function() end,
-        place_extmark_highlight = function(_, opts)
-          hl_calls[#hl_calls + 1] = opts
-        end,
-        clear_extmark_highlights = function() end,
-      }
+      local orig_hl = component._element.place_extmark_highlight
+      component._element.place_extmark_highlight = function(self_el, opts)
+        hl_calls[#hl_calls + 1] = opts
+        return orig_hl(self_el, opts)
+      end
 
       component:_render_viewport(0, 0)
       local first_count = #hl_calls
@@ -725,7 +724,7 @@ describe('PatchPreviewComponent:', function()
 
     it('should clear highlights before re-rendering viewport', function()
       local clear_called = 0
-      local component = create_patch_preview({
+      local component = create_mounted_patch_preview({
         state = {
           lines = {},
           line_metadata = {},
@@ -736,14 +735,11 @@ describe('PatchPreviewComponent:', function()
         },
       })
 
-      component._element = {
-        is_valid = function() return true end,
-        place_extmark_lnum = function() end,
-        place_extmark_highlight = function() end,
-        clear_extmark_highlights = function()
-          clear_called = clear_called + 1
-        end,
-      }
+      local orig_clear = component._element.clear_extmark_highlights
+      component._element.clear_extmark_highlights = function(self_el, ...)
+        clear_called = clear_called + 1
+        return orig_clear(self_el, ...)
+      end
 
       component:_render_viewport(0, 5)
       eq(1, clear_called)
@@ -782,14 +778,12 @@ describe('PatchPreviewComponent:', function()
   describe('forward', function()
     it('should delegate place_extmark_highlight to element when valid', function()
       local called_with = nil
-      local component = create_patch_preview({})
-      component._element = {
-        is_valid = function() return true end,
-        place_extmark_highlight = function(_, opts)
-          called_with = opts
-          return 99
-        end,
-      }
+      local component = create_mounted_patch_preview({})
+      local orig = component._element.place_extmark_highlight
+      component._element.place_extmark_highlight = function(self_el, opts)
+        called_with = opts
+        return 99
+      end
 
       local result = component:place_extmark_highlight({ hl = 'Test', row = 0 })
       eq(99, result)
@@ -833,10 +827,7 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should return true for is_valid when element is valid', function()
-      local component = create_patch_preview({})
-      component._element = {
-        is_valid = function() return true end,
-      }
+      local component = create_mounted_patch_preview({})
       assert.is_truthy(component:is_valid())
     end)
 

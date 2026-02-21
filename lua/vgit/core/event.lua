@@ -115,7 +115,14 @@ end
 function event.debounce(fn, ms)
   local args, argc
   local cooldown = false
-  local timer = vim.loop.new_timer()
+  local timer = nil
+
+  local function close_timer()
+    if timer and not timer:is_closing() then
+      timer:close()
+    end
+    timer = nil
+  end
 
   local debounced = function(...)
     args = { ... }
@@ -124,15 +131,19 @@ function event.debounce(fn, ms)
     if not cooldown then
       cooldown = true
       fn(...)
-      timer:stop()
+      close_timer()
+      timer = vim.loop.new_timer()
       timer:start(ms, 0, function()
+        close_timer()
         cooldown = false
       end)
       return
     end
 
-    timer:stop()
+    close_timer()
+    timer = vim.loop.new_timer()
     timer:start(ms, 0, function()
+      close_timer()
       cooldown = false
       vim.schedule(function()
         fn(unpack(args, 1, argc))
@@ -141,10 +152,8 @@ function event.debounce(fn, ms)
   end
 
   local cleanup = function()
-    if timer and not timer:is_closing() then
-      timer:stop()
-      timer:close()
-    end
+    close_timer()
+    cooldown = false
   end
 
   return debounced, cleanup

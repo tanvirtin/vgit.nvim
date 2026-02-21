@@ -82,7 +82,7 @@ function SplitDiffComponent:component_will_mount()
   local previous_plot = nil
   local current_plot = nil
 
-  local window_mode = self.config and self.config.window_mode or 'popup'
+  local window_mode = self._config and self._config.window_mode or 'popup'
 
   if window_mode == 'screen' then
   elseif window_mode == 'lens' or window_mode == 'popup' then
@@ -209,7 +209,7 @@ function SplitDiffComponent:set_lines(previous_lines, current_lines)
     previous_lines = previous_lines or {},
     current_lines = current_lines or {},
   })
-  if self.mounted then self:render() end
+  if self._mounted then self:render() end
   return self
 end
 

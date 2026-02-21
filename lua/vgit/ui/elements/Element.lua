@@ -14,16 +14,16 @@ function Element:constructor(props)
 
   return {
     props = props,
-    buffer = nil,
-    window = nil,
-    mounted = false,
+    _buffer = nil,
+    _window = nil,
+    _mounted = false,
     _lines = nil,
-    on_render = function() end,
-    is_attached_to_renderer = false,
-    plot = props.plot or {
+    _on_render = function() end,
+    _is_attached_to_renderer = false,
+    _plot = props.plot or {
       win_plot = utils.object.assign(props.win_plot or {}),
     },
-    config = {
+    _config = {
       window_mode = nil,
       buf_options = props.buf_options or {
         modifiable = false,
@@ -42,29 +42,29 @@ function Element:constructor(props)
 end
 
 function Element:mount()
-  if self.mounted then return self end
+  if self._mounted then return self end
 
-  self.buffer = Buffer():create()
-  self.buffer:assign_options(self.config.buf_options)
+  self._buffer = Buffer():create()
+  self._buffer:assign_options(self._config.buf_options)
 
-  local win_plot = self.plot.win_plot or {}
-  local window_mode = self.config.window_mode or 'popup'
+  local win_plot = self._plot.win_plot or {}
+  local window_mode = self._config.window_mode or 'popup'
 
   if win_plot.width then win_plot.width = LayoutContext.convert_dimension(win_plot.width) end
   if win_plot.height then win_plot.height = LayoutContext.convert_dimension(win_plot.height) end
 
   if window_mode == 'screen' then
     win_plot = vim.tbl_extend('force', win_plot or {}, {
-      win_options = self.config.win_options,
+      win_options = self._config.win_options,
     })
   end
 
   win_plot.mode = window_mode
-  self.window = Window:open(self.buffer, win_plot)
+  self._window = Window:open(self._buffer, win_plot)
 
   self:apply_window_options_explicitly()
 
-  self.mounted = true
+  self._mounted = true
 
   if self._lines then
     self:set_lines(self._lines)
@@ -75,32 +75,32 @@ function Element:mount()
 end
 
 function Element:unmount()
-  if not self.mounted then return self end
+  if not self._mounted then return self end
 
   self:detach_from_renderer()
 
-  if self.window and self.window:is_valid() then self.window:close() end
+  if self._window and self._window:is_valid() then self._window:close() end
 
-  if self.buffer and self.buffer:is_valid() then self.buffer:delete({ force = true }) end
+  if self._buffer and self._buffer:is_valid() then self._buffer:delete({ force = true }) end
 
-  self.mounted = false
+  self._mounted = false
 
   return self
 end
 
 function Element:is_valid()
-  return self.mounted and self.buffer and self.buffer:is_valid() and self.window and self.window:is_valid()
+  return self._mounted and self._buffer and self._buffer:is_valid() and self._window and self._window:is_valid()
 end
 
 function Element:set_lines(lines)
   if not self:is_valid() then return self end
-  self.buffer:set_lines(lines)
+  self._buffer:set_lines(lines)
   return self
 end
 
 function Element:get_lines()
   if not self:is_valid() then return {} end
-  return self.buffer:get_lines()
+  return self._buffer:get_lines()
 end
 
 function Element:clear_lines()
@@ -109,34 +109,34 @@ end
 
 function Element:get_line_count()
   if not self:is_valid() then return 0 end
-  return self.buffer:get_line_count()
+  return self._buffer:get_line_count()
 end
 
 function Element:set_cursor(cursor)
   if not self:is_valid() then return self end
-  self.window:set_cursor(cursor)
+  self._window:set_cursor(cursor)
   return self
 end
 
 function Element:get_cursor()
   if not self:is_valid() then return { 1, 1 } end
-  return self.window:get_cursor()
+  return self._window:get_cursor()
 end
 
 function Element:set_lnum(lnum)
   if not self:is_valid() then return self end
-  self.window:set_lnum(lnum)
+  self._window:set_lnum(lnum)
   return self
 end
 
 function Element:get_lnum()
   if not self:is_valid() then return 1 end
-  return self.window:get_lnum()
+  return self._window:get_lnum()
 end
 
 function Element:position_cursor(placement)
   if not self:is_valid() then return self end
-  self.window:position_cursor(placement)
+  self._window:position_cursor(placement)
   return self
 end
 
@@ -146,97 +146,97 @@ end
 
 function Element:set_width(width)
   if not self:is_valid() then return self end
-  self.window:set_width(width)
+  self._window:set_width(width)
   return self
 end
 
 function Element:set_height(height)
   if not self:is_valid() then return self end
-  self.window:set_height(height)
+  self._window:set_height(height)
   return self
 end
 
 function Element:get_width()
   if not self:is_valid() then return 0 end
-  return self.window:get_width()
+  return self._window:get_width()
 end
 
 function Element:get_height()
   if not self:is_valid() then return 0 end
-  return self.window:get_height()
+  return self._window:get_height()
 end
 
 function Element:focus()
   if not self:is_valid() then return self end
-  self.window:focus()
+  self._window:focus()
   return self
 end
 
 function Element:is_focused()
   if not self:is_valid() then return false end
-  return self.window:is_focused()
+  return self._window:is_focused()
 end
 
 function Element:set_filetype(filetype)
   if not self:is_valid() then return self end
-  self.buffer:set_option('filetype', filetype)
-  self.buffer:set_option('ft', filetype)
-  self.buffer:set_option('syntax', filetype)
+  self._buffer:set_option('filetype', filetype)
+  self._buffer:set_option('ft', filetype)
+  self._buffer:set_option('syntax', filetype)
   return self
 end
 
 function Element:get_filetype()
   if not self:is_valid() then return '' end
-  return self.buffer:get_option('filetype')
+  return self._buffer:get_option('filetype')
 end
 
 function Element:place_extmark_text(opts)
   if not self:is_valid() then return nil end
-  return self.buffer:place_extmark_text(opts)
+  return self._buffer:place_extmark_text(opts)
 end
 
 function Element:place_extmark_lnum(opts)
   if not self:is_valid() then return nil end
-  return self.buffer:place_extmark_lnum(opts)
+  return self._buffer:place_extmark_lnum(opts)
 end
 
 function Element:place_extmark_sign(sign)
   if not self:is_valid() then return nil end
-  return self.buffer:place_extmark_sign(sign)
+  return self._buffer:place_extmark_sign(sign)
 end
 
 function Element:place_extmark_highlight(opts)
   if not self:is_valid() then return nil end
-  return self.buffer:place_extmark_highlight(opts)
+  return self._buffer:place_extmark_highlight(opts)
 end
 
 function Element:clear_extmarks()
   if not self:is_valid() then return self end
-  self.buffer:clear_extmarks()
+  self._buffer:clear_extmarks()
   return self
 end
 
 function Element:clear_extmark_lnums()
   if not self:is_valid() then return self end
-  self.buffer:clear_extmark_lnums()
+  self._buffer:clear_extmark_lnums()
   return self
 end
 
 function Element:clear_extmark_texts()
   if not self:is_valid() then return self end
-  self.buffer:clear_extmark_texts()
+  self._buffer:clear_extmark_texts()
   return self
 end
 
 function Element:clear_extmark_signs()
   if not self:is_valid() then return self end
-  self.buffer:clear_extmark_signs()
+  self._buffer:clear_extmark_signs()
   return self
 end
 
 function Element:clear_extmark_highlights(from, to)
   if not self:is_valid() then return self end
-  self.buffer:clear_extmark_highlights(from, to)
+  self._buffer:clear_extmark_highlights(from, to)
   return self
 end
 
@@ -244,42 +244,42 @@ function Element:set_keymap(opts_or_mode, callback_or_key, handler, desc)
   if not self:is_valid() then return self end
   
   if type(opts_or_mode) == 'table' then
-    self.buffer:set_keymap(opts_or_mode, event.async(callback_or_key))
+    self._buffer:set_keymap(opts_or_mode, event.async(callback_or_key))
   else
     local opts = {
       mode = opts_or_mode,
       key = callback_or_key,
       desc = desc or '',
     }
-    self.buffer:set_keymap(opts, event.async(handler))
+    self._buffer:set_keymap(opts, event.async(handler))
   end
 
   return self
 end
 
 function Element:get_bufnr()
-  return self.buffer and self.buffer.bufnr or nil
+  return self._buffer and self._buffer.bufnr or nil
 end
 
 function Element:get_win_id()
-  return self.window and self.window.win_id or nil
+  return self._window and self._window.win_id or nil
 end
 
 function Element:on(event_name, callback)
   if not self:is_valid() then return self end
-  self.buffer:on(event_name, callback)
+  self._buffer:on(event_name, callback)
   return self
 end
 
 function Element:call(callback)
   if not self:is_valid() then return self end
-  self.window:call(callback)
+  self._window:call(callback)
   return self
 end
 
 function Element:set_option(key, value)
   if not self:is_valid() then return self end
-  self.window:set_option(key, value)
+  self._window:set_option(key, value)
   return self
 end
 
@@ -292,54 +292,54 @@ function Element:disable_cursorline()
 end
 
 function Element:attach_to_renderer(on_render)
-  self.on_render = on_render or function() end
+  self._on_render = on_render or function() end
 
-  if not self.is_attached_to_renderer and self.buffer then
-    self.buffer.on_render = function(top, bot)
-      self.on_render(top, bot)
+  if not self._is_attached_to_renderer and self._buffer then
+    self._buffer._on_render = function(top, bot)
+      self._on_render(top, bot)
     end
     renderer.register_module()
-    renderer.attach(self.buffer)
-    self.is_attached_to_renderer = true
+    renderer.attach(self._buffer)
+    self._is_attached_to_renderer = true
   end
 
   return self
 end
 
 function Element:detach_from_renderer()
-  if self.buffer then renderer.detach(self.buffer) end
-  self.is_attached_to_renderer = false
+  if self._buffer then renderer.detach(self._buffer) end
+  self._is_attached_to_renderer = false
   return self
 end
 
 function Element:render(top, bot)
-  self.on_render(top, bot)
+  self._on_render(top, bot)
   return self
 end
 
 function Element:apply_window_options_explicitly()
-  if not self.window or not self.window:is_valid() then return self end
+  if not self._window or not self._window:is_valid() then return self end
 
-  local options = self.config.win_options or {}
+  local options = self._config.win_options or {}
 
   for key, value in pairs(options) do
-    pcall(vim.api.nvim_win_set_option, self.window.win_id, key, value)
+    pcall(vim.api.nvim_win_set_option, self._window.win_id, key, value)
   end
 
   return self
 end
 
 function Element:reapply_window_options()
-  if self.mounted and self.window and self.window:is_valid() then self:apply_window_options_explicitly() end
+  if self._mounted and self._window and self._window:is_valid() then self:apply_window_options_explicitly() end
   return self
 end
 
 function Element:update_window_options(new_options)
   if not new_options then return self end
 
-  self.config.win_options = vim.tbl_deep_extend('force', self.config.win_options, new_options)
+  self._config.win_options = vim.tbl_deep_extend('force', self._config.win_options, new_options)
 
-  if self.mounted then self:apply_window_options_explicitly() end
+  if self._mounted then self:apply_window_options_explicitly() end
 
   return self
 end

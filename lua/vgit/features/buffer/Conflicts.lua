@@ -9,7 +9,7 @@ local Conflicts = Object:extend()
 
 function Conflicts:constructor()
   return {
-    name = 'Buffer Conflicts',
+    _name = 'Buffer Conflicts',
   }
 end
 

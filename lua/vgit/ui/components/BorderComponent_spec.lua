@@ -1,11 +1,22 @@
+local ui_helper = require('tests.helpers.ui')
 local eq = assert.are.same
 
 describe('BorderComponent:', function()
   local BorderComponent
+  local ComponentManager
 
   before_each(function()
     BorderComponent = require('vgit.ui.components.BorderComponent')
+    ComponentManager = require('vgit.ui.ComponentManager')
   end)
+
+  after_each(ui_helper.cleanup_ui)
+
+  local function mount_component(props)
+    local component = BorderComponent(props or {})
+    ComponentManager():render({ component = component, mode = 'popup', width = 40, height = 20 })
+    return component
+  end
 
   describe('constructor', function()
     it('should create via Component.constructor', function()
@@ -26,13 +37,7 @@ describe('BorderComponent:', function()
 
   describe('render', function()
     it('should be a no-op and return nil', function()
-      local instance = {
-        props = {},
-        state = {},
-        mounted = false,
-        _needs_update = false,
-      }
-      setmetatable(instance, BorderComponent)
+      local instance = BorderComponent({})
 
       assert.is_nil(instance:render())
     end)
@@ -40,51 +45,37 @@ describe('BorderComponent:', function()
 
   describe('get_layout_spec', function()
     it('should return a view spec with height 1', function()
-      local mock_element = { type = 'element' }
-      local instance = {
-        props = {},
-        state = {},
-        mounted = false,
-        _needs_update = false,
-        _element = mock_element,
-      }
-      setmetatable(instance, BorderComponent)
+      local instance = mount_component()
 
       local spec = instance:get_layout_spec()
 
       assert.is_not_nil(spec)
       eq('view', spec.type)
       eq(1, spec.height)
-      eq(mock_element, spec.view)
+      eq(instance._element, spec.view)
     end)
   end)
 
   describe('component_will_mount', function()
-    it('should use default winhl when none provided', function()
-      local instance = BorderComponent({})
-      instance:component_will_mount()
+    it('should create a valid Neovim window with default winhl', function()
+      local instance = mount_component()
 
       assert.is_not_nil(instance._element)
+      assert.is_truthy(instance._element:is_valid())
     end)
 
-    it('should use custom winhl from props', function()
-      local instance = BorderComponent({ winhl = 'Normal:CustomHL' })
-      instance:component_will_mount()
+    it('should create a valid Neovim window with custom winhl', function()
+      local instance = mount_component({ winhl = 'Normal:CustomHL' })
 
       assert.is_not_nil(instance._element)
+      assert.is_truthy(instance._element:is_valid())
     end)
   end)
 
   describe('component_did_mount', function()
     it('should call render', function()
       local render_called = false
-      local instance = {
-        props = {},
-        state = {},
-        mounted = false,
-        _needs_update = false,
-      }
-      setmetatable(instance, BorderComponent)
+      local instance = mount_component()
 
       instance.render = function() render_called = true end
       instance:component_did_mount()

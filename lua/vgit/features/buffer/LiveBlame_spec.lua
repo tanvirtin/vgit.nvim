@@ -11,7 +11,7 @@ describe('LiveBlame:', function()
     it('should set name to Live Blame', function()
       local instance = LiveBlame()
 
-      eq('Live Blame', instance.name)
+      eq('Live Blame', instance._name)
     end)
 
     it('should initialize debounced blame function and cleanup', function()

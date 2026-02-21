@@ -470,26 +470,26 @@ describe('ProjectDiffView:', function()
   describe('_get_active_component', function()
     it('should return current_component for split layout', function()
       local view = ProjectDiffView()
-      view.layout_type = ProjectDiffView.LAYOUT_SPLIT
-      view.current_component = 'current'
-      view.patch_component = 'patch'
+      view._layout_type = ProjectDiffView.LAYOUT_SPLIT
+      view._current_component = 'current'
+      view._patch_component = 'patch'
 
       eq('current', view:_get_active_component())
     end)
 
     it('should return patch_component for unified layout', function()
       local view = ProjectDiffView()
-      view.layout_type = ProjectDiffView.LAYOUT_UNIFIED
-      view.current_component = 'current'
-      view.patch_component = 'patch'
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+      view._current_component = 'current'
+      view._patch_component = 'patch'
 
       eq('patch', view:_get_active_component())
     end)
 
     it('should return patch_component for nil layout', function()
       local view = ProjectDiffView()
-      view.layout_type = nil
-      view.patch_component = 'patch'
+      view._layout_type = nil
+      view._patch_component = 'patch'
 
       eq('patch', view:_get_active_component())
     end)

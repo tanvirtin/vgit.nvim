@@ -1,41 +1,14 @@
 local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-
--- We only test parse_layout_spec in isolation.
--- ComponentManager requires LayoutRenderer for render(), which needs real Neovim UI.
--- We construct a ComponentManager manually, bypassing the full constructor to avoid
--- requiring LayoutContext/LayoutRenderer at construction time.
-
-local Object = require('vgit.core.Object')
-local ComponentGroup = require('vgit.ui.ComponentGroup')
+local ComponentManager = require('vgit.ui.ComponentManager')
+local ui_helper = require('tests.helpers.ui')
+local TestComponent = ui_helper.TestComponent
+local cleanup_ui = ui_helper.cleanup_ui
+local count_floating_windows = ui_helper.count_floating_windows
 
 local eq = assert.are.same
 
--- Create a minimal ComponentManager-like object that has parse_layout_spec
--- but avoids requiring the full module (which imports LayoutRenderer/LayoutContext at load time).
 local function create_manager()
-  local ComponentManager = require('vgit.ui.ComponentManager')
-  local mgr = ComponentManager()
-  return mgr
-end
-
-local function mock_child_component(layout_spec, opts)
-  opts = opts or {}
-  return {
-    mounted = opts.mounted or false,
-    props = {},
-    get_layout_spec = function()
-      return layout_spec
-    end,
-    mount = function(self)
-      self.mounted = true
-    end,
-    unmount = function(self)
-      self.mounted = false
-    end,
-    component_did_mount = function() end,
-    on = function() end,
-    set_keymap = function() end,
-  }
+  return ComponentManager()
 end
 
 describe('ComponentManager:', function()
@@ -43,6 +16,10 @@ describe('ComponentManager:', function()
 
   before_each(function()
     mgr = create_manager()
+  end)
+
+  after_each(function()
+    cleanup_ui()
   end)
 
   describe('parse_layout_spec', function()
@@ -58,23 +35,18 @@ describe('ComponentManager:', function()
     end)
 
     it('should mount child components found in children array', function()
-      local child_view = mock_child_component({
-        type = LayoutSpec.Type.VIEW,
-        view = {},
-      })
+      local child_view = TestComponent({ name = 'child' })
       local spec = LayoutSpec.horizontal({
         LayoutSpec.view(child_view, { id = 'test', flex = 1 }),
       })
       mgr:parse_layout_spec(spec)
-      assert.is_true(child_view.mounted)
+      assert.is_true(child_view._mounted)
     end)
 
     it('should skip already mounted child components', function()
+      local child_view = TestComponent({ name = 'child' })
+      child_view._mounted = true
       local mount_count = 0
-      local child_view = mock_child_component({
-        type = LayoutSpec.Type.VIEW,
-        view = {},
-      }, { mounted = true })
       local original_mount = child_view.mount
       child_view.mount = function(self)
         mount_count = mount_count + 1
@@ -88,48 +60,41 @@ describe('ComponentManager:', function()
     end)
 
     it('should replace child spec with parsed child layout spec', function()
-      local inner_spec = {
-        type = LayoutSpec.Type.VIEW,
-        view = { some = 'element' },
-        id = 'inner',
-        flex = 1,
-      }
-      local child_view = mock_child_component(inner_spec)
+      local child_view = TestComponent({ name = 'child' })
       local spec = LayoutSpec.horizontal({
         LayoutSpec.view(child_view, { id = 'wrapper', flex = 1 }),
       })
       local result = mgr:parse_layout_spec(spec)
-      -- The child should have been replaced with the inner spec
+      -- The child should have been replaced with the inner spec (VIEW wrapping element)
       assert.are.equal(LayoutSpec.Type.VIEW, result.children[1].type)
-      assert.are.equal('inner', result.children[1].id)
     end)
 
     it('should mount single child component via child property', function()
-      local child_view = mock_child_component({
-        type = LayoutSpec.Type.VIEW,
-        view = {},
-      })
+      local child_view = TestComponent({ name = 'child' })
       local spec = LayoutSpec.container(LayoutSpec.view(child_view, { id = 'c', flex = 1 }))
-      -- container has type + child
-      -- The child is a VIEW with child_view as view
       mgr:parse_layout_spec(spec)
-      assert.is_true(child_view.mounted)
+      assert.is_true(child_view._mounted)
     end)
 
     it('should handle nested layout specs recursively', function()
-      local inner_child = mock_child_component({
-        type = LayoutSpec.Type.VIEW,
-        view = {},
-      })
-      -- Create a component whose layout spec itself contains children
+      local inner_child = TestComponent({ name = 'inner' })
       local outer_spec = LayoutSpec.horizontal({
         LayoutSpec.view(inner_child, { id = 'deep', flex = 1 }),
       })
-      local outer_child = mock_child_component(outer_spec)
+      local OuterComponent = TestComponent:extend()
+      function OuterComponent:constructor(props)
+        local instance = OuterComponent.super.constructor(self, props)
+        instance._outer_spec = outer_spec
+        return instance
+      end
+      function OuterComponent:get_layout_spec()
+        return self._outer_spec
+      end
+      local outer_child = OuterComponent({ name = 'outer' })
       local spec = LayoutSpec.container(LayoutSpec.view(outer_child, { id = 'outer', flex = 1 }))
       mgr:parse_layout_spec(spec)
-      assert.is_true(outer_child.mounted)
-      assert.is_true(inner_child.mounted)
+      assert.is_true(outer_child._mounted)
+      assert.is_true(inner_child._mounted)
     end)
 
     it('should wrap spec with win_plot in container/view', function()
@@ -170,6 +135,74 @@ describe('ComponentManager:', function()
       assert.has_error(function()
         mgr:parse_layout_spec(nil)
       end, 'Unable to convert UI description to LayoutSpec')
+    end)
+  end)
+
+  describe('render', function()
+    it('should render a single TestComponent with real floating window', function()
+      local root = TestComponent({ name = 'root' })
+      mgr:render({
+        component = root,
+        mode = 'popup',
+        width = 40,
+        height = 20,
+      })
+      assert.is_true(root._mounted)
+      assert.is_not_nil(root._element)
+      assert.is_true(root._element:is_valid())
+      assert.is_true(count_floating_windows() >= 1)
+    end)
+
+    it('should render nested children with real floating windows', function()
+      local child = TestComponent({ name = 'child' })
+
+      local WrapperComponent = TestComponent:extend()
+      function WrapperComponent:get_layout_spec()
+        return LayoutSpec.container(LayoutSpec.view(child, { flex = 1 }))
+      end
+
+      local wrapper = WrapperComponent({ name = 'wrapper' })
+      mgr:render({
+        component = wrapper,
+        mode = 'popup',
+        width = 40,
+        height = 20,
+      })
+      assert.is_true(wrapper._mounted)
+      assert.is_true(child._mounted)
+    end)
+  end)
+
+  describe('destroy', function()
+    it('should unmount all components and close windows', function()
+      local root = TestComponent({ name = 'root' })
+      mgr:render({
+        component = root,
+        mode = 'popup',
+        width = 40,
+        height = 20,
+      })
+      assert.is_true(root._mounted)
+      assert.is_true(count_floating_windows() >= 1)
+
+      mgr:destroy()
+      assert.is_false(root._mounted)
+      assert.are.equal(0, count_floating_windows())
+    end)
+
+    it('should be idempotent', function()
+      local root = TestComponent({ name = 'root' })
+      mgr:render({
+        component = root,
+        mode = 'popup',
+        width = 40,
+        height = 20,
+      })
+      mgr:destroy()
+      assert.has_no.errors(function()
+        mgr:destroy()
+      end)
+      assert.is_false(root._mounted)
     end)
   end)
 end)

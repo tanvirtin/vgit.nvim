@@ -13,8 +13,8 @@ function LiveGutter:constructor()
   end, live_gutter_setting:get('debounce_ms'))
 
   return {
-    name = 'Live Gutter',
-    debounce_cleanups = {},
+    _name = 'Live Gutter',
+    _debounce_cleanups = {},
     _fetch_debounced = fetch_debounced_fn,
     _fetch_debounced_cleanup = fetch_debounced_cleanup,
   }

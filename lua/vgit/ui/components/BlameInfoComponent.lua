@@ -49,7 +49,7 @@ function BlameInfoComponent:render()
       string.format('%s', commit_message),
     }
 
-    self._element.buffer:set_lines(lines)
+    self._element._buffer:set_lines(lines)
 
     self._element:clear_extmarks()
 
@@ -94,7 +94,7 @@ function BlameInfoComponent:component_did_mount()
 end
 
 function BlameInfoComponent:unmount()
-  if not self.mounted then return end
+  if not self._mounted then return end
 
   self._element:unmount()
   self._element = nil

@@ -104,9 +104,9 @@ describe('CommitPickerView:', function()
   describe('constructor', function()
     it('should initialize fields correctly', function()
       local view = CommitPickerView()
-      assert.is_nil(view.search_component)
-      assert.is_false(view.destroyed)
-      assert.is_nil(view.history)
+      assert.is_nil(view._search_component)
+      assert.is_false(view._destroyed)
+      assert.is_nil(view._history)
     end)
   end)
 
@@ -243,8 +243,8 @@ describe('CommitPickerView:', function()
       local view = CommitPickerView()
       view:create(make_data())
 
-      view.destroyed = false
-      view.search_component = { close = function() close_called = true end }
+      view._destroyed = false
+      view._search_component = { close = function() close_called = true end }
       view:_on_select('abc1234567890')
 
       eq({ 'abc1234567890' }, show_execute_args)
@@ -254,8 +254,8 @@ describe('CommitPickerView:', function()
       local view = CommitPickerView()
       view:create(make_data())
 
-      view.destroyed = false
-      view.search_component = { close = function() close_called = true end }
+      view._destroyed = false
+      view._search_component = { close = function() close_called = true end }
       view:_on_select(nil)
 
       assert.is_nil(show_execute_args)
@@ -266,7 +266,7 @@ describe('CommitPickerView:', function()
     it('should return items from history:load_more when no search query', function()
       local view = CommitPickerView()
       local new_commit = make_commit({ hash = 'def5678000000000000000000000000000000000', summary = 'New commit' })
-      view.history = {
+      view._history = {
         load_more = function() return { new_commit }, nil end,
       }
       view._search_query = ''
@@ -293,7 +293,7 @@ describe('CommitPickerView:', function()
 
     it('should return nil when no more commits', function()
       local view = CommitPickerView()
-      view.history = {
+      view._history = {
         load_more = function() return {}, nil end,
       }
       view._search_query = ''
@@ -304,7 +304,7 @@ describe('CommitPickerView:', function()
 
     it('should return nil on error', function()
       local view = CommitPickerView()
-      view.history = {
+      view._history = {
         load_more = function() return nil, { 'some error' } end,
       }
       view._search_query = ''
@@ -319,18 +319,18 @@ describe('CommitPickerView:', function()
       local view = CommitPickerView()
       view:create(make_data())
 
-      view.destroyed = false
+      view._destroyed = false
       view:destroy()
-      assert.is_true(view.destroyed)
+      assert.is_true(view._destroyed)
     end)
 
     it('should be idempotent', function()
       local view = CommitPickerView()
-      view.destroyed = false
-      view.search_component = { close = function() close_called = true end }
+      view._destroyed = false
+      view._search_component = { close = function() close_called = true end }
 
       view:destroy()
-      assert.is_true(view.destroyed)
+      assert.is_true(view._destroyed)
       assert.is_true(close_called)
 
       close_called = false
@@ -340,12 +340,12 @@ describe('CommitPickerView:', function()
 
     it('should clean up search component', function()
       local view = CommitPickerView()
-      view.destroyed = false
-      view.search_component = { close = function() close_called = true end }
+      view._destroyed = false
+      view._search_component = { close = function() close_called = true end }
 
       view:destroy()
       assert.is_true(close_called)
-      assert.is_nil(view.search_component)
+      assert.is_nil(view._search_component)
     end)
   end)
 end)

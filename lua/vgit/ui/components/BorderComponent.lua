@@ -38,7 +38,7 @@ function BorderComponent:get_layout_spec()
 end
 
 function BorderComponent:unmount()
-  if not self.mounted then return end
+  if not self._mounted then return end
 
   self._element:unmount()
   self._element = nil

@@ -152,7 +152,7 @@ describe('Hunks:', function()
 
   describe('constructor', function()
     it('should create an instance with name "Buffer Hunks"', function()
-      eq('Buffer Hunks', hunks_instance.name)
+      eq('Buffer Hunks', hunks_instance._name)
     end)
 
     it('should be an instance of Hunks', function()

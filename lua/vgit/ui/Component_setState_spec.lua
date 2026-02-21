@@ -1,11 +1,19 @@
 local spy = require('luassert.spy')
 local Component = require('vgit.ui.Component')
+local ui_helper = require('tests.helpers.ui')
+local UITestComponent = ui_helper.TestComponent
+local cleanup_ui = ui_helper.cleanup_ui
+local count_floating_windows = ui_helper.count_floating_windows
 
 local eq = assert.are.same
 
 describe('Component:', function()
   local TestComponent
   local component
+
+  after_each(function()
+    cleanup_ui()
+  end)
 
   before_each(function()
     -- Create a test component class
@@ -38,7 +46,7 @@ describe('Component:', function()
     end)
 
     it('should not be mounted initially', function()
-      assert.is_false(component.mounted)
+      assert.is_false(component._mounted)
     end)
 
     it('should not need update initially', function()
@@ -137,7 +145,7 @@ describe('Component:', function()
     it('should call component_will_update before update', function()
       local will_update_spy = spy.new(function() end)
       component.component_will_update = will_update_spy
-      component.mounted = true
+      component._mounted = true
 
       component:set_state({ count = 1 })
       vim.wait(10)
@@ -152,7 +160,7 @@ describe('Component:', function()
     it('should call component_did_update after update', function()
       local did_update_spy = spy.new(function() end)
       component.component_did_update = did_update_spy
-      component.mounted = true
+      component._mounted = true
 
       component:set_state({ count = 1 })
       vim.wait(10)
@@ -168,7 +176,7 @@ describe('Component:', function()
   describe('mount', function()
     it('should set mounted to true', function()
       component:mount()
-      assert.is_true(component.mounted)
+      assert.is_true(component._mounted)
     end)
 
     it('should not mount twice', function()
@@ -187,7 +195,7 @@ describe('Component:', function()
       component:mount()
       component:unmount()
 
-      assert.is_false(component.mounted)
+      assert.is_false(component._mounted)
     end)
 
     it('should not unmount if not mounted', function()
@@ -202,12 +210,12 @@ describe('Component:', function()
 
   describe('update', function()
     before_each(function()
-      component.mounted = true
+      component._mounted = true
       component._needs_update = true
     end)
 
     it('should not update if not mounted', function()
-      component.mounted = false
+      component._mounted = false
       component:update()
 
       assert.is_true(component._needs_update)
@@ -332,6 +340,38 @@ describe('Component:', function()
         'will_unmount',
         'unmounted',
       })
+    end)
+  end)
+
+  describe('mount/unmount (with real UI)', function()
+    it('should create real element and floating window', function()
+      local c = UITestComponent({ name = 'test' })
+      c:mount()
+      assert.is_true(c._mounted)
+      assert.is_not_nil(c._element)
+
+      -- Mount element to create a real window
+      c._element:mount()
+      assert.is_true(c._element:is_valid())
+      assert.is_true(count_floating_windows() >= 1)
+
+      c:unmount()
+      assert.is_false(c._mounted)
+      assert.are.equal(0, count_floating_windows())
+    end)
+
+    it('should track full lifecycle with real UI', function()
+      local c = UITestComponent({ name = 'lifecycle' })
+      c:mount()
+      c._element:mount()
+
+      assert.is_true(c._element:is_valid())
+      eq({ 'will_mount' }, c._log)
+
+      c:unmount()
+      eq({ 'will_mount', 'will_unmount' }, c._log)
+      assert.is_false(c._mounted)
+      assert.are.equal(0, count_floating_windows())
     end)
   end)
 end)

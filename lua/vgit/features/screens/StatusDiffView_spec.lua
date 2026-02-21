@@ -134,14 +134,14 @@ describe('StatusDiffView:', function()
     describe('get_current_entry', function()
       it('should return nil when tree_component is nil', function()
         local view = StatusDiffView()
-        view.tree_component = nil
+        view._tree_component = nil
         assert.is_nil(view:get_current_entry())
       end)
 
       it('should delegate to tree_component:get_selected_entry', function()
         local view = StatusDiffView()
         local expected_entry = make_entry({ filename = 'myfile.lua' })
-        view.tree_component = {
+        view._tree_component = {
           get_selected_entry = function() return expected_entry end,
         }
         eq(expected_entry, view:get_current_entry())
@@ -150,7 +150,7 @@ describe('StatusDiffView:', function()
 
       it('should return nil when tree has no selected entry', function()
         local view = StatusDiffView()
-        view.tree_component = {
+        view._tree_component = {
           get_selected_entry = function() return nil end,
         }
         assert.is_nil(view:get_current_entry())
@@ -203,7 +203,7 @@ describe('StatusDiffView:', function()
         -- Mock _create_entries_view to avoid UI creation
         view._create_entries_view = function() return true end
         view:create(make_data({ layout_type = 'split' }))
-        eq('split', view.opts.layout_type)
+        eq('split', view._opts.layout_type)
       end)
 
       it('should store data in view via _process_entries_data', function()
@@ -211,12 +211,12 @@ describe('StatusDiffView:', function()
         view._create_entries_view = function() return true end
         local data = make_data()
         view:create(data)
-        eq(data, view.data)
+        eq(data, view._data)
       end)
 
       it('should use default layout_type when not provided', function()
         local view = StatusDiffView()
-        eq('unified', view.opts.layout_type)
+        eq('unified', view._opts.layout_type)
       end)
     end)
   end)
@@ -296,7 +296,7 @@ describe('StatusDiffView:', function()
 
       it('should pass layout_type in opts', function()
         local view = StatusDiffView()
-        view.opts.layout_type = 'split'
+        view._opts.layout_type = 'split'
         local entry = make_entry({ filename = 'test.lua' })
         local result = view:_build_entry_diff(entry, mock_repo)
 
@@ -317,7 +317,7 @@ describe('StatusDiffView:', function()
     describe('create_diff_component', function()
       it('should return DiffComponent for unified layout', function()
         local view = StatusDiffView()
-        view.opts.layout_type = 'unified'
+        view._opts.layout_type = 'unified'
         local component = view:create_diff_component({})
 
         assert.is_not_nil(component)
@@ -328,7 +328,7 @@ describe('StatusDiffView:', function()
 
       it('should return SplitDiffComponent for split layout', function()
         local view = StatusDiffView()
-        view.opts.layout_type = 'split'
+        view._opts.layout_type = 'split'
         local component = view:create_diff_component({})
 
         assert.is_not_nil(component)
@@ -339,7 +339,7 @@ describe('StatusDiffView:', function()
 
       it('should use unified as default layout type', function()
         local view = StatusDiffView()
-        view.opts.layout_type = nil
+        view._opts.layout_type = nil
         local component = view:create_diff_component({})
 
         assert.is_not_nil(component)
@@ -390,7 +390,7 @@ describe('StatusDiffView:', function()
         set_list = function() end,
         focus = function() end,
       }
-      view.tree_component = mock_tree
+      view._tree_component = mock_tree
     end
 
     before_each(function()
@@ -399,12 +399,12 @@ describe('StatusDiffView:', function()
 
     describe('move_to_next_file', function()
       it('should return nil if tree_component is nil', function()
-        view.tree_component = nil
+        view._tree_component = nil
         assert.is_nil(view:move_to_next_file())
       end)
 
       it('should return nil if tree_component is invalid', function()
-        view.tree_component = { is_valid = function() return false end }
+        view._tree_component = { is_valid = function() return false end }
         assert.is_nil(view:move_to_next_file())
       end)
 
@@ -467,12 +467,12 @@ describe('StatusDiffView:', function()
 
     describe('move_to_prev_file', function()
       it('should return nil if tree_component is nil', function()
-        view.tree_component = nil
+        view._tree_component = nil
         assert.is_nil(view:move_to_prev_file())
       end)
 
       it('should return nil if tree_component is invalid', function()
-        view.tree_component = { is_valid = function() return false end }
+        view._tree_component = { is_valid = function() return false end }
         assert.is_nil(view:move_to_prev_file())
       end)
 
@@ -687,7 +687,7 @@ describe('StatusDiffView:', function()
         set_keymap = function() end,
         component_will_unmount = function() end,
       }
-      view.diff_component = mock_diff
+      view._diff_component = mock_diff
     end
 
     before_each(function()
@@ -755,13 +755,13 @@ describe('StatusDiffView:', function()
 
     describe('hunk_down', function()
       it('should return early if diff_component is nil', function()
-        view.diff_component = nil
+        view._diff_component = nil
         -- Should not error
         view:hunk_down()
       end)
 
       it('should return early if diff_component is invalid', function()
-        view.diff_component = { is_valid = function() return false end }
+        view._diff_component = { is_valid = function() return false end }
         -- Should not error
         view:hunk_down()
       end)
@@ -782,12 +782,12 @@ describe('StatusDiffView:', function()
 
     describe('hunk_up', function()
       it('should return early if diff_component is nil', function()
-        view.diff_component = nil
+        view._diff_component = nil
         view:hunk_up()
       end)
 
       it('should return early if diff_component is invalid', function()
-        view.diff_component = { is_valid = function() return false end }
+        view._diff_component = { is_valid = function() return false end }
         view:hunk_up()
       end)
 
@@ -940,8 +940,8 @@ describe('StatusDiffView:', function()
         component_will_unmount = function() end,
       }
 
-      view.diff_component = mock_diff
-      view.tree_component = mock_tree
+      view._diff_component = mock_diff
+      view._tree_component = mock_tree
     end
 
     before_each(function()
@@ -1167,7 +1167,7 @@ describe('StatusDiffView:', function()
       package.loaded['vgit.features.screens.StatusDiffView'] = nil
       StatusDiffView = require('vgit.features.screens.StatusDiffView')
       view = StatusDiffView()
-      view.tree_component = {
+      view._tree_component = {
         each_entry = function() end,
         get_selected_entry = function() return nil end,
         move_to = function() end,
@@ -1185,13 +1185,13 @@ describe('StatusDiffView:', function()
 
     describe('stage_entry', function()
       it('should return early if entry is invalid', function()
-        view.tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function() return nil end
         view:stage_entry()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:stage_file with filename', function()
-        view.tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'stage_me.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'stage_me.lua' }) end
         view:stage_entry()
 
         eq(1, #repo_calls)
@@ -1202,13 +1202,13 @@ describe('StatusDiffView:', function()
 
     describe('unstage_entry', function()
       it('should return early if entry is invalid', function()
-        view.tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function() return nil end
         view:unstage_entry()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:unstage_file with filename', function()
-        view.tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'unstage_me.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'unstage_me.lua' }) end
         view:unstage_entry()
 
         eq(1, #repo_calls)
@@ -1219,7 +1219,7 @@ describe('StatusDiffView:', function()
 
     describe('reset_entry', function()
       it('should return early if entry is invalid', function()
-        view.tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function() return nil end
         view:reset_entry()
         eq(0, #repo_calls)
       end)
@@ -1231,7 +1231,7 @@ describe('StatusDiffView:', function()
           return 'n'
         end
 
-        view.tree_component.get_selected_entry = function() return make_entry({ filename = 'test.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ filename = 'test.lua' }) end
         view:reset_entry()
 
         assert.is_true(prompted)
@@ -1239,7 +1239,7 @@ describe('StatusDiffView:', function()
 
       it('should abort on n response', function()
         console_input_response = 'n'
-        view.tree_component.get_selected_entry = function() return make_entry({ filename = 'test.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ filename = 'test.lua' }) end
         view:reset_entry()
 
         eq(0, #repo_calls)
@@ -1248,7 +1248,7 @@ describe('StatusDiffView:', function()
       it('should proceed on y response', function()
         package.loaded['vgit.core.console'].input = function() return 'y' end
 
-        view.tree_component.get_selected_entry = function() return make_entry({ filename = 'reset_me.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ filename = 'reset_me.lua' }) end
         view:reset_entry()
 
         eq(1, #repo_calls)
@@ -1259,7 +1259,7 @@ describe('StatusDiffView:', function()
       it('should proceed on yes response', function()
         package.loaded['vgit.core.console'].input = function() return 'yes' end
 
-        view.tree_component.get_selected_entry = function() return make_entry({ filename = 'reset_me.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ filename = 'reset_me.lua' }) end
         view:reset_entry()
 
         eq(1, #repo_calls)
@@ -1269,19 +1269,19 @@ describe('StatusDiffView:', function()
 
     describe('stage_entry_from_diff', function()
       it('should return early if entry is invalid', function()
-        view.tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function() return nil end
         view:stage_entry_from_diff()
         eq(0, #repo_calls)
       end)
 
       it('should return early if entry type is not unstaged', function()
-        view.tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'test.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'test.lua' }) end
         view:stage_entry_from_diff()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:stage_file with filename', function()
-        view.tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'diff_stage.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'diff_stage.lua' }) end
         view:stage_entry_from_diff()
 
         eq(1, #repo_calls)
@@ -1292,19 +1292,19 @@ describe('StatusDiffView:', function()
 
     describe('unstage_entry_from_diff', function()
       it('should return early if entry is invalid', function()
-        view.tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function() return nil end
         view:unstage_entry_from_diff()
         eq(0, #repo_calls)
       end)
 
       it('should return early if entry type is not staged', function()
-        view.tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'test.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'test.lua' }) end
         view:unstage_entry_from_diff()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:unstage_file with filename', function()
-        view.tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'diff_unstage.lua' }) end
+        view._tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'diff_unstage.lua' }) end
         view:unstage_entry_from_diff()
 
         eq(1, #repo_calls)
@@ -1327,7 +1327,7 @@ describe('StatusDiffView:', function()
       it('should return early if entry is invalid', function()
         local destroy_called = false
         view.destroy = function() destroy_called = true end
-        view.tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function() return nil end
 
         view:open_file()
         assert.is_false(destroy_called)
@@ -1350,7 +1350,7 @@ describe('StatusDiffView:', function()
         StatusDiffView = require('vgit.features.screens.StatusDiffView')
         view = StatusDiffView()
         view.destroy = function() destroy_called = true end
-        view.tree_component = {
+        view._tree_component = {
           get_selected_entry = function() return make_entry({ filename = 'open_me.lua' }) end,
         }
 
@@ -1415,7 +1415,7 @@ describe('StatusDiffView:', function()
         move_to = function() end,
         get_selected_entry = function() return nil end,
       }
-      view.tree_component = mock_tree
+      view._tree_component = mock_tree
       view.refresh_data = function() end
       view._update_diff_component = function() end
     end
@@ -1515,8 +1515,8 @@ describe('StatusDiffView:', function()
           '',
           '# comment line',
         })
-        view.commit_buf = buf
-        view.commit_win = nil
+        view._commit_buf = buf
+        view._commit_win = nil
 
         view:_confirm_commit()
 
@@ -1531,8 +1531,8 @@ describe('StatusDiffView:', function()
           '# This is a comment',
           'More details here',
         })
-        view.commit_buf = buf
-        view.commit_win = nil
+        view._commit_buf = buf
+        view._commit_win = nil
 
         view:_confirm_commit()
 
@@ -1546,8 +1546,8 @@ describe('StatusDiffView:', function()
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
           'feat: add new feature',
         })
-        view.commit_buf = buf
-        view.commit_win = nil
+        view._commit_buf = buf
+        view._commit_win = nil
 
         view:_confirm_commit()
 
@@ -1561,8 +1561,8 @@ describe('StatusDiffView:', function()
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
           'test commit',
         })
-        view.commit_buf = buf
-        view.commit_win = nil
+        view._commit_buf = buf
+        view._commit_win = nil
 
         view:_confirm_commit()
 
@@ -1645,8 +1645,8 @@ describe('StatusDiffView:', function()
       package.loaded['vgit.features.screens.StatusDiffView'] = nil
       StatusDiffView = require('vgit.features.screens.StatusDiffView')
       view = StatusDiffView()
-      view.diff_component = mock_diff
-      view.tree_component = mock_tree
+      view._diff_component = mock_diff
+      view._tree_component = mock_tree
     end
 
     before_each(function()
@@ -1705,7 +1705,7 @@ describe('StatusDiffView:', function()
 
     describe('_handle_file_selection_change', function()
       it('should return early if no component_manager', function()
-        view.component_manager = nil
+        view._component_manager = nil
         -- Should not error
         view:_handle_file_selection_change({ entry = make_entry() })
       end)
@@ -1724,9 +1724,9 @@ describe('StatusDiffView:', function()
         package.loaded['vgit.features.screens.StatusDiffView'] = nil
         StatusDiffView = require('vgit.features.screens.StatusDiffView')
         view = StatusDiffView()
-        view.diff_component = mock_diff
-        view.tree_component = mock_tree
-        view.component_manager = {}
+        view._diff_component = mock_diff
+        view._tree_component = mock_tree
+        view._component_manager = {}
 
         view:_handle_file_selection_change(nil)
         assert.is_true(warned)
@@ -1743,7 +1743,7 @@ describe('StatusDiffView:', function()
         mock_diff.clear_folds = function() cleared_folds = true end
         mock_diff.reset_cursor = function() reset_cursor_called = true end
 
-        view.component_manager = {}
+        view._component_manager = {}
         view:_handle_file_selection_change({ entry = make_entry() })
 
         assert.is_true(cleared_extmarks)
@@ -1753,7 +1753,7 @@ describe('StatusDiffView:', function()
       end)
 
       it('should process valid entry from item', function()
-        view.component_manager = {}
+        view._component_manager = {}
         local entry = make_entry({ filename = 'selected.lua' })
 
         view:_handle_file_selection_change({ entry = entry })
@@ -1808,19 +1808,19 @@ describe('StatusDiffView:', function()
 
     describe('constructor', function()
       it('should initialize with default opts', function()
-        eq('unified', view.opts.layout_type)
+        eq('unified', view._opts.layout_type)
       end)
 
       it('should initialize debounce_cleanups as empty array', function()
-        eq({}, view.debounce_cleanups)
+        eq({}, view._debounce_cleanups)
       end)
 
       it('should initialize data as nil', function()
-        assert.is_nil(view.data)
+        assert.is_nil(view._data)
       end)
 
       it('should initialize repo as nil', function()
-        assert.is_nil(view.repo)
+        assert.is_nil(view._repo)
       end)
 
       it('should return nil from get_current_entry when no tree', function()
@@ -1828,15 +1828,15 @@ describe('StatusDiffView:', function()
       end)
 
       it('should initialize diff_component as nil', function()
-        assert.is_nil(view.diff_component)
+        assert.is_nil(view._diff_component)
       end)
 
       it('should initialize tree_component as nil', function()
-        assert.is_nil(view.tree_component)
+        assert.is_nil(view._tree_component)
       end)
 
       it('should initialize component_manager as nil', function()
-        assert.is_nil(view.component_manager)
+        assert.is_nil(view._component_manager)
       end)
     end)
 
@@ -1845,18 +1845,18 @@ describe('StatusDiffView:', function()
         local cleanup1_called = false
         local cleanup2_called = false
 
-        view.debounce_cleanups = {
+        view._debounce_cleanups = {
           function() cleanup1_called = true end,
           function() cleanup2_called = true end,
         }
 
-        view.diff_component = {
+        view._diff_component = {
           component_will_unmount = function() end,
         }
-        view.tree_component = {
+        view._tree_component = {
           component_will_unmount = function() end,
         }
-        view.component_manager = {
+        view._component_manager = {
           destroy = function() end,
         }
 
@@ -1867,21 +1867,21 @@ describe('StatusDiffView:', function()
       end)
 
       it('should clear debounce_cleanups array', function()
-        view.debounce_cleanups = { function() end }
-        view.diff_component = { component_will_unmount = function() end }
-        view.tree_component = { component_will_unmount = function() end }
-        view.component_manager = { destroy = function() end }
+        view._debounce_cleanups = { function() end }
+        view._diff_component = { component_will_unmount = function() end }
+        view._tree_component = { component_will_unmount = function() end }
+        view._component_manager = { destroy = function() end }
 
         view:destroy()
 
-        eq({}, view.debounce_cleanups)
+        eq({}, view._debounce_cleanups)
       end)
 
       it('should call emit_cleanup_events', function()
         local emit_called = false
         view.emit_cleanup_events = function() emit_called = true end
-        view.component_manager = { destroy = function() end }
-        view.debounce_cleanups = {}
+        view._component_manager = { destroy = function() end }
+        view._debounce_cleanups = {}
 
         view:destroy()
 
@@ -1890,10 +1890,10 @@ describe('StatusDiffView:', function()
 
       it('should call component_manager:destroy', function()
         local manager_destroyed = false
-        view.debounce_cleanups = {}
-        view.diff_component = { component_will_unmount = function() end }
-        view.tree_component = { component_will_unmount = function() end }
-        view.component_manager = {
+        view._debounce_cleanups = {}
+        view._diff_component = { component_will_unmount = function() end }
+        view._tree_component = { component_will_unmount = function() end }
+        view._component_manager = {
           destroy = function() manager_destroyed = true end,
         }
 
@@ -1908,10 +1908,10 @@ describe('StatusDiffView:', function()
         local diff_unmount_called = false
         local tree_unmount_called = false
 
-        view.diff_component = {
+        view._diff_component = {
           component_will_unmount = function() diff_unmount_called = true end,
         }
-        view.tree_component = {
+        view._tree_component = {
           component_will_unmount = function() tree_unmount_called = true end,
         }
 
@@ -1973,8 +1973,8 @@ describe('StatusDiffView:', function()
         package.loaded['vgit.features.screens.StatusDiffView'] = nil
         StatusDiffView = require('vgit.features.screens.StatusDiffView')
         view = StatusDiffView()
-        view.tree_component = mock_tree
-        view.diff_component = {
+        view._tree_component = mock_tree
+        view._diff_component = {
           is_valid = function() return true end,
           set_props = function() end,
           move_to_hunk = function() end,
@@ -2103,7 +2103,7 @@ describe('StatusDiffView:', function()
       local move_to_called = false
       local query_fn_received = nil
 
-      view.tree_component = {
+      view._tree_component = {
         move_to = function(_, query_fn)
           move_to_called = true
           query_fn_received = query_fn
