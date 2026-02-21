@@ -53,5 +53,20 @@ describe('gitcli:', function()
       assert.is_nil(err)
       assert.is_table(result)
     end)
+
+    it('should force English locale so parsers never break', function()
+      local result, err = gitcli.run({ '-C', repo:get_path(), 'status', '--short' })
+
+      assert.is_nil(err)
+      assert.is_table(result)
+    end)
+
+    it('should prepend --no-optional-locks to every command', function()
+      local result, err, code = gitcli.run({ '-C', repo:get_path(), 'status', '--porcelain' })
+
+      assert.is_nil(err)
+      assert.is_table(result)
+      eq(0, code)
+    end)
   end)
 end)

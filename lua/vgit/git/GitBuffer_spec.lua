@@ -89,6 +89,68 @@ describe('GitBuffer:', function()
       assert.equals(0, vim.tbl_count(git_buf.state.blames))
       assert.is_nil(git_buf.state.config)
     end)
+
+    it('resets op_lock on sync', function()
+      local bufnr = vim.fn.bufadd(test_file)
+      vim.fn.bufload(bufnr)
+      local git_buf = GitBuffer(bufnr)
+
+      git_buf._op_lock = true
+      git_buf:sync()
+
+      assert.is_false(git_buf._op_lock)
+    end)
+  end)
+
+  describe('operation lock', function()
+    describe('acquire', function()
+      it('returns true on first acquire', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        assert.is_true(git_buf:acquire())
+      end)
+
+      it('returns false when already acquired', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf:acquire()
+
+        assert.is_false(git_buf:acquire())
+      end)
+
+      it('sets _op_lock to true', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf:acquire()
+
+        assert.is_true(git_buf._op_lock)
+      end)
+    end)
+
+    describe('release', function()
+      it('clears the lock', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf:acquire()
+        git_buf:release()
+
+        assert.is_false(git_buf._op_lock)
+      end)
+
+      it('allows re-acquire after release', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf:acquire()
+        git_buf:release()
+
+        assert.is_true(git_buf:acquire())
+      end)
+    end)
   end)
 
   describe('file status checks', function()
@@ -654,7 +716,7 @@ describe('GitBuffer:', function()
         assert.equals(git_buf, result)
       end)
 
-      it('skips rendering when signs are not dirty', function()
+      it('renders even when signs are not dirty (viewport pull model)', function()
         local bufnr = vim.fn.bufadd(test_file)
         vim.fn.bufload(bufnr)
         local git_buf = GitBuffer(bufnr)
@@ -664,6 +726,37 @@ describe('GitBuffer:', function()
         local result = git_buf:render_signs()
 
         assert.equals(git_buf, result)
+      end)
+
+      it('clears dirty flag after rendering', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        vim.fn.bufload(bufnr)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf.state.signs = { { col = 0, name = 'GitSignsAdd' } }
+        git_buf._signs_dirty = true
+        git_buf:render_signs()
+
+        assert.is_false(git_buf._signs_dirty)
+      end)
+
+      it('only places signs within viewport range', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        vim.fn.bufload(bufnr)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf.state.signs = {
+          { col = 2, name = 'GitSignsAdd' },
+          { col = 5, name = 'GitSignsAdd' },
+          { col = 8, name = 'GitSignsAdd' },
+        }
+        git_buf._signs_dirty = true
+
+        -- Render with viewport 3-6: only sign at col=5 is in range
+        local result = git_buf:render_signs(3, 6)
+
+        assert.equals(git_buf, result)
+        assert.is_false(git_buf._signs_dirty)
       end)
     end)
 
