@@ -7,7 +7,9 @@ local LiveConflict = Object:extend()
 
 function LiveConflict:constructor()
   local debounced_conflicts, debounced_conflicts_cleanup = event.debounce_async(function(buffer)
+    if not buffer:acquire() then return end
     buffer:conflicts()
+    buffer:release()
     buffer:render_conflicts()
   end, 100)
 
