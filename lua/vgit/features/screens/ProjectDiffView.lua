@@ -15,7 +15,6 @@ local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local display_service = lazy('vgit.ui.display_service')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
-local view_utils = lazy('vgit.features.screens.view_utils')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
 local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
 local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
@@ -42,7 +41,20 @@ function ProjectDiffView:constructor()
 end
 
 function ProjectDiffView:_handle_git_error(err, operation_name)
-  return view_utils.handle_git_error(err, operation_name, 'ProjectDiffView')
+  if err then
+    console.debug.error(string.format('[ProjectDiffView] %s failed: %s', operation_name, err))
+    return false
+  end
+  return true
+end
+
+function ProjectDiffView:get_key(keymap)
+  if type(keymap) == 'string' then
+    return keymap
+  elseif type(keymap) == 'table' then
+    return keymap.key
+  end
+  return nil
 end
 
 function ProjectDiffView:create(data)
@@ -350,10 +362,6 @@ function ProjectDiffView:show_blame_view()
     blames = blames,
     lines = lines,
   })
-end
-
-function ProjectDiffView:get_key(keymap)
-  return view_utils.get_key(keymap)
 end
 
 function ProjectDiffView:_set_keymap_on_component(component, mode, key, handler)

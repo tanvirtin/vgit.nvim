@@ -12,7 +12,6 @@ local blame_view_setting = lazy('vgit.settings.blame_view')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
-local view_utils = lazy('vgit.features.screens.view_utils')
 local repository = lazy('vgit.git.repository')
 local display_service = lazy('vgit.ui.display_service')
 local GitTree = lazy('vgit.git.GitTree')
@@ -705,7 +704,12 @@ function BlameView:_refresh_view(blames, lines, target_lnum)
 end
 
 function BlameView:get_key(keymap)
-  return view_utils.get_key(keymap)
+  if type(keymap) == 'string' then
+    return keymap
+  elseif type(keymap) == 'table' then
+    return keymap.key
+  end
+  return nil
 end
 
 function BlameView:_setup_keymaps()

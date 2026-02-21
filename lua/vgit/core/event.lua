@@ -6,6 +6,8 @@ local git_repo = lazy('vgit.libgit2.git_repo')
 
 local _is_registered = false
 local _augroup_created = false
+local _dir_watcher_registered = false
+local _handle = nil
 
 local function ensure_augroup()
   if _augroup_created then return end
@@ -163,8 +165,12 @@ function event.debounce_async(fn, ms)
   return event.debounce(event.async(fn), ms)
 end
 
-function event.register_module()
-  if _is_registered then return end
+local function _start_watcher()
+  if _handle then
+    pcall(function() _handle:stop() end)
+    pcall(function() _handle:close() end)
+    _handle = nil
+  end
 
   if not git_repo.exists() then return end
 
@@ -177,7 +183,7 @@ function event.register_module()
   local ok = handle:start(
     git_dirname,
     {},
-    function(err, filename, event_name)
+    function(err, filename, ev_name)
       if err then return end
       if not filename then return end
       if filename:match('index%.lock$') then return end
@@ -186,24 +192,54 @@ function event.register_module()
         event.emit('VGitChange', {
           git_dir = git_dirname,
           filename = filename,
-          event_name = event_name,
+          event_name = ev_name,
         })
       end)
     end
   )
-  if not ok then return handle:close() end
 
+  if not ok then
+    handle:close()
+    return
+  end
+
+  _handle = handle
+end
+
+function event.register_module()
+  if _is_registered then return end
   _is_registered = true
 
+  _start_watcher()
+
   event.on({ 'VimLeavePre' }, function()
-    handle:stop()
-    handle:close()
+    if _handle then
+      pcall(function() _handle:stop() end)
+      pcall(function() _handle:close() end)
+      _handle = nil
+    end
   end)
+
+  if not _dir_watcher_registered then
+    _dir_watcher_registered = true
+    event.on({ 'DirChanged' }, function(args)
+      if args.match ~= 'global' then return end
+      git_repo.clear_cache()
+      _start_watcher()
+      event.emit('VGitDirChanged', {})
+    end)
+  end
 end
 
 function event.reset()
+  if _handle then
+    pcall(function() _handle:stop() end)
+    pcall(function() _handle:close() end)
+    _handle = nil
+  end
   _is_registered = false
   _augroup_created = false
+  _dir_watcher_registered = false
 end
 
 return event

@@ -44,6 +44,17 @@ git_buffer_store.register_events = event.async(function()
       end
     end
   end)
+
+  event.custom_on('VGitDirChanged', function()
+    repository.invalidate()
+    statusline.reset()
+    git_buffer_store.clear_buffers()
+    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_loaded(bufnr) then
+        git_buffer_store.collect(bufnr)
+      end
+    end
+  end)
 end)
 
 git_buffer_store.for_each = function(callback)
@@ -115,6 +126,10 @@ git_buffer_store.dispatch = function(git_buffer, event_type, ...)
   for _, handler in pairs(handlers) do
     handler(git_buffer, event_type, ...)
   end
+end
+
+git_buffer_store.clear_buffers = function()
+  buffers = {}
 end
 
 git_buffer_store.reset = function()

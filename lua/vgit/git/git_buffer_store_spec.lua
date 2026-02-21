@@ -521,6 +521,60 @@ describe('git_buffer_store:', function()
     end)
   end)
 
+  describe('clear_buffers()', function()
+    before_each(function()
+      -- Full reset to avoid stale event handlers accumulated by earlier tests
+      git_buffer_store.reset()
+    end)
+
+    after_each(function()
+      git_buffer_store.reset()
+    end)
+
+    it('should empty the buffer store', function()
+      git_buffer_store.add({ bufnr = 1 })
+      git_buffer_store.add({ bufnr = 2 })
+      git_buffer_store.add({ bufnr = 3 })
+
+      git_buffer_store.clear_buffers()
+
+      eq(git_buffer_store.size(), 0)
+      eq(git_buffer_store.is_empty(), true)
+    end)
+
+    it('should be idempotent on an already-empty store', function()
+      git_buffer_store.clear_buffers()
+      git_buffer_store.clear_buffers()
+      eq(git_buffer_store.size(), 0)
+    end)
+
+    it('should not affect registered event handlers', function()
+      local attach_count = 0
+      git_buffer_store.on('attach', function()
+        attach_count = attach_count + 1
+      end)
+
+      git_buffer_store.add({ bufnr = 1 })
+      git_buffer_store.clear_buffers()
+
+      local buf = { bufnr = 2 }
+      git_buffer_store.add(buf)
+      git_buffer_store.dispatch(buf, 'attach')
+
+      eq(attach_count, 1)
+    end)
+
+    it('should allow buffers to be re-added after clear', function()
+      git_buffer_store.add({ bufnr = 1 })
+      git_buffer_store.clear_buffers()
+
+      git_buffer_store.add({ bufnr = 1 })
+      git_buffer_store.add({ bufnr = 2 })
+
+      eq(git_buffer_store.size(), 2)
+    end)
+  end)
+
   describe('edge cases', function()
     it('should handle string bufnr conversion', function()
       -- Store uses tostring(bufnr) internally

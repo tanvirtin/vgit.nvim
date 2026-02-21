@@ -54,4 +54,54 @@ describe('event:', function()
       assert.is_true(callback_called)
     end)
   end)
+
+  describe('VGitDirChanged', function()
+    it('should be emittable and receivable via custom_on', function()
+      local received = false
+      event.custom_on('VGitDirChanged', function()
+        received = true
+      end)
+      event.emit('VGitDirChanged', {})
+      assert.is_true(received)
+    end)
+
+    it('should emit VGitDirChanged for global DirChanged scope', function()
+      local count = 0
+      event.custom_on('VGitDirChanged', function()
+        count = count + 1
+      end)
+      event.on({ 'DirChanged' }, function(args)
+        if args.match ~= 'global' then return end
+        event.emit('VGitDirChanged', {})
+      end)
+      vim.api.nvim_exec_autocmds('DirChanged', { pattern = 'global', modeline = false })
+      eq(count, 1)
+    end)
+
+    it('should not emit VGitDirChanged for local DirChanged scope', function()
+      local count = 0
+      event.custom_on('VGitDirChanged', function()
+        count = count + 1
+      end)
+      event.on({ 'DirChanged' }, function(args)
+        if args.match ~= 'global' then return end
+        event.emit('VGitDirChanged', {})
+      end)
+      vim.api.nvim_exec_autocmds('DirChanged', { pattern = 'local', modeline = false })
+      eq(count, 0)
+    end)
+
+    it('should not emit VGitDirChanged for tab DirChanged scope', function()
+      local count = 0
+      event.custom_on('VGitDirChanged', function()
+        count = count + 1
+      end)
+      event.on({ 'DirChanged' }, function(args)
+        if args.match ~= 'global' then return end
+        event.emit('VGitDirChanged', {})
+      end)
+      vim.api.nvim_exec_autocmds('DirChanged', { pattern = 'tab', modeline = false })
+      eq(count, 0)
+    end)
+  end)
 end)

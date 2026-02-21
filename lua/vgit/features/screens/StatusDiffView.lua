@@ -12,7 +12,6 @@ local scene_setting = lazy('vgit.settings.scene')
 local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
-local view_utils = lazy('vgit.features.screens.view_utils')
 local TreeComponent = lazy('vgit.ui.components.TreeComponent')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
@@ -167,9 +166,7 @@ function StatusDiffView:reset_hunk()
     if next_file then
       self:move_to_entry(next_file, 'unstaged')
     elseif not self:_move_to_first_entry_of_type('unstaged') then
-      if not self:_move_to_first_entry_of_type('staged') then
-        self:_move_to_first_entry()
-      end
+      if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
     end
     self._refreshing = false
     self:_update_diff_component(1)
@@ -209,7 +206,9 @@ function StatusDiffView:restore_hunk_position(hunk_index)
 end
 
 function StatusDiffView:_move_to_first_entry()
-  self._tree_component:move_to(function(status) return status ~= nil end)
+  self._tree_component:move_to(function(status)
+    return status ~= nil
+  end)
 end
 
 function StatusDiffView:_move_to_first_entry_of_type(target_type)
@@ -225,7 +224,6 @@ function StatusDiffView:refresh_and_navigate(navigate_fn)
   self._refreshing = false
   self:_update_diff_component()
 end
-
 
 function StatusDiffView:move_to_next_file()
   if not self._tree_component or not self._tree_component:is_valid() then return nil end
@@ -278,7 +276,20 @@ function StatusDiffView:navigate_up()
 end
 
 function StatusDiffView:_handle_git_error(err, operation_name)
-  return view_utils.handle_git_error(err, operation_name, 'StatusDiffView')
+  if err then
+    console.debug.error(string.format('[StatusDiffView] %s failed: %s', operation_name, err))
+    return false
+  end
+  return true
+end
+
+function StatusDiffView:get_key(keymap)
+  if type(keymap) == 'string' then
+    return keymap
+  elseif type(keymap) == 'table' then
+    return keymap.key
+  end
+  return nil
 end
 
 function StatusDiffView:_build_entry_diff(entry, repo)
@@ -451,10 +462,12 @@ function StatusDiffView:stage_hunk()
     self:restore_hunk_position(hunk_index)
   else
     if not self:_move_to_first_entry_of_type('unstaged') then
-      if not self._tree_component:move_to(function(s, et) return s.filename == filename and et == 'staged' end) then
-        if not self:_move_to_first_entry_of_type('staged') then
-          self:_move_to_first_entry()
-        end
+      if
+        not self._tree_component:move_to(function(s, et)
+          return s.filename == filename and et == 'staged'
+        end)
+      then
+        if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
       end
     end
     self._refreshing = false
@@ -504,10 +517,12 @@ function StatusDiffView:unstage_hunk()
     self:restore_hunk_position(hunk_index)
   else
     if not self:_move_to_first_entry_of_type('staged') then
-      if not self._tree_component:move_to(function(s, et) return s.filename == filename and et == 'unstaged' end) then
-        if not self:_move_to_first_entry_of_type('unstaged') then
-          self:_move_to_first_entry()
-        end
+      if
+        not self._tree_component:move_to(function(s, et)
+          return s.filename == filename and et == 'unstaged'
+        end)
+      then
+        if not self:_move_to_first_entry_of_type('unstaged') then self:_move_to_first_entry() end
       end
     end
     self._refreshing = false
@@ -535,9 +550,7 @@ function StatusDiffView:stage_entry()
     if next_file then
       self:move_to_entry(next_file, 'unstaged')
     elseif not self:_move_to_first_entry_of_type('unstaged') then
-      if not self:_move_to_first_entry_of_type('staged') then
-        self:_move_to_first_entry()
-      end
+      if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
     end
   end)
 end
@@ -558,9 +571,7 @@ function StatusDiffView:unstage_entry()
     if next_file then
       self:move_to_entry(next_file, 'staged')
     elseif not self:_move_to_first_entry_of_type('staged') then
-      if not self:_move_to_first_entry_of_type('unstaged') then
-        self:_move_to_first_entry()
-      end
+      if not self:_move_to_first_entry_of_type('unstaged') then self:_move_to_first_entry() end
     end
   end)
 end
@@ -583,18 +594,14 @@ function StatusDiffView:reset_entry()
   local repo, err = repository.current()
   if err then return end
 
-  if entry_type == 'staged' then
-    repo:unstage_file(filename)
-  end
+  if entry_type == 'staged' then repo:unstage_file(filename) end
   repo:reset(filename)
 
   self:refresh_and_navigate(function()
     if next_file then
       self:move_to_entry(next_file, entry_type)
     elseif not self:_move_to_first_entry_of_type('unstaged') then
-      if not self:_move_to_first_entry_of_type('staged') then
-        self:_move_to_first_entry()
-      end
+      if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
     end
   end)
 end
@@ -611,10 +618,12 @@ function StatusDiffView:stage_entry_from_diff()
   repo:stage_file(filename)
 
   self:refresh_and_navigate(function()
-    if not self._tree_component:move_to(function(s, et) return s.filename == filename and et == 'staged' end) then
-      if not self:_move_to_first_entry_of_type('staged') then
-        self:_move_to_first_entry()
-      end
+    if
+      not self._tree_component:move_to(function(s, et)
+        return s.filename == filename and et == 'staged'
+      end)
+    then
+      if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
     end
   end)
 end
@@ -631,10 +640,12 @@ function StatusDiffView:unstage_entry_from_diff()
   repo:unstage_file(filename)
 
   self:refresh_and_navigate(function()
-    if not self._tree_component:move_to(function(s, et) return s.filename == filename and et == 'unstaged' end) then
-      if not self:_move_to_first_entry_of_type('unstaged') then
-        self:_move_to_first_entry()
-      end
+    if
+      not self._tree_component:move_to(function(s, et)
+        return s.filename == filename and et == 'unstaged'
+      end)
+    then
+      if not self:_move_to_first_entry_of_type('unstaged') then self:_move_to_first_entry() end
     end
   end)
 end
@@ -786,9 +797,7 @@ function StatusDiffView:open_file()
   event.await()
   fs.open(filename)
 
-  if mark then
-    Window(0):set_lnum(mark.top_relative):position_cursor('center')
-  end
+  if mark then Window(0):set_lnum(mark.top_relative):position_cursor('center') end
 end
 
 function StatusDiffView:_handle_file_selection_change(item)
@@ -862,9 +871,7 @@ function StatusDiffView:stage_all()
   repo:stage_all()
 
   self:refresh_and_navigate(function()
-    if not self:_move_to_first_entry_of_type('staged') then
-      self:_move_to_first_entry()
-    end
+    if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
   end)
 end
 
@@ -874,9 +881,7 @@ function StatusDiffView:unstage_all()
   repo:unstage_all()
 
   self:refresh_and_navigate(function()
-    if not self:_move_to_first_entry_of_type('unstaged') then
-      self:_move_to_first_entry()
-    end
+    if not self:_move_to_first_entry_of_type('unstaged') then self:_move_to_first_entry() end
   end)
 end
 
@@ -926,10 +931,6 @@ function StatusDiffView:refresh_data()
   end
 
   self._tree_component:set_list(file_groups)
-end
-
-function StatusDiffView:get_key(keymap)
-  return view_utils.get_key(keymap)
 end
 
 function StatusDiffView:setup_keymaps()

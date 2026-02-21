@@ -26,6 +26,13 @@ function display_service.register_events()
       if active_view and active_view._destroyed then active_view = nil end
     end
   end)
+
+  event.custom_on('VGitDirChanged', function()
+    if active_view and active_view.destroy then
+      active_view:destroy()
+    end
+    active_view = nil
+  end)
 end
 
 display_service.show_diff = event.async(function(data)
