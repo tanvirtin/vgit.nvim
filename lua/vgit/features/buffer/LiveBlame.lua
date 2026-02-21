@@ -18,14 +18,19 @@ function LiveBlame:constructor()
     event.await()
     local conflicts = buffer:get_conflicts()
     if #conflicts ~= 0 then return end
+    if not buffer:acquire() then return end
 
     local _, config_err = buffer:config()
-    if config_err then return console.debug.error(config_err) end
+    if config_err then
+      buffer:release()
+      return console.debug.error(config_err)
+    end
 
     local window = Window(0)
     local lnum = window:get_lnum()
 
     local _, blame_err = buffer:blame(lnum)
+    buffer:release()
     if blame_err then return console.debug.error(blame_err) end
 
     buffer:render_blames()

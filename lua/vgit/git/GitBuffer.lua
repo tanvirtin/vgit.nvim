@@ -25,6 +25,7 @@ function GitBuffer:constructor(...)
     conflicts = {},
   }
   buffer._signs_dirty = false
+  buffer._op_lock = false
   buffer._blame_extmark = Extmark(bufnr, 'blame')
   buffer._gutter_extmark = Extmark(bufnr, 'gutter')
   buffer._conflict_extmark = Extmark(bufnr, 'conflict')
@@ -57,9 +58,20 @@ function GitBuffer:sync()
     conflicts = {},
   }
   self._signs_dirty = false
+  self._op_lock = false
   self._git_file = GitFile(self:get_name())
 
   return self
+end
+
+function GitBuffer:acquire()
+  if self._op_lock then return false end
+  self._op_lock = true
+  return true
+end
+
+function GitBuffer:release()
+  self._op_lock = false
 end
 
 function GitBuffer:reset_signs()
@@ -308,13 +320,19 @@ function GitBuffer:render_conflicts(top, bot)
 end
 
 function GitBuffer:render_signs(top, bot)
-  if not self._signs_dirty then return self end
-  self._signs_dirty = false
-
   top = top or 0
   bot = bot or -1
-  self:clear_signs(top, bot)
 
+  -- When sign data has changed, do a full clear so stale signs outside
+  -- the current viewport are removed, then reset the flag.
+  if self._signs_dirty then
+    self:clear_signs()
+    self._signs_dirty = false
+  else
+    self:clear_signs(top, bot)
+  end
+
+  -- Only place extmarks for signs visible in the current viewport.
   local signs = self.state.signs or {}
   for _, sign in ipairs(signs) do
     local col = sign.col

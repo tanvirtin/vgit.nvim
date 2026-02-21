@@ -33,8 +33,10 @@ end
 function LiveGutter:fetch(buffer)
   event.await()
   if not buffer:is_valid() then return end
+  if not buffer:acquire() then return end
 
   local _, err = buffer:diff()
+  buffer:release()
 
   if err then
     console.debug.error(err)

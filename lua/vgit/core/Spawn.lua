@@ -119,6 +119,7 @@ function Spawn:start()
     args = self.spec.args,
     stdio = { nil, stdout, stderr },
     cwd = self.spec.cwd,
+    env = self.spec.env,
   }, on_exit)
 
   stdout:read_start(on_stdout)
