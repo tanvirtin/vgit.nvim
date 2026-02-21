@@ -54,7 +54,7 @@ function git_rebase.rebase(reponame, upstream, opts)
 
   if opts.branch then query:raw_arg(opts.branch) end
 
-  return query:execute()
+  return query:execute({ env = opts.env })
 end
 
 function git_rebase.continue(reponame)
