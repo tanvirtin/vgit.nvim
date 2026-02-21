@@ -8,6 +8,7 @@ local console = lazy('vgit.core.console')
 local git_blame = lazy('vgit.git.git_blame')
 local git_show = lazy('vgit.git.git_show')
 local scene_setting = lazy('vgit.settings.scene')
+local blame_view_setting = lazy('vgit.settings.blame_view')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
@@ -112,6 +113,7 @@ function BlameView:constructor()
     _history_stack = {},
     _current_commit = nil,
     _current_blames = {},
+    _blame_segments = {},
     _opts = {
       filename = nil,
       filetype = nil,
@@ -228,9 +230,7 @@ function BlameView:_render_blame(blames)
     group_index = group_index + 1
 
     local short_hash = ''
-    if not is_uncommitted then
-      short_hash = (blame:short_hash() or ''):sub(1, 7)
-    end
+    if not is_uncommitted then short_hash = (blame:short_hash() or ''):sub(1, 7) end
 
     local message = blame.message or blame.commit_message or ''
     if #message > 35 then message = message:sub(1, 34) .. '..' end
@@ -245,9 +245,7 @@ function BlameView:_render_blame(blames)
     if #author > 16 then author = author:sub(1, 15) .. '..' end
 
     local initial = ''
-    if not is_uncommitted and #author > 0 then
-      initial = author:sub(1, 1):upper()
-    end
+    if not is_uncommitted and #author > 0 then initial = author:sub(1, 1):upper() end
 
     -- Line 1: initial  short_hash  commit_message  age
     local line1
@@ -354,6 +352,9 @@ function BlameView:_render_blame(blames)
       col_range = { from = h.from, to = h.to },
     })
   end
+
+  -- Store blame segments for navigation
+  self._blame_segments = self:_compute_blame_segments(blames)
 end
 
 function BlameView:_render_content(lines, filetype)
@@ -362,8 +363,73 @@ function BlameView:_render_content(lines, filetype)
 
   element:set_lines(lines)
 
-  if filetype then
-    element:set_filetype(filetype)
+  if filetype then element:set_filetype(filetype) end
+end
+
+function BlameView:_compute_blame_segments(blames)
+  local segments = {}
+  local line_count = #blames
+  local i = 1
+
+  while i <= line_count do
+    local blame = blames[i]
+    local hash = blame.commit_hash or blame.hash
+    local segment_start = i
+
+    while i <= line_count do
+      local b = blames[i]
+      local h = b.commit_hash or b.hash
+      if h ~= hash then break end
+      i = i + 1
+    end
+    local segment_end = i - 1
+
+    table.insert(segments, {
+      start = segment_start,
+      finish = segment_end,
+    })
+  end
+
+  return segments
+end
+
+function BlameView:blame_down()
+  local element = self._content_component._element
+  if not element or not element:is_valid() then return end
+  if #self._blame_segments == 0 then return end
+
+  local current_lnum = element:get_lnum()
+
+  for i = 1, #self._blame_segments do
+    local segment = self._blame_segments[i]
+    if current_lnum < segment.start then
+      element:set_lnum(segment.start)
+      return
+    end
+    if current_lnum >= segment.start and current_lnum <= segment.finish then
+      if i < #self._blame_segments then element:set_lnum(self._blame_segments[i + 1].start) end
+      return
+    end
+  end
+end
+
+function BlameView:blame_up()
+  local element = self._content_component._element
+  if not element or not element:is_valid() then return end
+  if #self._blame_segments == 0 then return end
+
+  local current_lnum = element:get_lnum()
+
+  for i = #self._blame_segments, 1, -1 do
+    local segment = self._blame_segments[i]
+    if current_lnum > segment.start then
+      element:set_lnum(segment.start)
+      return
+    end
+    if current_lnum >= segment.start and current_lnum <= segment.finish then
+      if i > 1 then element:set_lnum(self._blame_segments[i - 1].start) end
+      return
+    end
   end
 end
 
@@ -599,9 +665,7 @@ function BlameView:show_commit_project_diff()
 
   local entries = {}
   for i = 1, #funcs do
-    if results[i] then
-      table.insert(entries, results[i])
-    end
+    if results[i] then table.insert(entries, results[i]) end
   end
 
   if #entries == 0 then
@@ -636,9 +700,7 @@ function BlameView:_refresh_view(blames, lines, target_lnum)
     if target_lnum < 1 then target_lnum = 1 end
 
     local element = self._content_component._element
-    if element and element:is_valid() then
-      element:set_lnum(target_lnum)
-    end
+    if element and element:is_valid() then element:set_lnum(target_lnum) end
   end
 end
 
@@ -684,6 +746,15 @@ function BlameView:_setup_keymaps()
   end, self.DEBOUNCE_MS)
   table.insert(self._debounce_cleanups, project_diff_cleanup)
 
+  local blame_keymaps = blame_view_setting:get('keymaps')
+
+  local blame_down_fn = function()
+    self:blame_down()
+  end
+  local blame_up_fn = function()
+    self:blame_up()
+  end
+
   for _, component in ipairs(components) do
     component:set_keymap({
       mode = 'n',
@@ -704,6 +775,22 @@ function BlameView:_setup_keymaps()
       mode = 'n',
       key = 'D',
     }, project_diff_fn)
+
+    if blame_keymaps and blame_keymaps.down then
+      local down_key = self:get_key(blame_keymaps.down)
+      if down_key then component:set_keymap({
+        mode = 'n',
+        key = down_key,
+      }, blame_down_fn) end
+    end
+
+    if blame_keymaps and blame_keymaps.up then
+      local up_key = self:get_key(blame_keymaps.up)
+      if up_key then component:set_keymap({
+        mode = 'n',
+        key = up_key,
+      }, blame_up_fn) end
+    end
   end
 end
 
@@ -716,9 +803,7 @@ function BlameView:destroy()
   end
   self._debounce_cleanups = {}
 
-  if self._component_manager then
-    self._component_manager:destroy()
-  end
+  if self._component_manager then self._component_manager:destroy() end
 end
 
 return BlameView
