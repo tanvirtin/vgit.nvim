@@ -48,12 +48,12 @@ describe('BranchView:', function()
   describe('constructor', function()
     it('should initialize search_component as nil', function()
       local view = BranchView()
-      assert.is_nil(view.search_component)
+      assert.is_nil(view._search_component)
     end)
 
     it('should initialize destroyed as false', function()
       local view = BranchView()
-      assert.is_false(view.destroyed)
+      assert.is_false(view._destroyed)
     end)
   end)
 
@@ -439,42 +439,42 @@ describe('BranchView:', function()
     it('should set destroyed to true', function()
       local view = BranchView()
       view:destroy()
-      assert.is_true(view.destroyed)
+      assert.is_true(view._destroyed)
     end)
 
     it('should be idempotent', function()
       local view = BranchView()
       view:destroy()
       view:destroy()
-      assert.is_true(view.destroyed)
+      assert.is_true(view._destroyed)
     end)
 
     it('should close search_component if present', function()
       local view = BranchView()
       local close_called = false
-      view.search_component = {
+      view._search_component = {
         close = function()
           close_called = true
           -- Simulate on_close callback
-          view.destroyed = true
-          view.search_component = nil
+          view._destroyed = true
+          view._search_component = nil
         end,
       }
 
       view:destroy()
 
       assert.is_true(close_called)
-      assert.is_nil(view.search_component)
+      assert.is_nil(view._search_component)
     end)
 
     it('should not call close twice when called twice', function()
       local view = BranchView()
       local close_count = 0
-      view.search_component = {
+      view._search_component = {
         close = function()
           close_count = close_count + 1
-          view.destroyed = true
-          view.search_component = nil
+          view._destroyed = true
+          view._search_component = nil
         end,
       }
 

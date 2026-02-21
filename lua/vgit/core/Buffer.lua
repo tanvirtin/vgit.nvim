@@ -14,12 +14,12 @@ function Buffer:constructor(bufnr)
   return {
     bufnr = bufnr,
     _modifiable = nil,
-    on_render = function() end,
-    is_attached_to_screen = false,
-    text_extmark = Extmark(bufnr, 'text'),
-    lnum_extmark = Extmark(bufnr, 'lnum'),
-    sign_extmark = Extmark(bufnr, 'sign'),
-    highlight_extmark = Extmark(bufnr, 'highlight'),
+    _on_render = function() end,
+    _is_attached_to_screen = false,
+    _text_extmark = Extmark(bufnr, 'text'),
+    _lnum_extmark = Extmark(bufnr, 'lnum'),
+    _sign_extmark = Extmark(bufnr, 'sign'),
+    _highlight_extmark = Extmark(bufnr, 'highlight'),
   }
 end
 
@@ -44,11 +44,11 @@ function Buffer:attach_to_changes(opts)
 end
 
 function Buffer:attach_to_renderer(on_render)
-  self.on_render = on_render or function() end
+  self._on_render = on_render or function() end
 
-  if not self.is_attached_to_screen then
+  if not self._is_attached_to_screen then
     renderer.attach(self)
-    self.is_attached_to_screen = true
+    self._is_attached_to_screen = true
   end
 
   return self
@@ -65,7 +65,7 @@ function Buffer:on(event_type, callback)
 end
 
 function Buffer:render(top, bot)
-  self.on_render(top, bot)
+  self._on_render(top, bot)
   return self
 end
 
@@ -84,36 +84,36 @@ function Buffer:get_relative_name()
 end
 
 function Buffer:place_extmark_text(opts)
-  return self.text_extmark:text(opts)
+  return self._text_extmark:text(opts)
 end
 
 function Buffer:place_extmark_sign(opts)
-  return self.sign_extmark:sign(opts)
+  return self._sign_extmark:sign(opts)
 end
 
 function Buffer:place_extmark_lnum(opts)
-  return self.lnum_extmark:lnum(opts)
+  return self._lnum_extmark:lnum(opts)
 end
 
 function Buffer:place_extmark_highlight(opts)
-  return self.highlight_extmark:highlight(opts)
+  return self._highlight_extmark:highlight(opts)
 end
 
 function Buffer:clear_extmark_texts()
   if not self:is_valid() then return end
-  return self.text_extmark:clear()
+  return self._text_extmark:clear()
 end
 
 function Buffer:clear_extmark_lnums()
-  return self.lnum_extmark:clear()
+  return self._lnum_extmark:clear()
 end
 
 function Buffer:clear_extmark_signs()
-  return self.sign_extmark:clear()
+  return self._sign_extmark:clear()
 end
 
 function Buffer:clear_extmark_highlights(from, to)
-  self.highlight_extmark:clear(from, to)
+  self._highlight_extmark:clear(from, to)
   return self
 end
 
@@ -132,10 +132,10 @@ function Buffer:create(listed, scratch)
   local bufnr = vim.api.nvim_create_buf(listed, scratch)
 
   self.bufnr = bufnr
-  self.text_extmark = Extmark(bufnr, 'text')
-  self.lnum_extmark = Extmark(bufnr, 'lnum')
-  self.sign_extmark = Extmark(bufnr, 'sign')
-  self.highlight_extmark = Extmark(bufnr, 'highlight')
+  self._text_extmark = Extmark(bufnr, 'text')
+  self._lnum_extmark = Extmark(bufnr, 'lnum')
+  self._sign_extmark = Extmark(bufnr, 'sign')
+  self._highlight_extmark = Extmark(bufnr, 'highlight')
 
   return self
 end

@@ -23,7 +23,7 @@ function display_service.register_events()
     if active_view and active_view.on_git_change then
       active_view:on_git_change()
       -- View may have destroyed itself (e.g. no more changes after commit)
-      if active_view and active_view.destroyed then active_view = nil end
+      if active_view and active_view._destroyed then active_view = nil end
     end
   end)
 end

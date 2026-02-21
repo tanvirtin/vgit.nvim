@@ -1,27 +1,37 @@
+local ui_helper = require('tests.helpers.ui')
 local eq = assert.are.same
 
-local function create_split_component(overrides)
-  local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
-  local LineNumberCalculator = require('vgit.ui.calculators.LineNumberCalculator')
-
-  local instance = {
-    props = overrides.props or {},
-    state = overrides.state or { previous_lines = {}, current_lines = {} },
-    mounted = false,
-    _needs_update = false,
-    _previous_component = nil,
-    _current_component = nil,
-    _line_number_calculator = LineNumberCalculator(),
-  }
-
-  setmetatable(instance, SplitDiffComponent)
-  return instance
-end
-
 describe('SplitDiffComponent:', function()
+  local SplitDiffComponent
+
+  before_each(function()
+    SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+  end)
+
+  after_each(ui_helper.cleanup_ui)
+
+  -- mount() calls component_will_mount() which creates child DiffComponents and their Element
+  -- objects. We then explicitly call _element:mount() on each child to open the real Neovim
+  -- windows, since LayoutRenderer (which normally does this) doesn't support the horizontal
+  -- flex layout that SplitDiffComponent:get_layout_spec() returns.
+  local function create_split_component(overrides)
+    overrides = overrides or {}
+    local component = SplitDiffComponent(overrides.props or {})
+    component:mount()
+    if component._previous_component and component._previous_component._element then
+      component._previous_component._element:mount()
+    end
+    if component._current_component and component._current_component._element then
+      component._current_component._element:mount()
+    end
+    for k, v in pairs(overrides.state or {}) do component.state[k] = v end
+    return component
+  end
+
   describe('calculate_split_line_numbers', function()
+    -- Pure logic tests: only need _line_number_calculator — no real UI required
     it('should separate lnum_changes by buftype', function()
-      local component = create_split_component({})
+      local component = SplitDiffComponent({})
       local diff = {
         lines = { 'line1', 'line2', 'line3' },
         current_lines = { 'line1', 'line2', 'line3' },
@@ -39,18 +49,15 @@ describe('SplitDiffComponent:', function()
 
       assert.is_not_nil(result.previous)
       assert.is_not_nil(result.current)
-      -- Line number arrays must match the line count of their respective sides
       assert.are.equal(#diff.previous_lines, #result.previous.lines)
       assert.are.equal(#diff.current_lines, #result.current.lines)
-      -- Both sides must produce equal-length line number arrays
       assert.are.equal(#result.previous.lines, #result.current.lines)
-      -- Changes arrays must match too
       assert.are.equal(#diff.previous_lines, #result.previous.changes)
       assert.are.equal(#diff.current_lines, #result.current.changes)
     end)
 
     it('should handle empty lnum_changes', function()
-      local component = create_split_component({})
+      local component = SplitDiffComponent({})
       local diff = {
         lines = {},
         current_lines = {},
@@ -68,7 +75,7 @@ describe('SplitDiffComponent:', function()
     end)
 
     it('should produce equal-length results when sides have equal lines', function()
-      local component = create_split_component({})
+      local component = SplitDiffComponent({})
       local lines = { 'a', 'b', 'c', 'd', 'e' }
       local diff = {
         lines = lines,
@@ -91,11 +98,10 @@ describe('SplitDiffComponent:', function()
   end)
 
   describe('should_component_update', function()
+    -- Pure logic: only compares self.props references — no real UI required
     it('should return true when diff changes', function()
       local diff_ref = { lines = {} }
-      local component = create_split_component({
-        props = { diff = diff_ref, filetype = 'lua' },
-      })
+      local component = SplitDiffComponent({ diff = diff_ref, filetype = 'lua' })
 
       local result = component:should_component_update({
         diff = { lines = {} },
@@ -106,9 +112,7 @@ describe('SplitDiffComponent:', function()
 
     it('should return true when filetype changes', function()
       local diff_ref = { lines = {} }
-      local component = create_split_component({
-        props = { diff = diff_ref, filetype = 'lua' },
-      })
+      local component = SplitDiffComponent({ diff = diff_ref, filetype = 'lua' })
 
       local result = component:should_component_update({
         diff = diff_ref,
@@ -119,9 +123,7 @@ describe('SplitDiffComponent:', function()
 
     it('should return false when nothing changes', function()
       local diff_ref = { lines = {} }
-      local component = create_split_component({
-        props = { diff = diff_ref, filetype = 'lua' },
-      })
+      local component = SplitDiffComponent({ diff = diff_ref, filetype = 'lua' })
 
       local result = component:should_component_update({
         diff = diff_ref,
@@ -133,88 +135,50 @@ describe('SplitDiffComponent:', function()
 
   describe('_for_both', function()
     it('should apply operation to both child components', function()
-      local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+      local component = create_split_component()
       local prev_called = false
       local curr_called = false
 
-      local instance = {
-        props = {},
-        state = { previous_lines = {}, current_lines = {} },
-        mounted = false,
-        _needs_update = false,
-        _previous_component = {
-          test_method = function() prev_called = true end,
-        },
-        _current_component = {
-          test_method = function() curr_called = true end,
-        },
-        _line_number_calculator = require('vgit.ui.calculators.LineNumberCalculator')(),
-      }
-      setmetatable(instance, SplitDiffComponent)
+      component._previous_component.test_method = function() prev_called = true end
+      component._current_component.test_method = function() curr_called = true end
 
-      instance:_for_both(function(c) c:test_method() end)
+      component:_for_both(function(c) c:test_method() end)
+
       assert.is_true(prev_called)
       assert.is_true(curr_called)
     end)
 
     it('should handle nil previous component gracefully', function()
-      local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+      local component = create_split_component()
       local curr_called = false
 
-      local instance = {
-        props = {},
-        state = { previous_lines = {}, current_lines = {} },
-        mounted = false,
-        _needs_update = false,
-        _previous_component = nil,
-        _current_component = {
-          test_method = function() curr_called = true end,
-        },
-        _line_number_calculator = require('vgit.ui.calculators.LineNumberCalculator')(),
-      }
-      setmetatable(instance, SplitDiffComponent)
+      component._previous_component = nil
+      component._current_component.test_method = function() curr_called = true end
 
-      instance:_for_both(function(c) c:test_method() end)
+      component:_for_both(function(c) c:test_method() end)
+
       assert.is_true(curr_called)
     end)
 
     it('should handle nil current component gracefully', function()
-      local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+      local component = create_split_component()
       local prev_called = false
 
-      local instance = {
-        props = {},
-        state = { previous_lines = {}, current_lines = {} },
-        mounted = false,
-        _needs_update = false,
-        _previous_component = {
-          test_method = function() prev_called = true end,
-        },
-        _current_component = nil,
-        _line_number_calculator = require('vgit.ui.calculators.LineNumberCalculator')(),
-      }
-      setmetatable(instance, SplitDiffComponent)
+      component._previous_component.test_method = function() prev_called = true end
+      component._current_component = nil
 
-      instance:_for_both(function(c) c:test_method() end)
+      component:_for_both(function(c) c:test_method() end)
+
       assert.is_true(prev_called)
     end)
 
     it('should handle both nil gracefully', function()
-      local SplitDiffComponent = require('vgit.ui.components.SplitDiffComponent')
+      local component = create_split_component()
+      component._previous_component = nil
+      component._current_component = nil
 
-      local instance = {
-        props = {},
-        state = { previous_lines = {}, current_lines = {} },
-        mounted = false,
-        _needs_update = false,
-        _previous_component = nil,
-        _current_component = nil,
-        _line_number_calculator = require('vgit.ui.calculators.LineNumberCalculator')(),
-      }
-      setmetatable(instance, SplitDiffComponent)
-
-      -- Should not error
-      instance:_for_both(function(c) c:test_method() end)
+      -- should not error
+      component:_for_both(function(c) c:test_method() end)
     end)
   end)
 
@@ -224,26 +188,22 @@ describe('SplitDiffComponent:', function()
         { header = '@@ -1,3 +1,4 @@', diff = {}, top = 1, bot = 4 },
         { header = '@@ -10,2 +10,3 @@', diff = {}, top = 10, bot = 12 },
       }
-      local component = create_split_component({})
-      component._current_component = {
-        get_hunks = function() return hunks end,
-      }
+      local component = create_split_component()
+      component._current_component.get_hunks = function() return hunks end
 
       eq(hunks, component:get_hunks())
     end)
 
     it('should return empty table when _current_component is nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._current_component = nil
 
       eq({}, component:get_hunks())
     end)
 
     it('should return empty table when _current_component has no hunks', function()
-      local component = create_split_component({})
-      component._current_component = {
-        get_hunks = function() return {} end,
-      }
+      local component = create_split_component()
+      component._current_component.get_hunks = function() return {} end
 
       eq({}, component:get_hunks())
     end)
@@ -255,16 +215,14 @@ describe('SplitDiffComponent:', function()
         { top = 5, bot = 10 },
         { top = 15, bot = 20 },
       }
-      local component = create_split_component({})
-      component._current_component = {
-        get_marks = function() return marks end,
-      }
+      local component = create_split_component()
+      component._current_component.get_marks = function() return marks end
 
       eq(marks, component:get_marks())
     end)
 
     it('should return empty table when _current_component is nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._current_component = nil
 
       eq({}, component:get_marks())
@@ -274,16 +232,14 @@ describe('SplitDiffComponent:', function()
   describe('get_hunk_under_cursor', function()
     it('should delegate to _current_component', function()
       local hunk = { header = '@@ -1,3 +1,4 @@', diff = {} }
-      local component = create_split_component({})
-      component._current_component = {
-        get_hunk_under_cursor = function() return hunk end,
-      }
+      local component = create_split_component()
+      component._current_component.get_hunk_under_cursor = function() return hunk end
 
       eq(hunk, component:get_hunk_under_cursor())
     end)
 
     it('should return nil when _current_component is nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._current_component = nil
 
       assert.is_nil(component:get_hunk_under_cursor())
@@ -293,16 +249,14 @@ describe('SplitDiffComponent:', function()
   describe('get_current_mark_under_cursor', function()
     it('should delegate to _current_component', function()
       local mark = { top = 5, bot = 10 }
-      local component = create_split_component({})
-      component._current_component = {
-        get_current_mark_under_cursor = function() return mark end,
-      }
+      local component = create_split_component()
+      component._current_component.get_current_mark_under_cursor = function() return mark end
 
       eq(mark, component:get_current_mark_under_cursor())
     end)
 
     it('should return nil when _current_component is nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._current_component = nil
 
       assert.is_nil(component:get_current_mark_under_cursor())
@@ -311,17 +265,15 @@ describe('SplitDiffComponent:', function()
 
   describe('get_relative_mark_index', function()
     it('should delegate to _current_component', function()
-      local component = create_split_component({})
-      component._current_component = {
-        get_relative_mark_index = function(_, lnum) return lnum < 10 and 1 or 2 end,
-      }
+      local component = create_split_component()
+      component._current_component.get_relative_mark_index = function(_, lnum) return lnum < 10 and 1 or 2 end
 
       eq(1, component:get_relative_mark_index(5))
       eq(2, component:get_relative_mark_index(15))
     end)
 
     it('should return 1 when _current_component is nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._current_component = nil
 
       eq(1, component:get_relative_mark_index(5))
@@ -330,16 +282,14 @@ describe('SplitDiffComponent:', function()
 
   describe('get_lnum', function()
     it('should delegate to _current_component', function()
-      local component = create_split_component({})
-      component._current_component = {
-        get_lnum = function() return 42 end,
-      }
+      local component = create_split_component()
+      component._current_component.get_lnum = function() return 42 end
 
       eq(42, component:get_lnum())
     end)
 
     it('should return 1 when _current_component is nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._current_component = nil
 
       eq(1, component:get_lnum())
@@ -348,27 +298,21 @@ describe('SplitDiffComponent:', function()
 
   describe('is_valid', function()
     it('should return true when _current_component is valid', function()
-      local component = create_split_component({})
-      component._current_component = {
-        is_valid = function() return true end,
-      }
+      local component = create_split_component()
       component._previous_component = nil
 
       assert.is_truthy(component:is_valid())
     end)
 
     it('should return true when _previous_component is valid', function()
-      local component = create_split_component({})
-      component._previous_component = {
-        is_valid = function() return true end,
-      }
+      local component = create_split_component()
       component._current_component = nil
 
       assert.is_truthy(component:is_valid())
     end)
 
     it('should return false when both components are nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._previous_component = nil
       component._current_component = nil
 
@@ -379,16 +323,14 @@ describe('SplitDiffComponent:', function()
   describe('hunk_down', function()
     it('should delegate to _current_component', function()
       local mark = { top = 15, bot = 20 }
-      local component = create_split_component({})
-      component._current_component = {
-        hunk_down = function() return mark end,
-      }
+      local component = create_split_component()
+      component._current_component.hunk_down = function() return mark end
 
       eq(mark, component:hunk_down())
     end)
 
     it('should return nil when _current_component is nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._current_component = nil
 
       assert.is_nil(component:hunk_down())
@@ -398,16 +340,14 @@ describe('SplitDiffComponent:', function()
   describe('hunk_up', function()
     it('should delegate to _current_component', function()
       local mark = { top = 5, bot = 10 }
-      local component = create_split_component({})
-      component._current_component = {
-        hunk_up = function() return mark end,
-      }
+      local component = create_split_component()
+      component._current_component.hunk_up = function() return mark end
 
       eq(mark, component:hunk_up())
     end)
 
     it('should return nil when _current_component is nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._current_component = nil
 
       assert.is_nil(component:hunk_up())
@@ -416,20 +356,17 @@ describe('SplitDiffComponent:', function()
 
   describe('get_filetype', function()
     it('should delegate to _current_component', function()
-      local component = create_split_component({})
-      component._current_component = {
-        get_filetype = function() return 'lua' end,
-      }
+      local component = create_split_component()
+      component._current_component.get_filetype = function() return 'lua' end
 
       eq('lua', component:get_filetype())
     end)
 
     it('should return empty string when _current_component is nil', function()
-      local component = create_split_component({})
+      local component = create_split_component()
       component._current_component = nil
 
       eq('', component:get_filetype())
     end)
   end)
-
 end)

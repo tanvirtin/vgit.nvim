@@ -12,7 +12,7 @@ function LiveConflict:constructor()
   end, 100)
 
   return {
-    name = 'Conflict',
+    _name = 'Conflict',
     _debounced_conflicts = debounced_conflicts,
     _debounced_conflicts_cleanup = debounced_conflicts_cleanup,
   }

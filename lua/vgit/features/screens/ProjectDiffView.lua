@@ -28,16 +28,16 @@ ProjectDiffView.LAYOUT_UNIFIED = 'unified'
 
 function ProjectDiffView:constructor()
   return {
-    data = nil,
-    repo = nil,
-    layout_type = nil,
-    patch_component = nil,
-    previous_component = nil,
-    current_component = nil,
-    component_manager = nil,
-    patch_entries = {},
-    line_to_file_map = {},
-    debounce_cleanups = {},
+    _data = nil,
+    _repo = nil,
+    _layout_type = nil,
+    _patch_component = nil,
+    _previous_component = nil,
+    _current_component = nil,
+    _component_manager = nil,
+    _patch_entries = {},
+    _line_to_file_map = {},
+    _debounce_cleanups = {},
   }
 end
 
@@ -70,7 +70,7 @@ function ProjectDiffView:create(data)
     return false
   end
 
-  self.data = data
+  self._data = data
   return self:_create_view(data)
 end
 
@@ -243,8 +243,8 @@ function ProjectDiffView:_build_patch_entries(repo, data)
 end
 
 function ProjectDiffView:_get_active_component()
-  if self.layout_type == self.LAYOUT_SPLIT then return self.current_component end
-  return self.patch_component
+  if self._layout_type == self.LAYOUT_SPLIT then return self._current_component end
+  return self._patch_component
 end
 
 function ProjectDiffView:get_hunk_alignment()
@@ -291,7 +291,7 @@ function ProjectDiffView:jump_to_file()
   if not component or not component:is_valid() then return end
 
   local lnum = component:get_lnum()
-  local file_info = self.line_to_file_map[lnum]
+  local file_info = self._line_to_file_map[lnum]
 
   console.debug.info(
     string.format(
@@ -323,7 +323,7 @@ function ProjectDiffView:show_blame_view()
   if not component or not component:is_valid() then return end
 
   local lnum = component:get_lnum()
-  local file_info = self.line_to_file_map[lnum]
+  local file_info = self._line_to_file_map[lnum]
   if not file_info or not file_info.filename then return end
 
   local filename = file_info.filename
@@ -364,11 +364,11 @@ function ProjectDiffView:_set_keymap_on_component(component, mode, key, handler)
 end
 
 function ProjectDiffView:_set_keymap_all_components(mode, key, handler)
-  if self.layout_type == self.LAYOUT_SPLIT then
-    self:_set_keymap_on_component(self.previous_component, mode, key, handler)
-    self:_set_keymap_on_component(self.current_component, mode, key, handler)
+  if self._layout_type == self.LAYOUT_SPLIT then
+    self:_set_keymap_on_component(self._previous_component, mode, key, handler)
+    self:_set_keymap_on_component(self._current_component, mode, key, handler)
   else
-    self:_set_keymap_on_component(self.patch_component, mode, key, handler)
+    self:_set_keymap_on_component(self._patch_component, mode, key, handler)
   end
 end
 
@@ -381,7 +381,7 @@ function ProjectDiffView:setup_keymaps()
     local quit_key = self:get_key(scene_keymaps.quit)
     if quit_key then
       self:_set_keymap_all_components('n', quit_key, function()
-        self.component_manager:destroy()
+        self._component_manager:destroy()
       end)
     end
   end
@@ -391,7 +391,7 @@ function ProjectDiffView:setup_keymaps()
     local jump_fn, jump_cleanup = event.debounce_async(function()
       self:jump_to_file()
     end, self.DEBOUNCE_MS)
-    table.insert(self.debounce_cleanups, jump_cleanup)
+    table.insert(self._debounce_cleanups, jump_cleanup)
 
     self:_set_keymap_all_components('n', jump_key, jump_fn)
   end
@@ -422,7 +422,7 @@ function ProjectDiffView:setup_keymaps()
   local blame_fn, blame_cleanup = event.debounce_async(function()
     self:show_blame_view()
   end, self.DEBOUNCE_MS)
-  table.insert(self.debounce_cleanups, blame_cleanup)
+  table.insert(self._debounce_cleanups, blame_cleanup)
   self:_set_keymap_all_components('n', 'b', blame_fn)
 end
 
@@ -487,35 +487,35 @@ function ProjectDiffView:_build_split_patch_entries(patch_entries)
 end
 
 function ProjectDiffView:_create_unified_view(patch_entries, line_to_file_map)
-  self.patch_entries = patch_entries
-  self.line_to_file_map = line_to_file_map
+  self._patch_entries = patch_entries
+  self._line_to_file_map = line_to_file_map
 
-  self.patch_component = PatchPreviewComponent({
+  self._patch_component = PatchPreviewComponent({
     patch_entries = patch_entries,
     focus = true,
   })
 
-  self.component_manager = ComponentManager()
+  self._component_manager = ComponentManager()
   event.await()
-  self.component_manager:render(Layout.screen(self.patch_component, {
+  self._component_manager:render(Layout.screen(self._patch_component, {
     width = '100vw',
     height = '100vh',
   }))
 
   self:setup_keymaps()
 
-  if self.patch_component and self.patch_component:is_valid() then self.patch_component:focus() end
+  if self._patch_component and self._patch_component:is_valid() then self._patch_component:focus() end
 
   return true
 end
 
 function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map)
-  self.patch_entries = patch_entries
-  self.line_to_file_map = line_to_file_map
+  self._patch_entries = patch_entries
+  self._line_to_file_map = line_to_file_map
 
   local prev_entries, curr_entries = self:_build_split_patch_entries(patch_entries)
 
-  self.previous_component = PatchPreviewComponent({
+  self._previous_component = PatchPreviewComponent({
     patch_entries = prev_entries,
     focus = false,
     win_options = {
@@ -524,7 +524,7 @@ function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map)
     },
   })
 
-  self.current_component = PatchPreviewComponent({
+  self._current_component = PatchPreviewComponent({
     patch_entries = curr_entries,
     focus = true,
     win_options = {
@@ -535,21 +535,21 @@ function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map)
 
   local wrapper = LayoutComponent({
     spec = LayoutSpec.horizontal({
-      LayoutSpec.view(self.previous_component, { flex = 1 }),
-      LayoutSpec.view(self.current_component, { flex = 1 }),
+      LayoutSpec.view(self._previous_component, { flex = 1 }),
+      LayoutSpec.view(self._current_component, { flex = 1 }),
     }),
   })
 
-  self.component_manager = ComponentManager()
+  self._component_manager = ComponentManager()
   event.await()
-  self.component_manager:render(Layout.screen(wrapper, {
+  self._component_manager:render(Layout.screen(wrapper, {
     width = '100vw',
     height = '100vh',
   }))
 
   self:setup_keymaps()
 
-  if self.current_component and self.current_component:is_valid() then self.current_component:focus() end
+  if self._current_component and self._current_component:is_valid() then self._current_component:focus() end
 
   return true
 end
@@ -557,7 +557,7 @@ end
 function ProjectDiffView:_create_view(data)
   local layout_type = scene_setting:get('diff_preference') or self.LAYOUT_UNIFIED
 
-  self.layout_type = layout_type
+  self._layout_type = layout_type
 
   local repo, err = repository.current()
   if err then
@@ -565,7 +565,7 @@ function ProjectDiffView:_create_view(data)
     return false
   end
 
-  self.repo = repo
+  self._repo = repo
 
   local patch_entries, line_to_file_map = self:_build_patch_entries(repo, data)
 
@@ -583,18 +583,18 @@ function ProjectDiffView:_create_view(data)
 end
 
 function ProjectDiffView:emit_cleanup_events()
-  if self.patch_component then self.patch_component:component_will_unmount() end
-  if self.previous_component then self.previous_component:component_will_unmount() end
-  if self.current_component then self.current_component:component_will_unmount() end
+  if self._patch_component then self._patch_component:component_will_unmount() end
+  if self._previous_component then self._previous_component:component_will_unmount() end
+  if self._current_component then self._current_component:component_will_unmount() end
 end
 
 function ProjectDiffView:destroy()
-  for _, cleanup in ipairs(self.debounce_cleanups) do
+  for _, cleanup in ipairs(self._debounce_cleanups) do
     cleanup()
   end
-  self.debounce_cleanups = {}
+  self._debounce_cleanups = {}
   self:emit_cleanup_events()
-  if self.component_manager then self.component_manager:destroy() end
+  if self._component_manager then self._component_manager:destroy() end
 end
 
 return ProjectDiffView

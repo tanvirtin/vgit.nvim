@@ -85,7 +85,7 @@ function SearchComponent:_load_more_items()
     vim.schedule(function()
       self._loading = false
 
-      if not self.mounted then return end
+      if not self._mounted then return end
 
       if not new_items or #new_items == 0 then
         self._exhausted = true
@@ -255,7 +255,7 @@ function SearchComponent:component_will_mount()
 end
 
 function SearchComponent:mount()
-  if self.mounted then return end
+  if self._mounted then return end
 
   Component.mount(self)
 
@@ -277,12 +277,12 @@ end
 
 function SearchComponent:_setup_input_tracking()
   local prompt = self.props.prompt or '> '
-  local input_buffer = self._input_element.buffer
+  local input_buffer = self._input_element._buffer
 
   input_buffer:attach_to_changes({
     on_lines = function()
       vim.schedule(function()
-        if not self.mounted then return end
+        if not self._mounted then return end
         if not input_buffer:is_valid() then return end
 
         local lines = input_buffer:get_lines(0, 1)
@@ -292,7 +292,7 @@ function SearchComponent:_setup_input_tracking()
           line = prompt
           input_buffer:set_lines({ line }, 0, 1)
           local col = #prompt
-          pcall(vim.api.nvim_win_set_cursor, self._input_element.window.win_id, { 1, col })
+          pcall(vim.api.nvim_win_set_cursor, self._input_element._window.win_id, { 1, col })
           return
         end
 
@@ -358,7 +358,7 @@ function SearchComponent:_setup_close_autocmds()
   local wipeout_id = vim.api.nvim_create_autocmd('BufWipeout', {
     buffer = input_bufnr,
     callback = function()
-      if self.mounted then
+      if self._mounted then
         -- The input buffer is already being wiped, so clear the reference
         -- to prevent unmount() from trying to delete it again (E937).
         self._input_element = nil
@@ -375,7 +375,7 @@ function SearchComponent:_setup_close_autocmds()
     buffer = input_bufnr,
     callback = function()
       vim.defer_fn(function()
-        if not self.mounted then return end
+        if not self._mounted then return end
 
         local current_win = vim.api.nvim_get_current_win()
         if current_win ~= input_win_id and current_win ~= list_win_id then self:close() end
@@ -448,11 +448,11 @@ function SearchComponent:render()
 
   local list_height = math.min(max_height, math.max(1, #lines))
 
-  self._list_element.buffer:set_lines(lines)
+  self._list_element._buffer:set_lines(lines)
 
   for i = 1, #description_hls do
     local hl = description_hls[i]
-    self._list_element.buffer:place_extmark_highlight({
+    self._list_element._buffer:place_extmark_highlight({
       hl = 'GitComment',
       row = hl.row,
       col_range = {
@@ -464,7 +464,7 @@ function SearchComponent:render()
 
   for i = 1, #icon_hls do
     local hl = icon_hls[i]
-    self._list_element.buffer:place_extmark_highlight({
+    self._list_element._buffer:place_extmark_highlight({
       hl = hl.hl,
       row = hl.row,
       col_range = {
@@ -474,19 +474,19 @@ function SearchComponent:render()
     })
   end
 
-  if self._list_element.window and self._list_element.window:is_valid() then
-    self._list_element.window:set_height(list_height)
+  if self._list_element._window and self._list_element._window:is_valid() then
+    self._list_element._window:set_height(list_height)
 
     local selected = self.state.selected_index
     if selected >= 1 and selected <= visible_count then
-      pcall(vim.api.nvim_win_set_cursor, self._list_element.window.win_id, { selected, 0 })
+      pcall(vim.api.nvim_win_set_cursor, self._list_element._window.win_id, { selected, 0 })
     end
   end
 
   if #items == 0 then
     local placeholder = self.props.placeholder or 'Search...'
-    self._list_element.buffer:set_lines({ '' })
-    self._list_element.buffer:place_extmark_text({
+    self._list_element._buffer:set_lines({ '' })
+    self._list_element._buffer:place_extmark_text({
       text = padding .. placeholder,
       hl = 'GitComment',
       row = 0,
@@ -496,7 +496,7 @@ function SearchComponent:render()
 
   if self._input_element and self._input_element:is_valid() then
     local count_text = tostring(#(self.props.items or {}))
-    self._input_element.buffer:place_extmark_text({
+    self._input_element._buffer:place_extmark_text({
       text = count_text,
       hl = 'GitComment',
       row = 0,
@@ -507,7 +507,7 @@ function SearchComponent:render()
 end
 
 function SearchComponent:unmount()
-  if not self.mounted then return end
+  if not self._mounted then return end
 
   vim.cmd('stopinsert')
 

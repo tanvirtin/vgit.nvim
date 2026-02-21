@@ -167,8 +167,8 @@ describe('FileDiffView:', function()
       package.loaded['vgit.features.screens.FileDiffView'] = nil
       FileDiffView = require('vgit.features.screens.FileDiffView')
       view = FileDiffView()
-      view.diff_component = mock_diff
-      view.opts.filename = 'test.lua'
+      view._diff_component = mock_diff
+      view._opts.filename = 'test.lua'
     end
 
     before_each(function()
@@ -177,7 +177,7 @@ describe('FileDiffView:', function()
 
     describe('_reconcile', function()
       it('should return false when diff_component is nil', function()
-        view.diff_component = nil
+        view._diff_component = nil
         local result = view:_reconcile()
         assert.is_false(result)
       end)
@@ -269,7 +269,7 @@ describe('FileDiffView:', function()
           reconcile_opts = opts
           return true
         end
-        view.opts.is_staged = false
+        view._opts.is_staged = false
 
         view:toggle_view()
 
@@ -279,26 +279,26 @@ describe('FileDiffView:', function()
 
       it('should revert is_staged on failure', function()
         view._reconcile = function() return false end
-        view.opts.is_staged = false
+        view._opts.is_staged = false
 
         view:toggle_view()
 
-        assert.is_false(view.opts.is_staged)
+        assert.is_false(view._opts.is_staged)
       end)
 
       it('should keep is_staged flipped on success', function()
         view._reconcile = function() return true end
-        view.opts.is_staged = false
+        view._opts.is_staged = false
 
         view:toggle_view()
 
-        assert.is_true(view.opts.is_staged)
+        assert.is_true(view._opts.is_staged)
       end)
 
       it('should not call _reconcile when filename is nil', function()
         local reconcile_called = false
         view._reconcile = function() reconcile_called = true; return true end
-        view.opts.filename = nil
+        view._opts.filename = nil
 
         view:toggle_view()
 
@@ -324,9 +324,9 @@ describe('FileDiffView:', function()
         package.loaded['vgit.features.screens.FileDiffView'] = nil
         FileDiffView = require('vgit.features.screens.FileDiffView')
         view = FileDiffView()
-        view.diff_component = mock_diff
-        view.opts.filename = 'test.lua'
-        view.opts.is_staged = false
+        view._diff_component = mock_diff
+        view._opts.filename = 'test.lua'
+        view._opts.is_staged = false
         mock_repo.reset = function() reset_called = true end
         view._reconcile = function() reconcile_called = true; return true end
 
@@ -339,7 +339,7 @@ describe('FileDiffView:', function()
       it('should not call _reconcile when is_staged', function()
         local reconcile_called = false
         view._reconcile = function() reconcile_called = true; return true end
-        view.opts.is_staged = true
+        view._opts.is_staged = true
 
         view:reset_current()
 

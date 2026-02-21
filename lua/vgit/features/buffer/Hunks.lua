@@ -12,7 +12,7 @@ local Hunks = Object:extend()
 
 function Hunks:constructor()
   return {
-    name = 'Buffer Hunks',
+    _name = 'Buffer Hunks',
   }
 end
 

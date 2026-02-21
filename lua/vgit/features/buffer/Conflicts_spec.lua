@@ -46,7 +46,7 @@ describe('Conflicts:', function()
   describe('constructor', function()
     it('should create instance with name "Buffer Conflicts"', function()
       local conflicts = Conflicts()
-      eq('Buffer Conflicts', conflicts.name)
+      eq('Buffer Conflicts', conflicts._name)
     end)
   end)
 

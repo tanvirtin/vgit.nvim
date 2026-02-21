@@ -25,7 +25,7 @@ function ComponentManager:parse_layout_spec(layout_spec)
     if layout_spec.children then
       for i, child in ipairs(layout_spec.children) do
         if child.view and type(child.view.get_layout_spec) == 'function' then
-          if not child.view.mounted and type(child.view.mount) == 'function' then
+          if not child.view._mounted and type(child.view.mount) == 'function' then
             self.component_group:mount(child.view, self)
           end
           local child_layout_spec = child.view:get_layout_spec()
@@ -34,7 +34,7 @@ function ComponentManager:parse_layout_spec(layout_spec)
       end
     elseif layout_spec.child then
       if layout_spec.child.view and type(layout_spec.child.view.get_layout_spec) == 'function' then
-        if not layout_spec.child.view.mounted and type(layout_spec.child.view.mount) == 'function' then
+        if not layout_spec.child.view._mounted and type(layout_spec.child.view.mount) == 'function' then
           self.component_group:mount(layout_spec.child.view, self)
         end
         local child_layout_spec = layout_spec.child.view:get_layout_spec()

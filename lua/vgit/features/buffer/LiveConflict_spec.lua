@@ -11,7 +11,7 @@ describe('LiveConflict:', function()
     it('should set name to Conflict', function()
       local instance = LiveConflict()
 
-      eq('Conflict', instance.name)
+      eq('Conflict', instance._name)
     end)
 
     it('should initialize debounced conflicts function and cleanup', function()

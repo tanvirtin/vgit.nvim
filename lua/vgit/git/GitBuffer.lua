@@ -24,10 +24,10 @@ function GitBuffer:constructor(...)
     config = nil,
     conflicts = {},
   }
-  buffer.signs_dirty = false
-  buffer.blame_extmark = Extmark(bufnr, 'blame')
-  buffer.gutter_extmark = Extmark(bufnr, 'gutter')
-  buffer.conflict_extmark = Extmark(bufnr, 'conflict')
+  buffer._signs_dirty = false
+  buffer._blame_extmark = Extmark(bufnr, 'blame')
+  buffer._gutter_extmark = Extmark(bufnr, 'gutter')
+  buffer._conflict_extmark = Extmark(bufnr, 'conflict')
   buffer._gutter_sign_annotator = GutterSignAnnotator()
   buffer._conflict_annotator = ConflictAnnotator()
   buffer._blame_annotator = BlameAnnotator()
@@ -38,9 +38,9 @@ end
 function GitBuffer:create(...)
   Buffer.create(self, ...)
 
-  self.blame_extmark = Extmark(self.bufnr, 'blame')
-  self.gutter_extmark = Extmark(self.bufnr, 'gutter')
-  self.conflict_extmark = Extmark(self.bufnr, 'conflict')
+  self._blame_extmark = Extmark(self.bufnr, 'blame')
+  self._gutter_extmark = Extmark(self.bufnr, 'gutter')
+  self._conflict_extmark = Extmark(self.bufnr, 'conflict')
   self._gutter_sign_annotator = GutterSignAnnotator()
   self._conflict_annotator = ConflictAnnotator()
   self._blame_annotator = BlameAnnotator()
@@ -56,15 +56,15 @@ function GitBuffer:sync()
     config = nil,
     conflicts = {},
   }
-  self.signs_dirty = false
-  self.git_file = GitFile(self:get_name())
+  self._signs_dirty = false
+  self._git_file = GitFile(self:get_name())
 
   return self
 end
 
 function GitBuffer:reset_signs()
   self.state.signs = {}
-  self.signs_dirty = true
+  self._signs_dirty = true
   return self
 end
 
@@ -72,7 +72,7 @@ function GitBuffer:clear_conflicts(top, bot)
   top = top or 0
   bot = bot or -1
 
-  self.conflict_extmark:clear(top, bot)
+  self._conflict_extmark:clear(top, bot)
   return self
 end
 
@@ -80,7 +80,7 @@ function GitBuffer:clear_blames(top, bot)
   top = top or 0
   bot = bot or -1
 
-  self.blame_extmark:clear(top, bot)
+  self._blame_extmark:clear(top, bot)
   return self
 end
 
@@ -88,7 +88,7 @@ function GitBuffer:clear_signs(top, bot)
   top = top or 0
   bot = bot or -1
 
-  self.gutter_extmark:clear(top, bot)
+  self._gutter_extmark:clear(top, bot)
   return self
 end
 
@@ -106,17 +106,17 @@ end
 
 function GitBuffer:config()
   if self.state.config then return self.state.config end
-  local config, err = self.git_file:config()
+  local config, err = self._git_file:config()
   if config then self:set_state({ config = config }) end
   return config, err
 end
 
 function GitBuffer:is_ignored()
-  return self.git_file:is_ignored()
+  return self._git_file:is_ignored()
 end
 
 function GitBuffer:is_tracked()
-  return self.git_file:is_tracked()
+  return self._git_file:is_tracked()
 end
 
 function GitBuffer:is_inside_git_dir()
@@ -124,40 +124,40 @@ function GitBuffer:is_inside_git_dir()
 end
 
 function GitBuffer:generate_status()
-  self:set_var('vgit_status', self.git_file:generate_status())
+  self:set_var('vgit_status', self._git_file:generate_status())
   return self
 end
 
 function GitBuffer:stage_hunk(hunk)
-  local _, err = self.git_file:stage_hunk(hunk)
+  local _, err = self._git_file:stage_hunk(hunk)
   if err then return _, err end
 
   return self:diff()
 end
 
 function GitBuffer:unstage_hunk(hunk)
-  local _, err = self.git_file:unstage_hunk(hunk)
+  local _, err = self._git_file:unstage_hunk(hunk)
   if err then return _, err end
 
   return self:diff()
 end
 
 function GitBuffer:stage()
-  local _, err = self.git_file:stage()
+  local _, err = self._git_file:stage()
   if err then return _, err end
 
   return self:diff()
 end
 
 function GitBuffer:unstage()
-  local _, err = self.git_file:unstage()
+  local _, err = self._git_file:unstage()
   if err then return _, err end
 
   return self:diff()
 end
 
 function GitBuffer:get_hunks()
-  return self.git_file:get_hunks()
+  return self._git_file:get_hunks()
 end
 
 function GitBuffer:get_conflicts()
@@ -188,30 +188,30 @@ function GitBuffer:get_conflict_marks()
 end
 
 function GitBuffer:blame(lnum)
-  local blame, err = self.git_file:blame(lnum)
+  local blame, err = self._git_file:blame(lnum)
   if blame then self:set_state({ blames = { [lnum] = blame } }) end
   return blame, err
 end
 
 function GitBuffer:blames()
-  return self.git_file:blames()
+  return self._git_file:blames()
 end
 
 function GitBuffer:conflicts()
   local state = self.state
-  if not self.git_file:has_conflict() then
+  if not self._git_file:has_conflict() then
     state.conflicts = {}
     return state.conflicts
   end
   local lines = self:get_lines()
-  local conflicts = self.git_file:conflicts(lines)
+  local conflicts = self._git_file:conflicts(lines)
   self:set_state({ conflicts = conflicts })
   return conflicts
 end
 
 function GitBuffer:diff()
   local lines = self:get_lines()
-  local hunks, err = self.git_file:live_hunks(lines)
+  local hunks, err = self._git_file:live_hunks(lines)
   if err then return nil, err end
   if not hunks then return nil end
 
@@ -219,7 +219,7 @@ function GitBuffer:diff()
   local signs = self._gutter_sign_annotator:annotate(hunks, sign_types)
 
   self:set_state({ signs = signs })
-  self.signs_dirty = true
+  self._signs_dirty = true
 
   return hunks
 end
@@ -268,7 +268,7 @@ function GitBuffer:render_conflict_help_text(conflict)
   end
 
   if help_text ~= '' then
-    self.conflict_extmark:text({
+    self._conflict_extmark:text({
       text = help_text,
       hl = 'GitComment',
       row = current.top - 2,
@@ -282,10 +282,10 @@ end
 function GitBuffer:render_conflict(conflict)
   local annotation = self._conflict_annotator:annotate(conflict)
   for _, sign in ipairs(annotation.signs) do
-    self.conflict_extmark:sign(sign)
+    self._conflict_extmark:sign(sign)
   end
   for _, text in ipairs(annotation.texts) do
-    self.conflict_extmark:text(text)
+    self._conflict_extmark:text(text)
   end
 
   return self
@@ -308,8 +308,8 @@ function GitBuffer:render_conflicts(top, bot)
 end
 
 function GitBuffer:render_signs(top, bot)
-  if not self.signs_dirty then return self end
-  self.signs_dirty = false
+  if not self._signs_dirty then return self end
+  self._signs_dirty = false
 
   top = top or 0
   bot = bot or -1
@@ -318,7 +318,7 @@ function GitBuffer:render_signs(top, bot)
   local signs = self.state.signs or {}
   for _, sign in ipairs(signs) do
     local col = sign.col
-    if col >= top and (bot == -1 or col <= bot) then self.gutter_extmark:sign(sign) end
+    if col >= top and (bot == -1 or col <= bot) then self._gutter_extmark:sign(sign) end
   end
 
   return self
@@ -336,7 +336,7 @@ function GitBuffer:render_blames(top, bot)
     if blame and lnum >= top and (bot == -1 or lnum <= bot) then
       local annotation = self._blame_annotator:annotate(blame, lnum, self.state.config, format_fn)
       if annotation then
-        self.blame_extmark:text(annotation)
+        self._blame_extmark:text(annotation)
       end
     end
   end

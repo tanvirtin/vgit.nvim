@@ -165,7 +165,7 @@ end
 
 function DiffComponent:set_lines(lines)
   self:set_state({ lines = lines })
-  if self.mounted then self:render() end
+  if self._mounted then self:render() end
   return self
 end
 
@@ -494,7 +494,7 @@ function DiffComponent:ensure_window_options()
 end
 
 function DiffComponent:unmount()
-  if not self.mounted then return end
+  if not self._mounted then return end
 
   self._element:unmount()
   self._element = nil

@@ -437,7 +437,7 @@ end
 function TreeComponent:paint()
   if not self._element then return end
 
-  local buffer = self._element.buffer
+  local buffer = self._element._buffer
 
   local virtual_texts = self.state.virtual_texts
   for i = 1, #virtual_texts do
@@ -483,7 +483,7 @@ end
 
 function TreeComponent:render()
   self:with_element(function(el)
-    local buffer = el.buffer
+    local buffer = el._buffer
     self._rendering = true
     buffer:clear_extmarks()
     buffer:set_lines(self:generate_lines())
@@ -605,7 +605,7 @@ function TreeComponent:destroy()
 end
 
 function TreeComponent:unmount()
-  if not self.mounted then return end
+  if not self._mounted then return end
 
   self._element:unmount()
   self._element = nil

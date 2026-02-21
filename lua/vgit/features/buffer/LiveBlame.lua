@@ -32,7 +32,7 @@ function LiveBlame:constructor()
   end, live_blame_setting:get('debounce_ms'))
 
   return {
-    name = 'Live Blame',
+    _name = 'Live Blame',
     _debounced_blame = debounced_blame,
     _debounced_blame_cleanup = debounced_blame_cleanup,
   }

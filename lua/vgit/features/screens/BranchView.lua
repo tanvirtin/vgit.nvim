@@ -8,8 +8,8 @@ local BranchView = Object:extend()
 
 function BranchView:constructor()
   return {
-    search_component = nil,
-    destroyed = false,
+    _search_component = nil,
+    _destroyed = false,
   }
 end
 
@@ -38,7 +38,7 @@ function BranchView:create(data)
 
   local items = self:_build_items(data.branches, data.current_branch)
 
-  self.search_component = SearchComponent({
+  self._search_component = SearchComponent({
     items = items,
     width = '40vw',
     max_height = 10,
@@ -51,12 +51,12 @@ function BranchView:create(data)
       self:_on_no_match(query)
     end,
     on_close = function()
-      self.destroyed = true
-      self.search_component = nil
+      self._destroyed = true
+      self._search_component = nil
     end,
   })
 
-  self.search_component:mount()
+  self._search_component:mount()
 
   return true
 end
@@ -112,13 +112,13 @@ function BranchView:_on_no_match(query)
 end
 
 function BranchView:destroy()
-  if self.destroyed then return end
+  if self._destroyed then return end
 
-  self.destroyed = true
+  self._destroyed = true
 
-  if self.search_component then
-    self.search_component:close()
-    self.search_component = nil
+  if self._search_component then
+    self._search_component:close()
+    self._search_component = nil
   end
 end
 

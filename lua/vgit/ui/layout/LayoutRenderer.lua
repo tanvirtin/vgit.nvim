@@ -44,9 +44,9 @@ function LayoutRenderer:render_view_layout(layout)
     end
   end
 
-  if not view.config then view.config = {} end
+  if not view._config then view._config = {} end
 
-  view.config.window_mode = self.context.mode
+  view._config.window_mode = self.context.mode
 
   if self.context:is_lens_mode() then
     local win_plot = bounds:to_win_plot({
@@ -55,16 +55,16 @@ function LayoutRenderer:render_view_layout(layout)
       focus = spec.focus or false,
     })
 
-    if view.plot and type(view.plot) == 'table' then
-      if view.plot.win_plot then
-        local component_focusable = view.plot.win_plot.focusable
-        view.plot.win_plot = utils.object.assign(view.plot.win_plot, win_plot)
-        if component_focusable ~= nil then view.plot.win_plot.focusable = component_focusable end
+    if view._plot and type(view._plot) == 'table' then
+      if view._plot.win_plot then
+        local component_focusable = view._plot.win_plot.focusable
+        view._plot.win_plot = utils.object.assign(view._plot.win_plot, win_plot)
+        if component_focusable ~= nil then view._plot.win_plot.focusable = component_focusable end
 
-        view.plot.is_built = false
-        if type(view.plot.build) == 'function' then view.plot:build() end
+        view._plot.is_built = false
+        if type(view._plot.build) == 'function' then view._plot:build() end
       else
-        view.plot.win_plot = win_plot
+        view._plot.win_plot = win_plot
       end
     end
   else
@@ -74,16 +74,16 @@ function LayoutRenderer:render_view_layout(layout)
       focus = spec.focus or false,
     })
 
-    if view.plot and type(view.plot) == 'table' then
-      if view.plot.win_plot then
-        local component_focusable = view.plot.win_plot.focusable
-        view.plot.win_plot = utils.object.assign(view.plot.win_plot, win_plot)
-        if component_focusable ~= nil then view.plot.win_plot.focusable = component_focusable end
+    if view._plot and type(view._plot) == 'table' then
+      if view._plot.win_plot then
+        local component_focusable = view._plot.win_plot.focusable
+        view._plot.win_plot = utils.object.assign(view._plot.win_plot, win_plot)
+        if component_focusable ~= nil then view._plot.win_plot.focusable = component_focusable end
 
-        view.plot.is_built = false
-        if type(view.plot.build) == 'function' then view.plot:build() end
+        view._plot.is_built = false
+        if type(view._plot.build) == 'function' then view._plot:build() end
       else
-        view.plot.win_plot = win_plot
+        view._plot.win_plot = win_plot
       end
     end
   end

@@ -1,51 +1,59 @@
+local ui_helper = require('tests.helpers.ui')
 local eq = assert.are.same
 
--- Create a minimal DiffComponent with mocked _element for testing
--- pure logic methods without requiring Neovim UI
 local function create_diff_component(overrides)
   local DiffComponent = require('vgit.ui.components.DiffComponent')
+  local ComponentManager = require('vgit.ui.ComponentManager')
+  overrides = overrides or {}
 
-  local current_lnum = overrides.lnum or 1
-  local instance = {
-    props = overrides.props or {},
-    state = overrides.state or {
-      lines = {},
-      line_numbers = {},
-      lines_changes = {},
-      folds = {},
-      marks = {},
-      hunks = {},
-    },
-    mounted = false,
-    _needs_update = false,
-    _viewport_dirty = true,
-    _last_top = nil,
-    _last_bot = nil,
-    _renderer_attached = false,
-    _element = {
-      is_valid = function() return true end,
-      get_lnum = function() return current_lnum end,
-      set_lnum = function(_, lnum)
-        current_lnum = lnum
-      end,
-      position_cursor = function() end,
-    },
-    _line_number_calculator = require('vgit.ui.calculators.LineNumberCalculator')(),
-    _diff_calculator = require('vgit.ui.calculators.DiffCalculator')(),
-    _fold_calculator = require('vgit.ui.calculators.FoldCalculator')(),
-  }
+  local component = DiffComponent(overrides.props or {})
+  ComponentManager():render({ component = component, mode = 'popup', width = 80, height = 40 })
 
-  setmetatable(instance, DiffComponent)
-  return instance
+  -- Apply state overrides
+  for k, v in pairs(overrides.state or {}) do
+    component.state[k] = v
+  end
+
+  -- Compute how many buffer lines are needed
+  local max_line = 50
+  if overrides.lnum and overrides.lnum > max_line then max_line = overrides.lnum + 5 end
+  if overrides.state then
+    if overrides.state.marks then
+      for _, mark in ipairs(overrides.state.marks) do
+        if mark.bot and mark.bot > max_line then max_line = mark.bot + 5 end
+      end
+    end
+    if overrides.state.line_numbers then
+      local n = #overrides.state.line_numbers
+      if n > max_line then max_line = n end
+    end
+  end
+
+  -- Populate buffer so cursor movement and extmarks work
+  local dummy = {}
+  for i = 1, max_line do dummy[i] = '' end
+  component._element:set_lines(dummy)
+
+  -- Set initial cursor position
+  if overrides.lnum then component:set_lnum(overrides.lnum) end
+
+  -- Reset viewport state for a clean test baseline
+  component._viewport_dirty = true
+  component._last_top = nil
+  component._last_bot = nil
+
+  return component
 end
 
 describe('DiffComponent:', function()
+  after_each(ui_helper.cleanup_ui)
+
   describe('should_component_update', function()
+    -- Pure logic: only needs self.props — no real UI required
     it('should return true when diff changes', function()
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
       local diff_ref = { lines = {} }
-      local component = create_diff_component({
-        props = { diff = diff_ref, filetype = 'lua' },
-      })
+      local component = DiffComponent({ diff = diff_ref, filetype = 'lua' })
 
       local result = component:should_component_update({
         diff = { lines = {} },
@@ -55,10 +63,9 @@ describe('DiffComponent:', function()
     end)
 
     it('should return true when filetype changes', function()
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
       local diff_ref = { lines = {} }
-      local component = create_diff_component({
-        props = { diff = diff_ref, filetype = 'lua' },
-      })
+      local component = DiffComponent({ diff = diff_ref, filetype = 'lua' })
 
       local result = component:should_component_update({
         diff = diff_ref,
@@ -68,10 +75,9 @@ describe('DiffComponent:', function()
     end)
 
     it('should return false when nothing changes', function()
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
       local diff_ref = { lines = {} }
-      local component = create_diff_component({
-        props = { diff = diff_ref, filetype = 'lua' },
-      })
+      local component = DiffComponent({ diff = diff_ref, filetype = 'lua' })
 
       local result = component:should_component_update({
         diff = diff_ref,
@@ -554,15 +560,9 @@ describe('DiffComponent:', function()
   describe('get_initial_state', function()
     it('should return expected default state', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local instance = {
-        props = {},
-        state = {},
-        mounted = false,
-        _needs_update = false,
-      }
-      setmetatable(instance, DiffComponent)
+      local component = DiffComponent({})
 
-      local state = instance:get_initial_state()
+      local state = component:get_initial_state()
 
       eq({}, state.lines)
       eq({}, state.line_numbers)
@@ -629,8 +629,10 @@ describe('DiffComponent:', function()
           hunks = {},
         },
       })
-      component._element.place_extmark_lnum = function(_, opts)
+      local orig = component._element.place_extmark_lnum
+      component._element.place_extmark_lnum = function(self_el, opts)
         lnum_calls[#lnum_calls + 1] = opts
+        return orig(self_el, opts)
       end
 
       -- Render only lines 2-4 (viewport)
@@ -655,8 +657,10 @@ describe('DiffComponent:', function()
           hunks = {},
         },
       })
-      component._element.place_extmark_lnum = function(_, opts)
+      local orig = component._element.place_extmark_lnum
+      component._element.place_extmark_lnum = function(self_el, opts)
         lnum_calls[#lnum_calls + 1] = opts
+        return orig(self_el, opts)
       end
 
       component:render_diff(1, 5)
@@ -679,8 +683,10 @@ describe('DiffComponent:', function()
           hunks = {},
         },
       })
-      component._element.place_extmark_lnum = function(_, opts)
+      local orig = component._element.place_extmark_lnum
+      component._element.place_extmark_lnum = function(self_el, opts)
         lnum_calls[#lnum_calls + 1] = opts
+        return orig(self_el, opts)
       end
 
       -- Request range beyond line_numbers length
@@ -707,8 +713,10 @@ describe('DiffComponent:', function()
           hunks = {},
         },
       })
-      component._element.place_extmark_lnum = function(_, opts)
+      local orig = component._element.place_extmark_lnum
+      component._element.place_extmark_lnum = function(self_el, opts)
         lnum_calls[#lnum_calls + 1] = opts
+        return orig(self_el, opts)
       end
 
       -- First call should render
@@ -739,8 +747,10 @@ describe('DiffComponent:', function()
           hunks = {},
         },
       })
-      component._element.place_extmark_lnum = function(_, opts)
+      local orig = component._element.place_extmark_lnum
+      component._element.place_extmark_lnum = function(self_el, opts)
         lnum_calls[#lnum_calls + 1] = opts
+        return orig(self_el, opts)
       end
 
       component:render_diff(1, 3)
@@ -767,8 +777,10 @@ describe('DiffComponent:', function()
           hunks = {},
         },
       })
-      component._element.place_extmark_lnum = function(_, opts)
+      local orig = component._element.place_extmark_lnum
+      component._element.place_extmark_lnum = function(self_el, opts)
         lnum_calls[#lnum_calls + 1] = opts
+        return orig(self_el, opts)
       end
 
       component:render_diff(1, 2)
@@ -783,10 +795,9 @@ describe('DiffComponent:', function()
 
   describe('should_component_update edge cases', function()
     it('should return false when both diff and filetype are same reference', function()
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
       local diff_ref = { lines = { 'a', 'b' } }
-      local component = create_diff_component({
-        props = { diff = diff_ref, filetype = 'lua' },
-      })
+      local component = DiffComponent({ diff = diff_ref, filetype = 'lua' })
 
       local result = component:should_component_update({
         diff = diff_ref,
@@ -796,11 +807,10 @@ describe('DiffComponent:', function()
     end)
 
     it('should return true when only diff reference changes', function()
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
       local diff1 = { lines = {} }
       local diff2 = { lines = {} }
-      local component = create_diff_component({
-        props = { diff = diff1, filetype = 'lua' },
-      })
+      local component = DiffComponent({ diff = diff1, filetype = 'lua' })
 
       local result = component:should_component_update({
         diff = diff2,
@@ -818,28 +828,27 @@ describe('DiffComponent:', function()
   end)
 
   describe('get_cursor', function()
-    it('should return default cursor when element has no get_cursor', function()
+    it('should return default cursor when element is nil', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local instance = {
-        props = {},
-        state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
-        mounted = false,
-        _needs_update = false,
-        _element = nil,
-      }
-      setmetatable(instance, DiffComponent)
+      local component = DiffComponent({})
 
-      eq({ 1, 1 }, instance:get_cursor())
+      eq({ 1, 1 }, component:get_cursor())
+    end)
+
+    it('should return real cursor when element is valid', function()
+      local component = create_diff_component({ lnum = 5 })
+
+      local cursor = component:get_cursor()
+      eq(5, cursor[1])
     end)
   end)
 
   describe('forward', function()
     it('should delegate place_extmark_text to element when valid', function()
       local called_with = nil
-      local component = create_diff_component({
-        lnum = 1,
-      })
-      component._element.place_extmark_text = function(_, opts)
+      local component = create_diff_component({ lnum = 1 })
+      local orig = component._element.place_extmark_text
+      component._element.place_extmark_text = function(self_el, opts)
         called_with = opts
         return 42
       end
@@ -851,16 +860,9 @@ describe('DiffComponent:', function()
 
     it('should return nil for place_extmark_text when element is nil', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local instance = {
-        props = {},
-        state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
-        mounted = false,
-        _needs_update = false,
-        _element = nil,
-      }
-      setmetatable(instance, DiffComponent)
+      local component = DiffComponent({})
 
-      local result = instance:place_extmark_text({ row = 0 })
+      local result = component:place_extmark_text({ row = 0 })
       assert.is_nil(result)
     end)
 
@@ -869,7 +871,7 @@ describe('DiffComponent:', function()
       local instance = {
         props = {},
         state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
-        mounted = false,
+        _mounted = false,
         _needs_update = false,
         _element = { is_valid = function() return false end },
       }
@@ -892,82 +894,66 @@ describe('DiffComponent:', function()
   end)
 
   describe('with_element', function()
-    it('should return default for get_lines when element is nil', function()
+    it('should return state lines when element is nil', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local instance = {
-        props = {},
-        state = { lines = { 'a', 'b' }, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
-        mounted = false,
-        _needs_update = false,
-        _element = nil,
-      }
-      setmetatable(instance, DiffComponent)
+      local component = DiffComponent({})
+      component.state.lines = { 'a', 'b' }
 
-      eq({ 'a', 'b' }, instance:get_lines())
+      eq({ 'a', 'b' }, component:get_lines())
     end)
 
-    it('should return default for get_line_count when element is nil', function()
+    it('should return 0 for get_line_count when element is nil', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local instance = {
-        props = {},
-        state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
-        mounted = false,
-        _needs_update = false,
-        _element = nil,
-      }
-      setmetatable(instance, DiffComponent)
+      local component = DiffComponent({})
 
-      eq(0, instance:get_line_count())
+      eq(0, component:get_line_count())
     end)
 
-    it('should return default for get_filetype when element is nil', function()
+    it('should return empty string for get_filetype when element is nil', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local instance = {
-        props = {},
-        state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
-        mounted = false,
-        _needs_update = false,
-        _element = nil,
-      }
-      setmetatable(instance, DiffComponent)
+      local component = DiffComponent({})
 
-      eq('', instance:get_filetype())
+      eq('', component:get_filetype())
     end)
 
     it('should return self for chaining on void methods when element is nil', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local instance = {
-        props = {},
-        state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
-        mounted = false,
-        _needs_update = false,
-        _element = nil,
-      }
-      setmetatable(instance, DiffComponent)
+      local component = DiffComponent({})
 
-      eq(instance, instance:set_cursor({ 1, 0 }))
-      eq(instance, instance:enable_cursorline())
-      eq(instance, instance:disable_cursorline())
-      eq(instance, instance:clear_extmarks())
+      eq(component, component:set_cursor({ 1, 0 }))
+      eq(component, component:enable_cursorline())
+      eq(component, component:disable_cursorline())
+      eq(component, component:clear_extmarks())
     end)
 
     it('should return false for is_valid when element is nil', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local instance = {
-        props = {},
-        state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
-        mounted = false,
-        _needs_update = false,
-        _element = nil,
-      }
-      setmetatable(instance, DiffComponent)
+      local component = DiffComponent({})
 
-      assert.is_false(instance:is_valid())
+      assert.is_false(component:is_valid())
     end)
 
     it('should return true for is_valid when element is valid', function()
       local component = create_diff_component({})
       assert.is_truthy(component:is_valid())
+    end)
+
+    it('should return real buffer lines when element is valid', function()
+      local component = create_diff_component({})
+      -- Buffer was populated with 50 empty lines by create_diff_component
+      local lines = component:get_lines()
+      eq(50, #lines)
+    end)
+
+    it('should return real line count when element is valid', function()
+      local component = create_diff_component({})
+      eq(50, component:get_line_count())
+    end)
+
+    it('should return filetype from buffer when element is valid', function()
+      local component = create_diff_component({})
+      -- DiffComponent sets filetype='diff' by default in component_will_mount
+      eq('diff', component:get_filetype())
     end)
   end)
 

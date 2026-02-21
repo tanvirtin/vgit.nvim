@@ -16,7 +16,7 @@ function Component:constructor(props)
   return {
     props = props or {},
     state = self:get_initial_state() or {},
-    mounted = false,
+    _mounted = false,
     _needs_update = false,
   }
 end
@@ -51,7 +51,7 @@ function Component:set_props(updates, callback)
   self.props = next_props
   self._needs_update = true
 
-  if self.mounted and self._needs_update then
+  if self._mounted and self._needs_update then
     self:update(prev_state)
     self._needs_update = false
   end
@@ -71,7 +71,7 @@ function Component:set_state(updates, callback)
   self.state = next_state
   self._needs_update = true
 
-  if self.mounted and self._needs_update then
+  if self._mounted and self._needs_update then
     self:update(prev_state)
     self._needs_update = false
   end
@@ -80,7 +80,7 @@ function Component:set_state(updates, callback)
 end
 
 function Component:update(prev_state)
-  if not self.mounted or not self._needs_update then return end
+  if not self._mounted or not self._needs_update then return end
 
   self:component_will_update(self.state)
 
@@ -95,24 +95,24 @@ function Component:render()
 end
 
 function Component:mount()
-  if self.mounted then return end
+  if self._mounted then return end
 
   self:component_will_mount()
 
-  self.mounted = true
+  self._mounted = true
 end
 
 function Component:unmount()
-  if not self.mounted then return end
+  if not self._mounted then return end
 
   self:component_will_unmount()
 
-  self.mounted = false
+  self._mounted = false
   self._needs_update = false
 end
 
 function Component:is_mounted()
-  return self.mounted
+  return self._mounted
 end
 
 function Component:with_element(fn)

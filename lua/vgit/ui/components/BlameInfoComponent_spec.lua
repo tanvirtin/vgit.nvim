@@ -1,11 +1,22 @@
+local ui_helper = require('tests.helpers.ui')
 local eq = assert.are.same
 
 describe('BlameInfoComponent:', function()
   local BlameInfoComponent
+  local ComponentManager
 
   before_each(function()
     BlameInfoComponent = require('vgit.ui.components.BlameInfoComponent')
+    ComponentManager = require('vgit.ui.ComponentManager')
   end)
+
+  after_each(ui_helper.cleanup_ui)
+
+  local function mount_component(props)
+    local component = BlameInfoComponent(props or {})
+    ComponentManager():render({ component = component, mode = 'popup', width = 40, height = 20 })
+    return component
+  end
 
   describe('constructor', function()
     it('should create via Component.constructor', function()
@@ -33,44 +44,30 @@ describe('BlameInfoComponent:', function()
 
   describe('get_layout_spec', function()
     it('should return a view spec with height 3', function()
-      local mock_element = { type = 'element' }
-      local instance = {
-        props = {},
-        state = { blame = nil },
-        mounted = false,
-        _needs_update = false,
-        _element = mock_element,
-      }
-      setmetatable(instance, BlameInfoComponent)
+      local instance = mount_component()
 
       local spec = instance:get_layout_spec()
 
       assert.is_not_nil(spec)
       eq('view', spec.type)
       eq(3, spec.height)
-      eq(mock_element, spec.view)
+      eq(instance._element, spec.view)
     end)
   end)
 
   describe('component_will_mount', function()
-    it('should create an element', function()
-      local instance = BlameInfoComponent({})
-      instance:component_will_mount()
+    it('should create a valid Neovim window', function()
+      local instance = mount_component()
 
       assert.is_not_nil(instance._element)
+      assert.is_truthy(instance._element:is_valid())
     end)
   end)
 
   describe('component_did_mount', function()
     it('should call render', function()
       local render_called = false
-      local instance = {
-        props = {},
-        state = { blame = nil },
-        mounted = false,
-        _needs_update = false,
-      }
-      setmetatable(instance, BlameInfoComponent)
+      local instance = mount_component()
 
       instance.render = function() render_called = true end
       instance:component_did_mount()
