@@ -109,6 +109,35 @@ describe('statusline_state:', function()
       eq(nil, vim.g.vgit_changed)
       eq(nil, vim.g.vgit_branch)
     end)
+
+    it('should close timer when reset is called after set_hunk', function()
+      local close_called = false
+      local mock_timer = setmetatable({}, {
+        __index = function(_, k)
+          if k == 'start' then return function() end end
+          if k == 'stop' then return function() end end
+          if k == 'is_closing' then return function() return false end end
+          if k == 'close' then
+            return function()
+              close_called = true
+            end
+          end
+        end
+      })
+
+      local original_new_timer = vim.uv.new_timer
+      vim.uv.new_timer = function()
+        return mock_timer
+      end
+
+      local statusline_state_fresh = require('vgit.core.statusline_state')
+      statusline_state_fresh.set_hunk(1, 5)
+      statusline_state_fresh.reset()
+
+      vim.uv.new_timer = original_new_timer
+
+      assert.is_true(close_called)
+    end)
   end)
 
   describe('get_hunk edge cases', function()

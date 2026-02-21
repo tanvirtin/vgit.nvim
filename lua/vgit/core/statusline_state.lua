@@ -61,6 +61,11 @@ function statusline_state.set_branch(name)
 end
 
 function statusline_state.reset()
+  if hunk_timer then
+    hunk_timer:stop()
+    hunk_timer:close()
+    hunk_timer = nil
+  end
   state.hunk_index = nil
   state.hunk_count = nil
   state.diff_stats = nil
