@@ -14,7 +14,6 @@ local hunks_setting = lazy('vgit.settings.hunks')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
-local view_utils = lazy('vgit.features.screens.view_utils')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local file_diff_view_setting = lazy('vgit.settings.file_diff_view')
 local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
@@ -78,7 +77,20 @@ function FileDiffView:hunk_down()
 end
 
 function FileDiffView:_handle_git_error(err, operation_name)
-  return view_utils.handle_git_error(err, operation_name, 'FileDiffView')
+  if err then
+    console.debug.error(string.format('[FileDiffView] %s failed: %s', operation_name, err))
+    return false
+  end
+  return true
+end
+
+function FileDiffView:get_key(keymap)
+  if type(keymap) == 'string' then
+    return keymap
+  elseif type(keymap) == 'table' then
+    return keymap.key
+  end
+  return nil
 end
 
 function FileDiffView:_refresh_diff_data()
@@ -368,9 +380,7 @@ function FileDiffView:show_blame_view()
   end
 
   local lines, lines_err = git_show.lines(repo_path, filename, 'HEAD')
-  if lines_err or not lines then
-    lines = {}
-  end
+  if lines_err or not lines then lines = {} end
 
   display_service.show_blame_view({
     filename = filename,
@@ -379,10 +389,6 @@ function FileDiffView:show_blame_view()
     blames = blames,
     lines = lines,
   })
-end
-
-function FileDiffView:get_key(keymap)
-  return view_utils.get_key(keymap)
 end
 
 function FileDiffView:setup_keymaps()
