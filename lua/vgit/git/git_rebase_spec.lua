@@ -112,15 +112,10 @@ describe('git_rebase:', function()
       })
       assert.is_nil(err, 'Failed to create feature commit')
 
-      -- Use a no-op editor so interactive rebase doesn't hang waiting for user input
-      local old_editor = vim.env.GIT_SEQUENCE_EDITOR
-      vim.env.GIT_SEQUENCE_EDITOR = 'true'
-
       local result, rebase_err = git_rebase.rebase(repo:get_path(), base_commit, {
         interactive = true,
+        env = { 'GIT_SEQUENCE_EDITOR=true' },
       })
-
-      vim.env.GIT_SEQUENCE_EDITOR = old_editor
 
       -- With 'true' as editor, the rebase should succeed (accepts default todo)
       assert.is_nil(rebase_err, 'Interactive rebase should succeed with no-op editor: ' .. vim.inspect(rebase_err))

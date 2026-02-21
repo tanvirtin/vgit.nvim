@@ -30,10 +30,15 @@ local _run = event.promisify(function(args, opts, callback)
   local err = {}
   local stdout = {}
 
+  local env = _env
+  if opts.env then
+    env = vim.list_extend(vim.list_extend({}, _env), opts.env)
+  end
+
   Spawn({
     command = cmd,
     args = effective_args,
-    env = _env,
+    env = env,
     on_stderr = function(line)
       err[#err + 1] = line
     end,
