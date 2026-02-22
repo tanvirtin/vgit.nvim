@@ -231,6 +231,7 @@ function Diff:generate_split_conflict(conflicts, lines)
         type = 'void',
       }
     end
+    current_lines[incoming.bot] = ''
     lnum_changes[#lnum_changes + 1] = {
       lnum = incoming.bot,
       buftype = 'current',

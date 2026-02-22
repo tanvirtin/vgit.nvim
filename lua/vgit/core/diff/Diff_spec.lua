@@ -152,6 +152,20 @@ describe('Diff:', function()
       assert.is_not_nil(result.marks[1].top_relative)
       assert.is_not_nil(result.marks[1].bot_relative)
     end)
+
+    it('should insert removed line content with the dash prefix stripped', function()
+      local hunk = make_hunk('@@ -3,2 +3,0 @@', { '-removed1', '-removed2' })
+      local diff = Diff()
+      local lines = { 'a', 'b', 'c', 'd' }
+      local result = diff:generate_unified({ hunk }, lines)
+
+      local found = {}
+      for _, line in ipairs(result.lines) do found[line] = true end
+      assert.is_true(found['removed1'])
+      assert.is_true(found['removed2'])
+      assert.is_nil(found['-removed1'])
+      assert.is_nil(found['-removed2'])
+    end)
   end)
 
   describe('generate_split', function()
@@ -177,9 +191,7 @@ describe('Diff:', function()
       -- Previous lines should have void (empty string) where adds are
       local void_count = 0
       for _, lc in ipairs(result.lnum_changes) do
-        if lc.type == 'void' and lc.buftype == 'previous' then
-          void_count = void_count + 1
-        end
+        if lc.type == 'void' and lc.buftype == 'previous' then void_count = void_count + 1 end
       end
       assert.are.equal(2, void_count)
     end)
@@ -197,9 +209,7 @@ describe('Diff:', function()
       -- Current lines should have void where removes are
       local void_count = 0
       for _, lc in ipairs(result.lnum_changes) do
-        if lc.type == 'void' and lc.buftype == 'current' then
-          void_count = void_count + 1
-        end
+        if lc.type == 'void' and lc.buftype == 'current' then void_count = void_count + 1 end
       end
       assert.are.equal(2, void_count)
     end)
@@ -284,6 +294,54 @@ describe('Diff:', function()
       local result = diff:generate_split({ hunk }, lines)
 
       assert.are.equal(#result.current_lines, #result.previous_lines)
+    end)
+
+    it('should place added content in current_lines and empty strings in previous_lines', function()
+      local hunk = make_hunk('@@ -0,0 +1,2 @@', { '+new1', '+new2' })
+      local diff = Diff()
+      local lines = { 'new1', 'new2' }
+      local result = diff:generate_split({ hunk }, lines)
+
+      assert.are.equal('new1', result.current_lines[1])
+      assert.are.equal('new2', result.current_lines[2])
+      assert.are.equal('', result.previous_lines[1])
+      assert.are.equal('', result.previous_lines[2])
+    end)
+
+    it('should place removed content in previous_lines and empty strings in current_lines', function()
+      local hunk = make_hunk('@@ -3,2 +3,0 @@', { '-removed1', '-removed2' })
+      local diff = Diff()
+      local lines = { 'a', 'b', 'c', 'd' }
+      local result = diff:generate_split({ hunk }, lines)
+
+      local prev_found = {}
+      for _, line in ipairs(result.previous_lines) do prev_found[line] = true end
+      assert.is_true(prev_found['removed1'])
+      assert.is_true(prev_found['removed2'])
+
+      -- Those same positions in current_lines should be blank (void)
+      local blank_count = 0
+      for _, line in ipairs(result.current_lines) do
+        if line == '' then blank_count = blank_count + 1 end
+      end
+      assert.is_true(blank_count >= 2)
+    end)
+
+    it('should place old content in previous_lines and new content in current_lines for change hunk', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
+      local diff = Diff()
+      local lines = { 'a', 'new', 'c' }
+      local result = diff:generate_split({ hunk }, lines)
+
+      -- Changed line: previous shows the removed content, current shows the added content
+      assert.are.equal('old', result.previous_lines[2])
+      assert.are.equal('new', result.current_lines[2])
+
+      -- Context lines are identical on both sides
+      assert.are.equal('a', result.previous_lines[1])
+      assert.are.equal('a', result.current_lines[1])
+      assert.are.equal('c', result.previous_lines[3])
+      assert.are.equal('c', result.current_lines[3])
     end)
   end)
 
@@ -456,6 +514,50 @@ describe('Diff:', function()
 
       eq({ added = 0, removed = 0 }, result.stat)
     end)
+
+    it('should not modify the lines array', function()
+      local diff = Diff()
+      local conflicts = {
+        {
+          current = { top = 1, bot = 2 },
+          ancestor = nil,
+          middle = { top = 3, bot = 3 },
+          incoming = { top = 4, bot = 5 },
+        },
+      }
+      local lines = { '<<<', 'c', '===', 'i', '>>>' }
+      local result = diff:generate_unified_conflict(conflicts, lines)
+
+      eq(lines, result.lines)
+    end)
+
+    it('should preserve non-conflict lines between two conflicts', function()
+      local diff = Diff()
+      local conflicts = {
+        {
+          current = { top = 1, bot = 2 },
+          ancestor = nil,
+          middle = { top = 3, bot = 3 },
+          incoming = { top = 4, bot = 5 },
+        },
+        {
+          current = { top = 7, bot = 8 },
+          ancestor = nil,
+          middle = { top = 9, bot = 9 },
+          incoming = { top = 10, bot = 11 },
+        },
+      }
+      local lines = { '<<<', 'c1', '===', 'i1', '>>>', 'normal', '<<<', 'c2', '===', 'i2', '>>>' }
+      local result = diff:generate_unified_conflict(conflicts, lines)
+
+      -- Line 6 ('normal') sits between the two conflicts and must be untouched
+      assert.are.equal('normal', result.lines[6])
+
+      -- No lnum_change should reference line 6
+      for _, lc in ipairs(result.lnum_changes) do
+        assert.are_not.equal(6, lc.lnum)
+      end
+    end)
   end)
 
   describe('generate_split_conflict', function()
@@ -521,6 +623,144 @@ describe('Diff:', function()
 
       assert.are.equal(#result.current_lines, #result.previous_lines)
       eq({ added = 0, removed = 0 }, result.stat)
+    end)
+
+    it('should erase conflict markers and content symmetrically from each panel', function()
+      -- current.top (<<<) erased from left; incoming.bot (>>>) erased from right
+      -- current content erased from left; incoming content erased from right
+      local diff = Diff()
+      local conflicts = {
+        {
+          current = { top = 1, bot = 3 },
+          ancestor = nil,
+          middle = { top = 4, bot = 4 },
+          incoming = { top = 5, bot = 7 },
+        },
+      }
+      local lines = { '<<<', 'cur1', 'cur2', '===', 'inc1', 'inc2', '>>>' }
+      local result = diff:generate_split_conflict(conflicts, lines)
+
+      -- Left panel: <<<<<<< marker and current content erased
+      assert.are.equal('', result.previous_lines[1]) -- current.top
+      assert.are.equal('', result.previous_lines[2]) -- current content
+      assert.are.equal('', result.previous_lines[3]) -- current content
+
+      -- Right panel: >>>>>>> marker and incoming content erased
+      assert.are.equal('', result.current_lines[5]) -- incoming content
+      assert.are.equal('', result.current_lines[6]) -- incoming content
+      assert.are.equal('', result.current_lines[7]) -- incoming.bot (>>>)
+
+      -- Non-conflict lines untouched on both sides
+      assert.are.equal('===', result.previous_lines[4])
+      assert.are.equal('===', result.current_lines[4])
+    end)
+
+    it('should retain current content on right panel and incoming content on left panel', function()
+      local diff = Diff()
+      local conflicts = {
+        {
+          current = { top = 1, bot = 3 },
+          ancestor = nil,
+          middle = { top = 4, bot = 4 },
+          incoming = { top = 5, bot = 7 },
+        },
+      }
+      local lines = { '<<<', 'cur1', 'cur2', '===', 'inc1', 'inc2', '>>>' }
+      local result = diff:generate_split_conflict(conflicts, lines)
+
+      -- Right panel (current_lines) shows HEAD/current content
+      assert.are.equal('cur1', result.current_lines[2])
+      assert.are.equal('cur2', result.current_lines[3])
+
+      -- Left panel (previous_lines) shows incoming content
+      assert.are.equal('inc1', result.previous_lines[5])
+      assert.are.equal('inc2', result.previous_lines[6])
+    end)
+
+    it('should emit all conflict lnum_change types with correct buftypes', function()
+      local diff = Diff()
+      local conflicts = {
+        {
+          current = { top = 1, bot = 3 },
+          ancestor = nil,
+          middle = { top = 4, bot = 4 },
+          incoming = { top = 5, bot = 7 },
+        },
+      }
+      local lines = { '<<<', 'cur1', 'cur2', '===', 'inc1', 'inc2', '>>>' }
+      local result = diff:generate_split_conflict(conflicts, lines)
+
+      local seen = {}
+      for _, lc in ipairs(result.lnum_changes) do
+        seen[lc.type .. ':' .. lc.buftype] = true
+      end
+
+      -- Current section signs go on the right (current) panel
+      assert.is_true(seen['conflict_current_mark:current'])
+      assert.is_true(seen['conflict_current:current'])
+
+      -- Middle separator appears on both panels
+      assert.is_true(seen['conflict_middle:current'])
+      assert.is_true(seen['conflict_middle:previous'])
+
+      -- Incoming section signs go on the left (previous) panel
+      assert.is_true(seen['conflict_incoming:previous'])
+      assert.is_true(seen['conflict_incoming_mark:previous'])
+    end)
+
+    it('should generate ancestor marks on both panels', function()
+      local diff = Diff()
+      local conflicts = {
+        {
+          current = { top = 1, bot = 2 },
+          ancestor = { top = 3, bot = 4 },
+          middle = { top = 5, bot = 5 },
+          incoming = { top = 6, bot = 7 },
+        },
+      }
+      local lines = { '<<<', 'c1', '|||', 'anc', '===', 'i1', '>>>' }
+      local result = diff:generate_split_conflict(conflicts, lines)
+
+      local seen = {}
+      for _, lc in ipairs(result.lnum_changes) do
+        seen[lc.type .. ':' .. lc.buftype] = true
+      end
+
+      assert.is_true(seen['conflict_ancestor_mark:previous'])
+      assert.is_true(seen['conflict_ancestor_mark:current'])
+      assert.is_true(seen['conflict_ancestor:previous'])
+      assert.is_true(seen['conflict_ancestor:current'])
+    end)
+
+    it('should handle multiple conflicts with non-conflict lines untouched on both panels', function()
+      local diff = Diff()
+      local conflicts = {
+        {
+          current = { top = 1, bot = 2 },
+          ancestor = nil,
+          middle = { top = 3, bot = 3 },
+          incoming = { top = 4, bot = 5 },
+        },
+        {
+          current = { top = 7, bot = 8 },
+          ancestor = nil,
+          middle = { top = 9, bot = 9 },
+          incoming = { top = 10, bot = 11 },
+        },
+      }
+      local lines = { '<<<', 'c1', '===', 'i1', '>>>', 'normal', '<<<', 'c2', '===', 'i2', '>>>' }
+      local result = diff:generate_split_conflict(conflicts, lines)
+
+      assert.are.equal(2, #result.marks)
+
+      -- Line 6 ('normal') is between the two conflicts — untouched on both panels
+      assert.are.equal('normal', result.current_lines[6])
+      assert.are.equal('normal', result.previous_lines[6])
+
+      -- No lnum_change should reference the non-conflict line
+      for _, lc in ipairs(result.lnum_changes) do
+        assert.are_not.equal(6, lc.lnum)
+      end
     end)
   end)
 
