@@ -205,4 +205,46 @@ describe('ComponentManager:', function()
       assert.is_false(root._mounted)
     end)
   end)
+
+  describe('render (screen mode)', function()
+    local initial_tab_count
+
+    before_each(function()
+      initial_tab_count = vim.fn.tabpagenr('$')
+    end)
+
+    after_each(function()
+      pcall(function() mgr:destroy() end)
+      while vim.fn.tabpagenr('$') > initial_tab_count do
+        vim.cmd('tabclose!')
+      end
+    end)
+
+    it('should open a new tab', function()
+      mgr:render({ component = TestComponent(), mode = 'screen' })
+      assert.are.equal(initial_tab_count + 1, vim.fn.tabpagenr('$'))
+    end)
+
+    it('should close the new tab on destroy', function()
+      mgr:render({ component = TestComponent(), mode = 'screen' })
+      mgr:destroy()
+      assert.are.equal(initial_tab_count, vim.fn.tabpagenr('$'))
+    end)
+
+    it('should preserve the original window after destroy', function()
+      local original_win = vim.api.nvim_get_current_win()
+      mgr:render({ component = TestComponent(), mode = 'screen' })
+      mgr:destroy()
+      assert.is_true(vim.api.nvim_win_is_valid(original_win))
+    end)
+
+    it('should not leave orphaned scratch buffers after render', function()
+      local buf_count_before = #vim.api.nvim_list_bufs()
+      mgr:render({ component = TestComponent(), mode = 'screen' })
+      -- tabnew creates a scratch buffer; it should be deleted once VGit
+      -- sets its own buffer into the window, leaving only the component buffer
+      assert.are.equal(buf_count_before + 1, #vim.api.nvim_list_bufs())
+      mgr:destroy()
+    end)
+  end)
 end)

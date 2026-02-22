@@ -107,8 +107,16 @@ end
 
 function ComponentManager:render(layout_config)
   self:prepare_layout(layout_config)
+  local tabnew_scratch_buf
+  if self.context:is_screen_mode() then
+    vim.api.nvim_command('tabnew')
+    tabnew_scratch_buf = vim.api.nvim_get_current_buf()
+  end
   self:mount_components()
   self:render_layout()
+  if tabnew_scratch_buf and vim.api.nvim_buf_is_valid(tabnew_scratch_buf) then
+    pcall(vim.api.nvim_buf_delete, tabnew_scratch_buf, { force = true })
+  end
   self:register_lifecycle_events()
 end
 
