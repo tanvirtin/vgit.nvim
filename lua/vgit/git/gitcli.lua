@@ -2,20 +2,9 @@ local lazy = require('vgit.core.lazy')
 local event = lazy('vgit.core.event')
 local Spawn = lazy('vgit.core.Spawn')
 local console = lazy('vgit.core.console')
+local env = lazy('vgit.core.env')
 
 local gitcli = {}
-
-local _env = (function()
-  local env = {}
-
-  for k, v in pairs(vim.fn.environ()) do
-    env[#env + 1] = string.format('%s=%s', k, v)
-  end
-  env[#env + 1] = 'LC_ALL=C'
-  env[#env + 1] = 'LANGUAGE=C'
-
-  return env
-end)()
 
 local _run = event.promisify(function(args, opts, callback)
   local cmd = 'git'
@@ -30,15 +19,15 @@ local _run = event.promisify(function(args, opts, callback)
   local err = {}
   local stdout = {}
 
-  local env = _env
+  local spawn_env = env.get_all()
   if opts.env then
-    env = vim.list_extend(vim.list_extend({}, _env), opts.env)
+    spawn_env = vim.list_extend(vim.list_extend({}, spawn_env), opts.env)
   end
 
   Spawn({
     command = cmd,
     args = effective_args,
-    env = env,
+    env = spawn_env,
     on_stderr = function(line)
       err[#err + 1] = line
     end,
