@@ -1075,12 +1075,6 @@ function StatusDiffView:_create_entries_view(data)
 
   self._repo = repo
 
-  if repo:conflict_status() then
-    event.await()
-    console.info('All conflicts fixed but you are still merging')
-    return false
-  end
-
   local file_groups = {}
   for _, entry in ipairs(data.entries) do
     file_groups[#file_groups + 1] = {
