@@ -111,7 +111,8 @@ local function execute_lens_blame(opts, repo, repo_path, filename)
 
   local diff = repo:diff({
     type = 'blame',
-    filename = filename,
+    filename = blame.filename or filename,
+    old_filename = blame.old_filename,
     blame_commit = commit_hash,
     parent_commit = parent_hash,
     layout_type = layout_type,

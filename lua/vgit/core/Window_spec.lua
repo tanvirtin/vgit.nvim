@@ -155,7 +155,7 @@ describe('Window:', function()
       win = Window:open(buffer, default_float_opts)
       win:set_option('wrap', false)
 
-      assert.is_false(vim.api.nvim_win_get_option(win.win_id, 'wrap'))
+      assert.is_false(vim.api.nvim_get_option_value('wrap', { win = win.win_id }))
     end)
   end)
 
@@ -196,8 +196,8 @@ describe('Window:', function()
       win = Window:open(buffer, default_float_opts)
       win:assign_options({ wrap = false, number = true })
 
-      assert.is_false(vim.api.nvim_win_get_option(win.win_id, 'wrap'))
-      assert.is_true(vim.api.nvim_win_get_option(win.win_id, 'number'))
+      assert.is_false(vim.api.nvim_get_option_value('wrap', { win = win.win_id }))
+      assert.is_true(vim.api.nvim_get_option_value('number', { win = win.win_id }))
     end)
   end)
 

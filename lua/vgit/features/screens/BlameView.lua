@@ -474,7 +474,7 @@ function BlameView:enter_parent()
   })
 
   local reponame = self._opts.reponame
-  local parent_filename = blame.previous_filename or self._opts.filename
+  local parent_filename = blame.old_filename or self._opts.filename
 
   local new_blames, blame_err = git_blame.list(reponame, parent_filename, parent_hash)
   if blame_err or not new_blames or #new_blames == 0 then
@@ -550,7 +550,7 @@ function BlameView:show_commit_diff()
 
   local commit_hash = blame.commit_hash or blame.hash
   local parent_hash = blame.parent_hash or blame._parent_hash or (commit_hash .. '~1')
-  local filename = blame.previous_filename or self._opts.filename
+  local filename = blame.filename or self._opts.filename
 
   local repo, repo_err = repository.current()
   if repo_err then
@@ -563,6 +563,7 @@ function BlameView:show_commit_diff()
   local diff, diff_err = repo:diff({
     type = 'blame',
     filename = filename,
+    old_filename = blame.old_filename,
     blame_commit = commit_hash,
     parent_commit = parent_hash,
     layout_type = layout_type,

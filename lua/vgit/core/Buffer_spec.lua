@@ -183,7 +183,7 @@ describe('Buffer:', function()
 
   describe('set_option', function()
     it('should set buffer option', function()
-      vim.api.nvim_buf_set_option(buffer.bufnr, 'ft', 'lua')
+      vim.api.nvim_set_option_value('ft', 'lua', { buf = buffer.bufnr })
       assert.equals(buffer:get_option('ft'), 'lua')
     end)
 
