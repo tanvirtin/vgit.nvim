@@ -40,7 +40,7 @@ function LayoutContext.capture_window_options()
   if not vim.api.nvim_win_is_valid(current_win) then return end
 
   for _, option_name in ipairs(LayoutContext.WINDOW_OPTIONS) do
-    local ok, value = pcall(vim.api.nvim_win_get_option, current_win, option_name)
+    local ok, value = pcall(vim.api.nvim_get_option_value, option_name, { win = current_win })
     if ok then win_options[option_name] = value end
   end
 

@@ -323,7 +323,7 @@ function Element:apply_window_options_explicitly()
   local options = self._config.win_options or {}
 
   for key, value in pairs(options) do
-    pcall(vim.api.nvim_win_set_option, self._window.win_id, key, value)
+    pcall(vim.api.nvim_set_option_value, key, value, { win = self._window.win_id })
   end
 
   return self

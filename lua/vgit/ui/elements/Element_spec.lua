@@ -341,7 +341,7 @@ describe('Element:', function()
       el:mount()
       el:enable_cursorline()
       -- Verify the option was set via window
-      local ok, value = pcall(vim.api.nvim_win_get_option, el:get_win_id(), 'cursorline')
+      local ok, value = pcall(vim.api.nvim_get_option_value, 'cursorline', { win = el:get_win_id() })
       if ok then
         assert.is_true(value)
       end
@@ -352,7 +352,7 @@ describe('Element:', function()
       el:mount()
       el:enable_cursorline()
       el:disable_cursorline()
-      local ok, value = pcall(vim.api.nvim_win_get_option, el:get_win_id(), 'cursorline')
+      local ok, value = pcall(vim.api.nvim_get_option_value, 'cursorline', { win = el:get_win_id() })
       if ok then
         assert.is_false(value)
       end

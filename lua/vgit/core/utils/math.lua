@@ -1,3 +1,5 @@
+local jit_uuid = require('vgit.vendor.jit-uuid')
+
 local M = {}
 
 function M.round(x)
@@ -5,7 +7,7 @@ function M.round(x)
 end
 
 function M.uuid()
-  return require('vgit.vendor.jit-uuid').generate_v4()
+  return jit_uuid.generate_v4()
 end
 
 function M.scale_unit_up(unit, percent)

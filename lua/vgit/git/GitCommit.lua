@@ -50,7 +50,7 @@ function GitCommit:constructor(data)
   commit.summary = commit.message and commit.message:match('^([^\n]*)') or commit.message
   commit.lnum = commit.context.lnum
   commit.filename = commit.context.filename
-  commit.previous_filename = commit.context.previous_filename
+  commit.old_filename = commit.context.old_filename
   commit.revision = commit.context.revision
   commit.committed = commit.hash ~= GitCommit.EMPTY_HASH
 

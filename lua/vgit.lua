@@ -1,8 +1,10 @@
 local lazy = require('vgit.core.lazy')
+
 local env = lazy('vgit.core.env')
 local sign = lazy('vgit.core.sign')
 local libgit2 = lazy('vgit.libgit2')
 local event = lazy('vgit.core.event')
+local router = lazy('vgit.cli.router')
 local keymap = lazy('vgit.core.keymap')
 local console = lazy('vgit.core.console')
 local renderer = lazy('vgit.core.renderer')
@@ -13,19 +15,20 @@ local Hunks = lazy('vgit.features.buffer.Hunks')
 local hunks_setting = lazy('vgit.settings.hunks')
 local scene_setting = lazy('vgit.settings.scene')
 local signs_setting = lazy('vgit.settings.signs')
+local git_porcelain = lazy('vgit.cli.GitPorcelain')
 local symbols_setting = lazy('vgit.settings.symbols')
 local libgit2_setting = lazy('vgit.settings.libgit2')
 local display_service = lazy('vgit.ui.display_service')
 local Conflicts = lazy('vgit.features.buffer.Conflicts')
 local LiveBlame = lazy('vgit.features.buffer.LiveBlame')
-local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
 local git_buffer_store = lazy('vgit.git.git_buffer_store')
 local LiveGutter = lazy('vgit.features.buffer.LiveGutter')
 local live_blame_setting = lazy('vgit.settings.live_blame')
 local live_gutter_setting = lazy('vgit.settings.live_gutter')
-local file_diff_view_setting = lazy('vgit.settings.file_diff_view')
-local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
 local LiveConflict = lazy('vgit.features.buffer.LiveConflict')
+local file_diff_view_setting = lazy('vgit.settings.file_diff_view')
+local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
+local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
 
 local hunks = Hunks()
 local conflicts = Conflicts()
@@ -214,7 +217,6 @@ controller.execute_command = event.async(function(args)
   }
 
   if porcelain_commands[cmd] then
-    local router = require('vgit.cli.router')
     router.execute(args.fargs)
     return
   end
@@ -253,7 +255,6 @@ function controller.autocomplete(arg_lead, cmd_line, _)
   end
 
   if cmd == 'diff' or cmd == 'blame' or cmd == 'hunk' then
-    local git_porcelain = require('vgit.cli.GitPorcelain')
     local porcelain = git_porcelain()
     local command_def = porcelain:get_command(cmd)
     if command_def and command_def.options then

@@ -165,12 +165,12 @@ function Buffer:get_lines(top, bot)
 end
 
 function Buffer:get_option(key)
-  return vim.api.nvim_buf_get_option(self.bufnr, key)
+  return vim.api.nvim_get_option_value(key, { buf = self.bufnr })
 end
 
 function Buffer:set_option(key, value)
   if key == 'modifiable' then self._modifiable = value end
-  pcall(vim.api.nvim_buf_set_option, self.bufnr, key, value)
+  pcall(vim.api.nvim_set_option_value, key, value, { buf = self.bufnr })
   return self
 end
 
@@ -181,7 +181,7 @@ function Buffer:set_lines(lines, top, bot)
 
   local modifiable = self._modifiable
   if modifiable == nil then
-    modifiable = vim.api.nvim_buf_get_option(bufnr, 'modifiable')
+    modifiable = vim.api.nvim_get_option_value('modifiable', { buf = bufnr })
     self._modifiable = modifiable
   end
 
@@ -190,9 +190,9 @@ function Buffer:set_lines(lines, top, bot)
     return self
   end
 
-  vim.api.nvim_buf_set_option(bufnr, 'modifiable', true)
+  vim.api.nvim_set_option_value('modifiable', true, { buf = bufnr })
   vim.api.nvim_buf_set_lines(bufnr, top, bot, false, lines)
-  vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
+  vim.api.nvim_set_option_value('modifiable', false, { buf = bufnr })
 
   return self
 end
@@ -202,7 +202,7 @@ function Buffer:assign_options(options)
 
   for key, value in pairs(options) do
     if key == 'modifiable' then self._modifiable = value end
-    vim.api.nvim_buf_set_option(bufnr, key, value)
+    vim.api.nvim_set_option_value(key, value, { buf = bufnr })
   end
 
   return self

@@ -25,7 +25,7 @@ local function parse_blame(blame_lines, filename)
         for k = 3, #parts do
           filename_parts[#filename_parts + 1] = parts[k]
         end
-        blame_data['previous_filename'] = table.concat(filename_parts, ' ')
+        blame_data['old_filename'] = table.concat(filename_parts, ' ')
       end
     else
       local value_parts = {}
@@ -70,8 +70,8 @@ local function parse_blame(blame_lines, filename)
     repository = blame_data.filename and vim.fn.fnamemodify(blame_data.filename, ':h'),
     context = {
       lnum = blame_data.lnum,
-      filename = filename or blame_data.filename,
-      previous_filename = blame_data.previous_filename,
+      filename = blame_data.filename,
+      old_filename = blame_data.old_filename,
     },
   })
 end

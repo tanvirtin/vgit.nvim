@@ -18,7 +18,7 @@ function Window.open_screen(buffer, config)
 
   if config.win_options then
     for key, value in pairs(config.win_options) do
-      pcall(vim.api.nvim_win_set_option, win_id, key, value)
+      pcall(vim.api.nvim_set_option_value, key, value, { win = win_id })
     end
   end
 
@@ -80,7 +80,7 @@ function Window:set_lnum(lnum)
 end
 
 function Window:set_option(key, value)
-  pcall(vim.api.nvim_win_set_option, self.win_id, key, value)
+  pcall(vim.api.nvim_set_option_value, key, value, { win = self.win_id })
   return self
 end
 
@@ -106,7 +106,7 @@ end
 
 function Window:assign_options(options)
   for key, value in pairs(options) do
-    vim.api.nvim_win_set_option(self.win_id, key, value)
+    vim.api.nvim_set_option_value(key, value, { win = self.win_id })
   end
   return self
 end
@@ -114,7 +114,7 @@ end
 function Window:get_options(option_names)
   local options = {}
   for _, name in ipairs(option_names) do
-    local ok, value = pcall(vim.api.nvim_win_get_option, self.win_id, name)
+    local ok, value = pcall(vim.api.nvim_get_option_value, name, { win = self.win_id })
     if ok then options[name] = value end
   end
   return options

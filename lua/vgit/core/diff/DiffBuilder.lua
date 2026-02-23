@@ -27,12 +27,13 @@ function DiffBuilder:_get_blame_lines(spec)
   local blame_commit = spec.blame_commit
   local parent_commit = spec.parent_commit
   local filename = spec.filename
+  local old_filename = spec.old_filename
 
   assertion.assert(blame_commit, 'blame_commit is required').assert(filename, 'filename is required')
 
   local effective_parent_commit = parent_commit or blame_commit .. '~1'
 
-  local original_lines = self._repository:file_lines(filename, effective_parent_commit)
+  local original_lines = self._repository:file_lines(old_filename or filename, effective_parent_commit)
   local current_lines = self._repository:file_lines(filename, blame_commit)
 
   return original_lines, current_lines
@@ -178,7 +179,8 @@ function DiffBuilder:build(spec)
     display_lines = original_lines
   end
 
-  local hunks = (spec.hunks and #spec.hunks > 0) and spec.hunks or hunk_generator:generate(original_lines, current_lines, spec)
+  local hunks = (spec.hunks and #spec.hunks > 0) and spec.hunks
+    or hunk_generator:generate(original_lines, current_lines, spec)
   assertion.assert(hunks, 'hunk generator returned nil')
 
   local layout_generator = DiffLayoutGenerator()

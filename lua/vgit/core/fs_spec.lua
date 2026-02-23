@@ -155,7 +155,7 @@ describe('fs:', function()
       local bufnr = vim.api.nvim_create_buf(true, true)
       local buffer = Buffer(bufnr)
 
-      vim.api.nvim_buf_set_option(bufnr, 'filetype', 'bar')
+      vim.api.nvim_set_option_value('filetype', 'bar', { buf = bufnr })
       eq(fs.filetype(buffer), 'bar')
     end)
 
