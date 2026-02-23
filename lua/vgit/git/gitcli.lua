@@ -10,11 +10,18 @@ local _run = event.promisify(function(args, opts, callback)
   local cmd = 'git'
 
   opts = opts or {}
-  local debug = opts.debug
 
-  local effective_args = { '--no-optional-locks', unpack(args) }
+  local config_args = {}
+  if opts.config then
+    for _, entry in ipairs(opts.config) do
+      config_args[#config_args + 1] = '-c'
+      config_args[#config_args + 1] = entry
+    end
+  end
 
-  if debug then console.info(cmd .. ' ' .. table.concat(effective_args, ' ')) end
+  local effective_args = { '--no-optional-locks' }
+  vim.list_extend(effective_args, config_args)
+  vim.list_extend(effective_args, args)
 
   local err = {}
   local stdout = {}
@@ -35,8 +42,17 @@ local _run = event.promisify(function(args, opts, callback)
       stdout[#stdout + 1] = line
     end,
     on_exit = function(code)
-      if code == 0 then return callback(stdout, nil, code) end
-      if #err ~= 0 then return callback(nil, err, code) end
+      local cmd_str = 'git ' .. table.concat(effective_args, ' ')
+      if code == 0 then
+        console.debug.info(cmd_str .. ' (exit=0, ' .. #stdout .. ' lines)')
+        return callback(stdout, nil, code)
+      end
+      if #err ~= 0 then
+        local log_lines = { cmd_str .. ' (exit=' .. code .. ')' }
+        for _, line in ipairs(err) do log_lines[#log_lines + 1] = line end
+        console.debug.error(log_lines)
+        return callback(nil, err, code)
+      end
       callback(stdout, nil, code)
     end,
   }):start()

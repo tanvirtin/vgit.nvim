@@ -1,5 +1,6 @@
 local lazy = require('vgit.core.lazy')
 local fs = lazy('vgit.core.fs')
+local console = lazy('vgit.core.console')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 local GitPatch = lazy('vgit.git.GitPatch')
 
@@ -25,7 +26,11 @@ function git_stager.stage_hunk(reponame, filename, hunk)
   local patch = GitPatch(filename, hunk)
   local patch_filename = fs.tmpname()
 
-  fs.write_file(patch_filename, patch)
+  local _, write_err = fs.write_file(patch_filename, patch)
+  if write_err then
+    console.debug.error(write_err)
+    return nil, write_err
+  end
 
   local _, err = GitQueryBuilder(reponame)
     :raw_args('--no-pager', 'apply', '--cached', '--whitespace=nowarn', '--unidiff-zero', patch_filename)
@@ -44,7 +49,11 @@ function git_stager.unstage_hunk(reponame, filename, hunk)
   local patch = GitPatch(filename, hunk)
   local patch_filename = fs.tmpname()
 
-  fs.write_file(patch_filename, patch)
+  local _, write_err = fs.write_file(patch_filename, patch)
+  if write_err then
+    console.debug.error(write_err)
+    return nil, write_err
+  end
 
   local _, err =
     GitQueryBuilder(reponame)
@@ -65,7 +74,11 @@ function git_stager.reset_hunk(reponame, filename, hunk)
   local patch = GitPatch(filename, hunk)
   local patch_filename = fs.tmpname()
 
-  fs.write_file(patch_filename, patch)
+  local _, write_err = fs.write_file(patch_filename, patch)
+  if write_err then
+    console.debug.error(write_err)
+    return nil, write_err
+  end
 
   -- Apply the patch in reverse to the working directory (not staged)
   local _, err = GitQueryBuilder(reponame)

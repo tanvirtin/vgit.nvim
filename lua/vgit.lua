@@ -91,16 +91,22 @@ local toggle_live_gutter = event.async(function()
   live_gutter:toggle()
 end)
 
-local toggle_tracing = event.async(function()
-  env.set('DEBUG', not env.get('DEBUG'))
-end)
-
 local function help()
   if display_service.help() then return end
   vim.cmd('h vgit')
 end
 
+local function cleanup()
+  console.cleanup()
+  live_blame:cleanup()
+  live_gutter:cleanup()
+  live_conflict:cleanup()
+  display_service.cleanup()
+end
+
 local function register_modules()
+  env.register_module()
+
   highlight.register_module(function()
     sign.register_module()
   end)
@@ -119,12 +125,6 @@ local function register_events()
   highlight.register_events()
   git_buffer_store.register_events()
   live_conflict:register_events()
-
-  event.on({ 'VimLeavePre' }, function()
-    live_blame:cleanup()
-    live_gutter:cleanup()
-    live_conflict:cleanup()
-  end)
 end
 
 local function register_keymaps(config)
@@ -168,13 +168,16 @@ function controller.setup(config)
   register_modules()
   register_events()
   register_keymaps(config)
+
+  event.on({ 'VimLeavePre' }, function()
+    cleanup()
+  end)
 end
 
 function controller.commands()
   return {
     help = help,
     setup = controller.setup,
-    toggle_tracing = toggle_tracing,
     toggle_live_blame = toggle_live_blame,
     toggle_live_gutter = toggle_live_gutter,
     toggle_diff_preference = toggle_diff_preference,
@@ -207,6 +210,7 @@ controller.execute_command = event.async(function(args)
     show = true,
     status = true,
     branch = true,
+    debug = true,
   }
 
   if porcelain_commands[cmd] then
@@ -233,7 +237,7 @@ function controller.autocomplete(arg_lead, cmd_line, _)
     local commands = controller.commands()
     local all_commands = vim.tbl_keys(commands)
 
-    vim.list_extend(all_commands, { 'diff', 'blame', 'hunk', 'status', 'show', 'branch' })
+    vim.list_extend(all_commands, { 'diff', 'blame', 'hunk', 'status', 'show', 'branch', 'debug' })
 
     return vim.tbl_filter(function(cmd)
       return vim.startswith(cmd, arg_lead)
@@ -241,6 +245,13 @@ function controller.autocomplete(arg_lead, cmd_line, _)
   end
 
   local cmd = split_cmd[2]
+  if cmd == 'debug' then
+    local subcommands = { 'on', 'off', 'status', 'open' }
+    return vim.tbl_filter(function(sub)
+      return vim.startswith(sub, arg_lead)
+    end, subcommands)
+  end
+
   if cmd == 'diff' or cmd == 'blame' or cmd == 'hunk' then
     local git_porcelain = require('vgit.cli.GitPorcelain')
     local porcelain = git_porcelain()

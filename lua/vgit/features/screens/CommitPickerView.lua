@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 local Object = lazy('vgit.core.Object')
 local event = lazy('vgit.core.event')
+local console = lazy('vgit.core.console')
 local git_log = lazy('vgit.git.git_log')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 local show_command = lazy('vgit.cli.commands.show')
@@ -118,7 +119,12 @@ function CommitPickerView:_on_search(query)
       sc._loading = false
       self._search_skip = 100
 
-      if err or not commits or #commits == 0 then
+      if err then
+        console.debug.error(err)
+        sc:set_items({})
+        return
+      end
+      if not commits or #commits == 0 then
         sc:set_items({})
         return
       end
@@ -140,7 +146,7 @@ function CommitPickerView:_on_load_more()
   if self._search_query == '' then
     local new_commits, err = self._history:load_more(100)
 
-    if err then return nil end
+    if err then console.debug.error(err); return nil end
     if not new_commits or #new_commits == 0 then return nil end
 
     return self:_build_items(new_commits)
@@ -151,7 +157,7 @@ function CommitPickerView:_on_load_more()
     pagination = { count = 100, skip = self._search_skip },
   })
 
-  if err then return nil end
+  if err then console.debug.error(err); return nil end
   if not commits or #commits == 0 then return nil end
 
   self._search_skip = self._search_skip + #commits

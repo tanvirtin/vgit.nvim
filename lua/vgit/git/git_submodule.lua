@@ -37,7 +37,7 @@ function git_submodule.add(reponame, url, path, opts)
   query:raw_arg(url)
   query:raw_arg(path)
 
-  return query:execute()
+  return query:execute({ config = { 'protocol.file.allow=always' } })
 end
 
 -- List submodules
@@ -174,7 +174,7 @@ function git_submodule.update(reponame, paths, opts)
     end
   end
 
-  return query:execute()
+  return query:execute({ config = { 'protocol.file.allow=always' } })
 end
 
 -- Sync submodules

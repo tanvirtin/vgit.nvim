@@ -7,6 +7,7 @@ local utils = {
   list = lazy('vgit.core.utils.list'),
   date = lazy('vgit.core.utils.date'),
   math = lazy('vgit.core.utils.math'),
+  value = lazy('vgit.core.utils.value'),
   object = lazy('vgit.core.utils.object'),
 }
 

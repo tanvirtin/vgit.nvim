@@ -269,7 +269,7 @@ function FileDiffView:reset_current()
   if not filename then return end
 
   local repo, err = repository.current()
-  if err then return end
+  if err then console.debug.error(err); return end
   repo:reset(filename)
 
   self:_reconcile()
@@ -302,7 +302,7 @@ function FileDiffView:stage_hunk()
   if not hunk then return end
 
   local repo, err = repository.current()
-  if err then return end
+  if err then console.debug.error(err); return end
 
   repo:stage_hunk(filename, hunk)
 
@@ -323,7 +323,7 @@ function FileDiffView:unstage_hunk()
   if not hunk then return end
 
   local repo, err = repository.current()
-  if err then return end
+  if err then console.debug.error(err); return end
 
   repo:unstage_hunk(filename, hunk)
 
@@ -341,7 +341,7 @@ function FileDiffView:stage_current()
   if not filename then return end
 
   local repo, err = repository.current()
-  if err then return end
+  if err then console.debug.error(err); return end
 
   repo:stage_file(filename)
 
@@ -356,7 +356,7 @@ function FileDiffView:unstage_current()
   if not filename then return end
 
   local repo, err = repository.current()
-  if err then return end
+  if err then console.debug.error(err); return end
 
   repo:unstage_file(filename)
 
