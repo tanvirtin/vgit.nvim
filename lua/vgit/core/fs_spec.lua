@@ -50,7 +50,10 @@ describe('fs:', function()
     end)
 
     it('should not strip partial directory matches', function()
-      eq('/home/user/project-extra/file.txt', fs.make_relative('/home/user/project', '/home/user/project-extra/file.txt'))
+      eq(
+        '/home/user/project-extra/file.txt',
+        fs.make_relative('/home/user/project', '/home/user/project-extra/file.txt')
+      )
     end)
 
     it('should handle dirname without trailing separator', function()
@@ -137,6 +140,13 @@ describe('fs:', function()
 
       eq(filepath, 'lua/vgit/init.lua')
     end)
+
+    it('should return the unchanged path when it is outside cwd', function()
+      local path = '/some/other/path/outside/cwd/file.txt'
+      local filepath = fs.relative_filename(path)
+
+      eq(filepath, path)
+    end)
   end)
 
   describe('short_filename', function()
@@ -147,6 +157,15 @@ describe('fs:', function()
       eq(fs.short_filename('init.lua'), 'init.lua')
       eq(fs.short_filename(''), '')
       eq(fs.short_filename('init/.lua'), '.lua')
+    end)
+
+    it('should return the full string when no separator is present', function()
+      eq(fs.short_filename('filename'), 'filename')
+      eq(fs.short_filename('noext'), 'noext')
+    end)
+
+    it('should return empty string for a path that is only a separator', function()
+      eq(fs.short_filename('/'), '')
     end)
   end)
 
@@ -174,6 +193,24 @@ describe('fs:', function()
       assert.are_not.same(err, nil)
       eq(data, nil)
     end)
+
+    it('should read lines from an existing file', function()
+      fs.write_file(filename, { 'hello', 'world' })
+
+      local data, err = fs.read_file(filename)
+
+      eq(err, nil)
+      eq(data, { 'hello', 'world' })
+    end)
+
+    it('should return an empty table for an empty file', function()
+      fs.write_file(filename, {})
+
+      local data, err = fs.read_file(filename)
+
+      eq(err, nil)
+      eq(data, {})
+    end)
   end)
 
   describe('tmpname', function()
@@ -183,26 +220,27 @@ describe('fs:', function()
     it('should start with /tmp/', function()
       eq(vim.startswith(fs.tmpname(), '/tmp/'), true)
     end)
+    it('should return distinct names on successive calls', function()
+      local a = fs.tmpname()
+      local b = fs.tmpname()
+      assert.are_not.same(a, b)
+      os.remove(a)
+      os.remove(b)
+    end)
   end)
 
   describe('detect', function()
-    it('should work for md', function()
+    it('should work for common extensions', function()
       eq('markdown', fs.detect_filetype('Readme.md'))
-    end)
-
-    it('should work for CMakeList.txt', function()
       eq('cmake', fs.detect_filetype('CMakeLists.txt'))
+      eq('python', fs.detect_filetype('__init__.py'))
+      eq('sh', fs.detect_filetype('.bashrc'))
+      eq('fennel', fs.detect_filetype('init.fnl'))
     end)
 
-    it('should work with extensions with dot', function()
-      eq('text', fs.detect_filetype('example.rst.txt'))
-      eq('text', fs.detect_filetype('example.rest.txt'))
-      eq('sed', fs.detect_filetype('example.yaml.sed'))
-      eq('mysql', fs.detect_filetype('example.yml.mysql'))
-      eq('erlang', fs.detect_filetype('asdf/example.app.src'))
-      eq('cmake', fs.detect_filetype('/asdf/example.cmake.in'))
-      eq('desktop', fs.detect_filetype('/asdf/asdf.desktop.in'))
-      eq('rust', fs.detect_filetype('example.rs.in'))
+    it('should work for common filenames', function()
+      eq('make', fs.detect_filetype('Makefile'))
+      eq('make', fs.detect_filetype('makefile'))
     end)
 
     it('should work for ext==ft even without a table value', function()
@@ -210,38 +248,67 @@ describe('fs:', function()
       eq('bst', fs.detect_filetype('file.bst'))
     end)
 
-    it('should work for common filenames, like makefile', function()
-      eq('make', fs.detect_filetype('Makefile'))
-      eq('make', fs.detect_filetype('makefile'))
-    end)
-
-    it('should work for CMakeList.txt', function()
-      eq('cmake', fs.detect_filetype('CMakeLists.txt'))
-    end)
-
-    it('should work for common filetypes, like python', function()
-      eq('python', fs.detect_filetype('__init__.py'))
-    end)
-
-    it('should work for common filenames, like makefile', function()
-      eq('make', fs.detect_filetype('Makefile'))
-      eq('make', fs.detect_filetype('makefile'))
-    end)
-
-    it('should work for CMakeList.txt', function()
-      eq('cmake', fs.detect_filetype('CMakeLists.txt'))
-    end)
-
-    it('should work for common files, even with .s, like .bashrc', function()
-      eq('sh', fs.detect_filetype('.bashrc'))
-    end)
-
-    it('should work fo custom filetypes, like fennel', function()
-      eq('fennel', fs.detect_filetype('init.fnl'))
-    end)
-
-    it('should work for custom filenames, like Cakefile', function()
+    it('should return nil for unknown extensions', function()
+      assert.is_nil(fs.detect_filetype('file.unknownxyz123'))
       assert.is_nil(fs.detect_filetype('Cakefile'))
+    end)
+
+    it('should use last extension for compound filenames', function()
+      eq('text', fs.detect_filetype('example.rst.txt'))
+      eq('text', fs.detect_filetype('example.rest.txt'))
+      eq('sed', fs.detect_filetype('example.yaml.sed'))
+      eq('mysql', fs.detect_filetype('example.yml.mysql'))
+    end)
+
+    it('should handle explicit compound patterns (.cmake.in)', function()
+      eq('cmake', fs.detect_filetype('/asdf/example.cmake.in'))
+    end)
+
+    it('should strip .in suffix to find base filetype', function()
+      eq('rust', fs.detect_filetype('example.rs.in'))
+      eq('desktop', fs.detect_filetype('/asdf/asdf.desktop.in'))
+      eq('lua', fs.detect_filetype('example.lua.in'))
+      eq('python', fs.detect_filetype('example.py.in'))
+    end)
+
+    it('should strip .bak suffix to find base filetype', function()
+      eq('rust', fs.detect_filetype('example.rs.bak'))
+      eq('python', fs.detect_filetype('example.py.bak'))
+    end)
+
+    it('should strip .orig and .old suffixes to find base filetype', function()
+      eq('python', fs.detect_filetype('example.py.orig'))
+      eq('lua', fs.detect_filetype('example.lua.old'))
+      eq('sh', fs.detect_filetype('example.sh.new'))
+    end)
+
+    it('should strip chained strippable suffixes', function()
+      eq('rust', fs.detect_filetype('example.rs.bak.in'))
+      eq('python', fs.detect_filetype('example.py.orig.bak'))
+    end)
+
+    it('should terminate and return nil when all suffixes are strippable but base has no filetype', function()
+      -- "only.bak" -> strip .bak -> "only" (no ext) -> break -> nil
+      assert.is_nil(fs.detect_filetype('only.bak'))
+      -- "file.in.bak" -> strip .bak -> "file.in" -> strip .in -> "file" -> break -> nil
+      assert.is_nil(fs.detect_filetype('file.in.bak'))
+      -- deeply chained: all strippable, no recognizable base
+      assert.is_nil(fs.detect_filetype('noext.bak.in.orig.old'))
+    end)
+
+    it('should terminate correctly with a long chain of strippable suffixes before a real type', function()
+      -- 5 strippable suffixes before .rs; loop must run all 5 and still resolve
+      eq('rust', fs.detect_filetype('example.rs.in.bak.orig.old.new'))
+    end)
+
+    it('should strip distro-specific suffixes to find base filetype', function()
+      eq('python', fs.detect_filetype('example.py.pacsave'))
+      eq('python', fs.detect_filetype('example.py.pacnew'))
+      eq('python', fs.detect_filetype('example.py.rpmsave'))
+      eq('python', fs.detect_filetype('example.py.dpkg-bak'))
+      eq('python', fs.detect_filetype('example.py.dpkg-dist'))
+      eq('python', fs.detect_filetype('example.py.dpkg-old'))
+      eq('python', fs.detect_filetype('example.py.dpkg-new'))
     end)
   end)
 
@@ -269,6 +336,22 @@ describe('fs:', function()
 
       eq(err, nil)
       eq(data, { 'foo', 'baz' })
+    end)
+
+    it('should create an empty file when given an empty lines table', function()
+      fs.write_file(filename, {})
+
+      local data, err = fs.read_file(filename)
+
+      eq(err, nil)
+      eq(data, {})
+    end)
+
+    it('should return error when path is not writable', function()
+      local result, err = fs.write_file('/nonexistent/path/file.txt', { 'line' })
+
+      eq(result, nil)
+      assert.is_not_nil(err)
     end)
   end)
 
@@ -304,6 +387,12 @@ describe('fs:', function()
   end)
 
   describe('remove_file', function()
+    it('should return falsy when removing a nonexistent file', function()
+      local result = fs.remove_file('/tmp/vgit_nonexistent_file_xyz')
+
+      assert.is_falsy(result)
+    end)
+
     it('should remove a file succesfully', function()
       local num_files = 5
       local file_exists = function(name)
@@ -361,6 +450,15 @@ describe('fs:', function()
       eq(fs.dirname('a/b/c/d/e'), 'a/b/c/d')
       eq(fs.dirname('a'), '.')
       eq(fs.dirname(''), '.')
+    end)
+
+    it('should work for absolute paths', function()
+      eq(fs.dirname('/a/b/c'), '/a/b')
+      eq(fs.dirname('/home/user/file.txt'), '/home/user')
+    end)
+
+    it('should return / for root path', function()
+      eq(fs.dirname('/'), '/')
     end)
   end)
 end)

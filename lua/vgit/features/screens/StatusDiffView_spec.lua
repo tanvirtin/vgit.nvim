@@ -7,14 +7,24 @@ local original_event = package.loaded['vgit.core.event']
 -- Create mock event module that doesn't block
 local mock_event = {
   await = function() end, -- no-op
-  async = function(fn) return fn end, -- just return the function
-  debounce = function(fn) return fn, function() end end,
-  debounce_async = function(fn) return fn, function() end end,
+  async = function(fn)
+    return fn
+  end, -- just return the function
+  debounce = function(fn)
+    return fn, function() end
+  end,
+  debounce_async = function(fn)
+    return fn, function() end
+  end,
   on = function() end,
   emit = function() end,
-  custom_on = function() return function() end end,
+  custom_on = function()
+    return function() end
+  end,
   buffer_on = function() end,
-  promisify = function(fn) return fn end,
+  promisify = function(fn)
+    return fn
+  end,
   group = 'VGitGroup',
   register_module = function() end,
 }
@@ -142,7 +152,9 @@ describe('StatusDiffView:', function()
         local view = StatusDiffView()
         local expected_entry = make_entry({ filename = 'myfile.lua' })
         view._tree_component = {
-          get_selected_entry = function() return expected_entry end,
+          get_selected_entry = function()
+            return expected_entry
+          end,
         }
         eq(expected_entry, view:get_current_entry())
         eq('myfile.lua', view:get_current_entry().status.filename)
@@ -151,7 +163,9 @@ describe('StatusDiffView:', function()
       it('should return nil when tree has no selected entry', function()
         local view = StatusDiffView()
         view._tree_component = {
-          get_selected_entry = function() return nil end,
+          get_selected_entry = function()
+            return nil
+          end,
         }
         assert.is_nil(view:get_current_entry())
       end)
@@ -201,14 +215,18 @@ describe('StatusDiffView:', function()
       it('should store layout_type from data in opts via _process_entries_data', function()
         local view = StatusDiffView()
         -- Mock _create_entries_view to avoid UI creation
-        view._create_entries_view = function() return true end
+        view._create_entries_view = function()
+          return true
+        end
         view:create(make_data({ layout_type = 'split' }))
         eq('split', view._opts.layout_type)
       end)
 
       it('should store data in view via _process_entries_data', function()
         local view = StatusDiffView()
-        view._create_entries_view = function() return true end
+        view._create_entries_view = function()
+          return true
+        end
         local data = make_data()
         view:create(data)
         eq(data, view._data)
@@ -374,16 +392,24 @@ describe('StatusDiffView:', function()
       mock_items = items or {}
       local lnum = current_lnum or 1
       mock_tree = {
-        get_lnum = function() return lnum end,
-        set_lnum = function(_, new_lnum) lnum = new_lnum end,
-        get_line_count = function() return #mock_items end,
-        is_valid = function() return true end,
-        get_list_item = function(_, l) return mock_items[l] end,
+        get_lnum = function()
+          return lnum
+        end,
+        set_lnum = function(_, new_lnum)
+          lnum = new_lnum
+        end,
+        get_line_count = function()
+          return #mock_items
+        end,
+        is_valid = function()
+          return true
+        end,
+        get_list_item = function(_, l)
+          return mock_items[l]
+        end,
         each_entry = function(_, cb)
           for _, item in ipairs(mock_items) do
-            if item and item.entry and item.entry.status then
-              cb(item.entry.status, item.entry.type)
-            end
+            if item and item.entry and item.entry.status then cb(item.entry.status, item.entry.type) end
           end
         end,
         move_to = function() end,
@@ -404,7 +430,11 @@ describe('StatusDiffView:', function()
       end)
 
       it('should return nil if tree_component is invalid', function()
-        view._tree_component = { is_valid = function() return false end }
+        view._tree_component = {
+          is_valid = function()
+            return false
+          end,
+        }
         assert.is_nil(view:move_to_next_file())
       end)
 
@@ -472,7 +502,11 @@ describe('StatusDiffView:', function()
       end)
 
       it('should return nil if tree_component is invalid', function()
-        view._tree_component = { is_valid = function() return false end }
+        view._tree_component = {
+          is_valid = function()
+            return false
+          end,
+        }
         assert.is_nil(view:move_to_prev_file())
       end)
 
@@ -583,9 +617,7 @@ describe('StatusDiffView:', function()
         setup_mock_tree({}, 1)
         mock_tree.move_to = function(_, predicate)
           -- Simulate finding an entry
-          if predicate({ filename = 'file1.lua' }, 'staged') then
-            return { filename = 'file1.lua' }
-          end
+          if predicate({ filename = 'file1.lua' }, 'staged') then return { filename = 'file1.lua' } end
           return nil
         end
 
@@ -594,7 +626,9 @@ describe('StatusDiffView:', function()
 
       it('should return false when no entry of target type exists', function()
         setup_mock_tree({}, 1)
-        mock_tree.move_to = function() return nil end
+        mock_tree.move_to = function()
+          return nil
+        end
 
         assert.is_false(view:_move_to_first_entry_of_type('staged'))
       end)
@@ -636,8 +670,12 @@ describe('StatusDiffView:', function()
         setup_mock_tree({}, 1)
         local call_order = {}
 
-        view.refresh_data = function() table.insert(call_order, 'refresh') end
-        view._update_diff_component = function() table.insert(call_order, 'update_diff') end
+        view.refresh_data = function()
+          table.insert(call_order, 'refresh')
+        end
+        view._update_diff_component = function()
+          table.insert(call_order, 'update_diff')
+        end
 
         view:refresh_and_navigate(function()
           table.insert(call_order, 'navigate')
@@ -651,7 +689,9 @@ describe('StatusDiffView:', function()
         local update_called = false
 
         view.refresh_data = function() end
-        view._update_diff_component = function() update_called = true end
+        view._update_diff_component = function()
+          update_called = true
+        end
 
         view:refresh_and_navigate(function() end)
 
@@ -670,11 +710,21 @@ describe('StatusDiffView:', function()
       marks = marks or {}
       cursor_lnum = cursor_lnum or 1
       mock_diff = {
-        is_valid = function() return true end,
-        get_marks = function() return marks end,
-        get_hunks = function() return {} end,
-        get_lnum = function() return cursor_lnum end,
-        get_hunk_under_cursor = function() return nil, nil end,
+        is_valid = function()
+          return true
+        end,
+        get_marks = function()
+          return marks
+        end,
+        get_hunks = function()
+          return {}
+        end,
+        get_lnum = function()
+          return cursor_lnum
+        end,
+        get_hunk_under_cursor = function()
+          return nil, nil
+        end,
         move_to_hunk = function() end,
         hunk_down = function() end,
         hunk_up = function() end,
@@ -683,7 +733,9 @@ describe('StatusDiffView:', function()
         clear_lines = function() end,
         clear_folds = function() end,
         reset_cursor = function() end,
-        call = function(_, cb) cb() end,
+        call = function(_, cb)
+          cb()
+        end,
         set_keymap = function() end,
         component_will_unmount = function() end,
       }
@@ -761,7 +813,11 @@ describe('StatusDiffView:', function()
       end)
 
       it('should return early if diff_component is invalid', function()
-        view._diff_component = { is_valid = function() return false end }
+        view._diff_component = {
+          is_valid = function()
+            return false
+          end,
+        }
         -- Should not error
         view:hunk_down()
       end)
@@ -773,7 +829,9 @@ describe('StatusDiffView:', function()
           { top = 10, bot = 15 },
         }
         setup_mock_diff(marks, 3) -- at first hunk
-        mock_diff.hunk_down = function() called = true end
+        mock_diff.hunk_down = function()
+          called = true
+        end
 
         view:hunk_down()
         assert.is_true(called)
@@ -787,7 +845,11 @@ describe('StatusDiffView:', function()
       end)
 
       it('should return early if diff_component is invalid', function()
-        view._diff_component = { is_valid = function() return false end }
+        view._diff_component = {
+          is_valid = function()
+            return false
+          end,
+        }
         view:hunk_up()
       end)
 
@@ -798,7 +860,9 @@ describe('StatusDiffView:', function()
           { top = 10, bot = 15 },
         }
         setup_mock_diff(marks, 12) -- at second hunk
-        mock_diff.hunk_up = function() called = true end
+        mock_diff.hunk_up = function()
+          called = true
+        end
 
         view:hunk_up()
         assert.is_true(called)
@@ -808,7 +872,9 @@ describe('StatusDiffView:', function()
     describe('navigate_down', function()
       it('should delegate to hunk_down', function()
         local called = false
-        view.hunk_down = function() called = true end
+        view.hunk_down = function()
+          called = true
+        end
 
         view:navigate_down()
         assert.is_true(called)
@@ -818,7 +884,9 @@ describe('StatusDiffView:', function()
     describe('navigate_up', function()
       it('should delegate to hunk_up', function()
         local called = false
-        view.hunk_up = function() called = true end
+        view.hunk_up = function()
+          called = true
+        end
 
         view:navigate_up()
         assert.is_true(called)
@@ -834,7 +902,9 @@ describe('StatusDiffView:', function()
           { top = 20, bot = 25 },
         }
         setup_mock_diff(marks, 1)
-        mock_diff.move_to_hunk = function(_, idx) moved_to = idx end
+        mock_diff.move_to_hunk = function(_, idx)
+          moved_to = idx
+        end
 
         view:restore_hunk_position(2)
         eq(2, moved_to)
@@ -847,7 +917,9 @@ describe('StatusDiffView:', function()
           { top = 10, bot = 15 },
         }
         setup_mock_diff(marks, 1)
-        mock_diff.move_to_hunk = function(_, idx) moved_to = idx end
+        mock_diff.move_to_hunk = function(_, idx)
+          moved_to = idx
+        end
 
         view:restore_hunk_position(10) -- exceeds 2 marks
         eq(2, moved_to)
@@ -856,8 +928,12 @@ describe('StatusDiffView:', function()
       it('should not move if no marks', function()
         local called = false
         setup_mock_diff({}, 1)
-        mock_diff.get_marks = function() return {} end
-        mock_diff.move_to_hunk = function() called = true end
+        mock_diff.get_marks = function()
+          return {}
+        end
+        mock_diff.move_to_hunk = function()
+          called = true
+        end
 
         view:restore_hunk_position(1)
         assert.is_false(called)
@@ -897,18 +973,32 @@ describe('StatusDiffView:', function()
         end,
         index = function()
           return {
-            staged_hunks = function() return {} end,
-            unstaged_hunks = function() return {} end,
+            staged_hunks = function()
+              return {}
+            end,
+            unstaged_hunks = function()
+              return {}
+            end,
           }
         end,
       }
 
       mock_diff = {
-        is_valid = function() return true end,
-        get_hunk_under_cursor = function() return { start = 1, count = 5 }, 1 end,
-        get_marks = function() return {} end,
-        get_hunks = function() return {} end,
-        get_lnum = function() return 1 end,
+        is_valid = function()
+          return true
+        end,
+        get_hunk_under_cursor = function()
+          return { start = 1, count = 5 }, 1
+        end,
+        get_marks = function()
+          return {}
+        end,
+        get_hunks = function()
+          return {}
+        end,
+        get_lnum = function()
+          return 1
+        end,
         move_to_hunk = function() end,
         hunk_down = function() end,
         hunk_up = function() end,
@@ -917,18 +1007,30 @@ describe('StatusDiffView:', function()
         clear_lines = function() end,
         clear_folds = function() end,
         reset_cursor = function() end,
-        call = function(_, cb) cb() end,
+        call = function(_, cb)
+          cb()
+        end,
         set_keymap = function() end,
         component_will_unmount = function() end,
       }
 
       mock_tree = {
-        get_lnum = function() return 1 end,
+        get_lnum = function()
+          return 1
+        end,
         set_lnum = function() end,
-        get_line_count = function() return 1 end,
-        is_valid = function() return true end,
-        get_list_item = function() return nil end,
-        get_selected_entry = function() return nil end,
+        get_line_count = function()
+          return 1
+        end,
+        is_valid = function()
+          return true
+        end,
+        get_list_item = function()
+          return nil
+        end,
+        get_selected_entry = function()
+          return nil
+        end,
         each_entry = function() end,
         move_to = function() end,
         set_list = function() end,
@@ -948,7 +1050,9 @@ describe('StatusDiffView:', function()
       -- Mock repository.current BEFORE requiring StatusDiffView
       save_package('vgit.git.repository')
       package.loaded['vgit.git.repository'] = {
-        current = function() return mock_repo, nil end,
+        current = function()
+          return mock_repo, nil
+        end,
       }
 
       -- Re-require StatusDiffView to pick up the mock
@@ -961,28 +1065,40 @@ describe('StatusDiffView:', function()
 
     describe('stage_hunk', function()
       it('should return early if entry is invalid', function()
-        mock_tree.get_selected_entry = function() return nil end
+        mock_tree.get_selected_entry = function()
+          return nil
+        end
         view:stage_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should return early if entry type is not unstaged', function()
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'staged' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'staged' })
+        end
         view:stage_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should return early if no hunk under cursor', function()
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged' }) end
-        mock_diff.get_hunk_under_cursor = function() return nil, nil end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged' })
+        end
+        mock_diff.get_hunk_under_cursor = function()
+          return nil, nil
+        end
         view:stage_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:stage_hunk with filename and hunk', function()
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'test.lua' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged', filename = 'test.lua' })
+        end
         local test_hunk = { start = 10, count = 5 }
-        mock_diff.get_hunk_under_cursor = function() return test_hunk, 1 end
+        mock_diff.get_hunk_under_cursor = function()
+          return test_hunk, 1
+        end
 
         view:stage_hunk()
 
@@ -995,28 +1111,40 @@ describe('StatusDiffView:', function()
 
     describe('unstage_hunk', function()
       it('should return early if entry is invalid', function()
-        mock_tree.get_selected_entry = function() return nil end
+        mock_tree.get_selected_entry = function()
+          return nil
+        end
         view:unstage_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should return early if entry type is not staged', function()
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged' })
+        end
         view:unstage_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should return early if no hunk under cursor', function()
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'staged' }) end
-        mock_diff.get_hunk_under_cursor = function() return nil, nil end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'staged' })
+        end
+        mock_diff.get_hunk_under_cursor = function()
+          return nil, nil
+        end
         view:unstage_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:unstage_hunk with filename and hunk', function()
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'staged.lua' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'staged', filename = 'staged.lua' })
+        end
         local test_hunk = { start = 20, count = 3 }
-        mock_diff.get_hunk_under_cursor = function() return test_hunk, 1 end
+        mock_diff.get_hunk_under_cursor = function()
+          return test_hunk, 1
+        end
 
         view:unstage_hunk()
 
@@ -1034,7 +1162,9 @@ describe('StatusDiffView:', function()
         console_input_response = 'n'
         save_package('vgit.core.console')
         package.loaded['vgit.core.console'] = {
-          input = function() return console_input_response end,
+          input = function()
+            return console_input_response
+          end,
           info = function() end,
           error = function() end,
           warn = function() end,
@@ -1048,50 +1178,68 @@ describe('StatusDiffView:', function()
       end)
 
       it('should return early if entry is invalid', function()
-        mock_tree.get_selected_entry = function() return nil end
+        mock_tree.get_selected_entry = function()
+          return nil
+        end
         view:reset_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should return early if entry type is not unstaged', function()
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'staged' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'staged' })
+        end
         view:reset_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should return early if no hunk under cursor', function()
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged' }) end
-        mock_diff.get_hunk_under_cursor = function() return nil, nil end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged' })
+        end
+        mock_diff.get_hunk_under_cursor = function()
+          return nil, nil
+        end
         view:reset_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should abort on n response', function()
         console_input_response = 'n'
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged' })
+        end
         view:reset_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should abort on no response', function()
         console_input_response = 'no'
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged' })
+        end
         view:reset_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should abort on empty response', function()
         console_input_response = ''
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged' })
+        end
         view:reset_hunk()
         eq(0, #repo_calls)
       end)
 
       it('should proceed on y response', function()
         console_input_response = 'y'
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'reset.lua' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged', filename = 'reset.lua' })
+        end
         local test_hunk = { start = 5, count = 2 }
-        mock_diff.get_hunk_under_cursor = function() return test_hunk, 1 end
+        mock_diff.get_hunk_under_cursor = function()
+          return test_hunk, 1
+        end
 
         view:reset_hunk()
 
@@ -1101,9 +1249,13 @@ describe('StatusDiffView:', function()
 
       it('should proceed on yes response', function()
         console_input_response = 'yes'
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'reset.lua' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged', filename = 'reset.lua' })
+        end
         local test_hunk = { start = 5, count = 2 }
-        mock_diff.get_hunk_under_cursor = function() return test_hunk, 1 end
+        mock_diff.get_hunk_under_cursor = function()
+          return test_hunk, 1
+        end
 
         view:reset_hunk()
 
@@ -1113,9 +1265,13 @@ describe('StatusDiffView:', function()
 
       it('should call repo:reset_hunk with filename and hunk', function()
         console_input_response = 'y'
-        mock_tree.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'file.lua' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ type = 'unstaged', filename = 'file.lua' })
+        end
         local test_hunk = { start = 15, count = 8 }
-        mock_diff.get_hunk_under_cursor = function() return test_hunk, 1 end
+        mock_diff.get_hunk_under_cursor = function()
+          return test_hunk, 1
+        end
 
         view:reset_hunk()
 
@@ -1152,12 +1308,16 @@ describe('StatusDiffView:', function()
 
       save_package('vgit.git.repository')
       package.loaded['vgit.git.repository'] = {
-        current = function() return mock_repo, nil end,
+        current = function()
+          return mock_repo, nil
+        end,
       }
 
       save_package('vgit.core.console')
       package.loaded['vgit.core.console'] = {
-        input = function() return console_input_response end,
+        input = function()
+          return console_input_response
+        end,
         info = function() end,
         error = function() end,
         warn = function() end,
@@ -1169,14 +1329,22 @@ describe('StatusDiffView:', function()
       view = StatusDiffView()
       view._tree_component = {
         each_entry = function() end,
-        get_selected_entry = function() return nil end,
+        get_selected_entry = function()
+          return nil
+        end,
         move_to = function() end,
       }
-      view.refresh_and_navigate = function(_, fn) fn() end
-      view._move_to_first_entry_of_type = function() return false end
+      view.refresh_and_navigate = function(_, fn)
+        fn()
+      end
+      view._move_to_first_entry_of_type = function()
+        return false
+      end
       view._move_to_first_entry = function() end
       view.move_to_entry = function() end
-      view.find_next_file = function() return nil end
+      view.find_next_file = function()
+        return nil
+      end
     end
 
     before_each(function()
@@ -1185,13 +1353,17 @@ describe('StatusDiffView:', function()
 
     describe('stage_entry', function()
       it('should return early if entry is invalid', function()
-        view._tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function()
+          return nil
+        end
         view:stage_entry()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:stage_file with filename', function()
-        view._tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'stage_me.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ type = 'unstaged', filename = 'stage_me.lua' })
+        end
         view:stage_entry()
 
         eq(1, #repo_calls)
@@ -1202,13 +1374,17 @@ describe('StatusDiffView:', function()
 
     describe('unstage_entry', function()
       it('should return early if entry is invalid', function()
-        view._tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function()
+          return nil
+        end
         view:unstage_entry()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:unstage_file with filename', function()
-        view._tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'unstage_me.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ type = 'staged', filename = 'unstage_me.lua' })
+        end
         view:unstage_entry()
 
         eq(1, #repo_calls)
@@ -1219,7 +1395,9 @@ describe('StatusDiffView:', function()
 
     describe('reset_entry', function()
       it('should return early if entry is invalid', function()
-        view._tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function()
+          return nil
+        end
         view:reset_entry()
         eq(0, #repo_calls)
       end)
@@ -1231,7 +1409,9 @@ describe('StatusDiffView:', function()
           return 'n'
         end
 
-        view._tree_component.get_selected_entry = function() return make_entry({ filename = 'test.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ filename = 'test.lua' })
+        end
         view:reset_entry()
 
         assert.is_true(prompted)
@@ -1239,16 +1419,22 @@ describe('StatusDiffView:', function()
 
       it('should abort on n response', function()
         console_input_response = 'n'
-        view._tree_component.get_selected_entry = function() return make_entry({ filename = 'test.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ filename = 'test.lua' })
+        end
         view:reset_entry()
 
         eq(0, #repo_calls)
       end)
 
       it('should proceed on y response', function()
-        package.loaded['vgit.core.console'].input = function() return 'y' end
+        package.loaded['vgit.core.console'].input = function()
+          return 'y'
+        end
 
-        view._tree_component.get_selected_entry = function() return make_entry({ filename = 'reset_me.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ filename = 'reset_me.lua' })
+        end
         view:reset_entry()
 
         eq(1, #repo_calls)
@@ -1257,9 +1443,13 @@ describe('StatusDiffView:', function()
       end)
 
       it('should proceed on yes response', function()
-        package.loaded['vgit.core.console'].input = function() return 'yes' end
+        package.loaded['vgit.core.console'].input = function()
+          return 'yes'
+        end
 
-        view._tree_component.get_selected_entry = function() return make_entry({ filename = 'reset_me.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ filename = 'reset_me.lua' })
+        end
         view:reset_entry()
 
         eq(1, #repo_calls)
@@ -1269,19 +1459,25 @@ describe('StatusDiffView:', function()
 
     describe('stage_entry_from_diff', function()
       it('should return early if entry is invalid', function()
-        view._tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function()
+          return nil
+        end
         view:stage_entry_from_diff()
         eq(0, #repo_calls)
       end)
 
       it('should return early if entry type is not unstaged', function()
-        view._tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'test.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ type = 'staged', filename = 'test.lua' })
+        end
         view:stage_entry_from_diff()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:stage_file with filename', function()
-        view._tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'diff_stage.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ type = 'unstaged', filename = 'diff_stage.lua' })
+        end
         view:stage_entry_from_diff()
 
         eq(1, #repo_calls)
@@ -1292,19 +1488,25 @@ describe('StatusDiffView:', function()
 
     describe('unstage_entry_from_diff', function()
       it('should return early if entry is invalid', function()
-        view._tree_component.get_selected_entry = function() return nil end
+        view._tree_component.get_selected_entry = function()
+          return nil
+        end
         view:unstage_entry_from_diff()
         eq(0, #repo_calls)
       end)
 
       it('should return early if entry type is not staged', function()
-        view._tree_component.get_selected_entry = function() return make_entry({ type = 'unstaged', filename = 'test.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ type = 'unstaged', filename = 'test.lua' })
+        end
         view:unstage_entry_from_diff()
         eq(0, #repo_calls)
       end)
 
       it('should call repo:unstage_file with filename', function()
-        view._tree_component.get_selected_entry = function() return make_entry({ type = 'staged', filename = 'diff_unstage.lua' }) end
+        view._tree_component.get_selected_entry = function()
+          return make_entry({ type = 'staged', filename = 'diff_unstage.lua' })
+        end
         view:unstage_entry_from_diff()
 
         eq(1, #repo_calls)
@@ -1316,7 +1518,9 @@ describe('StatusDiffView:', function()
     describe('reset_entry_from_diff', function()
       it('should delegate to reset_entry', function()
         local reset_entry_called = false
-        view.reset_entry = function() reset_entry_called = true end
+        view.reset_entry = function()
+          reset_entry_called = true
+        end
 
         view:reset_entry_from_diff()
         assert.is_true(reset_entry_called)
@@ -1326,8 +1530,12 @@ describe('StatusDiffView:', function()
     describe('open_file', function()
       it('should return early if entry is invalid', function()
         local destroy_called = false
-        view.destroy = function() destroy_called = true end
-        view._tree_component.get_selected_entry = function() return nil end
+        view.destroy = function()
+          destroy_called = true
+        end
+        view._tree_component.get_selected_entry = function()
+          return nil
+        end
 
         view:open_file()
         assert.is_false(destroy_called)
@@ -1337,7 +1545,9 @@ describe('StatusDiffView:', function()
         local destroy_called = false
         local opened_file = nil
 
-        view.destroy = function() destroy_called = true end
+        view.destroy = function()
+          destroy_called = true
+        end
 
         save_package('vgit.core.fs')
         package.loaded['vgit.core.fs'] = {
@@ -1349,9 +1559,13 @@ describe('StatusDiffView:', function()
         package.loaded['vgit.features.screens.StatusDiffView'] = nil
         StatusDiffView = require('vgit.features.screens.StatusDiffView')
         view = StatusDiffView()
-        view.destroy = function() destroy_called = true end
+        view.destroy = function()
+          destroy_called = true
+        end
         view._tree_component = {
-          get_selected_entry = function() return make_entry({ filename = 'open_me.lua' }) end,
+          get_selected_entry = function()
+            return make_entry({ filename = 'open_me.lua' })
+          end,
         }
 
         view:open_file()
@@ -1394,13 +1608,19 @@ describe('StatusDiffView:', function()
 
       save_package('vgit.git.repository')
       package.loaded['vgit.git.repository'] = {
-        current = function() return mock_repo, nil end,
+        current = function()
+          return mock_repo, nil
+        end,
       }
 
       save_package('vgit.core.console')
       package.loaded['vgit.core.console'] = {
-        input = function() return console_input_response end,
-        info = function(msg) table.insert(info_messages, msg) end,
+        input = function()
+          return console_input_response
+        end,
+        info = function(msg)
+          table.insert(info_messages, msg)
+        end,
         error = function() end,
         warn = function() end,
         debug = { error = function() end, warning = function() end },
@@ -1413,7 +1633,9 @@ describe('StatusDiffView:', function()
       local mock_tree = {
         each_entry = function() end,
         move_to = function() end,
-        get_selected_entry = function() return nil end,
+        get_selected_entry = function()
+          return nil
+        end,
       }
       view._tree_component = mock_tree
       view.refresh_data = function() end
@@ -1481,7 +1703,9 @@ describe('StatusDiffView:', function()
       end)
 
       it('should proceed on y response', function()
-        package.loaded['vgit.core.console'].input = function() return 'y' end
+        package.loaded['vgit.core.console'].input = function()
+          return 'y'
+        end
 
         view:reset_all()
 
@@ -1490,7 +1714,9 @@ describe('StatusDiffView:', function()
       end)
 
       it('should proceed on yes response', function()
-        package.loaded['vgit.core.console'].input = function() return 'yes' end
+        package.loaded['vgit.core.console'].input = function()
+          return 'yes'
+        end
 
         view:reset_all()
 
@@ -1499,7 +1725,9 @@ describe('StatusDiffView:', function()
       end)
 
       it('should call repo:reset with no filename (reset all)', function()
-        package.loaded['vgit.core.console'].input = function() return 'y' end
+        package.loaded['vgit.core.console'].input = function()
+          return 'y'
+        end
 
         view:reset_all()
 
@@ -1590,22 +1818,37 @@ describe('StatusDiffView:', function()
                 entries = { make_entry({ filename = 'file1.lua' }) },
               },
             },
-          }, nil
+          },
+            nil
         end,
         index = function()
           return {
-            staged_hunks = function() return {} end,
-            unstaged_hunks = function() return {} end,
+            staged_hunks = function()
+              return {}
+            end,
+            unstaged_hunks = function()
+              return {}
+            end,
           }
         end,
       }
 
       mock_diff = {
-        is_valid = function() return true end,
-        get_marks = function() return {} end,
-        get_hunks = function() return {} end,
-        get_lnum = function() return 1 end,
-        get_hunk_under_cursor = function() return nil, nil end,
+        is_valid = function()
+          return true
+        end,
+        get_marks = function()
+          return {}
+        end,
+        get_hunks = function()
+          return {}
+        end,
+        get_lnum = function()
+          return 1
+        end,
+        get_hunk_under_cursor = function()
+          return nil, nil
+        end,
         move_to_hunk = function() end,
         hunk_down = function() end,
         hunk_up = function() end,
@@ -1614,18 +1857,30 @@ describe('StatusDiffView:', function()
         clear_lines = function() end,
         clear_folds = function() end,
         reset_cursor = function() end,
-        call = function(_, cb) cb() end,
+        call = function(_, cb)
+          cb()
+        end,
         set_keymap = function() end,
         component_will_unmount = function() end,
       }
 
       mock_tree = {
-        get_lnum = function() return 1 end,
+        get_lnum = function()
+          return 1
+        end,
         set_lnum = function() end,
-        get_line_count = function() return 1 end,
-        is_valid = function() return true end,
-        get_list_item = function() return nil end,
-        get_selected_entry = function() return nil end,
+        get_line_count = function()
+          return 1
+        end,
+        is_valid = function()
+          return true
+        end,
+        get_list_item = function()
+          return nil
+        end,
+        get_selected_entry = function()
+          return nil
+        end,
         each_entry = function() end,
         move_to = function() end,
         set_list = function() end,
@@ -1639,7 +1894,9 @@ describe('StatusDiffView:', function()
 
       save_package('vgit.git.repository')
       package.loaded['vgit.git.repository'] = {
-        current = function() return mock_repo, nil end,
+        current = function()
+          return mock_repo, nil
+        end,
       }
 
       package.loaded['vgit.features.screens.StatusDiffView'] = nil
@@ -1655,7 +1912,9 @@ describe('StatusDiffView:', function()
 
     describe('_update_diff_component', function()
       it('should return false if entry is invalid', function()
-        mock_tree.get_selected_entry = function() return nil end
+        mock_tree.get_selected_entry = function()
+          return nil
+        end
         local result = view:_update_diff_component()
         assert.is_false(result)
       end)
@@ -1664,7 +1923,9 @@ describe('StatusDiffView:', function()
         package.loaded['vgit.git.repository'].current = function()
           return nil, 'repo error'
         end
-        mock_tree.get_selected_entry = function() return make_entry() end
+        mock_tree.get_selected_entry = function()
+          return make_entry()
+        end
 
         local result = view:_update_diff_component()
         assert.is_false(result)
@@ -1674,7 +1935,9 @@ describe('StatusDiffView:', function()
         mock_repo.diff = function()
           return nil, { 'diff error' }
         end
-        mock_tree.get_selected_entry = function() return make_entry() end
+        mock_tree.get_selected_entry = function()
+          return make_entry()
+        end
 
         local result = view:_update_diff_component()
         assert.is_false(result)
@@ -1682,8 +1945,12 @@ describe('StatusDiffView:', function()
 
       it('should call set_props with diff data', function()
         local props_set = nil
-        mock_diff.set_props = function(_, props) props_set = props end
-        mock_tree.get_selected_entry = function() return make_entry({ filename = 'test.lua', filetype = 'lua' }) end
+        mock_diff.set_props = function(_, props)
+          props_set = props
+        end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ filename = 'test.lua', filetype = 'lua' })
+        end
 
         view:_update_diff_component()
 
@@ -1694,8 +1961,12 @@ describe('StatusDiffView:', function()
 
       it('should move to hunk_index if provided', function()
         local moved_to = nil
-        mock_diff.move_to_hunk = function(_, idx) moved_to = idx end
-        mock_tree.get_selected_entry = function() return make_entry() end
+        mock_diff.move_to_hunk = function(_, idx)
+          moved_to = idx
+        end
+        mock_tree.get_selected_entry = function()
+          return make_entry()
+        end
 
         view:_update_diff_component(3)
 
@@ -1714,8 +1985,12 @@ describe('StatusDiffView:', function()
         local warned = false
         save_package('vgit.core.console')
         package.loaded['vgit.core.console'] = {
-          warn = function() warned = true end,
-          input = function() return '' end,
+          warn = function()
+            warned = true
+          end,
+          input = function()
+            return ''
+          end,
           info = function() end,
           error = function() end,
           debug = { error = function() end, warning = function() end },
@@ -1738,10 +2013,18 @@ describe('StatusDiffView:', function()
         local cleared_folds = false
         local reset_cursor_called = false
 
-        mock_diff.clear_extmarks = function() cleared_extmarks = true end
-        mock_diff.clear_lines = function() cleared_lines = true end
-        mock_diff.clear_folds = function() cleared_folds = true end
-        mock_diff.reset_cursor = function() reset_cursor_called = true end
+        mock_diff.clear_extmarks = function()
+          cleared_extmarks = true
+        end
+        mock_diff.clear_lines = function()
+          cleared_lines = true
+        end
+        mock_diff.clear_folds = function()
+          cleared_folds = true
+        end
+        mock_diff.reset_cursor = function()
+          reset_cursor_called = true
+        end
 
         view._component_manager = {}
         view:_handle_file_selection_change({ entry = make_entry() })
@@ -1787,7 +2070,9 @@ describe('StatusDiffView:', function()
 
       it('should update tree_component list', function()
         local list_set = nil
-        mock_tree.set_list = function(_, list) list_set = list end
+        mock_tree.set_list = function(_, list)
+          list_set = list
+        end
 
         view:refresh_data()
 
@@ -1846,8 +2131,12 @@ describe('StatusDiffView:', function()
         local cleanup2_called = false
 
         view._debounce_cleanups = {
-          function() cleanup1_called = true end,
-          function() cleanup2_called = true end,
+          function()
+            cleanup1_called = true
+          end,
+          function()
+            cleanup2_called = true
+          end,
         }
 
         view._diff_component = {
@@ -1879,7 +2168,9 @@ describe('StatusDiffView:', function()
 
       it('should call emit_cleanup_events', function()
         local emit_called = false
-        view.emit_cleanup_events = function() emit_called = true end
+        view.emit_cleanup_events = function()
+          emit_called = true
+        end
         view._component_manager = { destroy = function() end }
         view._debounce_cleanups = {}
 
@@ -1894,7 +2185,9 @@ describe('StatusDiffView:', function()
         view._diff_component = { component_will_unmount = function() end }
         view._tree_component = { component_will_unmount = function() end }
         view._component_manager = {
-          destroy = function() manager_destroyed = true end,
+          destroy = function()
+            manager_destroyed = true
+          end,
         }
 
         view:destroy()
@@ -1909,10 +2202,14 @@ describe('StatusDiffView:', function()
         local tree_unmount_called = false
 
         view._diff_component = {
-          component_will_unmount = function() diff_unmount_called = true end,
+          component_will_unmount = function()
+            diff_unmount_called = true
+          end,
         }
         view._tree_component = {
-          component_will_unmount = function() tree_unmount_called = true end,
+          component_will_unmount = function()
+            tree_unmount_called = true
+          end,
         }
 
         view:emit_cleanup_events()
@@ -1937,26 +2234,41 @@ describe('StatusDiffView:', function()
                   },
                 },
               },
-            }, nil
+            },
+              nil
           end,
           diff = function()
             return { lines = {}, marks = {} }, nil
           end,
           index = function()
             return {
-              staged_hunks = function() return {} end,
-              unstaged_hunks = function() return {} end,
+              staged_hunks = function()
+                return {}
+              end,
+              unstaged_hunks = function()
+                return {}
+              end,
             }
           end,
         }
 
         mock_tree = {
-          get_lnum = function() return 1 end,
+          get_lnum = function()
+            return 1
+          end,
           set_lnum = function() end,
-          get_line_count = function() return 1 end,
-          is_valid = function() return true end,
-          get_list_item = function() return nil end,
-          get_selected_entry = function() return nil end,
+          get_line_count = function()
+            return 1
+          end,
+          is_valid = function()
+            return true
+          end,
+          get_list_item = function()
+            return nil
+          end,
+          get_selected_entry = function()
+            return nil
+          end,
           each_entry = function(_, cb)
             cb({ filename = 'file1.lua' }, 'unstaged')
           end,
@@ -1967,7 +2279,9 @@ describe('StatusDiffView:', function()
 
         save_package('vgit.git.repository')
         package.loaded['vgit.git.repository'] = {
-          current = function() return mock_repo, nil end,
+          current = function()
+            return mock_repo, nil
+          end,
         }
 
         package.loaded['vgit.features.screens.StatusDiffView'] = nil
@@ -1975,18 +2289,26 @@ describe('StatusDiffView:', function()
         view = StatusDiffView()
         view._tree_component = mock_tree
         view._diff_component = {
-          is_valid = function() return true end,
+          is_valid = function()
+            return true
+          end,
           set_props = function() end,
           move_to_hunk = function() end,
-          get_marks = function() return {} end,
-          get_lnum = function() return 1 end,
+          get_marks = function()
+            return {}
+          end,
+          get_lnum = function()
+            return 1
+          end,
           state = { marks = {} },
         }
       end)
 
       it('should refresh data', function()
         local refresh_called = false
-        view.refresh_data = function() refresh_called = true end
+        view.refresh_data = function()
+          refresh_called = true
+        end
 
         view:on_git_change()
 
@@ -1995,8 +2317,12 @@ describe('StatusDiffView:', function()
 
       it('should restore selection if file still exists', function()
         local move_to_entry_called = false
-        mock_tree.get_selected_entry = function() return make_entry({ filename = 'file1.lua', type = 'unstaged' }) end
-        view.move_to_entry = function() move_to_entry_called = true end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ filename = 'file1.lua', type = 'unstaged' })
+        end
+        view.move_to_entry = function()
+          move_to_entry_called = true
+        end
         view._update_diff_component = function() end
 
         view:on_git_change()
@@ -2006,11 +2332,15 @@ describe('StatusDiffView:', function()
 
       it('should fall back to first entry if file gone', function()
         local move_to_called = false
-        mock_tree.get_selected_entry = function() return make_entry({ filename = 'gone_file.lua', type = 'unstaged' }) end
+        mock_tree.get_selected_entry = function()
+          return make_entry({ filename = 'gone_file.lua', type = 'unstaged' })
+        end
         mock_tree.each_entry = function(_, cb)
           cb({ filename = 'other_file.lua' }, 'unstaged')
         end
-        mock_tree.move_to = function() move_to_called = true end
+        mock_tree.move_to = function()
+          move_to_called = true
+        end
 
         view:on_git_change()
 
@@ -2110,7 +2440,9 @@ describe('StatusDiffView:', function()
         end,
       }
 
-      local my_query = function() return true end
+      local my_query = function()
+        return true
+      end
       view:move_to(my_query)
 
       assert.is_true(move_to_called)

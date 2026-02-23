@@ -160,7 +160,9 @@ describe('Diff:', function()
       local result = diff:generate_unified({ hunk }, lines)
 
       local found = {}
-      for _, line in ipairs(result.lines) do found[line] = true end
+      for _, line in ipairs(result.lines) do
+        found[line] = true
+      end
       assert.is_true(found['removed1'])
       assert.is_true(found['removed2'])
       assert.is_nil(found['-removed1'])
@@ -315,7 +317,9 @@ describe('Diff:', function()
       local result = diff:generate_split({ hunk }, lines)
 
       local prev_found = {}
-      for _, line in ipairs(result.previous_lines) do prev_found[line] = true end
+      for _, line in ipairs(result.previous_lines) do
+        prev_found[line] = true
+      end
       assert.is_true(prev_found['removed1'])
       assert.is_true(prev_found['removed2'])
 

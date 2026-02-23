@@ -24,7 +24,9 @@ describe('SplitDiffComponent:', function()
     if component._current_component and component._current_component._element then
       component._current_component._element:mount()
     end
-    for k, v in pairs(overrides.state or {}) do component.state[k] = v end
+    for k, v in pairs(overrides.state or {}) do
+      component.state[k] = v
+    end
     return component
   end
 
@@ -139,10 +141,16 @@ describe('SplitDiffComponent:', function()
       local prev_called = false
       local curr_called = false
 
-      component._previous_component.test_method = function() prev_called = true end
-      component._current_component.test_method = function() curr_called = true end
+      component._previous_component.test_method = function()
+        prev_called = true
+      end
+      component._current_component.test_method = function()
+        curr_called = true
+      end
 
-      component:_for_both(function(c) c:test_method() end)
+      component:_for_both(function(c)
+        c:test_method()
+      end)
 
       assert.is_true(prev_called)
       assert.is_true(curr_called)
@@ -153,9 +161,13 @@ describe('SplitDiffComponent:', function()
       local curr_called = false
 
       component._previous_component = nil
-      component._current_component.test_method = function() curr_called = true end
+      component._current_component.test_method = function()
+        curr_called = true
+      end
 
-      component:_for_both(function(c) c:test_method() end)
+      component:_for_both(function(c)
+        c:test_method()
+      end)
 
       assert.is_true(curr_called)
     end)
@@ -164,10 +176,14 @@ describe('SplitDiffComponent:', function()
       local component = create_split_component()
       local prev_called = false
 
-      component._previous_component.test_method = function() prev_called = true end
+      component._previous_component.test_method = function()
+        prev_called = true
+      end
       component._current_component = nil
 
-      component:_for_both(function(c) c:test_method() end)
+      component:_for_both(function(c)
+        c:test_method()
+      end)
 
       assert.is_true(prev_called)
     end)
@@ -178,7 +194,9 @@ describe('SplitDiffComponent:', function()
       component._current_component = nil
 
       -- should not error
-      component:_for_both(function(c) c:test_method() end)
+      component:_for_both(function(c)
+        c:test_method()
+      end)
     end)
   end)
 
@@ -189,7 +207,9 @@ describe('SplitDiffComponent:', function()
         { header = '@@ -10,2 +10,3 @@', diff = {}, top = 10, bot = 12 },
       }
       local component = create_split_component()
-      component._current_component.get_hunks = function() return hunks end
+      component._current_component.get_hunks = function()
+        return hunks
+      end
 
       eq(hunks, component:get_hunks())
     end)
@@ -203,7 +223,9 @@ describe('SplitDiffComponent:', function()
 
     it('should return empty table when _current_component has no hunks', function()
       local component = create_split_component()
-      component._current_component.get_hunks = function() return {} end
+      component._current_component.get_hunks = function()
+        return {}
+      end
 
       eq({}, component:get_hunks())
     end)
@@ -216,7 +238,9 @@ describe('SplitDiffComponent:', function()
         { top = 15, bot = 20 },
       }
       local component = create_split_component()
-      component._current_component.get_marks = function() return marks end
+      component._current_component.get_marks = function()
+        return marks
+      end
 
       eq(marks, component:get_marks())
     end)
@@ -233,7 +257,9 @@ describe('SplitDiffComponent:', function()
     it('should delegate to _current_component', function()
       local hunk = { header = '@@ -1,3 +1,4 @@', diff = {} }
       local component = create_split_component()
-      component._current_component.get_hunk_under_cursor = function() return hunk end
+      component._current_component.get_hunk_under_cursor = function()
+        return hunk
+      end
 
       eq(hunk, component:get_hunk_under_cursor())
     end)
@@ -250,7 +276,9 @@ describe('SplitDiffComponent:', function()
     it('should delegate to _current_component', function()
       local mark = { top = 5, bot = 10 }
       local component = create_split_component()
-      component._current_component.get_current_mark_under_cursor = function() return mark end
+      component._current_component.get_current_mark_under_cursor = function()
+        return mark
+      end
 
       eq(mark, component:get_current_mark_under_cursor())
     end)
@@ -266,7 +294,9 @@ describe('SplitDiffComponent:', function()
   describe('get_relative_mark_index', function()
     it('should delegate to _current_component', function()
       local component = create_split_component()
-      component._current_component.get_relative_mark_index = function(_, lnum) return lnum < 10 and 1 or 2 end
+      component._current_component.get_relative_mark_index = function(_, lnum)
+        return lnum < 10 and 1 or 2
+      end
 
       eq(1, component:get_relative_mark_index(5))
       eq(2, component:get_relative_mark_index(15))
@@ -283,7 +313,9 @@ describe('SplitDiffComponent:', function()
   describe('get_lnum', function()
     it('should delegate to _current_component', function()
       local component = create_split_component()
-      component._current_component.get_lnum = function() return 42 end
+      component._current_component.get_lnum = function()
+        return 42
+      end
 
       eq(42, component:get_lnum())
     end)
@@ -324,7 +356,9 @@ describe('SplitDiffComponent:', function()
     it('should delegate to _current_component', function()
       local mark = { top = 15, bot = 20 }
       local component = create_split_component()
-      component._current_component.hunk_down = function() return mark end
+      component._current_component.hunk_down = function()
+        return mark
+      end
 
       eq(mark, component:hunk_down())
     end)
@@ -341,7 +375,9 @@ describe('SplitDiffComponent:', function()
     it('should delegate to _current_component', function()
       local mark = { top = 5, bot = 10 }
       local component = create_split_component()
-      component._current_component.hunk_up = function() return mark end
+      component._current_component.hunk_up = function()
+        return mark
+      end
 
       eq(mark, component:hunk_up())
     end)
@@ -357,7 +393,9 @@ describe('SplitDiffComponent:', function()
   describe('get_filetype', function()
     it('should delegate to _current_component', function()
       local component = create_split_component()
-      component._current_component.get_filetype = function() return 'lua' end
+      component._current_component.get_filetype = function()
+        return 'lua'
+      end
 
       eq('lua', component:get_filetype())
     end)

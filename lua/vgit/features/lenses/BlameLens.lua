@@ -145,13 +145,10 @@ function BlameLens:setup_hunk_keymaps()
     local prev_fn = event.async(function()
       self:prev_hunk()
     end)
-    self.diff_component:set_keymap(
-      {
-        mode = 'n',
-        key = prev_key,
-      },
-      prev_fn
-    )
+    self.diff_component:set_keymap({
+      mode = 'n',
+      key = prev_key,
+    }, prev_fn)
   end
 
   local next_key = self:get_key(keymaps.next)
@@ -159,13 +156,10 @@ function BlameLens:setup_hunk_keymaps()
     local next_fn = event.async(function()
       self:next_hunk()
     end)
-    self.diff_component:set_keymap(
-      {
-        mode = 'n',
-        key = next_key,
-      },
-      next_fn
-    )
+    self.diff_component:set_keymap({
+      mode = 'n',
+      key = next_key,
+    }, next_fn)
   end
 end
 

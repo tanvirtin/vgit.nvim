@@ -27,9 +27,7 @@ local _run = event.promisify(function(args, opts, callback)
   local stdout = {}
 
   local spawn_env = env.get_all()
-  if opts.env then
-    spawn_env = vim.list_extend(vim.list_extend({}, spawn_env), opts.env)
-  end
+  if opts.env then spawn_env = vim.list_extend(vim.list_extend({}, spawn_env), opts.env) end
 
   Spawn({
     command = cmd,
@@ -49,7 +47,9 @@ local _run = event.promisify(function(args, opts, callback)
       end
       if #err ~= 0 then
         local log_lines = { cmd_str .. ' (exit=' .. code .. ')' }
-        for _, line in ipairs(err) do log_lines[#log_lines + 1] = line end
+        for _, line in ipairs(err) do
+          log_lines[#log_lines + 1] = line
+        end
         console.debug.error(log_lines)
         return callback(nil, err, code)
       end

@@ -27,7 +27,9 @@ describe('LiveConflict:', function()
       local instance = LiveConflict()
       local called = false
 
-      instance._debounced_conflicts_cleanup = function() called = true end
+      instance._debounced_conflicts_cleanup = function()
+        called = true
+      end
 
       instance:cleanup()
 

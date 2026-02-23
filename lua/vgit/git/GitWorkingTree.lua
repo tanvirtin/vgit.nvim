@@ -13,9 +13,7 @@ function GitWorkingTree:constructor(repository)
 
   local root_path = repository:get_path()
   -- Strip trailing slashes to prevent double-slash in path concatenation
-  if root_path and #root_path > 1 then
-    root_path = root_path:gsub('/+$', '')
-  end
+  if root_path and #root_path > 1 then root_path = root_path:gsub('/+$', '') end
 
   local tree = {
     _root_path = root_path,
@@ -158,8 +156,7 @@ function GitWorkingTree:contains(path)
   if not vim.startswith(path, '/') then absolute_path = self:path(path) end
 
   local root = self._root_path
-  return vim.startswith(absolute_path, root .. '/')
-    or absolute_path == root
+  return vim.startswith(absolute_path, root .. '/') or absolute_path == root
 end
 
 function GitWorkingTree:stat(filename)

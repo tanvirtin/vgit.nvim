@@ -7,7 +7,7 @@ local DepthTree = Object:extend()
 
 function DepthTree:constructor()
   return {
-    _tree = {}
+    _tree = {},
   }
 end
 

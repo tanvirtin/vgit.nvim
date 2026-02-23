@@ -25,9 +25,7 @@ function LiveGutter:is_enabled()
 end
 
 function LiveGutter:cleanup()
-  if self._fetch_debounced_cleanup then
-    self._fetch_debounced_cleanup()
-  end
+  if self._fetch_debounced_cleanup then self._fetch_debounced_cleanup() end
 end
 
 function LiveGutter:fetch(buffer)

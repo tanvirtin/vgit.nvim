@@ -651,7 +651,10 @@ function BlameView:show_commit_project_diff()
         layout_type = layout_type,
       })
 
-      if diff_err then console.debug.error(diff_err); return nil end
+      if diff_err then
+        console.debug.error(diff_err)
+        return nil
+      end
       if not diff then return nil end
 
       local from_filename = file_old_filename or filename

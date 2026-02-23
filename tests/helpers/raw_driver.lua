@@ -244,10 +244,16 @@ function RawDriver.create_merge_commit(repo, opts)
 end
 
 function RawDriver.add_submodule(repo, source_path, submodule_path)
-  local _, err = utils.git_exec({ 'git', '-C', repo, '-c', 'protocol.file.allow=always', 'submodule', 'add', source_path, submodule_path }, { check = true })
+  local _, err = utils.git_exec(
+    { 'git', '-C', repo, '-c', 'protocol.file.allow=always', 'submodule', 'add', source_path, submodule_path },
+    { check = true }
+  )
   if err then return nil, 'Failed to add submodule: ' .. err end
 
-  _, err = utils.git_exec({ 'git', '-C', repo, 'commit', '-q', '-m', 'Add submodule ' .. submodule_path }, { check = true })
+  _, err = utils.git_exec(
+    { 'git', '-C', repo, 'commit', '-q', '-m', 'Add submodule ' .. submodule_path },
+    { check = true }
+  )
   if err then return nil, 'Failed to commit submodule: ' .. err end
 
   return true, nil

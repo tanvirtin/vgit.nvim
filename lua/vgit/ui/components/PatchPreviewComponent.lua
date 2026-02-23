@@ -20,10 +20,7 @@ end
 
 local function flush_file_section(ctx)
   local section = ctx.file_section
-  if
-    section
-    and (section.line_count > 0 or (section.syntax_mappings and #section.syntax_mappings > 0))
-  then
+  if section and (section.line_count > 0 or (section.syntax_mappings and #section.syntax_mappings > 0)) then
     section.end_row = #ctx.lines - 1
     ctx.file_sections[#ctx.file_sections + 1] = section
   end
@@ -148,7 +145,7 @@ local function process_hunk(ctx, entry)
       lnum_change = change_type and { type = change_type } or nil,
     }
 
-    local syntax_mapping = nil
+    local syntax_mapping
     if change_type == 'remove' then
       syntax_mapping = { source = 'original', source_line = ctx.orig_lnum, display_row = display_row }
     else
@@ -166,9 +163,7 @@ local function process_hunk(ctx, entry)
   }
 
   if ctx.file_section then
-    ctx.file_section.line_count = (ctx.file_section.line_count or 0)
-      + #(hunk.diff or {})
-      + (hunk.header and 1 or 0)
+    ctx.file_section.line_count = (ctx.file_section.line_count or 0) + #(hunk.diff or {}) + (hunk.header and 1 or 0)
   end
 
   ctx.lines[#ctx.lines + 1] = ''

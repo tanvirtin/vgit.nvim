@@ -28,8 +28,12 @@ describe('LayoutRenderer:', function()
     it('should create with valid context', function()
       local context = {
         create_parent_bounds = function() end,
-        is_screen_mode = function() return false end,
-        is_lens_mode = function() return false end,
+        is_screen_mode = function()
+          return false
+        end,
+        is_lens_mode = function()
+          return false
+        end,
       }
       local renderer = LayoutRenderer(context)
 
@@ -44,8 +48,12 @@ describe('LayoutRenderer:', function()
     local function make_context()
       return {
         create_parent_bounds = function() end,
-        is_screen_mode = function() return false end,
-        is_lens_mode = function() return false end,
+        is_screen_mode = function()
+          return false
+        end,
+        is_lens_mode = function()
+          return false
+        end,
         mode = 'popup',
       }
     end
@@ -128,8 +136,12 @@ describe('LayoutRenderer:', function()
     it('should recursively render children', function()
       local context = {
         create_parent_bounds = function() end,
-        is_screen_mode = function() return false end,
-        is_lens_mode = function() return false end,
+        is_screen_mode = function()
+          return false
+        end,
+        is_lens_mode = function()
+          return false
+        end,
       }
       local renderer = LayoutRenderer(context)
       local rendered_children = {}

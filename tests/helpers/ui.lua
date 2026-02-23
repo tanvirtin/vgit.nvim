@@ -62,16 +62,12 @@ function M.cleanup_ui()
   pcall(function()
     for _, win_id in ipairs(vim.api.nvim_list_wins()) do
       local config = vim.api.nvim_win_get_config(win_id)
-      if config.relative and config.relative ~= '' then
-        pcall(vim.api.nvim_win_close, win_id, true)
-      end
+      if config.relative and config.relative ~= '' then pcall(vim.api.nvim_win_close, win_id, true) end
     end
   end)
   pcall(function()
     for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-      if vim.api.nvim_buf_is_valid(bufnr) then
-        pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
-      end
+      if vim.api.nvim_buf_is_valid(bufnr) then pcall(vim.api.nvim_buf_delete, bufnr, { force = true }) end
     end
   end)
 end
@@ -80,9 +76,7 @@ function M.count_floating_windows()
   local count = 0
   for _, win_id in ipairs(vim.api.nvim_list_wins()) do
     local config = vim.api.nvim_win_get_config(win_id)
-    if config.relative and config.relative ~= '' then
-      count = count + 1
-    end
+    if config.relative and config.relative ~= '' then count = count + 1 end
   end
   return count
 end

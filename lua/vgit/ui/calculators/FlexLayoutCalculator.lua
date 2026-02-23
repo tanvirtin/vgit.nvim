@@ -48,7 +48,6 @@ function FlexLayoutCalculator:calculate_flex(spec, parent_bounds)
   if flex_space < 0 then flex_space = 0 end
 
   local child_sizes = {}
-  local accumulated_size = 0
 
   for i, child in ipairs(children) do
     if fixed_children[i] then

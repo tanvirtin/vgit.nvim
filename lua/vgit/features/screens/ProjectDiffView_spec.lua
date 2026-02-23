@@ -494,5 +494,4 @@ describe('ProjectDiffView:', function()
       eq('patch', view:_get_active_component())
     end)
   end)
-
 end)

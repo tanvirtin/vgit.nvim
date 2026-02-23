@@ -14,17 +14,13 @@ end
 function Config:get(key)
   assert(type(key) == 'string', 'type error :: expected string')
   local value = self.data[key]
-  if value == nil then
-    error(string.format('key "%s" does not exist', tostring(key)))
-  end
+  if value == nil then error(string.format('key "%s" does not exist', tostring(key))) end
 
   return value
 end
 
 function Config:set(key, value)
-  if self.data[key] == nil then
-    error(string.format('key "%s" does not exist', tostring(key)))
-  end
+  if self.data[key] == nil then error(string.format('key "%s" does not exist', tostring(key))) end
   if type(self.data[key]) ~= type(value) then
     error(string.format('type error :: expected %s', type(self.data[key])))
   end

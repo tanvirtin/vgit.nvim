@@ -21,18 +21,13 @@ function LiveConflict:constructor()
 end
 
 function LiveConflict:register_events()
-  git_buffer_store.on(
-    { 'attach', 'reload', 'change', 'sync' },
-    self._debounced_conflicts
-  )
+  git_buffer_store.on({ 'attach', 'reload', 'change', 'sync' }, self._debounced_conflicts)
 
   return self
 end
 
 function LiveConflict:cleanup()
-  if self._debounced_conflicts_cleanup then
-    self._debounced_conflicts_cleanup()
-  end
+  if self._debounced_conflicts_cleanup then self._debounced_conflicts_cleanup() end
 end
 
 return LiveConflict

@@ -1,5 +1,4 @@
 local lazy = require('vgit.core.lazy')
-local utils = lazy('vgit.core.utils')
 local async = lazy('vgit.core.async')
 local utils_math = lazy('vgit.core.utils.math')
 local git_repo = lazy('vgit.libgit2.git_repo')
@@ -55,9 +54,7 @@ local event = {
 
 function event.all(funcs, opts)
   opts = opts or {}
-  if not opts.max_concurrent then
-    opts.max_concurrent = 20
-  end
+  if not opts.max_concurrent then opts.max_concurrent = 20 end
   return async.all(funcs, opts)
 end
 
@@ -74,9 +71,7 @@ end
 function event.buffer_on(buffer, event_name, callback)
   ensure_augroup()
   local group = event_name
-  if type(event_name) == 'table' then
-    group = '::' .. table.concat(event_name, '::')
-  end
+  if type(event_name) == 'table' then group = '::' .. table.concat(event_name, '::') end
   group = event.group .. '::' .. group .. '::' .. buffer.bufnr
   vim.api.nvim_create_augroup(group, { clear = true })
   vim.api.nvim_create_autocmd(event_name, {
@@ -120,9 +115,7 @@ function event.debounce(fn, ms)
   local timer = nil
 
   local function close_timer()
-    if timer and not timer:is_closing() then
-      timer:close()
-    end
+    if timer and not timer:is_closing() then timer:close() end
     timer = nil
   end
 
@@ -167,8 +160,12 @@ end
 
 local function _start_watcher()
   if _handle then
-    pcall(function() _handle:stop() end)
-    pcall(function() _handle:close() end)
+    pcall(function()
+      _handle:stop()
+    end)
+    pcall(function()
+      _handle:close()
+    end)
     _handle = nil
   end
 
@@ -180,23 +177,19 @@ local function _start_watcher()
   local handle = vim.loop.new_fs_event()
   if not handle then return end
 
-  local ok = handle:start(
-    git_dirname,
-    {},
-    function(err, filename, ev_name)
-      if err then return end
-      if not filename then return end
-      if filename:match('index%.lock$') then return end
+  local ok = handle:start(git_dirname, {}, function(err, filename, ev_name)
+    if err then return end
+    if not filename then return end
+    if filename:match('index%.lock$') then return end
 
-      vim.schedule(function()
-        event.emit('VGitChange', {
-          git_dir = git_dirname,
-          filename = filename,
-          event_name = ev_name,
-        })
-      end)
-    end
-  )
+    vim.schedule(function()
+      event.emit('VGitChange', {
+        git_dir = git_dirname,
+        filename = filename,
+        event_name = ev_name,
+      })
+    end)
+  end)
 
   if not ok then
     handle:close()
@@ -214,8 +207,12 @@ function event.register_module()
 
   event.on({ 'VimLeavePre' }, function()
     if _handle then
-      pcall(function() _handle:stop() end)
-      pcall(function() _handle:close() end)
+      pcall(function()
+        _handle:stop()
+      end)
+      pcall(function()
+        _handle:close()
+      end)
       _handle = nil
     end
   end)
@@ -233,8 +230,12 @@ end
 
 function event.reset()
   if _handle then
-    pcall(function() _handle:stop() end)
-    pcall(function() _handle:close() end)
+    pcall(function()
+      _handle:stop()
+    end)
+    pcall(function()
+      _handle:close()
+    end)
     _handle = nil
   end
   _is_registered = false

@@ -7,7 +7,11 @@ local eq = assert.are.same
 
 local function make_repo(path)
   path = path or '/repo'
-  return { get_path = function() return path end }
+  return {
+    get_path = function()
+      return path
+    end,
+  }
 end
 
 describe('GitSubmodule:', function()
@@ -378,8 +382,14 @@ describe('GitSubmodule:', function()
 
         -- Create a commit inside the submodule to make it "modified"
         vim.fn.system({
-          'git', '-C', repo .. '/libs/dep',
-          'commit', '-q', '--allow-empty', '-m', 'local-change',
+          'git',
+          '-C',
+          repo .. '/libs/dep',
+          'commit',
+          '-q',
+          '--allow-empty',
+          '-m',
+          'local-change',
         })
 
         -- Reset cache to pick up new state

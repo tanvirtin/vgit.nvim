@@ -3,14 +3,24 @@ local eq = assert.are.same
 -- Mock the event module to avoid async issues in tests
 local mock_event = {
   await = function() end,
-  async = function(fn) return fn end,
-  debounce = function(fn) return fn, function() end end,
-  debounce_async = function(fn) return fn, function() end end,
+  async = function(fn)
+    return fn
+  end,
+  debounce = function(fn)
+    return fn, function() end
+  end,
+  debounce_async = function(fn)
+    return fn, function() end
+  end,
   on = function() end,
   emit = function() end,
-  custom_on = function() return function() end end,
+  custom_on = function()
+    return function() end
+  end,
   buffer_on = function() end,
-  promisify = function(fn) return fn end,
+  promisify = function(fn)
+    return fn
+  end,
   group = 'VGitGroup',
   register_module = function() end,
 }
@@ -174,15 +184,22 @@ describe('BranchView:', function()
                 end,
               }
             end,
-          }, nil
+          },
+            nil
         end,
       }
 
       save_package('vgit.core.console')
       package.loaded['vgit.core.console'] = {
-        input = function() return opts.input_response or 'n' end,
-        error = function(msg) if opts.on_error then opts.on_error(msg) end end,
-        info = function(msg) if opts.on_info then opts.on_info(msg) end end,
+        input = function()
+          return opts.input_response or 'n'
+        end,
+        error = function(msg)
+          if opts.on_error then opts.on_error(msg) end
+        end,
+        info = function(msg)
+          if opts.on_info then opts.on_info(msg) end
+        end,
       }
 
       package.loaded['vgit.features.screens.BranchView'] = nil
@@ -191,7 +208,12 @@ describe('BranchView:', function()
 
     it('should do nothing for nil query', function()
       local checkout_called = false
-      setup_mocks({ input_response = 'y', on_checkout = function() checkout_called = true end })
+      setup_mocks({
+        input_response = 'y',
+        on_checkout = function()
+          checkout_called = true
+        end,
+      })
 
       local view = BranchView()
       view:_on_no_match(nil)
@@ -201,7 +223,12 @@ describe('BranchView:', function()
 
     it('should do nothing for empty query', function()
       local checkout_called = false
-      setup_mocks({ input_response = 'y', on_checkout = function() checkout_called = true end })
+      setup_mocks({
+        input_response = 'y',
+        on_checkout = function()
+          checkout_called = true
+        end,
+      })
 
       local view = BranchView()
       view:_on_no_match('')
@@ -211,7 +238,12 @@ describe('BranchView:', function()
 
     it('should abort when user responds with n', function()
       local checkout_called = false
-      setup_mocks({ input_response = 'n', on_checkout = function() checkout_called = true end })
+      setup_mocks({
+        input_response = 'n',
+        on_checkout = function()
+          checkout_called = true
+        end,
+      })
 
       local view = BranchView()
       view:_on_no_match('new-branch')
@@ -221,7 +253,12 @@ describe('BranchView:', function()
 
     it('should abort when user responds with empty string', function()
       local checkout_called = false
-      setup_mocks({ input_response = '', on_checkout = function() checkout_called = true end })
+      setup_mocks({
+        input_response = '',
+        on_checkout = function()
+          checkout_called = true
+        end,
+      })
 
       local view = BranchView()
       view:_on_no_match('new-branch')
@@ -231,7 +268,12 @@ describe('BranchView:', function()
 
     it('should create and checkout branch on y response', function()
       local checkout_name = nil
-      setup_mocks({ input_response = 'y', on_checkout = function(name) checkout_name = name end })
+      setup_mocks({
+        input_response = 'y',
+        on_checkout = function(name)
+          checkout_name = name
+        end,
+      })
 
       local view = BranchView()
       view:_on_no_match('new-branch')
@@ -241,7 +283,12 @@ describe('BranchView:', function()
 
     it('should create and checkout branch on yes response', function()
       local checkout_name = nil
-      setup_mocks({ input_response = 'yes', on_checkout = function(name) checkout_name = name end })
+      setup_mocks({
+        input_response = 'yes',
+        on_checkout = function(name)
+          checkout_name = name
+        end,
+      })
 
       local view = BranchView()
       view:_on_no_match('new-branch')
@@ -251,7 +298,12 @@ describe('BranchView:', function()
 
     it('should show success message after creation', function()
       local info_msg = nil
-      setup_mocks({ input_response = 'y', on_info = function(msg) info_msg = msg end })
+      setup_mocks({
+        input_response = 'y',
+        on_info = function(msg)
+          info_msg = msg
+        end,
+      })
 
       local view = BranchView()
       view:_on_no_match('feature-x')
@@ -264,7 +316,9 @@ describe('BranchView:', function()
       setup_mocks({
         input_response = 'y',
         checkout_err = { 'fatal: branch already exists' },
-        on_error = function(msg) error_msg = msg end,
+        on_error = function(msg)
+          error_msg = msg
+        end,
       })
 
       local view = BranchView()
@@ -278,7 +332,9 @@ describe('BranchView:', function()
       setup_mocks({
         input_response = 'y',
         repo_err = 'not a git repository',
-        on_error = function(msg) error_msg = msg end,
+        on_error = function(msg)
+          error_msg = msg
+        end,
       })
 
       local view = BranchView()
@@ -307,7 +363,8 @@ describe('BranchView:', function()
                 end,
               }
             end,
-          }, nil
+          },
+            nil
         end,
       }
 
@@ -336,21 +393,25 @@ describe('BranchView:', function()
             refs = function()
               return {
                 checkout = function()
-                  return nil, {
-                    'error: Your local changes would be overwritten by checkout:',
-                    '\tfile.lua',
-                    'Please commit your changes or stash them.',
-                  }
+                  return nil,
+                    {
+                      'error: Your local changes would be overwritten by checkout:',
+                      '\tfile.lua',
+                      'Please commit your changes or stash them.',
+                    }
                 end,
               }
             end,
-          }, nil
+          },
+            nil
         end,
       }
 
       save_package('vgit.core.console')
       package.loaded['vgit.core.console'] = {
-        error = function(msg) error_msg = msg end,
+        error = function(msg)
+          error_msg = msg
+        end,
         info = function() end,
       }
 
@@ -378,14 +439,17 @@ describe('BranchView:', function()
                 end,
               }
             end,
-          }, nil
+          },
+            nil
         end,
       }
 
       save_package('vgit.core.console')
       package.loaded['vgit.core.console'] = {
         error = function() end,
-        info = function(msg) info_msg = msg end,
+        info = function(msg)
+          info_msg = msg
+        end,
       }
 
       package.loaded['vgit.features.screens.BranchView'] = nil
@@ -412,7 +476,8 @@ describe('BranchView:', function()
                 end,
               }
             end,
-          }, nil
+          },
+            nil
         end,
       }
 

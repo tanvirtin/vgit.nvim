@@ -9,8 +9,6 @@ local LayoutRenderer = lazy('vgit.ui.layout.LayoutRenderer')
 local ComponentManager = Object:extend()
 
 function ComponentManager:constructor(config)
-  config = config or {}
-
   return {
     context = nil,
     root_component = nil,

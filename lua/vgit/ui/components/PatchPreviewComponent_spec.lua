@@ -31,7 +31,9 @@ local function create_mounted_patch_preview(overrides)
 
   -- Populate buffer with dummy lines so extmarks work
   local dummy = {}
-  for i = 1, 30 do dummy[i] = '' end
+  for i = 1, 30 do
+    dummy[i] = ''
+  end
   component._element:set_lines(dummy)
 
   -- Reset viewport state for a clean test baseline
@@ -209,9 +211,7 @@ describe('PatchPreviewComponent:', function()
       -- Find the diff content lines
       local found_code = false
       for i, meta in pairs(line_metadata) do
-        if meta.type == 'code' and meta.filetype == 'lua' then
-          found_code = true
-        end
+        if meta.type == 'code' and meta.filetype == 'lua' then found_code = true end
       end
       assert.is_true(found_code)
     end)
@@ -838,5 +838,4 @@ describe('PatchPreviewComponent:', function()
       eq(component, component:disable_cursorline())
     end)
   end)
-
 end)

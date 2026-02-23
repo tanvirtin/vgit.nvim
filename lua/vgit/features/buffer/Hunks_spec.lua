@@ -25,7 +25,9 @@ local live_gutter_stub = {
 
 local current_buffer = nil
 local git_buffer_store_stub = {
-  current = function() return current_buffer end,
+  current = function()
+    return current_buffer
+  end,
   dispatch = function() end,
   on = function() end,
   for_each = function() end,
@@ -61,16 +63,24 @@ local console_stub = {
 
 local event_stub = {
   await = function() end,
-  async = function(fn) return fn end,
-  debounce_async = function(fn, delay) return fn, function() end end,
+  async = function(fn)
+    return fn
+  end,
+  debounce_async = function(fn, delay)
+    return fn, function() end
+  end,
 }
 
 local window_lnum = 1
 local window_set_lnum_called = false
 local window_set_lnum_value = nil
 local window_instance = {
-  get_cursor = function() return { window_lnum, 0 } end,
-  get_lnum = function() return window_lnum end,
+  get_cursor = function()
+    return { window_lnum, 0 }
+  end,
+  get_lnum = function()
+    return window_lnum
+  end,
   set_lnum = function(self, lnum)
     window_set_lnum_called = true
     window_set_lnum_value = lnum
@@ -78,7 +88,9 @@ local window_instance = {
 }
 local Window_stub = setmetatable({}, {
   __index = {},
-  __call = function(_, ...) return window_instance end,
+  __call = function(_, ...)
+    return window_instance
+  end,
 })
 
 -- Install stubs BEFORE requiring Hunks
@@ -108,8 +120,12 @@ local function make_mock_buffer(opts)
       end,
     },
   }
-  function buffer:get_hunks() return opts.hunks end
-  function buffer:get_lines() return opts.lines or {} end
+  function buffer:get_hunks()
+    return opts.hunks
+  end
+  function buffer:get_lines()
+    return opts.lines or {}
+  end
   function buffer:set_lines(lines_or_range, top, bot)
     buffer._set_lines_calls[#buffer._set_lines_calls + 1] = {
       lines = lines_or_range,
@@ -130,9 +146,15 @@ local function make_mock_buffer(opts)
     buffer._unstage_called = true
     return opts.unstage_result, opts.unstage_err
   end
-  function buffer:is_tracked() return opts.is_tracked ~= false end
-  function buffer:editing() return opts.editing == true end
-  function buffer:is_valid() return opts.is_valid ~= false end
+  function buffer:is_tracked()
+    return opts.is_tracked ~= false
+  end
+  function buffer:editing()
+    return opts.editing == true
+  end
+  function buffer:is_valid()
+    return opts.is_valid ~= false
+  end
   return buffer
 end
 
@@ -615,9 +637,7 @@ describe('Hunks:', function()
         -- But the hunk is still matched via the second loop (top=0 bot=0 lnum=1)
         local found_reset_all_call = false
         for _, call in ipairs(current_buffer._set_lines_calls) do
-          if call.top == nil and call.bot == nil then
-            found_reset_all_call = true
-          end
+          if call.top == nil and call.bot == nil then found_reset_all_call = true end
         end
         assert.is_false(found_reset_all_call)
       end)
@@ -635,9 +655,7 @@ describe('Hunks:', function()
         -- reset_all not triggered because not all hunks are remove type
         local found_reset_all_call = false
         for _, call in ipairs(current_buffer._set_lines_calls) do
-          if call.top == nil and call.bot == nil then
-            found_reset_all_call = true
-          end
+          if call.top == nil and call.bot == nil then found_reset_all_call = true end
         end
         assert.is_false(found_reset_all_call)
       end)

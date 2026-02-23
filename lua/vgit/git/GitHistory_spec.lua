@@ -6,7 +6,11 @@ local async = require('tests.helpers.async')({ it = it, before_each = before_eac
 local eq = assert.are.same
 
 local function make_repo(path)
-  return { get_path = function() return path end }
+  return {
+    get_path = function()
+      return path
+    end,
+  }
 end
 
 describe('GitHistory:', function()
@@ -411,9 +415,7 @@ describe('GitHistory:', function()
         local result = history:authors()
         local alice_count = 0
         for _, author in ipairs(result) do
-          if author.email == 'alice@example.com' then
-            alice_count = alice_count + 1
-          end
+          if author.email == 'alice@example.com' then alice_count = alice_count + 1 end
         end
         eq(1, alice_count)
       end)
@@ -558,7 +560,6 @@ describe('GitHistory:', function()
         eq(1, #result)
         eq('fix: resolve login bug', result[1].summary)
       end)
-
     end)
 
     describe('by_date_range edge cases', function()

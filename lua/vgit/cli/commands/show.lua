@@ -19,16 +19,12 @@ function show_command.parse_args(args)
       table.insert(opts.flags, arg)
     else
       -- First non-flag arg is the commit
-      if not opts.commit then
-        opts.commit = arg
-      end
+      if not opts.commit then opts.commit = arg end
     end
   end
 
   -- Default to HEAD if no commit specified
-  if not opts.commit then
-    opts.commit = 'HEAD'
-  end
+  if not opts.commit then opts.commit = 'HEAD' end
 
   return opts
 end
@@ -115,9 +111,7 @@ show_command.execute = event.async(function(args)
 
   local entries = {}
   for i = 1, #funcs do
-    if results[i] then
-      table.insert(entries, results[i])
-    end
+    if results[i] then table.insert(entries, results[i]) end
   end
 
   if #entries == 0 then

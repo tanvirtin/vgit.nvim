@@ -118,9 +118,7 @@ describe('repository:', function()
       local call_count = 0
       package.loaded['vgit.git.GitRepository'].discover = function()
         call_count = call_count + 1
-        if call_count == 1 then
-          return nil, { 'error' }
-        end
+        if call_count == 1 then return nil, { 'error' } end
         return { reset = function() end }, nil
       end
 

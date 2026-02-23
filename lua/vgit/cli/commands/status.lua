@@ -39,9 +39,7 @@ status_command.execute = event.async(function()
   local cursor_lnum = Window(0):get_lnum()
 
   local current_filename = nil
-  if buf_name and buf_name ~= '' then
-    current_filename = fs.make_relative(repo:get_path(), buf_name)
-  end
+  if buf_name and buf_name ~= '' then current_filename = fs.make_relative(repo:get_path(), buf_name) end
 
   local transformed_data = {
     type = 'status',

@@ -192,9 +192,7 @@ describe('debug_logger:', function()
       local notified = false
       local original_notify = vim.notify
       vim.notify = function(msg, level)
-        if msg:match('Debug mode is not enabled') then
-          notified = true
-        end
+        if msg:match('Debug mode is not enabled') then notified = true end
       end
 
       debug_logger.open()

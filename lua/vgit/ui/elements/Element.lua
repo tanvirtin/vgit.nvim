@@ -242,7 +242,7 @@ end
 
 function Element:set_keymap(opts_or_mode, callback_or_key, handler, desc)
   if not self:is_valid() then return self end
-  
+
   if type(opts_or_mode) == 'table' then
     self._buffer:set_keymap(opts_or_mode, event.async(callback_or_key))
   else

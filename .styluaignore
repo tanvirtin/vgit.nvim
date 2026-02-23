@@ -1,0 +1,2 @@
+lua/vgit/features/screens/ProjectDiffView.lua
+lua/vgit/git/git_status.lua

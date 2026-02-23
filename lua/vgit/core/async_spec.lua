@@ -5,7 +5,9 @@ local eq = assert.are.same
 describe('async:', function()
   describe('wrap', function()
     it('should return a function', function()
-      local wrapped = async.wrap(function(cb) cb() end, 1)
+      local wrapped = async.wrap(function(cb)
+        cb()
+      end, 1)
 
       eq('function', type(wrapped))
     end)
@@ -87,7 +89,9 @@ describe('async:', function()
         scheduled = true
       end)
 
-      vim.wait(1000, function() return scheduled end, 10)
+      vim.wait(1000, function()
+        return scheduled
+      end, 10)
 
       assert.is_true(scheduled)
     end)
@@ -269,7 +273,9 @@ describe('async:', function()
 
       async.run(function()
         result = async.all({
-          function() return 42 end,
+          function()
+            return 42
+          end,
         })
       end)
 
@@ -281,9 +287,15 @@ describe('async:', function()
 
       async.run(function()
         result = async.all({
-          function() return 'a' end,
-          function() return 'b' end,
-          function() return 'c' end,
+          function()
+            return 'a'
+          end,
+          function()
+            return 'b'
+          end,
+          function()
+            return 'c'
+          end,
         })
       end)
 
@@ -295,9 +307,15 @@ describe('async:', function()
 
       async.run(function()
         result = async.all({
-          function() return 'first' end,
-          function() return nil end,
-          function() return 'third' end,
+          function()
+            return 'first'
+          end,
+          function()
+            return nil
+          end,
+          function()
+            return 'third'
+          end,
         })
       end)
 
@@ -314,9 +332,15 @@ describe('async:', function()
 
       async.run(function()
         result = async.all({
-          function() return double(5) end,
-          function() return double(10) end,
-          function() return double(15) end,
+          function()
+            return double(5)
+          end,
+          function()
+            return double(10)
+          end,
+          function()
+            return double(15)
+          end,
         })
       end)
 
@@ -333,13 +357,21 @@ describe('async:', function()
 
       async.run(function()
         result = async.all({
-          function() return async_compute(1) end,
-          function() return async_compute(2) end,
-          function() return async_compute(3) end,
+          function()
+            return async_compute(1)
+          end,
+          function()
+            return async_compute(2)
+          end,
+          function()
+            return async_compute(3)
+          end,
         })
       end)
 
-      vim.wait(1000, function() return result ~= nil end, 10)
+      vim.wait(1000, function()
+        return result ~= nil
+      end, 10)
 
       eq({ 3, 6, 9 }, result)
     end)
@@ -349,19 +381,29 @@ describe('async:', function()
       -- Simulate different completion times using vim.defer_fn
       local delayed = function(val, delay_ms)
         return async.wrap(function(cb)
-          vim.defer_fn(function() cb(val) end, delay_ms)
+          vim.defer_fn(function()
+            cb(val)
+          end, delay_ms)
         end, 1)
       end
 
       async.run(function()
         result = async.all({
-          function() return delayed('slow', 30)() end,
-          function() return delayed('fast', 5)() end,
-          function() return delayed('medium', 15)() end,
+          function()
+            return delayed('slow', 30)()
+          end,
+          function()
+            return delayed('fast', 5)()
+          end,
+          function()
+            return delayed('medium', 15)()
+          end,
         })
       end)
 
-      vim.wait(1000, function() return result ~= nil end, 10)
+      vim.wait(1000, function()
+        return result ~= nil
+      end, 10)
 
       eq({ 'slow', 'fast', 'medium' }, result)
     end)
@@ -371,9 +413,15 @@ describe('async:', function()
 
       async.run(function()
         result = async.all({
-          function() return 'ok' end,
-          function() error('boom') end,
-          function() return 'also ok' end,
+          function()
+            return 'ok'
+          end,
+          function()
+            error('boom')
+          end,
+          function()
+            return 'also ok'
+          end,
         })
       end)
 
@@ -392,16 +440,22 @@ describe('async:', function()
 
       async.run(function()
         result = async.all({
-          function() return async_op('first') end,
+          function()
+            return async_op('first')
+          end,
           function()
             async_op('before error')
             error('async boom')
           end,
-          function() return async_op('third') end,
+          function()
+            return async_op('third')
+          end,
         })
       end)
 
-      vim.wait(1000, function() return result ~= nil end, 10)
+      vim.wait(1000, function()
+        return result ~= nil
+      end, 10)
 
       eq('first', result[1])
       assert.is_nil(result[2])
@@ -415,9 +469,7 @@ describe('async:', function()
 
       local async_op = async.wrap(function(val, cb)
         current_concurrent = current_concurrent + 1
-        if current_concurrent > peak_concurrent then
-          peak_concurrent = current_concurrent
-        end
+        if current_concurrent > peak_concurrent then peak_concurrent = current_concurrent end
         vim.schedule(function()
           current_concurrent = current_concurrent - 1
           cb(val)
@@ -426,15 +478,27 @@ describe('async:', function()
 
       async.run(function()
         result = async.all({
-          function() return async_op(1) end,
-          function() return async_op(2) end,
-          function() return async_op(3) end,
-          function() return async_op(4) end,
-          function() return async_op(5) end,
+          function()
+            return async_op(1)
+          end,
+          function()
+            return async_op(2)
+          end,
+          function()
+            return async_op(3)
+          end,
+          function()
+            return async_op(4)
+          end,
+          function()
+            return async_op(5)
+          end,
         }, { max_concurrent = 2 })
       end)
 
-      vim.wait(1000, function() return result ~= nil end, 10)
+      vim.wait(1000, function()
+        return result ~= nil
+      end, 10)
 
       eq({ 1, 2, 3, 4, 5 }, result)
       assert.is_true(peak_concurrent <= 2)
@@ -445,11 +509,21 @@ describe('async:', function()
 
       async.run(function()
         result = async.all({
-          function() return 'a' end,
-          function() return 'b' end,
-          function() return 'c' end,
-          function() return 'd' end,
-          function() return 'e' end,
+          function()
+            return 'a'
+          end,
+          function()
+            return 'b'
+          end,
+          function()
+            return 'c'
+          end,
+          function()
+            return 'd'
+          end,
+          function()
+            return 'e'
+          end,
         }, { max_concurrent = 2 })
       end)
 
@@ -469,7 +543,9 @@ describe('async:', function()
 
       voided()
 
-      vim.wait(1000, function() return result ~= nil end, 10)
+      vim.wait(1000, function()
+        return result ~= nil
+      end, 10)
 
       eq('scheduled', result)
     end)
@@ -489,7 +565,9 @@ describe('async:', function()
         result = a
       end)
 
-      vim.wait(1000, function() return result ~= nil end, 10)
+      vim.wait(1000, function()
+        return result ~= nil
+      end, 10)
 
       eq(50, result)
     end)

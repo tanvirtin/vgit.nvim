@@ -11,6 +11,7 @@ ignore = {
     "122", -- Indirectly setting a readonly global
     "431", -- Shadowing upvalue (acceptable in local scopes)
     "512", -- Loop is executed at most once (intentional in utils.object.first)
+    "631", -- Line too long (stylua handles line length)
 }
 
 globals = {
@@ -26,8 +27,12 @@ exclude_files = {
     "lua/vgit/vendor/*",
 }
 
-files["tests/"] = {
-    ignore = { "143" },
+local test_settings = {
+    ignore = {
+        "143", -- accessing undefined field of global (assert.are.same, assert.is_true, etc.)
+        "211", -- unused variable (common in tests: local eq = ..., local _, err = ...)
+        "231", -- variable never accessed in for loop (common in destructured returns)
+    },
     read_globals = {
         "describe",
         "it",
@@ -39,3 +44,6 @@ files["tests/"] = {
         "mock",
     },
 }
+
+files["tests/"] = test_settings
+files["lua/**/*_spec.lua"] = test_settings

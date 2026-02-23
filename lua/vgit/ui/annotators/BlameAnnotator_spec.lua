@@ -13,7 +13,9 @@ describe('BlameAnnotator:', function()
     it('should return text record for normal blame', function()
       local blame = { author = 'John', commit_hash = 'abc123' }
       local config = {}
-      local format_fn = function(b, c) return b.author .. ' ' .. b.commit_hash end
+      local format_fn = function(b, c)
+        return b.author .. ' ' .. b.commit_hash
+      end
 
       local result = annotator:annotate(blame, 5, config, format_fn)
 
@@ -29,7 +31,9 @@ describe('BlameAnnotator:', function()
     it('should return nil when format_fn returns non-string', function()
       local blame = { author = 'John' }
       local config = {}
-      local format_fn = function() return nil end
+      local format_fn = function()
+        return nil
+      end
 
       local result = annotator:annotate(blame, 1, config, format_fn)
 
@@ -39,7 +43,9 @@ describe('BlameAnnotator:', function()
     it('should return nil when format_fn returns a number', function()
       local blame = { author = 'John' }
       local config = {}
-      local format_fn = function() return 42 end
+      local format_fn = function()
+        return 42
+      end
 
       local result = annotator:annotate(blame, 1, config, format_fn)
 
@@ -49,7 +55,9 @@ describe('BlameAnnotator:', function()
     it('should set row to lnum - 1', function()
       local blame = { author = 'Test' }
       local config = {}
-      local format_fn = function() return 'text' end
+      local format_fn = function()
+        return 'text'
+      end
 
       local result = annotator:annotate(blame, 10, config, format_fn)
 

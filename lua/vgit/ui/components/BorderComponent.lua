@@ -31,7 +31,9 @@ end
 
 function BorderComponent:render() end
 
-function BorderComponent:component_did_mount() self:render() end
+function BorderComponent:component_did_mount()
+  self:render()
+end
 
 function BorderComponent:get_layout_spec()
   return LayoutSpec.view(self._element, { height = 1 })

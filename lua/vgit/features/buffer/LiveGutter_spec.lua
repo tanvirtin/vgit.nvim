@@ -57,7 +57,9 @@ describe('LiveGutter:', function()
       local called = false
 
       local instance = LiveGutter()
-      instance._fetch_debounced_cleanup = function() called = true end
+      instance._fetch_debounced_cleanup = function()
+        called = true
+      end
       instance:cleanup()
 
       assert.is_true(called)

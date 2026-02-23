@@ -35,9 +35,7 @@ function TreeComponent:get_display_name(filename)
 end
 
 function TreeComponent:get_status_highlight(status)
-  if not status:is_staged() and not status:is_unstaged() and not status:is_unmerged() then
-    return 'GitLineNr'
-  end
+  if not status:is_staged() and not status:is_unstaged() and not status:is_unmerged() then return 'GitLineNr' end
 
   if status:is_staged() then
     if status:has('A*') or status:has('C*') or status:has('R*') then return 'GitSignsAdd' end
@@ -96,7 +94,8 @@ function TreeComponent:create_node(entry)
   if node.entry and node.entry.status and not node.items then
     local status = node.entry.status
     if status.old_filename then
-      node.value = string.format('%s -> %s', self:get_display_name(status.old_filename), self:get_display_name(status.filename))
+      node.value =
+        string.format('%s -> %s', self:get_display_name(status.old_filename), self:get_display_name(status.filename))
     else
       node.value = self:get_display_name(status.filename)
     end
@@ -162,7 +161,9 @@ function TreeComponent:move_to(callback)
   local status, lnum = self:find_entry(callback)
   if not status then return end
 
-  self:with_element(function(el) el:set_lnum(lnum) end)
+  self:with_element(function(el)
+    el:set_lnum(lnum)
+  end)
 
   return status
 end
@@ -261,12 +262,10 @@ function TreeComponent:generate_lines()
           )
         end
 
-        if icon then
-          item.icon_before = {
-            icon = icon,
-            hl = icon_hl,
-          }
-        end
+        if icon then item.icon_before = {
+          icon = icon,
+          hl = icon_hl,
+        } end
 
         item.virtual_text = {
           before = {
@@ -275,7 +274,9 @@ function TreeComponent:generate_lines()
           },
         }
       else
-        item.icon_before = function(i) return { icon = i.open and '' or '' } end
+        item.icon_before = function(node)
+          return { icon = node.open and '' or '' }
+        end
       end
 
       current_lnum = current_lnum + 1
@@ -407,12 +408,12 @@ function TreeComponent:generate_lines()
 end
 
 function TreeComponent:set_on_enter(callback)
-    self._on_enter_callback = event.async(callback)
+  self._on_enter_callback = event.async(callback)
   return self
 end
 
 function TreeComponent:set_on_move(callback)
-    self._on_move_callback = event.async(callback)
+  self._on_move_callback = event.async(callback)
   return self
 end
 
@@ -555,9 +556,7 @@ function TreeComponent:setup_keymaps(keymaps, handlers)
       el:set_keymap(mode, key, handler, key_desc)
     end
 
-    if keymaps.commit and handlers.commit then
-      set_safe_keymap('n', keymaps.commit, handlers.commit, 'Commit')
-    end
+    if keymaps.commit and handlers.commit then set_safe_keymap('n', keymaps.commit, handlers.commit, 'Commit') end
     if keymaps.buffer_reset and handlers.reset_file then
       set_safe_keymap('n', keymaps.buffer_reset, handlers.reset_file, 'Reset')
     end
@@ -580,20 +579,28 @@ function TreeComponent:setup_keymaps(keymaps, handlers)
 end
 
 function TreeComponent:get_lnum()
-  return self:with_element(function(el) return el:get_lnum() end) or 1
+  return self:with_element(function(el)
+    return el:get_lnum()
+  end) or 1
 end
 
 function TreeComponent:set_lnum(lnum)
-  self:with_element(function(el) el:set_lnum(lnum) end)
+  self:with_element(function(el)
+    el:set_lnum(lnum)
+  end)
   return self
 end
 
 function TreeComponent:get_line_count()
-  return self:with_element(function(el) return el:get_line_count() end) or 0
+  return self:with_element(function(el)
+    return el:get_line_count()
+  end) or 0
 end
 
 function TreeComponent:is_valid()
-  return self:with_element(function() return true end) or false
+  return self:with_element(function()
+    return true
+  end) or false
 end
 
 function TreeComponent:focus()
