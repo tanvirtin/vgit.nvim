@@ -353,9 +353,7 @@ function GitBuffer:render_blames(top, bot)
   for lnum, blame in pairs(blames) do
     if blame and lnum >= top and (bot == -1 or lnum <= bot) then
       local annotation = self._blame_annotator:annotate(blame, lnum, self.state.config, format_fn)
-      if annotation then
-        self._blame_extmark:text(annotation)
-      end
+      if annotation then self._blame_extmark:text(annotation) end
     end
   end
 

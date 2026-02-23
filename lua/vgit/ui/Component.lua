@@ -116,9 +116,7 @@ function Component:is_mounted()
 end
 
 function Component:with_element(fn)
-  if self._element and self._element:is_valid() then
-    return fn(self._element)
-  end
+  if self._element and self._element:is_valid() then return fn(self._element) end
 end
 
 function Component:on(event_name, callback)

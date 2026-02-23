@@ -11,7 +11,7 @@ jobs:
     name: luacheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install luacheck
         run: |
@@ -26,22 +26,20 @@ jobs:
     name: stylua
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Install stylua
-        run: |
-          wget -qO- https://github.com/JohnnyMorganz/StyLua/releases/latest/download/stylua-linux-x86_64.zip | funzip > stylua
-          chmod +x stylua
-          sudo mv stylua /usr/local/bin/
+      - uses: actions/checkout@v4
 
       - name: Check formatting
-        run: make format-check
+        uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: v0.15.1
+          args: --check --config-path stylua.toml lua/ tests/
 
   test:
     name: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Neovim
         uses: rhysd/action-setup-vim@v1
@@ -51,10 +49,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt update
-          sudo apt install -y fd-find lua5.3
-          sudo ln -sf /usr/bin/lua5.3 /usr/bin/lua
-          make install-deps
+          sudo apt-get update
+          sudo apt-get install -y luarocks
+          sudo luarocks install vusted
           git config --global user.name "CI Bot"
           git config --global user.email "ci@vgit.nvim"
 
@@ -65,7 +62,7 @@ jobs:
     name: commit-lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: webiny/action-conventional-commits@v1.0.3

@@ -88,7 +88,7 @@ function BranchView:_on_no_match(query)
 
   self:destroy()
 
-  local decision = console.input(string.format("Branch '%s' does not exist. Create it? (y/N) ", query))
+  local decision = console.input(string.format('Branch \'%s\' does not exist. Create it? (y/N) ', query))
   if not decision then return end
 
   decision = decision:lower()

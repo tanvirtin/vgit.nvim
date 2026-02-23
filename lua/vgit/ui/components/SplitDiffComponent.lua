@@ -84,8 +84,7 @@ function SplitDiffComponent:component_will_mount()
 
   local window_mode = self._config and self._config.window_mode or 'popup'
 
-  if window_mode == 'screen' then
-  elseif window_mode == 'lens' or window_mode == 'popup' then
+  if window_mode == 'lens' or window_mode == 'popup' then
     local width = vim.o.columns
     local height = '35vh'
 
@@ -143,7 +142,9 @@ function SplitDiffComponent:component_will_mount()
 end
 
 function SplitDiffComponent:component_will_unmount()
-  self:_for_both(function(c) c:unmount() end)
+  self:_for_both(function(c)
+    c:unmount()
+  end)
 end
 
 function SplitDiffComponent:render()
@@ -214,7 +215,9 @@ function SplitDiffComponent:set_lines(previous_lines, current_lines)
 end
 
 function SplitDiffComponent:clear_lines()
-  self:_for_both(function(c) c:clear_lines():disable_cursorline() end)
+  self:_for_both(function(c)
+    c:clear_lines():disable_cursorline()
+  end)
   self:set_state({ previous_lines = {}, current_lines = {} })
 end
 
@@ -231,19 +234,27 @@ function SplitDiffComponent:get_lnum()
 end
 
 function SplitDiffComponent:reset_cursor()
-  self:_for_both(function(c) c:reset_cursor() end)
+  self:_for_both(function(c)
+    c:reset_cursor()
+  end)
 end
 
 function SplitDiffComponent:enable_cursorline()
-  self:_for_both(function(c) c:enable_cursorline() end)
+  self:_for_both(function(c)
+    c:enable_cursorline()
+  end)
 end
 
 function SplitDiffComponent:disable_cursorline()
-  self:_for_both(function(c) c:disable_cursorline() end)
+  self:_for_both(function(c)
+    c:disable_cursorline()
+  end)
 end
 
 function SplitDiffComponent:set_filetype(filetype)
-  self:_for_both(function(c) c:set_filetype(filetype) end)
+  self:_for_both(function(c)
+    c:set_filetype(filetype)
+  end)
 end
 
 function SplitDiffComponent:get_filetype()
@@ -252,11 +263,15 @@ function SplitDiffComponent:get_filetype()
 end
 
 function SplitDiffComponent:clear_extmarks()
-  self:_for_both(function(c) c:clear_extmarks() end)
+  self:_for_both(function(c)
+    c:clear_extmarks()
+  end)
 end
 
 function SplitDiffComponent:attach_to_renderer(callback)
-  self:_for_both(function(c) c:attach_to_renderer(callback) end)
+  self:_for_both(function(c)
+    c:attach_to_renderer(callback)
+  end)
 end
 
 function SplitDiffComponent:is_valid()
@@ -313,11 +328,15 @@ function SplitDiffComponent:get_hunks()
 end
 
 function SplitDiffComponent:render_folds()
-  self:_for_both(function(c) c:render_folds() end)
+  self:_for_both(function(c)
+    c:render_folds()
+  end)
 end
 
 function SplitDiffComponent:clear_folds()
-  self:_for_both(function(c) c:clear_folds() end)
+  self:_for_both(function(c)
+    c:clear_folds()
+  end)
 end
 
 function SplitDiffComponent:call(callback)
@@ -327,15 +346,21 @@ function SplitDiffComponent:call(callback)
 end
 
 function SplitDiffComponent:on(event_name, callback)
-  self:_for_both(function(c) c:on(event_name, callback) end)
+  self:_for_both(function(c)
+    c:on(event_name, callback)
+  end)
 end
 
 function SplitDiffComponent:set_keymap(mode_or_opts, key_or_callback, handler, desc)
-  self:_for_both(function(c) c:set_keymap(mode_or_opts, key_or_callback, handler, desc) end)
+  self:_for_both(function(c)
+    c:set_keymap(mode_or_opts, key_or_callback, handler, desc)
+  end)
 end
 
 function SplitDiffComponent:unmount()
-  self:_for_both(function(c) c:unmount() end)
+  self:_for_both(function(c)
+    c:unmount()
+  end)
 end
 
 return SplitDiffComponent

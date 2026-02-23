@@ -214,7 +214,9 @@ describe('ComponentManager:', function()
     end)
 
     after_each(function()
-      pcall(function() mgr:destroy() end)
+      pcall(function()
+        mgr:destroy()
+      end)
       while vim.fn.tabpagenr('$') > initial_tab_count do
         vim.cmd('tabclose!')
       end

@@ -32,7 +32,11 @@ describe('GitBlob:', function()
     end)
 
     it('should accept repo object with get_path', function()
-      local repo = { get_path = function() return '/my/repo' end }
+      local repo = {
+        get_path = function()
+          return '/my/repo'
+        end,
+      }
       local blob = GitBlob(repo, 'file.lua')
       assert.is_not_nil(blob)
     end)

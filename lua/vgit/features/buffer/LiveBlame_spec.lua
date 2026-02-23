@@ -31,7 +31,9 @@ describe('LiveBlame:', function()
       local original_for_each = git_buffer_store.for_each
       git_buffer_store.for_each = function(callback)
         local mock_buffer = {
-          clear_blames = function(self) table.insert(cleared, true) end,
+          clear_blames = function(self)
+            table.insert(cleared, true)
+          end,
         }
         callback(mock_buffer)
       end
@@ -49,7 +51,9 @@ describe('LiveBlame:', function()
       local instance = LiveBlame()
       local called = false
 
-      instance._debounced_blame_cleanup = function() called = true end
+      instance._debounced_blame_cleanup = function()
+        called = true
+      end
 
       instance:cleanup()
 

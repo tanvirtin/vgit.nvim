@@ -31,7 +31,9 @@ local function create_diff_component(overrides)
 
   -- Populate buffer so cursor movement and extmarks work
   local dummy = {}
-  for i = 1, max_line do dummy[i] = '' end
+  for i = 1, max_line do
+    dummy[i] = ''
+  end
   component._element:set_lines(dummy)
 
   -- Set initial cursor position
@@ -873,7 +875,11 @@ describe('DiffComponent:', function()
         state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
         _mounted = false,
         _needs_update = false,
-        _element = { is_valid = function() return false end },
+        _element = {
+          is_valid = function()
+            return false
+          end,
+        },
       }
       setmetatable(instance, DiffComponent)
 
@@ -956,5 +962,4 @@ describe('DiffComponent:', function()
       eq('diff', component:get_filetype())
     end)
   end)
-
 end)

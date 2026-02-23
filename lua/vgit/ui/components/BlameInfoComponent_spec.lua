@@ -69,7 +69,9 @@ describe('BlameInfoComponent:', function()
       local render_called = false
       local instance = mount_component()
 
-      instance.render = function() render_called = true end
+      instance.render = function()
+        render_called = true
+      end
       instance:component_did_mount()
 
       assert.is_true(render_called)

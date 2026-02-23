@@ -3,14 +3,24 @@ local eq = assert.are.same
 -- Mock the event module to avoid async issues in tests
 local mock_event = {
   await = function() end,
-  async = function(fn) return fn end,
-  debounce = function(fn) return fn, function() end end,
-  debounce_async = function(fn) return fn, function() end end,
+  async = function(fn)
+    return fn
+  end,
+  debounce = function(fn)
+    return fn, function() end
+  end,
+  debounce_async = function(fn)
+    return fn, function() end
+  end,
   on = function() end,
   emit = function() end,
-  custom_on = function() return function() end end,
+  custom_on = function()
+    return function() end
+  end,
   buffer_on = function() end,
-  promisify = function(fn) return fn end,
+  promisify = function(fn)
+    return fn
+  end,
   group = 'VGitGroup',
   register_module = function() end,
 }
@@ -119,32 +129,46 @@ describe('FileDiffView:', function()
       }
 
       mock_diff = {
-        is_valid = function() return true end,
+        is_valid = function()
+          return true
+        end,
         move_to_hunk = function() end,
         hunk_up = function() end,
         hunk_down = function() end,
         set_props = function() end,
         set_keymap = function() end,
-        get_hunk_under_cursor = function() return nil, nil end,
+        get_hunk_under_cursor = function()
+          return nil, nil
+        end,
         component_will_unmount = function() end,
       }
 
       save_package('vgit.git.repository')
       package.loaded['vgit.git.repository'] = {
-        current = function() return mock_repo, nil end,
+        current = function()
+          return mock_repo, nil
+        end,
       }
 
       save_package('vgit.core.fs')
       package.loaded['vgit.core.fs'] = {
-        detect_filetype = function(filename) return 'lua' end,
+        detect_filetype = function(filename)
+          return 'lua'
+        end,
         open = function() end,
       }
 
       save_package('vgit.features.screens.view_utils')
       package.loaded['vgit.features.screens.view_utils'] = {
-        handle_git_error = function(err) return err == nil end,
-        get_hunk_alignment = function() return 'top' end,
-        get_key = function(keymap) return keymap end,
+        handle_git_error = function(err)
+          return err == nil
+        end,
+        get_hunk_alignment = function()
+          return 'top'
+        end,
+        get_key = function(keymap)
+          return keymap
+        end,
       }
 
       save_package('vgit.settings.file_diff_view')
@@ -183,7 +207,9 @@ describe('FileDiffView:', function()
       end)
 
       it('should return false when diff_component is invalid', function()
-        mock_diff.is_valid = function() return false end
+        mock_diff.is_valid = function()
+          return false
+        end
         local result = view:_reconcile()
         assert.is_false(result)
       end)
@@ -200,7 +226,9 @@ describe('FileDiffView:', function()
             filetype = 'lua',
           }
         end
-        mock_diff.set_props = function(_, props) props_set = props end
+        mock_diff.set_props = function(_, props)
+          props_set = props
+        end
 
         view:_reconcile()
 
@@ -211,7 +239,9 @@ describe('FileDiffView:', function()
       end)
 
       it('should return false when _refresh_diff_data returns nil', function()
-        view._refresh_diff_data = function() return nil end
+        view._refresh_diff_data = function()
+          return nil
+        end
         local result = view:_reconcile()
         assert.is_false(result)
       end)
@@ -225,7 +255,9 @@ describe('FileDiffView:', function()
             filetype = 'lua',
           }
         end
-        mock_diff.move_to_hunk = function(_, idx) moved_to = idx end
+        mock_diff.move_to_hunk = function(_, idx)
+          moved_to = idx
+        end
 
         view:_reconcile({ hunk_index = 3 })
 
@@ -241,7 +273,9 @@ describe('FileDiffView:', function()
             filetype = 'lua',
           }
         end
-        mock_diff.move_to_hunk = function() move_called = true end
+        mock_diff.move_to_hunk = function()
+          move_called = true
+        end
 
         view:_reconcile()
 
@@ -278,7 +312,9 @@ describe('FileDiffView:', function()
       end)
 
       it('should revert is_staged on failure', function()
-        view._reconcile = function() return false end
+        view._reconcile = function()
+          return false
+        end
         view._opts.is_staged = false
 
         view:toggle_view()
@@ -287,7 +323,9 @@ describe('FileDiffView:', function()
       end)
 
       it('should keep is_staged flipped on success', function()
-        view._reconcile = function() return true end
+        view._reconcile = function()
+          return true
+        end
         view._opts.is_staged = false
 
         view:toggle_view()
@@ -297,7 +335,10 @@ describe('FileDiffView:', function()
 
       it('should not call _reconcile when filename is nil', function()
         local reconcile_called = false
-        view._reconcile = function() reconcile_called = true; return true end
+        view._reconcile = function()
+          reconcile_called = true
+          return true
+        end
         view._opts.filename = nil
 
         view:toggle_view()
@@ -311,12 +352,19 @@ describe('FileDiffView:', function()
         local reset_called = false
         local reconcile_called = false
 
-        mock_repo.reset = function() reset_called = true end
-        view._reconcile = function() reconcile_called = true; return true end
+        mock_repo.reset = function()
+          reset_called = true
+        end
+        view._reconcile = function()
+          reconcile_called = true
+          return true
+        end
 
         save_package('vgit.core.console')
         package.loaded['vgit.core.console'] = {
-          input = function() return 'y' end,
+          input = function()
+            return 'y'
+          end,
           error = function() end,
           warn = function() end,
         }
@@ -327,8 +375,13 @@ describe('FileDiffView:', function()
         view._diff_component = mock_diff
         view._opts.filename = 'test.lua'
         view._opts.is_staged = false
-        mock_repo.reset = function() reset_called = true end
-        view._reconcile = function() reconcile_called = true; return true end
+        mock_repo.reset = function()
+          reset_called = true
+        end
+        view._reconcile = function()
+          reconcile_called = true
+          return true
+        end
 
         view:reset_current()
 
@@ -338,7 +391,10 @@ describe('FileDiffView:', function()
 
       it('should not call _reconcile when is_staged', function()
         local reconcile_called = false
-        view._reconcile = function() reconcile_called = true; return true end
+        view._reconcile = function()
+          reconcile_called = true
+          return true
+        end
         view._opts.is_staged = true
 
         view:reset_current()
@@ -347,5 +403,4 @@ describe('FileDiffView:', function()
       end)
     end)
   end)
-
 end)

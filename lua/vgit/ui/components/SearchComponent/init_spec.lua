@@ -3,14 +3,24 @@ local eq = assert.are.same
 -- Mock the event module
 package.loaded['vgit.core.event'] = {
   await = function() end,
-  async = function(fn) return fn end,
-  debounce = function(fn) return fn, function() end end,
-  debounce_async = function(fn) return fn, function() end end,
+  async = function(fn)
+    return fn
+  end,
+  debounce = function(fn)
+    return fn, function() end
+  end,
+  debounce_async = function(fn)
+    return fn, function() end
+  end,
   on = function() end,
   emit = function() end,
-  custom_on = function() return function() end end,
+  custom_on = function()
+    return function() end
+  end,
   buffer_on = function() end,
-  promisify = function(fn) return fn end,
+  promisify = function(fn)
+    return fn
+  end,
   group = 'VGitGroup',
   register_module = function() end,
 }
@@ -142,7 +152,9 @@ describe('SearchComponent:', function()
       local sc = SearchComponent({
         items = { { label = 'main' } },
         on_select = function() end,
-        on_search = function() return nil end,
+        on_search = function()
+          return nil
+        end,
       })
 
       sc.state.query = 'test'
@@ -243,7 +255,9 @@ describe('SearchComponent:', function()
       local selected_value = nil
       local sc = SearchComponent({
         items = {},
-        on_select = function(value) selected_value = value end,
+        on_select = function(value)
+          selected_value = value
+        end,
       })
 
       local obj = { id = 42 }
@@ -261,7 +275,9 @@ describe('SearchComponent:', function()
       local selected_value = nil
       local sc = SearchComponent({
         items = {},
-        on_select = function(value) selected_value = value end,
+        on_select = function(value)
+          selected_value = value
+        end,
       })
 
       local item = { label = 'main', description = 'default' }
@@ -276,7 +292,9 @@ describe('SearchComponent:', function()
       local called = false
       local sc = SearchComponent({
         items = {},
-        on_select = function() called = true end,
+        on_select = function()
+          called = true
+        end,
       })
 
       sc.state.filtered_items = {}
@@ -291,7 +309,9 @@ describe('SearchComponent:', function()
       local selected_value = nil
       local sc = SearchComponent({
         items = {},
-        on_select = function(value) selected_value = value end,
+        on_select = function(value)
+          selected_value = value
+        end,
       })
 
       sc.state.filtered_items = {
@@ -352,7 +372,9 @@ describe('SearchComponent:', function()
       local sc = SearchComponent({
         items = {},
         on_select = function() end,
-        on_close = function() closed = true end,
+        on_close = function()
+          closed = true
+        end,
       })
 
       -- Prevent unmount from running real UI teardown

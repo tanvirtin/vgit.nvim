@@ -48,9 +48,7 @@ describe('DiffStyleAnnotator:', function()
 
       local found_add = false
       for _, hl in ipairs(highlights) do
-        if hl.hl_group == 'GitPatchHeaderAdd' then
-          found_add = true
-        end
+        if hl.hl_group == 'GitPatchHeaderAdd' then found_add = true end
       end
       assert.is_true(found_add)
     end)

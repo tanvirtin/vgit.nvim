@@ -116,13 +116,13 @@ describe('statusline_state:', function()
         __index = function(_, k)
           if k == 'start' then return function() end end
           if k == 'stop' then return function() end end
-          if k == 'is_closing' then return function() return false end end
-          if k == 'close' then
-            return function()
-              close_called = true
-            end
-          end
-        end
+          if k == 'is_closing' then return function()
+            return false
+          end end
+          if k == 'close' then return function()
+            close_called = true
+          end end
+        end,
       })
 
       local original_new_timer = vim.uv.new_timer

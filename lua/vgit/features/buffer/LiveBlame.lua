@@ -50,9 +50,7 @@ function LiveBlame:reset()
 end
 
 function LiveBlame:cleanup()
-  if self._debounced_blame_cleanup then
-    self._debounced_blame_cleanup()
-  end
+  if self._debounced_blame_cleanup then self._debounced_blame_cleanup() end
 end
 
 function LiveBlame:register_events()

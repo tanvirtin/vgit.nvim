@@ -127,9 +127,7 @@ function SearchComponent:move(direction)
         self:set_state({ visible_count = new_visible, selected_index = index })
         return
       elseif self.props.on_load_more and not self._exhausted then
-        if not self._loading then
-          self:_load_more_items()
-        end
+        if not self._loading then self:_load_more_items() end
         return
       else
         index = 1

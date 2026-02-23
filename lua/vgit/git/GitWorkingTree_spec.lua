@@ -4,7 +4,11 @@ local eq = assert.are.same
 
 describe('GitWorkingTree:', function()
   local function make_repo(path)
-    return { get_path = function() return path end }
+    return {
+      get_path = function()
+        return path
+      end,
+    }
   end
 
   describe('constructor', function()

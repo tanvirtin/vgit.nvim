@@ -3,7 +3,43 @@ local fs = {}
 fs.sep = package.config:sub(1, 1)
 
 function fs.detect_filetype(filename)
-  return vim.filetype.match({ filename = filename })
+  local ft = vim.filetype.match({ filename = filename })
+  if ft then return ft end
+
+  local strip_exts = {
+    ['in'] = true,
+    ['bak'] = true,
+    ['old'] = true,
+    ['new'] = true,
+    ['orig'] = true,
+    ['pacsave'] = true,
+    ['pacnew'] = true,
+    ['rpmsave'] = true,
+    ['dpkg-bak'] = true,
+    ['dpkg-dist'] = true,
+    ['dpkg-old'] = true,
+    ['dpkg-new'] = true,
+  }
+
+  local name = filename
+  local _, num_dots = filename:gsub('%.', '')
+  for _ = 1, num_dots do
+    local ext = name:match('%.([^./\\]+)$')
+    if not ext then break end
+
+    if strip_exts[ext] then
+      -- Strip suffix and retry (e.g. "example.rs.in" -> "example.rs").
+      -- Loop handles chained suffixes like "example.rs.bak.in".
+      name = name:sub(1, #name - #ext - 1)
+      ft = vim.filetype.match({ filename = name })
+      if ft then return ft end
+    else
+      -- Non-strippable suffix: try the last extension alone.
+      -- Handles old stable where a compound filename like "example.yaml.sed"
+      -- may not match, but ".sed" is directly in the extension table.
+      return vim.filetype.match({ filename = 'x.' .. ext })
+    end
+  end
 end
 
 function fs.make_relative(dirname, filepath)

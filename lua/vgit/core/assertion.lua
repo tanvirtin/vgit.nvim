@@ -1,8 +1,8 @@
 local assertion = {}
 
 function assertion.assert(cond, msg)
-  if not cond then error(debug.traceback(msg)) end
   if type(cond) == 'function' then cond = cond() end
+  if not cond then error(debug.traceback(msg)) end
 
   return assertion
 end

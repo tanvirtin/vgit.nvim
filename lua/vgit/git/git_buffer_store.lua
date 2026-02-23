@@ -50,9 +50,7 @@ git_buffer_store.register_events = event.async(function()
     statusline.reset()
     git_buffer_store.clear_buffers()
     for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-      if vim.api.nvim_buf_is_loaded(bufnr) then
-        git_buffer_store.collect(bufnr)
-      end
+      if vim.api.nvim_buf_is_loaded(bufnr) then git_buffer_store.collect(bufnr) end
     end
   end)
 end)

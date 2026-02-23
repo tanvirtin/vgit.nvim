@@ -141,7 +141,10 @@ function StatusDiffView:reset_hunk()
   local next_file = self:find_next_file(filename, 'unstaged')
 
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   local _, reset_err = repo:reset_hunk(filename, hunk)
   if reset_err then
@@ -435,11 +438,11 @@ function StatusDiffView:stage_hunk()
   local hunk, hunk_index = self._diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  -- Find next unstaged file before staging
-  local next_file = self:find_next_file(filename, 'unstaged')
-
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   local _, stage_err = repo:stage_hunk(filename, hunk)
   if stage_err then
@@ -491,10 +494,11 @@ function StatusDiffView:unstage_hunk()
   local hunk, hunk_index = self._diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  local next_file = self:find_next_file(filename, 'staged')
-
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   local _, unstage_err = repo:unstage_hunk(filename, hunk)
   if unstage_err then
@@ -543,7 +547,10 @@ function StatusDiffView:stage_entry()
   local next_file = self:find_next_file(filename, 'unstaged')
 
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
   repo:stage_file(filename)
 
   self:refresh_and_navigate(function()
@@ -564,7 +571,10 @@ function StatusDiffView:unstage_entry()
   local next_file = self:find_next_file(filename, 'staged')
 
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
   repo:unstage_file(filename)
 
   self:refresh_and_navigate(function()
@@ -592,7 +602,10 @@ function StatusDiffView:reset_entry()
   local next_file = self:find_next_file(filename, entry_type)
 
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   if entry_type == 'staged' then repo:unstage_file(filename) end
   repo:reset(filename)
@@ -614,7 +627,10 @@ function StatusDiffView:stage_entry_from_diff()
   local filename = entry.status.filename
 
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
   repo:stage_file(filename)
 
   self:refresh_and_navigate(function()
@@ -636,7 +652,10 @@ function StatusDiffView:unstage_entry_from_diff()
   local filename = entry.status.filename
 
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
   repo:unstage_file(filename)
 
   self:refresh_and_navigate(function()
@@ -867,7 +886,10 @@ end
 
 function StatusDiffView:stage_all()
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
   repo:stage_all()
 
   self:refresh_and_navigate(function()
@@ -877,7 +899,10 @@ end
 
 function StatusDiffView:unstage_all()
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
   repo:unstage_all()
 
   self:refresh_and_navigate(function()
@@ -893,7 +918,10 @@ function StatusDiffView:reset_all()
   if decision ~= 'yes' and decision ~= 'y' then return end
 
   local repo, err = repository.current()
-  if err then console.debug.error(err); return end
+  if err then
+    console.debug.error(err)
+    return
+  end
   repo:reset()
 
   self._refreshing = true
@@ -1071,7 +1099,10 @@ end
 
 function StatusDiffView:_create_entries_view(data)
   local repo, err = repository.current()
-  if err then console.debug.error(err); return false end
+  if err then
+    console.debug.error(err)
+    return false
+  end
 
   self._repo = repo
 

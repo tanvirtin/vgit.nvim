@@ -14,9 +14,7 @@ local diff_command = {}
 
 local function format_ref_for_display(ref)
   -- Only truncate if it looks like a full commit hash (40 hex chars)
-  if ref:match('^[a-f0-9]+$') and #ref == 40 then
-    return ref:sub(1, 7)
-  end
+  if ref:match('^[a-f0-9]+$') and #ref == 40 then return ref:sub(1, 7) end
   return ref
 end
 
@@ -153,9 +151,9 @@ diff_command.execute = event.async(function(args)
     opts.ambiguous = nil
   end
 
-  local base_ref, compare_ref, is_range, ref_err
+  local base_ref, compare_ref, _, ref_err
   if #opts.refs > 0 then
-    base_ref, compare_ref, is_range, ref_err = normalize_refs(opts.refs)
+    base_ref, compare_ref, _, ref_err = normalize_refs(opts.refs)
     if ref_err then
       console.error(ref_err)
       return
@@ -231,9 +229,7 @@ diff_command.execute = event.async(function(args)
         to = 'index'
         -- Look up old_filename from git status for renames
         local file_status = git_status.ls(repo:get_path(), filename)
-        if file_status and file_status.old_filename then
-          old_filename = file_status.old_filename
-        end
+        if file_status and file_status.old_filename then old_filename = file_status.old_filename end
       else
         -- Unstaged changes: index vs disk (working tree changes)
         from = 'index'
@@ -321,9 +317,7 @@ diff_command.execute = event.async(function(args)
 
     local entries = {}
     for i = 1, #funcs do
-      if results[i] then
-        table.insert(entries, results[i])
-      end
+      if results[i] then table.insert(entries, results[i]) end
     end
 
     if #entries == 0 then

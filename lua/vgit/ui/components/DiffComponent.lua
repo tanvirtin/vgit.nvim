@@ -140,9 +140,7 @@ function DiffComponent:render()
         local pad_fmt = '%' .. max_digits .. 's'
         for i = 1, #line_numbers do
           local ln = line_numbers[i]
-          if ln then
-            ln[1] = string.format(pad_fmt, ln[1])
-          end
+          if ln then ln[1] = string.format(pad_fmt, ln[1]) end
         end
       end
 
@@ -170,31 +168,43 @@ function DiffComponent:set_lines(lines)
 end
 
 function DiffComponent:get_lines()
-  return self:with_element(function(el) return el:get_lines() end) or self.state.lines
+  return self:with_element(function(el)
+    return el:get_lines()
+  end) or self.state.lines
 end
 
 function DiffComponent:clear_lines()
-  self:with_element(function(el) el:clear_lines() end)
+  self:with_element(function(el)
+    el:clear_lines()
+  end)
   self:set_state({ lines = {} })
   return self
 end
 
 function DiffComponent:set_cursor(cursor)
-  self:with_element(function(el) el:set_cursor(cursor) end)
+  self:with_element(function(el)
+    el:set_cursor(cursor)
+  end)
   return self
 end
 
 function DiffComponent:get_cursor()
-  return self:with_element(function(el) return el:get_cursor() end) or { 1, 1 }
+  return self:with_element(function(el)
+    return el:get_cursor()
+  end) or { 1, 1 }
 end
 
 function DiffComponent:set_lnum(lnum)
-  self:with_element(function(el) el:set_lnum(lnum) end)
+  self:with_element(function(el)
+    el:set_lnum(lnum)
+  end)
   return self
 end
 
 function DiffComponent:get_lnum()
-  return self:with_element(function(el) return el:get_lnum() end) or 1
+  return self:with_element(function(el)
+    return el:get_lnum()
+  end) or 1
 end
 
 function DiffComponent:reset_cursor()
@@ -202,50 +212,70 @@ function DiffComponent:reset_cursor()
 end
 
 function DiffComponent:position_cursor(placement)
-  self:with_element(function(el) el:position_cursor(placement) end)
+  self:with_element(function(el)
+    el:position_cursor(placement)
+  end)
   return self
 end
 
 function DiffComponent:call(callback)
-  if callback then self:with_element(function(el) el:call(callback) end) end
+  if callback then self:with_element(function(el)
+    el:call(callback)
+  end) end
   return self
 end
 
 function DiffComponent:enable_cursorline()
-  self:with_element(function(el) el:enable_cursorline() end)
+  self:with_element(function(el)
+    el:enable_cursorline()
+  end)
   return self
 end
 
 function DiffComponent:disable_cursorline()
-  self:with_element(function(el) el:disable_cursorline() end)
+  self:with_element(function(el)
+    el:disable_cursorline()
+  end)
   return self
 end
 
 function DiffComponent:get_line_count()
-  return self:with_element(function(el) return el:get_line_count() end) or 0
+  return self:with_element(function(el)
+    return el:get_line_count()
+  end) or 0
 end
 
 function DiffComponent:get_filetype()
-  return self:with_element(function(el) return el:get_filetype() end) or ''
+  return self:with_element(function(el)
+    return el:get_filetype()
+  end) or ''
 end
 
 function DiffComponent:clear_extmarks()
-  self:with_element(function(el) el:clear_extmarks() end)
+  self:with_element(function(el)
+    el:clear_extmarks()
+  end)
   return self
 end
 
 function DiffComponent:set_keymap(config, handler)
-  self:with_element(function(el) el:set_keymap(config, handler) end)
+  self:with_element(function(el)
+    el:set_keymap(config, handler)
+  end)
   return self
 end
 
 function DiffComponent:attach_to_renderer(callback)
-  self:with_element(function(el) el:attach_to_renderer(callback) end)
+  self:with_element(function(el)
+    el:attach_to_renderer(callback)
+  end)
   return self
 end
 
 function DiffComponent:is_valid()
-  return self:with_element(function() return true end) or false
+  return self:with_element(function()
+    return true
+  end) or false
 end
 
 Component.forward(DiffComponent, function(self)
@@ -278,13 +308,6 @@ function DiffComponent:hunk_down(pos)
   end
 
   local result = self:move_to_hunk(mark_index, pos)
-  if result then
-    if mark_index < 1 then
-      mark_index = #marks
-    elseif mark_index > #marks then
-      mark_index = 1
-    end
-  end
 
   return result
 end
@@ -308,13 +331,6 @@ function DiffComponent:hunk_up(pos)
   end
 
   local result = self:move_to_hunk(mark_index, pos)
-  if result then
-    if mark_index < 1 then
-      mark_index = #marks
-    elseif mark_index > #marks then
-      mark_index = 1
-    end
-  end
 
   return result
 end
@@ -434,9 +450,7 @@ function DiffComponent:render_diff(top, bot)
           end
 
           if line_marks.void_text then
-            if not void_text then
-              void_text = string.rep(symbols_setting:get('void'), el:get_width())
-            end
+            if not void_text then void_text = string.rep(symbols_setting:get('void'), el:get_width()) end
             el:place_extmark_text({
               row = line_marks.void_text.row,
               col = line_marks.void_text.col,
@@ -489,7 +503,9 @@ function DiffComponent:clear_folds()
 end
 
 function DiffComponent:ensure_window_options()
-  self:with_element(function(el) el:reapply_window_options() end)
+  self:with_element(function(el)
+    el:reapply_window_options()
+  end)
   return self
 end
 

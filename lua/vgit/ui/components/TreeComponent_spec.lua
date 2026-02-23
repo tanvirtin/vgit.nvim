@@ -58,9 +58,15 @@ describe('TreeComponent:', function()
     local function create_mock_status(config)
       config = config or {}
       return {
-        is_staged = function() return config.is_staged or false end,
-        is_unstaged = function() return config.is_unstaged or false end,
-        is_unmerged = function() return config.is_unmerged or false end,
+        is_staged = function()
+          return config.is_staged or false
+        end,
+        is_unstaged = function()
+          return config.is_unstaged or false
+        end,
+        is_unmerged = function()
+          return config.is_unmerged or false
+        end,
         has = function(_, code)
           if config.has_codes then
             for _, c in ipairs(config.has_codes) do
@@ -180,11 +186,21 @@ describe('TreeComponent:', function()
         filename = filename or 'test.lua',
         filetype = filetype or 'lua',
         value = 'M ',
-        is_staged = function() return false end,
-        is_unstaged = function() return true end,
-        is_unmerged = function() return false end,
-        has = function() return false end,
-        has_either = function() return false end,
+        is_staged = function()
+          return false
+        end,
+        is_unstaged = function()
+          return true
+        end,
+        is_unmerged = function()
+          return false
+        end,
+        has = function()
+          return false
+        end,
+        has_either = function()
+          return false
+        end,
       }
     end
 
@@ -238,7 +254,9 @@ describe('TreeComponent:', function()
 
     it('should return true for is_valid when element is valid', function()
       component._element = {
-        is_valid = function() return true end,
+        is_valid = function()
+          return true
+        end,
       }
       assert.is_truthy(component:is_valid())
       component._element = nil

@@ -27,9 +27,7 @@ function CommitPickerView:_build_items(commits)
     local commit = commits[i]
     local short_hash = commit:short_hash() or ''
     local summary = commit.summary or ''
-    if #summary > 60 then
-      summary = summary:sub(1, 57) .. '...'
-    end
+    if #summary > 60 then summary = summary:sub(1, 57) .. '...' end
     local author = commit.author or ''
     local age = commit:age()
     local age_display = age and age.display or ''
@@ -146,7 +144,10 @@ function CommitPickerView:_on_load_more()
   if self._search_query == '' then
     local new_commits, err = self._history:load_more(100)
 
-    if err then console.debug.error(err); return nil end
+    if err then
+      console.debug.error(err)
+      return nil
+    end
     if not new_commits or #new_commits == 0 then return nil end
 
     return self:_build_items(new_commits)
@@ -157,7 +158,10 @@ function CommitPickerView:_on_load_more()
     pagination = { count = 100, skip = self._search_skip },
   })
 
-  if err then console.debug.error(err); return nil end
+  if err then
+    console.debug.error(err)
+    return nil
+  end
   if not commits or #commits == 0 then return nil end
 
   self._search_skip = self._search_skip + #commits

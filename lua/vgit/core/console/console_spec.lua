@@ -50,7 +50,9 @@ describe('console:', function()
       local result = console.format('msg')
       -- only one bracket pair: [VGit]
       local count = 0
-      for _ in result:gmatch('%[') do count = count + 1 end
+      for _ in result:gmatch('%[') do
+        count = count + 1
+      end
       eq(count, 1)
     end)
   end)

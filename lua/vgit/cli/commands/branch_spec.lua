@@ -3,14 +3,24 @@ local eq = assert.are.same
 -- Mock the event module to avoid async issues in tests
 local mock_event = {
   await = function() end,
-  async = function(fn) return fn end,
-  debounce = function(fn) return fn, function() end end,
-  debounce_async = function(fn) return fn, function() end end,
+  async = function(fn)
+    return fn
+  end,
+  debounce = function(fn)
+    return fn, function() end
+  end,
+  debounce_async = function(fn)
+    return fn, function() end
+  end,
   on = function() end,
   emit = function() end,
-  custom_on = function() return function() end end,
+  custom_on = function()
+    return function() end
+  end,
   buffer_on = function() end,
-  promisify = function(fn) return fn end,
+  promisify = function(fn)
+    return fn
+  end,
   group = 'VGitGroup',
   register_module = function() end,
 }
@@ -51,14 +61,16 @@ describe('branch_command:', function()
                   { name = 'feature', hash = 'def456' },
                   { name = 'main', hash = 'abc123' },
                   { name = 'develop', hash = 'ghi789' },
-                }, nil
+                },
+                  nil
               end,
               current_branch = function()
                 return 'main', nil
               end,
             }
           end,
-        }, nil
+        },
+          nil
       end,
     }
 
@@ -105,7 +117,9 @@ describe('branch_command:', function()
 
     save_package('vgit.core.console')
     package.loaded['vgit.core.console'] = {
-      error = function(msg) error_msg = msg end,
+      error = function(msg)
+        error_msg = msg
+      end,
       info = function() end,
     }
 
@@ -133,7 +147,8 @@ describe('branch_command:', function()
               end,
             }
           end,
-        }, nil
+        },
+          nil
       end,
     }
 
@@ -145,7 +160,9 @@ describe('branch_command:', function()
     save_package('vgit.core.console')
     package.loaded['vgit.core.console'] = {
       error = function() end,
-      info = function(msg) info_msg = msg end,
+      info = function(msg)
+        info_msg = msg
+      end,
     }
 
     package.loaded['vgit.cli.commands.branch'] = nil
@@ -172,7 +189,8 @@ describe('branch_command:', function()
               end,
             }
           end,
-        }, nil
+        },
+          nil
       end,
     }
 
@@ -183,7 +201,9 @@ describe('branch_command:', function()
 
     save_package('vgit.core.console')
     package.loaded['vgit.core.console'] = {
-      error = function(msg) error_msg = msg end,
+      error = function(msg)
+        error_msg = msg
+      end,
       info = function() end,
     }
 

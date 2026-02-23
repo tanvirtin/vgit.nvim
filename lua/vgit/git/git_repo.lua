@@ -13,7 +13,7 @@ function git_repo.config(reponame)
 end
 
 function git_repo.discover(filepath)
-  local search_dir = filepath
+  local search_dir
 
   -- If filepath is a file, get its directory
   if filepath then

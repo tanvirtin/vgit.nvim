@@ -256,7 +256,9 @@ describe('git_submodule:', function()
         eq(2, #result)
 
         -- Sort by path for deterministic comparison
-        table.sort(result, function(a, b) return a.path < b.path end)
+        table.sort(result, function(a, b)
+          return a.path < b.path
+        end)
         eq('deps/lib', result[1].path)
         eq('deps/util', result[2].path)
 
@@ -450,8 +452,14 @@ describe('git_submodule:', function()
 
         -- Create a commit inside the submodule directory to make it "modified"
         vim.fn.system({
-          'git', '-C', repo .. '/deps/lib',
-          'commit', '-q', '--allow-empty', '-m', 'sub-commit',
+          'git',
+          '-C',
+          repo .. '/deps/lib',
+          'commit',
+          '-q',
+          '--allow-empty',
+          '-m',
+          'sub-commit',
         })
 
         local result, err = git_submodule.list(repo)
@@ -541,9 +549,7 @@ describe('git_submodule:', function()
         local result, err = git_submodule.set_branch(repo, 'main', 'deps/lib')
 
         -- set-branch may fail if the git version is too old, but should not crash
-        if not err then
-          assert(result)
-        end
+        if not err then assert(result) end
       end)
 
       it('should reset to default branch with default option', function()
@@ -551,9 +557,7 @@ describe('git_submodule:', function()
 
         local result, err = git_submodule.set_branch(repo, nil, 'deps/lib', { default = true })
 
-        if not err then
-          assert(result)
-        end
+        if not err then assert(result) end
       end)
     end)
 

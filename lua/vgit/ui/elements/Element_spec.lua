@@ -33,16 +33,12 @@ describe('Element:', function()
     pcall(function()
       for _, win_id in ipairs(vim.api.nvim_list_wins()) do
         local config = vim.api.nvim_win_get_config(win_id)
-        if config.relative and config.relative ~= '' then
-          pcall(vim.api.nvim_win_close, win_id, true)
-        end
+        if config.relative and config.relative ~= '' then pcall(vim.api.nvim_win_close, win_id, true) end
       end
     end)
     pcall(function()
       for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-        if vim.api.nvim_buf_is_valid(bufnr) then
-          pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
-        end
+        if vim.api.nvim_buf_is_valid(bufnr) then pcall(vim.api.nvim_buf_delete, bufnr, { force = true }) end
       end
     end)
   end)
@@ -342,9 +338,7 @@ describe('Element:', function()
       el:enable_cursorline()
       -- Verify the option was set via window
       local ok, value = pcall(vim.api.nvim_get_option_value, 'cursorline', { win = el:get_win_id() })
-      if ok then
-        assert.is_true(value)
-      end
+      if ok then assert.is_true(value) end
     end)
 
     it('should disable cursorline', function()
@@ -353,9 +347,7 @@ describe('Element:', function()
       el:enable_cursorline()
       el:disable_cursorline()
       local ok, value = pcall(vim.api.nvim_get_option_value, 'cursorline', { win = el:get_win_id() })
-      if ok then
-        assert.is_false(value)
-      end
+      if ok then assert.is_false(value) end
     end)
   end)
 

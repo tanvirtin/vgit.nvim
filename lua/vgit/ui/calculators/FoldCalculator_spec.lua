@@ -52,9 +52,7 @@ describe('FoldCalculator:', function()
       -- Between marks: top=20+7+1=28, bot=80-7-1=72 -> range [28,72] = 45 lines >= 10
       local found_between = false
       for _, fold in ipairs(folds) do
-        if fold.top == 28 and fold.bot == 72 then
-          found_between = true
-        end
+        if fold.top == 28 and fold.bot == 72 then found_between = true end
       end
       assert.is_true(found_between)
     end)
@@ -69,9 +67,7 @@ describe('FoldCalculator:', function()
       local folds = calc:calculate_folds(marks, 200)
       local found_between = false
       for _, fold in ipairs(folds) do
-        if fold.top >= 28 and fold.bot <= 27 then
-          found_between = true
-        end
+        if fold.top >= 28 and fold.bot <= 27 then found_between = true end
       end
       assert.is_false(found_between)
     end)
@@ -109,9 +105,10 @@ describe('FoldCalculator:', function()
         for _, mark in ipairs(marks) do
           -- Fold should not overlap any mark
           local overlaps = not (fold.bot < mark.top or fold.top > mark.bot)
-          assert.is_false(overlaps, string.format(
-            'Fold [%d,%d] overlaps mark [%d,%d]', fold.top, fold.bot, mark.top, mark.bot
-          ))
+          assert.is_false(
+            overlaps,
+            string.format('Fold [%d,%d] overlaps mark [%d,%d]', fold.top, fold.bot, mark.top, mark.bot)
+          )
         end
       end
     end)

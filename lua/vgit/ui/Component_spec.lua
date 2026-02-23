@@ -179,13 +179,17 @@ describe('Component:', function()
     it('should call callback after update', function()
       component:mount()
       local called = false
-      component:set_props({ x = 1 }, function() called = true end)
+      component:set_props({ x = 1 }, function()
+        called = true
+      end)
       assert.is_true(called)
     end)
 
     it('should call callback even when not mounted', function()
       local called = false
-      component:set_props({ x = 1 }, function() called = true end)
+      component:set_props({ x = 1 }, function()
+        called = true
+      end)
       assert.is_true(called)
     end)
 
@@ -227,7 +231,9 @@ describe('Component:', function()
     it('should call callback after update', function()
       component:mount()
       local called = false
-      component:set_state({ count = 2 }, function() called = true end)
+      component:set_state({ count = 2 }, function()
+        called = true
+      end)
       assert.is_true(called)
     end)
 
@@ -265,7 +271,9 @@ describe('Component:', function()
       c:mount()
       c._allow_update = false
       local called = false
-      c:set_props({ x = 1 }, function() called = true end)
+      c:set_props({ x = 1 }, function()
+        called = true
+      end)
       assert.is_false(called)
     end)
   end)
@@ -347,21 +355,35 @@ describe('Component:', function()
   describe('with_element', function()
     it('should return nil when _element is nil', function()
       local called = false
-      local result = component:with_element(function() called = true; return 42 end)
+      local result = component:with_element(function()
+        called = true
+        return 42
+      end)
       assert.is_false(called)
       assert.is_nil(result)
     end)
 
     it('should return nil when _element is_valid returns false', function()
-      component._element = { is_valid = function() return false end }
+      component._element = {
+        is_valid = function()
+          return false
+        end,
+      }
       local called = false
-      local result = component:with_element(function() called = true; return 42 end)
+      local result = component:with_element(function()
+        called = true
+        return 42
+      end)
       assert.is_false(called)
       assert.is_nil(result)
     end)
 
     it('should call fn with element when valid', function()
-      local mock_element = { is_valid = function() return true end }
+      local mock_element = {
+        is_valid = function()
+          return true
+        end,
+      }
       component._element = mock_element
       local received_element
       component:with_element(function(el)
@@ -371,8 +393,14 @@ describe('Component:', function()
     end)
 
     it('should forward return value', function()
-      component._element = { is_valid = function() return true end }
-      local result = component:with_element(function() return 'hello' end)
+      component._element = {
+        is_valid = function()
+          return true
+        end,
+      }
+      local result = component:with_element(function()
+        return 'hello'
+      end)
       assert.are.equal('hello', result)
     end)
   end)
@@ -381,16 +409,22 @@ describe('Component:', function()
     it('should create delegating methods on a class', function()
       local MyComponent = Component:extend()
       local target = {
-        get_value = function(self) return 42 end,
+        get_value = function(self)
+          return 42
+        end,
       }
-      Component.forward(MyComponent, function(self) return target end, { 'get_value' })
+      Component.forward(MyComponent, function(self)
+        return target
+      end, { 'get_value' })
       local instance = MyComponent()
       assert.are.equal(42, instance:get_value())
     end)
 
     it('should return nil when target is nil', function()
       local MyComponent = Component:extend()
-      Component.forward(MyComponent, function(self) return nil end, { 'get_value' })
+      Component.forward(MyComponent, function(self)
+        return nil
+      end, { 'get_value' })
       local instance = MyComponent()
       assert.is_nil(instance:get_value())
     end)
@@ -398,10 +432,16 @@ describe('Component:', function()
     it('should forward multiple methods', function()
       local MyComponent = Component:extend()
       local target = {
-        get_a = function(self) return 'a' end,
-        get_b = function(self) return 'b' end,
+        get_a = function(self)
+          return 'a'
+        end,
+        get_b = function(self)
+          return 'b'
+        end,
       }
-      Component.forward(MyComponent, function(self) return target end, { 'get_a', 'get_b' })
+      Component.forward(MyComponent, function(self)
+        return target
+      end, { 'get_a', 'get_b' })
       local instance = MyComponent()
       assert.are.equal('a', instance:get_a())
       assert.are.equal('b', instance:get_b())
@@ -410,9 +450,13 @@ describe('Component:', function()
     it('should pass arguments to target method', function()
       local MyComponent = Component:extend()
       local target = {
-        add = function(self, a, b) return a + b end,
+        add = function(self, a, b)
+          return a + b
+        end,
       }
-      Component.forward(MyComponent, function(self) return target end, { 'add' })
+      Component.forward(MyComponent, function(self)
+        return target
+      end, { 'add' })
       local instance = MyComponent()
       assert.are.equal(5, instance:add(2, 3))
     end)
@@ -420,10 +464,16 @@ describe('Component:', function()
     it('should be overrideable by explicit method', function()
       local MyComponent = Component:extend()
       local target = {
-        get_value = function(self) return 'from_target' end,
+        get_value = function(self)
+          return 'from_target'
+        end,
       }
-      Component.forward(MyComponent, function(self) return target end, { 'get_value' })
-      function MyComponent:get_value() return 'overridden' end
+      Component.forward(MyComponent, function(self)
+        return target
+      end, { 'get_value' })
+      function MyComponent:get_value()
+        return 'overridden'
+      end
       local instance = MyComponent()
       assert.are.equal('overridden', instance:get_value())
     end)

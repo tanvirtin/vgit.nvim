@@ -7,7 +7,11 @@ local eq = assert.are.same
 
 describe('GitTree:', function()
   local function make_repo(path)
-    return { get_path = function() return path end }
+    return {
+      get_path = function()
+        return path
+      end,
+    }
   end
 
   describe('constructor', function()
@@ -201,7 +205,6 @@ describe('GitTree:', function()
 
         eq('fix: important bug fix', msg)
       end)
-
     end)
 
     describe('hash', function()

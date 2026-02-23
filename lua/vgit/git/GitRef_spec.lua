@@ -6,7 +6,11 @@ local async = require('tests.helpers.async')({ it = it, before_each = before_eac
 local eq = assert.are.same
 
 local function make_repo(path)
-  return { get_path = function() return path end }
+  return {
+    get_path = function()
+      return path
+    end,
+  }
 end
 
 describe('GitRef:', function()

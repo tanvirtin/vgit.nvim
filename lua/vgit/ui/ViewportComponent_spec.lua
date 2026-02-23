@@ -88,14 +88,18 @@ describe('ViewportComponent:', function()
   describe('ensure_renderer_attached', function()
     it('should call attach_fn on first call', function()
       local called = false
-      component:ensure_renderer_attached(function() called = true end)
+      component:ensure_renderer_attached(function()
+        called = true
+      end)
       assert.is_true(called)
       assert.is_true(component._renderer_attached)
     end)
 
     it('should not call attach_fn on subsequent calls', function()
       local call_count = 0
-      local fn = function() call_count = call_count + 1 end
+      local fn = function()
+        call_count = call_count + 1
+      end
       component:ensure_renderer_attached(fn)
       component:ensure_renderer_attached(fn)
       component:ensure_renderer_attached(fn)

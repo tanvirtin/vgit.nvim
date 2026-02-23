@@ -16,16 +16,22 @@ local navigation_stub = {
 }
 
 local git_buffer_store_stub = {
-  current = function() return nil end,
+  current = function()
+    return nil
+  end,
 }
 
 local window_get_cursor_return = { 1, 0 }
 local window_instance = {
-  get_cursor = function() return window_get_cursor_return end,
+  get_cursor = function()
+    return window_get_cursor_return
+  end,
 }
 local Window_stub = setmetatable({}, {
   __index = require('vgit.core.Object'),
-  __call = function(_, ...) return window_instance end,
+  __call = function(_, ...)
+    return window_instance
+  end,
 })
 
 package.loaded['vgit.core.navigation'] = navigation_stub
@@ -39,7 +45,9 @@ describe('Conflicts:', function()
     -- Reset stubs before each test
     navigation_up_calls = {}
     navigation_down_calls = {}
-    git_buffer_store_stub.current = function() return nil end
+    git_buffer_store_stub.current = function()
+      return nil
+    end
     window_get_cursor_return = { 1, 0 }
   end)
 
@@ -52,7 +60,9 @@ describe('Conflicts:', function()
 
   describe('hunk_up', function()
     it('should return early when there is no current buffer', function()
-      git_buffer_store_stub.current = function() return nil end
+      git_buffer_store_stub.current = function()
+        return nil
+      end
 
       local conflicts = Conflicts()
       conflicts:hunk_up()
@@ -62,9 +72,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is nil', function()
       local mock_buffer = {
-        get_conflicts = function() return nil end,
+        get_conflicts = function()
+          return nil
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       conflicts:hunk_up()
@@ -74,9 +88,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is empty', function()
       local mock_buffer = {
-        get_conflicts = function() return {} end,
+        get_conflicts = function()
+          return {}
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       conflicts:hunk_up()
@@ -87,10 +105,16 @@ describe('Conflicts:', function()
     it('should call navigation.up with window and conflict marks', function()
       local mock_marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
       local mock_buffer = {
-        get_conflicts = function() return { { current = {}, incoming = {} } } end,
-        get_conflict_marks = function() return mock_marks end,
+        get_conflicts = function()
+          return { { current = {}, incoming = {} } }
+        end,
+        get_conflict_marks = function()
+          return mock_marks
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       conflicts:hunk_up()
@@ -103,7 +127,9 @@ describe('Conflicts:', function()
 
   describe('hunk_down', function()
     it('should return early when there is no current buffer', function()
-      git_buffer_store_stub.current = function() return nil end
+      git_buffer_store_stub.current = function()
+        return nil
+      end
 
       local conflicts = Conflicts()
       conflicts:hunk_down()
@@ -113,9 +139,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is nil', function()
       local mock_buffer = {
-        get_conflicts = function() return nil end,
+        get_conflicts = function()
+          return nil
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       conflicts:hunk_down()
@@ -125,9 +155,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is empty', function()
       local mock_buffer = {
-        get_conflicts = function() return {} end,
+        get_conflicts = function()
+          return {}
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       conflicts:hunk_down()
@@ -138,10 +172,16 @@ describe('Conflicts:', function()
     it('should call navigation.down with window and conflict marks', function()
       local mock_marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
       local mock_buffer = {
-        get_conflicts = function() return { { current = {}, incoming = {} } } end,
-        get_conflict_marks = function() return mock_marks end,
+        get_conflicts = function()
+          return { { current = {}, incoming = {} } }
+        end,
+        get_conflict_marks = function()
+          return mock_marks
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       conflicts:hunk_down()
@@ -154,7 +194,9 @@ describe('Conflicts:', function()
 
   describe('accept_both', function()
     it('should return early when there is no current buffer', function()
-      git_buffer_store_stub.current = function() return nil end
+      git_buffer_store_stub.current = function()
+        return nil
+      end
 
       local conflicts = Conflicts()
       local result = conflicts:accept_both()
@@ -164,9 +206,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is nil', function()
       local mock_buffer = {
-        get_conflicts = function() return nil end,
+        get_conflicts = function()
+          return nil
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       local result = conflicts:accept_both()
@@ -176,9 +222,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is empty', function()
       local mock_buffer = {
-        get_conflicts = function() return {} end,
+        get_conflicts = function()
+          return {}
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       local result = conflicts:accept_both()
@@ -192,10 +242,16 @@ describe('Conflicts:', function()
         get_conflicts = function()
           return { { current = { top = 1, bot = 3 }, incoming = { top = 5, bot = 7 } } }
         end,
-        get_conflict = function(_, lnum) return nil end,
-        set_lines = function() set_lines_called = true end,
+        get_conflict = function(_, lnum)
+          return nil
+        end,
+        set_lines = function()
+          set_lines_called = true
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 20, 0 }
 
       local conflicts = Conflicts()
@@ -234,12 +290,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 3, 0 }
 
       local conflicts = Conflicts()
@@ -280,12 +346,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 2, 0 }
 
       local conflicts = Conflicts()
@@ -321,12 +397,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 4, 0 }
 
       local conflicts = Conflicts()
@@ -361,12 +447,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 1, 0 }
 
       local conflicts = Conflicts()
@@ -381,7 +477,9 @@ describe('Conflicts:', function()
 
   describe('accept_current', function()
     it('should return early when there is no current buffer', function()
-      git_buffer_store_stub.current = function() return nil end
+      git_buffer_store_stub.current = function()
+        return nil
+      end
 
       local conflicts = Conflicts()
       local result = conflicts:accept_current()
@@ -391,9 +489,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is nil', function()
       local mock_buffer = {
-        get_conflicts = function() return nil end,
+        get_conflicts = function()
+          return nil
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       local result = conflicts:accept_current()
@@ -403,9 +505,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is empty', function()
       local mock_buffer = {
-        get_conflicts = function() return {} end,
+        get_conflicts = function()
+          return {}
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       local result = conflicts:accept_current()
@@ -419,10 +525,16 @@ describe('Conflicts:', function()
         get_conflicts = function()
           return { { current = { top = 1, bot = 3 }, incoming = { top = 5, bot = 7 } } }
         end,
-        get_conflict = function(_, lnum) return nil end,
-        set_lines = function() set_lines_called = true end,
+        get_conflict = function(_, lnum)
+          return nil
+        end,
+        set_lines = function()
+          set_lines_called = true
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 50, 0 }
 
       local conflicts = Conflicts()
@@ -451,12 +563,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 3, 0 }
 
       local conflicts = Conflicts()
@@ -487,12 +609,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 2, 0 }
 
       local conflicts = Conflicts()
@@ -525,12 +657,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 3, 0 }
 
       local conflicts = Conflicts()
@@ -561,12 +703,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 2, 0 }
 
       local conflicts = Conflicts()
@@ -580,7 +732,9 @@ describe('Conflicts:', function()
 
   describe('accept_incoming', function()
     it('should return early when there is no current buffer', function()
-      git_buffer_store_stub.current = function() return nil end
+      git_buffer_store_stub.current = function()
+        return nil
+      end
 
       local conflicts = Conflicts()
       local result = conflicts:accept_incoming()
@@ -590,9 +744,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is nil', function()
       local mock_buffer = {
-        get_conflicts = function() return nil end,
+        get_conflicts = function()
+          return nil
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       local result = conflicts:accept_incoming()
@@ -602,9 +760,13 @@ describe('Conflicts:', function()
 
     it('should return early when conflicts is empty', function()
       local mock_buffer = {
-        get_conflicts = function() return {} end,
+        get_conflicts = function()
+          return {}
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
 
       local conflicts = Conflicts()
       local result = conflicts:accept_incoming()
@@ -618,10 +780,16 @@ describe('Conflicts:', function()
         get_conflicts = function()
           return { { current = { top = 1, bot = 3 }, incoming = { top = 5, bot = 7 } } }
         end,
-        get_conflict = function(_, lnum) return nil end,
-        set_lines = function() set_lines_called = true end,
+        get_conflict = function(_, lnum)
+          return nil
+        end,
+        set_lines = function()
+          set_lines_called = true
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 50, 0 }
 
       local conflicts = Conflicts()
@@ -650,12 +818,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 6, 0 }
 
       local conflicts = Conflicts()
@@ -686,12 +864,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 4, 0 }
 
       local conflicts = Conflicts()
@@ -724,12 +912,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 7, 0 }
 
       local conflicts = Conflicts()
@@ -760,12 +958,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 4, 0 }
 
       local conflicts = Conflicts()
@@ -794,12 +1002,22 @@ describe('Conflicts:', function()
 
       local captured_lines = nil
       local mock_buffer = {
-        get_conflicts = function() return { conflict } end,
-        get_conflict = function(_, lnum) return conflict end,
-        get_lines = function() return lines end,
-        set_lines = function(_, new_lines) captured_lines = new_lines end,
+        get_conflicts = function()
+          return { conflict }
+        end,
+        get_conflict = function(_, lnum)
+          return conflict
+        end,
+        get_lines = function()
+          return lines
+        end,
+        set_lines = function(_, new_lines)
+          captured_lines = new_lines
+        end,
       }
-      git_buffer_store_stub.current = function() return mock_buffer end
+      git_buffer_store_stub.current = function()
+        return mock_buffer
+      end
       window_get_cursor_return = { 6, 0 }
 
       local conflicts = Conflicts()

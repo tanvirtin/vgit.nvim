@@ -124,6 +124,7 @@ describe('git_rebase:', function()
 
     it('should support rebase with preserve-merges option', function()
       local base_commit = test_repo.get_head_commit(repo)
+      local err
 
       _, err = test_repo.create_branch(repo, 'feature')
       assert.is_nil(err, 'Failed to create feature branch')
