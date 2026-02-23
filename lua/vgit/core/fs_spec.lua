@@ -272,6 +272,37 @@ describe('fs:', function()
     end)
   end)
 
+  describe('append_file', function()
+    it('should append lines to a new file', function()
+      local lines = { 'line1', 'line2' }
+      fs.append_file(filename, lines)
+
+      local data, err = fs.read_file(filename)
+
+      eq(err, nil)
+      eq(data, { 'line1', 'line2' })
+    end)
+
+    it('should append lines to an existing file without overwriting', function()
+      fs.write_file(filename, { 'existing content' })
+
+      fs.append_file(filename, { 'appended line' })
+
+      local data, err = fs.read_file(filename)
+
+      eq(err, nil)
+      eq(data, { 'existing content', 'appended line' })
+    end)
+
+    it('should return error for nonexistent file when using append mode', function()
+      local lines = { 'line1', 'line2' }
+      local result, err = fs.append_file('/nonexistent/path/file.txt', lines)
+
+      eq(result, nil)
+      assert.is_not_nil(err)
+    end)
+  end)
+
   describe('remove_file', function()
     it('should remove a file succesfully', function()
       local num_files = 5

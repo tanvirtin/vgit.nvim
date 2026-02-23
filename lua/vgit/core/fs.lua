@@ -13,9 +13,7 @@ function fs.make_relative(dirname, filepath)
     dirname = dirname:sub(1, -2)
   end
   local prefix = dirname == fs.sep and fs.sep or (dirname .. fs.sep)
-  if filepath:sub(1, #prefix) == prefix then
-    return filepath:sub(#prefix + 1)
-  end
+  if filepath:sub(1, #prefix) == prefix then return filepath:sub(#prefix + 1) end
   return filepath
 end
 
@@ -60,6 +58,18 @@ function fs.write_file(filepath, lines)
   fd:close()
 end
 
+function fs.append_file(filepath, lines)
+  local fd = io.open(filepath, 'ab')
+  if not fd then return nil, { 'no file descriptor found' } end
+
+  for i = 1, #lines do
+    fd:write(lines[i])
+    fd:write('\n')
+  end
+
+  fd:close()
+end
+
 function fs.remove_file(filepath)
   return os.remove(filepath)
 end
@@ -78,9 +88,7 @@ function fs.absolute_path(base_path, relative_path)
   while #base_path > 1 and base_path:sub(-1) == fs.sep do
     base_path = base_path:sub(1, -2)
   end
-  if base_path == fs.sep then
-    return fs.sep .. relative_path
-  end
+  if base_path == fs.sep then return fs.sep .. relative_path end
   return base_path .. fs.sep .. relative_path
 end
 

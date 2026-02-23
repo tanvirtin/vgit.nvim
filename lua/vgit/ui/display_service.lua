@@ -28,9 +28,7 @@ function display_service.register_events()
   end)
 
   event.custom_on('VGitDirChanged', function()
-    if active_view and active_view.destroy then
-      active_view:destroy()
-    end
+    if active_view and active_view.destroy then active_view:destroy() end
     active_view = nil
   end)
 end
@@ -226,11 +224,13 @@ function display_service.get_active_view()
 end
 
 function display_service.reset()
-  if active_view and active_view.destroy then
-    active_view:destroy()
-  end
+  if active_view and active_view.destroy then active_view:destroy() end
   active_view = nil
   _events_registered = false
+end
+
+function display_service.cleanup()
+  display_service.reset()
 end
 
 return display_service

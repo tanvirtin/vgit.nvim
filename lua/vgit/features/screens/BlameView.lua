@@ -560,7 +560,7 @@ function BlameView:show_commit_diff()
 
   local layout_type = scene_setting:get('diff_preference') or 'unified'
 
-  local diff = repo:diff({
+  local diff, diff_err = repo:diff({
     type = 'blame',
     filename = filename,
     blame_commit = commit_hash,
@@ -568,6 +568,10 @@ function BlameView:show_commit_diff()
     layout_type = layout_type,
   })
 
+  if diff_err then
+    console.debug.error(diff_err)
+    return
+  end
   if not diff then
     console.info('No changes in this commit for this file')
     return
@@ -637,7 +641,7 @@ function BlameView:show_commit_project_diff()
     local file_old_filename = file.old_filename
 
     table.insert(funcs, function()
-      local diff = repo:diff({
+      local diff, diff_err = repo:diff({
         type = 'range',
         filename = filename,
         old_filename = file_old_filename,
@@ -646,6 +650,7 @@ function BlameView:show_commit_project_diff()
         layout_type = layout_type,
       })
 
+      if diff_err then console.debug.error(diff_err); return nil end
       if not diff then return nil end
 
       local from_filename = file_old_filename or filename

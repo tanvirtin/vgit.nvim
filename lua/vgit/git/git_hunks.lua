@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 local fs = lazy('vgit.core.fs')
 local utils = lazy('vgit.core.utils')
+local console = lazy('vgit.core.console')
 local gitcli = lazy('vgit.git.gitcli')
 local GitHunk = lazy('vgit.git.GitHunk')
 local git_setting = lazy('vgit.settings.git')
@@ -25,7 +26,10 @@ function git_hunks.live(reponame, original_lines, current_lines)
     fs.remove_file(temp_filename_a)
     fs.remove_file(temp_filename_b)
 
-    if not ok then return nil, { tostring(hunks) } end
+    if not ok then
+      console.debug.error(tostring(hunks))
+      return nil, { tostring(hunks) }
+    end
     return hunks, hunks_err
   end
 

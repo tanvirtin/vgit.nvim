@@ -1,8 +1,17 @@
 -- Stub vim functions that cause async scheduling issues in tests
+-- (saved so they can be restored after each test to avoid cross-file pollution)
 local original_defer_fn = vim.defer_fn
 local original_cmd = vim.cmd
-vim.defer_fn = function(fn, ms) end
-vim.cmd = function(cmd) end
+
+-- Save original package.loaded entries so they can be restored after each test
+local original_loaded = {
+  ['vgit.core.event'] = package.loaded['vgit.core.event'],
+  ['vgit.core.Window'] = package.loaded['vgit.core.Window'],
+  ['vgit.core.navigation'] = package.loaded['vgit.core.navigation'],
+  ['vgit.core.console'] = package.loaded['vgit.core.console'],
+  ['vgit.git.git_buffer_store'] = package.loaded['vgit.git.git_buffer_store'],
+  ['vgit.settings.live_gutter'] = package.loaded['vgit.settings.live_gutter'],
+}
 
 -- Stubs for all dependencies
 local enabled_value = true
@@ -146,8 +155,29 @@ describe('Hunks:', function()
   local hunks_instance
 
   before_each(function()
+    vim.defer_fn = function(fn, ms) end
+    vim.cmd = function(cmd) end
+    -- Re-apply stubs (a prior test file may have restored originals to package.loaded)
+    package.loaded['vgit.core.event'] = event_stub
+    package.loaded['vgit.core.Window'] = Window_stub
+    package.loaded['vgit.core.navigation'] = navigation_stub
+    package.loaded['vgit.core.console'] = console_stub
+    package.loaded['vgit.git.git_buffer_store'] = git_buffer_store_stub
+    package.loaded['vgit.settings.live_gutter'] = live_gutter_stub
     reset_state()
     hunks_instance = Hunks()
+  end)
+
+  after_each(function()
+    vim.defer_fn = original_defer_fn
+    vim.cmd = original_cmd
+    -- Restore package.loaded so subsequent test files see real modules
+    package.loaded['vgit.core.event'] = original_loaded['vgit.core.event']
+    package.loaded['vgit.core.Window'] = original_loaded['vgit.core.Window']
+    package.loaded['vgit.core.navigation'] = original_loaded['vgit.core.navigation']
+    package.loaded['vgit.core.console'] = original_loaded['vgit.core.console']
+    package.loaded['vgit.git.git_buffer_store'] = original_loaded['vgit.git.git_buffer_store']
+    package.loaded['vgit.settings.live_gutter'] = original_loaded['vgit.settings.live_gutter']
   end)
 
   describe('constructor', function()
