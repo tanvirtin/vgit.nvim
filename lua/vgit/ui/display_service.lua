@@ -8,6 +8,7 @@ local HunkLens = lazy('vgit.features.lenses.HunkLens')
 local BlameLens = lazy('vgit.features.lenses.BlameLens')
 local StatusDiffView = lazy('vgit.features.screens.StatusDiffView')
 local BranchView = lazy('vgit.features.screens.BranchView')
+local StashView = lazy('vgit.features.screens.StashView')
 local CommitPickerView = lazy('vgit.features.screens.CommitPickerView')
 local BlameView = lazy('vgit.features.screens.BlameView')
 
@@ -156,6 +157,28 @@ display_service.show_branch = event.async(function(data)
   local success = view:create(data)
   if not success then
     console.error('Failed to create branch view')
+    return
+  end
+  active_view = view
+end)
+
+display_service.show_stash = event.async(function(data)
+  if not data then
+    console.error('No stash data')
+    return
+  end
+
+  if active_view and active_view.destroy then
+    active_view:destroy()
+    active_view = nil
+  end
+
+  event.await()
+
+  local view = StashView()
+  local success = view:create(data)
+  if not success then
+    console.error('Failed to create stash view')
     return
   end
   active_view = view

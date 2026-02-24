@@ -225,13 +225,74 @@ describe('ProjectDiffView:', function()
       eq(0, #prev)
       eq(0, #curr)
     end)
+
+    it('should void current-only conflict lines on previous pane and vice versa', function()
+      local view = ProjectDiffView()
+      -- Simulates a 5-line conflict: <<<, HEAD content, ===, incoming content, >>>
+      local entries = {
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,5 +1,5 @@ conflict',
+            diff = {
+              ' <<<<<<< HEAD',
+              ' head content',
+              ' =======',
+              ' incoming content',
+              ' >>>>>>> branch',
+            },
+            lnum_changes = {
+              { type = 'conflict_current_mark' },
+              { type = 'conflict_current' },
+              { type = 'conflict_middle' },
+              { type = 'conflict_incoming' },
+              { type = 'conflict_incoming_mark' },
+            },
+            top = 1,
+            bot = 5,
+          },
+          filetype = 'lua',
+          filename = 'conflict.lua',
+        },
+      }
+
+      local prev, curr = view:_build_split_patch_entries(entries)
+
+      -- Previous pane: current-only lines voided, incoming lines visible
+      eq(' ', prev[1].hunk.diff[1]) -- <<<<<<< voided
+      eq(' ', prev[1].hunk.diff[2]) -- HEAD content voided
+      eq(' =======', prev[1].hunk.diff[3]) -- middle visible on both
+      eq(' incoming content', prev[1].hunk.diff[4]) -- incoming visible
+      eq(' >>>>>>> branch', prev[1].hunk.diff[5]) -- incoming mark visible
+      eq('void', prev[1].hunk.lnum_changes[1].type)
+      eq('void', prev[1].hunk.lnum_changes[2].type)
+      eq('conflict_middle', prev[1].hunk.lnum_changes[3].type)
+      eq('conflict_incoming', prev[1].hunk.lnum_changes[4].type)
+      eq('conflict_incoming_mark', prev[1].hunk.lnum_changes[5].type)
+
+      -- Current pane: incoming-only lines voided, current lines visible
+      eq(' <<<<<<< HEAD', curr[1].hunk.diff[1]) -- current mark visible
+      eq(' head content', curr[1].hunk.diff[2]) -- HEAD content visible
+      eq(' =======', curr[1].hunk.diff[3]) -- middle visible on both
+      eq(' ', curr[1].hunk.diff[4]) -- incoming voided
+      eq(' ', curr[1].hunk.diff[5]) -- incoming mark voided
+      eq('conflict_current_mark', curr[1].hunk.lnum_changes[1].type)
+      eq('conflict_current', curr[1].hunk.lnum_changes[2].type)
+      eq('conflict_middle', curr[1].hunk.lnum_changes[3].type)
+      eq('void', curr[1].hunk.lnum_changes[4].type)
+      eq('void', curr[1].hunk.lnum_changes[5].type)
+    end)
   end)
 
   describe('_build_patch_entries', function()
     local mock_repo
 
     before_each(function()
-      mock_repo = {}
+      mock_repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+      }
     end)
 
     it('should build patch entries from pre-computed diffs', function()
@@ -467,6 +528,367 @@ describe('ProjectDiffView:', function()
     end)
   end)
 
+  describe('_build_patch_entries with status entries (mocked git_diff)', function()
+    -- event.all uses coroutine.yield so tests must run in an async context
+    local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
+    local it = async.it
+    local before_each = async.before_each
+    local after_each = async.after_each
+
+    local git_diff_mod
+    local original_staged
+    local original_unstaged
+
+    before_each(function()
+      git_diff_mod = require('vgit.git.git_diff')
+      original_staged = git_diff_mod.staged_patch_entries
+      original_unstaged = git_diff_mod.unstaged_patch_entries
+    end)
+
+    after_each(function()
+      git_diff_mod.staged_patch_entries = original_staged
+      git_diff_mod.unstaged_patch_entries = original_unstaged
+    end)
+
+    local function mock_repo()
+      return {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+      }
+    end
+
+    it('should call staged_patch_entries for staged entry without pre-computed diff', function()
+      local staged_called = false
+      git_diff_mod.staged_patch_entries = function(_repo_path)
+        staged_called = true
+        return {
+          { type = 'file_header', filename = 'staged.lua', filetype = 'lua' },
+          {
+            type = 'hunk',
+            hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-old', '+new' }, top = 1, bot = 1 },
+            filetype = 'lua',
+            filename = 'staged.lua',
+          },
+        }
+      end
+
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                type = 'staged',
+                status = { filename = 'staged.lua', filetype = 'lua' },
+                -- no diff field — should use batch fetch
+              },
+            },
+          },
+        },
+      }
+
+      local patch_entries = view:_build_patch_entries(mock_repo(), data)
+
+      assert.is_true(staged_called)
+      eq(2, #patch_entries)
+      eq('file_header', patch_entries[1].type)
+      eq('staged.lua', patch_entries[1].filename)
+      eq('hunk', patch_entries[2].type)
+    end)
+
+    it('should call unstaged_patch_entries for unstaged entry without pre-computed diff', function()
+      local unstaged_called = false
+      git_diff_mod.unstaged_patch_entries = function(_repo_path)
+        unstaged_called = true
+        return {
+          { type = 'file_header', filename = 'unstaged.lua', filetype = 'lua' },
+          {
+            type = 'hunk',
+            hunk = { header = '@@ -2,1 +2,1 @@', diff = { '-x', '+y' }, top = 2, bot = 2 },
+            filetype = 'lua',
+            filename = 'unstaged.lua',
+          },
+        }
+      end
+
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                type = 'unstaged',
+                status = { filename = 'unstaged.lua', filetype = 'lua' },
+              },
+            },
+          },
+        },
+      }
+
+      local patch_entries = view:_build_patch_entries(mock_repo(), data)
+
+      assert.is_true(unstaged_called)
+      eq(2, #patch_entries)
+      eq('file_header', patch_entries[1].type)
+      eq('unstaged.lua', patch_entries[1].filename)
+    end)
+
+    it('should call both staged and unstaged when both types are present', function()
+      local staged_called = false
+      local unstaged_called = false
+
+      git_diff_mod.staged_patch_entries = function()
+        staged_called = true
+        return {
+          { type = 'file_header', filename = 'staged.lua', filetype = 'lua' },
+          {
+            type = 'hunk',
+            hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
+            filetype = 'lua',
+            filename = 'staged.lua',
+          },
+        }
+      end
+
+      git_diff_mod.unstaged_patch_entries = function()
+        unstaged_called = true
+        return {
+          { type = 'file_header', filename = 'unstaged.lua', filetype = 'lua' },
+          {
+            type = 'hunk',
+            hunk = { header = '@@ -3,1 +3,1 @@', diff = { '-c', '+d' }, top = 3, bot = 3 },
+            filetype = 'lua',
+            filename = 'unstaged.lua',
+          },
+        }
+      end
+
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              { type = 'staged', status = { filename = 'staged.lua', filetype = 'lua' } },
+              { type = 'unstaged', status = { filename = 'unstaged.lua', filetype = 'lua' } },
+            },
+          },
+        },
+      }
+
+      local patch_entries = view:_build_patch_entries(mock_repo(), data)
+
+      assert.is_true(staged_called)
+      assert.is_true(unstaged_called)
+      -- 2 file_headers + 2 hunks = 4 entries total
+      eq(4, #patch_entries)
+    end)
+
+    it('should return empty patch_entries when staged fetch returns error (nil)', function()
+      git_diff_mod.staged_patch_entries = function()
+        return nil, { 'git error' }
+      end
+
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              { type = 'staged', status = { filename = 'staged.lua', filetype = 'lua' } },
+            },
+          },
+        },
+      }
+
+      -- Should not crash; returns empty (nil result → no entries added)
+      local patch_entries = view:_build_patch_entries(mock_repo(), data)
+      eq(0, #patch_entries)
+    end)
+
+    it('should build correct line_to_file_map with top from hunk header', function()
+      git_diff_mod.unstaged_patch_entries = function()
+        return {
+          { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
+          {
+            type = 'hunk',
+            hunk = { header = '@@ -10,2 +10,2 @@', diff = { '-x', '+y' }, top = 10, bot = 11 },
+            filetype = 'lua',
+            filename = 'foo.lua',
+          },
+        }
+      end
+
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              { type = 'unstaged', status = { filename = 'foo.lua', filetype = 'lua' } },
+            },
+          },
+        },
+      }
+
+      local _, line_to_file_map = view:_build_patch_entries(mock_repo(), data)
+
+      -- 3 file_header lines + 1 hunk_header line + 2 diff lines + 1 separator = 7 entries
+      -- The hunk header line should map to lnum=10 (hunk.top)
+      -- Line 4 is the hunk header line (after 3 file_header lines)
+      eq(10, line_to_file_map[4].lnum)
+      eq('foo.lua', line_to_file_map[4].filename)
+    end)
+
+    it('should not call batch functions for pre-computed entries', function()
+      local staged_called = false
+      local unstaged_called = false
+
+      git_diff_mod.staged_patch_entries = function()
+        staged_called = true
+        return {}
+      end
+      git_diff_mod.unstaged_patch_entries = function()
+        unstaged_called = true
+        return {}
+      end
+
+      local view = ProjectDiffView()
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                -- Pre-computed diff — should NOT trigger batch fetch
+                status = { filename = 'pre.lua', filetype = 'lua' },
+                diff = {
+                  hunks = {
+                    { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }
+
+      local patch_entries = view:_build_patch_entries(mock_repo(), data)
+
+      assert.is_false(staged_called)
+      assert.is_false(unstaged_called)
+      -- Pre-computed entry is still included
+      eq(2, #patch_entries)
+      eq('pre.lua', patch_entries[1].filename)
+    end)
+  end)
+
+  describe('_build_patch_entries with conflict entries', function()
+    -- event.all uses coroutine.yield so tests must run in an async context
+    local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
+    local it = async.it
+
+    it('should include conflict entry when DiffBuilder returns valid diff_data', function()
+      local view = ProjectDiffView()
+
+      -- Conflict diffs return marks+lnum_changes (hunks is always {})
+      view._get_diff_for_entry = function(self, repo, entry)
+        return {
+          hunks = {},
+          marks = {
+            {
+              type = 'conflict',
+              top = 1,
+              bot = 5,
+              top_relative = 1,
+              bot_relative = 5,
+            },
+          },
+          lines = {
+            '<<<<<<< HEAD',
+            'old content',
+            '=======',
+            'new content',
+            '>>>>>>> branch',
+          },
+          lnum_changes = {
+            { lnum = 1, buftype = 'current', type = 'conflict_current_mark' },
+            { lnum = 2, buftype = 'current', type = 'conflict_current' },
+            { lnum = 3, buftype = 'current', type = 'conflict_middle' },
+            { lnum = 4, buftype = 'current', type = 'conflict_incoming' },
+            { lnum = 5, buftype = 'current', type = 'conflict_incoming_mark' },
+          },
+        }
+      end
+
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                type = 'unmerged',
+                status = { filename = 'conflict.lua', filetype = 'lua' },
+              },
+            },
+          },
+        },
+      }
+
+      local repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+      }
+      local patch_entries = view:_build_patch_entries(repo, data)
+
+      -- Should have file_header + hunk for the conflict file
+      assert.is_true(#patch_entries >= 2)
+      eq('file_header', patch_entries[1].type)
+      eq('conflict.lua', patch_entries[1].filename)
+      eq('hunk', patch_entries[2].type)
+      -- Conflict region lines rendered as context (space prefix preserves actual content)
+      eq(5, #patch_entries[2].hunk.diff)
+      eq(' <<<<<<< HEAD', patch_entries[2].hunk.diff[1])
+      eq(' >>>>>>> branch', patch_entries[2].hunk.diff[5])
+      eq(1, patch_entries[2].hunk.top)
+      eq(5, patch_entries[2].hunk.bot)
+      -- lnum_changes carries conflict-specific highlight types
+      eq('conflict_current_mark', patch_entries[2].hunk.lnum_changes[1].type)
+      eq('conflict_current', patch_entries[2].hunk.lnum_changes[2].type)
+      eq('conflict_middle', patch_entries[2].hunk.lnum_changes[3].type)
+      eq('conflict_incoming', patch_entries[2].hunk.lnum_changes[4].type)
+      eq('conflict_incoming_mark', patch_entries[2].hunk.lnum_changes[5].type)
+    end)
+
+    it('should exclude conflict entry when DiffBuilder returns nil (error)', function()
+      local view = ProjectDiffView()
+
+      view._get_diff_for_entry = function(self, repo, entry)
+        return nil
+      end
+
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                type = 'unmerged',
+                status = { filename = 'conflict.lua', filetype = 'lua' },
+              },
+            },
+          },
+        },
+      }
+
+      local repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+      }
+      local patch_entries = view:_build_patch_entries(repo, data)
+
+      -- No entries because conflict DiffBuilder returned nil
+      eq(0, #patch_entries)
+    end)
+  end)
+
   describe('_get_active_component', function()
     it('should return current_component for split layout', function()
       local view = ProjectDiffView()
@@ -492,6 +914,185 @@ describe('ProjectDiffView:', function()
       view._patch_component = 'patch'
 
       eq('patch', view:_get_active_component())
+    end)
+  end)
+
+  describe('destroy', function()
+    it('should be idempotent (safe to call multiple times)', function()
+      local view = ProjectDiffView()
+      view._component_manager = { destroy = function() end }
+      view._patch_component = { component_will_unmount = function() end }
+
+      view:destroy()
+      view:destroy() -- second call should not error
+      assert.is_true(view._destroyed)
+    end)
+
+    it('should set _destroyed to true', function()
+      local view = ProjectDiffView()
+      view._component_manager = { destroy = function() end }
+
+      assert.is_false(view._destroyed)
+      view:destroy()
+      assert.is_true(view._destroyed)
+    end)
+
+    it('should increment _update_gen to invalidate background enrichment', function()
+      local view = ProjectDiffView()
+      view._component_manager = { destroy = function() end }
+
+      local gen_before = view._update_gen
+      view:destroy()
+      assert.is_true(view._update_gen > gen_before)
+    end)
+
+    it('should call each debounce cleanup function', function()
+      local cleanup1_calls = 0
+      local cleanup2_calls = 0
+      local view = ProjectDiffView()
+      view._debounce_cleanups = {
+        function()
+          cleanup1_calls = cleanup1_calls + 1
+        end,
+        function()
+          cleanup2_calls = cleanup2_calls + 1
+        end,
+      }
+      view._component_manager = { destroy = function() end }
+
+      view:destroy()
+      eq(1, cleanup1_calls)
+      eq(1, cleanup2_calls)
+      -- Second call is a no-op (idempotent)
+      view:destroy()
+      eq(1, cleanup1_calls)
+      eq(1, cleanup2_calls)
+    end)
+  end)
+
+  describe('_enrich_with_syntax', function()
+    it('should exit early when view is destroyed', function()
+      local view = ProjectDiffView()
+      view._destroyed = true
+      view._repo = {
+        file_lines = function()
+          error('should not be called')
+        end,
+      }
+      -- Should not call file_lines or error
+      view:_enrich_with_syntax(
+        { { type = 'file_header', filename = 'foo.lua', filetype = 'lua' } },
+        { entries = {} },
+        1
+      )
+    end)
+
+    it('should exit early when gen is stale', function()
+      local view = ProjectDiffView()
+      view._destroyed = false
+      view._update_gen = 2 -- current gen is 2, but we pass gen=1
+      view._repo = {
+        file_lines = function()
+          error('should not be called')
+        end,
+      }
+      view:_enrich_with_syntax(
+        { { type = 'file_header', filename = 'foo.lua', filetype = 'lua' } },
+        { entries = {} },
+        1
+      )
+    end)
+
+    it('should exit early when repo is nil', function()
+      local view = ProjectDiffView()
+      view._destroyed = false
+      view._update_gen = 1
+      view._repo = nil
+      -- Should not error
+      view:_enrich_with_syntax(
+        { { type = 'file_header', filename = 'foo.lua', filetype = 'lua' } },
+        { entries = {} },
+        1
+      )
+    end)
+
+    it('should exit early when all file_header entries have filetype text', function()
+      local view = ProjectDiffView()
+      view._destroyed = false
+      view._update_gen = 1
+      view._repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+      }
+      local entries = {
+        { type = 'file_header', filename = 'README', filetype = 'text' },
+        { type = 'hunk', filename = 'README', filetype = 'text', hunk = {} },
+      }
+      -- Should not call file_lines, so no coroutine/event.all issues
+      view:_enrich_with_syntax(entries, { entries = {} }, 1)
+    end)
+
+    it('should exit early when all file_headers already have original_lines (pre-computed)', function()
+      local view = ProjectDiffView()
+      view._destroyed = false
+      view._update_gen = 1
+      view._repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+      }
+      local entries = {
+        {
+          type = 'file_header',
+          filename = 'foo.lua',
+          filetype = 'lua',
+          original_lines = { 'old' },
+          current_lines = { 'new' },
+        },
+      }
+      -- Pre-computed entries are skipped — no file_lines calls needed
+      view:_enrich_with_syntax(entries, { entries = {} }, 1)
+    end)
+
+    it('should exit early when there are no file_header entries', function()
+      local view = ProjectDiffView()
+      view._destroyed = false
+      view._update_gen = 1
+      view._repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+      }
+      local entries = {
+        { type = 'hunk', filename = 'foo.lua', filetype = 'lua', hunk = {} },
+      }
+      view:_enrich_with_syntax(entries, { entries = {} }, 1)
+    end)
+
+    it('should exit early when all non-text file_headers are conflicts (unmerged)', function()
+      local view = ProjectDiffView()
+      view._destroyed = false
+      view._update_gen = 1
+      view._repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+      }
+      local data = {
+        entries = {
+          {
+            entries = {
+              { type = 'unmerged', status = { filename = 'conflict.lua' } },
+            },
+          },
+        },
+      }
+      local patch_entries = {
+        { type = 'file_header', filename = 'conflict.lua', filetype = 'lua' },
+      }
+      -- Conflict entries are skipped in enrichment
+      view:_enrich_with_syntax(patch_entries, data, 1)
     end)
   end)
 end)

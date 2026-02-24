@@ -136,6 +136,39 @@ describe('ComponentManager:', function()
         mgr:parse_layout_spec(nil)
       end, 'Unable to convert UI description to LayoutSpec')
     end)
+
+    it('should recurse into a FLEX child and mount its nested components', function()
+      local comp_a = TestComponent({ name = 'a' })
+      local comp_b = TestComponent({ name = 'b' })
+      -- The horizontal node is a plain FLEX table (no .view) — old code silently skipped it
+      local spec = LayoutSpec.vertical({
+        LayoutSpec.horizontal({
+          LayoutSpec.view(comp_a, { flex = 1 }),
+          LayoutSpec.view(comp_b, { flex = 1 }),
+        }),
+      })
+      mgr:parse_layout_spec(spec)
+      assert.is_true(comp_a._mounted, 'comp_a inside nested horizontal should be mounted')
+      assert.is_true(comp_b._mounted, 'comp_b inside nested horizontal should be mounted')
+    end)
+
+    it('should mount all components in vertical(horizontal(A, B), C)', function()
+      local comp_a = TestComponent({ name = 'a' })
+      local comp_b = TestComponent({ name = 'b' })
+      local comp_c = TestComponent({ name = 'c' })
+      -- Mirrors the StashView split layout: nested horizontal inside vertical
+      local spec = LayoutSpec.vertical({
+        LayoutSpec.horizontal({
+          LayoutSpec.view(comp_a, { flex = 1 }),
+          LayoutSpec.view(comp_b, { flex = 1 }),
+        }),
+        LayoutSpec.view(comp_c),
+      })
+      mgr:parse_layout_spec(spec)
+      assert.is_true(comp_a._mounted, 'comp_a (inside nested horizontal) should be mounted')
+      assert.is_true(comp_b._mounted, 'comp_b (inside nested horizontal) should be mounted')
+      assert.is_true(comp_c._mounted, 'comp_c (direct view child) should be mounted')
+    end)
   end)
 
   describe('render', function()

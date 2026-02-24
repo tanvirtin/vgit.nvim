@@ -8,6 +8,7 @@ local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
 local statusline = lazy('vgit.core.statusline_state')
 local repository = lazy('vgit.git.repository')
+local git_diff = lazy('vgit.git.git_diff')
 local git_blame = lazy('vgit.git.git_blame')
 local git_show = lazy('vgit.git.git_show')
 local scene_setting = lazy('vgit.settings.scene')
@@ -24,6 +25,14 @@ local ProjectDiffView = Object:extend()
 ProjectDiffView.DEBOUNCE_MS = 100
 ProjectDiffView.LAYOUT_SPLIT = 'split'
 ProjectDiffView.LAYOUT_UNIFIED = 'unified'
+ProjectDiffView.CONFLICT_CURRENT_ONLY = {
+  conflict_current_mark = true,
+  conflict_current = true,
+}
+ProjectDiffView.CONFLICT_PREVIOUS_ONLY = {
+  conflict_incoming = true,
+  conflict_incoming_mark = true,
+}
 
 function ProjectDiffView:constructor()
   return {
@@ -37,6 +46,8 @@ function ProjectDiffView:constructor()
     _patch_entries = {},
     _line_to_file_map = {},
     _debounce_cleanups = {},
+    _destroyed = false,
+    _update_gen = 0,
   }
 end
 
@@ -92,166 +103,231 @@ function ProjectDiffView:_get_file_lines(repo, filename, ref)
 end
 
 function ProjectDiffView:_get_diff_for_entry(repo, entry)
-  local entry_type = entry.type
   local status = entry.status
   local filename = status.filename
-  local old_filename = status.old_filename
 
-  local diff_spec
-  local from, to
-  if entry_type == 'staged' then
-    from, to = 'HEAD', 'index'
-    diff_spec = { type = 'range', filename = filename, old_filename = old_filename, from = from, to = to }
-  elseif entry_type == 'unmerged' then
-    diff_spec = { type = 'conflict', filename = filename }
-  else
-    from, to = 'index', 'disk'
-    diff_spec = { type = 'range', filename = filename, from = from, to = to }
-  end
+  local diff_spec = { type = 'conflict', filename = filename }
 
   local diff_data, err = repo:diff(diff_spec, {})
   if err then
-    console.debug.error(string.format('[ProjectDiffView] diff for %s failed: %s', filename, err))
+    console.error(string.format('[ProjectDiffView] diff for %s failed: %s', filename, err))
     return nil
   end
 
   if not diff_data then
-    console.debug.error(string.format('[ProjectDiffView] diff for %s returned nil', filename))
+    console.error(string.format('[ProjectDiffView] diff for %s returned nil', filename))
     return nil
   end
 
-  local original_lines, current_lines
-  if from and to then
-    local from_filename = (entry_type == 'staged' and old_filename) or filename
-    original_lines = self:_get_file_lines(repo, from_filename, from)
-    current_lines = self:_get_file_lines(repo, filename, to)
-  end
-
-  return diff_data, original_lines, current_lines
+  return diff_data
 end
 
-function ProjectDiffView:_build_patch_entries(repo, data)
-  local funcs = {}
-  local func_entries = {}
+function ProjectDiffView:_classify_entries(data)
+  local has_staged = false
+  local has_unstaged = false
+  local conflict_entries = {}
+
   for _, section in ipairs(data.entries or {}) do
     for _, file_entry in ipairs(section.entries or {}) do
       if not file_entry.diff and file_entry.status then
-        table.insert(funcs, function()
-          return { self:_get_diff_for_entry(repo, file_entry) }
-        end)
-        table.insert(func_entries, file_entry)
+        local entry_type = file_entry.type
+        if entry_type == 'unmerged' then
+          conflict_entries[#conflict_entries + 1] = file_entry
+        elseif entry_type == 'staged' then
+          has_staged = true
+        else
+          has_unstaged = true
+        end
       end
     end
   end
 
-  if #funcs > 0 then
-    local results = event.all(funcs)
-    for i = 1, #funcs do
-      local result = results[i]
-      if result and result[1] then
-        func_entries[i].diff = result[1]
-        func_entries[i].original_lines = result[2]
-        func_entries[i].current_lines = result[3]
-      end
-    end
-  end
+  return has_staged, has_unstaged, conflict_entries
+end
 
+function ProjectDiffView:_conflict_diff_to_patch_entries(diff_data, status)
   local patch_entries = {}
+  local marks = diff_data.marks
+  local file_lines = diff_data.lines
+
+  if not marks or #marks == 0 or not file_lines then return patch_entries end
+
+  local lnum_to_type = {}
+  for _, lc in ipairs(diff_data.lnum_changes or {}) do
+    lnum_to_type[lc.lnum] = lc.type
+  end
+
+  patch_entries[#patch_entries + 1] = {
+    type = 'file_header',
+    filename = status.filename,
+    filetype = status.filetype,
+  }
+
+  for _, mark in ipairs(marks) do
+    local top = mark.top or 1
+    local bot = mark.bot or top
+    local count = bot - top + 1
+
+    local diff_lines = {}
+    local lnum_changes = {}
+    for idx = 1, count do
+      local lnum = top + idx - 1
+      diff_lines[idx] = ' ' .. (file_lines[lnum] or '')
+      local t = lnum_to_type[lnum]
+      if t then lnum_changes[idx] = { type = t } end
+    end
+
+    patch_entries[#patch_entries + 1] = {
+      type = 'hunk',
+      hunk = {
+        header = string.format('@@ -%d,%d +%d,%d @@ conflict', top, count, top, count),
+        diff = diff_lines,
+        lnum_changes = lnum_changes,
+        top = top,
+        bot = bot,
+      },
+      filetype = status.filetype,
+      filename = status.filename,
+    }
+  end
+
+  return patch_entries
+end
+
+function ProjectDiffView:_precomputed_entry_to_patch_entries(file_entry)
+  local patch_entries = {}
+  local status = file_entry.status
+  if not status then return patch_entries end
+
+  local diff_data = file_entry.diff
+  if not diff_data.hunks or #diff_data.hunks == 0 then
+    console.debug.error(string.format('[ProjectDiffView] no hunks for %s', status.filename))
+    return patch_entries
+  end
+
+  local display_filename = status.filename
+  if status.old_filename then display_filename = status.old_filename .. ' -> ' .. status.filename end
+
+  patch_entries[#patch_entries + 1] = {
+    type = 'file_header',
+    filename = display_filename,
+    filetype = status.filetype,
+    original_lines = file_entry.original_lines,
+    current_lines = file_entry.current_lines,
+  }
+
+  for _, hunk in ipairs(diff_data.hunks) do
+    patch_entries[#patch_entries + 1] = {
+      type = 'hunk',
+      hunk = hunk,
+      filetype = status.filetype,
+      filename = status.filename,
+    }
+  end
+
+  return patch_entries
+end
+
+function ProjectDiffView:_build_line_to_file_map(patch_entries)
   local line_to_file_map = {}
   local current_line = 1
-  local files_processed = 0
+  local current_real_filename = nil
 
-  for _, section in ipairs(data.entries or {}) do
-    for _, file_entry in ipairs(section.entries or {}) do
-      local status = file_entry.status
-      if not status then
-        console.debug.error('[ProjectDiffView] file_entry has no status')
-        goto continue
-      end
-
-      files_processed = files_processed + 1
-
-      local diff_data = file_entry.diff
-      local original_lines = file_entry.original_lines
-      local current_lines = file_entry.current_lines
-
-      if not diff_data then
-        console.debug.error(string.format('[ProjectDiffView] no diff_data for %s', status.filename))
-        goto continue
-      end
-
-      if not diff_data.hunks or #diff_data.hunks == 0 then
-        console.debug.error(
-          string.format(
-            '[ProjectDiffView] no hunks for %s (hunks=%s)',
-            status.filename,
-            diff_data.hunks and #diff_data.hunks or 'nil'
-          )
-        )
-        goto continue
-      end
-
-      local hunks = diff_data.hunks
-
-      local display_filename = status.filename
-      if status.old_filename then display_filename = status.old_filename .. ' -> ' .. status.filename end
-
-      patch_entries[#patch_entries + 1] = {
-        type = 'file_header',
-        filename = display_filename,
-        filetype = status.filetype,
-        original_lines = original_lines,
-        current_lines = current_lines,
-      }
-
-      line_to_file_map[current_line] = { filename = status.filename, lnum = 1 }
+  for _, entry in ipairs(patch_entries) do
+    if entry.type == 'file_header' then
+      current_real_filename = entry.filename:match('^.+ %-> (.+)$') or entry.filename
+      line_to_file_map[current_line] = { filename = current_real_filename, lnum = 1 }
       current_line = current_line + 1
-      line_to_file_map[current_line] = { filename = status.filename, lnum = 1 }
+      line_to_file_map[current_line] = { filename = current_real_filename, lnum = 1 }
       current_line = current_line + 1
-      line_to_file_map[current_line] = { filename = status.filename, lnum = 1 }
+      line_to_file_map[current_line] = { filename = current_real_filename, lnum = 1 }
       current_line = current_line + 1
+    elseif entry.type == 'hunk' then
+      local hunk = entry.hunk
+      local filename = entry.filename or current_real_filename
 
-      for _, hunk in ipairs(hunks) do
-        patch_entries[#patch_entries + 1] = {
-          type = 'hunk',
-          hunk = hunk,
-          filetype = status.filetype,
-          filename = status.filename,
-        }
-
-        if hunk.header then
-          line_to_file_map[current_line] = {
-            filename = status.filename,
-            lnum = hunk.top or 1,
-          }
-          current_line = current_line + 1
-        end
-
-        local diff_line_offset = 0
-        for _, line in ipairs(hunk.diff or {}) do
-          local target_lnum = (hunk.top or 1) + diff_line_offset
-          line_to_file_map[current_line] = {
-            filename = status.filename,
-            lnum = target_lnum,
-          }
-          current_line = current_line + 1
-
-          local prefix = line:sub(1, 1)
-          if prefix ~= '-' then diff_line_offset = diff_line_offset + 1 end
-        end
-
-        line_to_file_map[current_line] = { filename = status.filename, lnum = hunk.top or 1 }
+      if hunk.header then
+        line_to_file_map[current_line] = { filename = filename, lnum = hunk.top or 1 }
         current_line = current_line + 1
       end
 
-      ::continue::
+      local diff_line_offset = 0
+      for _, line in ipairs(hunk.diff or {}) do
+        line_to_file_map[current_line] = { filename = filename, lnum = (hunk.top or 1) + diff_line_offset }
+        current_line = current_line + 1
+        if line:sub(1, 1) ~= '-' then diff_line_offset = diff_line_offset + 1 end
+      end
+
+      line_to_file_map[current_line] = { filename = filename, lnum = hunk.top or 1 }
+      current_line = current_line + 1
     end
   end
 
-  console.debug.info(
-    string.format('[ProjectDiffView] processed %d files, got %d patch entries', files_processed, #patch_entries)
-  )
-  return patch_entries, line_to_file_map
+  return line_to_file_map
+end
+
+function ProjectDiffView:_build_patch_entries(repo, data)
+  local repo_path = repo.get_path and repo:get_path() or nil
+  local has_staged, has_unstaged, conflict_entries = self:_classify_entries(data)
+
+  local fetch_funcs = {}
+  local staged_fn_idx = nil
+  local unstaged_fn_idx = nil
+
+  if has_staged and repo_path then
+    staged_fn_idx = #fetch_funcs + 1
+    fetch_funcs[#fetch_funcs + 1] = function() return git_diff.staged_patch_entries(repo_path) end
+  end
+
+  if has_unstaged and repo_path then
+    unstaged_fn_idx = #fetch_funcs + 1
+    fetch_funcs[#fetch_funcs + 1] = function() return git_diff.unstaged_patch_entries(repo_path) end
+  end
+
+  local conflict_start_idx = #fetch_funcs + 1
+  for _, entry in ipairs(conflict_entries) do
+    local e = entry
+    fetch_funcs[#fetch_funcs + 1] = function() return { self:_get_diff_for_entry(repo, e) } end
+  end
+
+  local fetch_results = {}
+  if #fetch_funcs > 0 then fetch_results = event.all(fetch_funcs) end
+
+  local all_patch_entries = {}
+
+  if staged_fn_idx then
+    local staged = fetch_results[staged_fn_idx]
+    if staged then
+      for _, e in ipairs(staged) do all_patch_entries[#all_patch_entries + 1] = e end
+    end
+  end
+
+  if unstaged_fn_idx then
+    local unstaged = fetch_results[unstaged_fn_idx]
+    if unstaged then
+      for _, e in ipairs(unstaged) do all_patch_entries[#all_patch_entries + 1] = e end
+    end
+  end
+
+  for i, entry in ipairs(conflict_entries) do
+    local result = fetch_results[conflict_start_idx + i - 1]
+    if result and result[1] then
+      local entries = self:_conflict_diff_to_patch_entries(result[1], entry.status)
+      for _, e in ipairs(entries) do all_patch_entries[#all_patch_entries + 1] = e end
+    end
+  end
+
+  for _, section in ipairs(data.entries or {}) do
+    for _, file_entry in ipairs(section.entries or {}) do
+      if file_entry.diff then
+        local entries = self:_precomputed_entry_to_patch_entries(file_entry)
+        for _, e in ipairs(entries) do all_patch_entries[#all_patch_entries + 1] = e end
+      end
+    end
+  end
+
+  console.debug.info(string.format('[ProjectDiffView] built %d patch entries', #all_patch_entries))
+  return all_patch_entries, self:_build_line_to_file_map(all_patch_entries)
 end
 
 function ProjectDiffView:_get_active_component()
@@ -434,69 +510,199 @@ function ProjectDiffView:setup_keymaps()
   self:_set_keymap_all_components('n', 'b', blame_fn)
 end
 
-function ProjectDiffView:_build_split_patch_entries(patch_entries)
-  local prev_entries = {}
-  local curr_entries = {}
+function ProjectDiffView:_split_hunk_entry(hunk, entry)
+  local previous_diff = {}
+  local current_diff = {}
+  local previous_lnum_changes = hunk.lnum_changes and {} or nil
+  local current_lnum_changes = hunk.lnum_changes and {} or nil
 
-  for _, entry in ipairs(patch_entries) do
-    if entry.type == 'file_header' then
-      prev_entries[#prev_entries + 1] = vim.tbl_extend('force', {}, entry)
-      curr_entries[#curr_entries + 1] = vim.tbl_extend('force', {}, entry)
-    elseif entry.type == 'hunk' then
-      local hunk = entry.hunk
-      local prev_diff = {}
-      local curr_diff = {}
+  for i, line in ipairs(hunk.diff or {}) do
+    local lc = hunk.lnum_changes and hunk.lnum_changes[i]
+    local t = lc and lc.type
 
-      for _, line in ipairs(hunk.diff or {}) do
-        local prefix = line:sub(1, 1)
-        if prefix == '-' then
-          prev_diff[#prev_diff + 1] = line
-          curr_diff[#curr_diff + 1] = ' '
-        elseif prefix == '+' then
-          prev_diff[#prev_diff + 1] = ' '
-          curr_diff[#curr_diff + 1] = line
-        else
-          prev_diff[#prev_diff + 1] = line
-          curr_diff[#curr_diff + 1] = line
-        end
+    if t and self.CONFLICT_CURRENT_ONLY[t] then
+      previous_diff[#previous_diff + 1] = ' '
+      current_diff[#current_diff + 1] = line
+      if previous_lnum_changes then previous_lnum_changes[i] = { type = 'void' } end
+      if current_lnum_changes then current_lnum_changes[i] = lc end
+    elseif t and self.CONFLICT_PREVIOUS_ONLY[t] then
+      previous_diff[#previous_diff + 1] = line
+      current_diff[#current_diff + 1] = ' '
+      if previous_lnum_changes then previous_lnum_changes[i] = lc end
+      if current_lnum_changes then current_lnum_changes[i] = { type = 'void' } end
+    elseif t then
+      previous_diff[#previous_diff + 1] = line
+      current_diff[#current_diff + 1] = line
+      if previous_lnum_changes then previous_lnum_changes[i] = lc end
+      if current_lnum_changes then current_lnum_changes[i] = lc end
+    else
+      local prefix = line:sub(1, 1)
+      if prefix == '-' then
+        previous_diff[#previous_diff + 1] = line
+        current_diff[#current_diff + 1] = ' '
+      elseif prefix == '+' then
+        previous_diff[#previous_diff + 1] = ' '
+        current_diff[#current_diff + 1] = line
+      else
+        previous_diff[#previous_diff + 1] = line
+        current_diff[#current_diff + 1] = line
       end
-
-      prev_entries[#prev_entries + 1] = {
-        type = 'hunk',
-        hunk = {
-          header = hunk.header,
-          diff = prev_diff,
-          top = hunk.top,
-          bot = hunk.bot,
-        },
-        filetype = entry.filetype,
-        filename = entry.filename,
-        original_lines = entry.original_lines,
-        current_lines = entry.current_lines,
-      }
-
-      curr_entries[#curr_entries + 1] = {
-        type = 'hunk',
-        hunk = {
-          header = hunk.header,
-          diff = curr_diff,
-          top = hunk.top,
-          bot = hunk.bot,
-        },
-        filetype = entry.filetype,
-        filename = entry.filename,
-        original_lines = entry.original_lines,
-        current_lines = entry.current_lines,
-      }
     end
   end
 
-  return prev_entries, curr_entries
+  local base = {
+    filetype = entry.filetype,
+    filename = entry.filename,
+    original_lines = entry.original_lines,
+    current_lines = entry.current_lines,
+  }
+
+  return
+    vim.tbl_extend('force', base, { type = 'hunk', hunk = {
+      header = hunk.header, diff = previous_diff,
+      lnum_changes = previous_lnum_changes, top = hunk.top, bot = hunk.bot,
+    } }),
+    vim.tbl_extend('force', base, { type = 'hunk', hunk = {
+      header = hunk.header, diff = current_diff,
+      lnum_changes = current_lnum_changes, top = hunk.top, bot = hunk.bot,
+    } })
 end
 
-function ProjectDiffView:_create_unified_view(patch_entries, line_to_file_map)
+function ProjectDiffView:_build_split_patch_entries(patch_entries)
+  local previous_entries = {}
+  local current_entries = {}
+
+  for _, entry in ipairs(patch_entries) do
+    if entry.type == 'file_header' then
+      previous_entries[#previous_entries + 1] = vim.tbl_extend('force', {}, entry)
+      current_entries[#current_entries + 1] = vim.tbl_extend('force', {}, entry)
+    elseif entry.type == 'hunk' then
+      local previous_entry, current_entry = self:_split_hunk_entry(entry.hunk, entry)
+      previous_entries[#previous_entries + 1] = previous_entry
+      current_entries[#current_entries + 1] = current_entry
+    end
+  end
+
+  return previous_entries, current_entries
+end
+
+function ProjectDiffView:_collect_file_specs(patch_entries, data)
+  local file_type_map = {}
+  for _, section in ipairs(data.entries or {}) do
+    for _, file_entry in ipairs(section.entries or {}) do
+      if file_entry.status and not file_entry.diff then
+        file_type_map[file_entry.status.filename] = file_entry.type
+      end
+    end
+  end
+
+  local file_specs = {}
+  local seen = {}
+  for _, entry in ipairs(patch_entries) do
+    if entry.type == 'file_header'
+        and entry.filetype and entry.filetype ~= 'text'
+        and not entry.original_lines
+        and not seen[entry.filename] then
+      local new_name = entry.filename:match('^.+ %-> (.+)$') or entry.filename
+      local old_name = entry.filename:match('^(.+) %-> .+$') or entry.filename
+      local file_type = file_type_map[new_name] or 'unstaged'
+      if file_type ~= 'unmerged' then
+        seen[entry.filename] = true
+        local from, to
+        if file_type == 'staged' then
+          from, to = 'HEAD', 'index'
+        else
+          from, to = 'index', 'disk'
+        end
+        file_specs[#file_specs + 1] = {
+          display = entry.filename,
+          old_name = old_name,
+          new_name = new_name,
+          from = from,
+          to = to,
+        }
+      end
+    end
+  end
+
+  return file_specs
+end
+
+function ProjectDiffView:_apply_syntax_to_patch_entries(patch_entries, content_map)
+  local enriched = {}
+  for _, entry in ipairs(patch_entries) do
+    if entry.type == 'file_header' then
+      local content = content_map[entry.filename]
+      if content then
+        enriched[#enriched + 1] = vim.tbl_extend('force', entry, {
+          original_lines = content.original_lines,
+          current_lines = content.current_lines,
+        })
+      else
+        enriched[#enriched + 1] = entry
+      end
+    else
+      enriched[#enriched + 1] = entry
+    end
+  end
+  return enriched
+end
+
+function ProjectDiffView:_enrich_with_syntax(patch_entries, data, gen)
+  if self._destroyed or self._update_gen ~= gen then return end
+
+  local repo = self._repo
+  if not repo then return end
+
+  local file_specs = self:_collect_file_specs(patch_entries, data)
+  if #file_specs == 0 then return end
+
+  local funcs = {}
+  for _, spec in ipairs(file_specs) do
+    local old_name, new_name, from, to, display = spec.old_name, spec.new_name, spec.from, spec.to, spec.display
+    funcs[#funcs + 1] = function()
+      if self._update_gen ~= gen then return nil end
+      local original_lines = self:_get_file_lines(repo, old_name, from)
+      if self._update_gen ~= gen then return nil end
+      local current_lines = self:_get_file_lines(repo, new_name, to)
+      return { display = display, original_lines = original_lines, current_lines = current_lines }
+    end
+  end
+
+  local results = event.all(funcs)
+  if self._destroyed or self._update_gen ~= gen then return end
+
+  local content_map = {}
+  for _, r in ipairs(results) do
+    if r then content_map[r.display] = { original_lines = r.original_lines, current_lines = r.current_lines } end
+  end
+
+  local enriched = self:_apply_syntax_to_patch_entries(patch_entries, content_map)
+  if self._update_gen ~= gen then return end
+
+  self._patch_entries = enriched
+
+  if self._layout_type == self.LAYOUT_SPLIT then
+    local previous_entries, current_entries = self:_build_split_patch_entries(enriched)
+    if self._previous_component and self._previous_component:is_valid() then
+      self._previous_component:set_props({ patch_entries = previous_entries })
+    end
+    if self._current_component and self._current_component:is_valid() then
+      self._current_component:set_props({ patch_entries = current_entries })
+    end
+  else
+    if self._patch_component and self._patch_component:is_valid() then
+      self._patch_component:set_props({ patch_entries = enriched })
+    end
+  end
+end
+
+function ProjectDiffView:_create_unified_view(patch_entries, line_to_file_map, data)
   self._patch_entries = patch_entries
   self._line_to_file_map = line_to_file_map
+
+  self._update_gen = self._update_gen + 1
+  local gen = self._update_gen
 
   self._patch_component = PatchPreviewComponent({
     patch_entries = patch_entries,
@@ -514,17 +720,22 @@ function ProjectDiffView:_create_unified_view(patch_entries, line_to_file_map)
 
   if self._patch_component and self._patch_component:is_valid() then self._patch_component:focus() end
 
+  self:_enrich_with_syntax(patch_entries, data, gen)
+
   return true
 end
 
-function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map)
+function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map, data)
   self._patch_entries = patch_entries
   self._line_to_file_map = line_to_file_map
 
-  local prev_entries, curr_entries = self:_build_split_patch_entries(patch_entries)
+  self._update_gen = self._update_gen + 1
+  local gen = self._update_gen
+
+  local previous_entries, current_entries = self:_build_split_patch_entries(patch_entries)
 
   self._previous_component = PatchPreviewComponent({
-    patch_entries = prev_entries,
+    patch_entries = previous_entries,
     focus = false,
     win_options = {
       scrollbind = true,
@@ -533,7 +744,7 @@ function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map)
   })
 
   self._current_component = PatchPreviewComponent({
-    patch_entries = curr_entries,
+    patch_entries = current_entries,
     focus = true,
     win_options = {
       scrollbind = true,
@@ -558,6 +769,8 @@ function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map)
   self:setup_keymaps()
 
   if self._current_component and self._current_component:is_valid() then self._current_component:focus() end
+
+  self:_enrich_with_syntax(patch_entries, data, gen)
 
   return true
 end
@@ -584,10 +797,9 @@ function ProjectDiffView:_create_view(data)
   end
 
   if layout_type == self.LAYOUT_SPLIT then
-    return self:_create_split_view(patch_entries, line_to_file_map)
-  else
-    return self:_create_unified_view(patch_entries, line_to_file_map)
+    return self:_create_split_view(patch_entries, line_to_file_map, data)
   end
+  return self:_create_unified_view(patch_entries, line_to_file_map, data)
 end
 
 function ProjectDiffView:emit_cleanup_events()
@@ -597,6 +809,9 @@ function ProjectDiffView:emit_cleanup_events()
 end
 
 function ProjectDiffView:destroy()
+  if self._destroyed then return end
+  self._destroyed = true
+  self._update_gen = self._update_gen + 1
   for _, cleanup in ipairs(self._debounce_cleanups) do
     cleanup()
   end

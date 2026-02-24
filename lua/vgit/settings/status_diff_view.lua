@@ -59,5 +59,9 @@ return Config({
       key = 't',
       desc = 'Toggle between staged/unstaged',
     },
+    stash = {
+      key = 'n',
+      desc = 'Stash current changes',
+    },
   },
 })

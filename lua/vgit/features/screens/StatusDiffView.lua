@@ -6,11 +6,12 @@ local event = lazy('vgit.core.event')
 local Object = lazy('vgit.core.Object')
 local Window = lazy('vgit.core.Window')
 local console = lazy('vgit.core.console')
-local statusline = lazy('vgit.core.statusline_state')
+local git_stash = lazy('vgit.git.git_stash')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local statusline = lazy('vgit.core.statusline_state')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local TreeComponent = lazy('vgit.ui.components.TreeComponent')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
@@ -1085,6 +1086,25 @@ function StatusDiffView:setup_keymaps()
     }, up_fn)
 
     if self._tree_component:is_valid() then self._tree_component:set_keymap('n', up_key, up_fn, 'Previous') end
+  end
+
+  local stash_key = self:get_key(diff_keymaps.stash)
+  if stash_key then
+    local stash_fn, stash_cleanup = event.debounce_async(function()
+      local _, err = git_stash.add(self._repo:get_path())
+      if err then
+        console.error(err[1] or tostring(err))
+        return
+      end
+      console.info('Changes stashed')
+      self._refreshing = true
+      self:refresh_data()
+    end, self.DEBOUNCE_MS)
+    table.insert(self._debounce_cleanups, stash_cleanup)
+    self._diff_component:set_keymap({ mode = 'n', key = stash_key }, stash_fn)
+    if self._tree_component:is_valid() then
+      self._tree_component:set_keymap('n', stash_key, stash_fn, 'Stash current changes')
+    end
   end
 
   local open_file_fn, open_file_cleanup = event.debounce_async(function()

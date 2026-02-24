@@ -4,7 +4,7 @@ local Component = lazy('vgit.ui.Component')
 local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local DiffCalculator = lazy('vgit.ui.calculators.DiffCalculator')
+local DiffAnnotator = lazy('vgit.ui.annotators.DiffAnnotator')
 local FoldCalculator = lazy('vgit.ui.calculators.FoldCalculator')
 local LineNumberCalculator = lazy('vgit.ui.calculators.LineNumberCalculator')
 local symbols_setting = lazy('vgit.settings.symbols')
@@ -15,13 +15,9 @@ function DiffComponent:constructor(props)
   local instance = ViewportComponent.constructor(self, props)
   instance._element = nil
   instance._line_number_calculator = LineNumberCalculator()
-  instance._diff_calculator = DiffCalculator()
+  instance._diff_annotator = DiffAnnotator()
   instance._fold_calculator = FoldCalculator()
   return instance
-end
-
-function DiffComponent:calculate_line_diff_marks(line_changes)
-  return self._diff_calculator:calculate_line_diff_marks(line_changes)
 end
 
 function DiffComponent:calculate_folds(diff, line_count)
@@ -30,10 +26,6 @@ end
 
 function DiffComponent:calculate_unified_line_numbers(diff)
   return self._line_number_calculator:calculate_unified_line_numbers(diff)
-end
-
-function DiffComponent:calculate_word_diff_marks(line_changes, lnum)
-  return self._diff_calculator:calculate_word_diff_marks(line_changes, lnum)
 end
 
 function DiffComponent:get_initial_state()
@@ -89,6 +81,37 @@ function DiffComponent:component_will_mount()
   end
 end
 
+function DiffComponent:build_diff_render_state(diff)
+  if not diff then return { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} } end
+
+  local line_numbers = self.props._split_line_numbers
+  local lines_changes = self.props._split_lines_changes
+
+  if not line_numbers then
+    line_numbers, lines_changes = self:calculate_unified_line_numbers(diff)
+  end
+
+  -- Pre-pad line number text so the viewport renderer just reads them
+  if #line_numbers > 0 then
+    local max_digits = string.len(tostring(#line_numbers)) + 1
+    local pad_fmt = '%' .. max_digits .. 's'
+    for i = 1, #line_numbers do
+      local ln = line_numbers[i]
+      if ln then ln[1] = string.format(pad_fmt, ln[1]) end
+    end
+  end
+
+  local line_count = #diff.lines
+  return {
+    lines = diff.lines,
+    marks = diff.marks or {},
+    hunks = diff.hunks or {},
+    line_numbers = line_numbers,
+    lines_changes = lines_changes,
+    folds = line_count > 0 and self:calculate_folds(diff, line_count) or {},
+  }
+end
+
 function DiffComponent:render()
   local diff = self.props.diff
 
@@ -100,55 +123,25 @@ function DiffComponent:render()
     el:clear_extmark_signs()
   end)
 
+  local new_state = self:build_diff_render_state(diff)
+  self.state.lines = new_state.lines
+  self.state.marks = new_state.marks
+  self.state.hunks = new_state.hunks
+  self.state.line_numbers = new_state.line_numbers
+  self.state.lines_changes = new_state.lines_changes
+  self.state.folds = new_state.folds
+
   if not diff then
-    self.state.lines = {}
-    self.state.line_numbers = {}
-    self.state.lines_changes = {}
-    self.state.folds = {}
-    self.state.marks = {}
-    self.state.hunks = {}
     self:clear_lines()
     self:reset_cursor()
     return
   end
-
-  self.state.marks = diff.marks or {}
-  self.state.hunks = diff.hunks or {}
 
   if self.props.filetype then self:set_filetype(self.props.filetype) end
 
   self:with_element(function(el)
     el:set_lines(diff.lines)
     el:enable_cursorline()
-  end)
-
-  self.state.lines = diff.lines
-
-  self:with_element(function(el)
-    local buffer_line_count = el:get_line_count()
-    if buffer_line_count > 0 then
-      local line_numbers = self.props._split_line_numbers
-      local lines_changes = self.props._split_lines_changes
-
-      if not line_numbers then
-        line_numbers, lines_changes = self:calculate_unified_line_numbers(diff)
-      end
-
-      -- Pre-pad line number text so viewport renderer just reads them
-      if #line_numbers > 0 then
-        local max_digits = string.len(tostring(#line_numbers)) + 1
-        local pad_fmt = '%' .. max_digits .. 's'
-        for i = 1, #line_numbers do
-          local ln = line_numbers[i]
-          if ln then ln[1] = string.format(pad_fmt, ln[1]) end
-        end
-      end
-
-      self.state.line_numbers = line_numbers
-      self.state.lines_changes = lines_changes
-
-      self.state.folds = self:calculate_folds(diff, buffer_line_count)
-    end
   end)
 
   -- Attach once — the callback reads from self.state which we just updated
@@ -288,51 +281,39 @@ end, {
   'set_filetype',
 })
 
-function DiffComponent:hunk_down(pos)
+function DiffComponent:find_adjacent_mark_index(direction)
   local marks = self.state.marks
   if #marks == 0 then return nil end
 
   local lnum = self:get_lnum()
-  local mark_index = 1
-  local num_marks = #marks
 
-  for i = 1, num_marks do
-    local mark = marks[i]
-    if lnum >= mark.top and lnum <= mark.bot then
-      mark_index = i + 1
-      break
-    elseif mark.top > lnum then
-      mark_index = i
-      break
+  if direction == 'next' then
+    for i = 1, #marks do
+      local mark = marks[i]
+      if lnum >= mark.top and lnum <= mark.bot then return i + 1 end
+      if mark.top > lnum then return i end
     end
+    return 1
   end
-
-  local result = self:move_to_hunk(mark_index, pos)
-
-  return result
-end
-
-function DiffComponent:hunk_up(pos)
-  local marks = self.state.marks
-  if #marks == 0 then return nil end
-
-  local lnum = self:get_lnum()
-  local mark_index = #marks
 
   for i = #marks, 1, -1 do
     local mark = marks[i]
-    if lnum >= mark.top and lnum <= mark.bot then
-      mark_index = i - 1
-      break
-    elseif mark.top < lnum then
-      mark_index = i
-      break
-    end
+    if lnum >= mark.top and lnum <= mark.bot then return i - 1 end
+    if mark.top < lnum then return i end
   end
+  return #marks
+end
 
-  local result = self:move_to_hunk(mark_index, pos)
+function DiffComponent:hunk_down(pos)
+  local mark_index = self:find_adjacent_mark_index('next')
+  if not mark_index then return nil end
+  return self:move_to_hunk(mark_index, pos)
+end
 
-  return result
+function DiffComponent:hunk_up(pos)
+  local mark_index = self:find_adjacent_mark_index('prev')
+  if not mark_index then return nil end
+  return self:move_to_hunk(mark_index, pos)
 end
 
 function DiffComponent:move_to_hunk(mark_index, pos)
@@ -349,13 +330,11 @@ function DiffComponent:move_to_hunk(mark_index, pos)
   end
 
   local mark = marks[mark_index]
-  if mark then
-    self:set_lnum(mark.top)
-    if pos then self:position_cursor(pos) end
-    return mark
-  end
+  if not mark then return nil end
 
-  return nil
+  self:set_lnum(mark.top)
+  if pos then self:position_cursor(pos) end
+  return mark
 end
 
 function DiffComponent:get_hunk_under_cursor()
@@ -440,7 +419,7 @@ function DiffComponent:render_diff(top, bot)
       if lines_changes and lines_changes[lnum] then
         local line_changes = lines_changes[lnum]
 
-        local line_marks = self._diff_calculator:calculate_line_diff_marks(line_changes)
+        local line_marks = self._diff_annotator:annotate_line(line_changes)
         if line_marks then
           if line_marks.sign then
             el:place_extmark_sign({
@@ -460,7 +439,7 @@ function DiffComponent:render_diff(top, bot)
           end
         end
 
-        local word_marks = self._diff_calculator:calculate_word_diff_marks(line_changes, lnum)
+        local word_marks = self._diff_annotator:annotate_word(line_changes, lnum)
         if word_marks then
           el:place_extmark_text({
             row = word_marks.row,

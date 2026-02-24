@@ -323,6 +323,89 @@ describe('LayoutRenderer:', function()
     end)
   end)
 
+  describe('create_screen_splits', function()
+    local initial_tab_count
+
+    before_each(function()
+      initial_tab_count = vim.fn.tabpagenr('$')
+      vim.cmd('tabnew')
+    end)
+
+    after_each(function()
+      while vim.fn.tabpagenr('$') > initial_tab_count do
+        vim.cmd('tabclose!')
+      end
+    end)
+
+    local function view_node()
+      return { spec = { type = LayoutSpec.Type.VIEW } }
+    end
+
+    local function horiz_node(children)
+      return {
+        spec = { type = LayoutSpec.Type.FLEX, direction = LayoutSpec.Direction.HORIZONTAL },
+        children = children,
+      }
+    end
+
+    local function vert_node(children)
+      return {
+        spec = { type = LayoutSpec.Type.FLEX, direction = LayoutSpec.Direction.VERTICAL },
+        children = children,
+      }
+    end
+
+    local function make_screen_renderer()
+      return LayoutRenderer(LayoutContext({ mode = 'screen' }))
+    end
+
+    it('should collect 1 window for a single VIEW leaf', function()
+      local renderer = make_screen_renderer()
+      renderer:create_screen_splits(view_node())
+      eq(1, #renderer.windows)
+    end)
+
+    it('should collect 2 windows for flat horizontal(A, B)', function()
+      local renderer = make_screen_renderer()
+      renderer:create_screen_splits(horiz_node({ view_node(), view_node() }))
+      eq(2, #renderer.windows)
+    end)
+
+    it('should collect 2 windows for flat vertical(A, B)', function()
+      local renderer = make_screen_renderer()
+      renderer:create_screen_splits(vert_node({ view_node(), view_node() }))
+      eq(2, #renderer.windows)
+    end)
+
+    it('should collect 3 windows for nested vertical(horizontal(A, B), C)', function()
+      local renderer = make_screen_renderer()
+      renderer:create_screen_splits(vert_node({
+        horiz_node({ view_node(), view_node() }),
+        view_node(),
+      }))
+      eq(3, #renderer.windows)
+    end)
+
+    it('C in vertical(horizontal(A, B), C) spans the full editor width', function()
+      local renderer = make_screen_renderer()
+      renderer:create_screen_splits(vert_node({
+        horiz_node({ view_node(), view_node() }),
+        view_node(),
+      }))
+      -- windows = {A (half-width), B (half-width), C (full-width bottom)}
+      local c_width = renderer.windows[3]:get_width()
+      local a_width = renderer.windows[1]:get_width()
+      assert.is_true(c_width > a_width, 'C should span the full editor width while A is a half-width split')
+    end)
+
+    it('should do nothing when not in screen mode', function()
+      local context = LayoutContext({ mode = 'popup' })
+      local renderer = LayoutRenderer(context)
+      renderer:create_screen_splits(horiz_node({ view_node(), view_node() }))
+      eq(0, #renderer.windows)
+    end)
+  end)
+
   describe('render (end-to-end)', function()
     it('should render container wrapping a view with real window', function()
       local element = Element({

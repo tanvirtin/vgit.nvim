@@ -1,7 +1,15 @@
 local lazy = require('vgit.core.lazy')
 local Object = lazy('vgit.core.Object')
+local signs_setting = lazy('vgit.settings.signs')
 
 local DiffStyleAnnotator = Object:extend()
+
+local _scene_signs
+
+local function get_scene_signs()
+  if not _scene_signs then _scene_signs = signs_setting:get('usage').scene end
+  return _scene_signs
+end
 
 function DiffStyleAnnotator:constructor()
   return {}
@@ -78,12 +86,13 @@ function DiffStyleAnnotator:_annotate_line(result, line, meta, row)
     for _, hl in ipairs(header_highlights) do
       result[#result + 1] = hl
     end
-  elseif change_type == 'add' then
-    result[#result + 1] = { row = row, hl_group = 'GitSignsAddLn', line = true }
-  elseif change_type == 'remove' then
-    result[#result + 1] = { row = row, hl_group = 'GitSignsDeleteLn', line = true }
   else
-    result[#result + 1] = { row = row, hl_group = 'GitPatchContext', line = true }
+    local hl_group = get_scene_signs()[change_type]
+    if hl_group then
+      result[#result + 1] = { row = row, hl_group = hl_group, line = true }
+    elseif change_type ~= 'void' then
+      result[#result + 1] = { row = row, hl_group = 'GitPatchContext', line = true }
+    end
   end
 end
 
