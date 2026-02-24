@@ -214,6 +214,7 @@ controller.execute_command = event.async(function(args)
     status = true,
     branch = true,
     debug = true,
+    stash = true,
   }
 
   if porcelain_commands[cmd] then

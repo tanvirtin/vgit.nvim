@@ -1,22 +1,22 @@
-local DiffCalculator = require('vgit.ui.calculators.DiffCalculator')
+local DiffAnnotator = require('vgit.ui.annotators.DiffAnnotator')
 
 local eq = assert.are.same
 
-describe('DiffCalculator:', function()
-  local calc
+describe('DiffAnnotator:', function()
+  local annotator
 
   before_each(function()
-    calc = DiffCalculator()
+    annotator = DiffAnnotator()
   end)
 
-  describe('calculate_line_diff_marks', function()
+  describe('annotate_line', function()
     it('should return nil when lnum_change is nil', function()
-      local result = calc:calculate_line_diff_marks({})
+      local result = annotator:annotate_line({})
       assert.is_nil(result)
     end)
 
     it('should return sign for add change type', function()
-      local result = calc:calculate_line_diff_marks({
+      local result = annotator:annotate_line({
         lnum_change = { lnum = 5, type = 'add' },
       })
       assert.is_not_nil(result)
@@ -26,7 +26,7 @@ describe('DiffCalculator:', function()
     end)
 
     it('should return sign for remove change type', function()
-      local result = calc:calculate_line_diff_marks({
+      local result = annotator:annotate_line({
         lnum_change = { lnum = 3, type = 'remove' },
       })
       assert.is_not_nil(result)
@@ -36,7 +36,7 @@ describe('DiffCalculator:', function()
     end)
 
     it('should return void_text for void change type', function()
-      local result = calc:calculate_line_diff_marks({
+      local result = annotator:annotate_line({
         lnum_change = { lnum = 7, type = 'void' },
       })
       assert.is_not_nil(result)
@@ -48,28 +48,28 @@ describe('DiffCalculator:', function()
 
     it('should not have sign when scene_signs has no mapping for type', function()
       -- void is not in scene_signs, so sign should be nil
-      local result = calc:calculate_line_diff_marks({
+      local result = annotator:annotate_line({
         lnum_change = { lnum = 1, type = 'void' },
       })
       assert.is_nil(result.sign)
     end)
   end)
 
-  describe('calculate_word_diff_marks', function()
+  describe('annotate_word', function()
     it('should return nil when lnum_change is nil', function()
-      local result = calc:calculate_word_diff_marks({}, 1)
+      local result = annotator:annotate_word({}, 1)
       assert.is_nil(result)
     end)
 
     it('should return nil when word_diff is nil', function()
-      local result = calc:calculate_word_diff_marks({
+      local result = annotator:annotate_word({
         lnum_change = { lnum = 1, type = 'add' },
       }, 1)
       assert.is_nil(result)
     end)
 
     it('should produce texts from word_diff for add type', function()
-      local result = calc:calculate_word_diff_marks({
+      local result = annotator:annotate_word({
         lnum_change = {
           lnum = 2,
           type = 'add',
@@ -88,7 +88,7 @@ describe('DiffCalculator:', function()
     end)
 
     it('should use GitWordDelete for remove type', function()
-      local result = calc:calculate_word_diff_marks({
+      local result = annotator:annotate_word({
         lnum_change = {
           lnum = 3,
           type = 'remove',
@@ -103,7 +103,7 @@ describe('DiffCalculator:', function()
     end)
 
     it('should skip operation 1 (insertions in other side)', function()
-      local result = calc:calculate_word_diff_marks({
+      local result = annotator:annotate_word({
         lnum_change = {
           lnum = 1,
           type = 'add',
@@ -121,7 +121,7 @@ describe('DiffCalculator:', function()
     end)
 
     it('should handle empty word_diff', function()
-      local result = calc:calculate_word_diff_marks({
+      local result = annotator:annotate_word({
         lnum_change = {
           lnum = 1,
           type = 'add',

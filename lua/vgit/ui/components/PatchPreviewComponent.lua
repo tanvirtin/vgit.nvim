@@ -43,6 +43,8 @@ local function track_lnum(ctx, change_type, syntax_mapping)
       sm[#sm + 1] = syntax_mapping
     end
     ctx.curr_lnum = ctx.curr_lnum + 1
+  elseif change_type == 'void' then
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
   else
     if ctx.curr_lnum > ctx.max_lnum then ctx.max_lnum = ctx.curr_lnum end
     ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = ctx.curr_lnum, hl = 'GitLineNr' }
@@ -125,15 +127,19 @@ local function process_hunk(ctx, entry)
     ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitPatchHeader' }
   end
 
-  for _, diff_line in ipairs(hunk.diff or {}) do
+  for i, diff_line in ipairs(hunk.diff or {}) do
     local prefix = diff_line:sub(1, 1)
     local cleaned_line = diff_line:sub(2)
 
     ctx.lines[#ctx.lines + 1] = cleaned_line
     local display_row = #ctx.lines - 1
 
-    local change_type = nil
-    if prefix == '+' then
+    -- hunk.lnum_changes carries conflict-type metadata that overrides prefix-derived type.
+    local lnum_change = hunk.lnum_changes and hunk.lnum_changes[i]
+    local change_type
+    if lnum_change then
+      change_type = lnum_change.type
+    elseif prefix == '+' then
       change_type = 'add'
     elseif prefix == '-' then
       change_type = 'remove'
@@ -148,7 +154,7 @@ local function process_hunk(ctx, entry)
     local syntax_mapping
     if change_type == 'remove' then
       syntax_mapping = { source = 'original', source_line = ctx.orig_lnum, display_row = display_row }
-    else
+    elseif change_type ~= 'void' and not lnum_change then
       syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
     end
 

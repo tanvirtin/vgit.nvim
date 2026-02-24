@@ -143,6 +143,15 @@ function GitQueryBuilder:blame()
   return self
 end
 
+function GitQueryBuilder:diff()
+  self:_prevent_duplicate_command()
+  self._command = 'diff'
+  self:_add_arg('--no-pager')
+  self:_add_arg('diff')
+  self:_add_arg('--no-color')
+  return self
+end
+
 function GitQueryBuilder:stash()
   self:_prevent_duplicate_command()
   self._command = 'stash'

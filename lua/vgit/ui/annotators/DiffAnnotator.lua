@@ -2,33 +2,26 @@ local lazy = require('vgit.core.lazy')
 local Object = lazy('vgit.core.Object')
 local signs_setting = lazy('vgit.settings.signs')
 
-local DiffCalculator = Object:extend()
+local DiffAnnotator = Object:extend()
 
--- Cache sign usage settings at module level — these never change after setup
 local _scene_signs
-local _main_signs
 
 local function get_scene_signs()
-  if not _scene_signs then
-    local usage = signs_setting:get('usage')
-    _scene_signs = usage.scene
-    _main_signs = usage.main
-  end
-  return _scene_signs, _main_signs
+  if not _scene_signs then _scene_signs = signs_setting:get('usage').scene end
+  return _scene_signs
 end
 
-function DiffCalculator:calculate_line_diff_marks(line_changes)
+function DiffAnnotator:constructor()
+  return {}
+end
+
+function DiffAnnotator:annotate_line(line_changes)
   local lnum_change = line_changes.lnum_change
   if not lnum_change then return nil end
 
-  local line_number_hl = 'GitLineNr'
-  local scene_signs, main_signs = get_scene_signs()
-
   local lnum = lnum_change.lnum
   local change_type = lnum_change.type
-  local sign_name = scene_signs[change_type]
-
-  if change_type ~= 'void' then line_number_hl = main_signs[change_type] end
+  local sign_name = get_scene_signs()[change_type]
 
   local marks = {}
 
@@ -40,13 +33,13 @@ function DiffCalculator:calculate_line_diff_marks(line_changes)
   if change_type == 'void' then marks.void_text = {
     row = lnum - 1,
     col = 0,
-    hl = line_number_hl,
+    hl = 'GitLineNr',
   } end
 
   return marks
 end
 
-function DiffCalculator:calculate_word_diff_marks(line_changes, lnum)
+function DiffAnnotator:annotate_word(line_changes, lnum)
   local lnum_change = line_changes.lnum_change
   if not lnum_change then return nil end
 
@@ -75,4 +68,4 @@ function DiffCalculator:calculate_word_diff_marks(line_changes, lnum)
   }
 end
 
-return DiffCalculator
+return DiffAnnotator

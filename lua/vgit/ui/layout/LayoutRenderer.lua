@@ -116,30 +116,36 @@ end
 function LayoutRenderer:create_screen_splits(layout)
   if not self.context:is_screen_mode() then return end
 
-  local function create_splits_for_layout(node, is_first)
+  local function create_splits_for_layout(node)
     if node.spec.type == LayoutSpec.Type.VIEW then
-      local current_window = Window(0)
-      table.insert(self.windows, current_window)
+      table.insert(self.windows, Window(0))
       return
     end
 
     local children = node.children or {}
     if #children == 0 then return end
 
-    local split_cmd = 'vsplit' -- side by side
+    local split_cmd = 'vsplit'
     if node.spec.type == LayoutSpec.Type.FLEX and node.spec.direction == LayoutSpec.Direction.VERTICAL then
-      split_cmd = 'split' -- stacked
+      split_cmd = 'split'
     end
 
-    create_splits_for_layout(children[1], is_first)
-
+    -- Collect all window IDs at this FLEX level BEFORE recursing into children
+    local child_wins = {}
+    child_wins[1] = vim.api.nvim_get_current_win()
     for i = 2, #children do
       vim.cmd(split_cmd)
-      create_splits_for_layout(children[i], false)
+      child_wins[i] = vim.api.nvim_get_current_win()
+    end
+
+    -- Navigate to each child window and recurse into it
+    for i, child in ipairs(children) do
+      vim.api.nvim_set_current_win(child_wins[i])
+      create_splits_for_layout(child)
     end
   end
 
-  create_splits_for_layout(layout, true)
+  create_splits_for_layout(layout)
 end
 
 function LayoutRenderer:render(spec, parent_bounds)

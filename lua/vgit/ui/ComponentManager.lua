@@ -28,6 +28,8 @@ function ComponentManager:parse_layout_spec(layout_spec)
           end
           local child_layout_spec = child.view:get_layout_spec()
           layout_spec.children[i] = self:parse_layout_spec(child_layout_spec)
+        elseif child.type and child.type ~= LayoutSpec.Type.VIEW then
+          layout_spec.children[i] = self:parse_layout_spec(child)
         end
       end
     elseif layout_spec.child then
@@ -37,6 +39,8 @@ function ComponentManager:parse_layout_spec(layout_spec)
         end
         local child_layout_spec = layout_spec.child.view:get_layout_spec()
         layout_spec.child = self:parse_layout_spec(child_layout_spec)
+      elseif layout_spec.child.type and layout_spec.child.type ~= LayoutSpec.Type.VIEW then
+        layout_spec.child = self:parse_layout_spec(layout_spec.child)
       end
     end
     return layout_spec
