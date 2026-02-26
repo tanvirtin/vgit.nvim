@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local BaseLayoutCalculator = lazy('vgit.ui.calculators.BaseLayoutCalculator')
 local FlexLayoutCalculator = lazy('vgit.ui.calculators.FlexLayoutCalculator')
 local AbsoluteLayoutCalculator = lazy('vgit.ui.calculators.AbsoluteLayoutCalculator')

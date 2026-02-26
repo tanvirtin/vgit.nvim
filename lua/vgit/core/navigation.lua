@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
-local live_gutter_setting = lazy('vgit.settings.live_gutter')
+
 local hunks_setting = lazy('vgit.settings.hunks')
+local live_gutter_setting = lazy('vgit.settings.live_gutter')
 
 local navigation = {}
 

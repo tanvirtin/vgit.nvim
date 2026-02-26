@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
-local Diff = lazy('vgit.core.diff.Diff')
+
 local Object = lazy('vgit.core.Object')
+local Diff = lazy('vgit.core.diff.Diff')
 local assertion = lazy('vgit.core.assertion')
 
 local DiffLayoutGenerator = Object:extend()

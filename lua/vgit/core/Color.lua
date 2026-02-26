@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local bit = lazy('vgit.vendor.bit')
 local utils = lazy('vgit.core.utils')
 local Object = lazy('vgit.core.Object')

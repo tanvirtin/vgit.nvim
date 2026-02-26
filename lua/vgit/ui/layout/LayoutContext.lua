@@ -1,8 +1,9 @@
 local lazy = require('vgit.core.lazy')
+
 local Object = lazy('vgit.core.Object')
+local Window = lazy('vgit.core.Window')
 local dimensions = lazy('vgit.ui.dimensions')
 local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
-local Window = lazy('vgit.core.Window')
 
 local LayoutContext = Object:extend()
 

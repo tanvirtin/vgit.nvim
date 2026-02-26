@@ -1,4 +1,5 @@
 local vim = vim
+
 local lazy = require('vgit.core.lazy')
 local Component = lazy('vgit.ui.Component')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')

@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local utils = lazy('vgit.core.utils')
 local Object = lazy('vgit.core.Object')
 local git_log = lazy('vgit.git.git_log')

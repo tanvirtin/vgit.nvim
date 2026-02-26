@@ -1,7 +1,8 @@
 local lazy = require('vgit.core.lazy')
+
+local event = lazy('vgit.core.event')
 local Window = lazy('vgit.core.Window')
 local Object = lazy('vgit.core.Object')
-local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
 local navigation = lazy('vgit.core.navigation')
 local statusline = lazy('vgit.core.statusline_state')

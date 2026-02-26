@@ -1,16 +1,17 @@
 local lazy = require('vgit.core.lazy')
+
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
 local scene_setting = lazy('vgit.settings.scene')
-local FileDiffView = lazy('vgit.features.screens.FileDiffView')
-local ProjectDiffView = lazy('vgit.features.screens.ProjectDiffView')
 local HunkLens = lazy('vgit.features.lenses.HunkLens')
 local BlameLens = lazy('vgit.features.lenses.BlameLens')
-local StatusDiffView = lazy('vgit.features.screens.StatusDiffView')
-local BranchView = lazy('vgit.features.screens.BranchView')
-local StashView = lazy('vgit.features.screens.StashView')
-local CommitPickerView = lazy('vgit.features.screens.CommitPickerView')
 local BlameView = lazy('vgit.features.screens.BlameView')
+local StashView = lazy('vgit.features.screens.StashView')
+local BranchView = lazy('vgit.features.screens.BranchView')
+local FileDiffView = lazy('vgit.features.screens.FileDiffView')
+local ProjectDiffView = lazy('vgit.features.screens.ProjectDiffView')
+local StatusDiffView = lazy('vgit.features.screens.StatusDiffView')
+local CommitPickerView = lazy('vgit.features.screens.CommitPickerView')
 
 local active_view = nil
 local _events_registered = false

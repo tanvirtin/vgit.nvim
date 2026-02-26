@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
-local Object = lazy('vgit.core.Object')
+
 local fs = lazy('vgit.core.fs')
+local Object = lazy('vgit.core.Object')
 local git_repo = lazy('vgit.git.git_repo')
 local git_show = lazy('vgit.git.git_show')
 local git_hunks = lazy('vgit.git.git_hunks')

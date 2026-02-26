@@ -1,18 +1,19 @@
 local lazy = require('vgit.core.lazy')
+
 local Layout = lazy('vgit.ui.Layout')
 local event = lazy('vgit.core.event')
 local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
-local statusline = lazy('vgit.core.statusline_state')
 local git_diff = lazy('vgit.git.git_diff')
 local git_stash = lazy('vgit.git.git_stash')
 local scene_setting = lazy('vgit.settings.scene')
 local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local statusline = lazy('vgit.core.statusline_state')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
+local stash_view_setting = lazy('vgit.settings.stash_view')
 local TreeComponent = lazy('vgit.ui.components.TreeComponent')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
-local stash_view_setting = lazy('vgit.settings.stash_view')
 local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
 
 local StashView = Object:extend()
@@ -130,33 +131,24 @@ function StashView:_split_hunk_entry(hunk, entry)
     current_lines = entry.current_lines,
   }
 
-  return
-    vim.tbl_extend(
-    'force',
-    base,
-    {
+  return vim.tbl_extend('force', base, {
+    type = 'hunk',
+    hunk = {
+      header = hunk.header,
+      diff = previous_diff,
+      top = hunk.top,
+      bot = hunk.bot,
+    },
+  }),
+    vim.tbl_extend('force', base, {
       type = 'hunk',
       hunk = {
         header = hunk.header,
-        diff = previous_diff,
+        diff = current_diff,
         top = hunk.top,
         bot = hunk.bot,
       },
-    }
-  ),
-    vim.tbl_extend(
-      'force',
-      base,
-      {
-        type = 'hunk',
-        hunk = {
-          header = hunk.header,
-          diff = current_diff,
-          top = hunk.top,
-          bot = hunk.bot,
-        },
-      }
-    )
+    })
 end
 
 function StashView:_build_split_patch_entries(patch_entries)

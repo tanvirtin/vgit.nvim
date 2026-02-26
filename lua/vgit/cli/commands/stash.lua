@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
 local git_stash = lazy('vgit.git.git_stash')

@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
-local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
+
 local fs = lazy('vgit.core.fs')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_revert = {}
 
