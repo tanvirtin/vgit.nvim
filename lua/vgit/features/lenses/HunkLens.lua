@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local Layout = lazy('vgit.ui.Layout')
 local Object = lazy('vgit.core.Object')
 local event = lazy('vgit.core.event')

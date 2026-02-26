@@ -1,10 +1,11 @@
 local lazy = require('vgit.core.lazy')
-local Object = lazy('vgit.core.Object')
+
 local event = lazy('vgit.core.event')
-local console = lazy('vgit.core.console')
+local Object = lazy('vgit.core.Object')
 local git_log = lazy('vgit.git.git_log')
-local SearchComponent = lazy('vgit.ui.components.SearchComponent')
+local console = lazy('vgit.core.console')
 local show_command = lazy('vgit.cli.commands.show')
+local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
 local CommitPickerView = Object:extend()
 

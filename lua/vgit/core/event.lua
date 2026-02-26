@@ -1,7 +1,8 @@
 local lazy = require('vgit.core.lazy')
+
 local async = lazy('vgit.core.async')
-local utils_math = lazy('vgit.core.utils.math')
 local git_repo = lazy('vgit.libgit2.git_repo')
+local utils_math = lazy('vgit.core.utils.math')
 
 local _is_registered = false
 local _augroup_created = false

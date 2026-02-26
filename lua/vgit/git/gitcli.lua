@@ -1,8 +1,9 @@
 local lazy = require('vgit.core.lazy')
+
+local env = lazy('vgit.core.env')
 local event = lazy('vgit.core.event')
 local Spawn = lazy('vgit.core.Spawn')
 local console = lazy('vgit.core.console')
-local env = lazy('vgit.core.env')
 
 local gitcli = {}
 

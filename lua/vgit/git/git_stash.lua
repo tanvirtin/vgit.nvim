@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local GitCommit = lazy('vgit.git.GitCommit')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 

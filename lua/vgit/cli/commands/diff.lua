@@ -1,11 +1,12 @@
 local lazy = require('vgit.core.lazy')
+
 local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
+local Window = lazy('vgit.core.Window')
 local Buffer = lazy('vgit.core.Buffer')
 local GitFile = lazy('vgit.git.GitFile')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
-local Window = lazy('vgit.core.Window')
 local git_status = lazy('vgit.git.git_status')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')

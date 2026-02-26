@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local utils = require('vgit.core.utils')
 local assertion = lazy('vgit.core.assertion')
 

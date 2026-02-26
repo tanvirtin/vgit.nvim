@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local GitHunk = lazy('vgit.git.GitHunk')
 local assertion = lazy('vgit.core.assertion')
 local HunkGenerator = lazy('vgit.core.diff.hunks.HunkGenerator')

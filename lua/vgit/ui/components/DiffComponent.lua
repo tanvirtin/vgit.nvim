@@ -1,13 +1,14 @@
 local lazy = require('vgit.core.lazy')
+
 local utils = lazy('vgit.core.utils')
 local Component = lazy('vgit.ui.Component')
-local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local symbols_setting = lazy('vgit.settings.symbols')
+local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local DiffAnnotator = lazy('vgit.ui.annotators.DiffAnnotator')
 local FoldCalculator = lazy('vgit.ui.calculators.FoldCalculator')
 local LineNumberCalculator = lazy('vgit.ui.calculators.LineNumberCalculator')
-local symbols_setting = lazy('vgit.settings.symbols')
 
 local DiffComponent = ViewportComponent:extend()
 

@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_submodule = {}

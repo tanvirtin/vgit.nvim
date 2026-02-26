@@ -1,9 +1,10 @@
 local lazy = require('vgit.core.lazy')
+
 local fs = lazy('vgit.core.fs')
 local utils = lazy('vgit.core.utils')
-local console = lazy('vgit.core.console')
 local gitcli = lazy('vgit.git.gitcli')
 local GitHunk = lazy('vgit.git.GitHunk')
+local console = lazy('vgit.core.console')
 local git_setting = lazy('vgit.settings.git')
 
 local git_hunks = {}

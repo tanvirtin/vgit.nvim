@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local console = lazy('vgit.core.console')
 
 local router = {}

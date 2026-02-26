@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local statusline_state = lazy('vgit.core.statusline_state')
 
 local statusline = {}

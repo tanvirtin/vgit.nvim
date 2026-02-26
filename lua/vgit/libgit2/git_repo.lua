@@ -1,5 +1,7 @@
 local ffi = require('ffi')
+
 local lazy = require('vgit.core.lazy')
+
 local libgit2 = lazy('vgit.libgit2')
 local git_repo = lazy('vgit.git.git_repo')
 

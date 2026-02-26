@@ -1,5 +1,7 @@
 local ffi = require('ffi')
+
 local lazy = require('vgit.core.lazy')
+
 local event = lazy('vgit.core.event')
 local libgit2_setting = lazy('vgit.settings.libgit2')
 

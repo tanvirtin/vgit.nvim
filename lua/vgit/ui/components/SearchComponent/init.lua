@@ -1,5 +1,5 @@
-local vim = vim
 local lazy = require('vgit.core.lazy')
+
 local event = lazy('vgit.core.event')
 local Component = lazy('vgit.ui.Component')
 local Element = lazy('vgit.ui.elements.Element')

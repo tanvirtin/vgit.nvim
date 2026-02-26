@@ -1,14 +1,15 @@
 local lazy = require('vgit.core.lazy')
+
 local fs = lazy('vgit.core.fs')
 local Object = lazy('vgit.core.Object')
 local git_log = lazy('vgit.git.git_log')
+local GitBlob = lazy('vgit.git.GitBlob')
 local git_hunks = lazy('vgit.git.git_hunks')
 local git_blame = lazy('vgit.git.git_blame')
 local git_repo = lazy('vgit.libgit2.git_repo')
 local git_status = lazy('vgit.git.git_status')
 local git_stager = lazy('vgit.git.git_stager')
 local git_conflict = lazy('vgit.libgit2.git_conflict')
-local GitBlob = lazy('vgit.git.GitBlob')
 
 local GitFile = Object:extend()
 

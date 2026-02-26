@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local signs_setting = lazy('vgit.settings.signs')
 
 local sign = {}

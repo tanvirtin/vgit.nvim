@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
-local Object = lazy('vgit.core.Object')
+
 local event = lazy('vgit.core.event')
+local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
 local git_buffer_store = lazy('vgit.git.git_buffer_store')
 local live_gutter_setting = lazy('vgit.settings.live_gutter')

@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local Object = lazy('vgit.core.Object')
 local git_remote = lazy('vgit.git.git_remote')
 

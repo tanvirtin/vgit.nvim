@@ -1,9 +1,10 @@
 local lazy = require('vgit.core.lazy')
+
 local utils = lazy('vgit.core.utils')
 local Component = lazy('vgit.ui.Component')
-local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
 local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
 

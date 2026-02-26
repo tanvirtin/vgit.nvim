@@ -1,7 +1,8 @@
 local lazy = require('vgit.core.lazy')
-local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
-local GitCommit = lazy('vgit.git.GitCommit')
+
 local utils = lazy('vgit.core.utils')
+local GitCommit = lazy('vgit.git.GitCommit')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_blame = {}
 

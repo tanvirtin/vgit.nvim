@@ -1,8 +1,9 @@
 local lazy = require('vgit.core.lazy')
+
 local fs = lazy('vgit.core.fs')
 local console = lazy('vgit.core.console')
-local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 local GitPatch = lazy('vgit.git.GitPatch')
+local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_stager = {}
 

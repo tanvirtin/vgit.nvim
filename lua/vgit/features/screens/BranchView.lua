@@ -1,4 +1,5 @@
 local lazy = require('vgit.core.lazy')
+
 local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
