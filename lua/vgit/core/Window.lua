@@ -182,14 +182,12 @@ function Window:scroll_to(placement, offset)
   return self:call(function()
     if placement == 'top' then
       vim.cmd('norm! zt')
-      if offset > 0 then
-        vim.cmd(string.format('norm! %d\25', offset))
-      end
     elseif placement == 'center' then
       vim.cmd('norm! zz')
     elseif placement == 'bottom' then
       vim.cmd('norm! zb')
     end
+    if offset > 0 then vim.cmd(string.format('norm! %d\25', offset)) end
   end)
 end
 

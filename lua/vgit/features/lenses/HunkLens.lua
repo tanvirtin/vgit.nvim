@@ -4,8 +4,10 @@ local Layout = lazy('vgit.ui.Layout')
 local Object = lazy('vgit.core.Object')
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
+local dimensions = lazy('vgit.ui.dimensions')
 local scene_setting = lazy('vgit.settings.scene')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local hunk_lens_setting = lazy('vgit.settings.hunk_lens')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local BorderComponent = lazy('vgit.ui.components.BorderComponent')
@@ -24,11 +26,17 @@ function HunkLens:constructor()
 end
 
 function HunkLens:prev_hunk()
-  self.diff_component:hunk_up('center')
+  self.diff_component:hunk_up(
+    hunk_lens_setting:get('hunk_alignment'),
+    hunk_lens_setting:get('hunk_alignment_offset') or 0
+  )
 end
 
 function HunkLens:next_hunk()
-  self.diff_component:hunk_down('center')
+  self.diff_component:hunk_down(
+    hunk_lens_setting:get('hunk_alignment'),
+    hunk_lens_setting:get('hunk_alignment_offset') or 0
+  )
 end
 
 function HunkLens:create_diff_component(diff_data, filename, filetype, layout_type)
@@ -112,6 +120,13 @@ function HunkLens:create(data)
 
   local layout_type = data.layout_type or 'unified'
 
+  local border_lines = 2
+  local target_mark = data.diff.marks[data.target_hunk_index]
+  local hunk_lines = target_mark.bot - target_mark.top + 1
+  local default_height = dimensions.convert('35vh')
+  local max_height = dimensions.global_height() - 3
+  local height = math.min(math.max(default_height, hunk_lines + border_lines), max_height)
+
   self.diff_component = self:create_diff_component(data.diff, data.filename, data.filetype, layout_type)
 
   local center_border = BorderComponent()
@@ -128,11 +143,12 @@ function HunkLens:create(data)
   self.component_manager = ComponentManager()
   self.component_manager:render(Layout.lens(wrapper, {
     relative = 'cursor',
-    height = '35vh',
+    height = height,
   }))
 
-  local target_hunk = data.target_hunk_index or 1
-  self.diff_component:move_to_hunk(target_hunk, 'center')
+  local hunk_alignment = hunk_lens_setting:get('hunk_alignment')
+  local hunk_alignment_offset = hunk_lens_setting:get('hunk_alignment_offset') or 0
+  self.diff_component:move_to_hunk(data.target_hunk_index, hunk_alignment, hunk_alignment_offset)
 
   self:setup_keymaps()
 
