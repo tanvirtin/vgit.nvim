@@ -15,8 +15,8 @@ function GitTree:constructor(repository, commit)
   if not commit then error('GitTree requires a commit reference') end
 
   local tree = {
-    _repo_path = repository:get_path(),
-    _commit_ref = commit,
+    ['$_repo_path'] = repository:get_path(),
+    ['$_commit_ref'] = commit,
     _commit_data = nil,
     _parent_tree = nil,
     _files = nil,

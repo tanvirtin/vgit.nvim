@@ -134,38 +134,6 @@ describe('SyntaxAnnotator:', function()
     end)
   end)
 
-  describe('_create_scratch_buffer', function()
-    it('should create a buffer with lines set', function()
-      local lines = { 'line1', 'line2' }
-      local bufnr = annotator:_create_scratch_buffer(lines, 'lua')
-
-      assert.is_truthy(bufnr)
-      assert.is_true(vim.api.nvim_buf_is_valid(bufnr))
-      local buf_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-      eq(lines, buf_lines)
-
-      vim.api.nvim_buf_delete(bufnr, { force = true })
-    end)
-
-    it('should set filetype on buffer', function()
-      local bufnr = annotator:_create_scratch_buffer({ 'test' }, 'lua')
-
-      local ft = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
-      eq('lua', ft)
-
-      vim.api.nvim_buf_delete(bufnr, { force = true })
-    end)
-
-    it('should not set filetype when empty', function()
-      local bufnr = annotator:_create_scratch_buffer({ 'test' }, '')
-
-      local ft = vim.api.nvim_get_option_value('filetype', { buf = bufnr })
-      eq('', ft)
-
-      vim.api.nvim_buf_delete(bufnr, { force = true })
-    end)
-  end)
-
   describe('_parse_highlights', function()
     it('should return empty table when parser unavailable', function()
       local bufnr = vim.api.nvim_create_buf(false, true)

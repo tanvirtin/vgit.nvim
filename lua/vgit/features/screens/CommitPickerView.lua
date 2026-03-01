@@ -102,8 +102,7 @@ function CommitPickerView:_on_search(query)
   local version = self._search_version
   local sc = self._search_component
 
-  sc._loading = true
-  sc:render()
+  sc:set_loading(true)
 
   event.async(function()
     local commits, err = git_log.list(self._repo_path, {
@@ -112,10 +111,9 @@ function CommitPickerView:_on_search(query)
     })
 
     vim.schedule(function()
-      if not sc._mounted then return end
+      if not sc:is_mounted() then return end
       if self._search_version ~= version then return end
 
-      sc._loading = false
       self._search_skip = 100
 
       if err then

@@ -24,25 +24,24 @@ function LayoutContext:constructor(config)
   config = config or {}
 
   return {
-    mode = config.mode or 'popup', -- 'screen', 'lens', 'popup'
-    width = config.width,
-    height = config.height,
-    zindex = config.zindex or 2,
-    relative = config.relative or 'editor',
-    position = config.position or 'center',
-    original_win_options = LayoutContext.capture_window_options(),
+    ['$mode'] = config.mode or 'popup', -- 'screen', 'lens', 'popup'
+    ['$width'] = config.width,
+    ['$height'] = config.height,
+    ['$zindex'] = config.zindex or 2,
+    ['$relative'] = config.relative or 'editor',
+    ['$position'] = config.position or 'center',
+    ['$original_win_options'] = LayoutContext.capture_window_options(),
   }
 end
 
 function LayoutContext.capture_window_options()
   local win_options = {}
-  local current_win = vim.api.nvim_get_current_win()
-  if not current_win then return end
-  if not vim.api.nvim_win_is_valid(current_win) then return end
+  local win = Window.get_current()
+  if not win or not win:is_valid() then return end
 
   for _, option_name in ipairs(LayoutContext.WINDOW_OPTIONS) do
-    local ok, value = pcall(vim.api.nvim_get_option_value, option_name, { win = current_win })
-    if ok then win_options[option_name] = value end
+    local value = win:get_option(option_name)
+    if value ~= nil then win_options[option_name] = value end
   end
 
   return win_options
@@ -149,11 +148,10 @@ end
 function LayoutContext:restore_window_options()
   if not self.original_win_options then return end
 
-  local current_win = vim.api.nvim_get_current_win()
-  if not current_win or not vim.api.nvim_win_is_valid(current_win) then return end
+  local win = Window.get_current()
+  if not win or not win:is_valid() then return end
 
   pcall(function()
-    local win = Window(current_win)
     win:assign_options(self.original_win_options)
   end)
 

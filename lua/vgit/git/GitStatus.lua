@@ -25,13 +25,13 @@ function GitStatus:constructor(status)
   local filetype = fs.detect_filetype(filename)
 
   return {
-    id = utils.math.uuid(),
-    value = value,
-    first = first,
-    second = second,
-    filename = filename,
-    old_filename = old_filename,
-    filetype = filetype,
+    ['$id'] = utils.math.uuid(),
+    ['$value'] = value,
+    ['$first'] = first,
+    ['$second'] = second,
+    ['$filename'] = filename,
+    ['$old_filename'] = old_filename,
+    ['$filetype'] = filetype,
   }
 end
 

@@ -87,4 +87,64 @@ describe('Object:', function()
       eq(test.y, 4)
     end)
   end)
+
+  describe('readonly', function()
+    local Buffer
+
+    before_each(function()
+      Buffer = Object:extend()
+      function Buffer:constructor(id)
+        return {
+          ['$id'] = id,
+          name = 'Default',
+        }
+      end
+    end)
+
+    it('should allow reading a readonly property', function()
+      local b = Buffer(42)
+      eq(b.id, 42)
+    end)
+
+    it('should throw an error when attempting to overwrite a readonly property', function()
+      local b = Buffer(42)
+      assert.has_error(function()
+        b.id = 99
+      end, "Property 'id' is read-only.")
+      eq(b.id, 42)
+    end)
+
+    it('should allow modifying normal (non-readonly) properties', function()
+      local b = Buffer(42)
+      b.name = 'Custom'
+      eq(b.name, 'Custom')
+    end)
+
+    it('should handle multiple instances independently', function()
+      local b1 = Buffer(1)
+      local b2 = Buffer(2)
+      eq(b1.id, 1)
+      eq(b2.id, 2)
+      assert.has_error(function()
+        b1.id = 10
+      end)
+      eq(b1.id, 1)
+    end)
+  end)
+
+  describe('inheritance with logic', function()
+    it('should inherit the readonly logic in deep subclasses', function()
+      local Parent = Object:extend()
+      local Child = Parent:extend()
+      function Child:constructor(val)
+        return { ['$secret'] = val }
+      end
+
+      local c = Child('shh')
+      eq(c.secret, 'shh')
+      assert.has_error(function()
+        c.secret = 'leak'
+      end)
+    end)
+  end)
 end)

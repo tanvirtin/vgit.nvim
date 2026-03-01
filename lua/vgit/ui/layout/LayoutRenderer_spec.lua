@@ -199,7 +199,7 @@ describe('LayoutRenderer:', function()
 
       assert.is_true(element._mounted)
       assert.is_true(element:is_valid())
-      assert.is_true(vim.api.nvim_win_is_valid(element:get_win_id()))
+      assert.is_true(vim.api.nvim_win_is_valid(element:get_window().win_id))
     end)
 
     it('should set window_mode from context mode', function()

@@ -5,6 +5,10 @@ local hls_setting = lazy('vgit.settings.hls')
 
 local highlight = {}
 
+function highlight.get_hl_by_name(name, ...)
+  return vim.api.nvim_get_hl_by_name(name, ...)
+end
+
 function highlight.define(group, color, force)
   if type(color) == 'string' then
     vim.api.nvim_exec(string.format('highlight default link %s %s', group, color), false)

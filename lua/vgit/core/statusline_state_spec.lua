@@ -15,7 +15,7 @@ describe('statusline_state:', function()
 
   describe('set_hunk and get_hunk', function()
     it('should set and get hunk state', function()
-      statusline_state.set_hunk(2, 5)
+      statusline_state.set_hunk({ index = 2, count = 5 })
       local hunk = statusline_state.get_hunk()
       eq(2, hunk.index)
       eq(5, hunk.count)
@@ -27,7 +27,7 @@ describe('statusline_state:', function()
     end)
 
     it('should set vim globals', function()
-      statusline_state.set_hunk(3, 10)
+      statusline_state.set_hunk({ index = 3, count = 10 })
       eq(3, vim.g.vgit_hunk_index)
       eq(10, vim.g.vgit_hunk_count)
     end)
@@ -81,7 +81,7 @@ describe('statusline_state:', function()
 
   describe('reset', function()
     it('should clear all state', function()
-      statusline_state.set_hunk(1, 5)
+      statusline_state.set_hunk({ index = 1, count = 5 })
       statusline_state.set_diff_stats({ added = 10 })
       statusline_state.set_branch('main')
 
@@ -131,7 +131,7 @@ describe('statusline_state:', function()
       end
 
       local statusline_state_fresh = require('vgit.core.statusline_state')
-      statusline_state_fresh.set_hunk(1, 5)
+      statusline_state_fresh.set_hunk({ index = 1, count = 5 })
       statusline_state_fresh.reset()
 
       vim.uv.new_timer = original_new_timer
@@ -142,12 +142,12 @@ describe('statusline_state:', function()
 
   describe('get_hunk edge cases', function()
     it('should return nil if only index is set', function()
-      statusline_state.set_hunk(2, nil)
+      statusline_state.set_hunk({ index = 2, count = nil })
       eq(nil, statusline_state.get_hunk())
     end)
 
     it('should return nil if only count is set', function()
-      statusline_state.set_hunk(nil, 5)
+      statusline_state.set_hunk({ index = nil, count = 5 })
       eq(nil, statusline_state.get_hunk())
     end)
   end)

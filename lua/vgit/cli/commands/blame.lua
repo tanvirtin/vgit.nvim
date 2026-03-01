@@ -3,6 +3,7 @@ local lazy = require('vgit.core.lazy')
 local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
 local Buffer = lazy('vgit.core.Buffer')
+local Window = lazy('vgit.core.Window')
 local GitFile = lazy('vgit.git.GitFile')
 local git_log = lazy('vgit.git.git_log')
 local console = lazy('vgit.core.console')
@@ -159,7 +160,10 @@ blame_command.execute = event.async(function(args)
     end
   end
 
-  if not opts.line_number then opts.line_number = vim.api.nvim_win_get_cursor(0)[1] end
+  if not opts.line_number then
+    local win = Window(0)
+    opts.line_number = win:get_cursor()[1]
+  end
 
   event.await()
 

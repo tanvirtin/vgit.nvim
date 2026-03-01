@@ -35,7 +35,7 @@ function GitCommit:constructor(data)
 
     _parent_hash = data.parent_hash,
     _parent = nil,
-    _repo_path = repo_path,
+    ['$_repo_path'] = repo_path,
 
     context = data.context or {},
   }

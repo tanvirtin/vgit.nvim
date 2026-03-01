@@ -4,7 +4,7 @@ local File = Object:extend()
 
 function File:constructor(path)
   return {
-    _path = path,
+    ['$_path'] = path,
     _fd = nil,
   }
 end

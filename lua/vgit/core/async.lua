@@ -22,7 +22,11 @@ end
 
 local function callback_or_next(step, thread, callback, ...)
   local stat = select(1, ...)
-  if not stat then error(string.format('The coroutine failed with this message: %s', tostring(select(2, ...)))) end
+  if not stat then
+    local err = tostring(select(2, ...))
+    if err:find('Keyboard interrupt') then return end
+    error(string.format('The coroutine failed with this message: %s', err))
+  end
 
   if co.status(thread) == 'dead' then
     if callback then callback(select(2, ...)) end

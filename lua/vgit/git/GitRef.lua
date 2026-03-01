@@ -10,7 +10,7 @@ function GitRef:constructor(repository)
   if not repository then error('GitRef requires a repository') end
 
   local refs = {
-    _repo_path = repository:get_path(),
+    ['$_repo_path'] = repository:get_path(),
     _branches = nil,
     _tags = nil,
     _current = nil,

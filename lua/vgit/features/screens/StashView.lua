@@ -328,6 +328,10 @@ function StashView:get_hunk_alignment()
   return stash_view_setting:get('hunk_alignment')
 end
 
+function StashView:get_hunk_alignment_offset()
+  return stash_view_setting:get('hunk_alignment_offset') or 0
+end
+
 function StashView:_get_current_mark_index(component)
   local marks = component:get_marks()
   if #marks == 0 then return nil, 0 end
@@ -348,18 +352,18 @@ end
 function StashView:hunk_down()
   local component = self:_get_active_component()
   if component and component:is_valid() then
-    component:hunk_down(self:get_hunk_alignment())
+    component:hunk_down(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
     local index, count = self:_get_current_mark_index(component)
-    if index then statusline.set_hunk(index, count) end
+    if index then statusline.set_hunk({ index = index, count = count }) end
   end
 end
 
 function StashView:hunk_up()
   local component = self:_get_active_component()
   if component and component:is_valid() then
-    component:hunk_up(self:get_hunk_alignment())
+    component:hunk_up(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
     local index, count = self:_get_current_mark_index(component)
-    if index then statusline.set_hunk(index, count) end
+    if index then statusline.set_hunk({ index = index, count = count }) end
   end
 end
 
@@ -529,7 +533,6 @@ function StashView:_create_unified(groups)
   }))
 
   self:setup_keymaps()
-  self._tree_component:component_did_mount()
   if self._tree_component:is_valid() then self._tree_component:focus() end
 
   self:_move_to_first_stash()
@@ -574,7 +577,6 @@ function StashView:_create_split()
   }))
 
   self:setup_keymaps()
-  self._tree_component:component_did_mount()
   if self._tree_component:is_valid() then self._tree_component:focus() end
 
   self:_move_to_first_stash()
@@ -629,13 +631,6 @@ function StashView:create(data)
   return true
 end
 
-function StashView:emit_cleanup_events()
-  if self._patch_component then self._patch_component:component_will_unmount() end
-  if self._previous_component then self._previous_component:component_will_unmount() end
-  if self._current_component then self._current_component:component_will_unmount() end
-  if self._tree_component then self._tree_component:component_will_unmount() end
-end
-
 function StashView:destroy()
   if self._destroyed then return end
   self._destroyed = true
@@ -643,7 +638,6 @@ function StashView:destroy()
     cleanup()
   end
   self._debounce_cleanups = {}
-  self:emit_cleanup_events()
   if self._component_manager then self._component_manager:destroy() end
 end
 

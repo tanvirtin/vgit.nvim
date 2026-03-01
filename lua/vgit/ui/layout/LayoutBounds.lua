@@ -9,11 +9,11 @@ local LayoutBounds = Object:extend()
 function LayoutBounds:constructor(opts)
   opts = opts or {}
   return {
-    row = opts.row or 0,
-    col = opts.col or 0,
-    width = opts.width or 0,
-    height = opts.height or 0,
-    parent = opts.parent or nil,
+    ['$row'] = opts.row or 0,
+    ['$col'] = opts.col or 0,
+    ['$width'] = opts.width or 0,
+    ['$height'] = opts.height or 0,
+    ['$parent'] = opts.parent or nil,
   }
 end
 

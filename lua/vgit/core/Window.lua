@@ -5,10 +5,22 @@ local assertion = lazy('vgit.core.assertion')
 
 local Window = Object:extend()
 
+function Window.get_current()
+  return Window(vim.api.nvim_get_current_win())
+end
+
+function Window.set_buf(win_id, bufnr)
+  vim.api.nvim_win_set_buf(win_id, bufnr)
+end
+
+function Window.set_current(win_id)
+  vim.api.nvim_set_current_win(win_id)
+end
+
 function Window:constructor(win_id)
   assertion.assert_number(win_id)
   if win_id == 0 then win_id = vim.api.nvim_get_current_win() end
-  return { win_id = win_id }
+  return { ['$win_id'] = win_id }
 end
 
 function Window.open_screen(buffer, config)
@@ -80,8 +92,19 @@ function Window:set_lnum(lnum)
   return self:set_cursor({ lnum, cursor[2] })
 end
 
+function Window:get_option(key)
+  local ok, value = pcall(vim.api.nvim_get_option_value, key, { win = self.win_id })
+  if ok then return value end
+  return nil
+end
+
 function Window:set_option(key, value)
   pcall(vim.api.nvim_set_option_value, key, value, { win = self.win_id })
+  return self
+end
+
+function Window:set_buffer(buffer)
+  vim.api.nvim_win_set_buf(self.win_id, buffer.bufnr)
   return self
 end
 
@@ -95,13 +118,13 @@ function Window:set_width(width)
   return self
 end
 
-function Window:set_win_plot(win_plot)
-  if win_plot.focus ~= nil then win_plot.focus = nil end
-  vim.api.nvim_win_set_config(self.win_id, win_plot)
+function Window:set_config(config)
+  if config.focus ~= nil then config.focus = nil end
+  vim.api.nvim_win_set_config(self.win_id, config)
   return self
 end
 
-function Window:get_win_plot()
+function Window:get_config()
   return vim.api.nvim_win_get_config(self.win_id)
 end
 
@@ -152,22 +175,22 @@ function Window:is_same(window)
   return self.win_id == window.win_id
 end
 
-function Window:position_cursor(placement)
-  local placement_map = {
-    top = function()
-      vim.cmd('norm! zt')
-    end,
-    center = function()
-      vim.cmd('norm! zz')
-    end,
-    bottom = function()
-      vim.cmd('norm! zb')
-    end,
-  }
-
+function Window:scroll_to(placement, offset)
   placement = placement or 'center'
+  offset = offset or 0
 
-  return self:call(placement_map[placement])
+  return self:call(function()
+    if placement == 'top' then
+      vim.cmd('norm! zt')
+      if offset > 0 then
+        vim.cmd(string.format('norm! %d\25', offset))
+      end
+    elseif placement == 'center' then
+      vim.cmd('norm! zz')
+    elseif placement == 'bottom' then
+      vim.cmd('norm! zb')
+    end
+  end)
 end
 
 function Window:call(callback)

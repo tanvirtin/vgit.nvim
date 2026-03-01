@@ -36,7 +36,7 @@ function GitQueryBuilder:constructor(repository)
   if repository:match('^%s*$') then error('GitQueryBuilder: repository path cannot be empty or whitespace') end
 
   return {
-    _repository = repository,
+    ['$_repository'] = repository,
     _command = nil,
     _args = {},
     _has_file = false,

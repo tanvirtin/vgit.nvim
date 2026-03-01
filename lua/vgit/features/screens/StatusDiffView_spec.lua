@@ -1738,13 +1738,11 @@ describe('StatusDiffView:', function()
 
     describe('commit', function()
       it('should cancel on empty message via _confirm_commit', function()
-        local buf = vim.api.nvim_create_buf(false, true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
-          '',
-          '# comment line',
-        })
-        view._commit_buf = buf
-        view._commit_win = nil
+        view._commit_component = {
+          is_valid = function() return true end,
+          get_lines = function() return { '', '# comment line' } end,
+          unmount = function() end,
+        }
 
         view:_confirm_commit()
 
@@ -1753,14 +1751,11 @@ describe('StatusDiffView:', function()
       end)
 
       it('should filter out comment lines', function()
-        local buf = vim.api.nvim_create_buf(false, true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
-          'feat: add new feature',
-          '# This is a comment',
-          'More details here',
-        })
-        view._commit_buf = buf
-        view._commit_win = nil
+        view._commit_component = {
+          is_valid = function() return true end,
+          get_lines = function() return { 'feat: add new feature', '# This is a comment', 'More details here' } end,
+          unmount = function() end,
+        }
 
         view:_confirm_commit()
 
@@ -1770,12 +1765,11 @@ describe('StatusDiffView:', function()
       end)
 
       it('should call repo:commit with message via _confirm_commit', function()
-        local buf = vim.api.nvim_create_buf(false, true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
-          'feat: add new feature',
-        })
-        view._commit_buf = buf
-        view._commit_win = nil
+        view._commit_component = {
+          is_valid = function() return true end,
+          get_lines = function() return { 'feat: add new feature' } end,
+          unmount = function() end,
+        }
 
         view:_confirm_commit()
 
@@ -1785,12 +1779,11 @@ describe('StatusDiffView:', function()
       end)
 
       it('should show success message after commit', function()
-        local buf = vim.api.nvim_create_buf(false, true)
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
-          'test commit',
-        })
-        view._commit_buf = buf
-        view._commit_win = nil
+        view._commit_component = {
+          is_valid = function() return true end,
+          get_lines = function() return { 'test commit' } end,
+          unmount = function() end,
+        }
 
         view:_confirm_commit()
 
@@ -2166,24 +2159,9 @@ describe('StatusDiffView:', function()
         eq({}, view._debounce_cleanups)
       end)
 
-      it('should call emit_cleanup_events', function()
-        local emit_called = false
-        view.emit_cleanup_events = function()
-          emit_called = true
-        end
-        view._component_manager = { destroy = function() end }
-        view._debounce_cleanups = {}
-
-        view:destroy()
-
-        assert.is_true(emit_called)
-      end)
-
       it('should call component_manager:destroy', function()
         local manager_destroyed = false
         view._debounce_cleanups = {}
-        view._diff_component = { component_will_unmount = function() end }
-        view._tree_component = { component_will_unmount = function() end }
         view._component_manager = {
           destroy = function()
             manager_destroyed = true
@@ -2193,29 +2171,6 @@ describe('StatusDiffView:', function()
         view:destroy()
 
         assert.is_true(manager_destroyed)
-      end)
-    end)
-
-    describe('emit_cleanup_events', function()
-      it('should call component_will_unmount on both components', function()
-        local diff_unmount_called = false
-        local tree_unmount_called = false
-
-        view._diff_component = {
-          component_will_unmount = function()
-            diff_unmount_called = true
-          end,
-        }
-        view._tree_component = {
-          component_will_unmount = function()
-            tree_unmount_called = true
-          end,
-        }
-
-        view:emit_cleanup_events()
-
-        assert.is_true(diff_unmount_called)
-        assert.is_true(tree_unmount_called)
       end)
     end)
 

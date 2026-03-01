@@ -15,17 +15,13 @@ function Buffer:constructor(bufnr)
   return {
     bufnr = bufnr,
     _modifiable = nil,
-    _on_render = function() end,
+    on_render = function() end,
     _is_attached_to_screen = false,
     _text_extmark = Extmark(bufnr, 'text'),
     _lnum_extmark = Extmark(bufnr, 'lnum'),
     _sign_extmark = Extmark(bufnr, 'sign'),
     _highlight_extmark = Extmark(bufnr, 'highlight'),
   }
-end
-
-function Buffer:sync()
-  return self
 end
 
 function Buffer:set_state(state)
@@ -45,7 +41,7 @@ function Buffer:attach_to_changes(opts)
 end
 
 function Buffer:attach_to_renderer(on_render)
-  self._on_render = on_render or function() end
+  self.on_render = on_render or function() end
 
   if not self._is_attached_to_screen then
     renderer.attach(self)
@@ -66,7 +62,7 @@ function Buffer:on(event_type, callback)
 end
 
 function Buffer:render(top, bot)
-  self._on_render(top, bot)
+  self.on_render(top, bot)
   return self
 end
 
@@ -213,11 +209,11 @@ function Buffer:get_line_count()
   return vim.api.nvim_buf_line_count(self.bufnr)
 end
 
-function Buffer:editing()
+function Buffer:is_modified()
   return self:get_option('modified')
 end
 
-function Buffer:filetype()
+function Buffer:get_filetype()
   return fs.detect_filetype(self:get_name())
 end
 

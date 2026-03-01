@@ -17,6 +17,7 @@ local ComponentManager = lazy('vgit.ui.ComponentManager')
 local TreeComponent = lazy('vgit.ui.components.TreeComponent')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
+local CommitComponent = lazy('vgit.ui.components.CommitComponent')
 local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
 local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
 
@@ -37,11 +38,11 @@ function StatusDiffView:constructor()
     _diff_component = nil,
     _tree_component = nil,
     _component_manager = nil,
-    _commit_buf = nil,
-    _commit_win = nil,
+    _commit_component = nil,
     _debounce_cleanups = {},
     _refreshing = false,
     _skip_on_move = false,
+    _destroyed = false,
   }
 end
 
@@ -78,11 +79,16 @@ function StatusDiffView:get_hunk_alignment()
   return status_diff_view_setting:get('hunk_alignment')
 end
 
+function StatusDiffView:get_hunk_alignment_offset()
+  return status_diff_view_setting:get('hunk_alignment_offset') or 0
+end
+
 function StatusDiffView:hunk_down()
   if not self._diff_component or not self._diff_component:is_valid() then return end
 
   local current_index, total_hunks = self:get_current_mark_index()
   local hunk_alignment = self:get_hunk_alignment()
+  local hunk_alignment_offset = self:get_hunk_alignment_offset()
 
   if not current_index or total_hunks == 0 or current_index >= total_hunks then
     -- At last hunk or no hunks - move to next file
@@ -90,14 +96,14 @@ function StatusDiffView:hunk_down()
     if not item then return end
     self:_update_diff_component()
     if self._diff_component and self._diff_component:is_valid() then
-      self._diff_component:move_to_hunk(1, hunk_alignment)
+      self._diff_component:move_to_hunk(1, hunk_alignment, hunk_alignment_offset)
     end
   else
-    self._diff_component:hunk_down(hunk_alignment)
+    self._diff_component:hunk_down(hunk_alignment, hunk_alignment_offset)
   end
 
   local idx, count = self:get_current_mark_index()
-  if idx then statusline.set_hunk(idx, count) end
+  if idx then statusline.set_hunk({ index = idx, count = count }) end
 end
 
 function StatusDiffView:hunk_up()
@@ -105,6 +111,7 @@ function StatusDiffView:hunk_up()
 
   local current_index, total_hunks = self:get_current_mark_index()
   local hunk_alignment = self:get_hunk_alignment()
+  local hunk_alignment_offset = self:get_hunk_alignment_offset()
 
   if not current_index or total_hunks == 0 or current_index <= 1 then
     -- At first hunk or no hunks - move to previous file's last hunk
@@ -113,14 +120,14 @@ function StatusDiffView:hunk_up()
     self:_update_diff_component()
     -- Pass 0 to go to last hunk
     if self._diff_component and self._diff_component:is_valid() then
-      self._diff_component:move_to_hunk(0, hunk_alignment)
+      self._diff_component:move_to_hunk(0, hunk_alignment, hunk_alignment_offset)
     end
   else
-    self._diff_component:hunk_up(hunk_alignment)
+    self._diff_component:hunk_up(hunk_alignment, hunk_alignment_offset)
   end
 
   local idx, count = self:get_current_mark_index()
-  if idx then statusline.set_hunk(idx, count) end
+  if idx then statusline.set_hunk({ index = idx, count = count }) end
 end
 
 function StatusDiffView:reset_hunk()
@@ -179,7 +186,7 @@ function StatusDiffView:reset_hunk()
 
   self._skip_on_move = true
   local idx, count = self:get_current_mark_index()
-  if idx then statusline.set_hunk(idx, count) end
+  if idx then statusline.set_hunk({ index = idx, count = count }) end
 end
 
 function StatusDiffView:find_next_file(filename, target_type)
@@ -206,7 +213,7 @@ function StatusDiffView:restore_hunk_position(hunk_index)
   local marks = self._diff_component:get_marks()
   if #marks > 0 then
     local target = math.min(hunk_index, #marks)
-    self._diff_component:move_to_hunk(target, self:get_hunk_alignment())
+    self._diff_component:move_to_hunk(target, self:get_hunk_alignment(), self:get_hunk_alignment_offset())
   end
 end
 
@@ -423,7 +430,7 @@ function StatusDiffView:_update_diff_component(hunk_index)
     filetype = entry.status.filetype,
   })
 
-  if hunk_index then self._diff_component:move_to_hunk(hunk_index, self:get_hunk_alignment()) end
+  if hunk_index then self._diff_component:move_to_hunk(hunk_index, self:get_hunk_alignment(), self:get_hunk_alignment_offset()) end
 
   return true
 end
@@ -481,7 +488,7 @@ function StatusDiffView:stage_hunk()
 
   self._skip_on_move = true
   local idx, count = self:get_current_mark_index()
-  if idx then statusline.set_hunk(idx, count) end
+  if idx then statusline.set_hunk({ index = idx, count = count }) end
 end
 
 function StatusDiffView:unstage_hunk()
@@ -537,7 +544,7 @@ function StatusDiffView:unstage_hunk()
 
   self._skip_on_move = true
   local idx, count = self:get_current_mark_index()
-  if idx then statusline.set_hunk(idx, count) end
+  if idx then statusline.set_hunk({ index = idx, count = count }) end
 end
 
 function StatusDiffView:stage_entry()
@@ -676,27 +683,19 @@ function StatusDiffView:reset_entry_from_diff()
 end
 
 function StatusDiffView:_is_commit_split_open()
-  return self._commit_buf
-    and vim.api.nvim_buf_is_valid(self._commit_buf)
-    and self._commit_win
-    and vim.api.nvim_win_is_valid(self._commit_win)
+  return self._commit_component and self._commit_component:is_valid() or false
 end
 
 function StatusDiffView:_close_commit_split()
-  if self._commit_win and vim.api.nvim_win_is_valid(self._commit_win) then
-    vim.api.nvim_win_close(self._commit_win, true)
+  if self._commit_component and self._commit_component:is_valid() then
+    self._commit_component:unmount()
   end
-  if self._commit_buf and vim.api.nvim_buf_is_valid(self._commit_buf) then
-    vim.api.nvim_buf_delete(self._commit_buf, { force = true })
-  end
-  self._commit_buf = nil
-  self._commit_win = nil
+  self._commit_component = nil
 end
 
 function StatusDiffView:_confirm_commit()
-  if not self._commit_buf or not vim.api.nvim_buf_is_valid(self._commit_buf) then return end
-
-  local lines = vim.api.nvim_buf_get_lines(self._commit_buf, 0, -1, false)
+  if not self._commit_component or not self._commit_component:is_valid() then return end
+  local lines = self._commit_component:get_lines()
 
   local message_lines = {}
   for _, line in ipairs(lines) do
@@ -726,11 +725,9 @@ function StatusDiffView:commit()
   event.await()
 
   if self:_is_commit_split_open() then
-    vim.api.nvim_set_current_win(self._commit_win)
+    self._commit_component:focus()
     return
   end
-
-  local buf = vim.api.nvim_create_buf(false, true)
 
   local diff_keymaps = status_diff_view_setting:get('keymaps')
   local confirm_key = self:get_key(diff_keymaps.commit_confirm) or '<C-s>'
@@ -761,50 +758,36 @@ function StatusDiffView:commit()
     end
   end
 
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-
-  vim.cmd('botright 20split')
-  local win = vim.api.nvim_get_current_win()
-  vim.api.nvim_win_set_buf(win, buf)
-
-  vim.api.nvim_set_option_value('buftype', 'nofile', { buf = buf })
-  vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = buf })
-  vim.api.nvim_set_option_value('filetype', 'gitcommit', { buf = buf })
-
-  vim.api.nvim_set_option_value('number', false, { win = win })
-  vim.api.nvim_set_option_value('relativenumber', false, { win = win })
-  vim.api.nvim_set_option_value('signcolumn', 'no', { win = win })
-  vim.api.nvim_set_option_value('wrap', true, { win = win })
-  vim.api.nvim_set_option_value('cursorline', true, { win = win })
-
-  self._commit_buf = buf
-  self._commit_win = win
-
-  vim.keymap.set(
-    { 'n', 'i' },
-    confirm_key,
-    event.async(function()
-      self:_confirm_commit()
-    end),
-    { buffer = buf, desc = 'Confirm commit' }
-  )
-
-  vim.keymap.set('n', cancel_key, function()
-    self:_close_commit_split()
-    console.info('Commit cancelled')
-  end, { buffer = buf, desc = 'Cancel commit' })
-
-  vim.api.nvim_create_autocmd('BufWipeout', {
-    buffer = buf,
-    once = true,
-    callback = function()
-      self._commit_buf = nil
-      self._commit_win = nil
-    end,
+  local commit_component = CommitComponent({
+    filetype = 'gitcommit',
+    height = 20,
+    split_direction = 'botright',
   })
 
-  vim.api.nvim_win_set_cursor(win, { 1, 0 })
+  commit_component:mount()
+  commit_component:set_lines(lines)
+
+  commit_component:set_keymap({
+    mode = { 'n', 'i' },
+    key = confirm_key,
+    desc = 'Confirm commit',
+  }, function()
+    self:_confirm_commit()
+  end)
+
+  commit_component:set_keymap('n', cancel_key, function()
+    self:_close_commit_split()
+    console.info('Commit cancelled')
+  end, 'Cancel commit')
+
+  commit_component:on('BufWinLeave', function()
+    self._commit_component = nil
+  end)
+
+  commit_component:set_cursor({ 1, 0 })
   vim.cmd('startinsert')
+
+  self._commit_component = commit_component
 end
 
 function StatusDiffView:open_file()
@@ -818,7 +801,7 @@ function StatusDiffView:open_file()
   event.await()
   fs.open(filename)
 
-  if mark then Window(0):set_lnum(mark.top_relative):position_cursor('center') end
+  if mark then Window(0):set_lnum(mark.top_relative):scroll_to('center') end
 end
 
 function StatusDiffView:_handle_file_selection_change(item)
@@ -873,7 +856,7 @@ function StatusDiffView:_handle_file_selection_change(item)
 
       if self._diff_component.call then
         self._diff_component:call(function()
-          self._diff_component:move_to_hunk(target_hunk, self:get_hunk_alignment())
+          self._diff_component:move_to_hunk(target_hunk, self:get_hunk_alignment(), self:get_hunk_alignment_offset())
         end)
       end
     else
@@ -1217,7 +1200,7 @@ function StatusDiffView:_create_entries_view(data)
   local wrapper = LayoutComponent({
     spec = LayoutSpec.horizontal({
       LayoutSpec.view(self._tree_component, { width = '30%' }),
-      LayoutSpec.view(self._diff_component, { expand = true }),
+      LayoutSpec.view(self._diff_component, { flex = 1 }),
     }),
   })
 
@@ -1227,8 +1210,6 @@ function StatusDiffView:_create_entries_view(data)
     width = '100vw',
     height = '100vh',
   }))
-
-  self._tree_component:component_did_mount()
 
   self:setup_keymaps()
 
@@ -1258,11 +1239,6 @@ function StatusDiffView:_create_entries_view(data)
   end
 
   return true
-end
-
-function StatusDiffView:emit_cleanup_events()
-  self._diff_component:component_will_unmount()
-  self._tree_component:component_will_unmount()
 end
 
 function StatusDiffView:on_git_change()
@@ -1303,14 +1279,14 @@ function StatusDiffView:on_git_change()
 end
 
 function StatusDiffView:destroy()
+  if self._destroyed then return end
+  self._destroyed = true
   self:_close_commit_split()
   for _, cleanup in ipairs(self._debounce_cleanups) do
     cleanup()
   end
   self._debounce_cleanups = {}
-  self:emit_cleanup_events()
   self._component_manager:destroy()
-  self._destroyed = true
 end
 
 return StatusDiffView

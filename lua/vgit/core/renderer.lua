@@ -1,25 +1,20 @@
 local renderer = {
   registered = false,
   buffers = {},
+  ns_id = nil,
 }
 
-local ns_id = nil
-
 local function ensure_ns_id()
-  if ns_id then return ns_id end
-  ns_id = vim.api.nvim_create_namespace('vgit')
-  return ns_id
-end
-
-function renderer.get_ns_id()
-  return ensure_ns_id()
+  if renderer.ns_id then return renderer.ns_id end
+  renderer.ns_id = vim.api.nvim_create_namespace('vgit')
+  return renderer.ns_id
 end
 
 function renderer.register_module()
   if renderer.registered then return renderer end
 
   ensure_ns_id()
-  vim.api.nvim_set_decoration_provider(ns_id, {
+  vim.api.nvim_set_decoration_provider(renderer.ns_id, {
     on_win = function(_, _, bufnr, top, bot)
       local buffer = renderer.buffers[bufnr]
       if buffer and bufnr == buffer.bufnr then buffer:render(top, bot) end
@@ -47,7 +42,7 @@ end
 function renderer.reset()
   renderer.registered = false
   renderer.buffers = {}
-  ns_id = nil
+  renderer.ns_id = nil
 end
 
 return renderer

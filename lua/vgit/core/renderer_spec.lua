@@ -4,11 +4,18 @@ local renderer = require('vgit.core.renderer')
 local eq = assert.are.same
 
 describe('renderer:', function()
-  local buffer = { bufnr = 1, on_render = function() end }
+  local buffer = {
+    bufnr = 1,
+    on_render = function() end,
+    render = function(self, top, bot)
+      self.on_render(top, bot)
+    end,
+  }
 
   before_each(function()
     renderer.buffers = {}
     renderer.registered = false
+    renderer.ns_id = nil
   end)
 
   describe('register_module', function()

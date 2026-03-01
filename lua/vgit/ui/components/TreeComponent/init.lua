@@ -12,15 +12,20 @@ local DepthTree = lazy('vgit.ui.components.TreeComponent.DepthTree')
 
 local TreeComponent = Component:extend()
 
-function TreeComponent:constructor(props)
-  local instance = Component.constructor(self, props)
-  instance.state = {
-    list = props and props.list or {},
-    title = props and props.title or '',
+function TreeComponent:get_initial_state()
+  return {
+    list = {},
+    title = '',
     hls = {},
     virtual_texts = {},
     shadow_list = {},
   }
+end
+
+function TreeComponent:constructor(props)
+  local instance = Component.constructor(self, props)
+  instance.state.list = props and props.list or {}
+  instance.state.title = props and props.title or ''
   instance._element = nil
   instance._on_enter_callback = nil
   instance._on_move_callback = nil
@@ -209,9 +214,7 @@ function TreeComponent:toggle_current_list_item()
 
     if item and item.open ~= nil then item.open = not item.open end
 
-    -- Force re-render through lifecycle (list reference unchanged, but tree structure mutated)
-    self._needs_update = true
-    self:update(self.state)
+    if self._mounted then self:render() end
   end)
 end
 
@@ -437,58 +440,55 @@ function TreeComponent:component_will_mount()
 end
 
 function TreeComponent:paint()
-  if not self._element then return end
+  self:with_element(function(el)
+    local virtual_texts = self.state.virtual_texts
+    for i = 1, #virtual_texts do
+      local virtual_text = virtual_texts[i]
+      if virtual_text.type == 'before' then
+        el:place_extmark_text({
+          text = virtual_text.text,
+          hl = virtual_text.hl,
+          row = virtual_text.lnum - 1,
+          col = 0,
+        })
+      end
+      if virtual_text.type == 'after' then
+        el:place_extmark_text({
+          text = virtual_text.text,
+          hl = virtual_text.hl,
+          row = virtual_text.lnum - 1,
+          col = 0,
+          pos = 'eol',
+        })
+      end
+    end
 
-  local buffer = self._element._buffer
+    local hls = self.state.hls
+    for i = 1, #hls do
+      local hl_info = hls[i]
+      local hl = hl_info.hl
+      local lnum = hl_info.lnum
+      local range = hl_info.range
 
-  local virtual_texts = self.state.virtual_texts
-  for i = 1, #virtual_texts do
-    local virtual_text = virtual_texts[i]
-    if virtual_text.type == 'before' then
-      buffer:place_extmark_text({
-        text = virtual_text.text,
-        hl = virtual_text.hl,
-        row = virtual_text.lnum - 1,
-        col = 0,
+      el:place_extmark_highlight({
+        hl = hl,
+        row = lnum - 1,
+        col_range = {
+          from = range.top,
+          to = range.bot,
+        },
       })
     end
-    if virtual_text.type == 'after' then
-      buffer:place_extmark_text({
-        text = virtual_text.text,
-        hl = virtual_text.hl,
-        row = virtual_text.lnum - 1,
-        col = 0,
-        pos = 'eol',
-      })
-    end
-  end
-
-  local hls = self.state.hls
-  for i = 1, #hls do
-    local hl_info = hls[i]
-    local hl = hl_info.hl
-    local lnum = hl_info.lnum
-    local range = hl_info.range
-
-    buffer:place_extmark_highlight({
-      hl = hl,
-      row = lnum - 1,
-      col_range = {
-        from = range.top,
-        to = range.bot,
-      },
-    })
-  end
+  end)
 
   return self
 end
 
 function TreeComponent:render()
   self:with_element(function(el)
-    local buffer = el._buffer
     self._rendering = true
-    buffer:clear_extmarks()
-    buffer:set_lines(self:generate_lines())
+    el:clear_extmarks()
+    el:set_lines(self:generate_lines())
     self._rendering = false
     self:paint()
   end)
@@ -518,16 +518,13 @@ function TreeComponent:component_did_mount()
 
       if self.props.keymaps then self:setup_keymaps(self.props.keymaps, self.props.keymap_handlers) end
 
-      local bufnr = el:get_bufnr()
-      if bufnr then
-        vim.api.nvim_create_autocmd({ 'CursorMoved' }, {
-          buffer = bufnr,
-          callback = function()
-            if self._rendering then return end
-            local item = self:get_current_list_item()
-            if self._on_move_callback then self._on_move_callback(item) end
-          end,
-        })
+      local buf = el:get_buffer()
+      if buf then
+        buf:on('CursorMoved', function()
+          if self._rendering then return end
+          local item = self:get_current_list_item()
+          if self._on_move_callback then self._on_move_callback(item) end
+        end)
       end
 
       self._keymaps_setup = true
@@ -605,11 +602,7 @@ function TreeComponent:is_valid()
 end
 
 function TreeComponent:focus()
-  if self._element then self._element:focus() end
-end
-
-function TreeComponent:destroy()
-  self._element:destroy()
+  self:with_element(function(el) el:focus() end)
 end
 
 function TreeComponent:unmount()

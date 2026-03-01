@@ -32,41 +32,40 @@ function BlameInfoComponent:component_will_mount()
 end
 
 function BlameInfoComponent:render()
-  if not self._element or not self._element:is_valid() then return end
-
   local blame = self.props.blame
-  if blame then
-    local max_line_length = 88
-    local commit_message = blame.commit_message
+  if not blame then return end
 
-    if #commit_message > max_line_length then commit_message = commit_message:sub(1, max_line_length) .. '...' end
+  local max_line_length = 88
+  local commit_message = blame.commit_message
 
-    local commit_details = blame.commit_hash
-    if blame.parent_hash then commit_details = string.format('%s -> %s', blame.parent_hash, blame.commit_hash) end
+  if #commit_message > max_line_length then commit_message = commit_message:sub(1, max_line_length) .. '...' end
 
-    local lines = {
-      commit_details,
-      string.format('%s (%s)', blame.author, blame.author_mail),
-      string.format('%s', commit_message),
-    }
+  local commit_details = blame.commit_hash
+  if blame.parent_hash then commit_details = string.format('%s -> %s', blame.parent_hash, blame.commit_hash) end
 
-    self._element._buffer:set_lines(lines)
+  local lines = {
+    commit_details,
+    string.format('%s (%s)', blame.author, blame.author_mail),
+    string.format('%s', commit_message),
+  }
 
-    self._element:clear_extmarks()
+  self:with_element(function(el)
+    el:set_lines(lines)
+    el:clear_extmarks()
 
     if lines[1]:match('^[a-f0-9]+%s*%->%s*[a-f0-9]+$') then
-      self._element:place_extmark_highlight({
+      el:place_extmark_highlight({
         hl = 'Character',
         pattern = '^([a-f0-9]+)',
         row = 0,
       })
-      self._element:place_extmark_highlight({
+      el:place_extmark_highlight({
         hl = 'Constant',
         pattern = '([a-f0-9]+)$',
         row = 0,
       })
     else
-      self._element:place_extmark_highlight({
+      el:place_extmark_highlight({
         hl = 'Constant',
         row = 0,
         col_range = {
@@ -76,14 +75,14 @@ function BlameInfoComponent:render()
       })
     end
 
-    self._element:place_extmark_text({
+    el:place_extmark_text({
       text = string.format('%s (%s)', blame:age().display, os.date('%c', blame.author_time)),
       hl = 'GitComment',
       row = 1,
       col = 0,
       pos = 'eol',
     })
-  end
+  end)
 end
 
 function BlameInfoComponent:get_layout_spec()

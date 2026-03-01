@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
 local Object = lazy('vgit.core.Object')
+local Buffer = lazy('vgit.core.Buffer')
 
 local SyntaxAnnotator = Object:extend()
 
@@ -35,18 +36,9 @@ function SyntaxAnnotator:clear_cache()
   self._cache_order = {}
 end
 
-function SyntaxAnnotator:_create_scratch_buffer(lines, filetype)
-  local bufnr = vim.api.nvim_create_buf(false, true)
-
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-
-  if filetype and filetype ~= '' then vim.api.nvim_set_option_value('filetype', filetype, { buf = bufnr }) end
-
-  return bufnr
-end
-
-function SyntaxAnnotator:_parse_highlights(bufnr, filetype)
+function SyntaxAnnotator:_parse_highlights(scratch_buffer, filetype)
   local highlights = {}
+  local bufnr = scratch_buffer.bufnr
 
   local ok, parser = pcall(vim.treesitter.get_parser, bufnr, filetype)
   if not ok or not parser then return highlights end
@@ -87,13 +79,16 @@ function SyntaxAnnotator:annotate(lines, filetype)
   local key = self:_cache_key(lines, filetype)
   if key and self._cache[key] then return self._cache[key] end
 
-  local bufnr = self:_create_scratch_buffer(lines, filetype)
-  local highlights = self:_parse_highlights(bufnr, filetype)
+  local scratch_buffer = Buffer():create(false, true)
+  scratch_buffer:set_lines(lines)
+  if filetype and filetype ~= '' then scratch_buffer:set_option('filetype', filetype) end
+
+  local highlights = self:_parse_highlights(scratch_buffer, filetype)
 
   if key then self:_cache_put(key, highlights) end
 
   vim.schedule(function()
-    if vim.api.nvim_buf_is_valid(bufnr) then vim.api.nvim_buf_delete(bufnr, { force = true }) end
+    if scratch_buffer:is_valid() then scratch_buffer:delete({ force = true }) end
   end)
 
   return highlights
