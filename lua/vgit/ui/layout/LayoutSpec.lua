@@ -136,6 +136,7 @@ function LayoutSpec.view(view_instance, opts)
     anchor = opts.anchor,
     offset = opts.offset,
     focus = opts.focus,
+    zindex = opts.zindex,
   }
 end
 

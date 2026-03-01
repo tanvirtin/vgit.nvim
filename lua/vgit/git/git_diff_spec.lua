@@ -1,4 +1,5 @@
 local eq = assert.are.same
+local GitHunk = require('vgit.git.GitHunk')
 
 describe('git_diff:', function()
   local git_diff
@@ -37,22 +38,22 @@ describe('git_diff:', function()
     package.loaded['vgit.git.GitQueryBuilder'] = original_qb
   end)
 
-  describe('range_patch_entries', function()
+  describe('range_hunk_entries', function()
     it('should return empty table when execute returns empty result', function()
       mock_execute_result = {}
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(0, #entries)
     end)
 
     it('should return empty table when execute returns nil', function()
       mock_execute_result = nil
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(0, #entries)
     end)
 
     it('should return nil and error when execute errors', function()
       mock_execute_error = { 'fatal: not a git repository' }
-      local entries, err = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries, err = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       assert.is_nil(entries)
       eq({ 'fatal: not a git repository' }, err)
     end)
@@ -68,7 +69,7 @@ describe('git_diff:', function()
         '-old line',
         '+new line',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(2, #entries)
       eq('file_header', entries[1].type)
       eq('foo.lua', entries[1].filename)
@@ -87,7 +88,7 @@ describe('git_diff:', function()
         '-old',
         '+new',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq('foo.lua', entries[1].filename)
       eq('foo.lua', entries[2].filename)
       eq('lua', entries[1].filetype)
@@ -105,7 +106,7 @@ describe('git_diff:', function()
         '-old b',
         '+new b',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(4, #entries)
       eq('file_header', entries[1].type)
       eq('a.lua', entries[1].filename)
@@ -129,7 +130,7 @@ describe('git_diff:', function()
         '-old',
         '+new',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(2, #entries)
       eq('file_header', entries[1].type)
       eq('old.lua -> new.lua', entries[1].filename)
@@ -143,7 +144,7 @@ describe('git_diff:', function()
         'index abc..def 100644',
         'Binary files a/image.png and b/image.png differ',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(0, #entries)
     end)
 
@@ -156,7 +157,7 @@ describe('git_diff:', function()
         'diff --git a/image.png b/image.png',
         'Binary files a/image.png and b/image.png differ',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(2, #entries)
       eq('file_header', entries[1].type)
       eq('script.lua', entries[1].filename)
@@ -171,7 +172,7 @@ describe('git_diff:', function()
         '-real',
         '+line',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(2, #entries)
       eq('file_header', entries[1].type)
       eq('hunk', entries[2].type)
@@ -185,7 +186,7 @@ describe('git_diff:', function()
         '-old',
         '+new',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq('@@ -10,3 +10,3 @@ function MyFunc()', entries[2].hunk.header)
     end)
 
@@ -199,7 +200,7 @@ describe('git_diff:', function()
         '-old2',
         '+new2',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(3, #entries)
       eq('file_header', entries[1].type)
       eq('hunk', entries[2].type)
@@ -218,7 +219,7 @@ describe('git_diff:', function()
         '-old',
         '+new',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(2, #entries)
       eq(2, #entries[2].hunk.diff)
       eq('-old', entries[2].hunk.diff[1])
@@ -234,7 +235,7 @@ describe('git_diff:', function()
         '-a',
         '+b',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(2, #entries)
       eq(5, entries[2].hunk.top)
       eq(8, entries[2].hunk.bot)
@@ -247,7 +248,7 @@ describe('git_diff:', function()
         '-old',
         '+new',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(1, entries[2].hunk.top)
       eq(1, entries[2].hunk.bot)
     end)
@@ -258,7 +259,7 @@ describe('git_diff:', function()
         '@@ -0,0 +1 @@',
         '+new file',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(1, entries[2].hunk.top)
       eq(1, entries[2].hunk.bot)
     end)
@@ -270,7 +271,7 @@ describe('git_diff:', function()
         '-old',
         '+new',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(10, entries[2].hunk.top)
       eq(12, entries[2].hunk.bot)
     end)
@@ -282,7 +283,7 @@ describe('git_diff:', function()
         '-x',
         '+y',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       eq(5, entries[2].hunk.top)
       eq(5, entries[2].hunk.bot)
     end)
@@ -297,7 +298,7 @@ describe('git_diff:', function()
         '-c',
         '+d',
       }
-      local entries = git_diff.range_patch_entries('/repo', 'HEAD^', 'HEAD')
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
       -- entries[1]=file_header, entries[2]=hunk1, entries[3]=hunk2
       eq(1, entries[2].hunk.top)
       eq(2, entries[2].hunk.bot)
@@ -306,22 +307,22 @@ describe('git_diff:', function()
     end)
   end)
 
-  describe('staged_patch_entries', function()
+  describe('staged_hunk_entries', function()
     it('should return empty table when execute returns empty result', function()
       mock_execute_result = {}
-      local entries = git_diff.staged_patch_entries('/repo')
+      local entries = git_diff.staged_hunk_entries('/repo')
       eq(0, #entries)
     end)
 
     it('should return empty table when execute returns nil', function()
       mock_execute_result = nil
-      local entries = git_diff.staged_patch_entries('/repo')
+      local entries = git_diff.staged_hunk_entries('/repo')
       eq(0, #entries)
     end)
 
     it('should return nil and error when execute errors', function()
       mock_execute_error = { 'fatal: not a git repository' }
-      local entries, err = git_diff.staged_patch_entries('/repo')
+      local entries, err = git_diff.staged_hunk_entries('/repo')
       assert.is_nil(entries)
       eq({ 'fatal: not a git repository' }, err)
     end)
@@ -333,7 +334,7 @@ describe('git_diff:', function()
         '-old staged',
         '+new staged',
       }
-      local entries = git_diff.staged_patch_entries('/repo')
+      local entries = git_diff.staged_hunk_entries('/repo')
       eq(2, #entries)
       eq('file_header', entries[1].type)
       eq('staged.lua', entries[1].filename)
@@ -369,7 +370,7 @@ describe('git_diff:', function()
       package.loaded['vgit.git.GitQueryBuilder'] = tracked_qb
       git_diff = require('vgit.git.git_diff')
 
-      git_diff.staged_patch_entries('/repo')
+      git_diff.staged_hunk_entries('/repo')
 
       local cached_found = false
       for _, opt in ipairs(options_called) do
@@ -388,28 +389,28 @@ describe('git_diff:', function()
         '-old',
         '+new',
       }
-      local entries = git_diff.staged_patch_entries('/repo')
+      local entries = git_diff.staged_hunk_entries('/repo')
       eq(3, entries[2].hunk.top)
       eq(4, entries[2].hunk.bot)
     end)
   end)
 
-  describe('unstaged_patch_entries', function()
+  describe('unstaged_hunk_entries', function()
     it('should return empty table when execute returns empty result', function()
       mock_execute_result = {}
-      local entries = git_diff.unstaged_patch_entries('/repo')
+      local entries = git_diff.unstaged_hunk_entries('/repo')
       eq(0, #entries)
     end)
 
     it('should return empty table when execute returns nil', function()
       mock_execute_result = nil
-      local entries = git_diff.unstaged_patch_entries('/repo')
+      local entries = git_diff.unstaged_hunk_entries('/repo')
       eq(0, #entries)
     end)
 
     it('should return nil and error when execute errors', function()
       mock_execute_error = { 'fatal: not a git repository' }
-      local entries, err = git_diff.unstaged_patch_entries('/repo')
+      local entries, err = git_diff.unstaged_hunk_entries('/repo')
       assert.is_nil(entries)
       eq({ 'fatal: not a git repository' }, err)
     end)
@@ -421,7 +422,7 @@ describe('git_diff:', function()
         '-old unstaged',
         '+new unstaged',
       }
-      local entries = git_diff.unstaged_patch_entries('/repo')
+      local entries = git_diff.unstaged_hunk_entries('/repo')
       eq(2, #entries)
       eq('file_header', entries[1].type)
       eq('unstaged.lua', entries[1].filename)
@@ -454,7 +455,7 @@ describe('git_diff:', function()
       package.loaded['vgit.git.GitQueryBuilder'] = tracked_qb
       git_diff = require('vgit.git.git_diff')
 
-      git_diff.unstaged_patch_entries('/repo')
+      git_diff.unstaged_hunk_entries('/repo')
       assert.is_false(refs_called)
 
       package.loaded['vgit.git.GitQueryBuilder'] = mock_qb
@@ -467,9 +468,89 @@ describe('git_diff:', function()
         '-old',
         '+new',
       }
-      local entries = git_diff.unstaged_patch_entries('/repo')
+      local entries = git_diff.unstaged_hunk_entries('/repo')
       eq(7, entries[2].hunk.top)
       eq(10, entries[2].hunk.bot)
+    end)
+  end)
+
+  describe('hunks are GitHunk instances', function()
+    it('should return GitHunk instances that pass is() check', function()
+      mock_execute_result = {
+        'diff --git a/foo.lua b/foo.lua',
+        '@@ -1,3 +1,3 @@',
+        ' unchanged',
+        '-old line',
+        '+new line',
+      }
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
+      local hunk = entries[2].hunk
+      assert.is_true(hunk:is(GitHunk))
+    end)
+
+    it('should populate hunk.type as "change" for mixed add/remove', function()
+      mock_execute_result = {
+        'diff --git a/foo.lua b/foo.lua',
+        '@@ -1,3 +1,3 @@',
+        ' unchanged',
+        '-old line',
+        '+new line',
+      }
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
+      eq('change', entries[2].hunk.type)
+    end)
+
+    it('should populate hunk.type as "add" for pure additions', function()
+      mock_execute_result = {
+        'diff --git a/foo.lua b/foo.lua',
+        '@@ -1,0 +1,2 @@',
+        '+new line 1',
+        '+new line 2',
+      }
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
+      eq('add', entries[2].hunk.type)
+    end)
+
+    it('should populate hunk.type as "remove" for pure deletions', function()
+      mock_execute_result = {
+        'diff --git a/foo.lua b/foo.lua',
+        '@@ -1,2 +1,0 @@',
+        '-old line 1',
+        '-old line 2',
+      }
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
+      eq('remove', entries[2].hunk.type)
+    end)
+
+    it('should track stat.added and stat.removed counts', function()
+      mock_execute_result = {
+        'diff --git a/foo.lua b/foo.lua',
+        '@@ -1,4 +1,5 @@',
+        ' unchanged',
+        '-removed 1',
+        '-removed 2',
+        '+added 1',
+        '+added 2',
+        '+added 3',
+      }
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
+      local hunk = entries[2].hunk
+      eq(3, hunk.stat.added)
+      eq(2, hunk.stat.removed)
+    end)
+
+    it('should count context lines as neither added nor removed in stat', function()
+      mock_execute_result = {
+        'diff --git a/foo.lua b/foo.lua',
+        '@@ -1,3 +1,3 @@',
+        ' context',
+        '-old',
+        '+new',
+      }
+      local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
+      local hunk = entries[2].hunk
+      eq(1, hunk.stat.added)
+      eq(1, hunk.stat.removed)
     end)
   end)
 end)

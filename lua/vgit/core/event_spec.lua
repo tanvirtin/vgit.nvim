@@ -55,6 +55,137 @@ describe('event:', function()
     end)
   end)
 
+  describe('debounce', function()
+    it('should execute first call immediately', function()
+      local call_count = 0
+      local debounced, cleanup = event.debounce(function()
+        call_count = call_count + 1
+      end, 100)
+
+      debounced()
+      assert.are.equal(1, call_count)
+      cleanup()
+    end)
+
+    it('should defer second call within cooldown period', function()
+      local call_count = 0
+      local debounced, cleanup = event.debounce(function()
+        call_count = call_count + 1
+      end, 50)
+
+      debounced()
+      assert.are.equal(1, call_count)
+
+      -- Second call within cooldown should NOT execute immediately
+      debounced()
+      assert.are.equal(1, call_count)
+
+      -- Wait for debounce timer + schedule to fire
+      vim.wait(200, function() return call_count >= 2 end, 10)
+      assert.are.equal(2, call_count)
+
+      cleanup()
+    end)
+
+    it('should forward arguments correctly', function()
+      local received_args = {}
+      local debounced, cleanup = event.debounce(function(a, b)
+        received_args = { a, b }
+      end, 100)
+
+      debounced('hello', 42)
+      assert.are.same({ 'hello', 42 }, received_args)
+      cleanup()
+    end)
+
+    it('cleanup should stop timer and reset state', function()
+      local call_count = 0
+      local debounced, cleanup = event.debounce(function()
+        call_count = call_count + 1
+      end, 50)
+
+      debounced()
+      assert.are.equal(1, call_count)
+
+      -- Second call schedules a deferred execution
+      debounced()
+      assert.are.equal(1, call_count)
+
+      -- Cleanup before timer fires
+      cleanup()
+
+      -- Wait past the debounce period — deferred call should NOT fire
+      vim.wait(150, function() return false end, 10)
+      assert.are.equal(1, call_count)
+    end)
+  end)
+
+  describe('debounce_async', function()
+    it('should return debounced function and cleanup function', function()
+      local debounced, cleanup = event.debounce_async(function() end, 100)
+
+      assert.is_function(debounced)
+      assert.is_function(cleanup)
+      cleanup()
+    end)
+  end)
+
+  describe('custom_on cleanup', function()
+    it('should remove autocmd when cleanup is called', function()
+      local call_count = 0
+      local cleanup = event.custom_on('TestCleanupEvent', function()
+        call_count = call_count + 1
+      end)
+
+      event.emit('TestCleanupEvent', {})
+      assert.are.equal(1, call_count)
+
+      cleanup()
+
+      -- Emitting again should not increment since autocmd was removed
+      pcall(event.emit, 'TestCleanupEvent', {})
+      assert.are.equal(1, call_count)
+    end)
+
+    it('should be safe to call cleanup twice', function()
+      local cleanup = event.custom_on('TestDoubleCleanup', function() end)
+
+      cleanup()
+
+      assert.has_no.errors(function()
+        cleanup()
+      end)
+    end)
+  end)
+
+  describe('disposable_on', function()
+    it('should remove augroup when cleanup is called', function()
+      local call_count = 0
+      local cleanup = event.disposable_on('BufRead', function()
+        call_count = call_count + 1
+      end)
+
+      vim.api.nvim_exec_autocmds('BufRead', { modeline = false })
+      assert.are.equal(1, call_count)
+
+      cleanup()
+
+      -- After cleanup, the autocmd should be removed
+      vim.api.nvim_exec_autocmds('BufRead', { modeline = false })
+      assert.are.equal(1, call_count)
+    end)
+
+    it('should be safe to call cleanup twice', function()
+      local cleanup = event.disposable_on('BufRead', function() end)
+
+      cleanup()
+
+      assert.has_no.errors(function()
+        cleanup()
+      end)
+    end)
+  end)
+
   describe('VGitDirChanged', function()
     it('should be emittable and receivable via custom_on', function()
       local received = false

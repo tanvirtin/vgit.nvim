@@ -14,10 +14,12 @@ function RootLayoutCalculator:constructor()
 end
 
 function RootLayoutCalculator:calculate_flex(spec, parent_bounds)
+  self.flex_calculator:set_root(self)
   return self.flex_calculator:calculate_flex(spec, parent_bounds)
 end
 
 function RootLayoutCalculator:calculate_absolute(spec, parent_bounds)
+  self.absolute_calculator:set_root(self)
   return self.absolute_calculator:calculate_absolute(spec, parent_bounds)
 end
 

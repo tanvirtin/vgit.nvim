@@ -1,6 +1,5 @@
 local lazy = require('vgit.core.lazy')
 
-local utils = lazy('vgit.core.utils')
 local event = lazy('vgit.core.event')
 local Object = lazy('vgit.core.Object')
 local Window = lazy('vgit.core.Window')
@@ -45,49 +44,15 @@ function LayoutRenderer:render_view_layout(layout)
     end
   end
 
-  if not view._config then view._config = {} end
+  view:set_window_mode(self.context.mode)
 
-  view._config.window_mode = self.context.mode
+  local win_plot = bounds:to_win_plot({
+    relative = 'editor',
+    zindex = spec.zindex or 2,
+    focus = spec.focus or false,
+  })
 
-  if self.context:is_lens_mode() then
-    local win_plot = bounds:to_win_plot({
-      relative = 'editor',
-      zindex = spec.zindex or 2,
-      focus = spec.focus or false,
-    })
-
-    if view._plot and type(view._plot) == 'table' then
-      if view._plot.win_plot then
-        local component_focusable = view._plot.win_plot.focusable
-        view._plot.win_plot = utils.object.assign(view._plot.win_plot, win_plot)
-        if component_focusable ~= nil then view._plot.win_plot.focusable = component_focusable end
-
-        view._plot.is_built = false
-        if type(view._plot.build) == 'function' then view._plot:build() end
-      else
-        view._plot.win_plot = win_plot
-      end
-    end
-  else
-    local win_plot = bounds:to_win_plot({
-      relative = 'editor',
-      zindex = spec.zindex or 2,
-      focus = spec.focus or false,
-    })
-
-    if view._plot and type(view._plot) == 'table' then
-      if view._plot.win_plot then
-        local component_focusable = view._plot.win_plot.focusable
-        view._plot.win_plot = utils.object.assign(view._plot.win_plot, win_plot)
-        if component_focusable ~= nil then view._plot.win_plot.focusable = component_focusable end
-
-        view._plot.is_built = false
-        if type(view._plot.build) == 'function' then view._plot:build() end
-      else
-        view._plot.win_plot = win_plot
-      end
-    end
-  end
+  view:apply_layout_win_plot(win_plot)
 
   if view.mount then view:mount() end
 

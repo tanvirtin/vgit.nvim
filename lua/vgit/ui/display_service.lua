@@ -9,8 +9,8 @@ local BlameView = lazy('vgit.features.screens.BlameView')
 local StashView = lazy('vgit.features.screens.StashView')
 local BranchView = lazy('vgit.features.screens.BranchView')
 local FileDiffView = lazy('vgit.features.screens.FileDiffView')
-local ProjectDiffView = lazy('vgit.features.screens.ProjectDiffView')
 local StatusDiffView = lazy('vgit.features.screens.StatusDiffView')
+local ProjectDiffView = lazy('vgit.features.screens.ProjectDiffView')
 local CommitPickerView = lazy('vgit.features.screens.CommitPickerView')
 
 local active_view = nil
@@ -25,7 +25,7 @@ function display_service.register_events()
     if active_view and active_view.on_git_change then
       active_view:on_git_change()
       -- View may have destroyed itself (e.g. no more changes after commit)
-      if active_view and active_view._destroyed then active_view = nil end
+      if active_view and active_view:is_destroyed() then active_view = nil end
     end
   end)
 
@@ -69,10 +69,7 @@ display_service.show_diff = event.async(function(data)
   end
 
   local success = view:create(data)
-  if not success then
-    console.error('Failed to create diff view')
-    return
-  end
+  if not success then return end
   active_view = view
 end)
 

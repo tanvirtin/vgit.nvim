@@ -7,14 +7,12 @@ local Layout = lazy('vgit.ui.Layout')
 local Object = lazy('vgit.core.Object')
 local Window = lazy('vgit.core.Window')
 local console = lazy('vgit.core.console')
-local git_show = lazy('vgit.git.git_show')
-local git_blame = lazy('vgit.git.git_blame')
 local repository = lazy('vgit.git.repository')
 local hunks_setting = lazy('vgit.settings.hunks')
 local scene_setting = lazy('vgit.settings.scene')
 local statusline = lazy('vgit.core.statusline_state')
-local display_service = lazy('vgit.ui.display_service')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
+local display_service = lazy('vgit.ui.display_service')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local file_diff_view_setting = lazy('vgit.settings.file_diff_view')
 local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
@@ -129,7 +127,11 @@ function FileDiffView:_refresh_diff_data()
     }
   end
 
-  local diff = repo:diff(diff_spec)
+  local diff, diff_err = repo:diff(diff_spec)
+  if diff_err then
+    console.debug.error(diff_err)
+    return
+  end
   if not diff then return end
 
   return {
@@ -249,7 +251,9 @@ function FileDiffView:_reconcile(opts)
   })
 
   if not self._diff_component or not self._diff_component:is_valid() then return false end
-  if opts.hunk_index then self._diff_component:move_to_hunk(opts.hunk_index, self:get_hunk_alignment(), self:get_hunk_alignment_offset()) end
+  if opts.hunk_index then
+    self._diff_component:move_to_hunk(opts.hunk_index, self:get_hunk_alignment(), self:get_hunk_alignment_offset())
+  end
 
   return true
 end
@@ -279,7 +283,11 @@ function FileDiffView:reset_current()
     console.debug.error(err)
     return
   end
-  repo:reset(filename)
+  local _, reset_err = repo:reset(filename)
+  if reset_err then
+    console.debug.error(reset_err)
+    return
+  end
 
   self:_reconcile()
 end
@@ -316,7 +324,11 @@ function FileDiffView:stage_hunk()
     return
   end
 
-  repo:stage_hunk(filename, hunk)
+  local _, stage_err = repo:stage_hunk(filename, hunk)
+  if stage_err then
+    console.debug.error(stage_err)
+    return
+  end
 
   self:_reconcile({ hunk_index = index })
 
@@ -340,7 +352,11 @@ function FileDiffView:unstage_hunk()
     return
   end
 
-  repo:unstage_hunk(filename, hunk)
+  local _, unstage_err = repo:unstage_hunk(filename, hunk)
+  if unstage_err then
+    console.debug.error(unstage_err)
+    return
+  end
 
   self:_reconcile({ hunk_index = index })
 
@@ -361,7 +377,11 @@ function FileDiffView:stage_current()
     return
   end
 
-  repo:stage_file(filename)
+  local _, stage_err = repo:stage_file(filename)
+  if stage_err then
+    console.debug.error(stage_err)
+    return
+  end
 
   self:_reconcile()
 end
@@ -379,7 +399,11 @@ function FileDiffView:unstage_current()
     return
   end
 
-  repo:unstage_file(filename)
+  local _, unstage_err = repo:unstage_file(filename)
+  if unstage_err then
+    console.debug.error(unstage_err)
+    return
+  end
 
   self:_reconcile()
 end
@@ -391,22 +415,21 @@ function FileDiffView:show_blame_view()
   local repo, err = repository.current()
   if not self:_handle_git_error(err, 'repository.current') then return end
 
-  local repo_path = repo:get_path()
   local filetype = fs.detect_filetype(filename)
 
-  local blames, blame_err = git_blame.list(repo_path, filename)
+  local blames, blame_err = repo:blame_list(filename)
   if blame_err or not blames or #blames == 0 then
     console.info('No blame information available for this file')
     return
   end
 
-  local lines, lines_err = git_show.lines(repo_path, filename, 'HEAD')
+  local lines, lines_err = repo:file_lines(filename, 'HEAD')
   if lines_err or not lines then lines = {} end
 
   display_service.show_blame_view({
     filename = filename,
     filetype = filetype,
-    reponame = repo_path,
+    reponame = repo:get_path(),
     blames = blames,
     lines = lines,
   })
@@ -543,6 +566,10 @@ function FileDiffView:setup_keymaps()
     mode = 'n',
     key = 'b',
   }, blame_fn)
+end
+
+function FileDiffView:is_destroyed()
+  return self._destroyed
 end
 
 function FileDiffView:destroy()

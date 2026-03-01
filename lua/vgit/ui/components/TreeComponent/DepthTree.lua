@@ -16,6 +16,11 @@ function DepthTree:value()
   return self._tree
 end
 
+function DepthTree:set_tree(tree)
+  self._tree = tree
+  return self
+end
+
 function DepthTree:get_parent_folder(segmented_folders, current_index)
   local folder = ''
   local depth = 1

@@ -4,6 +4,7 @@ local event = lazy('vgit.core.event')
 local Window = lazy('vgit.core.Window')
 local Component = lazy('vgit.ui.Component')
 local Element = lazy('vgit.ui.elements.Element')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
 local SearchFilter = lazy('vgit.ui.components.SearchComponent.SearchFilter')
 
@@ -12,12 +13,11 @@ local SearchComponent = Component:extend()
 function SearchComponent:constructor(props)
   local instance = Component.constructor(self, props)
 
-  instance._input_element = nil
-  instance._list_element = nil
-  instance._filter = SearchFilter()
-  instance._autocmd_ids = {}
   instance._loading = false
   instance._exhausted = false
+  instance._list_element = nil
+  instance._input_element = nil
+  instance._filter = SearchFilter()
 
   return instance
 end
@@ -84,30 +84,30 @@ function SearchComponent:_load_more_items()
   event.async(function()
     local new_items = self.props.on_load_more()
 
-    vim.schedule(function()
-      self._loading = false
+    event.await()
 
-      if not self._mounted then return end
+    self._loading = false
 
-      if not new_items or #new_items == 0 then
-        self._exhausted = true
-        self:render()
-        return
-      end
+    if not self._mounted then return end
 
-      local items = self.props.items or {}
-      for i = 1, #new_items do
-        items[#items + 1] = new_items[i]
-      end
+    if not new_items or #new_items == 0 then
+      self._exhausted = true
+      self:render()
+      return
+    end
 
-      local prev_visible = self.state.visible_count or 0
-      local prev_index = self.state.selected_index
+    local items = self.props.items or {}
+    for i = 1, #new_items do
+      items[#items + 1] = new_items[i]
+    end
 
-      self:_apply_filter()
-      local filtered = self.state.filtered_items
-      local new_visible = math.min(prev_visible + #new_items, #filtered)
-      self:set_state({ visible_count = new_visible, selected_index = prev_index })
-    end)
+    local prev_visible = self.state.visible_count or 0
+    local prev_index = self.state.selected_index
+
+    self:_apply_filter()
+    local filtered = self.state.filtered_items
+    local new_visible = math.min(prev_visible + #new_items, #filtered)
+    self:set_state({ visible_count = new_visible, selected_index = prev_index })
   end)()
 end
 
@@ -161,8 +161,6 @@ end
 
 function SearchComponent:close()
   if self.props.on_close then self.props.on_close() end
-
-  self:unmount()
 end
 
 function SearchComponent:get_selected_item()
@@ -177,24 +175,29 @@ function SearchComponent:_get_width()
   return LayoutContext.convert_dimension(width) or width
 end
 
-function SearchComponent:_get_col()
-  local width = self:_get_width()
-  return math.floor((vim.o.columns - width) / 2)
+function SearchComponent:get_layout_spec()
+  local zindex = self.props.zindex or 50
+
+  return LayoutSpec.absolute(
+    LayoutSpec.vertical({
+      LayoutSpec.view(self._input_element, { height = 1, zindex = zindex + 1 }),
+      LayoutSpec.view(self._list_element, { flex = 1, zindex = zindex }),
+    }),
+    {
+      anchor = LayoutSpec.Anchor.TOP_CENTER,
+      width = self:_get_width(),
+      height = 1 + (self.props.max_height or 20),
+    }
+  )
 end
 
 function SearchComponent:component_will_mount()
-  local width = self:_get_width()
-  local col = self:_get_col()
-  local row = 0
-  local zindex = self.props.zindex or 50
   local border_hl = self.props.border_hl or 'GitBorder'
   local winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl
   local list_winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl .. ',CursorLine:GitSelected'
 
   local input_border = self.props.border or { '', '', '', '│', '', '', '', '│' }
   local list_border = { '├', '─', '┤', '│', '╯', '─', '╰', '│' }
-
-  local list_row = row + 1
 
   if not self._input_element then
     self._input_element = Element({
@@ -211,15 +214,7 @@ function SearchComponent:component_will_mount()
         winhl = winhl,
       },
       win_plot = {
-        relative = 'editor',
-        row = row,
-        col = col,
-        width = width,
-        height = 1,
-        style = 'minimal',
         focusable = true,
-        focus = true,
-        zindex = zindex + 1,
         border = input_border,
       },
     })
@@ -240,39 +235,23 @@ function SearchComponent:component_will_mount()
         winhl = list_winhl,
       },
       win_plot = {
-        relative = 'editor',
-        row = list_row,
-        col = col,
-        width = width,
-        height = 1,
-        style = 'minimal',
         focusable = false,
-        zindex = zindex,
         border = list_border,
       },
     })
   end
 end
 
-function SearchComponent:mount()
-  if self._mounted then return end
-
-  Component.mount(self)
-
-  self._input_element:mount()
-  self._list_element:mount()
-
+function SearchComponent:component_did_mount()
   local prompt = self.props.prompt or '> '
   self._input_element:set_lines({ prompt })
 
   self:_setup_input_tracking()
   self:_setup_keymaps()
-  self:_setup_close_autocmds()
-
   self:_apply_filter()
 
   self._input_element:focus()
-  vim.cmd('startinsert!')
+  self._input_element:get_window():start_insert()
 end
 
 function SearchComponent:_setup_input_tracking()
@@ -280,31 +259,31 @@ function SearchComponent:_setup_input_tracking()
   local input_buf = self._input_element:get_buffer()
 
   input_buf:attach_to_changes({
-    on_lines = function()
-      vim.schedule(function()
-        if not self._mounted then return end
-        if not input_buf:is_valid() then return end
+    on_lines = event.async(function()
+      event.await()
 
-        local lines = input_buf:get_lines(0, 1)
-        local line = lines[1] or ''
+      if not self._mounted then return end
+      if not input_buf:is_valid() then return end
 
-        if not vim.startswith(line, prompt) then
-          line = prompt
-          input_buf:set_lines({ line }, 0, 1)
-          local col = #prompt
-          local win = self._input_element:get_window()
-          win:set_cursor({ 1, col })
-          return
-        end
+      local lines = input_buf:get_lines(0, 1)
+      local line = lines[1] or ''
 
-        local query = line:sub(#prompt + 1)
+      if not vim.startswith(line, prompt) then
+        line = prompt
+        input_buf:set_lines({ line }, 0, 1)
+        local col = #prompt
+        local win = self._input_element:get_window()
+        win:set_cursor({ 1, col })
+        return
+      end
 
-        if query ~= self.state.query then
-          self.state.query = query
-          self:_apply_filter()
-        end
-      end)
-    end,
+      local query = line:sub(#prompt + 1)
+
+      if query ~= self.state.query then
+        self.state.query = query
+        self:_apply_filter()
+      end
+    end),
   })
 end
 
@@ -350,37 +329,6 @@ function SearchComponent:_setup_keymaps()
   input_element:set_keymap('n', 'q', function()
     self:close()
   end, 'Close')
-end
-
-function SearchComponent:_setup_close_autocmds()
-  local input_buf = self._input_element:get_buffer()
-  if not input_buf then return end
-
-  -- BufWipeout fires exactly once when the buffer is destroyed; no need to track the ID.
-  input_buf:on('BufWipeout', function()
-    if self._mounted then
-      -- The input buffer is already being wiped, so clear the reference
-      -- to prevent unmount() from trying to delete it again (E937).
-      self._input_element = nil
-      self:close()
-    end
-  end)
-
-  local input_win = self._input_element:get_window()
-  local list_win = self._list_element:get_window()
-
-  local leave_id = vim.api.nvim_create_autocmd('WinLeave', {
-    group = 'VGitGroup',
-    callback = function()
-      vim.defer_fn(function()
-        if not self._mounted then return end
-
-        local current_win = Window.get_current()
-        if not current_win:is_same(input_win) and not current_win:is_same(list_win) then self:close() end
-      end, 50)
-    end,
-  })
-  self._autocmd_ids[#self._autocmd_ids + 1] = leave_id
 end
 
 function SearchComponent:render()
@@ -513,12 +461,7 @@ end
 function SearchComponent:unmount()
   if not self._mounted then return end
 
-  vim.cmd('stopinsert')
-
-  for i = 1, #self._autocmd_ids do
-    vim.api.nvim_del_autocmd(self._autocmd_ids[i])
-  end
-  self._autocmd_ids = {}
+  Window.stop_insert()
 
   if self._input_element then
     self._input_element:unmount()

@@ -8,6 +8,8 @@ local BaseLayoutCalculator = Object:extend()
 
 function BaseLayoutCalculator:apply_mode_wrapping(spec, context)
   if context:is_popup_mode() then
+    if spec.type == LayoutSpec.Type.ABSOLUTE then return spec end
+
     local dims = context:get_dimensions()
     return LayoutSpec.absolute(spec, {
       anchor = 'center',
@@ -28,23 +30,30 @@ function BaseLayoutCalculator:apply_mode_wrapping(spec, context)
   return spec
 end
 
+function BaseLayoutCalculator:set_root(root)
+  self._root = root
+  return self
+end
+
 function BaseLayoutCalculator:calculate(spec, parent_bounds, context)
   if not spec then error('BaseLayoutCalculator:calculate() requires a spec') end
 
+  local calculator = self._root or self
+
   if not parent_bounds then parent_bounds = LayoutBounds.from_viewport() end
 
-  if context then spec = self:apply_mode_wrapping(spec, context) end
+  if context then spec = calculator:apply_mode_wrapping(spec, context) end
 
   local spec_type = spec.type
 
   if spec_type == LayoutSpec.Type.CONTAINER then
-    return self:calculate_container(spec, parent_bounds)
+    return calculator:calculate_container(spec, parent_bounds)
   elseif spec_type == LayoutSpec.Type.FLEX then
-    return self:calculate_flex(spec, parent_bounds)
+    return calculator:calculate_flex(spec, parent_bounds)
   elseif spec_type == LayoutSpec.Type.ABSOLUTE then
-    return self:calculate_absolute(spec, parent_bounds)
+    return calculator:calculate_absolute(spec, parent_bounds)
   elseif spec_type == LayoutSpec.Type.VIEW then
-    return self:calculate_view(spec, parent_bounds)
+    return calculator:calculate_view(spec, parent_bounds)
   else
     error('Unknown layout type: ' .. tostring(spec_type))
   end

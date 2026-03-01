@@ -2,7 +2,6 @@ local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
-local git_stash = lazy('vgit.git.git_stash')
 local repository = lazy('vgit.git.repository')
 local display_service = lazy('vgit.ui.display_service')
 
@@ -44,10 +43,8 @@ stash_command.execute = event.async(function(args)
     return
   end
 
-  local repo_path = repo:get_path()
-
   if opts.action == 'add' then
-    local _, err = git_stash.add(repo_path)
+    local _, err = repo:stash_add()
     if err then
       console.error(err[1] or tostring(err))
       return
@@ -58,7 +55,7 @@ stash_command.execute = event.async(function(args)
 
   if opts.action == 'pop' then
     local stash_ref = string.format('stash@{%d}', opts.index)
-    local _, err = git_stash.pop(repo_path, stash_ref)
+    local _, err = repo:stash_pop(stash_ref)
     if err then
       console.error(err[1] or tostring(err))
       return
@@ -69,7 +66,7 @@ stash_command.execute = event.async(function(args)
 
   if opts.action == 'apply' then
     local stash_ref = string.format('stash@{%d}', opts.index)
-    local _, err = git_stash.apply(repo_path, stash_ref)
+    local _, err = repo:stash_apply(stash_ref)
     if err then
       console.error(err[1] or tostring(err))
       return
@@ -80,7 +77,7 @@ stash_command.execute = event.async(function(args)
 
   if opts.action == 'drop' then
     local stash_ref = string.format('stash@{%d}', opts.index)
-    local _, err = git_stash.drop(repo_path, stash_ref)
+    local _, err = repo:stash_drop(stash_ref)
     if err then
       console.error(err[1] or tostring(err))
       return
@@ -90,7 +87,7 @@ stash_command.execute = event.async(function(args)
   end
 
   if opts.action == 'clear' then
-    local _, err = git_stash.clear(repo_path)
+    local _, err = repo:stash_clear()
     if err then
       console.error(err[1] or tostring(err))
       return
@@ -100,7 +97,7 @@ stash_command.execute = event.async(function(args)
   end
 
   -- Default: show stash screen
-  local stashes, list_err = git_stash.list(repo_path)
+  local stashes, list_err = repo:stash_list()
   if list_err then
     console.error(list_err[1] or tostring(list_err))
     return

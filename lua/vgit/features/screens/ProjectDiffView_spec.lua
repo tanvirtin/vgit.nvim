@@ -7,7 +7,7 @@ describe('ProjectDiffView:', function()
     ProjectDiffView = require('vgit.features.screens.ProjectDiffView')
   end)
 
-  describe('_build_split_patch_entries', function()
+  describe('_build_split_hunk_entries', function()
     it('should split file_header entries identically to both sides', function()
       local view = ProjectDiffView()
       local entries = {
@@ -18,7 +18,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local prev, curr = view:_build_split_patch_entries(entries)
+      local prev, curr = view:_build_split_hunk_entries(entries)
 
       eq(1, #prev)
       eq(1, #curr)
@@ -47,7 +47,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local prev, curr = view:_build_split_patch_entries(entries)
+      local prev, curr = view:_build_split_hunk_entries(entries)
 
       eq(1, #prev)
       eq(1, #curr)
@@ -82,7 +82,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local prev, curr = view:_build_split_patch_entries(entries)
+      local prev, curr = view:_build_split_hunk_entries(entries)
 
       -- Previous side: context + removed line
       eq(' context', prev[1].hunk.diff[1])
@@ -114,7 +114,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local prev, curr = view:_build_split_patch_entries(entries)
+      local prev, curr = view:_build_split_hunk_entries(entries)
 
       eq(4, #prev[1].hunk.diff)
       eq(4, #curr[1].hunk.diff)
@@ -150,7 +150,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local prev, curr = view:_build_split_patch_entries(entries)
+      local prev, curr = view:_build_split_hunk_entries(entries)
 
       eq('@@ -5,2 +5,2 @@', prev[1].hunk.header)
       eq('@@ -5,2 +5,2 @@', curr[1].hunk.header)
@@ -191,7 +191,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local prev, curr = view:_build_split_patch_entries(entries)
+      local prev, curr = view:_build_split_hunk_entries(entries)
 
       eq(4, #prev)
       eq(4, #curr)
@@ -212,7 +212,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local prev, curr = view:_build_split_patch_entries(entries)
+      local prev, curr = view:_build_split_hunk_entries(entries)
 
       eq(0, #prev[1].hunk.diff)
       eq(0, #curr[1].hunk.diff)
@@ -220,7 +220,7 @@ describe('ProjectDiffView:', function()
 
     it('should handle empty entries', function()
       local view = ProjectDiffView()
-      local prev, curr = view:_build_split_patch_entries({})
+      local prev, curr = view:_build_split_hunk_entries({})
 
       eq(0, #prev)
       eq(0, #curr)
@@ -256,7 +256,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local prev, curr = view:_build_split_patch_entries(entries)
+      local prev, curr = view:_build_split_hunk_entries(entries)
 
       -- Previous pane: current-only lines voided, incoming lines visible
       eq(' ', prev[1].hunk.diff[1]) -- <<<<<<< voided
@@ -284,7 +284,7 @@ describe('ProjectDiffView:', function()
     end)
   end)
 
-  describe('_build_patch_entries', function()
+  describe('_build_hunk_entries', function()
     local mock_repo
 
     before_each(function()
@@ -316,13 +316,13 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries, line_to_file_map = view:_build_patch_entries(mock_repo, data)
+      local hunk_entries, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
 
-      assert.is_true(#patch_entries > 0)
-      eq('file_header', patch_entries[1].type)
-      eq('a.lua', patch_entries[1].filename)
-      eq('hunk', patch_entries[2].type)
-      eq('a.lua', patch_entries[2].filename)
+      assert.is_true(#hunk_entries > 0)
+      eq('file_header', hunk_entries[1].type)
+      eq('a.lua', hunk_entries[1].filename)
+      eq('hunk', hunk_entries[2].type)
+      eq('a.lua', hunk_entries[2].filename)
       assert.is_not_nil(line_to_file_map[1])
       eq('a.lua', line_to_file_map[1].filename)
     end)
@@ -339,8 +339,8 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries = view:_build_patch_entries(mock_repo, data)
-      eq(0, #patch_entries)
+      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
+      eq(0, #hunk_entries)
     end)
 
     it('should skip entries where diff has no hunks after population', function()
@@ -358,8 +358,8 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries = view:_build_patch_entries(mock_repo, data)
-      eq(0, #patch_entries)
+      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
+      eq(0, #hunk_entries)
     end)
 
     it('should skip entries with empty hunks', function()
@@ -377,16 +377,16 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries = view:_build_patch_entries(mock_repo, data)
-      eq(0, #patch_entries)
+      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
+      eq(0, #hunk_entries)
     end)
 
     it('should handle empty data entries', function()
       local view = ProjectDiffView()
       local data = { entries = {} }
 
-      local patch_entries, line_to_file_map = view:_build_patch_entries(mock_repo, data)
-      eq(0, #patch_entries)
+      local hunk_entries, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
+      eq(0, #hunk_entries)
       eq(0, vim.tbl_count(line_to_file_map))
     end)
 
@@ -394,8 +394,8 @@ describe('ProjectDiffView:', function()
       local view = ProjectDiffView()
       local data = {}
 
-      local patch_entries, line_to_file_map = view:_build_patch_entries(mock_repo, data)
-      eq(0, #patch_entries)
+      local hunk_entries, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
+      eq(0, #hunk_entries)
       eq(0, vim.tbl_count(line_to_file_map))
     end)
 
@@ -426,10 +426,10 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries, line_to_file_map = view:_build_patch_entries(mock_repo, data)
+      local hunk_entries, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
 
       -- Should have entries for both files
-      assert.is_true(#patch_entries >= 4) -- 2 file_headers + 2 hunks
+      assert.is_true(#hunk_entries >= 4) -- 2 file_headers + 2 hunks
 
       -- line_to_file_map should reference both files
       local filenames_seen = {}
@@ -463,11 +463,11 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries = view:_build_patch_entries(mock_repo, data)
+      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
 
-      eq('file_header', patch_entries[1].type)
-      eq(orig, patch_entries[1].original_lines)
-      eq(curr, patch_entries[1].current_lines)
+      eq('file_header', hunk_entries[1].type)
+      eq(orig, hunk_entries[1].original_lines)
+      eq(curr, hunk_entries[1].current_lines)
     end)
 
     it('should display renamed files correctly', function()
@@ -489,10 +489,10 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries = view:_build_patch_entries(mock_repo, data)
+      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
 
-      eq('file_header', patch_entries[1].type)
-      eq('old_name.lua -> new_name.lua', patch_entries[1].filename)
+      eq('file_header', hunk_entries[1].type)
+      eq('old_name.lua -> new_name.lua', hunk_entries[1].filename)
     end)
 
     it('should track line numbers correctly across hunks', function()
@@ -515,7 +515,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local _, line_to_file_map = view:_build_patch_entries(mock_repo, data)
+      local _, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
 
       -- All mapped lines should reference a.lua
       for _, info in pairs(line_to_file_map) do
@@ -528,50 +528,39 @@ describe('ProjectDiffView:', function()
     end)
   end)
 
-  describe('_build_patch_entries with status entries (mocked git_diff)', function()
+  describe('_build_hunk_entries with status entries (mocked repo:diff)', function()
     -- event.all uses coroutine.yield so tests must run in an async context
     local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
     local it = async.it
-    local before_each = async.before_each
-    local after_each = async.after_each
 
-    local git_diff_mod
-    local original_staged
-    local original_unstaged
-
-    before_each(function()
-      git_diff_mod = require('vgit.git.git_diff')
-      original_staged = git_diff_mod.staged_patch_entries
-      original_unstaged = git_diff_mod.unstaged_patch_entries
-    end)
-
-    after_each(function()
-      git_diff_mod.staged_patch_entries = original_staged
-      git_diff_mod.unstaged_patch_entries = original_unstaged
-    end)
-
-    local function mock_repo()
+    local function mock_repo(diff_fn)
       return {
         get_path = function()
           return '/tmp/repo'
         end,
+        diff = diff_fn or function()
+          return {}
+        end,
       }
     end
 
-    it('should call staged_patch_entries for staged entry without pre-computed diff', function()
+    it('should call repo:diff for staged entry without pre-computed diff', function()
       local staged_called = false
-      git_diff_mod.staged_patch_entries = function(_repo_path)
-        staged_called = true
-        return {
-          { type = 'file_header', filename = 'staged.lua', filetype = 'lua' },
-          {
-            type = 'hunk',
-            hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-old', '+new' }, top = 1, bot = 1 },
-            filetype = 'lua',
-            filename = 'staged.lua',
-          },
-        }
-      end
+      local repo = mock_repo(function(_, spec)
+        if spec.from == 'HEAD' and spec.to == 'index' then
+          staged_called = true
+          return {
+            { type = 'file_header', filename = 'staged.lua', filetype = 'lua' },
+            {
+              type = 'hunk',
+              hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-old', '+new' }, top = 1, bot = 1 },
+              filetype = 'lua',
+              filename = 'staged.lua',
+            },
+          }
+        end
+        return {}
+      end)
 
       local view = ProjectDiffView()
       local data = {
@@ -588,29 +577,32 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries = view:_build_patch_entries(mock_repo(), data)
+      local hunk_entries = view:_build_hunk_entries(repo, data)
 
       assert.is_true(staged_called)
-      eq(2, #patch_entries)
-      eq('file_header', patch_entries[1].type)
-      eq('staged.lua', patch_entries[1].filename)
-      eq('hunk', patch_entries[2].type)
+      eq(2, #hunk_entries)
+      eq('file_header', hunk_entries[1].type)
+      eq('staged.lua', hunk_entries[1].filename)
+      eq('hunk', hunk_entries[2].type)
     end)
 
-    it('should call unstaged_patch_entries for unstaged entry without pre-computed diff', function()
+    it('should call repo:diff for unstaged entry without pre-computed diff', function()
       local unstaged_called = false
-      git_diff_mod.unstaged_patch_entries = function(_repo_path)
-        unstaged_called = true
-        return {
-          { type = 'file_header', filename = 'unstaged.lua', filetype = 'lua' },
-          {
-            type = 'hunk',
-            hunk = { header = '@@ -2,1 +2,1 @@', diff = { '-x', '+y' }, top = 2, bot = 2 },
-            filetype = 'lua',
-            filename = 'unstaged.lua',
-          },
-        }
-      end
+      local repo = mock_repo(function(_, spec)
+        if spec.to == 'disk' then
+          unstaged_called = true
+          return {
+            { type = 'file_header', filename = 'unstaged.lua', filetype = 'lua' },
+            {
+              type = 'hunk',
+              hunk = { header = '@@ -2,1 +2,1 @@', diff = { '-x', '+y' }, top = 2, bot = 2 },
+              filetype = 'lua',
+              filename = 'unstaged.lua',
+            },
+          }
+        end
+        return {}
+      end)
 
       local view = ProjectDiffView()
       local data = {
@@ -626,43 +618,44 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries = view:_build_patch_entries(mock_repo(), data)
+      local hunk_entries = view:_build_hunk_entries(repo, data)
 
       assert.is_true(unstaged_called)
-      eq(2, #patch_entries)
-      eq('file_header', patch_entries[1].type)
-      eq('unstaged.lua', patch_entries[1].filename)
+      eq(2, #hunk_entries)
+      eq('file_header', hunk_entries[1].type)
+      eq('unstaged.lua', hunk_entries[1].filename)
     end)
 
-    it('should call both staged and unstaged when both types are present', function()
+    it('should call repo:diff for both staged and unstaged when both types are present', function()
       local staged_called = false
       local unstaged_called = false
 
-      git_diff_mod.staged_patch_entries = function()
-        staged_called = true
-        return {
-          { type = 'file_header', filename = 'staged.lua', filetype = 'lua' },
-          {
-            type = 'hunk',
-            hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
-            filetype = 'lua',
-            filename = 'staged.lua',
-          },
-        }
-      end
-
-      git_diff_mod.unstaged_patch_entries = function()
-        unstaged_called = true
-        return {
-          { type = 'file_header', filename = 'unstaged.lua', filetype = 'lua' },
-          {
-            type = 'hunk',
-            hunk = { header = '@@ -3,1 +3,1 @@', diff = { '-c', '+d' }, top = 3, bot = 3 },
-            filetype = 'lua',
-            filename = 'unstaged.lua',
-          },
-        }
-      end
+      local repo = mock_repo(function(_, spec)
+        if spec.from == 'HEAD' and spec.to == 'index' then
+          staged_called = true
+          return {
+            { type = 'file_header', filename = 'staged.lua', filetype = 'lua' },
+            {
+              type = 'hunk',
+              hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
+              filetype = 'lua',
+              filename = 'staged.lua',
+            },
+          }
+        elseif spec.to == 'disk' then
+          unstaged_called = true
+          return {
+            { type = 'file_header', filename = 'unstaged.lua', filetype = 'lua' },
+            {
+              type = 'hunk',
+              hunk = { header = '@@ -3,1 +3,1 @@', diff = { '-c', '+d' }, top = 3, bot = 3 },
+              filetype = 'lua',
+              filename = 'unstaged.lua',
+            },
+          }
+        end
+        return {}
+      end)
 
       local view = ProjectDiffView()
       local data = {
@@ -676,18 +669,18 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries = view:_build_patch_entries(mock_repo(), data)
+      local hunk_entries = view:_build_hunk_entries(repo, data)
 
       assert.is_true(staged_called)
       assert.is_true(unstaged_called)
       -- 2 file_headers + 2 hunks = 4 entries total
-      eq(4, #patch_entries)
+      eq(4, #hunk_entries)
     end)
 
-    it('should return empty patch_entries when staged fetch returns error (nil)', function()
-      git_diff_mod.staged_patch_entries = function()
+    it('should return empty hunk_entries when repo:diff returns error (nil)', function()
+      local repo = mock_repo(function()
         return nil, { 'git error' }
-      end
+      end)
 
       local view = ProjectDiffView()
       local data = {
@@ -701,22 +694,25 @@ describe('ProjectDiffView:', function()
       }
 
       -- Should not crash; returns empty (nil result → no entries added)
-      local patch_entries = view:_build_patch_entries(mock_repo(), data)
-      eq(0, #patch_entries)
+      local hunk_entries = view:_build_hunk_entries(repo, data)
+      eq(0, #hunk_entries)
     end)
 
     it('should build correct line_to_file_map with top from hunk header', function()
-      git_diff_mod.unstaged_patch_entries = function()
-        return {
-          { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
-          {
-            type = 'hunk',
-            hunk = { header = '@@ -10,2 +10,2 @@', diff = { '-x', '+y' }, top = 10, bot = 11 },
-            filetype = 'lua',
-            filename = 'foo.lua',
-          },
-        }
-      end
+      local repo = mock_repo(function(_, spec)
+        if spec.to == 'disk' then
+          return {
+            { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
+            {
+              type = 'hunk',
+              hunk = { header = '@@ -10,2 +10,2 @@', diff = { '-x', '+y' }, top = 10, bot = 11 },
+              filetype = 'lua',
+              filename = 'foo.lua',
+            },
+          }
+        end
+        return {}
+      end)
 
       local view = ProjectDiffView()
       local data = {
@@ -729,7 +725,7 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local _, line_to_file_map = view:_build_patch_entries(mock_repo(), data)
+      local _, line_to_file_map = view:_build_hunk_entries(repo, data)
 
       -- 3 file_header lines + 1 hunk_header line + 2 diff lines + 1 separator = 7 entries
       -- The hunk header line should map to lnum=10 (hunk.top)
@@ -738,18 +734,13 @@ describe('ProjectDiffView:', function()
       eq('foo.lua', line_to_file_map[4].filename)
     end)
 
-    it('should not call batch functions for pre-computed entries', function()
-      local staged_called = false
-      local unstaged_called = false
+    it('should not call repo:diff for pre-computed entries', function()
+      local diff_called = false
 
-      git_diff_mod.staged_patch_entries = function()
-        staged_called = true
+      local repo = mock_repo(function()
+        diff_called = true
         return {}
-      end
-      git_diff_mod.unstaged_patch_entries = function()
-        unstaged_called = true
-        return {}
-      end
+      end)
 
       local view = ProjectDiffView()
       local data = {
@@ -770,17 +761,16 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local patch_entries = view:_build_patch_entries(mock_repo(), data)
+      local hunk_entries = view:_build_hunk_entries(repo, data)
 
-      assert.is_false(staged_called)
-      assert.is_false(unstaged_called)
+      assert.is_false(diff_called)
       -- Pre-computed entry is still included
-      eq(2, #patch_entries)
-      eq('pre.lua', patch_entries[1].filename)
+      eq(2, #hunk_entries)
+      eq('pre.lua', hunk_entries[1].filename)
     end)
   end)
 
-  describe('_build_patch_entries with conflict entries', function()
+  describe('_build_hunk_entries with conflict entries', function()
     -- event.all uses coroutine.yield so tests must run in an async context
     local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
     local it = async.it
@@ -836,25 +826,25 @@ describe('ProjectDiffView:', function()
           return '/tmp/repo'
         end,
       }
-      local patch_entries = view:_build_patch_entries(repo, data)
+      local hunk_entries = view:_build_hunk_entries(repo, data)
 
       -- Should have file_header + hunk for the conflict file
-      assert.is_true(#patch_entries >= 2)
-      eq('file_header', patch_entries[1].type)
-      eq('conflict.lua', patch_entries[1].filename)
-      eq('hunk', patch_entries[2].type)
+      assert.is_true(#hunk_entries >= 2)
+      eq('file_header', hunk_entries[1].type)
+      eq('conflict.lua', hunk_entries[1].filename)
+      eq('hunk', hunk_entries[2].type)
       -- Conflict region lines rendered as context (space prefix preserves actual content)
-      eq(5, #patch_entries[2].hunk.diff)
-      eq(' <<<<<<< HEAD', patch_entries[2].hunk.diff[1])
-      eq(' >>>>>>> branch', patch_entries[2].hunk.diff[5])
-      eq(1, patch_entries[2].hunk.top)
-      eq(5, patch_entries[2].hunk.bot)
+      eq(5, #hunk_entries[2].hunk.diff)
+      eq(' <<<<<<< HEAD', hunk_entries[2].hunk.diff[1])
+      eq(' >>>>>>> branch', hunk_entries[2].hunk.diff[5])
+      eq(1, hunk_entries[2].hunk.top)
+      eq(5, hunk_entries[2].hunk.bot)
       -- lnum_changes carries conflict-specific highlight types
-      eq('conflict_current_mark', patch_entries[2].hunk.lnum_changes[1].type)
-      eq('conflict_current', patch_entries[2].hunk.lnum_changes[2].type)
-      eq('conflict_middle', patch_entries[2].hunk.lnum_changes[3].type)
-      eq('conflict_incoming', patch_entries[2].hunk.lnum_changes[4].type)
-      eq('conflict_incoming_mark', patch_entries[2].hunk.lnum_changes[5].type)
+      eq('conflict_current_mark', hunk_entries[2].hunk.lnum_changes[1].type)
+      eq('conflict_current', hunk_entries[2].hunk.lnum_changes[2].type)
+      eq('conflict_middle', hunk_entries[2].hunk.lnum_changes[3].type)
+      eq('conflict_incoming', hunk_entries[2].hunk.lnum_changes[4].type)
+      eq('conflict_incoming_mark', hunk_entries[2].hunk.lnum_changes[5].type)
     end)
 
     it('should exclude conflict entry when DiffBuilder returns nil (error)', function()
@@ -882,10 +872,10 @@ describe('ProjectDiffView:', function()
           return '/tmp/repo'
         end,
       }
-      local patch_entries = view:_build_patch_entries(repo, data)
+      local hunk_entries = view:_build_hunk_entries(repo, data)
 
       -- No entries because conflict DiffBuilder returned nil
-      eq(0, #patch_entries)
+      eq(0, #hunk_entries)
     end)
   end)
 
@@ -1088,11 +1078,11 @@ describe('ProjectDiffView:', function()
           },
         },
       }
-      local patch_entries = {
+      local hunk_entries = {
         { type = 'file_header', filename = 'conflict.lua', filetype = 'lua' },
       }
       -- Conflict entries are skipped in enrichment
-      view:_enrich_with_syntax(patch_entries, data, 1)
+      view:_enrich_with_syntax(hunk_entries, data, 1)
     end)
   end)
 end)

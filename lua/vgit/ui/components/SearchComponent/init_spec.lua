@@ -64,7 +64,6 @@ describe('SearchComponent:', function()
       assert.is_nil(sc._input_element)
       assert.is_nil(sc._list_element)
       assert.is_not_nil(sc._filter)
-      eq({}, sc._autocmd_ids)
     end)
   end)
 
@@ -377,9 +376,6 @@ describe('SearchComponent:', function()
         end,
       })
 
-      -- Prevent unmount from running real UI teardown
-      sc.unmount = function() end
-
       sc:close()
       assert.is_true(closed)
     end)
@@ -389,8 +385,6 @@ describe('SearchComponent:', function()
         items = {},
         on_select = function() end,
       })
-
-      sc.unmount = function() end
 
       -- Should not error
       sc:close()

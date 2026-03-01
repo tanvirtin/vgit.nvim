@@ -7,16 +7,13 @@ local event = lazy('vgit.core.event')
 local Window = lazy('vgit.core.Window')
 local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
-local git_diff = lazy('vgit.git.git_diff')
-local git_show = lazy('vgit.git.git_show')
-local git_blame = lazy('vgit.git.git_blame')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local statusline = lazy('vgit.core.statusline_state')
-local display_service = lazy('vgit.ui.display_service')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
+local display_service = lazy('vgit.ui.display_service')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
 local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
 local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
@@ -44,7 +41,7 @@ function ProjectDiffView:constructor()
     _previous_component = nil,
     _current_component = nil,
     _component_manager = nil,
-    _patch_entries = {},
+    _hunk_entries = {},
     _line_to_file_map = {},
     _debounce_cleanups = {},
     _destroyed = false,
@@ -146,19 +143,19 @@ function ProjectDiffView:_classify_entries(data)
   return has_staged, has_unstaged, conflict_entries
 end
 
-function ProjectDiffView:_conflict_diff_to_patch_entries(diff_data, status)
-  local patch_entries = {}
+function ProjectDiffView:_conflict_diff_to_hunk_entries(diff_data, status)
+  local hunk_entries = {}
   local marks = diff_data.marks
   local file_lines = diff_data.lines
 
-  if not marks or #marks == 0 or not file_lines then return patch_entries end
+  if not marks or #marks == 0 or not file_lines then return hunk_entries end
 
   local lnum_to_type = {}
   for _, lc in ipairs(diff_data.lnum_changes or {}) do
     lnum_to_type[lc.lnum] = lc.type
   end
 
-  patch_entries[#patch_entries + 1] = {
+  hunk_entries[#hunk_entries + 1] = {
     type = 'file_header',
     filename = status.filename,
     filetype = status.filetype,
@@ -178,7 +175,7 @@ function ProjectDiffView:_conflict_diff_to_patch_entries(diff_data, status)
       if t then lnum_changes[idx] = { type = t } end
     end
 
-    patch_entries[#patch_entries + 1] = {
+    hunk_entries[#hunk_entries + 1] = {
       type = 'hunk',
       hunk = {
         header = string.format('@@ -%d,%d +%d,%d @@ conflict', top, count, top, count),
@@ -192,24 +189,25 @@ function ProjectDiffView:_conflict_diff_to_patch_entries(diff_data, status)
     }
   end
 
-  return patch_entries
+  return hunk_entries
 end
 
-function ProjectDiffView:_precomputed_entry_to_patch_entries(file_entry)
-  local patch_entries = {}
+function ProjectDiffView:_precomputed_entry_to_hunk_entries(file_entry)
+  local hunk_entries = {}
   local status = file_entry.status
-  if not status then return patch_entries end
+  if not status then return hunk_entries end
+  if not status.filename then return hunk_entries end
 
   local diff_data = file_entry.diff
   if not diff_data.hunks or #diff_data.hunks == 0 then
     console.debug.error(string.format('[ProjectDiffView] no hunks for %s', status.filename))
-    return patch_entries
+    return hunk_entries
   end
 
   local display_filename = status.filename
   if status.old_filename then display_filename = status.old_filename .. ' -> ' .. status.filename end
 
-  patch_entries[#patch_entries + 1] = {
+  hunk_entries[#hunk_entries + 1] = {
     type = 'file_header',
     filename = display_filename,
     filetype = status.filetype,
@@ -218,7 +216,7 @@ function ProjectDiffView:_precomputed_entry_to_patch_entries(file_entry)
   }
 
   for _, hunk in ipairs(diff_data.hunks) do
-    patch_entries[#patch_entries + 1] = {
+    hunk_entries[#hunk_entries + 1] = {
       type = 'hunk',
       hunk = hunk,
       filetype = status.filetype,
@@ -226,16 +224,17 @@ function ProjectDiffView:_precomputed_entry_to_patch_entries(file_entry)
     }
   end
 
-  return patch_entries
+  return hunk_entries
 end
 
-function ProjectDiffView:_build_line_to_file_map(patch_entries)
+function ProjectDiffView:_build_line_to_file_map(hunk_entries)
   local line_to_file_map = {}
   local current_line = 1
   local current_real_filename = nil
 
-  for _, entry in ipairs(patch_entries) do
+  for _, entry in ipairs(hunk_entries) do
     if entry.type == 'file_header' then
+      if not entry.filename then goto continue end
       current_real_filename = entry.filename:match('^.+ %-> (.+)$') or entry.filename
       line_to_file_map[current_line] = { filename = current_real_filename, lnum = 1 }
       current_line = current_line + 1
@@ -262,27 +261,27 @@ function ProjectDiffView:_build_line_to_file_map(patch_entries)
       line_to_file_map[current_line] = { filename = filename, lnum = hunk.top or 1 }
       current_line = current_line + 1
     end
+    ::continue::
   end
 
   return line_to_file_map
 end
 
-function ProjectDiffView:_build_patch_entries(repo, data)
-  local repo_path = repo.get_path and repo:get_path() or nil
+function ProjectDiffView:_build_hunk_entries(repo, data)
   local has_staged, has_unstaged, conflict_entries = self:_classify_entries(data)
 
   local fetch_funcs = {}
   local staged_fn_idx = nil
   local unstaged_fn_idx = nil
 
-  if has_staged and repo_path then
+  if has_staged then
     staged_fn_idx = #fetch_funcs + 1
-    fetch_funcs[#fetch_funcs + 1] = function() return git_diff.staged_patch_entries(repo_path) end
+    fetch_funcs[#fetch_funcs + 1] = function() return repo:diff({ type = 'range', from = 'HEAD', to = 'index' }) end
   end
 
-  if has_unstaged and repo_path then
+  if has_unstaged then
     unstaged_fn_idx = #fetch_funcs + 1
-    fetch_funcs[#fetch_funcs + 1] = function() return git_diff.unstaged_patch_entries(repo_path) end
+    fetch_funcs[#fetch_funcs + 1] = function() return repo:diff({ type = 'range', to = 'disk' }) end
   end
 
   local conflict_start_idx = #fetch_funcs + 1
@@ -294,41 +293,41 @@ function ProjectDiffView:_build_patch_entries(repo, data)
   local fetch_results = {}
   if #fetch_funcs > 0 then fetch_results = event.all(fetch_funcs) end
 
-  local all_patch_entries = {}
+  local all_hunk_entries = {}
 
   if staged_fn_idx then
     local staged = fetch_results[staged_fn_idx]
     if staged then
-      for _, e in ipairs(staged) do all_patch_entries[#all_patch_entries + 1] = e end
+      for _, e in ipairs(staged) do all_hunk_entries[#all_hunk_entries + 1] = e end
     end
   end
 
   if unstaged_fn_idx then
     local unstaged = fetch_results[unstaged_fn_idx]
     if unstaged then
-      for _, e in ipairs(unstaged) do all_patch_entries[#all_patch_entries + 1] = e end
+      for _, e in ipairs(unstaged) do all_hunk_entries[#all_hunk_entries + 1] = e end
     end
   end
 
   for i, entry in ipairs(conflict_entries) do
     local result = fetch_results[conflict_start_idx + i - 1]
     if result and result[1] then
-      local entries = self:_conflict_diff_to_patch_entries(result[1], entry.status)
-      for _, e in ipairs(entries) do all_patch_entries[#all_patch_entries + 1] = e end
+      local entries = self:_conflict_diff_to_hunk_entries(result[1], entry.status)
+      for _, e in ipairs(entries) do all_hunk_entries[#all_hunk_entries + 1] = e end
     end
   end
 
   for _, section in ipairs(data.entries or {}) do
     for _, file_entry in ipairs(section.entries or {}) do
       if file_entry.diff then
-        local entries = self:_precomputed_entry_to_patch_entries(file_entry)
-        for _, e in ipairs(entries) do all_patch_entries[#all_patch_entries + 1] = e end
+        local entries = self:_precomputed_entry_to_hunk_entries(file_entry)
+        for _, e in ipairs(entries) do all_hunk_entries[#all_hunk_entries + 1] = e end
       end
     end
   end
 
-  console.debug.info(string.format('[ProjectDiffView] built %d patch entries', #all_patch_entries))
-  return all_patch_entries, self:_build_line_to_file_map(all_patch_entries)
+  console.debug.info(string.format('[ProjectDiffView] built %d patch entries', #all_hunk_entries))
+  return all_hunk_entries, self:_build_line_to_file_map(all_hunk_entries)
 end
 
 function ProjectDiffView:_get_active_component()
@@ -424,22 +423,21 @@ function ProjectDiffView:show_blame_view()
   local repo, err = repository.current()
   if not self:_handle_git_error(err, 'repository.current') then return end
 
-  local repo_path = repo:get_path()
   local filetype = fs.detect_filetype(filename)
 
-  local blames, blame_err = git_blame.list(repo_path, filename)
+  local blames, blame_err = repo:blame_list(filename)
   if blame_err or not blames or #blames == 0 then
     console.info('No blame information available for this file')
     return
   end
 
-  local lines, lines_err = git_show.lines(repo_path, filename, 'HEAD')
+  local lines, lines_err = repo:file_lines(filename, 'HEAD')
   if lines_err or not lines then lines = {} end
 
   display_service.show_blame_view({
     filename = filename,
     filetype = filetype,
-    reponame = repo_path,
+    reponame = repo:get_path(),
     blames = blames,
     lines = lines,
   })
@@ -488,7 +486,8 @@ function ProjectDiffView:setup_keymaps()
   local toggle_key = self:get_key(project_diff_view_keymaps.toggle_diff_preference)
   if toggle_key then
     self:_set_keymap_all_components('n', toggle_key, function()
-      display_service.toggle_diff_preference()
+      local current = scene_setting:get('diff_preference')
+      scene_setting:set('diff_preference', current == 'unified' and 'split' or 'unified')
     end)
   end
 
@@ -518,8 +517,8 @@ end
 function ProjectDiffView:_split_hunk_entry(hunk, entry)
   local previous_diff = {}
   local current_diff = {}
-  local previous_lnum_changes = hunk.lnum_changes and {} or nil
-  local current_lnum_changes = hunk.lnum_changes and {} or nil
+  local previous_lnum_changes = {}
+  local current_lnum_changes = {}
 
   for i, line in ipairs(hunk.diff or {}) do
     local lc = hunk.lnum_changes and hunk.lnum_changes[i]
@@ -528,26 +527,30 @@ function ProjectDiffView:_split_hunk_entry(hunk, entry)
     if t and self.CONFLICT_CURRENT_ONLY[t] then
       previous_diff[#previous_diff + 1] = ' '
       current_diff[#current_diff + 1] = line
-      if previous_lnum_changes then previous_lnum_changes[i] = { type = 'void' } end
-      if current_lnum_changes then current_lnum_changes[i] = lc end
+      previous_lnum_changes[i] = { type = 'void' }
+      current_lnum_changes[i] = lc
     elseif t and self.CONFLICT_PREVIOUS_ONLY[t] then
       previous_diff[#previous_diff + 1] = line
       current_diff[#current_diff + 1] = ' '
-      if previous_lnum_changes then previous_lnum_changes[i] = lc end
-      if current_lnum_changes then current_lnum_changes[i] = { type = 'void' } end
+      previous_lnum_changes[i] = lc
+      current_lnum_changes[i] = { type = 'void' }
     elseif t then
       previous_diff[#previous_diff + 1] = line
       current_diff[#current_diff + 1] = line
-      if previous_lnum_changes then previous_lnum_changes[i] = lc end
-      if current_lnum_changes then current_lnum_changes[i] = lc end
+      previous_lnum_changes[i] = lc
+      current_lnum_changes[i] = lc
     else
       local prefix = line:sub(1, 1)
       if prefix == '-' then
         previous_diff[#previous_diff + 1] = line
         current_diff[#current_diff + 1] = ' '
+        previous_lnum_changes[i] = { type = 'remove' }
+        current_lnum_changes[i] = { type = 'void' }
       elseif prefix == '+' then
         previous_diff[#previous_diff + 1] = ' '
         current_diff[#current_diff + 1] = line
+        previous_lnum_changes[i] = { type = 'void' }
+        current_lnum_changes[i] = { type = 'add' }
       else
         previous_diff[#previous_diff + 1] = line
         current_diff[#current_diff + 1] = line
@@ -573,11 +576,11 @@ function ProjectDiffView:_split_hunk_entry(hunk, entry)
     } })
 end
 
-function ProjectDiffView:_build_split_patch_entries(patch_entries)
+function ProjectDiffView:_build_split_hunk_entries(hunk_entries)
   local previous_entries = {}
   local current_entries = {}
 
-  for _, entry in ipairs(patch_entries) do
+  for _, entry in ipairs(hunk_entries) do
     if entry.type == 'file_header' then
       previous_entries[#previous_entries + 1] = vim.tbl_extend('force', {}, entry)
       current_entries[#current_entries + 1] = vim.tbl_extend('force', {}, entry)
@@ -591,7 +594,7 @@ function ProjectDiffView:_build_split_patch_entries(patch_entries)
   return previous_entries, current_entries
 end
 
-function ProjectDiffView:_collect_file_specs(patch_entries, data)
+function ProjectDiffView:_collect_file_specs(hunk_entries, data)
   local file_type_map = {}
   for _, section in ipairs(data.entries or {}) do
     for _, file_entry in ipairs(section.entries or {}) do
@@ -603,7 +606,7 @@ function ProjectDiffView:_collect_file_specs(patch_entries, data)
 
   local file_specs = {}
   local seen = {}
-  for _, entry in ipairs(patch_entries) do
+  for _, entry in ipairs(hunk_entries) do
     if entry.type == 'file_header'
         and entry.filetype and entry.filetype ~= 'text'
         and not entry.original_lines
@@ -633,9 +636,9 @@ function ProjectDiffView:_collect_file_specs(patch_entries, data)
   return file_specs
 end
 
-function ProjectDiffView:_apply_syntax_to_patch_entries(patch_entries, content_map)
+function ProjectDiffView:_apply_syntax_to_hunk_entries(hunk_entries, content_map)
   local enriched = {}
-  for _, entry in ipairs(patch_entries) do
+  for _, entry in ipairs(hunk_entries) do
     if entry.type == 'file_header' then
       local content = content_map[entry.filename]
       if content then
@@ -653,13 +656,13 @@ function ProjectDiffView:_apply_syntax_to_patch_entries(patch_entries, content_m
   return enriched
 end
 
-function ProjectDiffView:_enrich_with_syntax(patch_entries, data, gen)
+function ProjectDiffView:_enrich_with_syntax(hunk_entries, data, gen)
   if self._destroyed or self._update_gen ~= gen then return end
 
   local repo = self._repo
   if not repo then return end
 
-  local file_specs = self:_collect_file_specs(patch_entries, data)
+  local file_specs = self:_collect_file_specs(hunk_entries, data)
   if #file_specs == 0 then return end
 
   local funcs = {}
@@ -682,35 +685,35 @@ function ProjectDiffView:_enrich_with_syntax(patch_entries, data, gen)
     if r then content_map[r.display] = { original_lines = r.original_lines, current_lines = r.current_lines } end
   end
 
-  local enriched = self:_apply_syntax_to_patch_entries(patch_entries, content_map)
+  local enriched = self:_apply_syntax_to_hunk_entries(hunk_entries, content_map)
   if self._update_gen ~= gen then return end
 
-  self._patch_entries = enriched
+  self._hunk_entries = enriched
 
   if self._layout_type == self.LAYOUT_SPLIT then
-    local previous_entries, current_entries = self:_build_split_patch_entries(enriched)
+    local previous_entries, current_entries = self:_build_split_hunk_entries(enriched)
     if self._previous_component and self._previous_component:is_valid() then
-      self._previous_component:set_props({ patch_entries = previous_entries })
+      self._previous_component:set_props({ hunk_entries = previous_entries })
     end
     if self._current_component and self._current_component:is_valid() then
-      self._current_component:set_props({ patch_entries = current_entries })
+      self._current_component:set_props({ hunk_entries = current_entries })
     end
   else
     if self._patch_component and self._patch_component:is_valid() then
-      self._patch_component:set_props({ patch_entries = enriched })
+      self._patch_component:set_props({ hunk_entries = enriched })
     end
   end
 end
 
-function ProjectDiffView:_create_unified_view(patch_entries, line_to_file_map, data)
-  self._patch_entries = patch_entries
+function ProjectDiffView:_create_unified_view(hunk_entries, line_to_file_map, data)
+  self._hunk_entries = hunk_entries
   self._line_to_file_map = line_to_file_map
 
   self._update_gen = self._update_gen + 1
   local gen = self._update_gen
 
   self._patch_component = PatchPreviewComponent({
-    patch_entries = patch_entries,
+    hunk_entries = hunk_entries,
     focus = true,
   })
 
@@ -725,22 +728,22 @@ function ProjectDiffView:_create_unified_view(patch_entries, line_to_file_map, d
 
   if self._patch_component and self._patch_component:is_valid() then self._patch_component:focus() end
 
-  self:_enrich_with_syntax(patch_entries, data, gen)
+  self:_enrich_with_syntax(hunk_entries, data, gen)
 
   return true
 end
 
-function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map, data)
-  self._patch_entries = patch_entries
+function ProjectDiffView:_create_split_view(hunk_entries, line_to_file_map, data)
+  self._hunk_entries = hunk_entries
   self._line_to_file_map = line_to_file_map
 
   self._update_gen = self._update_gen + 1
   local gen = self._update_gen
 
-  local previous_entries, current_entries = self:_build_split_patch_entries(patch_entries)
+  local previous_entries, current_entries = self:_build_split_hunk_entries(hunk_entries)
 
   self._previous_component = PatchPreviewComponent({
-    patch_entries = previous_entries,
+    hunk_entries = previous_entries,
     focus = false,
     win_options = {
       scrollbind = true,
@@ -749,7 +752,7 @@ function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map, dat
   })
 
   self._current_component = PatchPreviewComponent({
-    patch_entries = current_entries,
+    hunk_entries = current_entries,
     focus = true,
     win_options = {
       scrollbind = true,
@@ -775,7 +778,7 @@ function ProjectDiffView:_create_split_view(patch_entries, line_to_file_map, dat
 
   if self._current_component and self._current_component:is_valid() then self._current_component:focus() end
 
-  self:_enrich_with_syntax(patch_entries, data, gen)
+  self:_enrich_with_syntax(hunk_entries, data, gen)
 
   return true
 end
@@ -787,24 +790,28 @@ function ProjectDiffView:_create_view(data)
 
   local repo, err = repository.current()
   if err then
-    console.debug.error(string.format('[ProjectDiffView] repository.current() failed: %s', err))
+    console.error('Failed to get repository: ' .. tostring(err))
     return false
   end
 
   self._repo = repo
 
-  local patch_entries, line_to_file_map = self:_build_patch_entries(repo, data)
+  local hunk_entries, line_to_file_map = self:_build_hunk_entries(repo, data)
 
-  if #patch_entries == 0 then
+  if #hunk_entries == 0 then
     event.await()
     console.info('No changes to display')
     return false
   end
 
   if layout_type == self.LAYOUT_SPLIT then
-    return self:_create_split_view(patch_entries, line_to_file_map, data)
+    return self:_create_split_view(hunk_entries, line_to_file_map, data)
   end
-  return self:_create_unified_view(patch_entries, line_to_file_map, data)
+  return self:_create_unified_view(hunk_entries, line_to_file_map, data)
+end
+
+function ProjectDiffView:is_destroyed()
+  return self._destroyed
 end
 
 function ProjectDiffView:destroy()

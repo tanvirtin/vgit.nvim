@@ -84,6 +84,36 @@ function event.buffer_on(buffer, event_name, callback)
   return event
 end
 
+function event.disposable_on(event_names, callback)
+  ensure_augroup()
+  local uuid = utils_math.uuid()
+  local event_key = event_names
+  if type(event_names) == 'table' then event_key = table.concat(event_names, '::') end
+  local group_name = event.group .. '::disposable::' .. event_key .. '::' .. uuid
+
+  vim.api.nvim_create_augroup(group_name, { clear = true })
+  vim.api.nvim_create_autocmd(event_names, {
+    group = group_name,
+    callback = callback,
+  })
+
+  local cleaned_up = false
+  return function()
+    if cleaned_up then return end
+    cleaned_up = true
+    pcall(vim.api.nvim_del_augroup_by_name, group_name)
+  end
+end
+
+function event.defer(fn, ms)
+  local timer = vim.loop.new_timer()
+  timer:start(ms, 0, function()
+    if not timer:is_closing() then timer:close() end
+    vim.schedule(fn)
+  end)
+  return timer
+end
+
 function event.custom_on(event_name, callback)
   local uuid = utils_math.uuid()
   local group_name = event.group .. '::custom::' .. event_name .. '::' .. uuid

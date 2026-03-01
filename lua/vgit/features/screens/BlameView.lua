@@ -3,17 +3,14 @@ local lazy = require('vgit.core.lazy')
 local event = lazy('vgit.core.event')
 local Layout = lazy('vgit.ui.Layout')
 local Object = lazy('vgit.core.Object')
-local GitTree = lazy('vgit.git.GitTree')
 local console = lazy('vgit.core.console')
-local git_show = lazy('vgit.git.git_show')
 local Component = lazy('vgit.ui.Component')
-local git_blame = lazy('vgit.git.git_blame')
 local repository = lazy('vgit.git.repository')
 local Element = lazy('vgit.ui.elements.Element')
 local scene_setting = lazy('vgit.settings.scene')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local display_service = lazy('vgit.ui.display_service')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
+local display_service = lazy('vgit.ui.display_service')
 local blame_view_setting = lazy('vgit.settings.blame_view')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
 
@@ -110,6 +107,7 @@ function BlameView:constructor()
     _gutter_component = nil,
     _content_component = nil,
     _component_manager = nil,
+    _repo = nil,
     _history_stack = {},
     _current_commit = nil,
     _current_blames = {},
@@ -150,6 +148,14 @@ function BlameView:create(data)
     filetype = data.filetype,
     reponame = data.reponame,
   }
+
+  local repo, repo_err = repository.open(data.reponame)
+  if repo_err then
+    console.error('[BlameView] Failed to open repository: ' .. tostring(repo_err))
+    return false
+  end
+  self._repo = repo
+
   self._current_blames = data.blames
   self._current_commit = nil
   self._history_stack = {}
@@ -448,7 +454,7 @@ function BlameView:enter_parent()
     return
   end
 
-  local parent_hash = blame.parent_hash or blame._parent_hash
+  local parent_hash = blame.parent_hash
   if not parent_hash or parent_hash == '' then
     console.info('No parent commit (initial commit)')
     return
@@ -460,17 +466,16 @@ function BlameView:enter_parent()
     lnum = lnum,
   })
 
-  local reponame = self._opts.reponame
   local parent_filename = blame.old_filename or self._opts.filename
 
-  local new_blames, blame_err = git_blame.list(reponame, parent_filename, parent_hash)
+  local new_blames, blame_err = self._repo:blame_list(parent_filename, parent_hash)
   if blame_err or not new_blames or #new_blames == 0 then
     table.remove(self._history_stack)
     console.error(blame_err or 'Failed to get blame at parent commit')
     return
   end
 
-  local new_lines, lines_err = git_show.lines(reponame, parent_filename, parent_hash)
+  local new_lines, lines_err = self._repo:file_lines(parent_filename, parent_hash)
   if lines_err or not new_lines then
     table.remove(self._history_stack)
     console.error(lines_err or 'Failed to get file content at parent commit')
@@ -491,20 +496,15 @@ function BlameView:go_back()
   end
 
   local entry = table.remove(self._history_stack)
-  local reponame = self._opts.reponame
   local filename = entry.filename
 
   local commit = entry.commit
   local new_blames, blame_err
   local new_lines, lines_err
 
-  if commit then
-    new_blames, blame_err = git_blame.list(reponame, filename, commit)
-    new_lines, lines_err = git_show.lines(reponame, filename, commit)
-  else
-    new_blames, blame_err = git_blame.list(reponame, filename, 'HEAD')
-    new_lines, lines_err = git_show.lines(reponame, filename, 'HEAD')
-  end
+  local ref = commit or 'HEAD'
+  new_blames, blame_err = self._repo:blame_list(filename, ref)
+  new_lines, lines_err = self._repo:file_lines(filename, ref)
 
   if blame_err or not new_blames or #new_blames == 0 then
     console.error(blame_err or 'Failed to restore blame')
@@ -536,7 +536,7 @@ function BlameView:show_commit_diff()
   end
 
   local commit_hash = blame.commit_hash or blame.hash
-  local parent_hash = blame.parent_hash or blame._parent_hash or (commit_hash .. '~1')
+  local parent_hash = blame.parent_hash or (commit_hash .. '~1')
   local filename = blame.filename or self._opts.filename
 
   local repo, repo_err = repository.current()
@@ -599,7 +599,7 @@ function BlameView:show_commit_project_diff()
     return
   end
 
-  local tree = GitTree(repo, commit_hash)
+  local tree = repo:tree(commit_hash)
 
   local commit, commit_err = tree:commit()
   if commit_err then
@@ -618,9 +618,10 @@ function BlameView:show_commit_project_diff()
     return
   end
 
+  local EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
   local layout_type = scene_setting:get('diff_preference') or 'unified'
   local parent_hash = commit.parent_hash or ''
-  local from_ref = parent_hash ~= '' and parent_hash or nil
+  local from_ref = parent_hash ~= '' and parent_hash or EMPTY_TREE
   local to_ref = commit.commit_hash or commit.hash
 
   local funcs = {}
@@ -668,7 +669,10 @@ function BlameView:show_commit_project_diff()
     return
   end
 
-  local data = {
+  self:destroy()
+  event.await()
+
+  display_service.show_diff({
     type = 'files',
     entries = {
       {
@@ -677,12 +681,7 @@ function BlameView:show_commit_project_diff()
       },
     },
     layout_type = layout_type,
-  }
-
-  self:destroy()
-  event.await()
-
-  display_service.show_diff(data)
+  })
 end
 
 function BlameView:_refresh_view(blames, lines, target_lnum)
@@ -793,6 +792,10 @@ function BlameView:_setup_keymaps()
       }, blame_up_fn) end
     end
   end
+end
+
+function BlameView:is_destroyed()
+  return self._destroyed
 end
 
 function BlameView:destroy()

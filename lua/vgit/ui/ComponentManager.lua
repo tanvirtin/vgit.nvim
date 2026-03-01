@@ -3,7 +3,7 @@ local lazy = require('vgit.core.lazy')
 local event = lazy('vgit.core.event')
 local Object = lazy('vgit.core.Object')
 local Buffer = lazy('vgit.core.Buffer')
-local Element = lazy('vgit.ui.elements.Element')
+local Window = lazy('vgit.core.Window')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentGroup = lazy('vgit.ui.ComponentGroup')
 local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
@@ -17,6 +17,8 @@ function ComponentManager:constructor(config)
     root_component = nil,
     layout_renderer = nil,
     is_destroying = false,
+    _tracked_elements = {},
+    _lifecycle_cleanup = nil,
     ['$component_group'] = ComponentGroup(),
   }
 end
@@ -26,22 +28,26 @@ function ComponentManager:parse_layout_spec(layout_spec)
     if layout_spec.children then
       for i, child in ipairs(layout_spec.children) do
         if child.view and type(child.view.get_layout_spec) == 'function' then
-          if not child.view._mounted and type(child.view.mount) == 'function' then
+          if not child.view:is_mounted() and type(child.view.mount) == 'function' then
             self.component_group:mount(child.view, self)
           end
           local child_layout_spec = child.view:get_layout_spec()
           layout_spec.children[i] = self:parse_layout_spec(child_layout_spec)
+        elseif child.type and child.type == LayoutSpec.Type.VIEW and child.view then
+          self._tracked_elements[#self._tracked_elements + 1] = child.view
         elseif child.type and child.type ~= LayoutSpec.Type.VIEW then
           layout_spec.children[i] = self:parse_layout_spec(child)
         end
       end
     elseif layout_spec.child then
       if layout_spec.child.view and type(layout_spec.child.view.get_layout_spec) == 'function' then
-        if not layout_spec.child.view._mounted and type(layout_spec.child.view.mount) == 'function' then
+        if not layout_spec.child.view:is_mounted() and type(layout_spec.child.view.mount) == 'function' then
           self.component_group:mount(layout_spec.child.view, self)
         end
         local child_layout_spec = layout_spec.child.view:get_layout_spec()
         layout_spec.child = self:parse_layout_spec(child_layout_spec)
+      elseif layout_spec.child.type and layout_spec.child.type == LayoutSpec.Type.VIEW and layout_spec.child.view then
+        self._tracked_elements[#self._tracked_elements + 1] = layout_spec.child.view
       elseif layout_spec.child.type and layout_spec.child.type ~= LayoutSpec.Type.VIEW then
         layout_spec.child = self:parse_layout_spec(layout_spec.child)
       end
@@ -99,15 +105,33 @@ function ComponentManager:render_layout()
 end
 
 function ComponentManager:register_lifecycle_events()
-  self:on('BufWinLeave', function()
-    event.await()
-    self:destroy()
-  end)
+  if self.context:is_floating_mode() then
+    self._lifecycle_cleanup = event.disposable_on('WinLeave', function()
+      event.defer(function()
+        if self.is_destroying then return end
 
-  self:on('QuitPre', function()
-    event.await()
-    self:destroy()
-  end)
+        local current_win = Window.get_current()
+        for _, el in ipairs(self._tracked_elements) do
+          if el:is_valid() then
+            local win = el:get_window()
+            if win and current_win:is_same(win) then return end
+          end
+        end
+
+        self:destroy()
+      end, 50)
+    end)
+  else
+    self:on('BufWinLeave', function()
+      event.await()
+      self:destroy()
+    end)
+
+    self:on('QuitPre', function()
+      event.await()
+      self:destroy()
+    end)
+  end
 end
 
 function ComponentManager:render(layout_config)
@@ -119,15 +143,18 @@ function ComponentManager:render(layout_config)
   end
   self:mount_components()
   self:render_layout()
-  if scratch_buffer and scratch_buffer:is_valid() then
-    scratch_buffer:delete({ force = true })
-  end
+  if scratch_buffer and scratch_buffer:is_valid() then scratch_buffer:delete({ force = true }) end
   self:register_lifecycle_events()
 end
 
 function ComponentManager:destroy()
   if self.is_destroying then return end
   self.is_destroying = true
+
+  if self._lifecycle_cleanup then
+    self._lifecycle_cleanup()
+    self._lifecycle_cleanup = nil
+  end
 
   self.component_group:unmount()
   self.context:restore_window_options()

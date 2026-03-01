@@ -17,28 +17,34 @@ local function parse_hunk_header_lnums(header)
   return new_start, new_start + math.max(new_count - 1, 0)
 end
 
-local function parse_unified_diff(lines)
-  local patch_entries = {}
-  local current_filename = nil
-  local current_filetype = 'text'
-  local current_old_filename = nil
-  local current_hunk = nil
+local function parse_hunk_entries(lines)
+  local entries = {}
+  local filename, filetype, old_filename
+  local current_hunk
+  local file_header
 
   local function flush_hunk()
-    if not current_hunk then return end
-    if #current_hunk.diff > 0 then
-      patch_entries[#patch_entries + 1] = {
-        type = 'hunk',
-        hunk = {
-          header = current_hunk.header,
-          diff = current_hunk.diff,
-          top = current_hunk.top,
-          bot = current_hunk.bot,
-        },
-        filetype = current_filetype,
-        filename = current_filename,
-      }
+    if not current_hunk or #current_hunk.diff == 0 then
+      current_hunk = nil
+      return
     end
+
+    if file_header then
+      entries[#entries + 1] = file_header
+      file_header = nil
+    end
+
+    entries[#entries + 1] = {
+      type = 'hunk',
+      hunk = {
+        header = current_hunk.header,
+        diff = current_hunk.diff,
+        top = current_hunk.top,
+        bot = current_hunk.bot,
+      },
+      filetype = filetype,
+      filename = filename,
+    }
     current_hunk = nil
   end
 
@@ -46,26 +52,23 @@ local function parse_unified_diff(lines)
     local b_path = line:match('^diff %-%-git a/.+ b/(.+)$')
     if b_path then
       flush_hunk()
-      current_filename = b_path
-      current_old_filename = nil
-      current_filetype = detect_filetype(b_path)
-      patch_entries[#patch_entries + 1] = {
+      filename = b_path
+      old_filename = nil
+      filetype = detect_filetype(b_path)
+      file_header = {
         type = 'file_header',
-        filename = current_filename,
-        filetype = current_filetype,
+        filename = filename,
+        filetype = filetype,
       }
-    elseif line:match('^rename from (.+)$') then
-      current_old_filename = line:match('^rename from (.+)$')
-    elseif line:match('^rename to (.+)$') then
+    elseif line:match('^rename from ') then
+      old_filename = line:match('^rename from (.+)$')
+    elseif line:match('^rename to ') then
       local new_name = line:match('^rename to (.+)$')
-      current_filename = new_name
-      current_filetype = detect_filetype(new_name)
-      for i = #patch_entries, 1, -1 do
-        if patch_entries[i].type == 'file_header' then
-          patch_entries[i].filename = (current_old_filename or new_name) .. ' -> ' .. new_name
-          patch_entries[i].filetype = current_filetype
-          break
-        end
+      filename = new_name
+      filetype = detect_filetype(new_name)
+      if file_header then
+        file_header.filename = (old_filename or new_name) .. ' -> ' .. new_name
+        file_header.filetype = filetype
       end
     elseif line:match('^@@ ') then
       flush_hunk()
@@ -74,50 +77,36 @@ local function parse_unified_diff(lines)
       current_hunk = { header = hunk_header, diff = {}, top = top, bot = bot }
     elseif current_hunk then
       local prefix = line:sub(1, 1)
-      if prefix == '+' or prefix == '-' or prefix == ' ' then current_hunk.diff[#current_hunk.diff + 1] = line end
+      if prefix == '+' or prefix == '-' or prefix == ' ' then
+        current_hunk.diff[#current_hunk.diff + 1] = line
+      end
     end
   end
 
   flush_hunk()
 
-  local clean = {}
-  for i, entry in ipairs(patch_entries) do
-    if entry.type == 'file_header' then
-      local next = patch_entries[i + 1]
-      if next and next.type == 'hunk' then clean[#clean + 1] = entry end
-    else
-      clean[#clean + 1] = entry
-    end
-  end
-
-  return clean
+  return entries
 end
 
-function git_diff.range_patch_entries(reponame, from_ref, to_ref)
-  local result, err = GitQueryBuilder(reponame):diff():option('unified', 3):refs(from_ref, to_ref):execute()
+local function run_diff(builder)
+  local result, err = builder:execute()
 
   if err then return nil, err end
   if not result or #result == 0 then return {} end
 
-  return parse_unified_diff(result)
+  return parse_hunk_entries(result)
 end
 
-function git_diff.staged_patch_entries(reponame)
-  local result, err = GitQueryBuilder(reponame):diff():option('unified', 3):option('cached'):refs('HEAD'):execute()
-
-  if err then return nil, err end
-  if not result or #result == 0 then return {} end
-
-  return parse_unified_diff(result)
+function git_diff.range_hunk_entries(reponame, from_ref, to_ref)
+  return run_diff(GitQueryBuilder(reponame):diff():option('unified', 3):refs(from_ref, to_ref))
 end
 
-function git_diff.unstaged_patch_entries(reponame)
-  local result, err = GitQueryBuilder(reponame):diff():option('unified', 3):execute()
+function git_diff.staged_hunk_entries(reponame)
+  return run_diff(GitQueryBuilder(reponame):diff():option('unified', 3):option('cached'):refs('HEAD'))
+end
 
-  if err then return nil, err end
-  if not result or #result == 0 then return {} end
-
-  return parse_unified_diff(result)
+function git_diff.unstaged_hunk_entries(reponame)
+  return run_diff(GitQueryBuilder(reponame):diff():option('unified', 3))
 end
 
 return git_diff

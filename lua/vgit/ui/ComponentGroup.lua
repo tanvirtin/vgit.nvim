@@ -11,7 +11,7 @@ function ComponentGroup:constructor()
 end
 
 function ComponentGroup:mount(component, renderer)
-  if component._mounted then return end
+  if component:is_mounted() then return end
 
   if renderer.context then
     component.props = component.props or {}

@@ -196,4 +196,14 @@ function Window:call(callback)
   return self
 end
 
+function Window:start_insert()
+  return self:call(function()
+    vim.cmd('startinsert!')
+  end)
+end
+
+function Window.stop_insert()
+  vim.cmd('stopinsert')
+end
+
 return Window

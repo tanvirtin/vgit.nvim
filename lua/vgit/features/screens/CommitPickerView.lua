@@ -1,10 +1,13 @@
 local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
+local Layout = lazy('vgit.ui.Layout')
 local Object = lazy('vgit.core.Object')
-local git_log = lazy('vgit.git.git_log')
 local console = lazy('vgit.core.console')
-local show_command = lazy('vgit.cli.commands.show')
+local repository = lazy('vgit.git.repository')
+local scene_setting = lazy('vgit.settings.scene')
+local ComponentManager = lazy('vgit.ui.ComponentManager')
+local display_service = lazy('vgit.ui.display_service')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
 local CommitPickerView = Object:extend()
@@ -12,8 +15,10 @@ local CommitPickerView = Object:extend()
 function CommitPickerView:constructor()
   return {
     _search_component = nil,
+    _component_manager = nil,
     _destroyed = false,
     _history = nil,
+    _repo = nil,
     _repo_path = nil,
     _search_query = '',
     _search_skip = 0,
@@ -51,6 +56,7 @@ function CommitPickerView:create(data)
   if not data.history then return false end
 
   self._history = data.history
+  self._repo = data.repo
   self._repo_path = data.repo_path
 
   local debounced_search, cleanup = event.debounce(function(query)
@@ -74,12 +80,12 @@ function CommitPickerView:create(data)
       return self:_on_load_more()
     end,
     on_close = function()
-      self._destroyed = true
-      self._search_component = nil
+      self:destroy()
     end,
   })
 
-  self._search_component:mount()
+  self._component_manager = ComponentManager()
+  self._component_manager:render(Layout.popup(self._search_component))
 
   return true
 end
@@ -105,7 +111,7 @@ function CommitPickerView:_on_search(query)
   sc:set_loading(true)
 
   event.async(function()
-    local commits, err = git_log.list(self._repo_path, {
+    local commits, err = self._repo:log_search({
       grep = self._search_query,
       pagination = { count = 100, skip = 0 },
     })
@@ -131,13 +137,108 @@ function CommitPickerView:_on_search(query)
   end)()
 end
 
-function CommitPickerView:_on_select(value)
+CommitPickerView._on_select = event.async(function(self, value)
   self:destroy()
 
   if not value then return end
 
-  show_command.execute({ value })
-end
+  event.await()
+
+  local repo, repo_err = repository.current()
+  if repo_err then
+    console.error(repo_err)
+    return
+  end
+
+  local tree = repo:tree(value)
+
+  local commit, commit_err = tree:commit()
+  if commit_err then
+    console.error('Failed to get commit info: ' .. tostring(commit_err))
+    return
+  end
+
+  local files, files_err = tree:files()
+  if files_err then
+    console.error('Failed to get commit files: ' .. tostring(files_err))
+    return
+  end
+
+  if not files or #files == 0 then
+    console.info('No files changed in commit ' .. value)
+    return
+  end
+
+  local layout_type = scene_setting:get('diff_preference') or 'unified'
+
+  local EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+  local parent_hash = commit.parent_hash or ''
+  local from_ref = parent_hash ~= '' and parent_hash or EMPTY_TREE
+  local to_ref = commit.commit_hash or commit.hash
+
+  local funcs = {}
+  for _, file in ipairs(files) do
+    local filename = file.filename
+    local file_old_filename = file.old_filename
+
+    table.insert(funcs, function()
+      local diff = repo:diff({
+        type = 'range',
+        filename = filename,
+        old_filename = file_old_filename,
+        from = from_ref,
+        to = to_ref,
+        layout_type = layout_type,
+      })
+
+      if not diff then return nil end
+
+      local from_filename = file_old_filename or filename
+      return {
+        filename = filename,
+        filetype = file.get_filetype and file:get_filetype() or 'text',
+        diff = diff,
+        status = file,
+        original_lines = repo:file_lines(from_filename, from_ref) or {},
+        current_lines = repo:file_lines(filename, to_ref) or {},
+      }
+    end)
+  end
+
+  local results = event.all(funcs)
+
+  local entries = {}
+  for i = 1, #funcs do
+    if results[i] then table.insert(entries, results[i]) end
+  end
+
+  if #entries == 0 then
+    console.info('No diffs available for commit ' .. value)
+    return
+  end
+
+  local commit_info = {
+    hash = commit.commit_hash or commit.hash,
+    author = commit.author,
+    author_mail = commit.author_mail,
+    author_time = commit.author_time,
+    message = commit.message,
+  }
+
+  local data = {
+    type = 'files',
+    entries = {
+      {
+        title = string.format('Commit: %s', (commit_info.hash or ''):sub(1, 7)),
+        entries = entries,
+      },
+    },
+    layout_type = layout_type,
+    commit_info = commit_info,
+  }
+
+  display_service.show_diff(data)
+end)
 
 function CommitPickerView:_on_load_more()
   if self._search_query == '' then
@@ -152,7 +253,7 @@ function CommitPickerView:_on_load_more()
     return self:_build_items(new_commits)
   end
 
-  local commits, err = git_log.list(self._repo_path, {
+  local commits, err = self._repo:log_search({
     grep = self._search_query,
     pagination = { count = 100, skip = self._search_skip },
   })
@@ -168,6 +269,10 @@ function CommitPickerView:_on_load_more()
   return self:_build_items(commits)
 end
 
+function CommitPickerView:is_destroyed()
+  return self._destroyed
+end
+
 function CommitPickerView:destroy()
   if self._destroyed then return end
 
@@ -178,10 +283,12 @@ function CommitPickerView:destroy()
     self._search_cleanup = nil
   end
 
-  if self._search_component then
-    self._search_component:close()
-    self._search_component = nil
+  if self._component_manager then
+    self._component_manager:destroy()
+    self._component_manager = nil
   end
+
+  self._search_component = nil
 end
 
 return CommitPickerView

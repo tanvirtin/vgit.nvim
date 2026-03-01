@@ -6,6 +6,7 @@ local Component = lazy('vgit.ui.Component')
 local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ViewportComponent = lazy('vgit.ui.ViewportComponent')
+local symbols_setting = lazy('vgit.settings.symbols')
 local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
 local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
 
@@ -219,7 +220,7 @@ function PatchPreviewComponent:get_initial_state()
 end
 
 function PatchPreviewComponent:should_component_update(next_props)
-  if self.props.patch_entries ~= next_props.patch_entries then return true end
+  if self.props.hunk_entries ~= next_props.hunk_entries then return true end
   return false
 end
 
@@ -255,7 +256,7 @@ function PatchPreviewComponent:component_will_mount()
   end
 end
 
-function PatchPreviewComponent:build_patch_lines_from_entries(patch_entries)
+function PatchPreviewComponent:build_patch_lines_from_entries(hunk_entries)
   local ctx = {
     lines = {},
     line_metadata = {},
@@ -268,7 +269,7 @@ function PatchPreviewComponent:build_patch_lines_from_entries(patch_entries)
     max_lnum = 0,
   }
 
-  for _, entry in ipairs(patch_entries or {}) do
+  for _, entry in ipairs(hunk_entries or {}) do
     if entry.type == 'file_header' then
       process_file_header(ctx, entry)
     elseif entry.type == 'diff_content' then
@@ -297,9 +298,9 @@ function PatchPreviewComponent:render()
     el:clear_extmark_highlights()
   end)
 
-  local patch_entries = self.props.patch_entries
+  local hunk_entries = self.props.hunk_entries
 
-  if not patch_entries or #patch_entries == 0 then
+  if not hunk_entries or #hunk_entries == 0 then
     self.state.lines = {}
     self.state.line_metadata = {}
     self:clear_lines()
@@ -307,7 +308,7 @@ function PatchPreviewComponent:render()
     return
   end
 
-  local lines, line_metadata, file_sections, marks, line_numbers = self:build_patch_lines_from_entries(patch_entries)
+  local lines, line_metadata, file_sections, marks, line_numbers = self:build_patch_lines_from_entries(hunk_entries)
   self.state.lines = lines
   self.state.line_metadata = line_metadata
   self.state.marks = marks or {}
@@ -388,6 +389,8 @@ function PatchPreviewComponent:_render_viewport(top, bot)
     local diff_hl_map = self.state._diff_hl_map
     local syntax_hl_map = self.state._syntax_hl_map
     local line_numbers = self.state._line_numbers
+    local line_metadata = self.state.line_metadata
+    local void_text
 
     for row = top, bot do
       local ln = line_numbers[row + 1]
@@ -396,6 +399,17 @@ function PatchPreviewComponent:_render_viewport(top, bot)
         hl = ln.hl,
         text = ln.text,
       }) end
+
+      local meta = line_metadata[row + 1]
+      if meta and meta.lnum_change and meta.lnum_change.type == 'void' then
+        if not void_text then void_text = string.rep(symbols_setting:get('void'), el:get_width()) end
+        el:place_extmark_text({
+          row = row,
+          col = 0,
+          text = void_text,
+          hl = 'GitLineNr',
+        })
+      end
 
       local diff_hls = diff_hl_map[row]
       if diff_hls then

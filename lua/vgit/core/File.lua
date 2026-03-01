@@ -43,6 +43,10 @@ function File:is_open()
   return self._fd ~= nil
 end
 
+function File:get_path()
+  return self._path
+end
+
 function File:remove()
   self:close()
   return os.remove(self._path)

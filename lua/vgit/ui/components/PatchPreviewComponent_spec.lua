@@ -751,13 +751,13 @@ describe('PatchPreviewComponent:', function()
   end)
 
   describe('should_component_update', function()
-    it('should return true when patch_entries change', function()
+    it('should return true when hunk_entries change', function()
       local component = create_patch_preview({
-        props = { patch_entries = { 'a' } },
+        props = { hunk_entries = { 'a' } },
       })
 
       local result = component:should_component_update({
-        patch_entries = { 'b' },
+        hunk_entries = { 'b' },
       }, {})
       assert.is_true(result)
     end)
@@ -765,11 +765,11 @@ describe('PatchPreviewComponent:', function()
     it('should return false when nothing changes', function()
       local entries = { 'same' }
       local component = create_patch_preview({
-        props = { patch_entries = entries },
+        props = { hunk_entries = entries },
       })
 
       local result = component:should_component_update({
-        patch_entries = entries,
+        hunk_entries = entries,
       }, {})
       assert.is_false(result)
     end)

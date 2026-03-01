@@ -4,10 +4,8 @@ local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
 local Window = lazy('vgit.core.Window')
 local Buffer = lazy('vgit.core.Buffer')
-local GitFile = lazy('vgit.git.GitFile')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
-local git_status = lazy('vgit.git.git_status')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
 
@@ -198,7 +196,6 @@ diff_command.execute = event.async(function(args)
 
   if opts.files and #opts.files == 1 then
     local filename = opts.files[1]
-    local git_file = GitFile(filename)
     local diff
     local old_filename = nil
 
@@ -229,7 +226,7 @@ diff_command.execute = event.async(function(args)
         from = 'HEAD'
         to = 'index'
         -- Look up old_filename from git status for renames
-        local file_status = git_status.ls(repo:get_path(), filename)
+        local file_status = repo:file_status(filename)
         if file_status and file_status.old_filename then old_filename = file_status.old_filename end
       else
         -- Unstaged changes: index vs disk (working tree changes)
@@ -256,7 +253,7 @@ diff_command.execute = event.async(function(args)
         diff = diff,
         filename = filename,
         old_filename = old_filename,
-        filetype = git_file:get_filetype(),
+        filetype = fs.detect_filetype(filename),
         layout_type = opts.layout_type,
         is_staged = opts.staged,
         is_live = is_live,
@@ -269,7 +266,7 @@ diff_command.execute = event.async(function(args)
     local to_ref = opts.compare_ref or 'HEAD'
 
     -- Get files that changed between the refs using git diff-tree
-    local files, files_err = git_status.tree(repo:get_path(), {
+    local files, files_err = repo:diff_tree({
       commit_hash = to_ref,
       parent_hash = from_ref,
     })

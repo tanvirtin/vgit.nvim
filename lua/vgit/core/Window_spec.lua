@@ -266,22 +266,49 @@ describe('Window:', function()
   end)
 
   describe('scroll_to', function()
-    it('should scroll to the center by default', function()
-      win = Window:open(buffer, default_float_opts)
-      win:scroll_to()
+    local big_buffer
 
-      assert.has_no.errors(function()
-        win:get_cursor()
-      end)
+    before_each(function()
+      -- Create a buffer with enough lines to scroll
+      local lines = {}
+      for i = 1, 100 do
+        lines[i] = 'Line ' .. i
+      end
+      big_buffer = Buffer(vim.api.nvim_create_buf(false, true))
+      big_buffer:set_lines(lines)
     end)
 
-    it('should scroll to the top when specified', function()
-      win = Window:open(buffer, default_float_opts)
+    after_each(function()
+      if big_buffer and big_buffer.bufnr and vim.api.nvim_buf_is_valid(big_buffer.bufnr) then
+        vim.api.nvim_buf_delete(big_buffer.bufnr, { force = true })
+      end
+    end)
+
+    it('should scroll to the center and preserve cursor line', function()
+      win = Window:open(big_buffer, vim.tbl_extend('force', default_float_opts, { focus = true }))
+      win:set_cursor({ 50, 0 })
+      win:scroll_to('center')
+
+      local cursor = win:get_cursor()
+      assert.are.equal(50, cursor[1])
+    end)
+
+    it('should scroll to the top and preserve cursor line', function()
+      win = Window:open(big_buffer, vim.tbl_extend('force', default_float_opts, { focus = true }))
+      win:set_cursor({ 50, 0 })
       win:scroll_to('top')
 
-      assert.has_no.errors(function()
-        win:get_cursor()
-      end)
+      local cursor = win:get_cursor()
+      assert.are.equal(50, cursor[1])
+    end)
+
+    it('should scroll to the bottom and preserve cursor line', function()
+      win = Window:open(big_buffer, vim.tbl_extend('force', default_float_opts, { focus = true }))
+      win:set_cursor({ 50, 0 })
+      win:scroll_to('bottom')
+
+      local cursor = win:get_cursor()
+      assert.are.equal(50, cursor[1])
     end)
   end)
 

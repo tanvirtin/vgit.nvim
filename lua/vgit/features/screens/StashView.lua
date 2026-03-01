@@ -4,8 +4,6 @@ local Layout = lazy('vgit.ui.Layout')
 local event = lazy('vgit.core.event')
 local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
-local git_diff = lazy('vgit.git.git_diff')
-local git_stash = lazy('vgit.git.git_stash')
 local scene_setting = lazy('vgit.settings.scene')
 local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
@@ -89,21 +87,21 @@ function StashView:_build_stash_groups(stashes)
   }
 end
 
-function StashView:_build_patch_entries_for_commit(commit)
+function StashView:_build_hunk_entries_for_commit(commit)
   local repo = self._repo
   if not repo then return {} end
 
   local revision = commit.context and commit.context.revision
   if not revision then return {} end
 
-  local patch_entries, err = git_diff.range_patch_entries(repo:get_path(), revision .. '^', revision)
+  local hunk_entries, err = repo:diff({ type = 'range', from = revision .. '^', to = revision })
 
   if err then
     console.debug.error(string.format('[StashView] git diff failed for %s: %s', revision, err[1] or tostring(err)))
     return {}
   end
 
-  return patch_entries or {}
+  return hunk_entries or {}
 end
 
 function StashView:_split_hunk_entry(hunk, entry)
@@ -151,11 +149,11 @@ function StashView:_split_hunk_entry(hunk, entry)
     })
 end
 
-function StashView:_build_split_patch_entries(patch_entries)
+function StashView:_build_split_hunk_entries(hunk_entries)
   local previous_entries = {}
   local current_entries = {}
 
-  for _, entry in ipairs(patch_entries) do
+  for _, entry in ipairs(hunk_entries) do
     if entry.type == 'file_header' then
       previous_entries[#previous_entries + 1] = vim.tbl_extend('force', {}, entry)
       current_entries[#current_entries + 1] = vim.tbl_extend('force', {}, entry)
@@ -169,18 +167,18 @@ function StashView:_build_split_patch_entries(patch_entries)
   return previous_entries, current_entries
 end
 
-function StashView:_set_patch_entries(patch_entries)
+function StashView:_set_hunk_entries(hunk_entries)
   if self._layout_type == self.LAYOUT_SPLIT then
-    local previous_entries, current_entries = self:_build_split_patch_entries(patch_entries)
+    local previous_entries, current_entries = self:_build_split_hunk_entries(hunk_entries)
     if self._previous_component and self._previous_component:is_valid() then
-      self._previous_component:set_props({ patch_entries = previous_entries })
+      self._previous_component:set_props({ hunk_entries = previous_entries })
     end
     if self._current_component and self._current_component:is_valid() then
-      self._current_component:set_props({ patch_entries = current_entries })
+      self._current_component:set_props({ hunk_entries = current_entries })
     end
   else
     if self._patch_component and self._patch_component:is_valid() then
-      self._patch_component:set_props({ patch_entries = patch_entries })
+      self._patch_component:set_props({ hunk_entries = hunk_entries })
     end
   end
 end
@@ -253,7 +251,7 @@ function StashView:_enrich_with_syntax(commit, initial_entries, gen)
 
   if revision then self._patch_cache[revision] = enriched end
 
-  if self._update_gen == gen then self:_set_patch_entries(enriched) end
+  if self._update_gen == gen then self:_set_hunk_entries(enriched) end
 end
 
 function StashView:_update_patch(commit)
@@ -265,20 +263,20 @@ function StashView:_update_patch(commit)
   local revision = commit.context and commit.context.revision
 
   if revision and self._patch_cache[revision] then
-    self:_set_patch_entries(self._patch_cache[revision])
+    self:_set_hunk_entries(self._patch_cache[revision])
     return
   end
 
-  local patch_entries = self:_build_patch_entries_for_commit(commit)
+  local hunk_entries = self:_build_hunk_entries_for_commit(commit)
 
   if self._update_gen ~= gen then return end
 
-  if revision then self._patch_cache[revision] = patch_entries end
+  if revision then self._patch_cache[revision] = hunk_entries end
 
-  self:_set_patch_entries(patch_entries)
+  self:_set_hunk_entries(hunk_entries)
 
   event.async(function()
-    self:_enrich_with_syntax(commit, patch_entries, gen)
+    self:_enrich_with_syntax(commit, hunk_entries, gen)
   end)()
 end
 
@@ -288,8 +286,7 @@ function StashView:_refresh_stash_list()
 
   self._patch_cache = {}
 
-  local repo_path = repo:get_path()
-  local stashes, err = git_stash.list(repo_path)
+  local stashes, err = repo:stash_list()
 
   if err then
     console.debug.error(string.format('[StashView] list failed: %s', err[1] or tostring(err)))
@@ -388,7 +385,7 @@ function StashView:setup_keymaps()
   local add_key = self:get_key(keymaps.add)
   if add_key then
     local add_fn, add_cleanup = event.debounce_async(function()
-      local _, err = git_stash.add(self._repo:get_path())
+      local _, err = self._repo:stash_add()
       if err then
         console.error(err[1] or tostring(err))
         return
@@ -410,7 +407,7 @@ function StashView:setup_keymaps()
       if not commit then return end
       local revision = commit.context and commit.context.revision
       if not revision then return end
-      local _, err = git_stash.apply(self._repo:get_path(), revision)
+      local _, err = self._repo:stash_apply(revision)
       if err then
         console.error(err[1] or tostring(err))
         return
@@ -432,7 +429,7 @@ function StashView:setup_keymaps()
       if not commit then return end
       local revision = commit.context and commit.context.revision
       if not revision then return end
-      local _, err = git_stash.pop(self._repo:get_path(), revision)
+      local _, err = self._repo:stash_pop(revision)
       if err then
         console.error(err[1] or tostring(err))
         return
@@ -454,7 +451,7 @@ function StashView:setup_keymaps()
       if not commit then return end
       local revision = commit.context and commit.context.revision
       if not revision then return end
-      local _, err = git_stash.drop(self._repo:get_path(), revision)
+      local _, err = self._repo:stash_drop(revision)
       if err then
         console.error(err[1] or tostring(err))
         return
@@ -472,7 +469,7 @@ function StashView:setup_keymaps()
   local clear_key = self:get_key(keymaps.clear)
   if clear_key then
     local clear_fn, clear_cleanup = event.debounce_async(function()
-      local _, err = git_stash.clear(self._repo:get_path())
+      local _, err = self._repo:stash_clear()
       if err then
         console.error(err[1] or tostring(err))
         return
@@ -514,7 +511,7 @@ end
 
 function StashView:_create_unified(groups)
   self._patch_component = PatchPreviewComponent({
-    patch_entries = {},
+    hunk_entries = {},
     focus = false,
   })
 
@@ -542,7 +539,7 @@ end
 
 function StashView:_create_split()
   self._previous_component = PatchPreviewComponent({
-    patch_entries = {},
+    hunk_entries = {},
     focus = false,
     win_options = {
       scrollbind = true,
@@ -551,7 +548,7 @@ function StashView:_create_split()
   })
 
   self._current_component = PatchPreviewComponent({
-    patch_entries = {},
+    hunk_entries = {},
     focus = false,
     win_options = {
       scrollbind = true,
@@ -629,6 +626,10 @@ function StashView:create(data)
   end
 
   return true
+end
+
+function StashView:is_destroyed()
+  return self._destroyed
 end
 
 function StashView:destroy()

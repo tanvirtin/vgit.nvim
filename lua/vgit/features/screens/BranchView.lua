@@ -112,6 +112,10 @@ function BranchView:_on_no_match(query)
   console.info('Created and switched to branch ' .. query)
 end
 
+function BranchView:is_destroyed()
+  return self._destroyed
+end
+
 function BranchView:destroy()
   if self._destroyed then return end
 

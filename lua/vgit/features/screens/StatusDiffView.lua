@@ -7,7 +7,6 @@ local event = lazy('vgit.core.event')
 local Object = lazy('vgit.core.Object')
 local Window = lazy('vgit.core.Window')
 local console = lazy('vgit.core.console')
-local git_stash = lazy('vgit.git.git_stash')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local hunks_setting = lazy('vgit.settings.hunks')
@@ -92,6 +91,7 @@ function StatusDiffView:hunk_down()
 
   if not current_index or total_hunks == 0 or current_index >= total_hunks then
     -- At last hunk or no hunks - move to next file
+    self._skip_on_move = true
     local item = self:move_to_next_file()
     if not item then return end
     self:_update_diff_component()
@@ -115,6 +115,7 @@ function StatusDiffView:hunk_up()
 
   if not current_index or total_hunks == 0 or current_index <= 1 then
     -- At first hunk or no hunks - move to previous file's last hunk
+    self._skip_on_move = true
     local item = self:move_to_prev_file()
     if not item then return end
     self:_update_diff_component()
@@ -560,7 +561,12 @@ function StatusDiffView:stage_entry()
     console.debug.error(err)
     return
   end
-  repo:stage_file(filename)
+
+  local _, stage_err = repo:stage_file(filename)
+  if stage_err then
+    console.debug.error(stage_err)
+    return
+  end
 
   self:refresh_and_navigate(function()
     if next_file then
@@ -584,7 +590,12 @@ function StatusDiffView:unstage_entry()
     console.debug.error(err)
     return
   end
-  repo:unstage_file(filename)
+
+  local _, unstage_err = repo:unstage_file(filename)
+  if unstage_err then
+    console.debug.error(unstage_err)
+    return
+  end
 
   self:refresh_and_navigate(function()
     if next_file then
@@ -616,8 +627,19 @@ function StatusDiffView:reset_entry()
     return
   end
 
-  if entry_type == 'staged' then repo:unstage_file(filename) end
-  repo:reset(filename)
+  if entry_type == 'staged' then
+    local _, unstage_err = repo:unstage_file(filename)
+    if unstage_err then
+      console.debug.error(unstage_err)
+      return
+    end
+  end
+
+  local _, reset_err = repo:reset(filename)
+  if reset_err then
+    console.debug.error(reset_err)
+    return
+  end
 
   self:refresh_and_navigate(function()
     if next_file then
@@ -640,7 +662,12 @@ function StatusDiffView:stage_entry_from_diff()
     console.debug.error(err)
     return
   end
-  repo:stage_file(filename)
+
+  local _, stage_err = repo:stage_file(filename)
+  if stage_err then
+    console.debug.error(stage_err)
+    return
+  end
 
   self:refresh_and_navigate(function()
     if
@@ -665,7 +692,12 @@ function StatusDiffView:unstage_entry_from_diff()
     console.debug.error(err)
     return
   end
-  repo:unstage_file(filename)
+
+  local _, unstage_err = repo:unstage_file(filename)
+  if unstage_err then
+    console.debug.error(unstage_err)
+    return
+  end
 
   self:refresh_and_navigate(function()
     if
@@ -875,7 +907,11 @@ function StatusDiffView:stage_all()
     console.debug.error(err)
     return
   end
-  repo:stage_all()
+  local _, stage_err = repo:stage_all()
+  if stage_err then
+    console.debug.error(stage_err)
+    return
+  end
 
   self:refresh_and_navigate(function()
     if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
@@ -888,7 +924,11 @@ function StatusDiffView:unstage_all()
     console.debug.error(err)
     return
   end
-  repo:unstage_all()
+  local _, unstage_err = repo:unstage_all()
+  if unstage_err then
+    console.debug.error(unstage_err)
+    return
+  end
 
   self:refresh_and_navigate(function()
     if not self:_move_to_first_entry_of_type('unstaged') then self:_move_to_first_entry() end
@@ -907,7 +947,11 @@ function StatusDiffView:reset_all()
     console.debug.error(err)
     return
   end
-  repo:reset()
+  local _, reset_err = repo:reset()
+  if reset_err then
+    console.debug.error(reset_err)
+    return
+  end
 
   self._refreshing = true
   local has_data = self:refresh_data()
@@ -1075,7 +1119,7 @@ function StatusDiffView:setup_keymaps()
   local stash_key = self:get_key(diff_keymaps.stash)
   if stash_key then
     local stash_fn, stash_cleanup = event.debounce_async(function()
-      local _, err = git_stash.add(self._repo:get_path())
+      local _, err = self._repo:stash_add()
       if err then
         console.error(err[1] or tostring(err))
         return
@@ -1276,6 +1320,10 @@ function StatusDiffView:on_git_change()
       self:_update_diff_component()
     end
   end
+end
+
+function StatusDiffView:is_destroyed()
+  return self._destroyed
 end
 
 function StatusDiffView:destroy()

@@ -136,13 +136,14 @@ describe('SyntaxAnnotator:', function()
 
   describe('_parse_highlights', function()
     it('should return empty table when parser unavailable', function()
-      local bufnr = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'test' })
+      local Buffer = require('vgit.core.Buffer')
+      local scratch_buffer = Buffer():create(false, true)
+      scratch_buffer:set_lines({ 'test' })
 
-      local highlights = annotator:_parse_highlights(bufnr, 'nonexistent_filetype_xyz')
+      local highlights = annotator:_parse_highlights(scratch_buffer, 'nonexistent_filetype_xyz')
       eq({}, highlights)
 
-      vim.api.nvim_buf_delete(bufnr, { force = true })
+      scratch_buffer:delete()
     end)
   end)
 end)

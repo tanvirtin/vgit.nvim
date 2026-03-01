@@ -33,6 +33,7 @@ log_command.execute = event.async(function()
     commits = commits,
     history = history,
     repo_path = repo:get_path(),
+    repo = repo,
   })
 end)
 

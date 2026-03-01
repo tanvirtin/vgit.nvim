@@ -76,21 +76,21 @@ end
 function TreeComponent:generate_tree(entries)
   local depth_tree = DepthTree()
   depth_tree:from_entries(entries)
-  return depth_tree._tree
+  return depth_tree:value()
 end
 
 function TreeComponent:transform_entries_to_tree(entries)
   local depth_tree = DepthTree()
   depth_tree:from_entries(entries)
   depth_tree:sort()
-  return depth_tree._tree
+  return depth_tree:value()
 end
 
 function TreeComponent:sort_tree(tree)
   local depth_tree = DepthTree()
-  depth_tree._tree = tree
+  depth_tree:set_tree(tree)
   depth_tree:sort()
-  return depth_tree._tree
+  return depth_tree:value()
 end
 
 function TreeComponent:create_node(entry)

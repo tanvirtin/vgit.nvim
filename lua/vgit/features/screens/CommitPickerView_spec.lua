@@ -3,16 +3,57 @@ local eq = assert.are.same
 -- Clear lazy cache and module cache to ensure fresh mocks
 package.loaded['vgit.core.lazy'] = nil
 package.loaded['vgit.features.screens.CommitPickerView'] = nil
-package.loaded['vgit.cli.commands.show'] = nil
 package.loaded['vgit.ui.components.SearchComponent'] = nil
+package.loaded['vgit.ui.ComponentManager'] = nil
+package.loaded['vgit.ui.Layout'] = nil
 package.loaded['vgit.core.event'] = nil
 package.loaded['vgit.git.git_log'] = nil
+package.loaded['vgit.git.repository'] = nil
+package.loaded['vgit.git.GitTree'] = nil
+package.loaded['vgit.settings.scene'] = nil
+package.loaded['vgit.ui.display_service'] = nil
 
 -- Stub modules before requiring CommitPickerView
-local show_execute_args = nil
-package.loaded['vgit.cli.commands.show'] = {
-  execute = function(args)
-    show_execute_args = args
+local display_service_show_diff_data = nil
+package.loaded['vgit.ui.display_service'] = {
+  show_diff = function(data)
+    display_service_show_diff_data = data
+  end,
+  show_blame_view = function() end,
+}
+
+local mock_repo = {
+  diff = function(_, spec)
+    return { hunks = {} }
+  end,
+  file_lines = function(_, filename, ref)
+    return {}
+  end,
+}
+package.loaded['vgit.git.repository'] = {
+  current = function()
+    return mock_repo, nil
+  end,
+}
+
+local mock_tree_commit = nil
+local mock_tree_files = nil
+package.loaded['vgit.git.GitTree'] = setmetatable({}, {
+  __call = function(_, repo, commit_ref)
+    return {
+      commit = function()
+        return mock_tree_commit, nil
+      end,
+      files = function()
+        return mock_tree_files, nil
+      end,
+    }
+  end,
+})
+
+package.loaded['vgit.settings.scene'] = {
+  get = function(_, key)
+    return 'unified'
   end,
 }
 
@@ -23,6 +64,13 @@ package.loaded['vgit.core.event'] = {
     end
   end,
   await = function() end,
+  all = function(funcs)
+    local results = {}
+    for i, fn in ipairs(funcs) do
+      results[i] = fn()
+    end
+    return results
+  end,
   debounce = function(fn)
     return fn, function() end
   end,
@@ -37,7 +85,6 @@ package.loaded['vgit.git.git_log'] = {
 }
 
 local mounted_props = nil
-local mount_called = false
 local close_called = false
 local set_items_called_with = nil
 local SearchComponentMock = setmetatable({}, {
@@ -46,9 +93,6 @@ local SearchComponentMock = setmetatable({}, {
     return {
       mounted = true,
       _loading = false,
-      mount = function()
-        mount_called = true
-      end,
       close = function()
         close_called = true
       end,
@@ -61,6 +105,36 @@ local SearchComponentMock = setmetatable({}, {
   end,
 })
 package.loaded['vgit.ui.components.SearchComponent'] = SearchComponentMock
+
+local cm_render_called = false
+local cm_render_config = nil
+local cm_destroy_called = false
+local ComponentManagerMock = setmetatable({}, {
+  __call = function()
+    return {
+      render = function(_, config)
+        cm_render_called = true
+        cm_render_config = config
+      end,
+      destroy = function()
+        cm_destroy_called = true
+      end,
+    }
+  end,
+})
+package.loaded['vgit.ui.ComponentManager'] = ComponentManagerMock
+
+package.loaded['vgit.ui.Layout'] = {
+  popup = function(component, opts)
+    return { mode = 'popup', component = component }
+  end,
+  screen = function(component, opts)
+    return { mode = 'screen', component = component }
+  end,
+  lens = function(component, opts)
+    return { mode = 'lens', component = component }
+  end,
+}
 
 local CommitPickerView = require('vgit.features.screens.CommitPickerView')
 
@@ -98,11 +172,15 @@ end
 
 describe('CommitPickerView:', function()
   before_each(function()
-    show_execute_args = nil
+    display_service_show_diff_data = nil
+    mock_tree_commit = nil
+    mock_tree_files = nil
     mounted_props = nil
-    mount_called = false
     close_called = false
     set_items_called_with = nil
+    cm_render_called = false
+    cm_render_config = nil
+    cm_destroy_called = false
     git_log_calls = {}
   end)
 
@@ -186,12 +264,14 @@ describe('CommitPickerView:', function()
       assert.is_false(view:create({ commits = { make_commit() } }))
     end)
 
-    it('should create search component and mount it', function()
+    it('should create search component and render via ComponentManager', function()
       local view = CommitPickerView()
       local result = view:create(make_data())
 
       assert.is_true(result)
-      assert.is_true(mount_called)
+      assert.is_true(cm_render_called)
+      assert.is_not_nil(cm_render_config)
+      eq('popup', cm_render_config.mode)
       assert.is_not_nil(mounted_props)
       eq(1, #mounted_props.items)
       eq('60vw', mounted_props.width)
@@ -244,19 +324,37 @@ describe('CommitPickerView:', function()
   end)
 
   describe('_on_select', function()
-    it('should call show_command.execute with correct hash', function()
+    it('should build diff data and call display_service.show_diff', function()
+      mock_tree_commit = {
+        commit_hash = 'abc1234567890',
+        parent_hash = 'def0000000000',
+        hash = 'abc1234567890',
+        author = 'John Doe',
+        author_mail = 'john@example.com',
+        author_time = '1234567890',
+        message = 'Fix the login bug',
+      }
+      mock_tree_files = {
+        {
+          filename = 'file.lua',
+          old_filename = nil,
+          get_filetype = function() return 'lua' end,
+        },
+      }
+
       local view = CommitPickerView()
       view:create(make_data())
 
       view._destroyed = false
-      view._search_component = {
-        close = function()
-          close_called = true
-        end,
-      }
       view:_on_select('abc1234567890')
 
-      eq({ 'abc1234567890' }, show_execute_args)
+      assert.is_not_nil(display_service_show_diff_data)
+      eq('files', display_service_show_diff_data.type)
+      eq('unified', display_service_show_diff_data.layout_type)
+      eq('abc1234567890', display_service_show_diff_data.commit_info.hash)
+      eq(1, #display_service_show_diff_data.entries)
+      eq(1, #display_service_show_diff_data.entries[1].entries)
+      eq('file.lua', display_service_show_diff_data.entries[1].entries[1].filename)
     end)
 
     it('should handle nil value gracefully', function()
@@ -264,14 +362,9 @@ describe('CommitPickerView:', function()
       view:create(make_data())
 
       view._destroyed = false
-      view._search_component = {
-        close = function()
-          close_called = true
-        end,
-      }
       view:_on_select(nil)
 
-      assert.is_nil(show_execute_args)
+      assert.is_nil(display_service_show_diff_data)
     end)
   end)
 
@@ -345,34 +438,27 @@ describe('CommitPickerView:', function()
 
     it('should be idempotent', function()
       local view = CommitPickerView()
-      view._destroyed = false
-      view._search_component = {
-        close = function()
-          close_called = true
-        end,
-      }
+      view:create(make_data())
 
+      view._destroyed = false
       view:destroy()
       assert.is_true(view._destroyed)
-      assert.is_true(close_called)
+      assert.is_true(cm_destroy_called)
 
-      close_called = false
+      cm_destroy_called = false
       view:destroy()
-      assert.is_false(close_called)
+      assert.is_false(cm_destroy_called)
     end)
 
-    it('should clean up search component', function()
+    it('should clean up component manager and search component', function()
       local view = CommitPickerView()
-      view._destroyed = false
-      view._search_component = {
-        close = function()
-          close_called = true
-        end,
-      }
+      view:create(make_data())
 
+      view._destroyed = false
       view:destroy()
-      assert.is_true(close_called)
+      assert.is_true(cm_destroy_called)
       assert.is_nil(view._search_component)
+      assert.is_nil(view._component_manager)
     end)
   end)
 end)

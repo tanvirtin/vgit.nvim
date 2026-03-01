@@ -4,9 +4,9 @@ local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
 local Buffer = lazy('vgit.core.Buffer')
 local Window = lazy('vgit.core.Window')
-local GitFile = lazy('vgit.git.GitFile')
 local Diff = lazy('vgit.core.diff.Diff')
 local console = lazy('vgit.core.console')
+local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
 
@@ -24,15 +24,14 @@ function hunk_command.find_target_hunk_index(diff, lnum)
   return nil
 end
 
-function hunk_command.compute_hunk_diff(filename, current_lines, layout_type)
-  local git_file = GitFile(filename)
-  local hunks, hunks_err = git_file:live_hunks(current_lines)
-  if hunks_err then return nil, nil, hunks_err end
+function hunk_command.compute_hunk_diff(repo, filename, current_lines, layout_type)
+  local hunks, hunks_err = repo:live_hunks(filename, current_lines)
+  if hunks_err then return nil, hunks_err end
 
   local diff = Diff():generate(hunks, current_lines, layout_type)
-  if not diff then return nil, nil, 'Failed to generate diff' end
+  if not diff then return nil, 'Failed to generate diff' end
 
-  return diff, git_file, nil
+  return diff, nil
 end
 
 hunk_command.execute = event.async(function(args)
@@ -53,13 +52,19 @@ hunk_command.execute = event.async(function(args)
 
   event.await()
 
+  local repo, repo_err = repository.current()
+  if repo_err then
+    console.error(repo_err)
+    return
+  end
+
   local current_lines = fs.read_file(filename)
   if not current_lines then
     console.error('Failed to read file')
     return
   end
 
-  local diff, git_file, err = hunk_command.compute_hunk_diff(filename, current_lines, current_layout_type)
+  local diff, err = hunk_command.compute_hunk_diff(repo, filename, current_lines, current_layout_type)
   if err then
     console.error(err)
     return
@@ -74,7 +79,7 @@ hunk_command.execute = event.async(function(args)
     diff = diff,
     target_hunk_index = target_hunk_index,
     filename = filename,
-    filetype = git_file:get_filetype(),
+    filetype = fs.detect_filetype(filename),
     layout_type = current_layout_type,
   }
 
