@@ -149,7 +149,7 @@ local function make_mock_buffer(opts)
   function buffer:is_tracked()
     return opts.is_tracked ~= false
   end
-  function buffer:editing()
+  function buffer:is_modified()
     return opts.editing == true
   end
   function buffer:is_valid()
@@ -457,7 +457,7 @@ describe('Hunks:', function()
       -- No error thrown
     end)
 
-    it('should return early when buffer is editing', function()
+    it('should return early when buffer is modified', function()
       current_buffer = make_mock_buffer({ editing = true })
       hunks_instance:cursor_stage()
       assert.is_false(current_buffer._stage_called)

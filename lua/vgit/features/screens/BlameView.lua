@@ -202,9 +202,6 @@ function BlameView:_get_author_hl(author)
 end
 
 function BlameView:_render_blame(blames)
-  local element = self._gutter_component._element
-  if not element or not element:is_valid() then return end
-
   local lines = {}
   local highlights = {}
   local line_highlights = {}
@@ -332,38 +329,35 @@ function BlameView:_render_blame(blames)
     lines[#lines + 1] = ''
   end
 
-  element:set_lines(lines)
-  element:clear_extmark_highlights()
+  self._gutter_component:with_element(function(el)
+    el:set_lines(lines)
+    el:clear_extmark_highlights()
 
-  -- Apply alternating line backgrounds
-  for _, lh in ipairs(line_highlights) do
-    element:place_extmark_highlight({
-      hl = lh.hl,
-      row = lh.row,
-      line_hl = true,
-    })
-  end
+    for _, lh in ipairs(line_highlights) do
+      el:place_extmark_highlight({
+        hl = lh.hl,
+        row = lh.row,
+        line_hl = true,
+      })
+    end
 
-  -- Apply inline text highlights
-  for _, h in ipairs(highlights) do
-    element:place_extmark_highlight({
-      hl = h.hl,
-      row = h.row,
-      col_range = { from = h.from, to = h.to },
-    })
-  end
+    for _, h in ipairs(highlights) do
+      el:place_extmark_highlight({
+        hl = h.hl,
+        row = h.row,
+        col_range = { from = h.from, to = h.to },
+      })
+    end
 
-  -- Store blame segments for navigation
-  self._blame_segments = self:_compute_blame_segments(blames)
+    self._blame_segments = self:_compute_blame_segments(blames)
+  end)
 end
 
 function BlameView:_render_content(lines, filetype)
-  local element = self._content_component._element
-  if not element or not element:is_valid() then return end
-
-  element:set_lines(lines)
-
-  if filetype then element:set_filetype(filetype) end
+  self._content_component:with_element(function(el)
+    el:set_lines(lines)
+    if filetype then el:set_filetype(filetype) end
+  end)
 end
 
 function BlameView:_compute_blame_segments(blames)
@@ -394,65 +388,57 @@ function BlameView:_compute_blame_segments(blames)
 end
 
 function BlameView:blame_down()
-  local element = self._content_component._element
-  if not element or not element:is_valid() then return end
   if #self._blame_segments == 0 then return end
-
-  local current_lnum = element:get_lnum()
-
-  for i = 1, #self._blame_segments do
-    local segment = self._blame_segments[i]
-    if current_lnum < segment.start then
-      element:set_lnum(segment.start)
-      return
+  self._content_component:with_element(function(el)
+    local current_lnum = el:get_lnum()
+    for i = 1, #self._blame_segments do
+      local segment = self._blame_segments[i]
+      if current_lnum < segment.start then
+        el:set_lnum(segment.start)
+        return
+      end
+      if current_lnum >= segment.start and current_lnum <= segment.finish then
+        if i < #self._blame_segments then el:set_lnum(self._blame_segments[i + 1].start) end
+        return
+      end
     end
-    if current_lnum >= segment.start and current_lnum <= segment.finish then
-      if i < #self._blame_segments then element:set_lnum(self._blame_segments[i + 1].start) end
-      return
-    end
-  end
+  end)
 end
 
 function BlameView:blame_up()
-  local element = self._content_component._element
-  if not element or not element:is_valid() then return end
   if #self._blame_segments == 0 then return end
-
-  local current_lnum = element:get_lnum()
-
-  for i = #self._blame_segments, 1, -1 do
-    local segment = self._blame_segments[i]
-    if current_lnum > segment.start then
-      element:set_lnum(segment.start)
-      return
+  self._content_component:with_element(function(el)
+    local current_lnum = el:get_lnum()
+    for i = #self._blame_segments, 1, -1 do
+      local segment = self._blame_segments[i]
+      if current_lnum > segment.start then
+        el:set_lnum(segment.start)
+        return
+      end
+      if current_lnum >= segment.start and current_lnum <= segment.finish then
+        if i > 1 then el:set_lnum(self._blame_segments[i - 1].start) end
+        return
+      end
     end
-    if current_lnum >= segment.start and current_lnum <= segment.finish then
-      if i > 1 then element:set_lnum(self._blame_segments[i - 1].start) end
-      return
-    end
-  end
+  end)
 end
 
 function BlameView:_setup_scroll_sync()
-  local gutter = self._gutter_component._element
-  local content = self._content_component._element
-
-  if gutter and gutter:is_valid() then
-    gutter:set_option('scrollbind', true)
-    gutter:set_option('cursorbind', true)
-  end
-
-  if content and content:is_valid() then
-    content:set_option('scrollbind', true)
-    content:set_option('cursorbind', true)
-  end
+  self._gutter_component:with_element(function(el)
+    el:set_win_option('scrollbind', true)
+    el:set_win_option('cursorbind', true)
+  end)
+  self._content_component:with_element(function(el)
+    el:set_win_option('scrollbind', true)
+    el:set_win_option('cursorbind', true)
+  end)
 end
 
 function BlameView:enter_parent()
-  local element = self._content_component._element
-  if not element or not element:is_valid() then return end
-
-  local lnum = element:get_lnum()
+  local lnum = self._content_component:with_element(function(el)
+    return el:get_lnum()
+  end)
+  if not lnum then return end
   local blame = self._current_blames[lnum]
 
   if not blame then return end
@@ -537,10 +523,10 @@ function BlameView:go_back()
 end
 
 function BlameView:show_commit_diff()
-  local element = self._content_component._element
-  if not element or not element:is_valid() then return end
-
-  local lnum = element:get_lnum()
+  local lnum = self._content_component:with_element(function(el)
+    return el:get_lnum()
+  end)
+  if not lnum then return end
   local blame = self._current_blames[lnum]
   if not blame then return end
 
@@ -593,10 +579,10 @@ function BlameView:show_commit_diff()
 end
 
 function BlameView:show_commit_project_diff()
-  local element = self._content_component._element
-  if not element or not element:is_valid() then return end
-
-  local lnum = element:get_lnum()
+  local lnum = self._content_component:with_element(function(el)
+    return el:get_lnum()
+  end)
+  if not lnum then return end
   local blame = self._current_blames[lnum]
   if not blame then return end
 
@@ -708,8 +694,9 @@ function BlameView:_refresh_view(blames, lines, target_lnum)
     if target_lnum > max_lnum then target_lnum = max_lnum end
     if target_lnum < 1 then target_lnum = 1 end
 
-    local element = self._content_component._element
-    if element and element:is_valid() then element:set_lnum(target_lnum) end
+    self._content_component:with_element(function(el)
+      el:set_lnum(target_lnum)
+    end)
   end
 end
 

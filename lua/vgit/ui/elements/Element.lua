@@ -14,7 +14,7 @@ function Element:constructor(props)
   props = props or {}
 
   return {
-    props = props,
+    ['$props'] = props,
     _buffer = nil,
     _window = nil,
     _mounted = false,
@@ -25,7 +25,7 @@ function Element:constructor(props)
       win_plot = utils.object.assign(props.win_plot or {}),
     },
     _config = {
-      window_mode = nil,
+      window_mode = props.window_mode or nil,
       buf_options = props.buf_options or {
         modifiable = false,
         buflisted = false,
@@ -58,12 +58,25 @@ function Element:mount()
     win_plot = vim.tbl_extend('force', win_plot or {}, {
       win_options = self._config.win_options,
     })
+  elseif window_mode == 'split' then
+    local split_height = win_plot.height or 20
+    local split_direction = win_plot.split_direction or 'botright'
+    vim.cmd(string.format('%s %dsplit', split_direction, split_height))
+    self._window = Window.get_current()
+    self._window:set_buffer(self._buffer)
+    self._window:assign_options(self._config.win_options)
+    self._mounted = true
+    if self._lines then
+      self:set_lines(self._lines)
+      self._lines = nil
+    end
+    return self
   end
 
   win_plot.mode = window_mode
   self._window = Window:open(self._buffer, win_plot)
 
-  self:apply_window_options_explicitly()
+  self:_apply_win_options()
 
   self._mounted = true
 
@@ -135,14 +148,14 @@ function Element:get_lnum()
   return self._window:get_lnum()
 end
 
-function Element:position_cursor(placement)
+function Element:scroll_to(placement, offset)
   if not self:is_valid() then return self end
-  self._window:position_cursor(placement)
+  self._window:scroll_to(placement, offset)
   return self
 end
 
 function Element:reset_cursor()
-  return self:set_cursor({ 1, 1 })
+  return self:set_cursor({ 1, 0 })
 end
 
 function Element:set_width(width)
@@ -201,9 +214,9 @@ function Element:place_extmark_lnum(opts)
   return self._buffer:place_extmark_lnum(opts)
 end
 
-function Element:place_extmark_sign(sign)
+function Element:place_extmark_sign(opts)
   if not self:is_valid() then return nil end
-  return self._buffer:place_extmark_sign(sign)
+  return self._buffer:place_extmark_sign(opts)
 end
 
 function Element:place_extmark_highlight(opts)
@@ -258,12 +271,12 @@ function Element:set_keymap(opts_or_mode, callback_or_key, handler, desc)
   return self
 end
 
-function Element:get_bufnr()
-  return self._buffer and self._buffer.bufnr or nil
+function Element:get_buffer()
+  return self._buffer or nil
 end
 
-function Element:get_win_id()
-  return self._window and self._window.win_id or nil
+function Element:get_window()
+  return self._window or nil
 end
 
 function Element:on(event_name, callback)
@@ -278,25 +291,25 @@ function Element:call(callback)
   return self
 end
 
-function Element:set_option(key, value)
+function Element:set_win_option(key, value)
   if not self:is_valid() then return self end
   self._window:set_option(key, value)
   return self
 end
 
 function Element:enable_cursorline()
-  return self:set_option('cursorline', true)
+  return self:set_win_option('cursorline', true)
 end
 
 function Element:disable_cursorline()
-  return self:set_option('cursorline', false)
+  return self:set_win_option('cursorline', false)
 end
 
 function Element:attach_to_renderer(on_render)
   self._on_render = on_render or function() end
 
   if not self._is_attached_to_renderer and self._buffer then
-    self._buffer._on_render = function(top, bot)
+    self._buffer.on_render = function(top, bot)
       self._on_render(top, bot)
     end
     renderer.register_module()
@@ -318,20 +331,20 @@ function Element:render(top, bot)
   return self
 end
 
-function Element:apply_window_options_explicitly()
+function Element:_apply_win_options()
   if not self._window or not self._window:is_valid() then return self end
 
   local options = self._config.win_options or {}
 
   for key, value in pairs(options) do
-    pcall(vim.api.nvim_set_option_value, key, value, { win = self._window.win_id })
+    self._window:set_option(key, value)
   end
 
   return self
 end
 
-function Element:reapply_window_options()
-  if self._mounted and self._window and self._window:is_valid() then self:apply_window_options_explicitly() end
+function Element:sync_win_options()
+  if self._mounted and self._window and self._window:is_valid() then self:_apply_win_options() end
   return self
 end
 
@@ -340,7 +353,7 @@ function Element:update_window_options(new_options)
 
   self._config.win_options = vim.tbl_deep_extend('force', self._config.win_options, new_options)
 
-  if self._mounted then self:apply_window_options_explicitly() end
+  if self._mounted then self:_apply_win_options() end
 
   return self
 end

@@ -14,9 +14,9 @@ function GitBlob:constructor(repo, filename, commit)
   local repo_path = type(repo) == 'string' and repo or repo:get_path()
 
   return {
-    _repo_path = repo_path,
-    _filename = filename,
-    _commit = commit or 'HEAD',
+    ['$_repo_path'] = repo_path,
+    ['$_filename'] = filename,
+    ['$_commit'] = commit or 'HEAD',
   }
 end
 

@@ -2,6 +2,8 @@ local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
 local Object = lazy('vgit.core.Object')
+local Buffer = lazy('vgit.core.Buffer')
+local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentGroup = lazy('vgit.ui.ComponentGroup')
 local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
@@ -15,7 +17,7 @@ function ComponentManager:constructor(config)
     root_component = nil,
     layout_renderer = nil,
     is_destroying = false,
-    component_group = ComponentGroup(),
+    ['$component_group'] = ComponentGroup(),
   }
 end
 
@@ -110,15 +112,15 @@ end
 
 function ComponentManager:render(layout_config)
   self:prepare_layout(layout_config)
-  local tabnew_scratch_buf
+  local scratch_buffer
   if self.context:is_screen_mode() then
     vim.api.nvim_command('tabnew')
-    tabnew_scratch_buf = vim.api.nvim_get_current_buf()
+    scratch_buffer = Buffer(0)
   end
   self:mount_components()
   self:render_layout()
-  if tabnew_scratch_buf and vim.api.nvim_buf_is_valid(tabnew_scratch_buf) then
-    pcall(vim.api.nvim_buf_delete, tabnew_scratch_buf, { force = true })
+  if scratch_buffer and scratch_buffer:is_valid() then
+    scratch_buffer:delete({ force = true })
   end
   self:register_lifecycle_events()
 end

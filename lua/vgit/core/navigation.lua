@@ -17,6 +17,10 @@ local function get_hunk_alignment()
   return alignment
 end
 
+local function get_hunk_alignment_offset()
+  return hunks_setting:get('hunk_alignment_offset') or 0
+end
+
 function navigation.up(window, marks)
   local new_lnum = nil
   local selected = nil
@@ -47,7 +51,7 @@ function navigation.up(window, marks)
   if new_lnum and new_lnum < 1 then new_lnum = 1 end
 
   if new_lnum and lnum ~= new_lnum then
-    window:set_lnum(new_lnum):position_cursor(alignment)
+    window:set_lnum(new_lnum):scroll_to(alignment, get_hunk_alignment_offset())
 
     return selected
   else
@@ -61,7 +65,7 @@ function navigation.up(window, marks)
       selected = 1
     end
 
-    window:set_lnum(new_lnum):position_cursor(alignment)
+    window:set_lnum(new_lnum):scroll_to(alignment, get_hunk_alignment_offset())
     return selected
   end
 end
@@ -96,7 +100,7 @@ function navigation.down(window, marks)
   if new_lnum and new_lnum < 1 then new_lnum = 1 end
 
   if new_lnum then
-    window:set_lnum(new_lnum):position_cursor(alignment)
+    window:set_lnum(new_lnum):scroll_to(alignment, get_hunk_alignment_offset())
 
     return selected
   else
@@ -109,7 +113,7 @@ function navigation.down(window, marks)
       selected = 1
     end
 
-    window:set_lnum(new_lnum):position_cursor(alignment)
+    window:set_lnum(new_lnum):scroll_to(alignment, get_hunk_alignment_offset())
 
     return selected
   end

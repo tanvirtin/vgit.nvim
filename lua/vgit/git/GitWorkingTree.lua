@@ -17,7 +17,7 @@ function GitWorkingTree:constructor(repository)
   if root_path and #root_path > 1 then root_path = root_path:gsub('/+$', '') end
 
   local tree = {
-    _root_path = root_path,
+    ['$_root_path'] = root_path,
   }
 
   return tree

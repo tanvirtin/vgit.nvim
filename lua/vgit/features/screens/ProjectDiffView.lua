@@ -340,6 +340,10 @@ function ProjectDiffView:get_hunk_alignment()
   return project_diff_view_setting:get('hunk_alignment')
 end
 
+function ProjectDiffView:get_hunk_alignment_offset()
+  return project_diff_view_setting:get('hunk_alignment_offset') or 0
+end
+
 function ProjectDiffView:_get_current_mark_index(component)
   local marks = component:get_marks()
   if #marks == 0 then return nil, 0 end
@@ -360,18 +364,18 @@ end
 function ProjectDiffView:hunk_up()
   local component = self:_get_active_component()
   if component and component:is_valid() then
-    component:hunk_up(self:get_hunk_alignment())
+    component:hunk_up(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
     local index, count = self:_get_current_mark_index(component)
-    if index then statusline.set_hunk(index, count) end
+    if index then statusline.set_hunk({ index = index, count = count }) end
   end
 end
 
 function ProjectDiffView:hunk_down()
   local component = self:_get_active_component()
   if component and component:is_valid() then
-    component:hunk_down(self:get_hunk_alignment())
+    component:hunk_down(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
     local index, count = self:_get_current_mark_index(component)
-    if index then statusline.set_hunk(index, count) end
+    if index then statusline.set_hunk({ index = index, count = count }) end
   end
 end
 
@@ -803,12 +807,6 @@ function ProjectDiffView:_create_view(data)
   return self:_create_unified_view(patch_entries, line_to_file_map, data)
 end
 
-function ProjectDiffView:emit_cleanup_events()
-  if self._patch_component then self._patch_component:component_will_unmount() end
-  if self._previous_component then self._previous_component:component_will_unmount() end
-  if self._current_component then self._current_component:component_will_unmount() end
-end
-
 function ProjectDiffView:destroy()
   if self._destroyed then return end
   self._destroyed = true
@@ -817,7 +815,6 @@ function ProjectDiffView:destroy()
     cleanup()
   end
   self._debounce_cleanups = {}
-  self:emit_cleanup_events()
   if self._component_manager then self._component_manager:destroy() end
 end
 

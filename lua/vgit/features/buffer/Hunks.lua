@@ -32,7 +32,7 @@ function Hunks:hunk_up()
 
   local window = Window(0)
   local selected = navigation.up(window, hunks)
-  statusline.set_hunk(selected, #hunks)
+  statusline.set_hunk({ index = selected, count = #hunks })
 end
 
 function Hunks:hunk_down()
@@ -46,7 +46,7 @@ function Hunks:hunk_down()
 
   local window = Window(0)
   local selected = navigation.down(window, hunks)
-  statusline.set_hunk(selected, #hunks)
+  statusline.set_hunk({ index = selected, count = #hunks })
 end
 
 function Hunks:cursor_hunk()
@@ -82,7 +82,7 @@ function Hunks:cursor_stage()
 
   local buffer = git_buffer_store.current()
   if not buffer then return end
-  if buffer:editing() then return end
+  if buffer:is_modified() then return end
 
   -- Performance: Deferred sync of only the current buffer after staging
   vim.defer_fn(

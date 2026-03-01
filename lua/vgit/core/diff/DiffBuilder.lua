@@ -21,7 +21,9 @@ local function has_binary_content(lines)
 end
 
 function DiffBuilder:constructor(repository)
-  self._repository = repository
+  return {
+    ['$_repository'] = repository,
+  }
 end
 
 function DiffBuilder:_get_blame_lines(spec)

@@ -31,7 +31,7 @@ function LogFormatter:constructor(msg, opts)
   return {
     _is_formatted = false,
     _msg = LogFormatter.clean(msg),
-    _should_show_timestamp = opts.timestamp,
+    ['$_should_show_timestamp'] = opts.timestamp,
   }
 end
 

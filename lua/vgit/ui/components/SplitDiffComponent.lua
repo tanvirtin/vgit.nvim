@@ -1,5 +1,3 @@
-local vim = vim
-
 local lazy = require('vgit.core.lazy')
 local Component = lazy('vgit.ui.Component')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
@@ -225,7 +223,7 @@ end
 function SplitDiffComponent:set_lnum(lnum, position)
   self:_for_both(function(c)
     c:set_lnum(lnum)
-    if position then c:position_cursor(position) end
+    if position then c:scroll_to(position) end
   end)
 end
 
@@ -280,24 +278,24 @@ function SplitDiffComponent:is_valid()
     or (self._current_component and self._current_component:is_valid())
 end
 
-function SplitDiffComponent:hunk_down(pos)
-  if self._current_component then return self._current_component:hunk_down(pos) end
+function SplitDiffComponent:hunk_down(pos, offset)
+  if self._current_component then return self._current_component:hunk_down(pos, offset) end
   return nil
 end
 
-function SplitDiffComponent:hunk_up(pos)
-  if self._current_component then return self._current_component:hunk_up(pos) end
+function SplitDiffComponent:hunk_up(pos, offset)
+  if self._current_component then return self._current_component:hunk_up(pos, offset) end
   return nil
 end
 
-function SplitDiffComponent:move_to_hunk(mark_index, pos)
+function SplitDiffComponent:move_to_hunk(mark_index, pos, offset)
   if not self._current_component then return nil end
 
-  local mark = self._current_component:move_to_hunk(mark_index, pos)
+  local mark = self._current_component:move_to_hunk(mark_index, pos, offset)
 
   if mark and self._previous_component then
     self._previous_component:set_lnum(mark.top)
-    if pos then self._previous_component:position_cursor(pos) end
+    if pos then self._previous_component:scroll_to(pos, offset) end
   end
 
   return mark
@@ -362,6 +360,7 @@ function SplitDiffComponent:unmount()
   self:_for_both(function(c)
     c:unmount()
   end)
+  Component.unmount(self)
 end
 
 return SplitDiffComponent

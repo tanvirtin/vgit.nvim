@@ -2,6 +2,8 @@ local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
 local utils = lazy('vgit.core.utils')
+local Buffer = lazy('vgit.core.Buffer')
+local buffers_module = lazy('vgit.core.buffers')
 local console = lazy('vgit.core.console')
 local git_repo = lazy('vgit.git.git_repo')
 local GitBuffer = lazy('vgit.git.GitBuffer')
@@ -50,8 +52,8 @@ git_buffer_store.register_events = event.async(function()
     repository.invalidate()
     statusline.reset()
     git_buffer_store.clear_buffers()
-    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-      if vim.api.nvim_buf_is_loaded(bufnr) then git_buffer_store.collect(bufnr) end
+    for _, buffer in ipairs(buffers_module.list()) do
+      if buffer:is_valid() then git_buffer_store.collect(buffer.bufnr) end
     end
   end)
 end)
@@ -105,7 +107,9 @@ git_buffer_store.get = function(buffer)
 end
 
 function git_buffer_store.current(bufnr)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  if not bufnr then
+    bufnr = vim.api.nvim_get_current_buf()
+  end
   bufnr = tostring(bufnr)
   return buffers[bufnr]
 end

@@ -763,15 +763,15 @@ describe('StashView:', function()
           return 3
         end,
       }
-      statusline_mod.set_hunk = function(idx, cnt)
-        set_hunk_called_with = { idx, cnt }
+      statusline_mod.set_hunk = function(hunk)
+        set_hunk_called_with = hunk
       end
 
       view:hunk_down()
 
       assert.is_true(hunk_down_called)
-      eq(1, set_hunk_called_with[1])
-      eq(2, set_hunk_called_with[2])
+      eq(1, set_hunk_called_with.index)
+      eq(2, set_hunk_called_with.count)
     end)
   end)
 
@@ -895,15 +895,15 @@ describe('StashView:', function()
           return 1
         end, -- cursor position AFTER hunk_up moves to first hunk
       }
-      statusline_mod.set_hunk = function(idx, cnt)
-        set_hunk_called_with = { idx, cnt }
+      statusline_mod.set_hunk = function(hunk)
+        set_hunk_called_with = hunk
       end
 
       view:hunk_up()
 
       assert.is_true(hunk_up_called)
-      eq(1, set_hunk_called_with[1])
-      eq(2, set_hunk_called_with[2])
+      eq(1, set_hunk_called_with.index)
+      eq(2, set_hunk_called_with.count)
     end)
   end)
 end)

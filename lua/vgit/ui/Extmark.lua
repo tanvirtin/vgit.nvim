@@ -25,13 +25,13 @@ function Extmark:constructor(bufnr, ns_name_extension)
   local ns_id = vim.api.nvim_create_namespace(ns_name)
 
   return {
-    bufnr = bufnr,
-    groups = {
+    ['$bufnr'] = bufnr,
+    ['$groups'] = {
       text = 10,
       sign = 100,
       lnum = 1000,
     },
-    ns_id = ns_id,
+    ['$ns_id'] = ns_id,
   }
 end
 

@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
 local utils = lazy('vgit.core.utils')
+local Window = lazy('vgit.core.Window')
 local Component = lazy('vgit.ui.Component')
 local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
@@ -533,31 +534,19 @@ function PatchPreviewComponent:get_line_count()
   end) or 0
 end
 
-function PatchPreviewComponent:position_cursor(pos)
+function PatchPreviewComponent:scroll_to(pos, offset)
   self:with_element(function(el)
     pos = pos or 'center'
-    local win_id = el:get_win_id()
-    if not win_id then return end
-
-    if pos == 'top' then
-      vim.api.nvim_win_call(win_id, function()
-        vim.cmd('normal! zt')
-      end)
-    elseif pos == 'center' then
-      vim.api.nvim_win_call(win_id, function()
-        vim.cmd('normal! zz')
-      end)
-    elseif pos == 'bottom' then
-      vim.api.nvim_win_call(win_id, function()
-        vim.cmd('normal! zb')
-      end)
-    end
+    offset = offset or 0
+    local win = el:get_window()
+    if not win then return end
+    win:scroll_to(pos, offset)
   end)
 
   return self
 end
 
-function PatchPreviewComponent:move_to_hunk(mark_index, pos)
+function PatchPreviewComponent:move_to_hunk(mark_index, pos, offset)
   pos = pos or 'center'
   mark_index = mark_index or 1
 
@@ -573,7 +562,7 @@ function PatchPreviewComponent:move_to_hunk(mark_index, pos)
   local mark = marks[mark_index]
   if mark then
     self:set_lnum(mark.top)
-    self:position_cursor(pos)
+    self:scroll_to(pos, offset)
     return mark
   end
 
@@ -610,16 +599,16 @@ function PatchPreviewComponent:find_adjacent_mark_index(direction)
   end
 end
 
-function PatchPreviewComponent:hunk_down(pos)
+function PatchPreviewComponent:hunk_down(pos, offset)
   local mark_index = self:find_adjacent_mark_index('next')
   if not mark_index then return nil end
-  return self:move_to_hunk(mark_index, pos)
+  return self:move_to_hunk(mark_index, pos, offset)
 end
 
-function PatchPreviewComponent:hunk_up(pos)
+function PatchPreviewComponent:hunk_up(pos, offset)
   local mark_index = self:find_adjacent_mark_index('prev')
   if not mark_index then return nil end
-  return self:move_to_hunk(mark_index, pos)
+  return self:move_to_hunk(mark_index, pos, offset)
 end
 
 Component.forward(PatchPreviewComponent, function(self)
@@ -650,7 +639,7 @@ function PatchPreviewComponent:is_valid()
 end
 
 function PatchPreviewComponent:focus()
-  if self._element then self._element:focus() end
+  self:with_element(function(el) el:focus() end)
 end
 
 function PatchPreviewComponent:call(callback)

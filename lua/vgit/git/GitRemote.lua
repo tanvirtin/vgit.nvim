@@ -9,7 +9,7 @@ function GitRemote:constructor(repository, name)
   if not repository then error('GitRemote requires a repository') end
 
   local remote = {
-    _repo_path = repository:get_path(),
+    ['$_repo_path'] = repository:get_path(),
     _name = name,
     _url = nil,
     _push_url = nil,

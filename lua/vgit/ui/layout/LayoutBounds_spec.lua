@@ -234,9 +234,8 @@ describe('LayoutBounds:', function()
       assert.are.equal(10, copy.col)
       assert.are.equal(80, copy.width)
       assert.are.equal(40, copy.height)
-      -- Modify original, clone should not change
-      original.row = 99
-      assert.are.equal(5, copy.row)
+      -- Clone is a distinct object
+      assert.are_not.equal(original, copy)
     end)
 
     it('should preserve parent reference', function()

@@ -7,7 +7,7 @@ local Spawn = Object:extend()
 
 function Spawn:constructor(spec)
   return {
-    spec = spec,
+    ['$spec'] = spec,
     stdout_buffer = {
       len = 0,
       index = 1,

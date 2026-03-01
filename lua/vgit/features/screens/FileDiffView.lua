@@ -39,11 +39,16 @@ function FileDiffView:constructor()
     _diff_component = nil,
     _component_manager = nil,
     _debounce_cleanups = {},
+    _destroyed = false,
   }
 end
 
 function FileDiffView:get_hunk_alignment()
   return file_diff_view_setting:get('hunk_alignment')
+end
+
+function FileDiffView:get_hunk_alignment_offset()
+  return file_diff_view_setting:get('hunk_alignment_offset') or 0
 end
 
 function FileDiffView:get_current_mark_index()
@@ -65,16 +70,16 @@ end
 
 function FileDiffView:hunk_up()
   if not self._diff_component or not self._diff_component:is_valid() then return end
-  self._diff_component:hunk_up(self:get_hunk_alignment())
+  self._diff_component:hunk_up(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
   local index, count = self:get_current_mark_index()
-  if index then statusline.set_hunk(index, count) end
+  if index then statusline.set_hunk({ index = index, count = count }) end
 end
 
 function FileDiffView:hunk_down()
   if not self._diff_component or not self._diff_component:is_valid() then return end
-  self._diff_component:hunk_down(self:get_hunk_alignment())
+  self._diff_component:hunk_down(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
   local index, count = self:get_current_mark_index()
-  if index then statusline.set_hunk(index, count) end
+  if index then statusline.set_hunk({ index = index, count = count }) end
 end
 
 function FileDiffView:_handle_git_error(err, operation_name)
@@ -220,7 +225,7 @@ function FileDiffView:_create_file_view(data)
     target_hunk = self._diff_component:get_relative_mark_index(lnum)
   end
 
-  self._diff_component:move_to_hunk(target_hunk, self:get_hunk_alignment())
+  self._diff_component:move_to_hunk(target_hunk, self:get_hunk_alignment(), self:get_hunk_alignment_offset())
 
   self:setup_keymaps()
 
@@ -244,7 +249,7 @@ function FileDiffView:_reconcile(opts)
   })
 
   if not self._diff_component or not self._diff_component:is_valid() then return false end
-  if opts.hunk_index then self._diff_component:move_to_hunk(opts.hunk_index, self:get_hunk_alignment()) end
+  if opts.hunk_index then self._diff_component:move_to_hunk(opts.hunk_index, self:get_hunk_alignment(), self:get_hunk_alignment_offset()) end
 
   return true
 end
@@ -292,7 +297,7 @@ function FileDiffView:enter_view()
 
   fs.open(filename)
 
-  Window(0):set_lnum(mark.top_relative):position_cursor('center')
+  Window(0):set_lnum(mark.top_relative):scroll_to('center')
 end
 
 function FileDiffView:stage_hunk()
@@ -316,7 +321,7 @@ function FileDiffView:stage_hunk()
   self:_reconcile({ hunk_index = index })
 
   local idx, count = self:get_current_mark_index()
-  if idx then statusline.set_hunk(idx, count) end
+  if idx then statusline.set_hunk({ index = idx, count = count }) end
 end
 
 function FileDiffView:unstage_hunk()
@@ -340,7 +345,7 @@ function FileDiffView:unstage_hunk()
   self:_reconcile({ hunk_index = index })
 
   local idx, count = self:get_current_mark_index()
-  if idx then statusline.set_hunk(idx, count) end
+  if idx then statusline.set_hunk({ index = idx, count = count }) end
 end
 
 function FileDiffView:stage_current()
@@ -540,16 +545,13 @@ function FileDiffView:setup_keymaps()
   }, blame_fn)
 end
 
-function FileDiffView:emit_cleanup_events()
-  self._diff_component:component_will_unmount()
-end
-
 function FileDiffView:destroy()
+  if self._destroyed then return end
+  self._destroyed = true
   for _, cleanup in ipairs(self._debounce_cleanups) do
     cleanup()
   end
   self._debounce_cleanups = {}
-  self:emit_cleanup_events()
   self._component_manager:destroy()
 end
 

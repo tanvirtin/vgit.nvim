@@ -150,8 +150,6 @@ function DiffComponent:render()
 end
 
 function DiffComponent:get_layout_spec()
-  if #self.state.lines > 0 then self._element._lines = self.state.lines end
-
   return LayoutSpec.view(self._element, { id = 'body', flex = 1, focus = true })
 end
 
@@ -205,9 +203,9 @@ function DiffComponent:reset_cursor()
   return self:set_cursor({ 1, 0 })
 end
 
-function DiffComponent:position_cursor(placement)
+function DiffComponent:scroll_to(placement, offset)
   self:with_element(function(el)
-    el:position_cursor(placement)
+    el:scroll_to(placement, offset)
   end)
   return self
 end
@@ -305,19 +303,19 @@ function DiffComponent:find_adjacent_mark_index(direction)
   return #marks
 end
 
-function DiffComponent:hunk_down(pos)
+function DiffComponent:hunk_down(pos, offset)
   local mark_index = self:find_adjacent_mark_index('next')
   if not mark_index then return nil end
-  return self:move_to_hunk(mark_index, pos)
+  return self:move_to_hunk(mark_index, pos, offset)
 end
 
-function DiffComponent:hunk_up(pos)
+function DiffComponent:hunk_up(pos, offset)
   local mark_index = self:find_adjacent_mark_index('prev')
   if not mark_index then return nil end
-  return self:move_to_hunk(mark_index, pos)
+  return self:move_to_hunk(mark_index, pos, offset)
 end
 
-function DiffComponent:move_to_hunk(mark_index, pos)
+function DiffComponent:move_to_hunk(mark_index, pos, offset)
   pos = pos or 'center'
   mark_index = mark_index or 1
 
@@ -334,7 +332,7 @@ function DiffComponent:move_to_hunk(mark_index, pos)
   if not mark then return nil end
 
   self:set_lnum(mark.top)
-  if pos then self:position_cursor(pos) end
+  if pos then self:scroll_to(pos, offset) end
   return mark
 end
 
@@ -484,7 +482,7 @@ end
 
 function DiffComponent:ensure_window_options()
   self:with_element(function(el)
-    el:reapply_window_options()
+    el:sync_win_options()
   end)
   return self
 end

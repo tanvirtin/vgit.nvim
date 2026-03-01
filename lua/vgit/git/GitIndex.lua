@@ -12,7 +12,7 @@ function GitIndex:constructor(repository)
   if not repository then error('GitIndex requires a repository') end
 
   local index = {
-    _repo_path = repository:get_path(),
+    ['$_repo_path'] = repository:get_path(),
     _staged_files = nil,
   }
 

@@ -13,10 +13,10 @@ function LayoutRenderer:constructor(context)
   if not context then error('LayoutRenderer requires LayoutContext') end
 
   return {
-    context = context,
-    windows = {},
+    ['$context'] = context,
+    ['$windows'] = {},
     window_index = 0,
-    calculator = RootLayoutCalculator(),
+    ['$calculator'] = RootLayoutCalculator(),
   }
 end
 
@@ -133,15 +133,15 @@ function LayoutRenderer:create_screen_splits(layout)
 
     -- Collect all window IDs at this FLEX level BEFORE recursing into children
     local child_wins = {}
-    child_wins[1] = vim.api.nvim_get_current_win()
+    child_wins[1] = Window.get_current()
     for i = 2, #children do
       vim.cmd(split_cmd)
-      child_wins[i] = vim.api.nvim_get_current_win()
+      child_wins[i] = Window.get_current()
     end
 
     -- Navigate to each child window and recurse into it
     for i, child in ipairs(children) do
-      vim.api.nvim_set_current_win(child_wins[i])
+      child_wins[i]:focus()
       create_splits_for_layout(child)
     end
   end

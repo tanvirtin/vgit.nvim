@@ -19,10 +19,10 @@ function GitFile:constructor(filepath)
   local filetype = fs.detect_filetype(filename)
 
   return {
-    reponame = reponame,
-    filepath = filepath,
-    filename = filename,
-    filetype = filetype,
+    ['$reponame'] = reponame,
+    ['$filepath'] = filepath,
+    ['$filename'] = filename,
+    ['$filetype'] = filetype,
     state = { hunks = nil },
     _blob_cache = {},
   }

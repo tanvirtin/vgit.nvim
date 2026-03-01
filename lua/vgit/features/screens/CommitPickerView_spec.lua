@@ -53,6 +53,7 @@ local SearchComponentMock = setmetatable({}, {
         close_called = true
       end,
       render = function() end,
+      set_loading = function() end,
       set_items = function(_, items)
         set_items_called_with = items
       end,

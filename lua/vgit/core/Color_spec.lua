@@ -32,13 +32,13 @@ describe('Color:', function()
     end)
   end)
 
-  describe('to_hex', function()
+  describe('get_hex', function()
     it('should return cached hex value if already computed', function()
       local spec = { name = 'Normal', attribute = 'fg' }
       local color = Color(spec)
       color.hex = '#ff0000'
 
-      assert.is_equal(color:to_hex(), '#ff0000')
+      assert.is_equal(color:get_hex(), '#ff0000')
     end)
 
     it('should return hex value based on spec', function()
@@ -46,7 +46,7 @@ describe('Color:', function()
       vim.api.nvim_set_hl(0, 'Normal', { foreground = 16711680 })
       local color = Color(spec)
 
-      assert.is_equal(color:to_hex(), '#ff0000')
+      assert.is_equal(color:get_hex(), '#ff0000')
     end)
   end)
 
@@ -57,7 +57,9 @@ describe('Color:', function()
       local color = Color(spec)
       local rgb = color:to_rgb()
 
-      assert.is_equal(rgb.hex, '#ff0000')
+      assert.is_equal(rgb.r, 255)
+      assert.is_equal(rgb.g, 0)
+      assert.is_equal(rgb.b, 0)
     end)
   end)
 

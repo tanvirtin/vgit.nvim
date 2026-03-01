@@ -11,11 +11,11 @@ function GitHistory:constructor(repository, opts)
   opts = opts or {}
 
   local history = {
-    _repo_path = repository:get_path(),
-    _from = opts.from or 'HEAD',
-    _count = opts.count,
-    _path = opts.path,
-    _skip = opts.skip or 0,
+    ['$_repo_path'] = repository:get_path(),
+    ['$_from'] = opts.from or 'HEAD',
+    ['$_count'] = opts.count,
+    ['$_path'] = opts.path,
+    ['$_skip'] = opts.skip or 0,
     _commits = nil,
   }
 

@@ -90,7 +90,7 @@ function keymap.define(keymaps)
   return keymap
 end
 
-function keymap.find(command)
+function keymap.find_by_rhs(command)
   local keybindings = {}
   local modes = { 'n', 'i', 'v', 'x', 's', 'o', 't', 'c' }
 

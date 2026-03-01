@@ -11,8 +11,8 @@ function GitSubmodule:constructor(repository, path)
   if not path then error('GitSubmodule requires a path') end
 
   local submodule = {
-    _repo_path = repository:get_path(),
-    _path = path,
+    ['$_repo_path'] = repository:get_path(),
+    ['$_path'] = path,
     _info = nil,
   }
 
