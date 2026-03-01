@@ -122,23 +122,11 @@ describe('StashView:', function()
     end)
   end)
 
-  describe('_build_patch_entries_for_commit', function()
-    local git_diff_mod
-    local original_range_patch_entries
-
-    before_each(function()
-      git_diff_mod = require('vgit.git.git_diff')
-      original_range_patch_entries = git_diff_mod.range_patch_entries
-    end)
-
-    after_each(function()
-      git_diff_mod.range_patch_entries = original_range_patch_entries
-    end)
-
+  describe('_build_hunk_entries_for_commit', function()
     it('should return empty table when repo is nil', function()
       local view = StashView()
       view._repo = nil
-      local entries = view:_build_patch_entries_for_commit(make_commit('stash@{0}'))
+      local entries = view:_build_hunk_entries_for_commit(make_commit('stash@{0}'))
       eq(0, #entries)
     end)
 
@@ -148,41 +136,44 @@ describe('StashView:', function()
         get_path = function()
           return '/tmp/repo'
         end,
+        diff = function()
+          return {}
+        end,
       }
       local commit = { hash = 'abc', message = 'test', context = {} }
-      local entries = view:_build_patch_entries_for_commit(commit)
+      local entries = view:_build_hunk_entries_for_commit(commit)
       eq(0, #entries)
     end)
 
-    it('should return empty table when git_diff returns error', function()
+    it('should return empty table when repo:diff returns error', function()
       local view = StashView()
-      git_diff_mod.range_patch_entries = function()
-        return nil, { 'git diff failed' }
-      end
       view._repo = {
         get_path = function()
           return '/tmp/repo'
         end,
+        diff = function()
+          return nil, { 'git diff failed' }
+        end,
       }
-      local entries = view:_build_patch_entries_for_commit(make_commit('stash@{0}'))
+      local entries = view:_build_hunk_entries_for_commit(make_commit('stash@{0}'))
       eq(0, #entries)
     end)
 
-    it('should return empty table when git_diff returns no entries', function()
+    it('should return empty table when repo:diff returns no entries', function()
       local view = StashView()
-      git_diff_mod.range_patch_entries = function()
-        return {}
-      end
       view._repo = {
         get_path = function()
           return '/tmp/repo'
         end,
+        diff = function()
+          return {}
+        end,
       }
-      local entries = view:_build_patch_entries_for_commit(make_commit('stash@{0}'))
+      local entries = view:_build_hunk_entries_for_commit(make_commit('stash@{0}'))
       eq(0, #entries)
     end)
 
-    it('should return patch entries from git_diff', function()
+    it('should return patch entries from repo:diff', function()
       local view = StashView()
       local mock_entries = {
         { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
@@ -193,37 +184,37 @@ describe('StashView:', function()
           filename = 'foo.lua',
         },
       }
-      git_diff_mod.range_patch_entries = function()
-        return mock_entries
-      end
       view._repo = {
         get_path = function()
           return '/tmp/repo'
         end,
+        diff = function()
+          return mock_entries
+        end,
       }
-      local entries = view:_build_patch_entries_for_commit(make_commit('stash@{0}'))
+      local entries = view:_build_hunk_entries_for_commit(make_commit('stash@{0}'))
       eq(2, #entries)
       eq('file_header', entries[1].type)
       eq('foo.lua', entries[1].filename)
       eq('hunk', entries[2].type)
     end)
 
-    it('should pass correct refs (revision^ and revision) to git_diff', function()
+    it('should pass correct refs (revision^ and revision) to repo:diff', function()
       local view = StashView()
-      local captured_from, captured_to
-      git_diff_mod.range_patch_entries = function(_, from_ref, to_ref)
-        captured_from = from_ref
-        captured_to = to_ref
-        return {}
-      end
+      local captured_spec
       view._repo = {
         get_path = function()
           return '/tmp/repo'
         end,
+        diff = function(_, spec)
+          captured_spec = spec
+          return {}
+        end,
       }
-      view:_build_patch_entries_for_commit(make_commit('stash@{2}'))
-      eq('stash@{2}^', captured_from)
-      eq('stash@{2}', captured_to)
+      view:_build_hunk_entries_for_commit(make_commit('stash@{2}'))
+      eq('range', captured_spec.type)
+      eq('stash@{2}^', captured_spec.from)
+      eq('stash@{2}', captured_spec.to)
     end)
   end)
 
@@ -425,7 +416,7 @@ describe('StashView:', function()
       local commit = make_commit('stash@{0}')
       local view = StashView()
       -- Override to avoid real git calls
-      view._build_patch_entries_for_commit = function()
+      view._build_hunk_entries_for_commit = function()
         return {}
       end
       view._patch_component = {
@@ -446,7 +437,7 @@ describe('StashView:', function()
 
       local view = StashView()
       view._patch_cache = { ['stash@{0}'] = cached }
-      view._build_patch_entries_for_commit = function()
+      view._build_hunk_entries_for_commit = function()
         git_called = true
         return {}
       end
@@ -460,7 +451,7 @@ describe('StashView:', function()
       }
       view:_update_patch(commit)
       assert.is_false(git_called)
-      eq(cached, set_props_data.patch_entries)
+      eq(cached, set_props_data.hunk_entries)
     end)
 
     it('should store result in cache on a cache miss', function()
@@ -468,7 +459,7 @@ describe('StashView:', function()
       local mock_entries = { { type = 'hunk', hunk = {}, filetype = 'lua', filename = 'a.lua' } }
 
       local view = StashView()
-      view._build_patch_entries_for_commit = function()
+      view._build_hunk_entries_for_commit = function()
         return mock_entries
       end
       view._patch_component = {
@@ -487,7 +478,7 @@ describe('StashView:', function()
 
       local view = StashView()
       -- Simulate another _update_patch call arriving during the git subprocess
-      view._build_patch_entries_for_commit = function()
+      view._build_hunk_entries_for_commit = function()
         view._update_gen = view._update_gen + 1 -- bump gen, making current gen stale
         return {}
       end

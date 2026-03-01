@@ -48,7 +48,7 @@ function debug_logger.cleanup()
 end
 
 function debug_logger.get_path()
-  return _file._path
+  return _file:get_path()
 end
 
 function debug_logger.open()
@@ -56,7 +56,7 @@ function debug_logger.open()
     vim.notify('VGit: Debug mode is not enabled', vim.log.levels.WARN)
     return
   end
-  vim.cmd('tabnew ' .. _file._path)
+  vim.cmd('tabnew ' .. _file:get_path())
 end
 
 return debug_logger

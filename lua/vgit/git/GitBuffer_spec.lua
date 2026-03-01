@@ -563,8 +563,8 @@ describe('GitBuffer:', function()
 
         if hunks and #hunks > 0 then
           local result, err = git_buf:unstage_hunk(hunks[1])
-          -- Note: This may fail with specific git state, so we just check it runs
-          assert.is_not_nil(result ~= nil or err)
+          -- Either the operation succeeded or returned an error
+          assert.is_true(result ~= nil or err ~= nil)
         end
       end)
     end)

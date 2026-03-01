@@ -368,6 +368,28 @@ describe('git_hunks:', function()
     end)
   end)
 
+  describe('list', function()
+    it('should return nil and error when reponame is nil', function()
+      local result, err = git_hunks.list(nil)
+
+      assert.is_nil(result)
+      assert.is_not_nil(err)
+      assert.are.same({ 'reponame is required' }, err)
+    end)
+
+    it('should error when filenames has wrong count', function()
+      assert.has_error(function()
+        git_hunks.list('/tmp', { filenames = { 'one.txt' } })
+      end)
+    end)
+
+    it('should error when filenames has three files', function()
+      assert.has_error(function()
+        git_hunks.list('/tmp', { filenames = { 'a.txt', 'b.txt', 'c.txt' } })
+      end)
+    end)
+  end)
+
   describe('GitHunk integration', function()
     it('should return valid GitHunk instances', function()
       local original_lines = { 'a', 'b' }

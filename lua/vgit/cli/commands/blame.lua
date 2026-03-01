@@ -4,11 +4,7 @@ local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
 local Buffer = lazy('vgit.core.Buffer')
 local Window = lazy('vgit.core.Window')
-local GitFile = lazy('vgit.git.GitFile')
-local git_log = lazy('vgit.git.git_log')
 local console = lazy('vgit.core.console')
-local git_show = lazy('vgit.git.git_show')
-local git_blame = lazy('vgit.git.git_blame')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
@@ -44,10 +40,10 @@ function blame_command.parse_args(args)
   return opts
 end
 
-local function execute_screen_blame(opts, repo, repo_path, filename)
+local function execute_screen_blame(opts, repo, filename)
   local filetype = fs.detect_filetype(filename)
 
-  local blames, blame_err = git_blame.list(repo_path, filename)
+  local blames, blame_err = repo:blame_list(filename)
   if blame_err then
     console.error(blame_err)
     return
@@ -58,7 +54,7 @@ local function execute_screen_blame(opts, repo, repo_path, filename)
     return
   end
 
-  local lines, lines_err = git_show.lines(repo_path, filename, 'HEAD')
+  local lines, lines_err = repo:file_lines(filename, 'HEAD')
   if lines_err or not lines then
     local buffer = Buffer(0)
     lines = buffer:get_lines()
@@ -72,17 +68,17 @@ local function execute_screen_blame(opts, repo, repo_path, filename)
   display_service.show_blame_view({
     filename = filename,
     filetype = filetype,
-    reponame = repo_path,
+    reponame = repo:get_path(),
     blames = blames,
     lines = lines,
   })
 end
 
-local function execute_lens_blame(opts, repo, repo_path, filename)
+local function execute_lens_blame(opts, repo, filename)
   local layout_type = scene_setting:get('diff_preference')
-  local git_file = GitFile(filename)
+  local filetype = fs.detect_filetype(filename)
 
-  local blame, blame_err = git_file:blame(opts.line_number)
+  local blame, blame_err = repo:blame_file(filename, opts.line_number)
   if blame_err then
     console.error(blame_err)
     return
@@ -99,7 +95,7 @@ local function execute_lens_blame(opts, repo, repo_path, filename)
       blame = blame,
       filename = filename,
       line_number = opts.line_number,
-      filetype = git_file:get_filetype(),
+      filetype = filetype,
       layout_type = layout_type,
       is_uncommitted = true,
     })
@@ -108,7 +104,7 @@ local function execute_lens_blame(opts, repo, repo_path, filename)
 
   local commit_hash = blame.hash or blame.commit_hash
 
-  local log_result = git_log.get(repo:get_path(), commit_hash)
+  local log_result = repo:log_get(commit_hash)
   local parent_hash = log_result and log_result.parent_hash or commit_hash .. '^'
 
   local diff = repo:diff({
@@ -131,7 +127,7 @@ local function execute_lens_blame(opts, repo, repo_path, filename)
     filename = filename,
     line_number = opts.line_number,
     diff = diff,
-    filetype = git_file:get_filetype(),
+    filetype = filetype,
     layout_type = layout_type,
     commit_hash = commit_hash,
     parent_hash = parent_hash,
@@ -173,13 +169,12 @@ blame_command.execute = event.async(function(args)
     return
   end
 
-  local repo_path = repo:get_path()
-  local filename = normalize_file_path(opts.file, repo_path)
+  local filename = normalize_file_path(opts.file, repo:get_path())
 
   if opts.screen then
-    execute_screen_blame(opts, repo, repo_path, filename)
+    execute_screen_blame(opts, repo, filename)
   else
-    execute_lens_blame(opts, repo, repo_path, filename)
+    execute_lens_blame(opts, repo, filename)
   end
 end)
 

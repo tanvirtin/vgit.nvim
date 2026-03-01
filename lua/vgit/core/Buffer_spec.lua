@@ -162,7 +162,7 @@ describe('Buffer:', function()
   describe('delete', function()
     it('should delete buffer', function()
       assert.is_true(buffer:is_valid())
-      vim.api.nvim_buf_delete(buffer.bufnr, { force = true })
+      buffer:delete()
       assert.is_false(buffer:is_valid())
     end)
   end)
@@ -264,55 +264,77 @@ describe('Buffer:', function()
   end)
 
   describe('get_filetype', function()
-    it('should return a string for unnamed buffer', function()
+    it('should return detected filetype for named buffer', function()
+      vim.api.nvim_buf_set_name(buffer.bufnr, 'test_file.lua')
       local ft = buffer:get_filetype()
-      -- filetype detection may return empty string or a detected type
-      assert.is_true(type(ft) == 'string' or ft == nil)
+      assert.are.equal('lua', ft)
     end)
   end)
 
   describe('set_keymap', function()
-    it('should not error with valid keymap config', function()
-      assert.has_no.errors(function()
-        buffer:set_keymap({
-          mode = 'n',
-          key = '<leader>x',
-          desc = 'test',
-        }, function() end)
-      end)
+    it('should register a keymap on the buffer', function()
+      buffer:set_keymap({
+        mode = 'n',
+        key = 'gz',
+        desc = 'test keymap',
+      }, function() end)
+
+      local keymaps = vim.api.nvim_buf_get_keymap(buffer.bufnr, 'n')
+      local found = false
+      for _, km in ipairs(keymaps) do
+        if km.lhs == 'gz' then
+          found = true
+          break
+        end
+      end
+      assert.is_true(found)
     end)
   end)
 
   describe('place_extmark_sign', function()
-    it('should place a sign on valid buffer', function()
+    it('should place a sign extmark on valid buffer', function()
       buffer:set_lines({ 'test line' })
 
-      -- Use a sign name that's defined in vgit's signs settings
-      local ok, _ = pcall(function()
-        buffer:place_extmark_sign({
-          col = 0,
-          name = 'GitSignsAdd',
-        })
-      end)
+      buffer:place_extmark_sign({
+        col = 0,
+        name = 'GitSignsAdd',
+      })
 
-      -- Should succeed or at least not crash
-      assert.is_true(ok)
+      local ns_id = buffer._sign_extmark.ns_id
+      local extmarks = vim.api.nvim_buf_get_extmarks(buffer.bufnr, ns_id, 0, -1, {})
+      assert.is_true(#extmarks > 0)
     end)
   end)
 
   describe('clear_extmarks', function()
-    it('should not error on buffer with no extmarks', function()
-      assert.has_no.errors(function()
-        buffer:clear_extmarks()
-      end)
+    it('should clear all extmarks from the buffer', function()
+      buffer:set_lines({ 'test line' })
+
+      buffer:place_extmark_sign({ col = 0, name = 'GitSignsAdd' })
+      local ns_id = buffer._sign_extmark.ns_id
+      local before = vim.api.nvim_buf_get_extmarks(buffer.bufnr, ns_id, 0, -1, {})
+      assert.is_true(#before > 0)
+
+      buffer:clear_extmarks()
+
+      local after = vim.api.nvim_buf_get_extmarks(buffer.bufnr, ns_id, 0, -1, {})
+      assert.are.equal(0, #after)
     end)
   end)
 
   describe('clear_extmark_signs', function()
-    it('should not error on valid buffer', function()
-      assert.has_no.errors(function()
-        buffer:clear_extmark_signs()
-      end)
+    it('should clear sign extmarks from the buffer', function()
+      buffer:set_lines({ 'test line' })
+
+      buffer:place_extmark_sign({ col = 0, name = 'GitSignsAdd' })
+      local ns_id = buffer._sign_extmark.ns_id
+      local before = vim.api.nvim_buf_get_extmarks(buffer.bufnr, ns_id, 0, -1, {})
+      assert.is_true(#before > 0)
+
+      buffer:clear_extmark_signs()
+
+      local after = vim.api.nvim_buf_get_extmarks(buffer.bufnr, ns_id, 0, -1, {})
+      assert.are.equal(0, #after)
     end)
   end)
 

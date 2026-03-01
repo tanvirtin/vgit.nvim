@@ -1,4 +1,4 @@
-local HUNK_CLEAR_MS = 5000
+local HUNK_CLEAR_MS = 2000
 
 local state = {
   hunk_index = nil,
@@ -12,7 +12,6 @@ local hunk_timer = nil
 local statusline_state = {}
 
 local function redraw()
-  vim.api.nvim_exec_autocmds('User', { pattern = 'VGitStatuslineChanged' })
   vim.cmd('redrawstatus')
 end
 

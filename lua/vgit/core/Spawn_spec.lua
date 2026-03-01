@@ -51,6 +51,7 @@ describe('Spawn:', function()
   describe('start', function()
     it('spawns process and pipes stdout', function()
       local stdout = {}
+      local exited = false
 
       Spawn({
         command = 'ls',
@@ -60,13 +61,18 @@ describe('Spawn:', function()
           if line ~= '' then table.insert(stdout, line) end
         end,
         on_exit = function()
-          assert.is_true(#stdout > 0)
+          exited = true
         end,
       }):start()
+
+      vim.wait(5000, function() return exited end, 50)
+      assert.is_true(exited, 'on_exit should have been called')
+      assert.is_true(#stdout > 0, 'should have received stdout output')
     end)
 
     it('pipes stderr correctly', function()
       local stderr = {}
+      local exited = false
 
       Spawn({
         command = 'ls',
@@ -76,9 +82,13 @@ describe('Spawn:', function()
         end,
         on_stdout = function() end,
         on_exit = function()
-          assert.is_true(#stderr > 0)
+          exited = true
         end,
       }):start()
+
+      vim.wait(5000, function() return exited end, 50)
+      assert.is_true(exited, 'on_exit should have been called')
+      assert.is_true(#stderr > 0, 'should have received stderr output')
     end)
   end)
 end)

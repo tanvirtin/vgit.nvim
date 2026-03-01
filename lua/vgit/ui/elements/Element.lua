@@ -102,6 +102,10 @@ function Element:unmount()
   return self
 end
 
+function Element:is_mounted()
+  return self._mounted
+end
+
 function Element:is_valid()
   return self._mounted and self._buffer and self._buffer:is_valid() and self._window and self._window:is_valid()
 end
@@ -338,6 +342,28 @@ function Element:_apply_win_options()
 
   for key, value in pairs(options) do
     self._window:set_option(key, value)
+  end
+
+  return self
+end
+
+function Element:set_window_mode(mode)
+  self._config.window_mode = mode
+  return self
+end
+
+function Element:apply_layout_win_plot(win_plot)
+  if not self._plot or type(self._plot) ~= 'table' then return self end
+
+  if self._plot.win_plot then
+    local component_focusable = self._plot.win_plot.focusable
+    self._plot.win_plot = utils.object.assign(self._plot.win_plot, win_plot)
+    if component_focusable ~= nil then self._plot.win_plot.focusable = component_focusable end
+
+    self._plot.is_built = false
+    if type(self._plot.build) == 'function' then self._plot:build() end
+  else
+    self._plot.win_plot = win_plot
   end
 
   return self

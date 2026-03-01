@@ -40,4 +40,25 @@ describe('lazy:', function()
       eq(proxy1, proxy2)
     end)
   end)
+
+  describe('deferred loading', function()
+    it('should not require module until first property access', function()
+      -- Use a module path that is unlikely to be loaded already
+      local module_path = 'vgit.core.assertion'
+
+      -- Unload the module so we can test lazy loading
+      package.loaded[module_path] = nil
+
+      local proxy = lazy(module_path)
+
+      -- Module should NOT be loaded yet (proxy is just a table with metatables)
+      assert.is_nil(package.loaded[module_path])
+
+      -- Accessing a property should trigger the require
+      local _ = proxy.assert
+
+      -- Now the module should be loaded
+      assert.is_not_nil(package.loaded[module_path])
+    end)
+  end)
 end)

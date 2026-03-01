@@ -3,6 +3,7 @@ local lazy = require('vgit.core.lazy')
 local fs = lazy('vgit.core.fs')
 local Object = lazy('vgit.core.Object')
 local assertion = lazy('vgit.core.assertion')
+local git_diff = lazy('vgit.git.git_diff')
 local git_conflict = lazy('vgit.git.git_conflict')
 local LiveHunkGenerator = lazy('vgit.core.diff.hunks.LiveHunkGenerator')
 local DiffLayoutGenerator = lazy('vgit.core.diff.layout.DiffLayoutGenerator')
@@ -154,6 +155,20 @@ function DiffBuilder:_build_conflict_diff(spec)
   return diff
 end
 
+function DiffBuilder:_build_multi_file_diff(spec)
+  local repo_path = self._repository:get_path()
+  local from = spec.from
+  local to = spec.to
+
+  if from == 'HEAD' and to == 'index' then
+    return git_diff.staged_hunk_entries(repo_path)
+  elseif to == 'disk' then
+    return git_diff.unstaged_hunk_entries(repo_path)
+  else
+    return git_diff.range_hunk_entries(repo_path, from, to)
+  end
+end
+
 function DiffBuilder:build(spec)
   spec = spec or {}
   local type = spec.type
@@ -161,6 +176,10 @@ function DiffBuilder:build(spec)
   local layout_type = spec.layout_type or 'unified'
 
   assertion.assert(spec, 'spec is required').assert(type, 'type is required')
+
+  if not spec.filename then
+    return self:_build_multi_file_diff(spec)
+  end
 
   if fs.is_dir(spec.filename) then return end
   if type == 'conflict' then return self:_build_conflict_diff(spec) end

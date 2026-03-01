@@ -20,6 +20,9 @@ local git_cherry = lazy('vgit.git.git_cherry')
 local git_revert = lazy('vgit.git.git_revert')
 local git_bisect = lazy('vgit.git.git_bisect')
 local GitHistory = lazy('vgit.git.GitHistory')
+local git_log = lazy('vgit.git.git_log')
+local git_show = lazy('vgit.git.git_show')
+local git_stash = lazy('vgit.git.git_stash')
 local git_blame_mod = lazy('vgit.git.git_blame')
 local GitRemote_class = lazy('vgit.git.GitRemote')
 local git_submodule = lazy('vgit.git.git_submodule')
@@ -404,6 +407,12 @@ function GitRepository:blame_file(filename, lnum)
   return git_blame_mod.get(self._path, filename, lnum)
 end
 
+function GitRepository:blame_list(filename, commit)
+  assertion.assert(filename, 'filename is required')
+  self:_ensure_initialized()
+  return git_blame_mod.list(self._path, filename, commit)
+end
+
 function GitRepository:file_content(filename, commit)
   assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
@@ -548,6 +557,71 @@ function GitRepository:get_file_lines(filename, is_staged, git_file)
   if is_staged then return git_file:lines() end
   event.await()
   return fs.read_file(filename)
+end
+
+function GitRepository:show_lines(filename, commit)
+  assertion.assert(filename, 'filename is required')
+  self:_ensure_initialized()
+  return git_show.lines(self._path, filename, commit)
+end
+
+function GitRepository:live_hunks(filename, current_lines)
+  assertion.assert(filename, 'filename is required')
+  self:_ensure_initialized()
+  local git_file = GitFile(filename)
+  return git_file:live_hunks(current_lines)
+end
+
+function GitRepository:log_get(commit)
+  assertion.assert(commit, 'commit is required')
+  self:_ensure_initialized()
+  return git_log.get(self._path, commit)
+end
+
+function GitRepository:log_search(opts)
+  self:_ensure_initialized()
+  return git_log.list(self._path, opts)
+end
+
+function GitRepository:file_status(filename)
+  assertion.assert(filename, 'filename is required')
+  self:_ensure_initialized()
+  return git_status.ls(self._path, filename)
+end
+
+function GitRepository:diff_tree(opts)
+  self:_ensure_initialized()
+  return git_status.tree(self._path, opts)
+end
+
+function GitRepository:stash_add()
+  self:_ensure_initialized()
+  return git_stash.add(self._path)
+end
+
+function GitRepository:stash_list(opts)
+  self:_ensure_initialized()
+  return git_stash.list(self._path, opts)
+end
+
+function GitRepository:stash_apply(stash_index)
+  self:_ensure_initialized()
+  return git_stash.apply(self._path, stash_index)
+end
+
+function GitRepository:stash_pop(stash_index)
+  self:_ensure_initialized()
+  return git_stash.pop(self._path, stash_index)
+end
+
+function GitRepository:stash_drop(stash_index)
+  self:_ensure_initialized()
+  return git_stash.drop(self._path, stash_index)
+end
+
+function GitRepository:stash_clear()
+  self:_ensure_initialized()
+  return git_stash.clear(self._path)
 end
 
 function GitRepository:conflict_status()
