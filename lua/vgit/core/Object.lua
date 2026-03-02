@@ -10,9 +10,7 @@ function Object:__index(key)
 end
 
 function Object:__newindex(key, value)
-  if rawget(self, '$' .. key) ~= nil then
-    error(string.format("Property '%s' is read-only.", tostring(key)), 2)
-  end
+  if rawget(self, '$' .. key) ~= nil then error(string.format('Property \'%s\' is read-only.', tostring(key)), 2) end
 
   rawset(self, key, value)
 end

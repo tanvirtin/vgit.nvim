@@ -64,26 +64,36 @@ function CommitComponent:unmount()
 end
 
 function CommitComponent:get_lines()
-  return self:with_element(function(el) return el:get_lines() end) or {}
+  return self:with_element(function(el)
+    return el:get_lines()
+  end) or {}
 end
 
 function CommitComponent:set_lines(lines)
-  self:with_element(function(el) el:set_lines(lines) end)
+  self:with_element(function(el)
+    el:set_lines(lines)
+  end)
   return self
 end
 
 function CommitComponent:focus()
-  self:with_element(function(el) el:focus() end)
+  self:with_element(function(el)
+    el:focus()
+  end)
   return self
 end
 
 function CommitComponent:set_cursor(cursor)
-  self:with_element(function(el) el:set_cursor(cursor) end)
+  self:with_element(function(el)
+    el:set_cursor(cursor)
+  end)
   return self
 end
 
 function CommitComponent:is_valid()
-  return self:with_element(function() return true end) or false
+  return self:with_element(function()
+    return true
+  end) or false
 end
 
 return CommitComponent

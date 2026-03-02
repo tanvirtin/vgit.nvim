@@ -110,7 +110,7 @@ describe('Object:', function()
       local b = Buffer(42)
       assert.has_error(function()
         b.id = 99
-      end, "Property 'id' is read-only.")
+      end, 'Property \'id\' is read-only.')
       eq(b.id, 42)
     end)
 

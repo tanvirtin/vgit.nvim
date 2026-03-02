@@ -602,7 +602,9 @@ function TreeComponent:is_valid()
 end
 
 function TreeComponent:focus()
-  self:with_element(function(el) el:focus() end)
+  self:with_element(function(el)
+    el:focus()
+  end)
 end
 
 function TreeComponent:unmount()

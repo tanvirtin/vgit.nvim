@@ -390,6 +390,105 @@ describe('SplitDiffComponent:', function()
     end)
   end)
 
+  describe('split data pipeline with real Diff', function()
+    local Diff = require('vgit.core.diff.Diff')
+    local GitHunk = require('vgit.git.GitHunk')
+
+    local function make_hunk(header, diff_lines)
+      local hunk = GitHunk(header)
+      for _, line in ipairs(diff_lines or {}) do
+        hunk:push(line)
+      end
+      return hunk
+    end
+
+    it('should produce equal-length previous and current line_numbers from real Diff', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
+      local diff = Diff():generate_split({ hunk }, { 'a', 'new', 'c' })
+
+      local component = SplitDiffComponent({})
+      local result = component:calculate_split_line_numbers(diff)
+
+      eq(#result.previous.lines, #result.current.lines)
+      eq(#diff.current_lines, #result.current.lines)
+    end)
+
+    it('should produce equal-length changes for both sides', function()
+      local hunk = make_hunk('@@ -0,0 +1,2 @@', { '+new1', '+new2' })
+      local diff = Diff():generate_split({ hunk }, { 'new1', 'new2' })
+
+      local component = SplitDiffComponent({})
+      local result = component:calculate_split_line_numbers(diff)
+
+      eq(#result.previous.changes, #result.current.changes)
+      eq(#diff.current_lines, #result.current.changes)
+    end)
+
+    it('should assign void entries on correct side for add hunk', function()
+      local hunk = make_hunk('@@ -0,0 +1,2 @@', { '+new1', '+new2' })
+      local diff = Diff():generate_split({ hunk }, { 'new1', 'new2' })
+
+      local component = SplitDiffComponent({})
+      local result = component:calculate_split_line_numbers(diff)
+
+      -- Previous side should have void highlights for added lines
+      local prev_void_count = 0
+      for _, change in ipairs(result.previous.changes) do
+        if change.lnum_change and change.lnum_change.type == 'void' then prev_void_count = prev_void_count + 1 end
+      end
+      assert.is_true(prev_void_count > 0, 'previous side should have void entries for adds')
+    end)
+
+    it('should assign void entries on correct side for remove hunk', function()
+      local hunk = make_hunk('@@ -3,2 +3,0 @@', { '-removed1', '-removed2' })
+      local diff = Diff():generate_split({ hunk }, { 'a', 'b', 'c', 'd' })
+
+      local component = SplitDiffComponent({})
+      local result = component:calculate_split_line_numbers(diff)
+
+      -- Current side should have void highlights for removed lines
+      local curr_void_count = 0
+      for _, change in ipairs(result.current.changes) do
+        if change.lnum_change and change.lnum_change.type == 'void' then curr_void_count = curr_void_count + 1 end
+      end
+      assert.is_true(curr_void_count > 0, 'current side should have void entries for removes')
+    end)
+
+    it('should handle mixed hunks with correct line number separation', function()
+      local hunk1 = make_hunk('@@ -0,0 +1,2 @@', { '+new1', '+new2' })
+      local hunk2 = make_hunk('@@ -4,2 +6,0 @@', { '-removed1', '-removed2' })
+      local diff = Diff():generate_split({ hunk1, hunk2 }, { 'new1', 'new2', 'a', 'b', 'c', 'd' })
+
+      local component = SplitDiffComponent({})
+      local result = component:calculate_split_line_numbers(diff)
+
+      eq(#result.previous.lines, #result.current.lines)
+      eq(#result.previous.changes, #result.current.changes)
+    end)
+
+    it('should produce line_number highlights matching change types per side', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
+      local diff = Diff():generate_split({ hunk }, { 'a', 'new', 'c' })
+
+      local component = SplitDiffComponent({})
+      local result = component:calculate_split_line_numbers(diff)
+
+      -- Check that highlight groups appear in the results
+      local prev_hls = {}
+      for _, ln in ipairs(result.previous.lines) do
+        prev_hls[ln[2]] = true
+      end
+      local curr_hls = {}
+      for _, ln in ipairs(result.current.lines) do
+        curr_hls[ln[2]] = true
+      end
+      -- Previous side should have at least delete or context hl
+      assert.is_true(prev_hls['GitSignsDelete'] ~= nil or prev_hls['GitLineNr'] ~= nil)
+      -- Current side should have at least add or context hl
+      assert.is_true(curr_hls['GitSignsAdd'] ~= nil or curr_hls['GitLineNr'] ~= nil)
+    end)
+  end)
+
   describe('get_filetype', function()
     it('should delegate to _current_component', function()
       local component = create_split_component()

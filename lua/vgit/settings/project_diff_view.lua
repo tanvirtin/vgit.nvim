@@ -4,7 +4,7 @@ local Config = lazy('vgit.core.Config')
 
 return Config({
   hunk_alignment = 'top',
-  hunk_alignment_offset = 0,
+  hunk_alignment_offset = 2,
   keymaps = {
     jump = {
       key = '<cr>',

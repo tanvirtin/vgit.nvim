@@ -1039,6 +1039,245 @@ describe('DiffBuilder:', function()
     end)
   end)
 
+  describe('build() data invariants', function()
+    local invariants = require('tests.helpers.diff_invariants')
+
+    it('should satisfy unified invariants for unstaged range diff', function()
+      local diff = builder:build({
+        type = 'range',
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'disk',
+        layout_type = 'unified',
+      })
+
+      invariants.assert_unified_diff(diff)
+    end)
+
+    it('should satisfy split invariants for unstaged range diff', function()
+      local diff = builder:build({
+        type = 'range',
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'disk',
+        layout_type = 'split',
+      })
+
+      invariants.assert_split_diff(diff)
+    end)
+
+    it('should satisfy unified invariants for staged range diff', function()
+      local diff = builder:build({
+        type = 'range',
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'index',
+        layout_type = 'unified',
+      })
+
+      invariants.assert_unified_diff(diff)
+    end)
+
+    it('should satisfy split invariants for staged range diff', function()
+      local diff = builder:build({
+        type = 'range',
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'index',
+        layout_type = 'split',
+      })
+
+      invariants.assert_split_diff(diff)
+    end)
+
+    it('should satisfy unified invariants for branch comparison', function()
+      local diff = builder:build({
+        type = 'range',
+        filename = 'test.lua',
+        from = 'main',
+        to = 'feature',
+        layout_type = 'unified',
+      })
+
+      invariants.assert_unified_diff(diff)
+    end)
+
+    it('should satisfy split invariants for branch comparison', function()
+      local diff = builder:build({
+        type = 'range',
+        filename = 'test.lua',
+        from = 'main',
+        to = 'feature',
+        layout_type = 'split',
+      })
+
+      invariants.assert_split_diff(diff)
+    end)
+
+    it('should satisfy unified invariants for blame diff', function()
+      local diff = builder:build({
+        type = 'blame',
+        filename = 'test.lua',
+        blame_commit = 'abc123',
+        layout_type = 'unified',
+      })
+
+      invariants.assert_unified_diff(diff)
+    end)
+
+    it('should satisfy unified invariants for version tag comparison', function()
+      local diff = builder:build({
+        type = 'range',
+        filename = 'test.lua',
+        from = 'v1.0',
+        to = 'v2.0',
+        layout_type = 'unified',
+      })
+
+      invariants.assert_unified_diff(diff)
+    end)
+
+    it('should satisfy unified invariants when original is nil (new file)', function()
+      repository.file_lines = function(self, filename, ref)
+        if ref == 'HEAD' then return nil end
+        return { 'new line 1', 'new line 2' }
+      end
+      fs.read_file = function()
+        return { 'new line 1', 'new line 2' }
+      end
+
+      local diff = builder:build({
+        type = 'range',
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'disk',
+        layout_type = 'unified',
+      })
+
+      invariants.assert_unified_diff(diff)
+      -- All lnum_changes should be add
+      for _, lc in ipairs(diff.lnum_changes) do
+        assert.are.equal('add', lc.type)
+      end
+    end)
+
+    it('should satisfy split invariants when original is nil (new file)', function()
+      repository.file_lines = function(self, filename, ref)
+        if ref == 'HEAD' then return nil end
+        return { 'new line 1', 'new line 2' }
+      end
+      fs.read_file = function()
+        return { 'new line 1', 'new line 2' }
+      end
+
+      local diff = builder:build({
+        type = 'range',
+        filename = 'test.lua',
+        from = 'HEAD',
+        to = 'disk',
+        layout_type = 'split',
+      })
+
+      invariants.assert_split_diff(diff)
+    end)
+  end)
+
+  describe('build_multi_file_diffs() data invariants', function()
+    local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
+    local it = async.it
+    local invariants = require('tests.helpers.diff_invariants')
+
+    local function mock_multi_file_diff(raw_entries)
+      builder._build_multi_file_diff = function()
+        return raw_entries
+      end
+    end
+
+    it('should produce unified invariants for each file diff', function()
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'line 1', 'modified line 2', 'line 3' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'a.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -2,1 +2,1 @@',
+            diff = { '-old line 2', '+modified line 2' },
+            top = 2,
+            bot = 2,
+          },
+          filename = 'a.lua',
+          filetype = 'lua',
+        },
+      })
+
+      local results = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      assert.is_true(#results >= 1)
+      for _, entry in ipairs(results) do
+        invariants.assert_unified_diff(entry.diff)
+      end
+    end)
+
+    it('should produce unified invariants for multi-file diffs', function()
+      repository.file_lines = function(_, filename, ref)
+        if filename == 'a.lua' and ref == 'HEAD' then
+          return { 'a line 1', 'a added' }
+        elseif filename == 'b.lua' and ref == 'HEAD' then
+          return { 'b line 1' }
+        end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'a.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,1 +1,2 @@',
+            diff = { ' a line 1', '+a added' },
+            top = 1,
+            bot = 2,
+          },
+          filename = 'a.lua',
+          filetype = 'lua',
+        },
+        { type = 'file_header', filename = 'b.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,2 +1,1 @@',
+            diff = { ' b line 1', '-b removed' },
+            top = 1,
+            bot = 1,
+          },
+          filename = 'b.lua',
+          filetype = 'lua',
+        },
+      })
+
+      local results = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      assert.are.equal(2, #results)
+      for _, entry in ipairs(results) do
+        invariants.assert_unified_diff(entry.diff)
+      end
+    end)
+  end)
+
   describe('integration scenarios', function()
     it('should handle complete workflow for unstaged changes (unified)', function()
       local spec = {
@@ -1354,6 +1593,716 @@ describe('DiffBuilder:', function()
 
       -- Should have called file_lines multiple times
       assert.is_true(vim.tbl_count(call_counts) > 0)
+    end)
+  end)
+
+  describe('build_multi_file_diffs', function()
+    local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
+    local it = async.it
+
+    local function mock_multi_file_diff(raw_entries)
+      builder._build_multi_file_diff = function()
+        return raw_entries
+      end
+    end
+
+    it('should produce correct marks for a simple add hunk', function()
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'line 1', 'new line 2', 'new line 3', 'line 4' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,2 +1,4 @@',
+            diff = {
+              ' line 1',
+              '+new line 2',
+              '+new line 3',
+              ' line 4',
+            },
+            top = 1,
+            bot = 4,
+          },
+          filename = 'test.lua',
+          filetype = 'lua',
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local diff = result[1].diff
+      assert.is_true(#diff.marks > 0)
+      local mark = diff.marks[1]
+      eq('add', mark.type)
+      eq(2, mark.top)
+      eq(3, mark.bot)
+    end)
+
+    it('should produce correct marks for a simple remove hunk', function()
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD~1' then return { 'line 1', 'old line 2', 'old line 3', 'line 4' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -2,2 +1,0 @@',
+            diff = {
+              '-old line 2',
+              '-old line 3',
+            },
+            top = 1,
+            bot = 1,
+          },
+          filename = 'test.lua',
+          filetype = 'lua',
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local diff = result[1].diff
+      assert.is_true(#diff.marks > 0)
+      eq('remove', diff.marks[1].type)
+    end)
+
+    it('should split merged git hunks with interleaved context into separate sub-hunks', function()
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then
+          return {
+            'context 1',
+            'added 2a',
+            'added 2b',
+            'context 4',
+            'context 5',
+            'added 6',
+            'context 7',
+            'context 8',
+          }
+        end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,6 +1,8 @@',
+            diff = {
+              ' context 1',
+              '-removed 2',
+              '+added 2a',
+              '+added 2b',
+              ' context 4',
+              ' context 5',
+              '-removed 6',
+              '+added 6',
+              ' context 7',
+              ' context 8',
+            },
+            top = 1,
+            bot = 8,
+          },
+          filename = 'test.lua',
+          filetype = 'lua',
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local diff = result[1].diff
+      eq(2, #diff.marks, 'should have 2 marks (one per change block)')
+
+      local mark1 = diff.marks[1]
+      eq('change', mark1.type)
+      eq(2, mark1.top_relative)
+
+      local mark2 = diff.marks[2]
+      eq('change', mark2.type)
+      eq(6, mark2.top_relative)
+    end)
+
+    it('should produce matching lnum_changes for split hunks', function()
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then
+          return {
+            'context 1',
+            'added A',
+            'context 3',
+            'context 4',
+            'added B',
+            'context 6',
+          }
+        end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,4 +1,6 @@',
+            diff = {
+              ' context 1',
+              '-removed A',
+              '+added A',
+              ' context 3',
+              ' context 4',
+              '-removed B',
+              '+added B',
+              ' context 6',
+            },
+            top = 1,
+            bot = 6,
+          },
+          filename = 'test.lua',
+          filetype = 'lua',
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local diff = result[1].diff
+      eq(2, #diff.marks)
+
+      local lnum_map = {}
+      for _, lc in ipairs(diff.lnum_changes) do
+        lnum_map[lc.lnum] = lc.type
+      end
+
+      for _, mark in ipairs(diff.marks) do
+        for lnum = mark.top, mark.bot do
+          local ct = lnum_map[lnum]
+          assert.is_not_nil(ct, 'mark line ' .. lnum .. ' should have a lnum_change')
+          assert.is_true(ct == 'add' or ct == 'remove', 'mark line ' .. lnum .. ' should be add or remove, got: ' .. ct)
+        end
+      end
+    end)
+
+    it('should handle single change block (no context splitting needed)', function()
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'new line 1', 'new line 2', 'new line 3' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,2 +1,3 @@',
+            diff = {
+              '-old 1',
+              '-old 2',
+              '+new line 1',
+              '+new line 2',
+              '+new line 3',
+            },
+            top = 1,
+            bot = 3,
+          },
+          filename = 'test.lua',
+          filetype = 'lua',
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local diff = result[1].diff
+      eq(1, #diff.marks, 'single change block should produce 1 mark')
+      eq('change', diff.marks[1].type)
+    end)
+
+    it('should produce correct marks for split layout with interleaved context', function()
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then
+          return {
+            'context 1',
+            'added 2',
+            'context 3',
+            'context 4',
+            'added 5',
+            'context 6',
+          }
+        end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,4 +1,6 @@',
+            diff = {
+              ' context 1',
+              '-removed 2',
+              '+added 2',
+              ' context 3',
+              ' context 4',
+              '-removed 5',
+              '+added 5',
+              ' context 6',
+            },
+            top = 1,
+            bot = 6,
+          },
+          filename = 'test.lua',
+          filetype = 'lua',
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'split',
+      })
+
+      eq(1, #result)
+      local diff = result[1].diff
+      eq(2, #diff.marks, 'split layout should also have 2 marks from interleaved hunk')
+
+      assert.is_true(#diff.current_lines > 0)
+      assert.is_true(#diff.previous_lines > 0)
+      eq(#diff.current_lines, #diff.previous_lines)
+    end)
+
+    -- Behavioral tests: verify EXPECTED output from the user's perspective
+
+    it('should place removed lines before the following context, not after it', function()
+      -- If original has [ctx1, old, ctx2] and current has [ctx1, ctx2],
+      -- the display should show: ctx1, -old, ctx2 (not ctx1, ctx2, -old)
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'ctx1', 'ctx2', 'ctx3' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,4 +1,3 @@',
+            diff = { ' ctx1', '-old_line', ' ctx2', ' ctx3' },
+          },
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local lines = result[1].diff.lines
+      -- Find positions of key lines
+      local ctx1_pos, old_pos, ctx2_pos
+      for i, line in ipairs(lines) do
+        if line == 'ctx1' then ctx1_pos = i end
+        if line == 'old_line' then old_pos = i end
+        if line == 'ctx2' then ctx2_pos = i end
+      end
+      assert.is_not_nil(ctx1_pos, 'ctx1 should be in output')
+      assert.is_not_nil(old_pos, 'removed line should be in output')
+      assert.is_not_nil(ctx2_pos, 'ctx2 should be in output')
+      assert.is_true(old_pos > ctx1_pos, 'removed line should come after ctx1')
+      assert.is_true(old_pos < ctx2_pos, 'removed line should come before ctx2')
+    end)
+
+    it('should place removed lines at the start when they precede all context', function()
+      -- Original: [old1, old2, ctx1], Current: [ctx1]
+      -- Display should show: -old1, -old2, ctx1
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'ctx1' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,3 +1,1 @@',
+            diff = { '-old1', '-old2', ' ctx1' },
+          },
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local lines = result[1].diff.lines
+      local old1_pos, old2_pos, ctx1_pos
+      for i, line in ipairs(lines) do
+        if line == 'old1' then old1_pos = i end
+        if line == 'old2' then old2_pos = i end
+        if line == 'ctx1' then ctx1_pos = i end
+      end
+      assert.is_not_nil(old1_pos, 'old1 should be in output')
+      assert.is_not_nil(old2_pos, 'old2 should be in output')
+      assert.is_not_nil(ctx1_pos, 'ctx1 should be in output')
+      assert.is_true(old1_pos < ctx1_pos, 'removed lines should appear before context')
+      assert.is_true(old2_pos < ctx1_pos, 'both removed lines should appear before context')
+    end)
+
+    it('should correctly position removes after prior adds cause line divergence', function()
+      -- This tests the critical bug: when a prior sub-hunk adds many lines,
+      -- old_pos and new_pos diverge. The remove sub-hunk must still place
+      -- removed lines at the correct position in the display.
+      --
+      -- Original: [ctx1, old_a, ctx2, old_b, ctx3]
+      -- Current:  [ctx1, new1, new2, new3, new4, new5, ctx2, ctx3]
+      -- The remove of old_b should appear between ctx2 and ctx3 in the display.
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'ctx1', 'new1', 'new2', 'new3', 'new4', 'new5', 'ctx2', 'ctx3' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,5 +1,8 @@',
+            diff = {
+              ' ctx1',
+              '-old_a',
+              '+new1',
+              '+new2',
+              '+new3',
+              '+new4',
+              '+new5',
+              ' ctx2',
+              '-old_b',
+              ' ctx3',
+            },
+          },
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local lines = result[1].diff.lines
+      local marks = result[1].diff.marks
+
+      -- Should have 2 marks (2 change blocks separated by context)
+      eq(2, #marks, 'should produce 2 marks for 2 change blocks')
+
+      -- The removed old_b line should appear between ctx2 and ctx3
+      local ctx2_pos, old_b_pos, ctx3_pos
+      for i, line in ipairs(lines) do
+        if line == 'ctx2' then ctx2_pos = i end
+        if line == 'old_b' then old_b_pos = i end
+        if line == 'ctx3' then ctx3_pos = i end
+      end
+
+      assert.is_not_nil(ctx2_pos, 'ctx2 should be in output')
+      assert.is_not_nil(old_b_pos, 'removed old_b should be in output')
+      assert.is_not_nil(ctx3_pos, 'ctx3 should be in output')
+      assert.is_true(old_b_pos > ctx2_pos, 'old_b should come after ctx2')
+      assert.is_true(old_b_pos < ctx3_pos, 'old_b should come before ctx3')
+    end)
+
+    it('should produce non-overlapping marks in ascending order', function()
+      -- With multiple change blocks, marks should be sorted and non-overlapping
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'a', 'new_b', 'c', 'd', 'new_e', 'f' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,6 +1,6 @@',
+            diff = {
+              ' a',
+              '-old_b',
+              '+new_b',
+              ' c',
+              ' d',
+              '-old_e',
+              '+new_e',
+              ' f',
+            },
+          },
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local marks = result[1].diff.marks
+      eq(2, #marks)
+
+      -- Marks should be in ascending order and non-overlapping
+      assert.is_true(marks[1].top <= marks[1].bot, 'mark 1: top <= bot')
+      assert.is_true(marks[2].top <= marks[2].bot, 'mark 2: top <= bot')
+      assert.is_true(marks[1].bot < marks[2].top, 'mark 1 should end before mark 2 starts')
+    end)
+
+    it('should have every mark line covered by a lnum_change', function()
+      -- Each line within a mark range must have a corresponding lnum_change entry
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'ctx', 'added_a', 'added_b', 'ctx2' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,2 +1,4 @@',
+            diff = { ' ctx', '+added_a', '+added_b', ' ctx2' },
+          },
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      local diff = result[1].diff
+      local lnum_set = {}
+      for _, lc in ipairs(diff.lnum_changes) do
+        lnum_set[lc.lnum] = lc.type
+      end
+
+      for _, mark in ipairs(diff.marks) do
+        for lnum = mark.top, mark.bot do
+          assert.is_not_nil(
+            lnum_set[lnum],
+            string.format('line %d within mark [%d,%d] must have a lnum_change', lnum, mark.top, mark.bot)
+          )
+        end
+      end
+    end)
+
+    it('should produce marks within buffer bounds', function()
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'a', 'b', 'c' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,2 +1,3 @@',
+            diff = { '-old', '+a', '+b', ' c' },
+          },
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      local diff = result[1].diff
+      local total_lines = #diff.lines
+      for i, mark in ipairs(diff.marks) do
+        assert.is_true(mark.top >= 1, string.format('mark %d top (%d) must be >= 1', i, mark.top))
+        assert.is_true(
+          mark.bot <= total_lines,
+          string.format('mark %d bot (%d) must be <= total lines (%d)', i, mark.bot, total_lines)
+        )
+      end
+    end)
+
+    it('should handle add-only at start of file', function()
+      -- New file or lines added at the very beginning
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'new1', 'new2', 'ctx1' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,1 +1,3 @@',
+            diff = { '+new1', '+new2', ' ctx1' },
+          },
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local diff = result[1].diff
+      assert.is_true(#diff.marks > 0, 'should have at least one mark')
+      eq('add', diff.marks[1].type)
+
+      -- Added lines should appear before ctx1
+      local new1_pos, ctx1_pos
+      for i, line in ipairs(diff.lines) do
+        if line == 'new1' then new1_pos = i end
+        if line == 'ctx1' then ctx1_pos = i end
+      end
+      assert.is_true(new1_pos < ctx1_pos, 'added lines should precede context')
+    end)
+
+    it('should handle remove-only at start of file', function()
+      -- Lines removed from the very beginning
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return { 'ctx1', 'ctx2' } end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,4 +1,2 @@',
+            diff = { '-removed1', '-removed2', ' ctx1', ' ctx2' },
+          },
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(1, #result)
+      local diff = result[1].diff
+      assert.is_true(#diff.marks > 0, 'should have at least one mark')
+      eq('remove', diff.marks[1].type)
+
+      -- Removed lines should appear before ctx1
+      local rm1_pos, ctx1_pos
+      for i, line in ipairs(diff.lines) do
+        if line == 'removed1' then rm1_pos = i end
+        if line == 'ctx1' then ctx1_pos = i end
+      end
+      assert.is_not_nil(rm1_pos, 'removed line should be in output')
+      assert.is_not_nil(ctx1_pos, 'ctx1 should be in output')
+      assert.is_true(rm1_pos < ctx1_pos, 'removed lines should appear before following context')
+    end)
+
+    it('should handle multiple files with different change patterns', function()
+      repository.file_lines = function(_, filename, ref)
+        if ref == 'HEAD' then
+          if filename == 'add.lua' then return { 'new_line', 'ctx' } end
+          if filename == 'remove.lua' then return { 'ctx' } end
+        end
+        if ref == 'HEAD~1' then
+          if filename == 'remove.lua' then return { 'old_line', 'ctx' } end
+        end
+        return {}
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'add.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,1 +1,2 @@',
+            diff = { '+new_line', ' ctx' },
+          },
+        },
+        { type = 'file_header', filename = 'remove.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,2 +1,1 @@',
+            diff = { '-old_line', ' ctx' },
+          },
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      eq(2, #result, 'should produce 2 file diffs')
+
+      -- First file: add
+      eq('add.lua', result[1].filename)
+      eq('add', result[1].diff.marks[1].type)
+
+      -- Second file: remove (all hunks are remove → is_deleted path)
+      eq('remove.lua', result[2].filename)
+      eq('remove', result[2].diff.marks[1].type)
     end)
   end)
 end)

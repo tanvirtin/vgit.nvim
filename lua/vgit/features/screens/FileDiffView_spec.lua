@@ -403,4 +403,270 @@ describe('FileDiffView:', function()
       end)
     end)
   end)
+
+  -- ==========================================================================
+  -- HUNK NAVIGATION
+  -- ==========================================================================
+  describe('Hunk Navigation', function()
+    local view, mock_diff
+
+    local function setup_mock_diff(marks, cursor_lnum)
+      marks = marks or {}
+      cursor_lnum = cursor_lnum or 1
+      mock_diff = {
+        is_valid = function()
+          return true
+        end,
+        get_marks = function()
+          return marks
+        end,
+        get_lnum = function()
+          return cursor_lnum
+        end,
+        hunk_down = function() end,
+        hunk_up = function() end,
+        move_to_hunk = function() end,
+        set_props = function() end,
+        set_keymap = function() end,
+        component_will_unmount = function() end,
+      }
+
+      save_package('vgit.settings.file_diff_view')
+      package.loaded['vgit.settings.file_diff_view'] = {
+        get = function(_, key)
+          if key == 'hunk_alignment' then return 'top' end
+          if key == 'hunk_alignment_offset' then return 2 end
+          if key == 'keymaps' then return {} end
+          return nil
+        end,
+      }
+
+      package.loaded['vgit.features.screens.FileDiffView'] = nil
+      FileDiffView = require('vgit.features.screens.FileDiffView')
+      view = FileDiffView()
+      view._diff_component = mock_diff
+      view._opts.filename = 'test.lua'
+    end
+
+    describe('get_current_mark_index', function()
+      it('should return nil,0 when no marks', function()
+        setup_mock_diff({}, 1)
+        local index, total = view:get_current_mark_index()
+        assert.is_nil(index)
+        eq(0, total)
+      end)
+
+      it('should return correct index when cursor inside a mark', function()
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 }, { top = 20, bot = 25 } }
+        setup_mock_diff(marks, 12) -- inside second mark
+        local index, total = view:get_current_mark_index()
+        eq(2, index)
+        eq(3, total)
+      end)
+
+      it('should return previous index when cursor between marks', function()
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        setup_mock_diff(marks, 7) -- between marks
+        local index, total = view:get_current_mark_index()
+        eq(1, index)
+        eq(2, total)
+      end)
+
+      it('should return last index when cursor after all marks', function()
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        setup_mock_diff(marks, 50) -- after all marks
+        local index, total = view:get_current_mark_index()
+        eq(2, index)
+        eq(2, total)
+      end)
+
+      it('should return 1 when cursor before first mark', function()
+        local marks = { { top = 10, bot = 15 } }
+        setup_mock_diff(marks, 1)
+        local index, total = view:get_current_mark_index()
+        eq(1, index)
+        eq(1, total)
+      end)
+
+      it('should return correct index at mark boundary (top)', function()
+        local marks = { { top = 5, bot = 10 } }
+        setup_mock_diff(marks, 5) -- exactly at top
+        local index, total = view:get_current_mark_index()
+        eq(1, index)
+        eq(1, total)
+      end)
+
+      it('should return correct index at mark boundary (bot)', function()
+        local marks = { { top = 5, bot = 10 } }
+        setup_mock_diff(marks, 10) -- exactly at bot
+        local index, total = view:get_current_mark_index()
+        eq(1, index)
+        eq(1, total)
+      end)
+    end)
+
+    describe('hunk_down', function()
+      it('should return early if diff_component is nil', function()
+        setup_mock_diff({}, 1)
+        view._diff_component = nil
+        view:hunk_down() -- should not error
+      end)
+
+      it('should return early if diff_component is invalid', function()
+        setup_mock_diff({}, 1)
+        mock_diff.is_valid = function()
+          return false
+        end
+        view:hunk_down() -- should not error
+      end)
+
+      it('should delegate to diff_component:hunk_down with alignment settings', function()
+        local called_with = nil
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        setup_mock_diff(marks, 3)
+        mock_diff.hunk_down = function(_, pos, offset)
+          called_with = { pos, offset }
+        end
+
+        view:hunk_down()
+
+        assert.is_not_nil(called_with)
+        eq('top', called_with[1])
+        eq(2, called_with[2])
+      end)
+
+      it('should update statusline after navigation', function()
+        local statusline_mod = require('vgit.core.statusline_state')
+        local set_hunk_called_with = nil
+        local original = statusline_mod.set_hunk
+        statusline_mod.set_hunk = function(hunk)
+          set_hunk_called_with = hunk
+        end
+
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        setup_mock_diff(marks, 3)
+
+        view:hunk_down()
+
+        assert.is_not_nil(set_hunk_called_with)
+        eq(1, set_hunk_called_with.index)
+        eq(2, set_hunk_called_with.count)
+
+        statusline_mod.set_hunk = original
+      end)
+    end)
+
+    describe('hunk_up', function()
+      it('should return early if diff_component is nil', function()
+        setup_mock_diff({}, 1)
+        view._diff_component = nil
+        view:hunk_up() -- should not error
+      end)
+
+      it('should return early if diff_component is invalid', function()
+        setup_mock_diff({}, 1)
+        mock_diff.is_valid = function()
+          return false
+        end
+        view:hunk_up() -- should not error
+      end)
+
+      it('should delegate to diff_component:hunk_up with alignment settings', function()
+        local called_with = nil
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        setup_mock_diff(marks, 12)
+        mock_diff.hunk_up = function(_, pos, offset)
+          called_with = { pos, offset }
+        end
+
+        view:hunk_up()
+
+        assert.is_not_nil(called_with)
+        eq('top', called_with[1])
+        eq(2, called_with[2])
+      end)
+
+      it('should update statusline after navigation', function()
+        local statusline_mod = require('vgit.core.statusline_state')
+        local set_hunk_called_with = nil
+        local original = statusline_mod.set_hunk
+        statusline_mod.set_hunk = function(hunk)
+          set_hunk_called_with = hunk
+        end
+
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        setup_mock_diff(marks, 12)
+
+        view:hunk_up()
+
+        assert.is_not_nil(set_hunk_called_with)
+        eq(2, set_hunk_called_with.index)
+        eq(2, set_hunk_called_with.count)
+
+        statusline_mod.set_hunk = original
+      end)
+    end)
+  end)
+
+  describe('diff data consistency', function()
+    local diff_invariants = require('tests.helpers.diff_invariants')
+    local Diff = require('vgit.core.diff.Diff')
+    local GitHunk = require('vgit.git.GitHunk')
+
+    local function make_hunk(header, diff_lines)
+      local hunk = GitHunk(header)
+      for _, line in ipairs(diff_lines) do
+        hunk:push(line)
+      end
+      return hunk
+    end
+
+    it('should accept unified diff data that passes all invariants', function()
+      local hunk = make_hunk('@@ -1,3 +1,4 @@', { ' a', '-b', '+c', '+d', ' e' })
+      local diff = Diff():generate_unified({ hunk }, { 'a', 'c', 'd', 'e' })
+
+      diff_invariants.assert_unified_diff(diff)
+
+      -- Verify the diff has the shape FileDiffView:create expects
+      assert.is_truthy(diff.lines)
+      assert.is_truthy(diff.marks)
+      assert.is_truthy(diff.hunks)
+      assert.is_true(#diff.lines > 0)
+      assert.is_true(#diff.marks > 0)
+    end)
+
+    it('should accept split diff data that passes all invariants', function()
+      local hunk = make_hunk('@@ -1,1 +1,2 @@', { '-old', '+new', '+added' })
+      local diff = Diff():generate_split({ hunk }, { 'new', 'added' })
+
+      diff_invariants.assert_split_diff(diff)
+
+      -- Verify the split structure FileDiffView uses
+      assert.is_truthy(diff.current_lines)
+      assert.is_truthy(diff.previous_lines)
+      eq(#diff.current_lines, #diff.previous_lines)
+    end)
+
+    it('should produce valid unified diff for multi-hunk scenario', function()
+      local hunk1 = make_hunk('@@ -1,2 +1,3 @@', { ' a', '-b', '+c', '+d' })
+      local hunk2 = make_hunk('@@ -5,2 +6,2 @@', { ' e', '-f', '+g' })
+      local diff = Diff():generate_unified({ hunk1, hunk2 }, { 'a', 'c', 'd', 'x', 'y', 'e', 'g' })
+
+      diff_invariants.assert_unified_diff(diff)
+      assert.is_true(#diff.marks >= 2)
+    end)
+
+    it('should produce valid unified diff for all-add (new file) scenario', function()
+      local hunk = make_hunk('@@ -0,0 +1,3 @@', { '+line1', '+line2', '+line3' })
+      local diff = Diff():generate_unified({ hunk }, { 'line1', 'line2', 'line3' })
+
+      diff_invariants.assert_unified_diff(diff)
+
+      local add_count = 0
+      for _, lc in ipairs(diff.lnum_changes) do
+        if lc.type == 'add' then add_count = add_count + 1 end
+      end
+      eq(3, add_count)
+    end)
+  end)
 end)

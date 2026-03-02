@@ -629,12 +629,9 @@ function GitRepository:conflict_status()
 end
 
 function GitRepository:diff(spec, opts)
-  spec = spec or {}
   opts = opts or {}
 
-  local type = spec.type
-
-  assertion.assert(spec, 'spec is required').assert(type, 'type is required')
+  assertion.assert(spec, 'spec is required').assert(spec.type, 'type is required')
 
   local builder = DiffBuilder(self)
   local diff_spec = vim.tbl_extend('force', spec, opts)
