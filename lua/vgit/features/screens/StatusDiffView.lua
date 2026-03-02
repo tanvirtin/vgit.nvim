@@ -431,7 +431,9 @@ function StatusDiffView:_update_diff_component(hunk_index)
     filetype = entry.status.filetype,
   })
 
-  if hunk_index then self._diff_component:move_to_hunk(hunk_index, self:get_hunk_alignment(), self:get_hunk_alignment_offset()) end
+  if hunk_index then
+    self._diff_component:move_to_hunk(hunk_index, self:get_hunk_alignment(), self:get_hunk_alignment_offset())
+  end
 
   return true
 end
@@ -719,9 +721,7 @@ function StatusDiffView:_is_commit_split_open()
 end
 
 function StatusDiffView:_close_commit_split()
-  if self._commit_component and self._commit_component:is_valid() then
-    self._commit_component:unmount()
-  end
+  if self._commit_component and self._commit_component:is_valid() then self._commit_component:unmount() end
   self._commit_component = nil
 end
 

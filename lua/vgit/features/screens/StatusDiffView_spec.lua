@@ -893,6 +893,257 @@ describe('StatusDiffView:', function()
       end)
     end)
 
+    describe('cross-file hunk navigation', function()
+      local mock_tree_items, mock_tree_lnum, update_diff_calls, statusline_calls
+
+      local function make_file_item(filename)
+        return {
+          entry = {
+            type = 'unstaged',
+            status = { filename = filename, filetype = 'lua' },
+          },
+        }
+      end
+
+      local function setup_cross_file_mocks(marks, cursor_lnum, tree_items, tree_lnum)
+        setup_mock_diff(marks, cursor_lnum)
+        update_diff_calls = 0
+        statusline_calls = {}
+        mock_tree_items = tree_items or {}
+        mock_tree_lnum = tree_lnum or 1
+
+        local statusline_mod = require('vgit.core.statusline_state')
+        statusline_mod.set_hunk = function(hunk)
+          statusline_calls[#statusline_calls + 1] = hunk
+        end
+
+        view._update_diff_component = function()
+          update_diff_calls = update_diff_calls + 1
+        end
+
+        view._tree_component = {
+          is_valid = function()
+            return true
+          end,
+          get_lnum = function()
+            return mock_tree_lnum
+          end,
+          set_lnum = function(_, lnum)
+            mock_tree_lnum = lnum
+          end,
+          get_line_count = function()
+            return #mock_tree_items
+          end,
+          get_list_item = function(_, l)
+            return mock_tree_items[l]
+          end,
+        }
+      end
+
+      after_each(function()
+        local statusline_mod = require('vgit.core.statusline_state')
+        statusline_mod.set_hunk = function() end
+      end)
+
+      it('hunk_down at last hunk should jump to next file and move_to_hunk(1)', function()
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 12, items, 1) -- cursor at second (last) hunk
+
+        local move_to_hunk_args = nil
+        mock_diff.move_to_hunk = function(_, idx, pos, offset)
+          move_to_hunk_args = { idx, pos, offset }
+        end
+
+        view:hunk_down()
+
+        -- Should have jumped to next file
+        eq(2, mock_tree_lnum) -- tree moved to file2
+        eq(1, update_diff_calls)
+        assert.is_not_nil(move_to_hunk_args)
+        eq(1, move_to_hunk_args[1]) -- move_to_hunk(1) = first hunk
+      end)
+
+      it('hunk_down with no hunks should jump to next file', function()
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks({}, 1, items, 1) -- no marks
+
+        view:hunk_down()
+
+        eq(2, mock_tree_lnum)
+        eq(1, update_diff_calls)
+      end)
+
+      it('hunk_down should set _skip_on_move when crossing files', function()
+        local marks = { { top = 1, bot = 5 } } -- single hunk, at last
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 3, items, 1) -- cursor at only hunk
+
+        view:hunk_down()
+
+        assert.is_true(view._skip_on_move)
+      end)
+
+      it('hunk_down should not cross files when not at last hunk', function()
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 3, items, 1) -- cursor at first hunk
+
+        local hunk_down_called = false
+        mock_diff.hunk_down = function()
+          hunk_down_called = true
+        end
+
+        view:hunk_down()
+
+        assert.is_true(hunk_down_called)
+        eq(0, update_diff_calls) -- no file switch
+        eq(1, mock_tree_lnum) -- tree didn't move
+      end)
+
+      it('hunk_down should not proceed when move_to_next_file returns nil', function()
+        local items = {} -- no files
+        setup_cross_file_mocks({}, 1, items, 1)
+
+        view:hunk_down()
+
+        eq(0, update_diff_calls) -- should not update diff
+      end)
+
+      it('hunk_down should wrap around to first file at end of list', function()
+        local marks = { { top = 1, bot = 5 } }
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 3, items, 2) -- at last file, at only hunk
+
+        view:hunk_down()
+
+        eq(1, mock_tree_lnum) -- wrapped to first file
+        eq(1, update_diff_calls)
+      end)
+
+      it('hunk_up at first hunk should jump to prev file and move_to_hunk(0)', function()
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 3, items, 2) -- cursor at first hunk, on file2
+
+        local move_to_hunk_args = nil
+        mock_diff.move_to_hunk = function(_, idx, pos, offset)
+          move_to_hunk_args = { idx, pos, offset }
+        end
+
+        view:hunk_up()
+
+        eq(1, mock_tree_lnum) -- tree moved to file1
+        eq(1, update_diff_calls)
+        assert.is_not_nil(move_to_hunk_args)
+        eq(0, move_to_hunk_args[1]) -- move_to_hunk(0) = last hunk
+      end)
+
+      it('hunk_up with no hunks should jump to prev file', function()
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks({}, 1, items, 2)
+
+        view:hunk_up()
+
+        eq(1, mock_tree_lnum)
+        eq(1, update_diff_calls)
+      end)
+
+      it('hunk_up should set _skip_on_move when crossing files', function()
+        local marks = { { top = 1, bot = 5 } }
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 3, items, 2) -- at first (only) hunk
+
+        view:hunk_up()
+
+        assert.is_true(view._skip_on_move)
+      end)
+
+      it('hunk_up should not cross files when not at first hunk', function()
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 12, items, 2) -- at second hunk
+
+        local hunk_up_called = false
+        mock_diff.hunk_up = function()
+          hunk_up_called = true
+        end
+
+        view:hunk_up()
+
+        assert.is_true(hunk_up_called)
+        eq(0, update_diff_calls)
+        eq(2, mock_tree_lnum) -- tree didn't move
+      end)
+
+      it('hunk_up should wrap around to last file at start of list', function()
+        local marks = { { top = 1, bot = 5 } }
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 3, items, 1) -- at first file, at first (only) hunk
+
+        view:hunk_up()
+
+        eq(2, mock_tree_lnum) -- wrapped to last file
+        eq(1, update_diff_calls)
+      end)
+
+      it('hunk_down should update statusline after navigation', function()
+        local marks = { { top = 1, bot = 5 } }
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 3, items, 1)
+
+        view:hunk_down()
+
+        assert.is_true(#statusline_calls > 0)
+      end)
+
+      it('hunk_up should update statusline after navigation', function()
+        local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+        local items = {
+          make_file_item('file1.lua'),
+          make_file_item('file2.lua'),
+        }
+        setup_cross_file_mocks(marks, 3, items, 2) -- first hunk, second file
+
+        view:hunk_up()
+
+        assert.is_true(#statusline_calls > 0)
+      end)
+    end)
+
     describe('restore_hunk_position', function()
       it('should move to hunk_index if marks exist', function()
         local moved_to = nil
@@ -1739,8 +1990,12 @@ describe('StatusDiffView:', function()
     describe('commit', function()
       it('should cancel on empty message via _confirm_commit', function()
         view._commit_component = {
-          is_valid = function() return true end,
-          get_lines = function() return { '', '# comment line' } end,
+          is_valid = function()
+            return true
+          end,
+          get_lines = function()
+            return { '', '# comment line' }
+          end,
           unmount = function() end,
         }
 
@@ -1752,8 +2007,12 @@ describe('StatusDiffView:', function()
 
       it('should filter out comment lines', function()
         view._commit_component = {
-          is_valid = function() return true end,
-          get_lines = function() return { 'feat: add new feature', '# This is a comment', 'More details here' } end,
+          is_valid = function()
+            return true
+          end,
+          get_lines = function()
+            return { 'feat: add new feature', '# This is a comment', 'More details here' }
+          end,
           unmount = function() end,
         }
 
@@ -1766,8 +2025,12 @@ describe('StatusDiffView:', function()
 
       it('should call repo:commit with message via _confirm_commit', function()
         view._commit_component = {
-          is_valid = function() return true end,
-          get_lines = function() return { 'feat: add new feature' } end,
+          is_valid = function()
+            return true
+          end,
+          get_lines = function()
+            return { 'feat: add new feature' }
+          end,
           unmount = function() end,
         }
 
@@ -1780,8 +2043,12 @@ describe('StatusDiffView:', function()
 
       it('should show success message after commit', function()
         view._commit_component = {
-          is_valid = function() return true end,
-          get_lines = function() return { 'test commit' } end,
+          is_valid = function()
+            return true
+          end,
+          get_lines = function()
+            return { 'test commit' }
+          end,
           unmount = function() end,
         }
 
@@ -2402,6 +2669,106 @@ describe('StatusDiffView:', function()
 
       assert.is_true(move_to_called)
       eq(my_query, query_fn_received)
+    end)
+  end)
+
+  describe('_build_entry_diff data invariants', function()
+    local diff_invariants = require('tests.helpers.diff_invariants')
+    local Diff = require('vgit.core.diff.Diff')
+    local GitHunk = require('vgit.git.GitHunk')
+
+    local function make_hunk(header, diff_lines)
+      local hunk = GitHunk(header)
+      for _, line in ipairs(diff_lines) do
+        hunk:push(line)
+      end
+      return hunk
+    end
+
+    local function make_real_repo_returning_unified(hunks, current_lines)
+      local diff = Diff():generate_unified(hunks, current_lines)
+      return {
+        diff = function()
+          return diff
+        end,
+        index = function()
+          return {
+            staged_hunks = function()
+              return {}
+            end,
+            unstaged_hunks = function()
+              return {}
+            end,
+          }
+        end,
+      }
+    end
+
+    it('should return unified diff data that passes all invariants for staged entry', function()
+      local hunk = make_hunk('@@ -1,3 +1,3 @@', { ' ctx', '-old', '+new', ' end' })
+      local repo = make_real_repo_returning_unified({ hunk }, { 'ctx', 'new', 'end' })
+
+      local view = StatusDiffView()
+      local entry = make_entry({ type = 'staged', filename = 'staged.lua' })
+      local result = view:_build_entry_diff(entry, repo)
+
+      assert.is_not_nil(result)
+      diff_invariants.assert_unified_diff(result)
+    end)
+
+    it('should return unified diff data that passes all invariants for unstaged entry', function()
+      local hunk = make_hunk('@@ -1,2 +1,3 @@', { ' a', '-b', '+c', '+d' })
+      local repo = make_real_repo_returning_unified({ hunk }, { 'a', 'c', 'd' })
+
+      local view = StatusDiffView()
+      local entry = make_entry({ type = 'unstaged', filename = 'unstaged.lua' })
+      local result = view:_build_entry_diff(entry, repo)
+
+      assert.is_not_nil(result)
+      diff_invariants.assert_unified_diff(result)
+    end)
+
+    it('should return diff whose marks are not mutated by the view layer', function()
+      local hunk = make_hunk('@@ -1,2 +1,3 @@', { ' x', '-y', '+z', '+w' })
+      local diff = Diff():generate_unified({ hunk }, { 'x', 'z', 'w' })
+      local original_marks = vim.deepcopy(diff.marks)
+
+      local repo = {
+        diff = function()
+          return diff
+        end,
+        index = function()
+          return {
+            staged_hunks = function()
+              return {}
+            end,
+            unstaged_hunks = function()
+              return {}
+            end,
+          }
+        end,
+      }
+
+      local view = StatusDiffView()
+      local entry = make_entry({ type = 'unstaged', filename = 'test.lua' })
+      local result = view:_build_entry_diff(entry, repo)
+
+      -- Marks should be identical — view layer must not mutate them
+      eq(original_marks, result.marks)
+    end)
+
+    it('should return diff with consistent stat for multi-hunk entry', function()
+      local hunk1 = make_hunk('@@ -1,1 +1,2 @@', { '-a', '+b', '+c' })
+      local hunk2 = make_hunk('@@ -4,1 +5,1 @@', { '-d', '+e' })
+      local repo = make_real_repo_returning_unified({ hunk1, hunk2 }, { 'b', 'c', 'x', 'y', 'e' })
+
+      local view = StatusDiffView()
+      local entry = make_entry({ type = 'unstaged', filename = 'multi.lua' })
+      local result = view:_build_entry_diff(entry, repo)
+
+      assert.is_not_nil(result)
+      diff_invariants.assert_stat_consistency(result.stat, result.lnum_changes)
+      diff_invariants.assert_marks_ascending(result.marks)
     end)
   end)
 end)

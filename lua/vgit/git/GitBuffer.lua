@@ -259,9 +259,12 @@ function GitBuffer:render_conflict_help_text(conflict)
   local accept_current_change_keymap = utils.list.find(keymap.find_by_rhs('conflict_accept_current'), function(binding)
     return binding.mode == 'n'
   end)
-  local accept_incoming_change_keymap = utils.list.find(keymap.find_by_rhs('conflict_accept_incoming'), function(binding)
-    return binding.mode == 'n'
-  end)
+  local accept_incoming_change_keymap = utils.list.find(
+    keymap.find_by_rhs('conflict_accept_incoming'),
+    function(binding)
+      return binding.mode == 'n'
+    end
+  )
   local accept_both_changes_keymap = utils.list.find(keymap.find_by_rhs('conflict_accept_both'), function(binding)
     return binding.mode == 'n'
   end)

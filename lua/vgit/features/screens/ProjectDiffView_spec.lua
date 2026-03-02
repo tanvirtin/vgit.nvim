@@ -7,284 +7,76 @@ describe('ProjectDiffView:', function()
     ProjectDiffView = require('vgit.features.screens.ProjectDiffView')
   end)
 
-  describe('_build_split_hunk_entries', function()
-    it('should split file_header entries identically to both sides', function()
+  describe('_build_line_to_file_map', function()
+    it('should extract filename and file_lnum from component line_metadata', function()
       local view = ProjectDiffView()
-      local entries = {
-        {
-          type = 'file_header',
-          filename = 'test.lua',
-          filetype = 'lua',
-        },
-      }
-
-      local prev, curr = view:_build_split_hunk_entries(entries)
-
-      eq(1, #prev)
-      eq(1, #curr)
-      eq('file_header', prev[1].type)
-      eq('file_header', curr[1].type)
-      eq('test.lua', prev[1].filename)
-      eq('test.lua', curr[1].filename)
-    end)
-
-    it('should split hunk with added lines', function()
-      local view = ProjectDiffView()
-      local entries = {
-        {
-          type = 'hunk',
-          hunk = {
-            header = '@@ -1,1 +1,2 @@',
-            diff = {
-              ' context',
-              '+added',
-            },
-            top = 1,
-            bot = 2,
+      local mock_component = {
+        state = {
+          line_metadata = {
+            [1] = { type = 'separator' },
+            [2] = { type = 'filename', filename = 'test.lua' },
+            [3] = { type = 'separator' },
+            [4] = { type = 'code', filetype = 'lua', filename = 'test.lua', file_lnum = 5 },
+            [5] = { type = 'code', filetype = 'lua', filename = 'test.lua', file_lnum = 6 },
+            [6] = { type = 'blank' },
           },
-          filetype = 'lua',
-          filename = 'test.lua',
         },
       }
 
-      local prev, curr = view:_build_split_hunk_entries(entries)
+      local map = view:_build_line_to_file_map(mock_component)
 
-      eq(1, #prev)
-      eq(1, #curr)
-
-      -- Previous side: context + space placeholder for added line
-      eq(2, #prev[1].hunk.diff)
-      eq(' context', prev[1].hunk.diff[1])
-      eq(' ', prev[1].hunk.diff[2]) -- placeholder
-
-      -- Current side: context + added line
-      eq(2, #curr[1].hunk.diff)
-      eq(' context', curr[1].hunk.diff[1])
-      eq('+added', curr[1].hunk.diff[2])
+      eq('test.lua', map[4].filename)
+      eq(5, map[4].lnum)
+      eq('test.lua', map[5].filename)
+      eq(6, map[5].lnum)
+      assert.is_nil(map[1])
+      assert.is_nil(map[6])
     end)
 
-    it('should split hunk with removed lines', function()
+    it('should handle multiple files in metadata', function()
       local view = ProjectDiffView()
-      local entries = {
-        {
-          type = 'hunk',
-          hunk = {
-            header = '@@ -1,2 +1,1 @@',
-            diff = {
-              ' context',
-              '-removed',
-            },
-            top = 1,
-            bot = 2,
+      local mock_component = {
+        state = {
+          line_metadata = {
+            [1] = { type = 'code', filetype = 'lua', filename = 'a.lua', file_lnum = 1 },
+            [2] = { type = 'code', filetype = 'lua', filename = 'a.lua', file_lnum = 2 },
+            [3] = { type = 'code', filetype = 'lua', filename = 'b.lua', file_lnum = 10 },
           },
-          filetype = 'lua',
-          filename = 'test.lua',
         },
       }
 
-      local prev, curr = view:_build_split_hunk_entries(entries)
+      local map = view:_build_line_to_file_map(mock_component)
 
-      -- Previous side: context + removed line
-      eq(' context', prev[1].hunk.diff[1])
-      eq('-removed', prev[1].hunk.diff[2])
-
-      -- Current side: context + space placeholder
-      eq(' context', curr[1].hunk.diff[1])
-      eq(' ', curr[1].hunk.diff[2]) -- placeholder
+      eq('a.lua', map[1].filename)
+      eq(1, map[1].lnum)
+      eq('b.lua', map[3].filename)
+      eq(10, map[3].lnum)
     end)
 
-    it('should split hunk with mixed changes', function()
+    it('should return empty map for empty metadata', function()
       local view = ProjectDiffView()
-      local entries = {
-        {
-          type = 'hunk',
-          hunk = {
-            header = '@@ -1,3 +1,3 @@',
-            diff = {
-              ' context1',
-              '-old_line',
-              '+new_line',
-              ' context2',
-            },
-            top = 1,
-            bot = 4,
+      local mock_component = { state = { line_metadata = {} } }
+
+      local map = view:_build_line_to_file_map(mock_component)
+      eq(0, vim.tbl_count(map))
+    end)
+
+    it('should default file_lnum to 1 when not set', function()
+      local view = ProjectDiffView()
+      local mock_component = {
+        state = {
+          line_metadata = {
+            [1] = { type = 'code', filename = 'test.lua' },
           },
-          filetype = 'lua',
-          filename = 'test.lua',
         },
       }
 
-      local prev, curr = view:_build_split_hunk_entries(entries)
-
-      eq(4, #prev[1].hunk.diff)
-      eq(4, #curr[1].hunk.diff)
-
-      -- Context lines identical
-      eq(' context1', prev[1].hunk.diff[1])
-      eq(' context1', curr[1].hunk.diff[1])
-      eq(' context2', prev[1].hunk.diff[4])
-      eq(' context2', curr[1].hunk.diff[4])
-
-      -- Removed line: present in prev, space in curr
-      eq('-old_line', prev[1].hunk.diff[2])
-      eq(' ', curr[1].hunk.diff[2])
-
-      -- Added line: space in prev, present in curr
-      eq(' ', prev[1].hunk.diff[3])
-      eq('+new_line', curr[1].hunk.diff[3])
-    end)
-
-    it('should preserve hunk metadata', function()
-      local view = ProjectDiffView()
-      local entries = {
-        {
-          type = 'hunk',
-          hunk = {
-            header = '@@ -5,2 +5,2 @@',
-            diff = { '-a', '+b' },
-            top = 5,
-            bot = 6,
-          },
-          filetype = 'python',
-          filename = 'app.py',
-        },
-      }
-
-      local prev, curr = view:_build_split_hunk_entries(entries)
-
-      eq('@@ -5,2 +5,2 @@', prev[1].hunk.header)
-      eq('@@ -5,2 +5,2 @@', curr[1].hunk.header)
-      eq(5, prev[1].hunk.top)
-      eq(5, curr[1].hunk.top)
-      eq(6, prev[1].hunk.bot)
-      eq(6, curr[1].hunk.bot)
-      eq('python', prev[1].filetype)
-      eq('python', curr[1].filetype)
-      eq('app.py', prev[1].filename)
-      eq('app.py', curr[1].filename)
-    end)
-
-    it('should handle multiple files and hunks', function()
-      local view = ProjectDiffView()
-      local entries = {
-        {
-          type = 'file_header',
-          filename = 'a.lua',
-          filetype = 'lua',
-        },
-        {
-          type = 'hunk',
-          hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-x', '+y' }, top = 1, bot = 1 },
-          filetype = 'lua',
-          filename = 'a.lua',
-        },
-        {
-          type = 'file_header',
-          filename = 'b.lua',
-          filetype = 'lua',
-        },
-        {
-          type = 'hunk',
-          hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-m', '+n' }, top = 1, bot = 1 },
-          filetype = 'lua',
-          filename = 'b.lua',
-        },
-      }
-
-      local prev, curr = view:_build_split_hunk_entries(entries)
-
-      eq(4, #prev)
-      eq(4, #curr)
-      eq('file_header', prev[1].type)
-      eq('hunk', prev[2].type)
-      eq('file_header', prev[3].type)
-      eq('hunk', prev[4].type)
-    end)
-
-    it('should handle empty diff in hunk', function()
-      local view = ProjectDiffView()
-      local entries = {
-        {
-          type = 'hunk',
-          hunk = { header = '@@ -1,0 +1,0 @@', diff = {} },
-          filetype = 'lua',
-          filename = 'test.lua',
-        },
-      }
-
-      local prev, curr = view:_build_split_hunk_entries(entries)
-
-      eq(0, #prev[1].hunk.diff)
-      eq(0, #curr[1].hunk.diff)
-    end)
-
-    it('should handle empty entries', function()
-      local view = ProjectDiffView()
-      local prev, curr = view:_build_split_hunk_entries({})
-
-      eq(0, #prev)
-      eq(0, #curr)
-    end)
-
-    it('should void current-only conflict lines on previous pane and vice versa', function()
-      local view = ProjectDiffView()
-      -- Simulates a 5-line conflict: <<<, HEAD content, ===, incoming content, >>>
-      local entries = {
-        {
-          type = 'hunk',
-          hunk = {
-            header = '@@ -1,5 +1,5 @@ conflict',
-            diff = {
-              ' <<<<<<< HEAD',
-              ' head content',
-              ' =======',
-              ' incoming content',
-              ' >>>>>>> branch',
-            },
-            lnum_changes = {
-              { type = 'conflict_current_mark' },
-              { type = 'conflict_current' },
-              { type = 'conflict_middle' },
-              { type = 'conflict_incoming' },
-              { type = 'conflict_incoming_mark' },
-            },
-            top = 1,
-            bot = 5,
-          },
-          filetype = 'lua',
-          filename = 'conflict.lua',
-        },
-      }
-
-      local prev, curr = view:_build_split_hunk_entries(entries)
-
-      -- Previous pane: current-only lines voided, incoming lines visible
-      eq(' ', prev[1].hunk.diff[1]) -- <<<<<<< voided
-      eq(' ', prev[1].hunk.diff[2]) -- HEAD content voided
-      eq(' =======', prev[1].hunk.diff[3]) -- middle visible on both
-      eq(' incoming content', prev[1].hunk.diff[4]) -- incoming visible
-      eq(' >>>>>>> branch', prev[1].hunk.diff[5]) -- incoming mark visible
-      eq('void', prev[1].hunk.lnum_changes[1].type)
-      eq('void', prev[1].hunk.lnum_changes[2].type)
-      eq('conflict_middle', prev[1].hunk.lnum_changes[3].type)
-      eq('conflict_incoming', prev[1].hunk.lnum_changes[4].type)
-      eq('conflict_incoming_mark', prev[1].hunk.lnum_changes[5].type)
-
-      -- Current pane: incoming-only lines voided, current lines visible
-      eq(' <<<<<<< HEAD', curr[1].hunk.diff[1]) -- current mark visible
-      eq(' head content', curr[1].hunk.diff[2]) -- HEAD content visible
-      eq(' =======', curr[1].hunk.diff[3]) -- middle visible on both
-      eq(' ', curr[1].hunk.diff[4]) -- incoming voided
-      eq(' ', curr[1].hunk.diff[5]) -- incoming mark voided
-      eq('conflict_current_mark', curr[1].hunk.lnum_changes[1].type)
-      eq('conflict_current', curr[1].hunk.lnum_changes[2].type)
-      eq('conflict_middle', curr[1].hunk.lnum_changes[3].type)
-      eq('void', curr[1].hunk.lnum_changes[4].type)
-      eq('void', curr[1].hunk.lnum_changes[5].type)
+      local map = view:_build_line_to_file_map(mock_component)
+      eq(1, map[1].lnum)
     end)
   end)
 
-  describe('_build_hunk_entries', function()
+  describe('_build_diff_file_entries with precomputed diffs', function()
     local mock_repo
 
     before_each(function()
@@ -292,11 +84,15 @@ describe('ProjectDiffView:', function()
         get_path = function()
           return '/tmp/repo'
         end,
+        diff = function()
+          return {}
+        end,
       }
     end)
 
-    it('should build patch entries from pre-computed diffs', function()
+    it('should build diff_file entries from precomputed diffs', function()
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {
         entries = {
           {
@@ -304,9 +100,10 @@ describe('ProjectDiffView:', function()
               {
                 status = { filename = 'a.lua', filetype = 'lua' },
                 diff = {
-                  hunks = {
-                    { header = '@@ -1,1 +1,1 @@', diff = { '-old', '+new' }, top = 1, bot = 1 },
-                  },
+                  lines = { 'line1' },
+                  lnum_changes = {},
+                  marks = {},
+                  hunks = { {} },
                 },
                 original_lines = { 'old' },
                 current_lines = { 'new' },
@@ -316,162 +113,54 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local hunk_entries, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
+      local entries = view:_build_diff_file_entries(mock_repo, data)
 
-      assert.is_true(#hunk_entries > 0)
-      eq('file_header', hunk_entries[1].type)
-      eq('a.lua', hunk_entries[1].filename)
-      eq('hunk', hunk_entries[2].type)
-      eq('a.lua', hunk_entries[2].filename)
-      assert.is_not_nil(line_to_file_map[1])
-      eq('a.lua', line_to_file_map[1].filename)
+      eq(1, #entries)
+      eq('diff_file', entries[1].type)
+      eq('a.lua', entries[1].filename)
+      eq('lua', entries[1].filetype)
+      eq({ 'old' }, entries[1].original_lines)
+      eq({ 'new' }, entries[1].current_lines)
     end)
 
     it('should skip entries without status', function()
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {
         entries = {
           {
             entries = {
-              { diff = { hunks = { { header = '@@', diff = { '+x' }, top = 1, bot = 1 } } } },
+              { diff = { lines = {}, lnum_changes = {}, marks = {}, hunks = { {} } } },
             },
           },
         },
       }
 
-      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
-      eq(0, #hunk_entries)
-    end)
-
-    it('should skip entries where diff has no hunks after population', function()
-      local view = ProjectDiffView()
-      local data = {
-        entries = {
-          {
-            entries = {
-              {
-                status = { filename = 'a.lua' },
-                diff = { hunks = nil },
-              },
-            },
-          },
-        },
-      }
-
-      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
-      eq(0, #hunk_entries)
-    end)
-
-    it('should skip entries with empty hunks', function()
-      local view = ProjectDiffView()
-      local data = {
-        entries = {
-          {
-            entries = {
-              {
-                status = { filename = 'a.lua' },
-                diff = { hunks = {} },
-              },
-            },
-          },
-        },
-      }
-
-      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
-      eq(0, #hunk_entries)
+      local entries = view:_build_diff_file_entries(mock_repo, data)
+      eq(0, #entries)
     end)
 
     it('should handle empty data entries', function()
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = { entries = {} }
 
-      local hunk_entries, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
-      eq(0, #hunk_entries)
-      eq(0, vim.tbl_count(line_to_file_map))
+      local entries = view:_build_diff_file_entries(mock_repo, data)
+      eq(0, #entries)
     end)
 
     it('should handle nil data entries', function()
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {}
 
-      local hunk_entries, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
-      eq(0, #hunk_entries)
-      eq(0, vim.tbl_count(line_to_file_map))
-    end)
-
-    it('should build correct line_to_file_map for multi-file data', function()
-      local view = ProjectDiffView()
-      local data = {
-        entries = {
-          {
-            entries = {
-              {
-                status = { filename = 'first.lua', filetype = 'lua' },
-                diff = {
-                  hunks = {
-                    { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
-                  },
-                },
-              },
-              {
-                status = { filename = 'second.lua', filetype = 'lua' },
-                diff = {
-                  hunks = {
-                    { header = '@@ -1,1 +1,1 @@', diff = { '-x', '+y' }, top = 1, bot = 1 },
-                  },
-                },
-              },
-            },
-          },
-        },
-      }
-
-      local hunk_entries, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
-
-      -- Should have entries for both files
-      assert.is_true(#hunk_entries >= 4) -- 2 file_headers + 2 hunks
-
-      -- line_to_file_map should reference both files
-      local filenames_seen = {}
-      for _, info in pairs(line_to_file_map) do
-        filenames_seen[info.filename] = true
-      end
-      assert.is_true(filenames_seen['first.lua'] == true)
-      assert.is_true(filenames_seen['second.lua'] == true)
-    end)
-
-    it('should include original_lines and current_lines in file_header entries', function()
-      local view = ProjectDiffView()
-      local orig = { 'old_line' }
-      local curr = { 'new_line' }
-      local data = {
-        entries = {
-          {
-            entries = {
-              {
-                status = { filename = 'a.lua', filetype = 'lua' },
-                diff = {
-                  hunks = {
-                    { header = '@@ -1,1 +1,1 @@', diff = { '-old_line', '+new_line' }, top = 1, bot = 1 },
-                  },
-                },
-                original_lines = orig,
-                current_lines = curr,
-              },
-            },
-          },
-        },
-      }
-
-      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
-
-      eq('file_header', hunk_entries[1].type)
-      eq(orig, hunk_entries[1].original_lines)
-      eq(curr, hunk_entries[1].current_lines)
+      local entries = view:_build_diff_file_entries(mock_repo, data)
+      eq(0, #entries)
     end)
 
     it('should display renamed files correctly', function()
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {
         entries = {
           {
@@ -479,9 +168,10 @@ describe('ProjectDiffView:', function()
               {
                 status = { filename = 'new_name.lua', old_filename = 'old_name.lua', filetype = 'lua' },
                 diff = {
-                  hunks = {
-                    { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
-                  },
+                  lines = { 'content' },
+                  lnum_changes = {},
+                  marks = {},
+                  hunks = { {} },
                 },
               },
             },
@@ -489,25 +179,39 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local hunk_entries = view:_build_hunk_entries(mock_repo, data)
+      local entries = view:_build_diff_file_entries(mock_repo, data)
 
-      eq('file_header', hunk_entries[1].type)
-      eq('old_name.lua -> new_name.lua', hunk_entries[1].filename)
+      eq(1, #entries)
+      eq('diff_file', entries[1].type)
+      eq('old_name.lua -> new_name.lua', entries[1].filename)
     end)
 
-    it('should track line numbers correctly across hunks', function()
+    it('should not call repo:diff for precomputed entries', function()
+      local diff_called = false
+
+      local repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+        diff = function()
+          diff_called = true
+          return {}
+        end,
+      }
+
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {
         entries = {
           {
             entries = {
               {
-                status = { filename = 'a.lua', filetype = 'lua' },
+                status = { filename = 'pre.lua', filetype = 'lua' },
                 diff = {
-                  hunks = {
-                    { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
-                    { header = '@@ -5,1 +5,1 @@', diff = { '-x', '+y' }, top = 5, bot = 5 },
-                  },
+                  lines = { 'content' },
+                  lnum_changes = {},
+                  marks = {},
+                  hunks = { {} },
                 },
               },
             },
@@ -515,21 +219,15 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local _, line_to_file_map = view:_build_hunk_entries(mock_repo, data)
+      local entries = view:_build_diff_file_entries(repo, data)
 
-      -- All mapped lines should reference a.lua
-      for _, info in pairs(line_to_file_map) do
-        eq('a.lua', info.filename)
-      end
-
-      -- Should have line mappings (3 header lines + hunk header + 2 diff lines + separator + hunk header + 2 diff lines + separator)
-      local count = vim.tbl_count(line_to_file_map)
-      assert.is_true(count > 0)
+      assert.is_false(diff_called)
+      eq(1, #entries)
+      eq('pre.lua', entries[1].filename)
     end)
   end)
 
-  describe('_build_hunk_entries with status entries (mocked repo:diff)', function()
-    -- event.all uses coroutine.yield so tests must run in an async context
+  describe('_build_diff_file_entries with status entries (mocked repo:diff)', function()
     local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
     local it = async.it
 
@@ -544,18 +242,18 @@ describe('ProjectDiffView:', function()
       }
     end
 
-    it('should call repo:diff for staged entry without pre-computed diff', function()
-      local staged_called = false
+    it('should call repo:diff with layout_type for staged entries', function()
+      local called_with_layout_type = nil
       local repo = mock_repo(function(_, spec)
         if spec.from == 'HEAD' and spec.to == 'index' then
-          staged_called = true
+          called_with_layout_type = spec.layout_type
           return {
-            { type = 'file_header', filename = 'staged.lua', filetype = 'lua' },
             {
-              type = 'hunk',
-              hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-old', '+new' }, top = 1, bot = 1 },
-              filetype = 'lua',
               filename = 'staged.lua',
+              filetype = 'lua',
+              diff = { lines = { 'content' }, lnum_changes = {}, marks = {} },
+              original_lines = { 'old' },
+              current_lines = { 'new' },
             },
           }
         end
@@ -563,6 +261,7 @@ describe('ProjectDiffView:', function()
       end)
 
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {
         entries = {
           {
@@ -570,34 +269,32 @@ describe('ProjectDiffView:', function()
               {
                 type = 'staged',
                 status = { filename = 'staged.lua', filetype = 'lua' },
-                -- no diff field — should use batch fetch
               },
             },
           },
         },
       }
 
-      local hunk_entries = view:_build_hunk_entries(repo, data)
+      local entries = view:_build_diff_file_entries(repo, data)
 
-      assert.is_true(staged_called)
-      eq(2, #hunk_entries)
-      eq('file_header', hunk_entries[1].type)
-      eq('staged.lua', hunk_entries[1].filename)
-      eq('hunk', hunk_entries[2].type)
+      eq('unified', called_with_layout_type)
+      eq(1, #entries)
+      eq('diff_file', entries[1].type)
+      eq('staged.lua', entries[1].filename)
     end)
 
-    it('should call repo:diff for unstaged entry without pre-computed diff', function()
+    it('should call repo:diff for unstaged entries', function()
       local unstaged_called = false
       local repo = mock_repo(function(_, spec)
         if spec.to == 'disk' then
           unstaged_called = true
           return {
-            { type = 'file_header', filename = 'unstaged.lua', filetype = 'lua' },
             {
-              type = 'hunk',
-              hunk = { header = '@@ -2,1 +2,1 @@', diff = { '-x', '+y' }, top = 2, bot = 2 },
-              filetype = 'lua',
               filename = 'unstaged.lua',
+              filetype = 'lua',
+              diff = { lines = { 'content' }, lnum_changes = {}, marks = {} },
+              original_lines = {},
+              current_lines = { 'new' },
             },
           }
         end
@@ -605,6 +302,7 @@ describe('ProjectDiffView:', function()
       end)
 
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {
         entries = {
           {
@@ -618,12 +316,12 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local hunk_entries = view:_build_hunk_entries(repo, data)
+      local entries = view:_build_diff_file_entries(repo, data)
 
       assert.is_true(unstaged_called)
-      eq(2, #hunk_entries)
-      eq('file_header', hunk_entries[1].type)
-      eq('unstaged.lua', hunk_entries[1].filename)
+      eq(1, #entries)
+      eq('diff_file', entries[1].type)
+      eq('unstaged.lua', entries[1].filename)
     end)
 
     it('should call repo:diff for both staged and unstaged when both types are present', function()
@@ -634,23 +332,23 @@ describe('ProjectDiffView:', function()
         if spec.from == 'HEAD' and spec.to == 'index' then
           staged_called = true
           return {
-            { type = 'file_header', filename = 'staged.lua', filetype = 'lua' },
             {
-              type = 'hunk',
-              hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
-              filetype = 'lua',
               filename = 'staged.lua',
+              filetype = 'lua',
+              diff = { lines = { 'a' }, lnum_changes = {}, marks = {} },
+              original_lines = {},
+              current_lines = { 'a' },
             },
           }
         elseif spec.to == 'disk' then
           unstaged_called = true
           return {
-            { type = 'file_header', filename = 'unstaged.lua', filetype = 'lua' },
             {
-              type = 'hunk',
-              hunk = { header = '@@ -3,1 +3,1 @@', diff = { '-c', '+d' }, top = 3, bot = 3 },
-              filetype = 'lua',
               filename = 'unstaged.lua',
+              filetype = 'lua',
+              diff = { lines = { 'b' }, lnum_changes = {}, marks = {} },
+              original_lines = {},
+              current_lines = { 'b' },
             },
           }
         end
@@ -658,6 +356,7 @@ describe('ProjectDiffView:', function()
       end)
 
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {
         entries = {
           {
@@ -669,20 +368,20 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local hunk_entries = view:_build_hunk_entries(repo, data)
+      local entries = view:_build_diff_file_entries(repo, data)
 
       assert.is_true(staged_called)
       assert.is_true(unstaged_called)
-      -- 2 file_headers + 2 hunks = 4 entries total
-      eq(4, #hunk_entries)
+      eq(2, #entries)
     end)
 
-    it('should return empty hunk_entries when repo:diff returns error (nil)', function()
+    it('should return empty entries when repo:diff returns error', function()
       local repo = mock_repo(function()
         return nil, { 'git error' }
       end)
 
       local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {
         entries = {
           {
@@ -693,121 +392,28 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      -- Should not crash; returns empty (nil result → no entries added)
-      local hunk_entries = view:_build_hunk_entries(repo, data)
-      eq(0, #hunk_entries)
+      local entries = view:_build_diff_file_entries(repo, data)
+      eq(0, #entries)
     end)
 
-    it('should build correct line_to_file_map with top from hunk header', function()
+    it('should handle conflict entries via repo:diff', function()
+      local conflict_called = false
       local repo = mock_repo(function(_, spec)
-        if spec.to == 'disk' then
+        if spec.type == 'conflict' then
+          conflict_called = true
           return {
-            { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
-            {
-              type = 'hunk',
-              hunk = { header = '@@ -10,2 +10,2 @@', diff = { '-x', '+y' }, top = 10, bot = 11 },
-              filetype = 'lua',
-              filename = 'foo.lua',
+            lines = { '<<<', 'ours', '===', 'theirs', '>>>' },
+            lnum_changes = {
+              { lnum = 1, type = 'conflict_current_mark' },
             },
+            marks = { { top = 1, bot = 5 } },
           }
         end
         return {}
       end)
 
       local view = ProjectDiffView()
-      local data = {
-        entries = {
-          {
-            entries = {
-              { type = 'unstaged', status = { filename = 'foo.lua', filetype = 'lua' } },
-            },
-          },
-        },
-      }
-
-      local _, line_to_file_map = view:_build_hunk_entries(repo, data)
-
-      -- 3 file_header lines + 1 hunk_header line + 2 diff lines + 1 separator = 7 entries
-      -- The hunk header line should map to lnum=10 (hunk.top)
-      -- Line 4 is the hunk header line (after 3 file_header lines)
-      eq(10, line_to_file_map[4].lnum)
-      eq('foo.lua', line_to_file_map[4].filename)
-    end)
-
-    it('should not call repo:diff for pre-computed entries', function()
-      local diff_called = false
-
-      local repo = mock_repo(function()
-        diff_called = true
-        return {}
-      end)
-
-      local view = ProjectDiffView()
-      local data = {
-        entries = {
-          {
-            entries = {
-              {
-                -- Pre-computed diff — should NOT trigger batch fetch
-                status = { filename = 'pre.lua', filetype = 'lua' },
-                diff = {
-                  hunks = {
-                    { header = '@@ -1,1 +1,1 @@', diff = { '-a', '+b' }, top = 1, bot = 1 },
-                  },
-                },
-              },
-            },
-          },
-        },
-      }
-
-      local hunk_entries = view:_build_hunk_entries(repo, data)
-
-      assert.is_false(diff_called)
-      -- Pre-computed entry is still included
-      eq(2, #hunk_entries)
-      eq('pre.lua', hunk_entries[1].filename)
-    end)
-  end)
-
-  describe('_build_hunk_entries with conflict entries', function()
-    -- event.all uses coroutine.yield so tests must run in an async context
-    local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
-    local it = async.it
-
-    it('should include conflict entry when DiffBuilder returns valid diff_data', function()
-      local view = ProjectDiffView()
-
-      -- Conflict diffs return marks+lnum_changes (hunks is always {})
-      view._get_diff_for_entry = function(self, repo, entry)
-        return {
-          hunks = {},
-          marks = {
-            {
-              type = 'conflict',
-              top = 1,
-              bot = 5,
-              top_relative = 1,
-              bot_relative = 5,
-            },
-          },
-          lines = {
-            '<<<<<<< HEAD',
-            'old content',
-            '=======',
-            'new content',
-            '>>>>>>> branch',
-          },
-          lnum_changes = {
-            { lnum = 1, buftype = 'current', type = 'conflict_current_mark' },
-            { lnum = 2, buftype = 'current', type = 'conflict_current' },
-            { lnum = 3, buftype = 'current', type = 'conflict_middle' },
-            { lnum = 4, buftype = 'current', type = 'conflict_incoming' },
-            { lnum = 5, buftype = 'current', type = 'conflict_incoming_mark' },
-          },
-        }
-      end
-
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
       local data = {
         entries = {
           {
@@ -821,61 +427,12 @@ describe('ProjectDiffView:', function()
         },
       }
 
-      local repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-      }
-      local hunk_entries = view:_build_hunk_entries(repo, data)
+      local entries = view:_build_diff_file_entries(repo, data)
 
-      -- Should have file_header + hunk for the conflict file
-      assert.is_true(#hunk_entries >= 2)
-      eq('file_header', hunk_entries[1].type)
-      eq('conflict.lua', hunk_entries[1].filename)
-      eq('hunk', hunk_entries[2].type)
-      -- Conflict region lines rendered as context (space prefix preserves actual content)
-      eq(5, #hunk_entries[2].hunk.diff)
-      eq(' <<<<<<< HEAD', hunk_entries[2].hunk.diff[1])
-      eq(' >>>>>>> branch', hunk_entries[2].hunk.diff[5])
-      eq(1, hunk_entries[2].hunk.top)
-      eq(5, hunk_entries[2].hunk.bot)
-      -- lnum_changes carries conflict-specific highlight types
-      eq('conflict_current_mark', hunk_entries[2].hunk.lnum_changes[1].type)
-      eq('conflict_current', hunk_entries[2].hunk.lnum_changes[2].type)
-      eq('conflict_middle', hunk_entries[2].hunk.lnum_changes[3].type)
-      eq('conflict_incoming', hunk_entries[2].hunk.lnum_changes[4].type)
-      eq('conflict_incoming_mark', hunk_entries[2].hunk.lnum_changes[5].type)
-    end)
-
-    it('should exclude conflict entry when DiffBuilder returns nil (error)', function()
-      local view = ProjectDiffView()
-
-      view._get_diff_for_entry = function(self, repo, entry)
-        return nil
-      end
-
-      local data = {
-        entries = {
-          {
-            entries = {
-              {
-                type = 'unmerged',
-                status = { filename = 'conflict.lua', filetype = 'lua' },
-              },
-            },
-          },
-        },
-      }
-
-      local repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-      }
-      local hunk_entries = view:_build_hunk_entries(repo, data)
-
-      -- No entries because conflict DiffBuilder returned nil
-      eq(0, #hunk_entries)
+      assert.is_true(conflict_called)
+      eq(1, #entries)
+      eq('diff_file', entries[1].type)
+      eq('conflict.lua', entries[1].filename)
     end)
   end)
 
@@ -960,129 +517,524 @@ describe('ProjectDiffView:', function()
     end)
   end)
 
-  describe('_enrich_with_syntax', function()
-    it('should exit early when view is destroyed', function()
-      local view = ProjectDiffView()
-      view._destroyed = true
-      view._repo = {
-        file_lines = function()
-          error('should not be called')
-        end,
-      }
-      -- Should not call file_lines or error
-      view:_enrich_with_syntax(
-        { { type = 'file_header', filename = 'foo.lua', filetype = 'lua' } },
-        { entries = {} },
-        1
-      )
+  -- ==========================================================================
+  -- HUNK NAVIGATION
+  -- ==========================================================================
+  describe('Hunk Navigation', function()
+    describe('_get_current_mark_index', function()
+      it('should return nil,0 when no marks', function()
+        local view = ProjectDiffView()
+        local component = {
+          get_marks = function()
+            return {}
+          end,
+          get_lnum = function()
+            return 1
+          end,
+        }
+        local index, count = view:_get_current_mark_index(component)
+        assert.is_nil(index)
+        eq(0, count)
+      end)
+
+      it('should return correct index when cursor inside a mark', function()
+        local view = ProjectDiffView()
+        local marks = { { top = 5, bot = 10 }, { top = 20, bot = 30 } }
+        local component = {
+          get_marks = function()
+            return marks
+          end,
+          get_lnum = function()
+            return 7
+          end,
+        }
+        local index, count = view:_get_current_mark_index(component)
+        eq(1, index)
+        eq(2, count)
+      end)
+
+      it('should return previous index when cursor between marks', function()
+        local view = ProjectDiffView()
+        local marks = { { top = 5, bot = 10 }, { top = 20, bot = 30 } }
+        local component = {
+          get_marks = function()
+            return marks
+          end,
+          get_lnum = function()
+            return 15
+          end,
+        }
+        local index, count = view:_get_current_mark_index(component)
+        eq(1, index)
+        eq(2, count)
+      end)
+
+      it('should return last index when cursor after all marks', function()
+        local view = ProjectDiffView()
+        local marks = { { top = 5, bot = 10 }, { top = 20, bot = 30 } }
+        local component = {
+          get_marks = function()
+            return marks
+          end,
+          get_lnum = function()
+            return 100
+          end,
+        }
+        local index, count = view:_get_current_mark_index(component)
+        eq(2, index)
+        eq(2, count)
+      end)
+
+      it('should return 1 when cursor before first mark', function()
+        local view = ProjectDiffView()
+        local marks = { { top = 10, bot = 15 } }
+        local component = {
+          get_marks = function()
+            return marks
+          end,
+          get_lnum = function()
+            return 1
+          end,
+        }
+        local index, count = view:_get_current_mark_index(component)
+        eq(1, index)
+        eq(1, count)
+      end)
     end)
 
-    it('should exit early when gen is stale', function()
-      local view = ProjectDiffView()
-      view._destroyed = false
-      view._update_gen = 2 -- current gen is 2, but we pass gen=1
-      view._repo = {
-        file_lines = function()
-          error('should not be called')
-        end,
-      }
-      view:_enrich_with_syntax(
-        { { type = 'file_header', filename = 'foo.lua', filetype = 'lua' } },
-        { entries = {} },
-        1
-      )
+    describe('hunk_down', function()
+      it('should return early if active component is nil', function()
+        local view = ProjectDiffView()
+        view._patch_component = nil
+        view._layout_type = nil
+        view:hunk_down() -- should not error
+      end)
+
+      it('should return early if active component is invalid', function()
+        local view = ProjectDiffView()
+        view._patch_component = {
+          is_valid = function()
+            return false
+          end,
+        }
+        view:hunk_down() -- should not error
+      end)
+
+      it('should delegate to patch_component for unified layout', function()
+        local called = false
+        local view = ProjectDiffView()
+        view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+        view._patch_component = {
+          is_valid = function()
+            return true
+          end,
+          hunk_down = function()
+            called = true
+          end,
+          get_marks = function()
+            return {}
+          end,
+          get_lnum = function()
+            return 1
+          end,
+        }
+
+        view:hunk_down()
+        assert.is_true(called)
+      end)
+
+      it('should delegate to current_component for split layout', function()
+        local patch_called = false
+        local current_called = false
+        local view = ProjectDiffView()
+        view._layout_type = ProjectDiffView.LAYOUT_SPLIT
+        view._patch_component = {
+          is_valid = function()
+            return true
+          end,
+          hunk_down = function()
+            patch_called = true
+          end,
+          get_marks = function()
+            return {}
+          end,
+          get_lnum = function()
+            return 1
+          end,
+        }
+        view._current_component = {
+          is_valid = function()
+            return true
+          end,
+          hunk_down = function()
+            current_called = true
+          end,
+          get_marks = function()
+            return {}
+          end,
+          get_lnum = function()
+            return 1
+          end,
+        }
+
+        view:hunk_down()
+        assert.is_false(patch_called)
+        assert.is_true(current_called)
+      end)
+
+      it('should update statusline after navigation', function()
+        local statusline_mod = require('vgit.core.statusline_state')
+        local set_hunk_called_with = nil
+        local original = statusline_mod.set_hunk
+        statusline_mod.set_hunk = function(hunk)
+          set_hunk_called_with = hunk
+        end
+
+        local view = ProjectDiffView()
+        view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+        view._patch_component = {
+          is_valid = function()
+            return true
+          end,
+          hunk_down = function() end,
+          get_marks = function()
+            return { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+          end,
+          get_lnum = function()
+            return 3
+          end,
+        }
+
+        view:hunk_down()
+
+        assert.is_not_nil(set_hunk_called_with)
+        eq(1, set_hunk_called_with.index)
+        eq(2, set_hunk_called_with.count)
+
+        statusline_mod.set_hunk = original
+      end)
     end)
 
-    it('should exit early when repo is nil', function()
-      local view = ProjectDiffView()
-      view._destroyed = false
-      view._update_gen = 1
-      view._repo = nil
-      -- Should not error
-      view:_enrich_with_syntax(
-        { { type = 'file_header', filename = 'foo.lua', filetype = 'lua' } },
-        { entries = {} },
-        1
-      )
-    end)
+    describe('hunk_up', function()
+      it('should return early if active component is nil', function()
+        local view = ProjectDiffView()
+        view._patch_component = nil
+        view._layout_type = nil
+        view:hunk_up() -- should not error
+      end)
 
-    it('should exit early when all file_header entries have filetype text', function()
-      local view = ProjectDiffView()
-      view._destroyed = false
-      view._update_gen = 1
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-      }
-      local entries = {
-        { type = 'file_header', filename = 'README', filetype = 'text' },
-        { type = 'hunk', filename = 'README', filetype = 'text', hunk = {} },
-      }
-      -- Should not call file_lines, so no coroutine/event.all issues
-      view:_enrich_with_syntax(entries, { entries = {} }, 1)
-    end)
+      it('should return early if active component is invalid', function()
+        local view = ProjectDiffView()
+        view._patch_component = {
+          is_valid = function()
+            return false
+          end,
+        }
+        view:hunk_up() -- should not error
+      end)
 
-    it('should exit early when all file_headers already have original_lines (pre-computed)', function()
-      local view = ProjectDiffView()
-      view._destroyed = false
-      view._update_gen = 1
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-      }
-      local entries = {
-        {
-          type = 'file_header',
-          filename = 'foo.lua',
-          filetype = 'lua',
-          original_lines = { 'old' },
-          current_lines = { 'new' },
-        },
-      }
-      -- Pre-computed entries are skipped — no file_lines calls needed
-      view:_enrich_with_syntax(entries, { entries = {} }, 1)
-    end)
+      it('should delegate to patch_component for unified layout', function()
+        local called = false
+        local view = ProjectDiffView()
+        view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+        view._patch_component = {
+          is_valid = function()
+            return true
+          end,
+          hunk_up = function()
+            called = true
+          end,
+          get_marks = function()
+            return {}
+          end,
+          get_lnum = function()
+            return 1
+          end,
+        }
 
-    it('should exit early when there are no file_header entries', function()
-      local view = ProjectDiffView()
-      view._destroyed = false
-      view._update_gen = 1
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-      }
-      local entries = {
-        { type = 'hunk', filename = 'foo.lua', filetype = 'lua', hunk = {} },
-      }
-      view:_enrich_with_syntax(entries, { entries = {} }, 1)
-    end)
+        view:hunk_up()
+        assert.is_true(called)
+      end)
 
-    it('should exit early when all non-text file_headers are conflicts (unmerged)', function()
-      local view = ProjectDiffView()
-      view._destroyed = false
-      view._update_gen = 1
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
+      it('should delegate to current_component for split layout', function()
+        local patch_called = false
+        local current_called = false
+        local view = ProjectDiffView()
+        view._layout_type = ProjectDiffView.LAYOUT_SPLIT
+        view._patch_component = {
+          is_valid = function()
+            return true
+          end,
+          hunk_up = function()
+            patch_called = true
+          end,
+          get_marks = function()
+            return {}
+          end,
+          get_lnum = function()
+            return 1
+          end,
+        }
+        view._current_component = {
+          is_valid = function()
+            return true
+          end,
+          hunk_up = function()
+            current_called = true
+          end,
+          get_marks = function()
+            return {}
+          end,
+          get_lnum = function()
+            return 1
+          end,
+        }
+
+        view:hunk_up()
+        assert.is_false(patch_called)
+        assert.is_true(current_called)
+      end)
+
+      it('should update statusline after navigation', function()
+        local statusline_mod = require('vgit.core.statusline_state')
+        local set_hunk_called_with = nil
+        local original = statusline_mod.set_hunk
+        statusline_mod.set_hunk = function(hunk)
+          set_hunk_called_with = hunk
+        end
+
+        local view = ProjectDiffView()
+        view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+        view._patch_component = {
+          is_valid = function()
+            return true
+          end,
+          hunk_up = function() end,
+          get_marks = function()
+            return { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
+          end,
+          get_lnum = function()
+            return 12
+          end,
+        }
+
+        view:hunk_up()
+
+        assert.is_not_nil(set_hunk_called_with)
+        eq(2, set_hunk_called_with.index)
+        eq(2, set_hunk_called_with.count)
+
+        statusline_mod.set_hunk = original
+      end)
+    end)
+  end)
+
+  describe('_build_diff_file_entries data invariants', function()
+    local diff_invariants = require('tests.helpers.diff_invariants')
+    local Diff = require('vgit.core.diff.Diff')
+    local GitHunk = require('vgit.git.GitHunk')
+    local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
+
+    local function make_hunk(header, diff_lines)
+      local hunk = GitHunk(header)
+      for _, line in ipairs(diff_lines) do
+        hunk:push(line)
+      end
+      return hunk
+    end
+
+    local function make_real_diff_entry(filename, filetype, hunks, current_lines)
+      local diff = Diff():generate_unified(hunks, current_lines)
+      return {
+        type = 'diff_file',
+        filename = filename,
+        filetype = filetype,
+        diff = diff,
+        original_lines = {},
+        current_lines = current_lines,
       }
+    end
+
+    it('should produce entries whose diff marks pass ascending + bounds invariants', function()
+      local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+
+      local hunk = make_hunk('@@ -1,2 +1,3 @@', { ' line1', '-old', '+new', '+added' })
+      local diff = Diff():generate_unified({ hunk }, { 'line1', 'new', 'added' })
+
       local data = {
         entries = {
           {
             entries = {
-              { type = 'unmerged', status = { filename = 'conflict.lua' } },
+              {
+                status = { filename = 'a.lua', filetype = 'lua' },
+                diff = diff,
+                original_lines = { 'line1', 'old' },
+                current_lines = { 'line1', 'new', 'added' },
+              },
             },
           },
         },
       }
-      local hunk_entries = {
-        { type = 'file_header', filename = 'conflict.lua', filetype = 'lua' },
+
+      local mock_repo = {
+        get_path = function()
+          return '/tmp'
+        end,
+        diff = function()
+          return {}
+        end,
       }
-      -- Conflict entries are skipped in enrichment
-      view:_enrich_with_syntax(hunk_entries, data, 1)
+      local entries = view:_build_diff_file_entries(mock_repo, data)
+
+      eq(1, #entries)
+      diff_invariants.assert_marks_ascending(entries[1].diff.marks)
+      diff_invariants.assert_marks_within_bounds(entries[1].diff.marks, #entries[1].diff.lines)
+    end)
+
+    it('should produce entries whose lnum_changes pass bounds invariants', function()
+      local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+
+      local hunk = make_hunk('@@ -1,1 +1,2 @@', { '-removed', '+changed', '+added' })
+      local diff = Diff():generate_unified({ hunk }, { 'changed', 'added' })
+
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'b.lua', filetype = 'lua' },
+                diff = diff,
+                original_lines = { 'removed' },
+                current_lines = { 'changed', 'added' },
+              },
+            },
+          },
+        },
+      }
+
+      local mock_repo = {
+        get_path = function()
+          return '/tmp'
+        end,
+        diff = function()
+          return {}
+        end,
+      }
+      local entries = view:_build_diff_file_entries(mock_repo, data)
+
+      eq(1, #entries)
+      diff_invariants.assert_lnum_changes_within_bounds(entries[1].diff.lnum_changes, #entries[1].diff.lines)
+    end)
+
+    it('should produce entries whose stat is consistent with lnum_changes', function()
+      local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+
+      local hunk = make_hunk('@@ -1,3 +1,3 @@', { ' ctx', '-old', '+new', ' ctx2' })
+      local diff = Diff():generate_unified({ hunk }, { 'ctx', 'new', 'ctx2' })
+
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'c.lua', filetype = 'lua' },
+                diff = diff,
+                original_lines = { 'ctx', 'old', 'ctx2' },
+                current_lines = { 'ctx', 'new', 'ctx2' },
+              },
+            },
+          },
+        },
+      }
+
+      local mock_repo = {
+        get_path = function()
+          return '/tmp'
+        end,
+        diff = function()
+          return {}
+        end,
+      }
+      local entries = view:_build_diff_file_entries(mock_repo, data)
+
+      eq(1, #entries)
+      diff_invariants.assert_stat_consistency(entries[1].diff.stat, entries[1].diff.lnum_changes)
+    end)
+
+    it('should produce valid patch marks when entries are piped through build_patch_lines_from_entries', function()
+      local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+
+      local hunk = make_hunk('@@ -1,2 +1,3 @@', { ' ctx', '-old', '+new', '+added' })
+      local diff = Diff():generate_unified({ hunk }, { 'ctx', 'new', 'added' })
+
+      local diff_file_entries = {
+        make_real_diff_entry('a.lua', 'lua', { hunk }, { 'ctx', 'new', 'added' }),
+      }
+      -- Use the real diff from generate_unified
+      diff_file_entries[1].diff = diff
+
+      local component = PatchPreviewComponent({})
+      local lines, _, _, marks = component:build_patch_lines_from_entries(diff_file_entries)
+
+      assert.is_true(#marks > 0)
+      diff_invariants.assert_patch_marks(marks, #lines)
+    end)
+
+    it('should produce ascending marks across multiple entries piped through patch pipeline', function()
+      local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+
+      local hunk1 = make_hunk('@@ -1,1 +1,2 @@', { '-old', '+new', '+added' })
+      local hunk2 = make_hunk('@@ -1,1 +1,1 @@', { '-removed', '+changed' })
+
+      local entry1 = make_real_diff_entry('a.lua', 'lua', { hunk1 }, { 'new', 'added' })
+      local entry2 = make_real_diff_entry('b.lua', 'lua', { hunk2 }, { 'changed' })
+
+      local component = PatchPreviewComponent({})
+      local lines, _, _, marks = component:build_patch_lines_from_entries({ entry1, entry2 })
+
+      assert.is_true(#marks >= 2)
+      diff_invariants.assert_patch_marks(marks, #lines)
+    end)
+
+    it('should pass full unified diff invariants for each precomputed entry', function()
+      local view = ProjectDiffView()
+      view._layout_type = ProjectDiffView.LAYOUT_UNIFIED
+
+      local hunk = make_hunk('@@ -1,3 +1,4 @@', { ' a', '-b', '+c', '+d', ' e' })
+      local diff = Diff():generate_unified({ hunk }, { 'a', 'c', 'd', 'e' })
+
+      local data = {
+        entries = {
+          {
+            entries = {
+              {
+                status = { filename = 'full.lua', filetype = 'lua' },
+                diff = diff,
+                original_lines = { 'a', 'b', 'e' },
+                current_lines = { 'a', 'c', 'd', 'e' },
+              },
+            },
+          },
+        },
+      }
+
+      local mock_repo = {
+        get_path = function()
+          return '/tmp'
+        end,
+        diff = function()
+          return {}
+        end,
+      }
+      local entries = view:_build_diff_file_entries(mock_repo, data)
+
+      eq(1, #entries)
+      diff_invariants.assert_unified_diff(entries[1].diff)
     end)
   end)
 end)

@@ -81,7 +81,9 @@ describe('event:', function()
       assert.are.equal(1, call_count)
 
       -- Wait for debounce timer + schedule to fire
-      vim.wait(200, function() return call_count >= 2 end, 10)
+      vim.wait(200, function()
+        return call_count >= 2
+      end, 10)
       assert.are.equal(2, call_count)
 
       cleanup()
@@ -115,7 +117,9 @@ describe('event:', function()
       cleanup()
 
       -- Wait past the debounce period — deferred call should NOT fire
-      vim.wait(150, function() return false end, 10)
+      vim.wait(150, function()
+        return false
+      end, 10)
       assert.are.equal(1, call_count)
     end)
   end)

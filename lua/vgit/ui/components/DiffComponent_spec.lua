@@ -899,6 +899,156 @@ describe('DiffComponent:', function()
     end)
   end)
 
+  describe('build_diff_render_state data pipeline', function()
+    local Diff = require('vgit.core.diff.Diff')
+    local GitHunk = require('vgit.git.GitHunk')
+    local invariants = require('tests.helpers.diff_invariants')
+
+    local function make_hunk(header, diff_lines)
+      local hunk = GitHunk(header)
+      for _, line in ipairs(diff_lines or {}) do
+        hunk:push(line)
+      end
+      return hunk
+    end
+
+    local function make_unified_diff(hunks, lines)
+      return Diff():generate_unified(hunks, lines)
+    end
+
+    it('should pass through marks, lines, and hunks from unified Diff', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
+      local diff = make_unified_diff({ hunk }, { 'a', 'new', 'c' })
+
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(diff)
+
+      eq(diff.lines, state.lines)
+      eq(diff.marks, state.marks)
+      eq(diff.hunks, state.hunks)
+    end)
+
+    it('should produce line_numbers with same length as diff.lines', function()
+      local hunk = make_hunk('@@ -0,0 +1,2 @@', { '+new1', '+new2' })
+      local diff = make_unified_diff({ hunk }, { 'new1', 'new2' })
+
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(diff)
+
+      eq(#diff.lines, #state.line_numbers)
+    end)
+
+    it('should produce lines_changes with same length as diff.lines', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
+      local diff = make_unified_diff({ hunk }, { 'a', 'new', 'c' })
+
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(diff)
+
+      eq(#diff.lines, #state.lines_changes)
+    end)
+
+    it('should produce lines_changes with {line_number, lnum_change} shape', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
+      local diff = make_unified_diff({ hunk }, { 'a', 'new', 'c' })
+
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(diff)
+
+      for i, lc in ipairs(state.lines_changes) do
+        -- line_number is always present (string)
+        assert.is_not_nil(lc.line_number, string.format('lines_changes[%d] missing line_number', i))
+        -- lnum_change is nil for context lines, present for changed lines
+      end
+      -- At least some entries should have non-nil lnum_change
+      local has_change = false
+      for _, lc in ipairs(state.lines_changes) do
+        if lc.lnum_change then has_change = true end
+      end
+      assert.is_true(has_change)
+    end)
+
+    it('should assign correct highlight groups to line_numbers', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
+      local diff = make_unified_diff({ hunk }, { 'a', 'new', 'c' })
+
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(diff)
+
+      local hl_groups = {}
+      for _, ln in ipairs(state.line_numbers) do
+        hl_groups[ln[2]] = true
+      end
+      -- Should have at least context and change highlights
+      assert.is_true(
+        hl_groups['GitLineNr'] ~= nil or hl_groups['GitSignsAdd'] ~= nil or hl_groups['GitSignsDelete'] ~= nil
+      )
+    end)
+
+    it('should return empty state when diff is nil', function()
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(nil)
+
+      eq({}, state.lines)
+      eq({}, state.marks)
+      eq({}, state.hunks)
+      eq({}, state.line_numbers)
+      eq({}, state.lines_changes)
+      eq({}, state.folds)
+    end)
+
+    it('should preserve marks from Diff through build_diff_render_state', function()
+      local hunk1 = make_hunk('@@ -0,0 +1,1 @@', { '+added' })
+      local hunk2 = make_hunk('@@ -2,1 +3,1 @@', { '-old', '+new' })
+      local diff = make_unified_diff({ hunk1, hunk2 }, { 'added', 'a', 'new' })
+
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(diff)
+
+      invariants.assert_marks_ascending(state.marks)
+      invariants.assert_marks_within_bounds(state.marks, #state.lines)
+    end)
+
+    it('should produce folds for unified diff with distant hunks', function()
+      -- FoldCalculator requires line_count >= 28 and gap >= 10 between hunks
+      local hunk1 = make_hunk('@@ -0,0 +1,1 @@', { '+added' })
+      local hunk2 = make_hunk('@@ -35,1 +36,1 @@', { '-old', '+new' })
+      local lines = {}
+      for i = 1, 40 do
+        lines[i] = 'line' .. i
+      end
+      lines[1] = 'added'
+      lines[36] = 'new'
+      local diff = make_unified_diff({ hunk1, hunk2 }, lines)
+
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(diff)
+
+      assert.is_true(#state.folds > 0, 'should produce folds for distant hunks')
+    end)
+
+    it('should handle diff with no hunks gracefully', function()
+      local diff = make_unified_diff({}, { 'a', 'b', 'c' })
+
+      local DiffComponent = require('vgit.ui.components.DiffComponent')
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(diff)
+
+      eq({}, state.marks)
+      eq({}, state.hunks)
+      eq(#diff.lines, #state.line_numbers)
+      eq(#diff.lines, #state.lines_changes)
+    end)
+  end)
+
   describe('with_element', function()
     it('should return state lines when element is nil', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
@@ -960,6 +1110,127 @@ describe('DiffComponent:', function()
       local component = create_diff_component({})
       -- DiffComponent sets filetype='diff' by default in component_will_mount
       eq('diff', component:get_filetype())
+    end)
+  end)
+
+  describe('adversarial build_diff_render_state', function()
+    local Diff = require('vgit.core.diff.Diff')
+    local GitHunk = require('vgit.git.GitHunk')
+    local DiffComponent = require('vgit.ui.components.DiffComponent')
+
+    local function make_hunk(header, diff_lines)
+      local hunk = GitHunk(header)
+      for _, line in ipairs(diff_lines) do
+        hunk:push(line)
+      end
+      return hunk
+    end
+
+    it('change with 10 removes and 1 add should have correct line count', function()
+      local diff_lines = {}
+      for i = 1, 10 do
+        diff_lines[i] = '-old' .. i
+      end
+      diff_lines[11] = '+survivor'
+      local h = make_hunk('@@ -1,1 +1,1 @@', diff_lines)
+      local diff = Diff():generate_unified({ h }, { 'survivor' })
+      local component = DiffComponent({})
+
+      local state = component:build_diff_render_state(diff)
+
+      eq(#diff.lines, #state.lines)
+      eq(#diff.lines, #state.line_numbers)
+      eq(#diff.lines, #state.lines_changes)
+      -- Should have 10 remove + 1 add lnum_changes
+      local change_count = 0
+      for _, lc in ipairs(state.lines_changes) do
+        if lc.lnum_change then change_count = change_count + 1 end
+      end
+      eq(11, change_count)
+    end)
+
+    it('3 back-to-back change hunks should produce 3 marks with correct navigation', function()
+      local h1 = make_hunk('@@ -1,1 +1,1 @@', { '-a', '+A' })
+      local h2 = make_hunk('@@ -2,1 +2,1 @@', { '-b', '+B' })
+      local h3 = make_hunk('@@ -3,1 +3,1 @@', { '-c', '+C' })
+      local diff = Diff():generate_unified({ h1, h2, h3 }, { 'A', 'B', 'C' })
+      local component = DiffComponent({})
+
+      local state = component:build_diff_render_state(diff)
+
+      eq(3, #state.marks)
+      eq(diff.marks, state.marks)
+      -- All marks ascending
+      for i = 2, #state.marks do
+        assert.is_true(state.marks[i].top > state.marks[i - 1].bot)
+      end
+    end)
+
+    it('remove at end of file should have marks within line_numbers bounds', function()
+      local h = make_hunk('@@ -4,2 +3,0 @@', { '-x', '-y' })
+      local diff = Diff():generate_unified({ h }, { 'a', 'b', 'c' })
+      local component = DiffComponent({})
+
+      local state = component:build_diff_render_state(diff)
+
+      eq(#diff.lines, #state.line_numbers)
+      for _, mark in ipairs(state.marks) do
+        assert.is_true(mark.top >= 1)
+        assert.is_true(mark.bot <= #state.lines)
+      end
+    end)
+
+    it('add-change-remove cascade should produce valid state', function()
+      local h1 = make_hunk('@@ -0,0 +1,1 @@', { '+header' })
+      local h2 = make_hunk('@@ -2,1 +3,1 @@', { '-old', '+new' })
+      local h3 = make_hunk('@@ -4,1 +4,0 @@', { '-tail' })
+      local diff = Diff():generate_unified({ h1, h2, h3 }, { 'header', 'a', 'new', 'b' })
+      local component = DiffComponent({})
+
+      local state = component:build_diff_render_state(diff)
+
+      eq(#diff.lines, #state.lines)
+      eq(3, #state.marks)
+      -- Verify line_numbers contains exactly #lines entries
+      eq(#state.lines, #state.line_numbers)
+    end)
+
+    it('very large diff with 20 hunks should produce complete state', function()
+      local hunks = {}
+      local current = {}
+      for i = 1, 40 do
+        current[i] = 'line' .. i
+      end
+      for i = 1, 20 do
+        local pos = i * 2
+        hunks[i] = make_hunk(string.format('@@ -%d,1 +%d,1 @@', pos, pos), { '-old' .. i, '+line' .. pos })
+      end
+      local diff = Diff():generate_unified(hunks, current)
+      local component = DiffComponent({})
+
+      local state = component:build_diff_render_state(diff)
+
+      eq(20, #state.marks)
+      eq(#diff.lines, #state.lines)
+      eq(#diff.lines, #state.line_numbers)
+      -- Every mark must be within line bounds
+      for _, mark in ipairs(state.marks) do
+        assert.is_true(mark.top >= 1)
+        assert.is_true(mark.bot <= #state.lines)
+      end
+    end)
+
+    it('nil diff should return empty state without crashing', function()
+      local component = DiffComponent({})
+      local state = component:build_diff_render_state(nil)
+
+      -- Should gracefully return empty state, not crash
+      assert.is_not_nil(state)
+      eq({}, state.lines)
+      eq({}, state.marks)
+      eq({}, state.hunks)
+      eq({}, state.lines_changes)
+      eq({}, state.line_numbers)
     end)
   end)
 end)

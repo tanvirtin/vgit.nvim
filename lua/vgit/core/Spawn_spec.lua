@@ -65,7 +65,9 @@ describe('Spawn:', function()
         end,
       }):start()
 
-      vim.wait(5000, function() return exited end, 50)
+      vim.wait(5000, function()
+        return exited
+      end, 50)
       assert.is_true(exited, 'on_exit should have been called')
       assert.is_true(#stdout > 0, 'should have received stdout output')
     end)
@@ -86,7 +88,9 @@ describe('Spawn:', function()
         end,
       }):start()
 
-      vim.wait(5000, function() return exited end, 50)
+      vim.wait(5000, function()
+        return exited
+      end, 50)
       assert.is_true(exited, 'on_exit should have been called')
       assert.is_true(#stderr > 0, 'should have received stderr output')
     end)

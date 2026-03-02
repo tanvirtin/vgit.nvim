@@ -338,7 +338,9 @@ describe('CommitPickerView:', function()
         {
           filename = 'file.lua',
           old_filename = nil,
-          get_filetype = function() return 'lua' end,
+          get_filetype = function()
+            return 'lua'
+          end,
         },
       }
 

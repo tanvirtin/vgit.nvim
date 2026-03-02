@@ -87,89 +87,50 @@ function StashView:_build_stash_groups(stashes)
   }
 end
 
-function StashView:_build_hunk_entries_for_commit(commit)
+function StashView:_build_diff_file_entries_for_commit(commit)
   local repo = self._repo
   if not repo then return {} end
 
   local revision = commit.context and commit.context.revision
   if not revision then return {} end
 
-  local hunk_entries, err = repo:diff({ type = 'range', from = revision .. '^', to = revision })
+  local layout_type = self._layout_type or self.LAYOUT_UNIFIED
+
+  local file_diffs, err =
+    repo:diff({ type = 'range', from = revision .. '^', to = revision, layout_type = layout_type })
 
   if err then
     console.debug.error(string.format('[StashView] git diff failed for %s: %s', revision, err[1] or tostring(err)))
     return {}
   end
 
-  return hunk_entries or {}
-end
+  if not file_diffs then return {} end
 
-function StashView:_split_hunk_entry(hunk, entry)
-  local previous_diff = {}
-  local current_diff = {}
-
-  for _, line in ipairs(hunk.diff or {}) do
-    local prefix = line:sub(1, 1)
-    if prefix == '-' then
-      previous_diff[#previous_diff + 1] = line
-      current_diff[#current_diff + 1] = ' '
-    elseif prefix == '+' then
-      previous_diff[#previous_diff + 1] = ' '
-      current_diff[#current_diff + 1] = line
-    else
-      previous_diff[#previous_diff + 1] = line
-      current_diff[#current_diff + 1] = line
-    end
+  local entries = {}
+  for _, fd in ipairs(file_diffs) do
+    entries[#entries + 1] = {
+      type = 'diff_file',
+      filename = fd.filename,
+      filetype = fd.filetype,
+      diff = fd.diff,
+      original_lines = fd.original_lines,
+      current_lines = fd.current_lines,
+    }
   end
 
-  local base = {
-    filetype = entry.filetype,
-    filename = entry.filename,
-    original_lines = entry.original_lines,
-    current_lines = entry.current_lines,
-  }
-
-  return vim.tbl_extend('force', base, {
-    type = 'hunk',
-    hunk = {
-      header = hunk.header,
-      diff = previous_diff,
-      top = hunk.top,
-      bot = hunk.bot,
-    },
-  }),
-    vim.tbl_extend('force', base, {
-      type = 'hunk',
-      hunk = {
-        header = hunk.header,
-        diff = current_diff,
-        top = hunk.top,
-        bot = hunk.bot,
-      },
-    })
+  return entries
 end
 
-function StashView:_build_split_hunk_entries(hunk_entries)
-  local previous_entries = {}
-  local current_entries = {}
-
-  for _, entry in ipairs(hunk_entries) do
-    if entry.type == 'file_header' then
-      previous_entries[#previous_entries + 1] = vim.tbl_extend('force', {}, entry)
-      current_entries[#current_entries + 1] = vim.tbl_extend('force', {}, entry)
-    elseif entry.type == 'hunk' then
-      local previous_entry, current_entry = self:_split_hunk_entry(entry.hunk, entry)
-      previous_entries[#previous_entries + 1] = previous_entry
-      current_entries[#current_entries + 1] = current_entry
-    end
-  end
-
-  return previous_entries, current_entries
-end
-
-function StashView:_set_hunk_entries(hunk_entries)
+function StashView:_set_diff_file_entries(diff_file_entries)
   if self._layout_type == self.LAYOUT_SPLIT then
-    local previous_entries, current_entries = self:_build_split_hunk_entries(hunk_entries)
+    local previous_entries = {}
+    local current_entries = {}
+    for _, entry in ipairs(diff_file_entries) do
+      if entry.type == 'diff_file' then
+        previous_entries[#previous_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'previous' })
+        current_entries[#current_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'current' })
+      end
+    end
     if self._previous_component and self._previous_component:is_valid() then
       self._previous_component:set_props({ hunk_entries = previous_entries })
     end
@@ -178,80 +139,9 @@ function StashView:_set_hunk_entries(hunk_entries)
     end
   else
     if self._patch_component and self._patch_component:is_valid() then
-      self._patch_component:set_props({ hunk_entries = hunk_entries })
+      self._patch_component:set_props({ hunk_entries = diff_file_entries })
     end
   end
-end
-
-function StashView:_enrich_with_syntax(commit, initial_entries, gen)
-  if self._destroyed or self._update_gen ~= gen then return end
-
-  local repo = self._repo
-  if not repo then return end
-
-  local revision = commit.context and commit.context.revision
-  if not revision then return end
-
-  local file_specs = {}
-  local seen = {}
-  for _, entry in ipairs(initial_entries) do
-    if entry.type == 'file_header' and entry.filetype and entry.filetype ~= 'text' and not seen[entry.filename] then
-      seen[entry.filename] = true
-      local old_name = entry.filename:match('^(.+) %-> .+$') or entry.filename
-      local new_name = entry.filename:match('^.+ %-> (.+)$') or entry.filename
-      file_specs[#file_specs + 1] = { display = entry.filename, old_name = old_name, new_name = new_name }
-    end
-  end
-
-  if #file_specs == 0 then return end
-
-  local parent_ref = revision .. '^'
-
-  local funcs = {}
-  for _, spec in ipairs(file_specs) do
-    local old_name = spec.old_name
-    local new_name = spec.new_name
-    local display = spec.display
-    funcs[#funcs + 1] = function()
-      if self._update_gen ~= gen then return nil end
-      local original_lines = repo:file_lines(old_name, parent_ref) or {}
-      if self._update_gen ~= gen then return nil end
-      local current_lines = repo:file_lines(new_name, revision) or {}
-      return { display = display, original_lines = original_lines, current_lines = current_lines }
-    end
-  end
-
-  local results = event.all(funcs)
-  if self._destroyed or self._update_gen ~= gen then return end
-
-  local content_map = {}
-  for _, r in ipairs(results) do
-    if r then content_map[r.display] = { original_lines = r.original_lines, current_lines = r.current_lines } end
-  end
-
-  local enriched = {}
-  for _, entry in ipairs(initial_entries) do
-    if entry.type == 'file_header' then
-      local content = content_map[entry.filename]
-      if content then
-        local new_entry = {}
-        for k, v in pairs(entry) do
-          new_entry[k] = v
-        end
-        new_entry.original_lines = content.original_lines
-        new_entry.current_lines = content.current_lines
-        enriched[#enriched + 1] = new_entry
-      else
-        enriched[#enriched + 1] = entry
-      end
-    else
-      enriched[#enriched + 1] = entry
-    end
-  end
-
-  if revision then self._patch_cache[revision] = enriched end
-
-  if self._update_gen == gen then self:_set_hunk_entries(enriched) end
 end
 
 function StashView:_update_patch(commit)
@@ -263,21 +153,17 @@ function StashView:_update_patch(commit)
   local revision = commit.context and commit.context.revision
 
   if revision and self._patch_cache[revision] then
-    self:_set_hunk_entries(self._patch_cache[revision])
+    self:_set_diff_file_entries(self._patch_cache[revision])
     return
   end
 
-  local hunk_entries = self:_build_hunk_entries_for_commit(commit)
+  local diff_file_entries = self:_build_diff_file_entries_for_commit(commit)
 
   if self._update_gen ~= gen then return end
 
-  if revision then self._patch_cache[revision] = hunk_entries end
+  if revision then self._patch_cache[revision] = diff_file_entries end
 
-  self:_set_hunk_entries(hunk_entries)
-
-  event.async(function()
-    self:_enrich_with_syntax(commit, hunk_entries, gen)
-  end)()
+  self:_set_diff_file_entries(diff_file_entries)
 end
 
 function StashView:_refresh_stash_list()

@@ -838,4 +838,542 @@ describe('PatchPreviewComponent:', function()
       eq(component, component:disable_cursorline())
     end)
   end)
+
+  describe('process_diff_file mark remapping', function()
+    it('should produce marks within buffer line bounds for a single-hunk file', function()
+      local component = create_patch_preview({})
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = { 'line 1', 'line 2', 'old line' },
+          current_lines = { 'line 1', 'line 2', 'new line', 'line 4', 'line 5' },
+          diff = {
+            lines = {
+              'line 1',
+              'line 2',
+              'old line',
+              'new line',
+              'line 4',
+              'line 5',
+            },
+            marks = {
+              { top = 3, bot = 4 },
+            },
+            lnum_changes = {
+              { lnum = 3, type = 'remove' },
+              { lnum = 4, type = 'add' },
+            },
+          },
+        },
+      }
+
+      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+
+      eq(1, #marks)
+      assert.is_true(marks[1].top >= 1)
+      assert.is_true(marks[1].bot <= #lines)
+      assert.is_true(marks[1].top <= marks[1].bot)
+    end)
+
+    it('should remap marks to lines that contain actual changes', function()
+      local component = create_patch_preview({})
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = {},
+          current_lines = {},
+          diff = {
+            lines = {
+              'line 1',
+              'line 2',
+              'old line',
+              'new line',
+              'line 4',
+              'line 5',
+            },
+            marks = {
+              { top = 3, bot = 4 },
+            },
+            lnum_changes = {
+              { lnum = 3, type = 'remove' },
+              { lnum = 4, type = 'add' },
+            },
+          },
+        },
+      }
+
+      local _, line_metadata, _, marks = component:build_patch_lines_from_entries(entries)
+
+      local mark = marks[1]
+      local mark_has_change = false
+      for lnum = mark.top, mark.bot do
+        local meta = line_metadata[lnum]
+        if meta and meta.lnum_change and (meta.lnum_change.type == 'remove' or meta.lnum_change.type == 'add') then
+          mark_has_change = true
+          break
+        end
+      end
+      assert.is_true(mark_has_change)
+    end)
+
+    it('should produce ascending non-overlapping marks for two far-apart hunks', function()
+      local component = create_patch_preview({})
+
+      local display_lines = {}
+      for i = 1, 20 do
+        display_lines[i] = 'line ' .. i
+      end
+      display_lines[3] = 'old line 3'
+      display_lines[4] = 'new line 3'
+      display_lines[17] = 'old line 17'
+      display_lines[18] = 'new line 18'
+
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = {},
+          current_lines = {},
+          diff = {
+            lines = display_lines,
+            marks = {
+              { top = 3, bot = 4 },
+              { top = 17, bot = 18 },
+            },
+            lnum_changes = {
+              { lnum = 3, type = 'remove' },
+              { lnum = 4, type = 'add' },
+              { lnum = 17, type = 'remove' },
+              { lnum = 18, type = 'add' },
+            },
+          },
+        },
+      }
+
+      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+
+      eq(2, #marks)
+      assert.is_true(marks[1].bot < marks[2].top)
+      assert.is_true(marks[1].top >= 1)
+      assert.is_true(marks[2].bot <= #lines)
+      assert.is_true(marks[1].top < marks[2].top)
+    end)
+
+    it('should produce marks from two files that are non-overlapping and ascending', function()
+      local component = create_patch_preview({})
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'a.lua',
+          filetype = 'lua',
+          original_lines = {},
+          current_lines = {},
+          diff = {
+            lines = { 'a1', 'a2', 'a3' },
+            marks = { { top = 2, bot = 3 } },
+            lnum_changes = {
+              { lnum = 2, type = 'remove' },
+              { lnum = 3, type = 'add' },
+            },
+          },
+        },
+        {
+          type = 'diff_file',
+          filename = 'b.lua',
+          filetype = 'lua',
+          original_lines = {},
+          current_lines = {},
+          diff = {
+            lines = { 'b1', 'b2', 'b3' },
+            marks = { { top = 2, bot = 3 } },
+            lnum_changes = {
+              { lnum = 2, type = 'remove' },
+              { lnum = 3, type = 'add' },
+            },
+          },
+        },
+      }
+
+      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+
+      eq(2, #marks)
+      assert.is_true(marks[1].bot < marks[2].top)
+      assert.is_true(marks[1].top >= 1)
+      assert.is_true(marks[2].bot <= #lines)
+    end)
+
+    it('should insert gap header between non-adjacent visible ranges', function()
+      local component = create_patch_preview({})
+
+      local display_lines = {}
+      for i = 1, 20 do
+        display_lines[i] = 'line ' .. i
+      end
+      display_lines[3] = 'old 3'
+      display_lines[4] = 'new 3'
+      display_lines[17] = 'old 17'
+      display_lines[18] = 'new 18'
+
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = {},
+          current_lines = {},
+          diff = {
+            lines = display_lines,
+            marks = {
+              { top = 3, bot = 4 },
+              { top = 17, bot = 18 },
+            },
+            lnum_changes = {
+              { lnum = 3, type = 'remove' },
+              { lnum = 4, type = 'add' },
+              { lnum = 17, type = 'remove' },
+              { lnum = 18, type = 'add' },
+            },
+          },
+        },
+      }
+
+      local _, line_metadata, _, marks = component:build_patch_lines_from_entries(entries)
+
+      eq(2, #marks)
+
+      -- Both marks should point to lines that have changes
+      for _, mark in ipairs(marks) do
+        local has_change = false
+        for lnum = mark.top, mark.bot do
+          local meta = line_metadata[lnum]
+          if meta and meta.lnum_change and (meta.lnum_change.type == 'remove' or meta.lnum_change.type == 'add') then
+            has_change = true
+            break
+          end
+        end
+        assert.is_true(has_change)
+      end
+
+      -- There should be a hunk header in the gap between marks
+      local has_gap_header = false
+      for lnum = marks[1].bot + 1, marks[2].top - 1 do
+        local meta = line_metadata[lnum]
+        if meta and meta.is_header then
+          has_gap_header = true
+          break
+        end
+      end
+      assert.is_true(has_gap_header)
+    end)
+  end)
+
+  describe('diff_file data consistency with real Diff', function()
+    local Diff = require('vgit.core.diff.Diff')
+    local GitHunk = require('vgit.git.GitHunk')
+    local invariants = require('tests.helpers.diff_invariants')
+
+    local function make_hunk(header, diff_lines)
+      local hunk = GitHunk(header)
+      for _, line in ipairs(diff_lines or {}) do
+        hunk:push(line)
+      end
+      return hunk
+    end
+
+    it('should produce valid patch marks from a real unified Diff', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
+      local diff = Diff():generate_unified({ hunk }, { 'a', 'new', 'c' })
+
+      local component = create_patch_preview({})
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = { 'a', 'old', 'c' },
+          current_lines = { 'a', 'new', 'c' },
+          diff = diff,
+        },
+      }
+
+      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+
+      assert.is_true(#marks > 0, 'should produce at least one mark')
+      invariants.assert_patch_marks(marks, #lines)
+    end)
+
+    it('should produce valid patch marks from multi-hunk real Diff', function()
+      local hunk1 = make_hunk('@@ -0,0 +1,2 @@', { '+new1', '+new2' })
+      local hunk2 = make_hunk('@@ -4,1 +6,1 @@', { '-old', '+changed' })
+      local diff = Diff():generate_unified({ hunk1, hunk2 }, { 'new1', 'new2', 'a', 'b', 'c', 'changed' })
+
+      local component = create_patch_preview({})
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = { 'a', 'b', 'c', 'old' },
+          current_lines = { 'new1', 'new2', 'a', 'b', 'c', 'changed' },
+          diff = diff,
+        },
+      }
+
+      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+
+      assert.is_true(#marks > 0)
+      invariants.assert_patch_marks(marks, #lines)
+    end)
+
+    it('should preserve word_diff through to line_metadata', function()
+      local component = create_patch_preview({})
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = { 'hello world' },
+          current_lines = { 'hello earth' },
+          diff = {
+            lines = { 'hello world', 'hello earth' },
+            marks = { { top = 1, bot = 2 } },
+            lnum_changes = {
+              { lnum = 1, type = 'remove', word_diff = { { 0, 'hello ' }, { -1, 'world' } } },
+              { lnum = 2, type = 'add', word_diff = { { 0, 'hello ' }, { 1, 'earth' } } },
+            },
+          },
+        },
+      }
+
+      local _, line_metadata = component:build_patch_lines_from_entries(entries)
+
+      local found_word_diff = false
+      for _, meta in pairs(line_metadata) do
+        if meta.lnum_change and meta.lnum_change.word_diff then
+          found_word_diff = true
+          invariants.assert_word_diff_shape({ meta.lnum_change })
+        end
+      end
+      assert.is_true(found_word_diff, 'word_diff should be preserved in line_metadata')
+    end)
+
+    it('should produce line_numbers with same count as lines', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
+      local diff = Diff():generate_unified({ hunk }, { 'a', 'new', 'c' })
+
+      local component = create_patch_preview({})
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = { 'a', 'old', 'c' },
+          current_lines = { 'a', 'new', 'c' },
+          diff = diff,
+        },
+      }
+
+      local lines, _, _, _, line_numbers = component:build_patch_lines_from_entries(entries)
+
+      eq(#lines, #line_numbers)
+    end)
+
+    it('should produce ascending marks across multiple files', function()
+      local hunk1 = make_hunk('@@ -0,0 +1,1 @@', { '+new' })
+      local diff1 = Diff():generate_unified({ hunk1 }, { 'new' })
+
+      local hunk2 = make_hunk('@@ -1,1 +1,1 @@', { '-old', '+changed' })
+      local diff2 = Diff():generate_unified({ hunk2 }, { 'changed' })
+
+      local component = create_patch_preview({})
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'a.lua',
+          filetype = 'lua',
+          original_lines = {},
+          current_lines = { 'new' },
+          diff = diff1,
+        },
+        {
+          type = 'diff_file',
+          filename = 'b.lua',
+          filetype = 'lua',
+          original_lines = { 'old' },
+          current_lines = { 'changed' },
+          diff = diff2,
+        },
+      }
+
+      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+
+      assert.is_true(#marks >= 2, 'should produce marks for each file')
+      invariants.assert_patch_marks(marks, #lines)
+    end)
+
+    it('should set void lnum_change type in line_metadata for void lines', function()
+      local component = create_patch_preview({})
+      local entries = {
+        {
+          type = 'diff_file',
+          filename = 'test.lua',
+          filetype = 'lua',
+          original_lines = { 'a', 'removed' },
+          current_lines = { 'a' },
+          diff = {
+            lines = { 'a', 'removed', 'a' },
+            marks = { { top = 2, bot = 2 } },
+            lnum_changes = {
+              { lnum = 2, type = 'remove' },
+            },
+          },
+        },
+      }
+
+      local _, line_metadata = component:build_patch_lines_from_entries(entries)
+
+      -- Check that remove type is preserved
+      local found_remove = false
+      for _, meta in pairs(line_metadata) do
+        if meta.lnum_change and meta.lnum_change.type == 'remove' then found_remove = true end
+      end
+      assert.is_true(found_remove, 'should have remove lnum_change in line_metadata')
+    end)
+  end)
+
+  describe('navigation cycle through marks', function()
+    it('should visit all marks exactly once per cycle with hunk_down', function()
+      local component = create_mounted_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {
+            { top = 5, bot = 8 },
+            { top = 15, bot = 18 },
+            { top = 25, bot = 28 },
+          },
+        },
+      })
+      component:set_lnum(1)
+
+      local visited = {}
+      for _ = 1, 4 do
+        local mark = component:hunk_down()
+        assert.is_truthy(mark)
+        visited[#visited + 1] = mark.top
+      end
+
+      -- Should visit mark 1, 2, 3, then wrap to 1
+      eq(5, visited[1])
+      eq(15, visited[2])
+      eq(25, visited[3])
+      eq(5, visited[4])
+    end)
+
+    it('should visit all marks in reverse with hunk_up', function()
+      local component = create_mounted_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {
+            { top = 5, bot = 8 },
+            { top = 15, bot = 18 },
+            { top = 25, bot = 28 },
+          },
+        },
+      })
+      component:set_lnum(30)
+
+      local visited = {}
+      for _ = 1, 4 do
+        local mark = component:hunk_up()
+        assert.is_truthy(mark)
+        visited[#visited + 1] = mark.top
+      end
+
+      -- Should visit mark 3, 2, 1, then wrap to 3
+      eq(25, visited[1])
+      eq(15, visited[2])
+      eq(5, visited[3])
+      eq(25, visited[4])
+    end)
+
+    it('should not loop with a single mark', function()
+      local component = create_mounted_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {
+            { top = 10, bot = 12 },
+          },
+        },
+      })
+      component:set_lnum(1)
+
+      local mark1 = component:hunk_down()
+      eq(10, mark1.top)
+
+      local mark2 = component:hunk_down()
+      eq(10, mark2.top)
+
+      local mark3 = component:hunk_down()
+      eq(10, mark3.top)
+    end)
+
+    it('should alternate between two marks without getting stuck', function()
+      local component = create_mounted_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {
+            { top = 5, bot = 7 },
+            { top = 20, bot = 22 },
+          },
+        },
+      })
+      component:set_lnum(1)
+
+      local visited = {}
+      for _ = 1, 6 do
+        local mark = component:hunk_down()
+        visited[#visited + 1] = mark.top
+      end
+
+      eq(5, visited[1])
+      eq(20, visited[2])
+      eq(5, visited[3])
+      eq(20, visited[4])
+      eq(5, visited[5])
+      eq(20, visited[6])
+    end)
+
+    it('should navigate correctly from a gap between marks', function()
+      local component = create_mounted_patch_preview({
+        state = {
+          lines = {},
+          line_metadata = {},
+          marks = {
+            { top = 5, bot = 8 },
+            { top = 15, bot = 18 },
+            { top = 25, bot = 28 },
+          },
+        },
+      })
+
+      -- Start in gap between mark 1 and 2
+      component:set_lnum(12)
+      local mark = component:hunk_down()
+      eq(15, mark.top)
+
+      -- Start in gap between mark 2 and 3, go prev
+      component:set_lnum(22)
+      mark = component:hunk_up()
+      eq(15, mark.top)
+    end)
+  end)
 end)

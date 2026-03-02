@@ -77,9 +77,7 @@ local function parse_hunk_entries(lines)
       current_hunk = { header = hunk_header, diff = {}, top = top, bot = bot }
     elseif current_hunk then
       local prefix = line:sub(1, 1)
-      if prefix == '+' or prefix == '-' or prefix == ' ' then
-        current_hunk.diff[#current_hunk.diff + 1] = line
-      end
+      if prefix == '+' or prefix == '-' or prefix == ' ' then current_hunk.diff[#current_hunk.diff + 1] = line end
     end
   end
 

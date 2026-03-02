@@ -122,11 +122,11 @@ describe('StashView:', function()
     end)
   end)
 
-  describe('_build_hunk_entries_for_commit', function()
+  describe('_build_diff_file_entries_for_commit', function()
     it('should return empty table when repo is nil', function()
       local view = StashView()
       view._repo = nil
-      local entries = view:_build_hunk_entries_for_commit(make_commit('stash@{0}'))
+      local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
       eq(0, #entries)
     end)
 
@@ -141,7 +141,7 @@ describe('StashView:', function()
         end,
       }
       local commit = { hash = 'abc', message = 'test', context = {} }
-      local entries = view:_build_hunk_entries_for_commit(commit)
+      local entries = view:_build_diff_file_entries_for_commit(commit)
       eq(0, #entries)
     end)
 
@@ -155,7 +155,7 @@ describe('StashView:', function()
           return nil, { 'git diff failed' }
         end,
       }
-      local entries = view:_build_hunk_entries_for_commit(make_commit('stash@{0}'))
+      local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
       eq(0, #entries)
     end)
 
@@ -169,19 +169,19 @@ describe('StashView:', function()
           return {}
         end,
       }
-      local entries = view:_build_hunk_entries_for_commit(make_commit('stash@{0}'))
+      local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
       eq(0, #entries)
     end)
 
-    it('should return patch entries from repo:diff', function()
+    it('should return diff_file entries from repo:diff', function()
       local view = StashView()
-      local mock_entries = {
-        { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
+      local mock_file_diffs = {
         {
-          type = 'hunk',
-          hunk = { header = '@@ -1,1 +1,1 @@', diff = { '-old', '+new' } },
-          filetype = 'lua',
           filename = 'foo.lua',
+          filetype = 'lua',
+          diff = { lines = { 'content' }, lnum_changes = {}, marks = {} },
+          original_lines = { 'old' },
+          current_lines = { 'new' },
         },
       }
       view._repo = {
@@ -189,18 +189,21 @@ describe('StashView:', function()
           return '/tmp/repo'
         end,
         diff = function()
-          return mock_entries
+          return mock_file_diffs
         end,
       }
-      local entries = view:_build_hunk_entries_for_commit(make_commit('stash@{0}'))
-      eq(2, #entries)
-      eq('file_header', entries[1].type)
+      local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
+      eq(1, #entries)
+      eq('diff_file', entries[1].type)
       eq('foo.lua', entries[1].filename)
-      eq('hunk', entries[2].type)
+      eq('lua', entries[1].filetype)
+      eq({ 'old' }, entries[1].original_lines)
+      eq({ 'new' }, entries[1].current_lines)
     end)
 
-    it('should pass correct refs (revision^ and revision) to repo:diff', function()
+    it('should pass correct refs and layout_type to repo:diff', function()
       local view = StashView()
+      view._layout_type = StashView.LAYOUT_SPLIT
       local captured_spec
       view._repo = {
         get_path = function()
@@ -211,10 +214,11 @@ describe('StashView:', function()
           return {}
         end,
       }
-      view:_build_hunk_entries_for_commit(make_commit('stash@{2}'))
+      view:_build_diff_file_entries_for_commit(make_commit('stash@{2}'))
       eq('range', captured_spec.type)
       eq('stash@{2}^', captured_spec.from)
       eq('stash@{2}', captured_spec.to)
+      eq('split', captured_spec.layout_type)
     end)
   end)
 
@@ -300,18 +304,6 @@ describe('StashView:', function()
   end)
 
   describe('_refresh_stash_list', function()
-    local git_stash_mod
-    local original_list
-
-    before_each(function()
-      git_stash_mod = require('vgit.git.git_stash')
-      original_list = git_stash_mod.list
-    end)
-
-    after_each(function()
-      git_stash_mod.list = original_list
-    end)
-
     it('should return early without error when repo is nil', function()
       local view = StashView()
       view._repo = nil
@@ -325,6 +317,9 @@ describe('StashView:', function()
         get_path = function()
           return '/tmp/repo'
         end,
+        stash_list = function()
+          return {}, nil
+        end,
       }
       view._patch_cache = { ['stash@{0}'] = {}, ['stash@{1}'] = {} }
       view._tree_component = {
@@ -332,9 +327,6 @@ describe('StashView:', function()
           return false
         end,
       }
-      git_stash_mod.list = function()
-        return {}, nil
-      end
       -- Empty list → destroy() is called, but we verify cache was cleared first
       view._component_manager = { destroy = function() end }
       view._patch_component = { component_will_unmount = function() end }
@@ -353,10 +345,10 @@ describe('StashView:', function()
         get_path = function()
           return '/tmp/repo'
         end,
+        stash_list = function()
+          return {}, nil
+        end,
       }
-      git_stash_mod.list = function()
-        return {}, nil
-      end
       view._component_manager = { destroy = function() end }
       view._patch_component = { component_will_unmount = function() end }
       view._tree_component = { component_will_unmount = function() end }
@@ -370,10 +362,10 @@ describe('StashView:', function()
         get_path = function()
           return '/tmp/repo'
         end,
+        stash_list = function()
+          return nil, { 'list error' }
+        end,
       }
-      git_stash_mod.list = function()
-        return nil, { 'list error' }
-      end
       -- Should not crash
       view:_refresh_stash_list()
     end)
@@ -385,6 +377,9 @@ describe('StashView:', function()
         get_path = function()
           return '/tmp/repo'
         end,
+        stash_list = function()
+          return { make_commit('stash@{0}', 'WIP') }, nil
+        end,
       }
       view._tree_component = {
         is_valid = function()
@@ -394,9 +389,6 @@ describe('StashView:', function()
           set_list_groups = groups
         end,
       }
-      git_stash_mod.list = function()
-        return { make_commit('stash@{0}', 'WIP') }, nil
-      end
       view:_refresh_stash_list()
       assert.is_not_nil(set_list_groups)
       eq(1, #set_list_groups)
@@ -416,7 +408,7 @@ describe('StashView:', function()
       local commit = make_commit('stash@{0}')
       local view = StashView()
       -- Override to avoid real git calls
-      view._build_hunk_entries_for_commit = function()
+      view._build_diff_file_entries_for_commit = function()
         return {}
       end
       view._patch_component = {
@@ -431,13 +423,15 @@ describe('StashView:', function()
 
     it('should serve from cache on a cache hit without calling git', function()
       local commit = make_commit('stash@{0}')
-      local cached = { { type = 'hunk', hunk = {}, filetype = 'lua', filename = 'a.lua' } }
+      local cached = {
+        { type = 'diff_file', filename = 'a.lua', filetype = 'lua', diff = {}, original_lines = {}, current_lines = {} },
+      }
       local set_props_data = nil
       local git_called = false
 
       local view = StashView()
       view._patch_cache = { ['stash@{0}'] = cached }
-      view._build_hunk_entries_for_commit = function()
+      view._build_diff_file_entries_for_commit = function()
         git_called = true
         return {}
       end
@@ -456,10 +450,12 @@ describe('StashView:', function()
 
     it('should store result in cache on a cache miss', function()
       local commit = make_commit('stash@{0}')
-      local mock_entries = { { type = 'hunk', hunk = {}, filetype = 'lua', filename = 'a.lua' } }
+      local mock_entries = {
+        { type = 'diff_file', filename = 'a.lua', filetype = 'lua', diff = {}, original_lines = {}, current_lines = {} },
+      }
 
       local view = StashView()
-      view._build_hunk_entries_for_commit = function()
+      view._build_diff_file_entries_for_commit = function()
         return mock_entries
       end
       view._patch_component = {
@@ -478,7 +474,7 @@ describe('StashView:', function()
 
       local view = StashView()
       -- Simulate another _update_patch call arriving during the git subprocess
-      view._build_hunk_entries_for_commit = function()
+      view._build_diff_file_entries_for_commit = function()
         view._update_gen = view._update_gen + 1 -- bump gen, making current gen stale
         return {}
       end
@@ -494,96 +490,6 @@ describe('StashView:', function()
       assert.is_false(set_props_called)
       -- Cache should NOT be populated with stale data
       assert.is_nil(view._patch_cache['stash@{0}'])
-    end)
-  end)
-
-  describe('_enrich_with_syntax', function()
-    it('should exit early when view is destroyed', function()
-      local view = StashView()
-      view._destroyed = true
-      view._repo = {
-        file_lines = function()
-          error('should not be called')
-        end,
-      }
-      -- Should not call file_lines or error
-      view:_enrich_with_syntax(make_commit('stash@{0}'), {
-        { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
-      }, 1)
-    end)
-
-    it('should exit early when gen is stale', function()
-      local view = StashView()
-      view._destroyed = false
-      view._update_gen = 2 -- current gen is 2, but we pass gen=1
-      view._repo = {
-        file_lines = function()
-          error('should not be called')
-        end,
-      }
-      view:_enrich_with_syntax(make_commit('stash@{0}'), {
-        { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
-      }, 1)
-    end)
-
-    it('should exit early when repo is nil', function()
-      local view = StashView()
-      view._destroyed = false
-      view._update_gen = 1
-      view._repo = nil
-      -- Should not error
-      view:_enrich_with_syntax(make_commit('stash@{0}'), {
-        { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
-      }, 1)
-    end)
-
-    it('should exit early when commit has no revision', function()
-      local view = StashView()
-      view._destroyed = false
-      view._update_gen = 1
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-      }
-      local commit = { hash = 'abc', context = {} } -- no revision
-      -- Should not error
-      view:_enrich_with_syntax(commit, {
-        { type = 'file_header', filename = 'foo.lua', filetype = 'lua' },
-      }, 1)
-    end)
-
-    it('should exit early when all file_header entries have filetype text', function()
-      local view = StashView()
-      view._destroyed = false
-      view._update_gen = 1
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-      }
-      -- filetype = 'text' entries are skipped, so file_specs will be empty
-      local entries = {
-        { type = 'file_header', filename = 'README', filetype = 'text' },
-        { type = 'hunk', filename = 'README', filetype = 'text', hunk = {} },
-      }
-      -- Should not call event.all / file_lines, so no coroutine issues
-      view:_enrich_with_syntax(make_commit('stash@{0}'), entries, 1)
-    end)
-
-    it('should exit early when there are no file_header entries at all', function()
-      local view = StashView()
-      view._destroyed = false
-      view._update_gen = 1
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-      }
-      local entries = {
-        { type = 'hunk', filename = 'foo.lua', filetype = 'lua', hunk = {} },
-      }
-      view:_enrich_with_syntax(make_commit('stash@{0}'), entries, 1)
     end)
   end)
 
@@ -895,6 +801,186 @@ describe('StashView:', function()
       assert.is_true(hunk_up_called)
       eq(1, set_hunk_called_with.index)
       eq(2, set_hunk_called_with.count)
+    end)
+  end)
+
+  describe('_build_diff_file_entries_for_commit data invariants', function()
+    local diff_invariants = require('tests.helpers.diff_invariants')
+    local Diff = require('vgit.core.diff.Diff')
+    local GitHunk = require('vgit.git.GitHunk')
+    local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
+
+    local function make_hunk(header, diff_lines)
+      local hunk = GitHunk(header)
+      for _, line in ipairs(diff_lines) do
+        hunk:push(line)
+      end
+      return hunk
+    end
+
+    local function make_real_diff(hunks, current_lines)
+      return Diff():generate_unified(hunks, current_lines)
+    end
+
+    it('should produce entries with marks passing ascending + bounds invariants', function()
+      local hunk = make_hunk('@@ -1,2 +1,3 @@', { ' line1', '-old', '+new', '+added' })
+      local diff = make_real_diff({ hunk }, { 'line1', 'new', 'added' })
+
+      local view = StashView()
+      view._repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+        diff = function()
+          return {
+            {
+              filename = 'stashed.lua',
+              filetype = 'lua',
+              diff = diff,
+              original_lines = { 'line1', 'old' },
+              current_lines = { 'line1', 'new', 'added' },
+            },
+          }
+        end,
+      }
+
+      local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
+
+      eq(1, #entries)
+      eq('diff_file', entries[1].type)
+      eq('stashed.lua', entries[1].filename)
+      diff_invariants.assert_marks_ascending(entries[1].diff.marks)
+      diff_invariants.assert_marks_within_bounds(entries[1].diff.marks, #entries[1].diff.lines)
+    end)
+
+    it('should produce entries whose lnum_changes and stat are consistent', function()
+      local hunk = make_hunk('@@ -1,1 +1,2 @@', { '-removed', '+changed', '+new' })
+      local diff = make_real_diff({ hunk }, { 'changed', 'new' })
+
+      local view = StashView()
+      view._repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+        diff = function()
+          return {
+            {
+              filename = 'a.lua',
+              filetype = 'lua',
+              diff = diff,
+              original_lines = { 'removed' },
+              current_lines = { 'changed', 'new' },
+            },
+          }
+        end,
+      }
+
+      local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
+
+      eq(1, #entries)
+      diff_invariants.assert_lnum_changes_within_bounds(entries[1].diff.lnum_changes, #entries[1].diff.lines)
+      diff_invariants.assert_stat_consistency(entries[1].diff.stat, entries[1].diff.lnum_changes)
+    end)
+
+    it('should pass full unified diff invariants on each entry', function()
+      local hunk = make_hunk('@@ -1,3 +1,3 @@', { ' ctx', '-old', '+new', ' end' })
+      local diff = make_real_diff({ hunk }, { 'ctx', 'new', 'end' })
+
+      local view = StashView()
+      view._repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+        diff = function()
+          return {
+            {
+              filename = 'full.lua',
+              filetype = 'lua',
+              diff = diff,
+              original_lines = { 'ctx', 'old', 'end' },
+              current_lines = { 'ctx', 'new', 'end' },
+            },
+          }
+        end,
+      }
+
+      local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
+
+      eq(1, #entries)
+      diff_invariants.assert_unified_diff(entries[1].diff)
+    end)
+
+    it('should produce valid patch marks when entries piped through build_patch_lines_from_entries', function()
+      local hunk1 = make_hunk('@@ -1,1 +1,2 @@', { '-old', '+new', '+added' })
+      local hunk2 = make_hunk('@@ -1,1 +1,1 @@', { '-removed', '+changed' })
+      local diff1 = make_real_diff({ hunk1 }, { 'new', 'added' })
+      local diff2 = make_real_diff({ hunk2 }, { 'changed' })
+
+      local view = StashView()
+      view._repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+        diff = function()
+          return {
+            {
+              filename = 'a.lua',
+              filetype = 'lua',
+              diff = diff1,
+              original_lines = { 'old' },
+              current_lines = { 'new', 'added' },
+            },
+            {
+              filename = 'b.lua',
+              filetype = 'lua',
+              diff = diff2,
+              original_lines = { 'removed' },
+              current_lines = { 'changed' },
+            },
+          }
+        end,
+      }
+
+      local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
+
+      eq(2, #entries)
+      local component = PatchPreviewComponent({})
+      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+
+      assert.is_true(#marks >= 2)
+      diff_invariants.assert_patch_marks(marks, #lines)
+    end)
+
+    it('should produce entries with non-nil diff, filename, and filetype', function()
+      local hunk = make_hunk('@@ -1,1 +1,1 @@', { '-a', '+b' })
+      local diff = make_real_diff({ hunk }, { 'b' })
+
+      local view = StashView()
+      view._repo = {
+        get_path = function()
+          return '/tmp/repo'
+        end,
+        diff = function()
+          return {
+            {
+              filename = 'typed.lua',
+              filetype = 'lua',
+              diff = diff,
+              original_lines = { 'a' },
+              current_lines = { 'b' },
+            },
+          }
+        end,
+      }
+
+      local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
+
+      eq(1, #entries)
+      eq('diff_file', entries[1].type)
+      assert.is_not_nil(entries[1].diff)
+      assert.is_not_nil(entries[1].filename)
+      assert.is_not_nil(entries[1].filetype)
+      assert.is_true(#entries[1].diff.lines > 0)
     end)
   end)
 end)

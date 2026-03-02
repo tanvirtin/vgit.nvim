@@ -107,9 +107,7 @@ git_buffer_store.get = function(buffer)
 end
 
 function git_buffer_store.current(bufnr)
-  if not bufnr then
-    bufnr = vim.api.nvim_get_current_buf()
-  end
+  if not bufnr then bufnr = vim.api.nvim_get_current_buf() end
   bufnr = tostring(bufnr)
   return buffers[bufnr]
 end
