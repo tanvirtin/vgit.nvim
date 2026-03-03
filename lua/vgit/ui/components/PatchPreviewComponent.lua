@@ -524,6 +524,10 @@ function PatchPreviewComponent:render()
   if not hunk_entries or #hunk_entries == 0 then
     self.state.lines = {}
     self.state.line_metadata = {}
+    self.state.marks = {}
+    self.state._diff_hl_map = {}
+    self.state._syntax_hl_map = {}
+    self.state._line_numbers = {}
     self:clear_lines()
     self:reset_cursor()
     return
@@ -726,6 +730,13 @@ function PatchPreviewComponent:get_lines()
   end) or self.state.lines
 end
 
+function PatchPreviewComponent:set_lines(lines)
+  self:with_element(function(el)
+    el:set_lines(lines)
+  end)
+  return self
+end
+
 function PatchPreviewComponent:clear_lines()
   self:with_element(function(el)
     el:clear_lines()
@@ -783,6 +794,25 @@ function PatchPreviewComponent:get_line_count()
   return self:with_element(function(el)
     return el:get_line_count()
   end) or 0
+end
+
+function PatchPreviewComponent:get_height()
+  return self:with_element(function(el)
+    return el:get_height()
+  end) or 0
+end
+
+function PatchPreviewComponent:get_width()
+  return self:with_element(function(el)
+    return el:get_width()
+  end) or 0
+end
+
+function PatchPreviewComponent:clear_extmark_highlights()
+  self:with_element(function(el)
+    el:clear_extmark_highlights()
+  end)
+  return self
 end
 
 function PatchPreviewComponent:scroll_to(pos, offset)

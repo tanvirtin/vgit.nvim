@@ -470,24 +470,35 @@ describe('StashView:', function()
 
     it('should not cache or render when gen is stale (concurrent navigation)', function()
       local commit = make_commit('stash@{0}')
-      local set_props_called = false
+      local set_props_calls = {}
 
       local view = StashView()
       -- Simulate another _update_patch call arriving during the git subprocess
       view._build_diff_file_entries_for_commit = function()
         view._update_gen = view._update_gen + 1 -- bump gen, making current gen stale
-        return {}
+        return { { type = 'diff_file', filename = 'stale.lua' } }
       end
       view._patch_component = {
         is_valid = function()
           return true
         end,
-        set_props = function()
-          set_props_called = true
+        set_props = function(_, props)
+          set_props_calls[#set_props_calls + 1] = props
         end,
+        clear_extmarks = function() end,
+        clear_lines = function() end,
+        reset_cursor = function() end,
+        clear_extmark_highlights = function() end,
+        get_height = function() return 10 end,
+        get_width = function() return 40 end,
+        set_lines = function() end,
+        place_extmark_highlight = function() end,
       }
       view:_update_patch(commit)
-      assert.is_false(set_props_called)
+      -- set_props should only be called once (for the clearing step with empty entries)
+      -- NOT called a second time with the stale diff data
+      eq(1, #set_props_calls)
+      eq({}, set_props_calls[1].hunk_entries)
       -- Cache should NOT be populated with stale data
       assert.is_nil(view._patch_cache['stash@{0}'])
     end)
