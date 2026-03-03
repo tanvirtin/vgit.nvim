@@ -12,6 +12,7 @@ local ComponentManager = lazy('vgit.ui.ComponentManager')
 local stash_view_setting = lazy('vgit.settings.stash_view')
 local TreeComponent = lazy('vgit.ui.components.TreeComponent')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
+local LoadingIndicator = lazy('vgit.ui.decorators.LoadingIndicator')
 local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
 
 local StashView = Object:extend()
@@ -37,6 +38,7 @@ function StashView:constructor()
     _patch_cache = {},
     _update_gen = 0,
     _destroyed = false,
+    _loading_indicator = LoadingIndicator(),
   }
 end
 
@@ -97,7 +99,7 @@ function StashView:_build_diff_file_entries_for_commit(commit)
   local layout_type = self._layout_type or self.LAYOUT_UNIFIED
 
   local file_diffs, err =
-    repo:diff({ type = 'range', from = revision .. '^', to = revision, layout_type = layout_type })
+      repo:diff({ type = 'range', from = revision .. '^', to = revision, layout_type = layout_type })
 
   if err then
     console.debug.error(string.format('[StashView] git diff failed for %s: %s', revision, err[1] or tostring(err)))
@@ -144,6 +146,32 @@ function StashView:_set_diff_file_entries(diff_file_entries)
   end
 end
 
+function StashView:_get_loading_targets()
+  if self._layout_type == self.LAYOUT_SPLIT then
+    local targets = {}
+    if self._previous_component and self._previous_component:is_valid() then
+      targets[#targets + 1] = self
+          ._previous_component
+    end
+    if self._current_component and self._current_component:is_valid() then
+      targets[#targets + 1] = self
+          ._current_component
+    end
+    return targets
+  end
+
+  if self._patch_component and self._patch_component:is_valid() then return { self._patch_component } end
+
+  return {}
+end
+
+function StashView:_render_loading()
+  local targets = self:_get_loading_targets()
+  for _, target in ipairs(targets) do
+    self._loading_indicator:render(target)
+  end
+end
+
 function StashView:_update_patch(commit)
   if not commit then return end
   self._current_commit = commit
@@ -153,11 +181,20 @@ function StashView:_update_patch(commit)
   local revision = commit.context and commit.context.revision
 
   if revision and self._patch_cache[revision] then
+    self._loading_indicator:stop()
     self:_set_diff_file_entries(self._patch_cache[revision])
     return
   end
 
+  self:_set_diff_file_entries({})
+
+  self._loading_indicator:start(function()
+    self:_render_loading()
+  end)
+
   local diff_file_entries = self:_build_diff_file_entries_for_commit(commit)
+
+  self._loading_indicator:stop()
 
   if self._update_gen ~= gen then return end
 
@@ -521,6 +558,7 @@ end
 function StashView:destroy()
   if self._destroyed then return end
   self._destroyed = true
+  self._loading_indicator:stop()
   for _, cleanup in ipairs(self._debounce_cleanups) do
     cleanup()
   end
