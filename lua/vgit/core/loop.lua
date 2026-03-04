@@ -31,7 +31,11 @@ function loop.debounce(fn, ms)
 
     timer:stop()
     timer:start(ms, 0, function()
-      fn(unpack(argv, 1, argc))
+      vim.schedule(function()
+        if not closed then
+          fn(unpack(argv, 1, argc))
+        end
+      end)
     end)
   end
 
