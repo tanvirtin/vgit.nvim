@@ -8,7 +8,7 @@ describe('StashView:', function()
   end)
 
   local function make_commit(revision, message, hash)
-    return {
+    local commit = {
       hash = hash or 'abc1234',
       parent_hash = 'parent000',
       author = 'Test Author',
@@ -21,6 +21,10 @@ describe('StashView:', function()
         is_stash = true,
       },
     }
+    function commit:age()
+      return { unit = 3, how_long = 'days', display = '3 days ago' }
+    end
+    return commit
   end
 
   describe('create', function()
@@ -55,20 +59,7 @@ describe('StashView:', function()
     end)
   end)
 
-  describe('_build_stash_groups', function()
-    it('should build a single group named Stashes', function()
-      local view = StashView()
-      local stashes = {
-        make_commit('stash@{0}', 'WIP on main'),
-        make_commit('stash@{1}', 'feature work'),
-      }
-      local groups = view:_build_stash_groups(stashes)
-
-      eq(1, #groups)
-      eq('Stashes', groups[1].value)
-      assert.is_true(groups[1].open)
-    end)
-
+  describe('_build_items', function()
     it('should build one item per stash', function()
       local view = StashView()
       local stashes = {
@@ -76,27 +67,39 @@ describe('StashView:', function()
         make_commit('stash@{1}', 'feature work'),
         make_commit('stash@{2}', 'temp save'),
       }
-      local groups = view:_build_stash_groups(stashes)
+      local items = view:_build_items(stashes)
 
-      eq(3, #groups[1].items)
+      eq(3, #items)
     end)
 
-    it('should format item value as revision: message', function()
+    it('should format item label with index and message', function()
       local view = StashView()
-      local commit = make_commit('stash@{0}', 'WIP on main')
-      local groups = view:_build_stash_groups({ commit })
+      local commit = make_commit('stash@{0}', 'WIP on main: abc1234 Fix bug')
+      local items = view:_build_items({ commit })
 
-      eq('stash@{0}: WIP on main', groups[1].items[1].value)
+      local label = items[1].label
+      assert.is_true(label:find('{0}') ~= nil)
+      assert.is_true(label:find('Fix bug') ~= nil)
     end)
 
-    it('should store commit in item entry', function()
+    it('should include branch and age in description', function()
+      local view = StashView()
+      local commit = make_commit('stash@{0}', 'WIP on main: abc1234 Fix bug')
+      local items = view:_build_items({ commit })
+
+      local desc = items[1].description
+      assert.is_true(desc:find('main') ~= nil)
+      assert.is_true(desc:find('3 days ago') ~= nil)
+    end)
+
+    it('should set value with commit entry', function()
       local view = StashView()
       local commit = make_commit('stash@{0}', 'WIP on main', 'deadbeef')
-      local groups = view:_build_stash_groups({ commit })
+      local items = view:_build_items({ commit })
 
-      local entry = groups[1].items[1].entry
-      eq('stash', entry.type)
-      eq(commit, entry.commit)
+      local value = items[1].value
+      eq('stash', value.type)
+      eq(commit, value.commit)
     end)
 
     it('should handle a stash with no context revision gracefully', function()
@@ -106,19 +109,72 @@ describe('StashView:', function()
         message = 'some work',
         context = {},
       }
-      local groups = view:_build_stash_groups({ commit })
+      function commit:age()
+        return { unit = 1, how_long = 'hour', display = '1 hour ago' }
+      end
+      local items = view:_build_items({ commit })
 
-      eq(1, #groups[1].items)
-      -- value should contain '?: some work'
-      assert.is_true(groups[1].items[1].value:find('some work') ~= nil)
+      eq(1, #items)
+      assert.is_true(items[1].label:find('some work') ~= nil)
     end)
 
     it('should return empty items for an empty stash list', function()
       local view = StashView()
-      local groups = view:_build_stash_groups({})
+      local items = view:_build_items({})
 
-      eq(1, #groups)
-      eq(0, #groups[1].items)
+      eq(0, #items)
+    end)
+  end)
+
+  describe('_format_stash_index', function()
+    it('should extract numeric index from stash@{N}', function()
+      local view = StashView()
+      eq('{0}', view:_format_stash_index('stash@{0}'))
+      eq('{5}', view:_format_stash_index('stash@{5}'))
+      eq('{12}', view:_format_stash_index('stash@{12}'))
+    end)
+
+    it('should return original string when format does not match', function()
+      local view = StashView()
+      eq('?', view:_format_stash_index('?'))
+      eq('unknown', view:_format_stash_index('unknown'))
+    end)
+  end)
+
+  describe('_parse_stash_message', function()
+    it('should parse WIP on branch format', function()
+      local view = StashView()
+      local branch, message = view:_parse_stash_message('WIP on main: abc1234 Fix bug')
+      eq('main', branch)
+      eq('Fix bug', message)
+    end)
+
+    it('should parse WIP on branch with complex branch name', function()
+      local view = StashView()
+      local branch, message = view:_parse_stash_message('WIP on feature/auth-flow: def5678 Add login page')
+      eq('feature/auth-flow', branch)
+      eq('Add login page', message)
+    end)
+
+    it('should parse On branch format (custom message)', function()
+      local view = StashView()
+      local branch, message = view:_parse_stash_message('On main: my custom stash message')
+      eq('main', branch)
+      eq('my custom stash message', message)
+    end)
+
+    it('should return nil branch for unrecognized format', function()
+      local view = StashView()
+      local branch, message = view:_parse_stash_message('some random message')
+      assert.is_nil(branch)
+      eq('some random message', message)
+    end)
+
+    it('should handle empty message', function()
+      local view = StashView()
+      local branch, message = view:_parse_stash_message('')
+      assert.is_nil(branch)
+      eq('', message)
     end)
   end)
 
@@ -203,7 +259,7 @@ describe('StashView:', function()
 
     it('should pass correct refs and layout_type to repo:diff', function()
       local view = StashView()
-      view._layout_type = StashView.LAYOUT_SPLIT
+      view._layout_type = 'split'
       local captured_spec
       view._repo = {
         get_path = function()
@@ -222,285 +278,121 @@ describe('StashView:', function()
     end)
   end)
 
-  describe('get_key', function()
-    it('should return string key as-is', function()
-      local view = StashView()
-      eq('a', view:get_key('a'))
-    end)
-
-    it('should return key field from table', function()
-      local view = StashView()
-      eq('p', view:get_key({ key = 'p', desc = 'Pop' }))
-    end)
-
-    it('should return nil for nil input', function()
-      local view = StashView()
-      assert.is_nil(view:get_key(nil))
-    end)
-  end)
-
-  describe('_get_current_commit', function()
-    it('should return nil when tree_component is nil', function()
-      local view = StashView()
-      view._tree_component = nil
-      assert.is_nil(view:_get_current_commit())
-    end)
-
-    it('should return nil when get_selected_entry returns nil', function()
-      local view = StashView()
-      view._tree_component = {
-        is_valid = function()
-          return true
-        end,
-        get_selected_entry = function()
-          return nil
-        end,
-      }
-      assert.is_nil(view:_get_current_commit())
-    end)
-
-    it('should return commit from item.entry.commit', function()
-      local commit = make_commit('stash@{0}')
-      local view = StashView()
-      view._tree_component = {
-        is_valid = function()
-          return true
-        end,
-        get_selected_entry = function()
-          return { entry = { commit = commit } }
-        end,
-      }
-      eq(commit, view:_get_current_commit())
-    end)
-
-    it('should return commit when item has commit field directly', function()
-      local commit = make_commit('stash@{0}')
-      local view = StashView()
-      view._tree_component = {
-        is_valid = function()
-          return true
-        end,
-        get_selected_entry = function()
-          return { commit = commit }
-        end,
-      }
-      eq(commit, view:_get_current_commit())
-    end)
-
-    it('should return _current_commit fallback when tree_component is invalid', function()
-      local commit = make_commit('stash@{0}')
-      local view = StashView()
-      view._tree_component = {
-        is_valid = function()
-          return false
-        end,
-        get_selected_entry = function()
-          return { entry = { commit = commit } }
-        end,
-      }
-      view._current_commit = commit
-      eq(commit, view:_get_current_commit())
-    end)
-  end)
-
-  describe('_refresh_stash_list', function()
-    it('should return early without error when repo is nil', function()
-      local view = StashView()
-      view._repo = nil
-      -- Should not crash
-      view:_refresh_stash_list()
-    end)
-
-    it('should clear the patch cache before fetching', function()
-      local view = StashView()
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-        stash_list = function()
-          return {}, nil
-        end,
-      }
-      view._patch_cache = { ['stash@{0}'] = {}, ['stash@{1}'] = {} }
-      view._tree_component = {
-        is_valid = function()
-          return false
-        end,
-      }
-      -- Empty list → destroy() is called, but we verify cache was cleared first
-      view._component_manager = { destroy = function() end }
-      view._patch_component = { component_will_unmount = function() end }
-      view._tree_component = { component_will_unmount = function() end }
-      view:_refresh_stash_list()
-      local count = 0
-      for _ in pairs(view._patch_cache) do
-        count = count + 1
-      end
-      eq(0, count)
-    end)
-
-    it('should call destroy when the refreshed stash list is empty', function()
-      local view = StashView()
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-        stash_list = function()
-          return {}, nil
-        end,
-      }
-      view._component_manager = { destroy = function() end }
-      view._patch_component = { component_will_unmount = function() end }
-      view._tree_component = { component_will_unmount = function() end }
-      view:_refresh_stash_list()
-      assert.is_true(view._destroyed)
-    end)
-
-    it('should not crash when git_stash.list returns an error', function()
-      local view = StashView()
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-        stash_list = function()
-          return nil, { 'list error' }
-        end,
-      }
-      -- Should not crash
-      view:_refresh_stash_list()
-    end)
-
-    it('should call set_list on the tree component with rebuilt groups', function()
-      local set_list_groups = nil
-      local view = StashView()
-      view._repo = {
-        get_path = function()
-          return '/tmp/repo'
-        end,
-        stash_list = function()
-          return { make_commit('stash@{0}', 'WIP') }, nil
-        end,
-      }
-      view._tree_component = {
-        is_valid = function()
-          return true
-        end,
-        set_list = function(_, groups)
-          set_list_groups = groups
-        end,
-      }
-      view:_refresh_stash_list()
-      assert.is_not_nil(set_list_groups)
-      eq(1, #set_list_groups)
-      eq('Stashes', set_list_groups[1].value)
-    end)
-  end)
-
   describe('_update_patch', function()
-    it('should do nothing when commit is nil', function()
+    it('should set _current_commit', function()
       local view = StashView()
-      view:_update_patch(nil)
-      assert.is_nil(view._current_commit)
-      eq(0, view._update_gen)
-    end)
-
-    it('should set _current_commit to the given commit', function()
-      local commit = make_commit('stash@{0}')
-      local view = StashView()
-      -- Override to avoid real git calls
-      view._build_diff_file_entries_for_commit = function()
-        return {}
-      end
-      view._patch_component = {
-        is_valid = function()
-          return false
-        end,
-        set_props = function() end,
+      view._repo = {
+        get_path = function() return '/tmp/repo' end,
+        diff = function() return {} end,
       }
+      local commit = make_commit('stash@{0}')
       view:_update_patch(commit)
       eq(commit, view._current_commit)
     end)
 
-    it('should serve from cache on a cache hit without calling git', function()
-      local commit = make_commit('stash@{0}')
-      local cached = {
-        { type = 'diff_file', filename = 'a.lua', filetype = 'lua', diff = {}, original_lines = {}, current_lines = {} },
-      }
-      local set_props_data = nil
-      local git_called = false
-
+    it('should increment _update_gen', function()
       local view = StashView()
-      view._patch_cache = { ['stash@{0}'] = cached }
-      view._build_diff_file_entries_for_commit = function()
-        git_called = true
-        return {}
-      end
-      view._patch_component = {
-        is_valid = function()
-          return true
-        end,
-        set_props = function(_, props)
-          set_props_data = props
-        end,
+      view._repo = {
+        get_path = function() return '/tmp/repo' end,
+        diff = function() return {} end,
       }
-      view:_update_patch(commit)
-      assert.is_false(git_called)
-      eq(cached, set_props_data.hunk_entries)
+      eq(0, view._update_gen)
+      view:_update_patch(make_commit('stash@{0}'))
+      eq(1, view._update_gen)
+      view:_update_patch(make_commit('stash@{1}'))
+      eq(2, view._update_gen)
     end)
 
-    it('should store result in cache on a cache miss', function()
-      local commit = make_commit('stash@{0}')
+    it('should cache entries by revision', function()
+      local view = StashView()
       local mock_entries = {
-        { type = 'diff_file', filename = 'a.lua', filetype = 'lua', diff = {}, original_lines = {}, current_lines = {} },
+        { filename = 'a.lua', filetype = 'lua', diff = {}, original_lines = {}, current_lines = {} },
+      }
+      view._repo = {
+        get_path = function() return '/tmp/repo' end,
+        diff = function() return mock_entries end,
       }
 
-      local view = StashView()
-      view._build_diff_file_entries_for_commit = function()
-        return mock_entries
-      end
-      view._patch_component = {
-        is_valid = function()
-          return false
-        end,
-        set_props = function() end,
-      }
-      view:_update_patch(commit)
-      eq(mock_entries, view._patch_cache['stash@{0}'])
+      view:_update_patch(make_commit('stash@{0}'))
+
+      assert.is_not_nil(view._patch_cache['stash@{0}'])
     end)
 
-    it('should not cache or render when gen is stale (concurrent navigation)', function()
-      local commit = make_commit('stash@{0}')
-      local set_props_calls = {}
-
+    it('should use cache on second call with same revision', function()
       local view = StashView()
-      -- Simulate another _update_patch call arriving during the git subprocess
-      view._build_diff_file_entries_for_commit = function()
-        view._update_gen = view._update_gen + 1 -- bump gen, making current gen stale
-        return { { type = 'diff_file', filename = 'stale.lua' } }
-      end
-      view._patch_component = {
-        is_valid = function()
-          return true
+      local call_count = 0
+      view._repo = {
+        get_path = function() return '/tmp/repo' end,
+        diff = function()
+          call_count = call_count + 1
+          return {}
         end,
-        set_props = function(_, props)
-          set_props_calls[#set_props_calls + 1] = props
-        end,
-        clear_extmarks = function() end,
-        clear_lines = function() end,
-        reset_cursor = function() end,
-        clear_extmark_highlights = function() end,
-        get_height = function() return 10 end,
-        get_width = function() return 40 end,
-        set_lines = function() end,
-        place_extmark_highlight = function() end,
       }
-      view:_update_patch(commit)
-      -- set_props should only be called once (for the clearing step with empty entries)
-      -- NOT called a second time with the stale diff data
-      eq(1, #set_props_calls)
-      eq({}, set_props_calls[1].hunk_entries)
-      -- Cache should NOT be populated with stale data
-      assert.is_nil(view._patch_cache['stash@{0}'])
+
+      view:_update_patch(make_commit('stash@{0}'))
+      eq(1, call_count)
+
+      view:_update_patch(make_commit('stash@{0}'))
+      eq(1, call_count) -- should not call diff again
+    end)
+
+    it('should not error when commit is nil', function()
+      local view = StashView()
+      -- Should not error
+      view:_update_patch(nil)
+    end)
+  end)
+
+  describe('_get_current_revision', function()
+    it('should return revision from current commit', function()
+      local view = StashView()
+      view._current_commit = make_commit('stash@{2}')
+      eq('stash@{2}', view:_get_current_revision())
+    end)
+
+    it('should return nil when no current commit', function()
+      local view = StashView()
+      assert.is_nil(view:_get_current_revision())
+    end)
+
+    it('should return nil when commit has no context', function()
+      local view = StashView()
+      view._current_commit = { hash = 'abc', context = {} }
+      assert.is_nil(view:_get_current_revision())
+    end)
+  end)
+
+  describe('_get_current_commit', function()
+    it('should return _current_commit when search component is nil', function()
+      local view = StashView()
+      local commit = make_commit('stash@{0}')
+      view._current_commit = commit
+      eq(commit, view:_get_current_commit())
+    end)
+
+    it('should return _current_commit when search component has no selected item', function()
+      local view = StashView()
+      local commit = make_commit('stash@{0}')
+      view._current_commit = commit
+      view._search_component = {
+        is_valid = function() return true end,
+        get_selected_item = function() return nil end,
+      }
+      eq(commit, view:_get_current_commit())
+    end)
+
+    it('should return commit from selected item when available', function()
+      local view = StashView()
+      local fallback = make_commit('stash@{1}')
+      local selected = make_commit('stash@{0}')
+      view._current_commit = fallback
+      view._search_component = {
+        is_valid = function() return true end,
+        get_selected_item = function()
+          return { value = { type = 'stash', commit = selected } }
+        end,
+      }
+      eq(selected, view:_get_current_commit())
     end)
   end)
 
@@ -508,310 +400,52 @@ describe('StashView:', function()
     it('should be idempotent (safe to call multiple times)', function()
       local view = StashView()
       view._component_manager = { destroy = function() end }
-      view._patch_component = { component_will_unmount = function() end }
-      view._tree_component = { component_will_unmount = function() end }
 
       view:destroy()
       view:destroy() -- second call should not error
     end)
 
-    it('should call each debounce cleanup function exactly once', function()
-      local cleanup1_calls = 0
-      local cleanup2_calls = 0
+    it('should set _destroyed to true', function()
       local view = StashView()
-      view._debounce_cleanups = {
-        function()
-          cleanup1_calls = cleanup1_calls + 1
-        end,
-        function()
-          cleanup2_calls = cleanup2_calls + 1
-        end,
-      }
       view._component_manager = { destroy = function() end }
-      view._patch_component = { component_will_unmount = function() end }
-      view._tree_component = { component_will_unmount = function() end }
 
       view:destroy()
-      eq(1, cleanup1_calls)
-      eq(1, cleanup2_calls)
-      -- Second call is a no-op (idempotent)
+      assert.is_true(view._destroyed)
+    end)
+
+    it('should call component_manager:destroy()', function()
+      local cm_destroyed = false
+      local view = StashView()
+      view._component_manager = {
+        destroy = function()
+          cm_destroyed = true
+        end,
+      }
+
       view:destroy()
-      eq(1, cleanup1_calls)
-      eq(1, cleanup2_calls)
+      assert.is_true(cm_destroyed)
     end)
-  end)
 
-  describe('_get_current_mark_index', function()
-    it('should return nil when marks are empty', function()
+    it('should nil out component_manager and search_component', function()
       local view = StashView()
-      local component = {
-        get_marks = function()
-          return {}
-        end,
-        get_lnum = function()
-          return 1
-        end,
-      }
-      local index, count = view:_get_current_mark_index(component)
-      assert.is_nil(index)
-      eq(0, count)
+      view._component_manager = { destroy = function() end }
+      view._search_component = {}
+      view._patch_component = {}
+
+      view:destroy()
+      assert.is_nil(view._component_manager)
+      assert.is_nil(view._search_component)
+      assert.is_nil(view._patch_component)
     end)
 
-    it('should return first hunk index when cursor is before first hunk', function()
+    it('should cleanup debounce functions', function()
+      local cleanup_called = false
       local view = StashView()
-      local marks = { { top = 10, bot = 15 }, { top = 20, bot = 25 } }
-      local component = {
-        get_marks = function()
-          return marks
-        end,
-        get_lnum = function()
-          return 1
-        end,
-      }
-      local index, count = view:_get_current_mark_index(component)
-      eq(1, index)
-      eq(2, count)
-    end)
+      view._component_manager = { destroy = function() end }
+      view._debounce_cleanups = { function() cleanup_called = true end }
 
-    it('should return current hunk index when cursor is inside a hunk', function()
-      local view = StashView()
-      local marks = { { top = 10, bot = 15 }, { top = 20, bot = 25 } }
-      local component = {
-        get_marks = function()
-          return marks
-        end,
-        get_lnum = function()
-          return 12
-        end,
-      }
-      local index, count = view:_get_current_mark_index(component)
-      eq(1, index)
-      eq(2, count)
-    end)
-
-    it('should return previous hunk index when cursor is between hunks', function()
-      local view = StashView()
-      local marks = { { top = 10, bot = 15 }, { top = 20, bot = 25 } }
-      local component = {
-        get_marks = function()
-          return marks
-        end,
-        get_lnum = function()
-          return 17
-        end,
-      }
-      local index, count = view:_get_current_mark_index(component)
-      eq(1, index)
-      eq(2, count)
-    end)
-
-    it('should return last hunk index when cursor is after last hunk', function()
-      local view = StashView()
-      local marks = { { top = 10, bot = 15 }, { top = 20, bot = 25 } }
-      local component = {
-        get_marks = function()
-          return marks
-        end,
-        get_lnum = function()
-          return 30
-        end,
-      }
-      local index, count = view:_get_current_mark_index(component)
-      eq(2, index)
-      eq(2, count)
-    end)
-  end)
-
-  describe('hunk_down', function()
-    local statusline_mod
-    local original_set_hunk
-
-    before_each(function()
-      statusline_mod = require('vgit.core.statusline_state')
-      original_set_hunk = statusline_mod.set_hunk
-      statusline_mod.set_hunk = function() end
-    end)
-
-    after_each(function()
-      statusline_mod.set_hunk = original_set_hunk
-    end)
-
-    it('should return early if patch_component is nil', function()
-      local view = StashView()
-      view._patch_component = nil
-      view:hunk_down()
-    end)
-
-    it('should return early if patch_component is invalid', function()
-      local view = StashView()
-      view._patch_component = {
-        is_valid = function()
-          return false
-        end,
-      }
-      view:hunk_down()
-    end)
-
-    it('should call hunk_down on component and update statusline', function()
-      local hunk_down_called = false
-      local set_hunk_called_with = nil
-
-      local view = StashView()
-      view._patch_component = {
-        is_valid = function()
-          return true
-        end,
-        hunk_down = function(_, pos)
-          hunk_down_called = true
-        end,
-        get_marks = function()
-          return { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
-        end,
-        get_lnum = function()
-          return 3
-        end,
-      }
-      statusline_mod.set_hunk = function(hunk)
-        set_hunk_called_with = hunk
-      end
-
-      view:hunk_down()
-
-      assert.is_true(hunk_down_called)
-      eq(1, set_hunk_called_with.index)
-      eq(2, set_hunk_called_with.count)
-    end)
-  end)
-
-  describe('_move_to_first_stash', function()
-    local function make_tree_mock(shadow_list)
-      return {
-        find_list_item = function(_, callback)
-          for lnum, item in ipairs(shadow_list) do
-            if callback(item) then return item, lnum end
-          end
-          return nil, nil
-        end,
-        set_lnum = function() end,
-      }
-    end
-
-    it('should do nothing when tree_component is nil', function()
-      local view = StashView()
-      view._tree_component = nil
-      view:_move_to_first_stash()
-    end)
-
-    it('should call set_lnum with the lnum of the first item that has entry.commit', function()
-      local set_lnum_called_with = nil
-      local commit = make_commit('stash@{0}')
-      local shadow_list = {
-        { value = 'Stashes' },
-        { value = 'stash@{0}: WIP', entry = { type = 'stash', commit = commit } },
-        { value = 'stash@{1}: more', entry = { type = 'stash', commit = make_commit('stash@{1}') } },
-      }
-      local view = StashView()
-      local mock = make_tree_mock(shadow_list)
-      mock.set_lnum = function(_, lnum)
-        set_lnum_called_with = lnum
-      end
-      view._tree_component = mock
-      view:_move_to_first_stash()
-      eq(2, set_lnum_called_with)
-    end)
-
-    it('should skip leading items without entry.commit', function()
-      local set_lnum_called_with = nil
-      local shadow_list = {
-        { value = 'Stashes' },
-        { value = 'sub-header' },
-        { value = 'stash@{0}: WIP', entry = { commit = make_commit('stash@{0}') } },
-      }
-      local view = StashView()
-      local mock = make_tree_mock(shadow_list)
-      mock.set_lnum = function(_, lnum)
-        set_lnum_called_with = lnum
-      end
-      view._tree_component = mock
-      view:_move_to_first_stash()
-      eq(3, set_lnum_called_with)
-    end)
-
-    it('should not call set_lnum when no items have entry.commit', function()
-      local set_lnum_called = false
-      local shadow_list = {
-        { value = 'Stashes' },
-        { value = 'Empty' },
-      }
-      local view = StashView()
-      local mock = make_tree_mock(shadow_list)
-      mock.set_lnum = function()
-        set_lnum_called = true
-      end
-      view._tree_component = mock
-      view:_move_to_first_stash()
-      assert.is_false(set_lnum_called)
-    end)
-  end)
-
-  describe('hunk_up', function()
-    local statusline_mod
-    local original_set_hunk
-
-    before_each(function()
-      statusline_mod = require('vgit.core.statusline_state')
-      original_set_hunk = statusline_mod.set_hunk
-      statusline_mod.set_hunk = function() end
-    end)
-
-    after_each(function()
-      statusline_mod.set_hunk = original_set_hunk
-    end)
-
-    it('should return early if patch_component is nil', function()
-      local view = StashView()
-      view._patch_component = nil
-      view:hunk_up()
-    end)
-
-    it('should return early if patch_component is invalid', function()
-      local view = StashView()
-      view._patch_component = {
-        is_valid = function()
-          return false
-        end,
-      }
-      view:hunk_up()
-    end)
-
-    it('should call hunk_up on component and update statusline', function()
-      local hunk_up_called = false
-      local set_hunk_called_with = nil
-
-      local view = StashView()
-      view._patch_component = {
-        is_valid = function()
-          return true
-        end,
-        hunk_up = function(_, pos)
-          hunk_up_called = true
-        end,
-        get_marks = function()
-          return { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
-        end,
-        get_lnum = function()
-          return 1
-        end, -- cursor position AFTER hunk_up moves to first hunk
-      }
-      statusline_mod.set_hunk = function(hunk)
-        set_hunk_called_with = hunk
-      end
-
-      view:hunk_up()
-
-      assert.is_true(hunk_up_called)
-      eq(1, set_hunk_called_with.index)
-      eq(2, set_hunk_called_with.count)
+      view:destroy()
+      assert.is_true(cleanup_called)
     end)
   end)
 

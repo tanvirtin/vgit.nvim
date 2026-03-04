@@ -14,24 +14,9 @@ describe('BlameInfoComponent:', function()
 
   local function mount_component(props)
     local component = BlameInfoComponent(props or {})
-    ComponentManager():render({ component = component, mode = 'popup', width = 40, height = 20 })
+    ComponentManager():render({ component = component, mode = 'popup', width = 80, height = 20 })
     return component
   end
-
-  describe('constructor', function()
-    it('should create via Component.constructor', function()
-      local instance = BlameInfoComponent({})
-
-      assert.is_not_nil(instance)
-      assert.is_table(instance.props)
-    end)
-
-    it('should preserve props', function()
-      local instance = BlameInfoComponent({ blame = 'test' })
-
-      eq('test', instance.props.blame)
-    end)
-  end)
 
   describe('get_initial_state', function()
     it('should return table with blame = nil', function()
@@ -45,36 +30,103 @@ describe('BlameInfoComponent:', function()
   describe('get_layout_spec', function()
     it('should return a view spec with height 3', function()
       local instance = mount_component()
-
       local spec = instance:get_layout_spec()
 
-      assert.is_not_nil(spec)
       eq('view', spec.type)
       eq(3, spec.height)
-      eq(instance._element, spec.view)
     end)
   end)
 
-  describe('component_will_mount', function()
-    it('should create a valid Neovim window', function()
-      local instance = mount_component()
-
-      assert.is_not_nil(instance._element)
-      assert.is_truthy(instance._element:is_valid())
-    end)
-  end)
-
-  describe('component_did_mount', function()
-    it('should call render', function()
-      local render_called = false
-      local instance = mount_component()
-
-      instance.render = function()
-        render_called = true
+  describe('render', function()
+    local function make_blame(overrides)
+      local blame = {
+        commit_hash = 'abc1234def5678',
+        commit_message = 'Fix important bug',
+        author = 'Alice',
+        author_mail = 'alice@example.com',
+        author_time = 1700000000,
+        age = function() return { display = '2 months ago' } end,
+      }
+      if overrides then
+        for k, v in pairs(overrides) do blame[k] = v end
       end
-      instance:component_did_mount()
+      return blame
+    end
 
-      assert.is_true(render_called)
+    it('should not error when blame is nil', function()
+      local component = mount_component()
+      component:set_props({ blame = nil })
+    end)
+
+    it('should render commit hash on line 1', function()
+      local blame = make_blame()
+      local component = mount_component({ blame = blame })
+      local lines = component:with_element(function(el) return el:get_lines() end)
+
+      eq(blame.commit_hash, lines[1])
+    end)
+
+    it('should render parent -> hash format when parent_hash exists', function()
+      local blame = make_blame({ parent_hash = 'parent123' })
+      local component = mount_component({ blame = blame })
+      local lines = component:with_element(function(el) return el:get_lines() end)
+
+      eq('parent123 -> abc1234def5678', lines[1])
+    end)
+
+    it('should render author and mail on line 2', function()
+      local blame = make_blame()
+      local component = mount_component({ blame = blame })
+      local lines = component:with_element(function(el) return el:get_lines() end)
+
+      eq('Alice (alice@example.com)', lines[2])
+    end)
+
+    it('should render commit message on line 3', function()
+      local blame = make_blame()
+      local component = mount_component({ blame = blame })
+      local lines = component:with_element(function(el) return el:get_lines() end)
+
+      eq('Fix important bug', lines[3])
+    end)
+
+    it('should truncate message longer than 88 chars', function()
+      local long_msg = string.rep('x', 100)
+      local blame = make_blame({ commit_message = long_msg })
+      local component = mount_component({ blame = blame })
+      local lines = component:with_element(function(el) return el:get_lines() end)
+
+      eq(string.rep('x', 88) .. '...', lines[3])
+    end)
+
+    it('should not truncate message at exactly 88 chars', function()
+      local msg = string.rep('y', 88)
+      local blame = make_blame({ commit_message = msg })
+      local component = mount_component({ blame = blame })
+      local lines = component:with_element(function(el) return el:get_lines() end)
+
+      eq(msg, lines[3])
+    end)
+
+    it('should always produce exactly 3 lines', function()
+      local blame = make_blame()
+      local component = mount_component({ blame = blame })
+      local lines = component:with_element(function(el) return el:get_lines() end)
+
+      eq(3, #lines)
+    end)
+
+    it('should update lines when props change', function()
+      local blame1 = make_blame({ commit_message = 'First message' })
+      local blame2 = make_blame({ commit_message = 'Second message' })
+
+      local component = mount_component({ blame = blame1 })
+      local lines1 = component:with_element(function(el) return el:get_lines() end)
+      eq('First message', lines1[3])
+
+      component:set_props({ blame = blame2 })
+      local lines2 = component:with_element(function(el) return el:get_lines() end)
+      eq('Second message', lines2[3])
     end)
   end)
 end)

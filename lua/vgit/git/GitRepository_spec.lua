@@ -6,9 +6,6 @@ local async = require('tests.helpers.async')({ it = it, before_each = before_eac
 local eq = assert.are.same
 
 describe('GitRepository:', function()
-  -- ================================================================
-  -- Unit tests (no repo needed)
-  -- ================================================================
   describe('State enum', function()
     it('should define UNINITIALIZED constant', function()
       assert.are.equal('uninitialized', GitRepository.State.UNINITIALIZED)
@@ -276,10 +273,6 @@ describe('GitRepository:', function()
       eq({ 'path is required' }, err)
     end)
   end)
-
-  -- ================================================================
-  -- Integration tests (real repo)
-  -- ================================================================
   describe('integration', function()
     local repo_path
     local it = async.it

@@ -11,9 +11,6 @@ local function clone_repo(source, dest)
 end
 
 describe('git_submodule:', function()
-  -- ============================================================
-  -- Unit tests: parameter validation (no repo, no async needed)
-  -- ============================================================
   describe('parameter validation', function()
     describe('list()', function()
       it('should error when reponame is nil', function()
@@ -145,10 +142,6 @@ describe('git_submodule:', function()
       end)
     end)
   end)
-
-  -- ============================================================
-  -- Integration tests: real git repos with async
-  -- ============================================================
   describe('integration', function()
     local repo
     local source_repo

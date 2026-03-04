@@ -25,6 +25,42 @@ package.loaded['vgit.core.event'] = {
   register_module = function() end,
 }
 
+local function make_mock_element(opts)
+  opts = opts or {}
+  local events = {}
+
+  return {
+    is_valid = function() return opts.valid ~= false end,
+    focus = function() end,
+    get_window = function()
+      return {
+        get_cursor = function() return { 1, 0 } end,
+        set_cursor = function() end,
+        start_insert = function() end,
+      }
+    end,
+    get_buffer = function()
+      return {
+        on = function() end,
+        attach_to_changes = function() end,
+        is_valid = function() return opts.valid ~= false end,
+        get_lines = function() return { '> ' } end,
+        set_lines = function() end,
+      }
+    end,
+    on = function(_, event_name, callback)
+      events[event_name] = callback
+    end,
+    set_keymap = function() end,
+    set_lines = function() end,
+    set_height = function() end,
+    place_extmark_highlight = function() end,
+    place_extmark_text = function() end,
+    unmount = function() end,
+    _events = events,
+  }
+end
+
 describe('SearchComponent:', function()
   local SearchComponent
 
@@ -161,6 +197,26 @@ describe('SearchComponent:', function()
 
       eq({}, sc.state.filtered_items)
     end)
+
+    it('should fire on_move after filtering', function()
+      local moved_item = nil
+      local sc = SearchComponent({
+        items = {
+          { label = 'main' },
+          { label = 'develop' },
+        },
+        on_select = function() end,
+        on_move = function(item)
+          moved_item = item
+        end,
+      })
+
+      sc.state.query = ''
+      sc:_apply_filter()
+
+      assert.is_not_nil(moved_item)
+      eq('main', moved_item.label)
+    end)
   end)
 
   describe('move', function()
@@ -246,6 +302,32 @@ describe('SearchComponent:', function()
 
       sc:move('up')
       eq(1, sc.state.selected_index)
+    end)
+
+    it('should fire on_move callback after moving', function()
+      local moved_items = {}
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+        on_move = function(item)
+          moved_items[#moved_items + 1] = item
+        end,
+      })
+
+      sc.state.filtered_items = {
+        { label = 'a' },
+        { label = 'b' },
+        { label = 'c' },
+      }
+      sc.state.selected_index = 1
+
+      sc:move('down')
+      eq(1, #moved_items)
+      eq('b', moved_items[1].label)
+
+      sc:move('down')
+      eq(2, #moved_items)
+      eq('c', moved_items[2].label)
     end)
   end)
 
@@ -388,6 +470,255 @@ describe('SearchComponent:', function()
 
       -- Should not error
       sc:close()
+    end)
+  end)
+
+  describe('on', function()
+    it('should delegate to both elements', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      sc._list_element = make_mock_element()
+      sc._input_element = make_mock_element()
+
+      local list_called = false
+      local input_called = false
+
+      sc._list_element.on = function(_, event_name)
+        if event_name == 'BufWinLeave' then list_called = true end
+      end
+      sc._input_element.on = function(_, event_name)
+        if event_name == 'BufWinLeave' then input_called = true end
+      end
+
+      sc:on('BufWinLeave', function() end)
+
+      assert.is_true(list_called)
+      assert.is_true(input_called)
+    end)
+
+    it('should not error when elements are nil', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      -- Should not error
+      sc:on('BufWinLeave', function() end)
+    end)
+  end)
+
+  describe('set_items', function()
+    it('should update items and reset state', function()
+      local sc = SearchComponent({
+        items = { { label = 'old' } },
+        on_select = function() end,
+      })
+
+      sc.state.selected_index = 5
+
+      local new_items = { { label = 'new1' }, { label = 'new2' } }
+      sc:set_items(new_items)
+
+      eq(new_items, sc.props.items)
+      eq(new_items, sc.state.filtered_items)
+      eq(1, sc.state.selected_index)
+    end)
+
+    it('should handle nil items', function()
+      local sc = SearchComponent({
+        items = { { label = 'old' } },
+        on_select = function() end,
+      })
+
+      sc:set_items(nil)
+
+      eq({}, sc.props.items)
+      eq({}, sc.state.filtered_items)
+    end)
+
+    it('should respect page_size', function()
+      local sc = SearchComponent({
+        items = {},
+        page_size = 2,
+        on_select = function() end,
+      })
+
+      sc:set_items({ { label = 'a' }, { label = 'b' }, { label = 'c' } })
+
+      eq(2, sc.state.visible_count)
+    end)
+
+    it('should fire on_move after setting items', function()
+      local moved_item = nil
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+        on_move = function(item)
+          moved_item = item
+        end,
+      })
+
+      sc:set_items({ { label = 'first' }, { label = 'second' } })
+
+      assert.is_not_nil(moved_item)
+      eq('first', moved_item.label)
+    end)
+  end)
+
+  describe('is_valid', function()
+    it('should return false when no elements exist', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      assert.is_false(sc:is_valid())
+    end)
+
+    it('should return true when input element is valid', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      sc._input_element = make_mock_element({ valid = true })
+
+      assert.is_true(sc:is_valid())
+    end)
+
+    it('should return true when list element is valid', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      sc._list_element = make_mock_element({ valid = true })
+
+      assert.is_true(sc:is_valid())
+    end)
+
+    it('should return false when both elements are invalid', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      sc._input_element = make_mock_element({ valid = false })
+      sc._list_element = make_mock_element({ valid = false })
+
+      assert.is_false(sc:is_valid())
+    end)
+  end)
+
+  describe('set_keymap', function()
+    it('should delegate to input element', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      local called_with = nil
+      sc._input_element = make_mock_element()
+      sc._input_element.set_keymap = function(_, mode, key, handler, desc)
+        called_with = { mode = mode, key = key, desc = desc }
+      end
+
+      sc:set_keymap('n', 'q', function() end, 'Quit')
+
+      assert.is_not_nil(called_with)
+      eq('n', called_with.mode)
+      eq('q', called_with.key)
+      eq('Quit', called_with.desc)
+    end)
+
+    it('should not error when input element is nil', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      -- Should not error
+      sc:set_keymap('n', 'q', function() end, 'Quit')
+    end)
+  end)
+
+  describe('layout mode (popup = false)', function()
+    it('should default to popup mode', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      -- popup defaults to true (popup ~= false)
+      assert.is_true(sc.props.popup ~= false)
+    end)
+
+    it('should accept popup = false', function()
+      local sc = SearchComponent({
+        items = {},
+        popup = false,
+        on_select = function() end,
+      })
+
+      eq(false, sc.props.popup)
+    end)
+  end)
+
+  describe('_fire_on_move', function()
+    it('should call on_move with current selected item', function()
+      local moved_item = nil
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+        on_move = function(item)
+          moved_item = item
+        end,
+      })
+
+      sc.state.filtered_items = {
+        { label = 'a' },
+        { label = 'b' },
+      }
+      sc.state.selected_index = 2
+
+      sc:_fire_on_move()
+
+      assert.is_not_nil(moved_item)
+      eq('b', moved_item.label)
+    end)
+
+    it('should not error when on_move is not provided', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      sc.state.filtered_items = { { label = 'a' } }
+      sc.state.selected_index = 1
+
+      -- Should not error
+      sc:_fire_on_move()
+    end)
+
+    it('should not call on_move when no items', function()
+      local called = false
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+        on_move = function()
+          called = true
+        end,
+      })
+
+      sc.state.filtered_items = {}
+      sc.state.selected_index = 1
+
+      sc:_fire_on_move()
+
+      assert.is_false(called)
     end)
   end)
 end)

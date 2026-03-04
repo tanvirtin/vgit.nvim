@@ -2,27 +2,8 @@ local eq = assert.are.same
 local BlameLens = require('vgit.features.lenses.BlameLens')
 
 describe('BlameLens:', function()
-  describe('get_key', function()
-    local lens
-
-    before_each(function()
-      lens = BlameLens()
-    end)
-
-    it('should return key as-is for string input', function()
-      eq('q', lens:get_key('q'))
-      eq('<esc>', lens:get_key('<esc>'))
-    end)
-
-    it('should return key from table input', function()
-      eq('q', lens:get_key({ key = 'q', desc = 'quit' }))
-      eq('j', lens:get_key({ key = 'j', desc = 'down' }))
-    end)
-
-    it('should return nil for other types', function()
-      assert.is_nil(lens:get_key(123))
-      assert.is_nil(lens:get_key(function() end))
-    end)
+  require('tests.helpers.get_key_tests')({ describe = describe, it = it, assert = assert }, function()
+    return BlameLens()
   end)
 
   describe('set_relative_lnum', function()

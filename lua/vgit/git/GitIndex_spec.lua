@@ -14,9 +14,6 @@ local function make_repo(path)
 end
 
 describe('GitIndex:', function()
-  -- =========================================================================
-  -- Unit tests (no repo needed, synchronous)
-  -- =========================================================================
   describe('constructor', function()
     it('should error when repository is nil', function()
       assert.has_error(function()
@@ -105,10 +102,6 @@ describe('GitIndex:', function()
       assert.is_nil(index._staged_files)
     end)
   end)
-
-  -- =========================================================================
-  -- Integration tests (real repo, async)
-  -- =========================================================================
   describe('integration', function()
     local repo
     local it = async.it

@@ -2,27 +2,8 @@ local eq = assert.are.same
 local HunkLens = require('vgit.features.lenses.HunkLens')
 
 describe('HunkLens:', function()
-  describe('get_key', function()
-    local lens
-
-    before_each(function()
-      lens = HunkLens()
-    end)
-
-    it('should return key as-is for string input', function()
-      eq('q', lens:get_key('q'))
-      eq('<esc>', lens:get_key('<esc>'))
-    end)
-
-    it('should return key from table input', function()
-      eq('q', lens:get_key({ key = 'q', desc = 'quit' }))
-      eq('j', lens:get_key({ key = 'j', desc = 'down' }))
-    end)
-
-    it('should return nil for other types', function()
-      assert.is_nil(lens:get_key(123))
-      assert.is_nil(lens:get_key(function() end))
-    end)
+  require('tests.helpers.get_key_tests')({ describe = describe, it = it, assert = assert }, function()
+    return HunkLens()
   end)
 
   describe('create_diff_component', function()
@@ -65,11 +46,7 @@ describe('HunkLens:', function()
 
   describe('create validation', function()
     local lens
-    local original_packages = {}
-
-    local function save_package(name)
-      original_packages[name] = package.loaded[name]
-    end
+    local save_package, restore_packages = require('tests.helpers.package_mock').create()
 
     before_each(function()
       lens = HunkLens()
@@ -82,9 +59,7 @@ describe('HunkLens:', function()
     end)
 
     after_each(function()
-      for name, module in pairs(original_packages) do
-        package.loaded[name] = module
-      end
+      restore_packages()
     end)
 
     it('should return false if no data provided', function()
