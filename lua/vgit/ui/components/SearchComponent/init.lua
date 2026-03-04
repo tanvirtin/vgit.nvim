@@ -43,6 +43,15 @@ function SearchComponent:set_items(items)
     selected_index = 1,
     visible_count = page_size and math.min(page_size, #filtered_items) or #filtered_items,
   })
+
+  self:_fire_on_move()
+end
+
+function SearchComponent:_fire_on_move()
+  if not self.props.on_move then return end
+
+  local item = self.state.filtered_items[self.state.selected_index]
+  if item then self.props.on_move(item) end
 end
 
 function SearchComponent:_apply_filter()
@@ -72,6 +81,8 @@ function SearchComponent:_apply_filter()
     selected_index = 1,
     visible_count = page_size and math.min(page_size, #filtered_items) or #filtered_items,
   })
+
+  self:_fire_on_move()
 end
 
 function SearchComponent:_load_more_items()
@@ -127,6 +138,7 @@ function SearchComponent:move(direction)
         local page_size = self.props.page_size or visible_count
         local new_visible = math.min(visible_count + page_size, #items)
         self:set_state({ visible_count = new_visible, selected_index = index })
+        self:_fire_on_move()
         return
       elseif self.props.on_load_more and not self._exhausted then
         if not self._loading then self:_load_more_items() end
@@ -141,6 +153,7 @@ function SearchComponent:move(direction)
   end
 
   self:set_state({ selected_index = index })
+  self:_fire_on_move()
 end
 
 function SearchComponent:select()
@@ -170,6 +183,21 @@ function SearchComponent:get_selected_item()
   return items[self.state.selected_index]
 end
 
+function SearchComponent:is_valid()
+  if self._input_element and self._input_element:is_valid() then return true end
+  if self._list_element and self._list_element:is_valid() then return true end
+  return false
+end
+
+function SearchComponent:on(event_name, callback)
+  if self._list_element then self._list_element:on(event_name, callback) end
+  if self._input_element then self._input_element:on(event_name, callback) end
+end
+
+function SearchComponent:set_keymap(mode_or_opts, key_or_callback, handler, desc)
+  if self._input_element then self._input_element:set_keymap(mode_or_opts, key_or_callback, handler, desc) end
+end
+
 function SearchComponent:_get_width()
   local width = self.props.width or '60vw'
   return LayoutContext.convert_dimension(width) or width
@@ -178,17 +206,29 @@ end
 function SearchComponent:get_layout_spec()
   local zindex = self.props.zindex or 50
 
-  return LayoutSpec.absolute(
-    LayoutSpec.vertical({
+  if self.props.popup ~= false then
+    return LayoutSpec.absolute(
+      LayoutSpec.vertical({
+        LayoutSpec.view(self._input_element, { height = 1, zindex = zindex + 1 }),
+        LayoutSpec.view(self._list_element, { flex = 1, zindex = zindex }),
+      }),
+      {
+        anchor = LayoutSpec.Anchor.TOP_CENTER,
+        width = self:_get_width(),
+        height = 1 + (self.props.max_height or 20),
+      }
+    )
+  end
+
+  return LayoutSpec.flex({
+    direction = LayoutSpec.Direction.VERTICAL,
+    children = {
       LayoutSpec.view(self._input_element, { height = 1, zindex = zindex + 1 }),
       LayoutSpec.view(self._list_element, { flex = 1, zindex = zindex }),
-    }),
-    {
-      anchor = LayoutSpec.Anchor.TOP_CENTER,
-      width = self:_get_width(),
-      height = 1 + (self.props.max_height or 20),
-    }
-  )
+    },
+    height = self.props.height,
+    flex = self.props.flex,
+  })
 end
 
 function SearchComponent:component_will_mount()
@@ -196,8 +236,10 @@ function SearchComponent:component_will_mount()
   local winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl
   local list_winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl .. ',CursorLine:GitSelected'
 
-  local input_border = self.props.border or { '', '', '', '│', '', '', '', '│' }
-  local list_border = { '├', '─', '┤', '│', '╯', '─', '╰', '│' }
+  local is_popup = self.props.popup ~= false
+  local input_border = is_popup and (self.props.border or { '', '', '', '│', '', '', '', '│' }) or 'none'
+  local list_border = is_popup and { '├', '─', '┤', '│', '╯', '─', '╰', '│' } or 'none'
+  local list_focusable = not is_popup
 
   if not self._input_element then
     self._input_element = Element({
@@ -235,7 +277,7 @@ function SearchComponent:component_will_mount()
         winhl = list_winhl,
       },
       win_plot = {
-        focusable = false,
+        focusable = list_focusable,
         border = list_border,
       },
     })
@@ -249,6 +291,22 @@ function SearchComponent:component_did_mount()
   self:_setup_input_tracking()
   self:_setup_keymaps()
   self:_apply_filter()
+
+  if self.props.popup == false then
+    local list_buf = self._list_element:get_buffer()
+    if list_buf then
+      list_buf:on('CursorMoved', function()
+        if not self._mounted then return end
+        local win = self._list_element:get_window()
+        if not win then return end
+        local lnum = win:get_cursor()[1]
+        if lnum ~= self.state.selected_index then
+          self.state.selected_index = lnum
+          self:_fire_on_move()
+        end
+      end)
+    end
+  end
 
   self._input_element:focus()
   self._input_element:get_window():start_insert()
@@ -421,7 +479,9 @@ function SearchComponent:render()
   end
 
   if self._list_element:is_valid() then
-    self._list_element:set_height(list_height)
+    if self.props.popup ~= false then
+      self._list_element:set_height(list_height)
+    end
 
     local selected = self.state.selected_index
     if selected >= 1 and selected <= visible_count then

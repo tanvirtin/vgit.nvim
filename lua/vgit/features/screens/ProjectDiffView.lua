@@ -15,6 +15,7 @@ local statusline = lazy('vgit.core.statusline_state')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local display_service = lazy('vgit.ui.display_service')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
+local LoadingIndicator = lazy('vgit.ui.decorators.LoadingIndicator')
 local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
 local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
 
@@ -38,6 +39,7 @@ function ProjectDiffView:constructor()
     _debounce_cleanups = {},
     _destroyed = false,
     _update_gen = 0,
+    _loading_indicator = LoadingIndicator(),
   }
 end
 
@@ -422,13 +424,47 @@ function ProjectDiffView:setup_keymaps()
   self:_set_keymap_all_components('n', 'b', blame_fn)
 end
 
-function ProjectDiffView:_create_unified_view(diff_file_entries)
-  self._diff_file_entries = diff_file_entries
+function ProjectDiffView:_get_diff_components()
+  if self._layout_type == self.LAYOUT_SPLIT then
+    local targets = {}
+    if self._previous_component and self._previous_component:is_valid() then targets[#targets + 1] = self._previous_component end
+    if self._current_component and self._current_component:is_valid() then targets[#targets + 1] = self._current_component end
+    return targets
+  end
 
+  if self._patch_component and self._patch_component:is_valid() then return { self._patch_component } end
+
+  return {}
+end
+
+function ProjectDiffView:_set_diff_file_entries(diff_file_entries)
+  if self._layout_type == self.LAYOUT_SPLIT then
+    local previous_entries = {}
+    local current_entries = {}
+    for _, entry in ipairs(diff_file_entries) do
+      if entry.type == 'diff_file' then
+        previous_entries[#previous_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'previous' })
+        current_entries[#current_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'current' })
+      end
+    end
+    if self._previous_component and self._previous_component:is_valid() then
+      self._previous_component:set_props({ hunk_entries = previous_entries })
+    end
+    if self._current_component and self._current_component:is_valid() then
+      self._current_component:set_props({ hunk_entries = current_entries })
+    end
+  else
+    if self._patch_component and self._patch_component:is_valid() then
+      self._patch_component:set_props({ hunk_entries = diff_file_entries })
+    end
+  end
+end
+
+function ProjectDiffView:_mount_unified_view()
   self._update_gen = self._update_gen + 1
 
   self._patch_component = PatchPreviewComponent({
-    hunk_entries = diff_file_entries,
+    hunk_entries = {},
     focus = true,
   })
 
@@ -439,32 +475,16 @@ function ProjectDiffView:_create_unified_view(diff_file_entries)
     height = '100vh',
   }))
 
-  self._line_to_file_map = self:_build_line_to_file_map(self._patch_component)
-
   self:setup_keymaps()
 
   if self._patch_component and self._patch_component:is_valid() then self._patch_component:focus() end
-
-  return true
 end
 
-function ProjectDiffView:_create_split_view(diff_file_entries)
-  self._diff_file_entries = diff_file_entries
-
+function ProjectDiffView:_mount_split_view()
   self._update_gen = self._update_gen + 1
 
-  local previous_entries = {}
-  local current_entries = {}
-
-  for _, entry in ipairs(diff_file_entries) do
-    if entry.type == 'diff_file' then
-      previous_entries[#previous_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'previous' })
-      current_entries[#current_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'current' })
-    end
-  end
-
   self._previous_component = PatchPreviewComponent({
-    hunk_entries = previous_entries,
+    hunk_entries = {},
     focus = false,
     win_options = {
       scrollbind = true,
@@ -473,7 +493,7 @@ function ProjectDiffView:_create_split_view(diff_file_entries)
   })
 
   self._current_component = PatchPreviewComponent({
-    hunk_entries = current_entries,
+    hunk_entries = {},
     focus = true,
     win_options = {
       scrollbind = true,
@@ -495,13 +515,17 @@ function ProjectDiffView:_create_split_view(diff_file_entries)
     height = '100vh',
   }))
 
-  self._line_to_file_map = self:_build_line_to_file_map(self._current_component)
-
   self:setup_keymaps()
 
   if self._current_component and self._current_component:is_valid() then self._current_component:focus() end
+end
 
-  return true
+function ProjectDiffView:_populate_diff(diff_file_entries)
+  self._diff_file_entries = diff_file_entries
+  self:_set_diff_file_entries(diff_file_entries)
+
+  local map_component = self._layout_type == self.LAYOUT_SPLIT and self._current_component or self._patch_component
+  if map_component then self._line_to_file_map = self:_build_line_to_file_map(map_component) end
 end
 
 function ProjectDiffView:_create_view(data)
@@ -517,18 +541,28 @@ function ProjectDiffView:_create_view(data)
 
   self._repo = repo
 
+  if layout_type == self.LAYOUT_SPLIT then
+    self:_mount_split_view()
+  else
+    self:_mount_unified_view()
+  end
+
+  self._loading_indicator:start(self:_get_diff_components())
+
   local diff_file_entries = self:_build_diff_file_entries(repo, data)
+
+  self._loading_indicator:stop()
 
   if #diff_file_entries == 0 then
     event.await()
     console.info('No changes to display')
+    self:destroy()
     return false
   end
 
-  if layout_type == self.LAYOUT_SPLIT then
-    return self:_create_split_view(diff_file_entries)
-  end
-  return self:_create_unified_view(diff_file_entries)
+  self:_populate_diff(diff_file_entries)
+
+  return true
 end
 
 function ProjectDiffView:is_destroyed()
@@ -538,6 +572,7 @@ end
 function ProjectDiffView:destroy()
   if self._destroyed then return end
   self._destroyed = true
+  self._loading_indicator:stop()
   self._update_gen = self._update_gen + 1
   for _, cleanup in ipairs(self._debounce_cleanups) do
     cleanup()

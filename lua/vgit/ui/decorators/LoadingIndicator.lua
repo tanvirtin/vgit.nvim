@@ -2,7 +2,7 @@ local lazy = require('vgit.core.lazy')
 
 local Object = lazy('vgit.core.Object')
 
-local frames = { '· · ·', '· · ●', '· ● ●', '● ● ●', '· ● ●', '· · ●', '· · ·' }
+local frames = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' }
 
 local LoadingIndicator = Object:extend()
 
@@ -11,13 +11,15 @@ function LoadingIndicator:constructor()
     _active = false,
     _frame = 1,
     _timer = nil,
+    _targets = {},
   }
 end
 
-function LoadingIndicator:start(on_frame)
+function LoadingIndicator:start(targets)
   if self._active then return end
   self._active = true
   self._frame = 1
+  self._targets = targets or {}
 
   self._timer = vim.uv.new_timer()
   self._timer:start(0, 150, vim.schedule_wrap(function()
@@ -26,12 +28,15 @@ function LoadingIndicator:start(on_frame)
       return
     end
     self._frame = (self._frame % #frames) + 1
-    if on_frame then on_frame() end
+    for _, target in ipairs(self._targets) do
+      self:render(target)
+    end
   end))
 end
 
 function LoadingIndicator:stop()
   self._active = false
+  self._targets = {}
 
   if self._timer then
     if not self._timer:is_closing() then

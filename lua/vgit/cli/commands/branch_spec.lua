@@ -1,45 +1,8 @@
 local eq = assert.are.same
-
--- Mock the event module to avoid async issues in tests
-local mock_event = {
-  await = function() end,
-  async = function(fn)
-    return fn
-  end,
-  debounce = function(fn)
-    return fn, function() end
-  end,
-  debounce_async = function(fn)
-    return fn, function() end
-  end,
-  on = function() end,
-  emit = function() end,
-  custom_on = function()
-    return function() end
-  end,
-  buffer_on = function() end,
-  promisify = function(fn)
-    return fn
-  end,
-  group = 'VGitGroup',
-  register_module = function() end,
-}
-
-package.loaded['vgit.core.event'] = mock_event
+local mock_event = require('tests.helpers.mock_event').install()
 
 describe('branch_command:', function()
-  local original_packages = {}
-
-  local function save_package(name)
-    original_packages[name] = package.loaded[name]
-  end
-
-  local function restore_packages()
-    for name, module in pairs(original_packages) do
-      package.loaded[name] = module
-    end
-    original_packages = {}
-  end
+  local save_package, restore_packages = require('tests.helpers.package_mock').create()
 
   after_each(function()
     restore_packages()

@@ -61,15 +61,7 @@ local console_stub = {
   info = function() end,
 }
 
-local event_stub = {
-  await = function() end,
-  async = function(fn)
-    return fn
-  end,
-  debounce_async = function(fn, delay)
-    return fn, function() end
-  end,
-}
+local event_stub = require('tests.helpers.mock_event').create()
 
 local window_lnum = 1
 local window_set_lnum_called = false

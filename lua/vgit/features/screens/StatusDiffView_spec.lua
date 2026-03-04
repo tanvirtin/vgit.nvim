@@ -1,40 +1,9 @@
 local eq = assert.are.same
-
--- Mock the event module to avoid async issues in tests
--- Save original before any requires
-local original_event = package.loaded['vgit.core.event']
-
--- Create mock event module that doesn't block
-local mock_event = {
-  await = function() end, -- no-op
-  async = function(fn)
-    return fn
-  end, -- just return the function
-  debounce = function(fn)
-    return fn, function() end
-  end,
-  debounce_async = function(fn)
-    return fn, function() end
-  end,
-  on = function() end,
-  emit = function() end,
-  custom_on = function()
-    return function() end
-  end,
-  buffer_on = function() end,
-  promisify = function(fn)
-    return fn
-  end,
-  group = 'VGitGroup',
-  register_module = function() end,
-}
-
--- Install the mock before any other modules load
-package.loaded['vgit.core.event'] = mock_event
+local mock_event = require('tests.helpers.mock_event').install()
 
 describe('StatusDiffView:', function()
   local StatusDiffView
-  local original_packages = {}
+  local save_package, restore_packages = require('tests.helpers.package_mock').create()
 
   -- Helper to create a valid entry
   local function make_entry(opts)
@@ -73,18 +42,6 @@ describe('StatusDiffView:', function()
     }
   end
 
-  -- Save/restore package.loaded for mocking
-  local function save_package(name)
-    original_packages[name] = package.loaded[name]
-  end
-
-  local function restore_packages()
-    for name, module in pairs(original_packages) do
-      package.loaded[name] = module
-    end
-    original_packages = {}
-  end
-
   before_each(function()
     -- Fresh require each test
     package.loaded['vgit.features.screens.StatusDiffView'] = nil
@@ -96,10 +53,6 @@ describe('StatusDiffView:', function()
     -- Ensure event mock stays in place
     package.loaded['vgit.core.event'] = mock_event
   end)
-
-  -- ============================================================================
-  -- ENTRY VALIDATION (Pure Logic)
-  -- ============================================================================
   describe('Entry Validation', function()
     describe('_is_valid_entry', function()
       it('should return false for nil entry', function()
@@ -171,10 +124,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- DATA VALIDATION
-  -- ============================================================================
   describe('Data Validation', function()
     describe('create', function()
       it('should reject when data is nil', function()
@@ -238,10 +187,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- DIFF SPEC BUILDING (Pure Logic)
-  -- ============================================================================
   describe('Diff Spec Building', function()
     describe('_build_entry_diff', function()
       local mock_repo
@@ -381,10 +326,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- FILE NAVIGATION (Mock tree_component)
-  -- ============================================================================
   describe('File Navigation', function()
     local view, mock_tree, mock_items
 
@@ -699,10 +640,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- HUNK NAVIGATION (Mock diff_component)
-  -- ============================================================================
   describe('Hunk Navigation', function()
     local view, mock_diff
 
@@ -1191,10 +1128,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- HUNK OPERATIONS (Mock repo + components)
-  -- ============================================================================
   describe('Hunk Operations', function()
     local view, mock_repo, mock_diff, mock_tree
     local repo_calls, console_calls
@@ -1531,10 +1464,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- FILE OPERATIONS (Mock repo + console)
-  -- ============================================================================
   describe('File Operations', function()
     local view, mock_repo, repo_calls, console_input_response
 
@@ -1826,10 +1755,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- BULK OPERATIONS (Mock repo + console)
-  -- ============================================================================
   describe('Bulk Operations', function()
     local view, mock_repo, repo_calls, console_input_response, info_messages
 
@@ -2058,10 +1983,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- VIEW MANAGEMENT (Mock components)
-  -- ============================================================================
   describe('View Management', function()
     local view, mock_repo, mock_diff, mock_tree
 
@@ -2340,10 +2261,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- LIFECYCLE
-  -- ============================================================================
   describe('Lifecycle', function()
     local view
 
@@ -2570,10 +2487,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- ERROR HANDLING
-  -- ============================================================================
   describe('Error Handling', function()
     describe('_handle_git_error', function()
       it('should delegate to view_utils.handle_git_error', function()
@@ -2589,10 +2502,6 @@ describe('StatusDiffView:', function()
       end)
     end)
   end)
-
-  -- ============================================================================
-  -- CONSTANTS
-  -- ============================================================================
   describe('Constants', function()
     it('should have correct DEBOUNCE_MS', function()
       eq(100, StatusDiffView.DEBOUNCE_MS)
@@ -2610,10 +2519,6 @@ describe('StatusDiffView:', function()
       eq('unified', StatusDiffView.LAYOUT_UNIFIED)
     end)
   end)
-
-  -- ============================================================================
-  -- GET KEY DELEGATION
-  -- ============================================================================
   describe('get_key', function()
     it('should delegate to view_utils.get_key for string', function()
       local view = StatusDiffView()
@@ -2631,10 +2536,6 @@ describe('StatusDiffView:', function()
       assert.is_nil(view:get_key(123))
     end)
   end)
-
-  -- ============================================================================
-  -- HUNK ALIGNMENT
-  -- ============================================================================
   describe('get_hunk_alignment', function()
     it('should delegate to view_utils.get_hunk_alignment', function()
       local view = StatusDiffView()
@@ -2645,10 +2546,6 @@ describe('StatusDiffView:', function()
       assert.is_true(valid[alignment] ~= nil)
     end)
   end)
-
-  -- ============================================================================
-  -- MOVE_TO DELEGATION
-  -- ============================================================================
   describe('move_to', function()
     it('should delegate to tree_component:move_to', function()
       local view = StatusDiffView()

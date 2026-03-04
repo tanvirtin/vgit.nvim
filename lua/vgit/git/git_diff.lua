@@ -1,5 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
+local GitHunk = lazy('vgit.git.GitHunk')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_diff = {}
@@ -7,14 +8,6 @@ local git_diff = {}
 local function detect_filetype(filename)
   if not filename or filename == '' then return 'text' end
   return vim.filetype.match({ filename = filename }) or 'text'
-end
-
-local function parse_hunk_header_lnums(header)
-  local new_start, new_count = header:match('^@@ %-%d+[,%d]* %+(%d+),?(%d*)')
-  new_start = tonumber(new_start) or 1
-  new_count = tonumber(new_count)
-  if new_count == nil then new_count = 1 end
-  return new_start, new_start + math.max(new_count - 1, 0)
 end
 
 local function parse_hunk_entries(lines)
@@ -36,12 +29,7 @@ local function parse_hunk_entries(lines)
 
     entries[#entries + 1] = {
       type = 'hunk',
-      hunk = {
-        header = current_hunk.header,
-        diff = current_hunk.diff,
-        top = current_hunk.top,
-        bot = current_hunk.bot,
-      },
+      hunk = current_hunk,
       filetype = filetype,
       filename = filename,
     }
@@ -73,11 +61,10 @@ local function parse_hunk_entries(lines)
     elseif line:match('^@@ ') then
       flush_hunk()
       local hunk_header = line:match('^(@@ .+ @@.*)$') or line
-      local top, bot = parse_hunk_header_lnums(hunk_header)
-      current_hunk = { header = hunk_header, diff = {}, top = top, bot = bot }
+      current_hunk = GitHunk(hunk_header)
     elseif current_hunk then
       local prefix = line:sub(1, 1)
-      if prefix == '+' or prefix == '-' or prefix == ' ' then current_hunk.diff[#current_hunk.diff + 1] = line end
+      if prefix == '+' or prefix == '-' or prefix == ' ' then current_hunk:push(line) end
     end
   end
 

@@ -516,10 +516,6 @@ describe('ProjectDiffView:', function()
       eq(1, cleanup2_calls)
     end)
   end)
-
-  -- ==========================================================================
-  -- HUNK NAVIGATION
-  -- ==========================================================================
   describe('Hunk Navigation', function()
     describe('_get_current_mark_index', function()
       it('should return nil,0 when no marks', function()

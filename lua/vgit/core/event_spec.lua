@@ -134,6 +134,87 @@ describe('event:', function()
     end)
   end)
 
+  describe('debounce_trailing', function()
+    it('should NOT execute first call immediately', function()
+      local call_count = 0
+      local debounced, cleanup = event.debounce_trailing(function()
+        call_count = call_count + 1
+      end, 50)
+
+      debounced()
+      assert.are.equal(0, call_count)
+
+      vim.wait(200, function()
+        return call_count >= 1
+      end, 10)
+      assert.are.equal(1, call_count)
+
+      cleanup()
+    end)
+
+    it('should only fire once after rapid calls', function()
+      local call_count = 0
+      local debounced, cleanup = event.debounce_trailing(function()
+        call_count = call_count + 1
+      end, 50)
+
+      debounced()
+      debounced()
+      debounced()
+      assert.are.equal(0, call_count)
+
+      vim.wait(200, function()
+        return call_count >= 1
+      end, 10)
+      assert.are.equal(1, call_count)
+
+      cleanup()
+    end)
+
+    it('should forward the last arguments', function()
+      local received_args = {}
+      local debounced, cleanup = event.debounce_trailing(function(a, b)
+        received_args = { a, b }
+      end, 50)
+
+      debounced('first', 1)
+      debounced('second', 2)
+      debounced('last', 3)
+
+      vim.wait(200, function()
+        return #received_args > 0
+      end, 10)
+      assert.are.same({ 'last', 3 }, received_args)
+
+      cleanup()
+    end)
+
+    it('cleanup should cancel pending invocation', function()
+      local call_count = 0
+      local debounced, cleanup = event.debounce_trailing(function()
+        call_count = call_count + 1
+      end, 50)
+
+      debounced()
+      cleanup()
+
+      vim.wait(150, function()
+        return false
+      end, 10)
+      assert.are.equal(0, call_count)
+    end)
+  end)
+
+  describe('debounce_trailing_async', function()
+    it('should return debounced function and cleanup function', function()
+      local debounced, cleanup = event.debounce_trailing_async(function() end, 100)
+
+      assert.is_function(debounced)
+      assert.is_function(cleanup)
+      cleanup()
+    end)
+  end)
+
   describe('custom_on cleanup', function()
     it('should remove autocmd when cleanup is called', function()
       local call_count = 0

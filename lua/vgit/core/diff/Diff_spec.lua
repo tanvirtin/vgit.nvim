@@ -1052,11 +1052,6 @@ describe('Diff:', function()
       invariants.assert_split_diff(result)
     end)
   end)
-
-  -- ============================================================================
-  -- ADVERSARIAL EDGE CASES
-  -- Designed to probe boundary conditions and stress internal bookkeeping.
-  -- ============================================================================
   describe('adversarial unified edge cases', function()
     local invariants = require('tests.helpers.diff_invariants')
 

@@ -1228,7 +1228,7 @@ function StatusDiffView:_create_entries_view(data)
     if item and item.entry and item.entry.status then self:open_file() end
   end)
 
-  local on_move_fn, on_move_cleanup = event.debounce_async(function(item)
+  local on_move_fn, on_move_cleanup = event.debounce_trailing_async(function(item)
     self:_handle_file_selection_change(item)
   end, self.DEBOUNCE_MS)
 

@@ -189,6 +189,40 @@ function event.debounce_async(fn, ms)
   return event.debounce(event.async(fn), ms)
 end
 
+function event.debounce_trailing(fn, ms)
+  local args, argc
+  local timer = nil
+
+  local function close_timer()
+    if timer and not timer:is_closing() then timer:close() end
+    timer = nil
+  end
+
+  local debounced = function(...)
+    args = { ... }
+    argc = select('#', ...)
+
+    close_timer()
+    timer = vim.loop.new_timer()
+    timer:start(ms, 0, function()
+      close_timer()
+      vim.schedule(function()
+        fn(unpack(args, 1, argc))
+      end)
+    end)
+  end
+
+  local cleanup = function()
+    close_timer()
+  end
+
+  return debounced, cleanup
+end
+
+function event.debounce_trailing_async(fn, ms)
+  return event.debounce_trailing(event.async(fn), ms)
+end
+
 local function _start_watcher()
   if _handle then
     pcall(function()

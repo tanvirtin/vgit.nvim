@@ -1,46 +1,9 @@
 local eq = assert.are.same
-
--- Mock the event module to avoid async issues in tests
-local mock_event = {
-  await = function() end,
-  async = function(fn)
-    return fn
-  end,
-  debounce = function(fn)
-    return fn, function() end
-  end,
-  debounce_async = function(fn)
-    return fn, function() end
-  end,
-  on = function() end,
-  emit = function() end,
-  custom_on = function()
-    return function() end
-  end,
-  buffer_on = function() end,
-  promisify = function(fn)
-    return fn
-  end,
-  group = 'VGitGroup',
-  register_module = function() end,
-}
-
-package.loaded['vgit.core.event'] = mock_event
+local mock_event = require('tests.helpers.mock_event').install()
 
 describe('BranchView:', function()
   local BranchView
-  local original_packages = {}
-
-  local function save_package(name)
-    original_packages[name] = package.loaded[name]
-  end
-
-  local function restore_packages()
-    for name, module in pairs(original_packages) do
-      package.loaded[name] = module
-    end
-    original_packages = {}
-  end
+  local save_package, restore_packages = require('tests.helpers.package_mock').create()
 
   before_each(function()
     package.loaded['vgit.features.screens.BranchView'] = nil
@@ -51,10 +14,6 @@ describe('BranchView:', function()
     restore_packages()
     package.loaded['vgit.core.event'] = mock_event
   end)
-
-  -- ============================================================================
-  -- CONSTRUCTOR
-  -- ============================================================================
   describe('constructor', function()
     it('should initialize search_component as nil', function()
       local view = BranchView()
@@ -66,10 +25,6 @@ describe('BranchView:', function()
       assert.is_false(view._destroyed)
     end)
   end)
-
-  -- ============================================================================
-  -- _build_items
-  -- ============================================================================
   describe('_build_items', function()
     it('should convert branches to items', function()
       local view = BranchView()
@@ -135,10 +90,6 @@ describe('BranchView:', function()
       eq('my-branch', items[1].value)
     end)
   end)
-
-  -- ============================================================================
-  -- create
-  -- ============================================================================
   describe('create', function()
     it('should return false for nil data', function()
       local view = BranchView()
@@ -162,10 +113,6 @@ describe('BranchView:', function()
       assert.is_false(view:create({ branches = {} }))
     end)
   end)
-
-  -- ============================================================================
-  -- _on_no_match
-  -- ============================================================================
   describe('_on_no_match', function()
     local function setup_mocks(opts)
       opts = opts or {}
@@ -343,10 +290,6 @@ describe('BranchView:', function()
       eq('not a git repository', error_msg)
     end)
   end)
-
-  -- ============================================================================
-  -- _on_select
-  -- ============================================================================
   describe('_on_select', function()
     it('should checkout the selected branch', function()
       local checkout_name = nil
@@ -496,10 +439,6 @@ describe('BranchView:', function()
       assert.is_false(checkout_called)
     end)
   end)
-
-  -- ============================================================================
-  -- destroy
-  -- ============================================================================
   describe('destroy', function()
     it('should set destroyed to true', function()
       local view = BranchView()
