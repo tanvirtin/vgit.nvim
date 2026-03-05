@@ -439,12 +439,12 @@ function PatchPreviewComponent:get_initial_state()
 end
 
 function PatchPreviewComponent:should_component_update(next_props)
-  if self.props.hunk_entries ~= next_props.hunk_entries then return true end
-  return false
+  return self.props.hunk_entries ~= next_props.hunk_entries
 end
 
 function PatchPreviewComponent:component_did_mount()
   self:render()
+  self:_ensure_renderer_attached()
 end
 
 function PatchPreviewComponent:component_did_update()
@@ -738,9 +738,7 @@ function PatchPreviewComponent:set_lines(lines)
 end
 
 function PatchPreviewComponent:clear_lines()
-  self:with_element(function(el)
-    el:clear_lines()
-  end)
+  ViewportComponent.clear(self)
   self.state.lines = {}
   self.state.line_metadata = {}
   return self

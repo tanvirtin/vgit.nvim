@@ -48,6 +48,7 @@ end
 
 function DiffComponent:component_did_mount()
   self:render()
+  self:_ensure_renderer_attached()
 end
 
 function DiffComponent:component_did_update(prev_state)
@@ -166,9 +167,7 @@ function DiffComponent:get_lines()
 end
 
 function DiffComponent:clear_lines()
-  self:with_element(function(el)
-    el:clear_lines()
-  end)
+  ViewportComponent.clear(self)
   self:set_state({ lines = {} })
   return self
 end

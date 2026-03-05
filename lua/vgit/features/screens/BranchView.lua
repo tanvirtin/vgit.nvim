@@ -1,8 +1,10 @@
 local lazy = require('vgit.core.lazy')
 
+local Layout = lazy('vgit.ui.Layout')
 local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
+local ComponentManager = lazy('vgit.ui.ComponentManager')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
 local BranchView = Object:extend()
@@ -10,6 +12,7 @@ local BranchView = Object:extend()
 function BranchView:constructor()
   return {
     _search_component = nil,
+    _component_manager = nil,
     _destroyed = false,
   }
 end
@@ -52,12 +55,12 @@ function BranchView:create(data)
       self:_on_no_match(query)
     end,
     on_close = function()
-      self._destroyed = true
-      self._search_component = nil
+      self:destroy()
     end,
   })
 
-  self._search_component:mount()
+  self._component_manager = ComponentManager()
+  self._component_manager:render(Layout.popup(self._search_component))
 
   return true
 end
@@ -121,10 +124,12 @@ function BranchView:destroy()
 
   self._destroyed = true
 
-  if self._search_component then
-    self._search_component:close()
-    self._search_component = nil
+  if self._component_manager then
+    self._component_manager:destroy()
+    self._component_manager = nil
   end
+
+  self._search_component = nil
 end
 
 return BranchView

@@ -30,6 +30,7 @@ local LiveConflict = lazy('vgit.features.buffer.LiveConflict')
 local file_diff_view_setting = lazy('vgit.settings.file_diff_view')
 local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
 local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
+local worktree_view_setting = lazy('vgit.settings.worktree_view')
 
 local hunks = Hunks()
 local conflicts = Conflicts()
@@ -153,6 +154,7 @@ local function configure_settings(config)
   file_diff_view_setting:assign(config_settings.file_diff_view)
   status_diff_view_setting:assign(config_settings.status_diff_view)
   project_diff_view_setting:assign(config_settings.project_diff_view)
+  worktree_view_setting:assign(config_settings.worktree_view)
 end
 
 local controller = {}
@@ -217,6 +219,7 @@ controller.execute_command = event.async(function(args)
     branch = true,
     debug = true,
     stash = true,
+    worktree = true,
   }
 
   if porcelain_commands[cmd] then

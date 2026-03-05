@@ -39,7 +39,23 @@ function git_repo.discover(filepath, opts)
 
   if git_dirname == true then return dirname end
 
-  local result = dirname:gsub('%.git/?$', ''):gsub('/+$', '')
+  local repo_ptr = ffi.new('git_repository*[1]')
+  local open_ret = libgit2.cli.git_repository_open_ext(repo_ptr, dirname, 0, nil)
+  if open_ret ~= 0 then
+    local result = dirname:gsub('%.git/?$', ''):gsub('/+$', '')
+    return result
+  end
+
+  local workdir = libgit2.cli.git_repository_workdir(repo_ptr[0])
+
+  if workdir == nil then
+    libgit2.cli.git_repository_free(repo_ptr[0])
+    local result = dirname:gsub('%.git/?$', ''):gsub('/+$', '')
+    return result
+  end
+
+  local result = ffi.string(workdir):gsub('/+$', '')
+  libgit2.cli.git_repository_free(repo_ptr[0])
   return result
 end
 

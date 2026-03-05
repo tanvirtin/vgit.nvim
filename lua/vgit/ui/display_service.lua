@@ -11,6 +11,7 @@ local BranchView = lazy('vgit.features.screens.BranchView')
 local FileDiffView = lazy('vgit.features.screens.FileDiffView')
 local StatusDiffView = lazy('vgit.features.screens.StatusDiffView')
 local ProjectDiffView = lazy('vgit.features.screens.ProjectDiffView')
+local WorktreeView = lazy('vgit.features.screens.WorktreeView')
 local CommitPickerView = lazy('vgit.features.screens.CommitPickerView')
 
 local active_view = nil
@@ -177,6 +178,28 @@ display_service.show_stash = event.async(function(data)
   local success = view:create(data)
   if not success then
     console.error('Failed to create stash view')
+    return
+  end
+  active_view = view
+end)
+
+display_service.show_worktree = event.async(function(data)
+  if not data then
+    console.error('No worktree data')
+    return
+  end
+
+  if active_view and active_view.destroy then
+    active_view:destroy()
+    active_view = nil
+  end
+
+  event.await()
+
+  local view = WorktreeView()
+  local success = view:create(data)
+  if not success then
+    console.error('Failed to create worktree view')
     return
   end
   active_view = view

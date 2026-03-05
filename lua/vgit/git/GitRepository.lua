@@ -8,9 +8,12 @@ local Object = lazy('vgit.core.Object')
 local GitFile = lazy('vgit.git.GitFile')
 local GitBlob = lazy('vgit.git.GitBlob')
 local GitTree = lazy('vgit.git.GitTree')
+local git_log = lazy('vgit.git.git_log')
+local git_show = lazy('vgit.git.git_show')
 local GitIndex = lazy('vgit.git.GitIndex')
 local git_repo = lazy('vgit.git.git_repo')
 local DiffBuilder = lazy('vgit.core.diff')
+local git_stash = lazy('vgit.git.git_stash')
 local git_merge = lazy('vgit.git.git_merge')
 local assertion = lazy('vgit.core.assertion')
 local git_status = lazy('vgit.git.git_status')
@@ -20,10 +23,8 @@ local git_cherry = lazy('vgit.git.git_cherry')
 local git_revert = lazy('vgit.git.git_revert')
 local git_bisect = lazy('vgit.git.git_bisect')
 local GitHistory = lazy('vgit.git.GitHistory')
-local git_log = lazy('vgit.git.git_log')
-local git_show = lazy('vgit.git.git_show')
-local git_stash = lazy('vgit.git.git_stash')
 local git_blame_mod = lazy('vgit.git.git_blame')
+local git_worktree = lazy('vgit.git.git_worktree')
 local GitRemote_class = lazy('vgit.git.GitRemote')
 local git_submodule = lazy('vgit.git.git_submodule')
 local GitWorkingTree = lazy('vgit.git.GitWorkingTree')
@@ -490,6 +491,32 @@ function GitRepository:unstage_all()
   return index:reset()
 end
 
+function GitRepository:_get_worktree_dirs()
+  local worktrees, err = git_worktree.list(self._path)
+  if err or not worktrees then return {} end
+
+  local repo_path = vim.fn.resolve(self._path)
+  local dirs = {}
+
+  for _, wt in ipairs(worktrees) do
+    local wt_path = vim.fn.resolve(wt.path)
+    if wt_path ~= repo_path and vim.startswith(wt_path, repo_path) then
+      local relative = wt_path:sub(#repo_path + 1)
+      if relative:sub(1, 1) == '/' then relative = relative:sub(2) end
+      if relative ~= '' then dirs[#dirs + 1] = relative end
+    end
+  end
+
+  return dirs
+end
+
+function GitRepository:_is_worktree_path(filename, worktree_dirs)
+  for _, dir in ipairs(worktree_dirs) do
+    if filename == dir or vim.startswith(filename, dir .. '/') then return true end
+  end
+  return false
+end
+
 function GitRepository:status(opts)
   opts = opts or {}
   assertion.assert(self:is_valid(), 'Project has no .git folder')
@@ -505,11 +532,14 @@ function GitRepository:status(opts)
   local statuses, err = working_tree:status()
   if err then return nil, err end
 
+  local worktree_dirs = self:_get_worktree_dirs()
+
   local staged_files = {}
   local changed_files = {}
   local unmerged_files = {}
 
   utils.list.each(statuses, function(status)
+    if self:_is_worktree_path(status.filename, worktree_dirs) then return end
     if status:is_unmerged() then
       local id = utils.math.uuid()
       local data = { id = id, status = status, type = 'unmerged' }
@@ -592,6 +622,28 @@ end
 function GitRepository:diff_tree(opts)
   self:_ensure_initialized()
   return git_status.tree(self._path, opts)
+end
+
+function GitRepository:worktree_list()
+  self:_ensure_initialized()
+  return git_worktree.list(self._path)
+end
+
+function GitRepository:worktree_add(path, opts)
+  assertion.assert(path, 'path is required')
+  self:_ensure_initialized()
+  return git_worktree.add(self._path, path, opts)
+end
+
+function GitRepository:worktree_remove(path, opts)
+  assertion.assert(path, 'path is required')
+  self:_ensure_initialized()
+  return git_worktree.remove(self._path, path, opts)
+end
+
+function GitRepository:worktree_prune()
+  self:_ensure_initialized()
+  return git_worktree.prune(self._path)
 end
 
 function GitRepository:stash_add()
