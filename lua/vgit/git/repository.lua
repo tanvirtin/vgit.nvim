@@ -16,7 +16,6 @@ function repository.current()
 end
 
 function repository.invalidate()
-  if _instance then _instance:reset() end
   _instance = nil
 end
 

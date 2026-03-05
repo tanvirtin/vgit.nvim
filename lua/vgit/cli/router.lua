@@ -14,6 +14,7 @@ local COMMAND_MAP = {
   log = 'vgit.cli.commands.log',
   debug = 'vgit.cli.commands.debug',
   stash = 'vgit.cli.commands.stash',
+  worktree = 'vgit.cli.commands.worktree',
 }
 
 function router.execute(args)
