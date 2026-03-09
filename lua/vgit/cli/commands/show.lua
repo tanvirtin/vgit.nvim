@@ -2,6 +2,7 @@ local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
+local GitTree = lazy('vgit.git.GitTree')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
