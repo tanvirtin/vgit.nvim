@@ -93,7 +93,9 @@ describe('LoadingIndicator:', function()
     it('should do nothing when element is invalid', function()
       local indicator = LoadingIndicator()
       indicator:render({
-        is_valid = function() return false end,
+        is_valid = function()
+          return false
+        end,
       })
     end)
 
@@ -101,11 +103,19 @@ describe('LoadingIndicator:', function()
       local indicator = LoadingIndicator()
       local set_lines_data = nil
       local mock_element = {
-        is_valid = function() return true end,
+        is_valid = function()
+          return true
+        end,
         clear_extmark_highlights = function() end,
-        get_height = function() return 10 end,
-        get_width = function() return 40 end,
-        set_lines = function(_, lines) set_lines_data = lines end,
+        get_height = function()
+          return 10
+        end,
+        get_width = function()
+          return 40
+        end,
+        set_lines = function(_, lines)
+          set_lines_data = lines
+        end,
         place_extmark_highlight = function() end,
       }
 
@@ -119,11 +129,19 @@ describe('LoadingIndicator:', function()
       local indicator = LoadingIndicator()
       local set_lines_data = nil
       local mock_element = {
-        is_valid = function() return true end,
+        is_valid = function()
+          return true
+        end,
         clear_extmark_highlights = function() end,
-        get_height = function() return 11 end,
-        get_width = function() return 40 end,
-        set_lines = function(_, lines) set_lines_data = lines end,
+        get_height = function()
+          return 11
+        end,
+        get_width = function()
+          return 40
+        end,
+        set_lines = function(_, lines)
+          set_lines_data = lines
+        end,
         place_extmark_highlight = function() end,
       }
 
@@ -143,11 +161,19 @@ describe('LoadingIndicator:', function()
       local indicator = LoadingIndicator()
       local set_lines_data = nil
       local mock_element = {
-        is_valid = function() return true end,
+        is_valid = function()
+          return true
+        end,
         clear_extmark_highlights = function() end,
-        get_height = function() return 1 end,
-        get_width = function() return 40 end,
-        set_lines = function(_, lines) set_lines_data = lines end,
+        get_height = function()
+          return 1
+        end,
+        get_width = function()
+          return 40
+        end,
+        set_lines = function(_, lines)
+          set_lines_data = lines
+        end,
         place_extmark_highlight = function() end,
       }
 
@@ -165,12 +191,20 @@ describe('LoadingIndicator:', function()
       local indicator = LoadingIndicator()
       local highlight_data = nil
       local mock_element = {
-        is_valid = function() return true end,
+        is_valid = function()
+          return true
+        end,
         clear_extmark_highlights = function() end,
-        get_height = function() return 5 end,
-        get_width = function() return 40 end,
+        get_height = function()
+          return 5
+        end,
+        get_width = function()
+          return 40
+        end,
         set_lines = function() end,
-        place_extmark_highlight = function(_, opts) highlight_data = opts end,
+        place_extmark_highlight = function(_, opts)
+          highlight_data = opts
+        end,
       }
 
       indicator:render(mock_element)
@@ -187,10 +221,18 @@ describe('LoadingIndicator:', function()
       local indicator = LoadingIndicator()
       local clear_called = false
       local mock_element = {
-        is_valid = function() return true end,
-        clear_extmark_highlights = function() clear_called = true end,
-        get_height = function() return 5 end,
-        get_width = function() return 40 end,
+        is_valid = function()
+          return true
+        end,
+        clear_extmark_highlights = function()
+          clear_called = true
+        end,
+        get_height = function()
+          return 5
+        end,
+        get_width = function()
+          return 40
+        end,
         set_lines = function() end,
         place_extmark_highlight = function() end,
       }

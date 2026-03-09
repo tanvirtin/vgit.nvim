@@ -282,8 +282,12 @@ describe('StashView:', function()
     it('should set _current_commit', function()
       local view = StashView()
       view._repo = {
-        get_path = function() return '/tmp/repo' end,
-        diff = function() return {} end,
+        get_path = function()
+          return '/tmp/repo'
+        end,
+        diff = function()
+          return {}
+        end,
       }
       local commit = make_commit('stash@{0}')
       view:_update_patch(commit)
@@ -293,8 +297,12 @@ describe('StashView:', function()
     it('should increment _update_gen', function()
       local view = StashView()
       view._repo = {
-        get_path = function() return '/tmp/repo' end,
-        diff = function() return {} end,
+        get_path = function()
+          return '/tmp/repo'
+        end,
+        diff = function()
+          return {}
+        end,
       }
       eq(0, view._update_gen)
       view:_update_patch(make_commit('stash@{0}'))
@@ -309,8 +317,12 @@ describe('StashView:', function()
         { filename = 'a.lua', filetype = 'lua', diff = {}, original_lines = {}, current_lines = {} },
       }
       view._repo = {
-        get_path = function() return '/tmp/repo' end,
-        diff = function() return mock_entries end,
+        get_path = function()
+          return '/tmp/repo'
+        end,
+        diff = function()
+          return mock_entries
+        end,
       }
 
       view:_update_patch(make_commit('stash@{0}'))
@@ -322,7 +334,9 @@ describe('StashView:', function()
       local view = StashView()
       local call_count = 0
       view._repo = {
-        get_path = function() return '/tmp/repo' end,
+        get_path = function()
+          return '/tmp/repo'
+        end,
         diff = function()
           call_count = call_count + 1
           return {}
@@ -375,8 +389,12 @@ describe('StashView:', function()
       local commit = make_commit('stash@{0}')
       view._current_commit = commit
       view._search_component = {
-        is_valid = function() return true end,
-        get_selected_item = function() return nil end,
+        is_valid = function()
+          return true
+        end,
+        get_selected_item = function()
+          return nil
+        end,
       }
       eq(commit, view:_get_current_commit())
     end)
@@ -387,7 +405,9 @@ describe('StashView:', function()
       local selected = make_commit('stash@{0}')
       view._current_commit = fallback
       view._search_component = {
-        is_valid = function() return true end,
+        is_valid = function()
+          return true
+        end,
         get_selected_item = function()
           return { value = { type = 'stash', commit = selected } }
         end,
@@ -442,7 +462,11 @@ describe('StashView:', function()
       local cleanup_called = false
       local view = StashView()
       view._component_manager = { destroy = function() end }
-      view._debounce_cleanups = { function() cleanup_called = true end }
+      view._debounce_cleanups = {
+        function()
+          cleanup_called = true
+        end,
+      }
 
       view:destroy()
       assert.is_true(cleanup_called)

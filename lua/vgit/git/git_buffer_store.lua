@@ -2,7 +2,6 @@ local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
 local utils = lazy('vgit.core.utils')
-local Buffer = lazy('vgit.core.Buffer')
 local buffers_module = lazy('vgit.core.buffers')
 local console = lazy('vgit.core.console')
 local git_repo = lazy('vgit.git.git_repo')

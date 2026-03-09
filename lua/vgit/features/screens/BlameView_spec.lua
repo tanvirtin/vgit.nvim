@@ -43,7 +43,9 @@ describe('BlameView:', function()
         results[view:_get_author_hl(name)] = true
       end
       local count = 0
-      for _ in pairs(results) do count = count + 1 end
+      for _ in pairs(results) do
+        count = count + 1
+      end
       assert.is_true(count >= 2)
     end)
   end)
@@ -177,8 +179,12 @@ describe('BlameView:', function()
       view._content_component = {
         with_element = function(_, fn)
           return fn({
-            get_lnum = function() return 1 end,
-            set_lnum = function(_, lnum) set_lnum_value = lnum end,
+            get_lnum = function()
+              return 1
+            end,
+            set_lnum = function(_, lnum)
+              set_lnum_value = lnum
+            end,
           })
         end,
       }
@@ -197,8 +203,12 @@ describe('BlameView:', function()
       view._content_component = {
         with_element = function(_, fn)
           return fn({
-            get_lnum = function() return 3 end,
-            set_lnum = function(_, lnum) set_lnum_value = lnum end,
+            get_lnum = function()
+              return 3
+            end,
+            set_lnum = function(_, lnum)
+              set_lnum_value = lnum
+            end,
           })
         end,
       }
@@ -217,8 +227,12 @@ describe('BlameView:', function()
       view._content_component = {
         with_element = function(_, fn)
           return fn({
-            get_lnum = function() return 5 end,
-            set_lnum = function(_, lnum) set_lnum_value = lnum end,
+            get_lnum = function()
+              return 5
+            end,
+            set_lnum = function(_, lnum)
+              set_lnum_value = lnum
+            end,
           })
         end,
       }
@@ -236,8 +250,12 @@ describe('BlameView:', function()
       view._content_component = {
         with_element = function(_, fn)
           return fn({
-            get_lnum = function() return 2 end,
-            set_lnum = function(_, lnum) set_lnum_value = lnum end,
+            get_lnum = function()
+              return 2
+            end,
+            set_lnum = function(_, lnum)
+              set_lnum_value = lnum
+            end,
           })
         end,
       }
@@ -269,8 +287,12 @@ describe('BlameView:', function()
       view._content_component = {
         with_element = function(_, fn)
           return fn({
-            get_lnum = function() return 6 end,
-            set_lnum = function(_, lnum) set_lnum_value = lnum end,
+            get_lnum = function()
+              return 6
+            end,
+            set_lnum = function(_, lnum)
+              set_lnum_value = lnum
+            end,
           })
         end,
       }
@@ -290,8 +312,12 @@ describe('BlameView:', function()
       view._content_component = {
         with_element = function(_, fn)
           return fn({
-            get_lnum = function() return 7 end,
-            set_lnum = function(_, lnum) set_lnum_value = lnum end,
+            get_lnum = function()
+              return 7
+            end,
+            set_lnum = function(_, lnum)
+              set_lnum_value = lnum
+            end,
           })
         end,
       }
@@ -310,8 +336,12 @@ describe('BlameView:', function()
       view._content_component = {
         with_element = function(_, fn)
           return fn({
-            get_lnum = function() return 1 end,
-            set_lnum = function(_, lnum) set_lnum_value = lnum end,
+            get_lnum = function()
+              return 1
+            end,
+            set_lnum = function(_, lnum)
+              set_lnum_value = lnum
+            end,
           })
         end,
       }
@@ -342,8 +372,12 @@ describe('BlameView:', function()
     it('should call all debounce cleanup functions', function()
       local called = 0
       view._debounce_cleanups = {
-        function() called = called + 1 end,
-        function() called = called + 1 end,
+        function()
+          called = called + 1
+        end,
+        function()
+          called = called + 1
+        end,
       }
 
       view:destroy()
@@ -359,7 +393,9 @@ describe('BlameView:', function()
     it('should destroy component manager if present', function()
       local destroyed = false
       view._component_manager = {
-        destroy = function() destroyed = true end,
+        destroy = function()
+          destroyed = true
+        end,
       }
       view:destroy()
       assert.is_true(destroyed)

@@ -343,8 +343,12 @@ function StashView:setup_keymaps()
     if key then self:_set_keymap_all_diff_components('n', key, mapping.fn) end
   end
 
-  local down_fn = event.async(function() self:hunk_down() end)
-  local up_fn = event.async(function() self:hunk_up() end)
+  local down_fn = event.async(function()
+    self:hunk_down()
+  end)
+  local up_fn = event.async(function()
+    self:hunk_up()
+  end)
 
   local down_key = self:get_key(hunks_keymaps.down)
   if down_key then self:_set_keymap_all_diff_components('n', down_key, down_fn) end
@@ -372,7 +376,9 @@ function StashView:_create_search_component(items)
     height = self.SEARCH_HEIGHT,
     placeholder = 'No stashes found',
     on_move = on_move_fn,
-    on_close = function() self:destroy() end,
+    on_close = function()
+      self:destroy()
+    end,
   })
 end
 
