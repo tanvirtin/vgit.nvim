@@ -88,7 +88,11 @@ describe('LiveBlame:', function()
       local original_for_each = git_buffer_store.for_each
       git_buffer_store.for_each = function(callback)
         for _ = 1, 3 do
-          callback({ clear_blames = function() cleared = cleared + 1 end })
+          callback({
+            clear_blames = function()
+              cleared = cleared + 1
+            end,
+          })
         end
       end
 

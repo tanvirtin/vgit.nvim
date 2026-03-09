@@ -174,12 +174,10 @@ function DiffView:render_line_diff(component_type, line_changes, lnum)
 
   if change_type ~= 'void' then line_number_hl = main_signs[change_type] end
 
-  if sign_name then
-    component:place_extmark_sign({
-      col = lnum - 1,
-      name = sign_name,
-    })
-  end
+  if sign_name then component:place_extmark_sign({
+    col = lnum - 1,
+    name = sign_name,
+  }) end
 
   if change_type == 'void' then
     local text = string.rep(symbols_setting:get('void'), component.window:get_width())
@@ -220,11 +218,7 @@ function DiffView:render_diff(top, bot)
 end
 
 function DiffView:render_unified_conflicts(conflicts)
-  local component = self.scene:get('current')
-
-  utils.list.each(conflicts, function(conflict)
-
-  end)
+  utils.list.each(conflicts, function(_conflict) end)
 end
 
 function DiffView:reset_cursor()

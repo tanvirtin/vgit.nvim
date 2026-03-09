@@ -25,19 +25,15 @@ describe('highlight:', function()
         bg = '#3b4261',
       })
 
-      assert.stub(vim.api.nvim_exec).was.called_with(
-        'highlight VGitTest gui = NONE guifg = #bb9af7 guibg = #3b4261 ',
-        false
-      )
+      assert
+        .stub(vim.api.nvim_exec).was
+        .called_with('highlight VGitTest gui = NONE guifg = #bb9af7 guibg = #3b4261 ', false)
     end)
 
     it('should use NONE for missing fg/bg/gui fields', function()
       highlight.define('VGitTest', {})
 
-      assert.stub(vim.api.nvim_exec).was.called_with(
-        'highlight VGitTest gui = NONE guifg = NONE guibg = NONE ',
-        false
-      )
+      assert.stub(vim.api.nvim_exec).was.called_with('highlight VGitTest gui = NONE guifg = NONE guibg = NONE ', false)
     end)
 
     it('should include gui value when provided', function()
@@ -46,10 +42,9 @@ describe('highlight:', function()
         gui = 'bold',
       })
 
-      assert.stub(vim.api.nvim_exec).was.called_with(
-        'highlight VGitTest gui = bold guifg = #ffffff guibg = NONE ',
-        false
-      )
+      assert
+        .stub(vim.api.nvim_exec).was
+        .called_with('highlight VGitTest gui = bold guifg = #ffffff guibg = NONE ', false)
     end)
 
     it('should include guisp when sp is provided', function()
@@ -58,10 +53,9 @@ describe('highlight:', function()
         sp = '#ff0000',
       })
 
-      assert.stub(vim.api.nvim_exec).was.called_with(
-        'highlight VGitTest gui = NONE guifg = #ffffff guibg = NONE guisp = #ff0000',
-        false
-      )
+      assert
+        .stub(vim.api.nvim_exec).was
+        .called_with('highlight VGitTest gui = NONE guifg = #ffffff guibg = NONE guisp = #ff0000', false)
     end)
 
     it('should use default keyword when override is false', function()
@@ -70,10 +64,9 @@ describe('highlight:', function()
         override = false,
       })
 
-      assert.stub(vim.api.nvim_exec).was.called_with(
-        'highlight default VGitTest gui = NONE guifg = #ffffff guibg = NONE ',
-        false
-      )
+      assert
+        .stub(vim.api.nvim_exec).was
+        .called_with('highlight default VGitTest gui = NONE guifg = #ffffff guibg = NONE ', false)
     end)
 
     it('should not use default keyword when override is not false', function()
@@ -81,10 +74,9 @@ describe('highlight:', function()
         fg = '#ffffff',
       })
 
-      assert.stub(vim.api.nvim_exec).was.called_with(
-        'highlight VGitTest gui = NONE guifg = #ffffff guibg = NONE ',
-        false
-      )
+      assert
+        .stub(vim.api.nvim_exec).was
+        .called_with('highlight VGitTest gui = NONE guifg = #ffffff guibg = NONE ', false)
     end)
 
     it('should call function and use result as table', function()
@@ -92,10 +84,9 @@ describe('highlight:', function()
         return { fg = '#aabbcc', bg = '#112233' }
       end)
 
-      assert.stub(vim.api.nvim_exec).was.called_with(
-        'highlight VGitTest gui = NONE guifg = #aabbcc guibg = #112233 ',
-        false
-      )
+      assert
+        .stub(vim.api.nvim_exec).was
+        .called_with('highlight VGitTest gui = NONE guifg = #aabbcc guibg = #112233 ', false)
     end)
 
     it('should return highlight module for chaining', function()
@@ -135,7 +126,9 @@ describe('highlight:', function()
 
     it('should invoke dependency if provided', function()
       local called = false
-      highlight.register_module(function() called = true end)
+      highlight.register_module(function()
+        called = true
+      end)
 
       assert.is_true(called)
     end)

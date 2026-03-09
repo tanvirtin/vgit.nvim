@@ -12,9 +12,7 @@ local function parse_porcelain(lines)
     local line = lines[i]
 
     if line == '' then
-      if current.path then
-        worktrees[#worktrees + 1] = current
-      end
+      if current.path then worktrees[#worktrees + 1] = current end
       current = {}
     else
       local key, value = line:match('^(%S+)%s*(.*)')
@@ -36,9 +34,7 @@ local function parse_porcelain(lines)
     end
   end
 
-  if current.path then
-    worktrees[#worktrees + 1] = current
-  end
+  if current.path then worktrees[#worktrees + 1] = current end
 
   return worktrees
 end
@@ -59,9 +55,7 @@ function git_worktree.add(reponame, path, opts)
   opts = opts or {}
   local args = { 'worktree', 'add' }
 
-  if opts.detach then
-    args[#args + 1] = '--detach'
-  end
+  if opts.detach then args[#args + 1] = '--detach' end
 
   if opts.new_branch then
     args[#args + 1] = '-b'
@@ -70,9 +64,7 @@ function git_worktree.add(reponame, path, opts)
 
   args[#args + 1] = path
 
-  if opts.branch then
-    args[#args + 1] = opts.branch
-  end
+  if opts.branch then args[#args + 1] = opts.branch end
 
   return GitQueryBuilder(reponame):raw_args(unpack(args)):execute()
 end
@@ -84,9 +76,7 @@ function git_worktree.remove(reponame, path, opts)
   opts = opts or {}
   local args = { 'worktree', 'remove' }
 
-  if opts.force then
-    args[#args + 1] = '--force'
-  end
+  if opts.force then args[#args + 1] = '--force' end
 
   args[#args + 1] = path
 

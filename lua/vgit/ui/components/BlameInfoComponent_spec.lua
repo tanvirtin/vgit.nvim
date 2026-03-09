@@ -45,10 +45,14 @@ describe('BlameInfoComponent:', function()
         author = 'Alice',
         author_mail = 'alice@example.com',
         author_time = 1700000000,
-        age = function() return { display = '2 months ago' } end,
+        age = function()
+          return { display = '2 months ago' }
+        end,
       }
       if overrides then
-        for k, v in pairs(overrides) do blame[k] = v end
+        for k, v in pairs(overrides) do
+          blame[k] = v
+        end
       end
       return blame
     end
@@ -61,7 +65,9 @@ describe('BlameInfoComponent:', function()
     it('should render commit hash on line 1', function()
       local blame = make_blame()
       local component = mount_component({ blame = blame })
-      local lines = component:with_element(function(el) return el:get_lines() end)
+      local lines = component:with_element(function(el)
+        return el:get_lines()
+      end)
 
       eq(blame.commit_hash, lines[1])
     end)
@@ -69,7 +75,9 @@ describe('BlameInfoComponent:', function()
     it('should render parent -> hash format when parent_hash exists', function()
       local blame = make_blame({ parent_hash = 'parent123' })
       local component = mount_component({ blame = blame })
-      local lines = component:with_element(function(el) return el:get_lines() end)
+      local lines = component:with_element(function(el)
+        return el:get_lines()
+      end)
 
       eq('parent123 -> abc1234def5678', lines[1])
     end)
@@ -77,7 +85,9 @@ describe('BlameInfoComponent:', function()
     it('should render author and mail on line 2', function()
       local blame = make_blame()
       local component = mount_component({ blame = blame })
-      local lines = component:with_element(function(el) return el:get_lines() end)
+      local lines = component:with_element(function(el)
+        return el:get_lines()
+      end)
 
       eq('Alice (alice@example.com)', lines[2])
     end)
@@ -85,7 +95,9 @@ describe('BlameInfoComponent:', function()
     it('should render commit message on line 3', function()
       local blame = make_blame()
       local component = mount_component({ blame = blame })
-      local lines = component:with_element(function(el) return el:get_lines() end)
+      local lines = component:with_element(function(el)
+        return el:get_lines()
+      end)
 
       eq('Fix important bug', lines[3])
     end)
@@ -94,7 +106,9 @@ describe('BlameInfoComponent:', function()
       local long_msg = string.rep('x', 100)
       local blame = make_blame({ commit_message = long_msg })
       local component = mount_component({ blame = blame })
-      local lines = component:with_element(function(el) return el:get_lines() end)
+      local lines = component:with_element(function(el)
+        return el:get_lines()
+      end)
 
       eq(string.rep('x', 88) .. '...', lines[3])
     end)
@@ -103,7 +117,9 @@ describe('BlameInfoComponent:', function()
       local msg = string.rep('y', 88)
       local blame = make_blame({ commit_message = msg })
       local component = mount_component({ blame = blame })
-      local lines = component:with_element(function(el) return el:get_lines() end)
+      local lines = component:with_element(function(el)
+        return el:get_lines()
+      end)
 
       eq(msg, lines[3])
     end)
@@ -111,7 +127,9 @@ describe('BlameInfoComponent:', function()
     it('should always produce exactly 3 lines', function()
       local blame = make_blame()
       local component = mount_component({ blame = blame })
-      local lines = component:with_element(function(el) return el:get_lines() end)
+      local lines = component:with_element(function(el)
+        return el:get_lines()
+      end)
 
       eq(3, #lines)
     end)
@@ -121,11 +139,15 @@ describe('BlameInfoComponent:', function()
       local blame2 = make_blame({ commit_message = 'Second message' })
 
       local component = mount_component({ blame = blame1 })
-      local lines1 = component:with_element(function(el) return el:get_lines() end)
+      local lines1 = component:with_element(function(el)
+        return el:get_lines()
+      end)
       eq('First message', lines1[3])
 
       component:set_props({ blame = blame2 })
-      local lines2 = component:with_element(function(el) return el:get_lines() end)
+      local lines2 = component:with_element(function(el)
+        return el:get_lines()
+      end)
       eq('Second message', lines2[3])
     end)
   end)

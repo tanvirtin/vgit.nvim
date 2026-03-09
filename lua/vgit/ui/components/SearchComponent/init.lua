@@ -479,9 +479,7 @@ function SearchComponent:render()
   end
 
   if self._list_element:is_valid() then
-    if self.props.popup ~= false then
-      self._list_element:set_height(list_height)
-    end
+    if self.props.popup ~= false then self._list_element:set_height(list_height) end
 
     local selected = self.state.selected_index
     if selected >= 1 and selected <= visible_count then

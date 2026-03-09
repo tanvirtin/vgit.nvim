@@ -46,9 +46,7 @@ worktree_command.execute = event.async(function(args)
       return
     end
     local add_opts = {}
-    if opts.branch then
-      add_opts.branch = opts.branch
-    end
+    if opts.branch then add_opts.branch = opts.branch end
     local _, err = repo:worktree_add(opts.path, add_opts)
     if err then
       console.error(err[1] or tostring(err))

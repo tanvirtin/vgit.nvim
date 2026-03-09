@@ -1,7 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
 local utils = lazy('vgit.core.utils')
-local Window = lazy('vgit.core.Window')
 local Component = lazy('vgit.ui.Component')
 local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')

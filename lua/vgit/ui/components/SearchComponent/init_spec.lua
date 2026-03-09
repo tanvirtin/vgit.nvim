@@ -30,11 +30,15 @@ local function make_mock_element(opts)
   local events = {}
 
   return {
-    is_valid = function() return opts.valid ~= false end,
+    is_valid = function()
+      return opts.valid ~= false
+    end,
     focus = function() end,
     get_window = function()
       return {
-        get_cursor = function() return { 1, 0 } end,
+        get_cursor = function()
+          return { 1, 0 }
+        end,
         set_cursor = function() end,
         start_insert = function() end,
       }
@@ -43,8 +47,12 @@ local function make_mock_element(opts)
       return {
         on = function() end,
         attach_to_changes = function() end,
-        is_valid = function() return opts.valid ~= false end,
-        get_lines = function() return { '> ' } end,
+        is_valid = function()
+          return opts.valid ~= false
+        end,
+        get_lines = function()
+          return { '> ' }
+        end,
         set_lines = function() end,
       }
     end,

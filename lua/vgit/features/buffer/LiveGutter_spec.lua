@@ -59,8 +59,12 @@ describe('LiveGutter:', function()
 
       local instance = LiveGutter()
       local fetch_called = false
-      instance.fetch = function() fetch_called = true end
-      instance.is_enabled = function() return true end
+      instance.fetch = function()
+        fetch_called = true
+      end
+      instance.is_enabled = function()
+        return true
+      end
 
       git_buffer_store.for_each = function(callback)
         callback({ render_signs = function() end })
@@ -78,11 +82,15 @@ describe('LiveGutter:', function()
 
       local instance = LiveGutter()
       local reset_called = false
-      instance.is_enabled = function() return false end
+      instance.is_enabled = function()
+        return false
+      end
 
       git_buffer_store.for_each = function(callback)
         callback({
-          reset_signs = function() reset_called = true end,
+          reset_signs = function()
+            reset_called = true
+          end,
           render_signs = function() end,
         })
       end
@@ -99,13 +107,17 @@ describe('LiveGutter:', function()
 
       local instance = LiveGutter()
       local render_count = 0
-      instance.is_enabled = function() return false end
+      instance.is_enabled = function()
+        return false
+      end
 
       git_buffer_store.for_each = function(callback)
         for _ = 1, 3 do
           callback({
             reset_signs = function() end,
-            render_signs = function() render_count = render_count + 1 end,
+            render_signs = function()
+              render_count = render_count + 1
+            end,
           })
         end
       end

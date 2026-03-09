@@ -22,16 +22,20 @@ function LoadingIndicator:start(targets)
   self._targets = targets or {}
 
   self._timer = vim.uv.new_timer()
-  self._timer:start(0, 150, vim.schedule_wrap(function()
-    if not self._active then
-      self:stop()
-      return
-    end
-    self._frame = (self._frame % #frames) + 1
-    for _, target in ipairs(self._targets) do
-      self:render(target)
-    end
-  end))
+  self._timer:start(
+    0,
+    150,
+    vim.schedule_wrap(function()
+      if not self._active then
+        self:stop()
+        return
+      end
+      self._frame = (self._frame % #frames) + 1
+      for _, target in ipairs(self._targets) do
+        self:render(target)
+      end
+    end)
+  )
 end
 
 function LoadingIndicator:stop()
