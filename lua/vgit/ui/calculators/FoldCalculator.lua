@@ -57,6 +57,7 @@ function FoldCalculator:calculate_folds(marks, line_count, num_focus_lines)
 end
 
 function FoldCalculator:apply_folds(element, folds)
+  self:clear_folds(element)
   if #folds == 0 then return end
 
   element:call(function()
