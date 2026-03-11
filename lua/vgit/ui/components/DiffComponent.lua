@@ -63,6 +63,9 @@ function DiffComponent:component_will_mount()
       wrap = false,
       number = false,
       cursorline = true,
+      foldmethod = 'manual',
+      foldenable = true,
+      foldlevel = 0,
     }
 
     local win_options = utils.object.assign(default_win_options, self.props.win_options or {})
@@ -148,6 +151,7 @@ function DiffComponent:render()
 
   -- Attach once — the callback reads from self.state which we just updated
   self:_ensure_renderer_attached()
+  self:render_folds()
 end
 
 function DiffComponent:get_layout_spec()
