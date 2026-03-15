@@ -217,10 +217,6 @@ function DiffView:render_diff(top, bot)
   end
 end
 
-function DiffView:render_unified_conflicts(conflicts)
-  utils.list.each(conflicts, function(_conflict) end)
-end
-
 function DiffView:reset_cursor()
   if self.props.layout_type() == 'split' then self.scene:get('previous'):reset_cursor() end
   self.scene:get('current'):reset_cursor()

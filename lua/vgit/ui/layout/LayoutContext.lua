@@ -74,6 +74,10 @@ function LayoutContext:is_popup_mode()
   return self.mode == 'popup'
 end
 
+function LayoutContext:is_split_mode()
+  return self.mode == 'split'
+end
+
 function LayoutContext:is_floating_mode()
   return self.mode == 'lens' or self.mode == 'popup'
 end
@@ -111,6 +115,14 @@ function LayoutContext:create_parent_bounds()
 
   if self:is_lens_mode() then
     return self:create_lens_bounds(viewport_bounds)
+  elseif self:is_split_mode() then
+    local dims = self:get_dimensions()
+    return LayoutBounds({
+      row = 0,
+      col = 0,
+      width = dims.width or viewport_bounds.width,
+      height = dims.height or viewport_bounds.height,
+    })
   else
     return viewport_bounds
   end

@@ -16,7 +16,7 @@ local ComponentManager = lazy('vgit.ui.ComponentManager')
 local TreeComponent = lazy('vgit.ui.components.TreeComponent')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
-local CommitComponent = lazy('vgit.ui.components.CommitComponent')
+local CommitView = lazy('vgit.features.screens.CommitView')
 local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
 local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
 
@@ -37,7 +37,7 @@ function StatusDiffView:constructor()
     _diff_component = nil,
     _tree_component = nil,
     _component_manager = nil,
-    _commit_component = nil,
+    _commit_view = nil,
     _debounce_cleanups = {},
     _refreshing = false,
     _skip_on_move = false,
@@ -717,17 +717,19 @@ function StatusDiffView:reset_entry_from_diff()
 end
 
 function StatusDiffView:_is_commit_split_open()
-  return self._commit_component and self._commit_component:is_valid() or false
+  return self._commit_view and self._commit_view:is_valid() or false
 end
 
 function StatusDiffView:_close_commit_split()
-  if self._commit_component and self._commit_component:is_valid() then self._commit_component:unmount() end
-  self._commit_component = nil
+  if self._commit_view then
+    self._commit_view:destroy()
+    self._commit_view = nil
+  end
 end
 
 function StatusDiffView:_confirm_commit()
-  if not self._commit_component or not self._commit_component:is_valid() then return end
-  local lines = self._commit_component:get_lines()
+  if not self._commit_view or not self._commit_view:is_valid() then return end
+  local lines = self._commit_view:get_lines()
 
   local message_lines = {}
   for _, line in ipairs(lines) do
@@ -757,7 +759,7 @@ function StatusDiffView:commit()
   event.await()
 
   if self:_is_commit_split_open() then
-    self._commit_component:focus()
+    self._commit_view:focus()
     return
   end
 
@@ -790,36 +792,23 @@ function StatusDiffView:commit()
     end
   end
 
-  local commit_component = CommitComponent({
+  self._commit_view = CommitView()
+  self._commit_view:create({
     filetype = 'gitcommit',
-    height = 20,
-    split_direction = 'botright',
+    confirm_key = confirm_key,
+    cancel_key = cancel_key,
+    on_confirm = function()
+      self:_confirm_commit()
+    end,
+    on_cancel = function()
+      self:_close_commit_split()
+      console.info('Commit cancelled')
+    end,
   })
 
-  commit_component:mount()
-  commit_component:set_lines(lines)
-
-  commit_component:set_keymap({
-    mode = { 'n', 'i' },
-    key = confirm_key,
-    desc = 'Confirm commit',
-  }, function()
-    self:_confirm_commit()
-  end)
-
-  commit_component:set_keymap('n', cancel_key, function()
-    self:_close_commit_split()
-    console.info('Commit cancelled')
-  end, 'Cancel commit')
-
-  commit_component:on('BufWinLeave', function()
-    self._commit_component = nil
-  end)
-
-  commit_component:set_cursor({ 1, 0 })
+  self._commit_view:set_lines(lines)
+  self._commit_view:set_cursor({ 1, 0 })
   vim.cmd('startinsert')
-
-  self._commit_component = commit_component
 end
 
 function StatusDiffView:open_file()
