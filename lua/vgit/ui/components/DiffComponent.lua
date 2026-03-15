@@ -292,16 +292,24 @@ function DiffComponent:find_adjacent_mark_index(direction)
   if direction == 'next' then
     for i = 1, #marks do
       local mark = marks[i]
-      if lnum >= mark.top and lnum <= mark.bot then return i + 1 end
-      if mark.top > lnum then return i end
+      if lnum >= mark.top and lnum <= mark.bot then
+        return i + 1
+      end
+      if mark.top > lnum then
+        return i
+      end
     end
     return 1
   end
 
   for i = #marks, 1, -1 do
     local mark = marks[i]
-    if lnum >= mark.top and lnum <= mark.bot then return i - 1 end
-    if mark.top < lnum then return i end
+    if lnum >= mark.top and lnum <= mark.bot then
+      return i - 1
+    end
+    if mark.top < lnum then
+      return i
+    end
   end
   return #marks
 end
@@ -336,6 +344,7 @@ function DiffComponent:move_to_hunk(mark_index, pos, offset)
 
   self:set_lnum(mark.top)
   if pos then self:scroll_to(pos, offset) end
+
   return mark
 end
 

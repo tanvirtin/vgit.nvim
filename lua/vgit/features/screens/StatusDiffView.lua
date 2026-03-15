@@ -42,6 +42,7 @@ function StatusDiffView:constructor()
     _refreshing = false,
     _skip_on_move = false,
     _destroyed = false,
+    _diff_gen = 0,
   }
 end
 
@@ -85,22 +86,7 @@ end
 function StatusDiffView:hunk_down()
   if not self._diff_component or not self._diff_component:is_valid() then return end
 
-  local current_index, total_hunks = self:get_current_mark_index()
-  local hunk_alignment = self:get_hunk_alignment()
-  local hunk_alignment_offset = self:get_hunk_alignment_offset()
-
-  if not current_index or total_hunks == 0 or current_index >= total_hunks then
-    -- At last hunk or no hunks - move to next file
-    self._skip_on_move = true
-    local item = self:move_to_next_file()
-    if not item then return end
-    self:_update_diff_component()
-    if self._diff_component and self._diff_component:is_valid() then
-      self._diff_component:move_to_hunk(1, hunk_alignment, hunk_alignment_offset)
-    end
-  else
-    self._diff_component:hunk_down(hunk_alignment, hunk_alignment_offset)
-  end
+  self._diff_component:hunk_down(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
 
   local idx, count = self:get_current_mark_index()
   if idx then statusline.set_hunk({ index = idx, count = count }) end
@@ -109,23 +95,7 @@ end
 function StatusDiffView:hunk_up()
   if not self._diff_component or not self._diff_component:is_valid() then return end
 
-  local current_index, total_hunks = self:get_current_mark_index()
-  local hunk_alignment = self:get_hunk_alignment()
-  local hunk_alignment_offset = self:get_hunk_alignment_offset()
-
-  if not current_index or total_hunks == 0 or current_index <= 1 then
-    -- At first hunk or no hunks - move to previous file's last hunk
-    self._skip_on_move = true
-    local item = self:move_to_prev_file()
-    if not item then return end
-    self:_update_diff_component()
-    -- Pass 0 to go to last hunk
-    if self._diff_component and self._diff_component:is_valid() then
-      self._diff_component:move_to_hunk(0, hunk_alignment, hunk_alignment_offset)
-    end
-  else
-    self._diff_component:hunk_up(hunk_alignment, hunk_alignment_offset)
-  end
+  self._diff_component:hunk_up(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
 
   local idx, count = self:get_current_mark_index()
   if idx then statusline.set_hunk({ index = idx, count = count }) end
@@ -236,48 +206,6 @@ function StatusDiffView:refresh_and_navigate(navigate_fn)
   navigate_fn()
   self._refreshing = false
   self:_update_diff_component()
-end
-
-function StatusDiffView:move_to_next_file()
-  if not self._tree_component or not self._tree_component:is_valid() then return nil end
-
-  local current_lnum = self._tree_component:get_lnum()
-  local count = self._tree_component:get_line_count()
-
-  -- Find next file entry (skip folders)
-  for offset = 1, count do
-    local target_lnum = current_lnum + offset
-    if target_lnum > count then target_lnum = target_lnum - count end
-
-    local item = self._tree_component:get_list_item(target_lnum)
-    if item and item.entry and item.entry.status then
-      self._tree_component:set_lnum(target_lnum)
-      return item
-    end
-  end
-
-  return nil
-end
-
-function StatusDiffView:move_to_prev_file()
-  if not self._tree_component or not self._tree_component:is_valid() then return nil end
-
-  local current_lnum = self._tree_component:get_lnum()
-  local count = self._tree_component:get_line_count()
-
-  -- Find previous file entry (skip folders)
-  for offset = 1, count do
-    local target_lnum = current_lnum - offset
-    if target_lnum < 1 then target_lnum = target_lnum + count end
-
-    local item = self._tree_component:get_list_item(target_lnum)
-    if item and item.entry and item.entry.status then
-      self._tree_component:set_lnum(target_lnum)
-      return item
-    end
-  end
-
-  return nil
 end
 
 function StatusDiffView:navigate_down()
@@ -415,7 +343,12 @@ function StatusDiffView:create_diff_component(opts)
 end
 
 function StatusDiffView:_update_diff_component(hunk_index)
+  self._diff_gen = self._diff_gen + 1
+  local gen = self._diff_gen
+
   event.await()
+  if self._diff_gen ~= gen then return false end
+
   local entry = self:get_current_entry()
   if not self:_is_valid_entry(entry) then return false end
 
@@ -424,6 +357,8 @@ function StatusDiffView:_update_diff_component(hunk_index)
 
   local diff_data, err = self:_build_entry_diff(entry, repo)
   if not self:_handle_git_error(err, '_build_entry_diff') then return false end
+
+  if self._diff_gen ~= gen then return false end
 
   self._diff_component:set_props({
     diff = diff_data,
@@ -838,12 +773,16 @@ function StatusDiffView:_handle_file_selection_change(item)
     return
   end
 
+  self._diff_gen = self._diff_gen + 1
+  local gen = self._diff_gen
+
+  local entry = item.entry or item
+
   self._diff_component:clear_extmarks()
   self._diff_component:clear_lines()
   self._diff_component:clear_folds()
   self._diff_component:reset_cursor()
 
-  local entry = item.entry or item
   if not self:_is_valid_entry(entry) then return end
 
   local repo, repo_err = repository.current()
@@ -851,6 +790,8 @@ function StatusDiffView:_handle_file_selection_change(item)
 
   local diff_data, err = self:_build_entry_diff(entry, repo)
   if not self:_handle_git_error(err, '_build_entry_diff') then return end
+
+  if self._diff_gen ~= gen then return end
 
   if self._diff_component then
     local has_content = diff_data and diff_data.marks and #diff_data.marks > 0
