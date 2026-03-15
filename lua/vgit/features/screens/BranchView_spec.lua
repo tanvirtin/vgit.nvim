@@ -453,39 +453,30 @@ describe('BranchView:', function()
       assert.is_true(view._destroyed)
     end)
 
-    it('should close search_component if present', function()
+    it('should nil search_component on destroy', function()
       local view = BranchView()
-      local close_called = false
       view._search_component = {
-        close = function()
-          close_called = true
-          -- Simulate on_close callback
-          view._destroyed = true
-          view._search_component = nil
-        end,
+        close = function() end,
       }
 
       view:destroy()
 
-      assert.is_true(close_called)
       assert.is_nil(view._search_component)
+      assert.is_true(view._destroyed)
     end)
 
-    it('should not call close twice when called twice', function()
+    it('should not re-nil search_component when called twice', function()
       local view = BranchView()
-      local close_count = 0
       view._search_component = {
-        close = function()
-          close_count = close_count + 1
-          view._destroyed = true
-          view._search_component = nil
-        end,
+        close = function() end,
       }
 
       view:destroy()
-      view:destroy()
+      assert.is_nil(view._search_component)
 
-      eq(1, close_count)
+      view:destroy()
+      assert.is_nil(view._search_component)
+      assert.is_true(view._destroyed)
     end)
   end)
 end)

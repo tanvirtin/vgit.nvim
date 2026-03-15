@@ -793,3 +793,132 @@ describe('GitBuffer:', function()
     end)
   end)
 end)
+
+describe('GitBuffer blob cache lifecycle:', function()
+  local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
+  local it = async.it
+  local before_each = async.before_each
+  local after_each = async.after_each
+
+  local repo
+  local test_file
+
+  before_each(function()
+    local err
+    repo, err = test_repo.create_repo({
+      initial_commit = true,
+      files = { ['test.txt'] = { 'line 1', 'line 2', 'line 3' } },
+    })
+    assert(not err, 'Failed to create test repo')
+    test_file = repo .. '/test.txt'
+  end)
+
+  after_each(function()
+    if repo then test_repo.cleanup(repo) end
+  end)
+
+  it('should delegate clear_blob_cache to _git_file', function()
+    local bufnr = vim.fn.bufadd(test_file)
+    vim.fn.bufload(bufnr)
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    -- Populate cache via diff
+    git_buf:diff()
+    assert.is_not_nil(git_buf._git_file._blob_cache['index'])
+
+    git_buf:clear_blob_cache()
+
+    assert.is_nil(git_buf._git_file._blob_cache['index'])
+  end)
+
+  it('should be safe when _git_file is nil', function()
+    local bufnr = vim.fn.bufadd(test_file)
+    vim.fn.bufload(bufnr)
+    local git_buf = GitBuffer(bufnr)
+    -- Do NOT call sync(), so _git_file is nil
+
+    -- Should not error
+    local result = git_buf:clear_blob_cache()
+    assert.equals(git_buf, result)
+  end)
+
+  it('should return updated hunks after external stage and clear_blob_cache', function()
+    -- Modify the file
+    test_repo.write_file(repo, 'test.txt', { 'modified 1', 'line 2', 'line 3' })
+    local bufnr = vim.fn.bufadd(test_file)
+    vim.fn.bufload(bufnr)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    -- First diff shows hunks
+    local hunks1, err1 = git_buf:diff()
+    assert.is_nil(err1)
+    assert.is_table(hunks1)
+    assert(#hunks1 > 0, 'should have hunks before staging')
+
+    -- Externally stage the file
+    test_repo.stage(repo, 'test.txt')
+
+    -- Clear cache
+    git_buf:clear_blob_cache()
+
+    -- Diff again should show zero hunks (buffer matches index)
+    local hunks2, err2 = git_buf:diff()
+    assert.is_nil(err2)
+    assert.is_table(hunks2)
+    assert.equals(0, #hunks2)
+  end)
+
+  it('should invalidate cache during stage_hunk and re-diff with fresh index', function()
+    local bufnr = vim.fn.bufadd(test_file)
+    vim.fn.bufload(bufnr)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    local hunks, _ = git_buf:diff()
+    if hunks and #hunks > 0 then
+      local count_before = #hunks
+      -- stage_hunk calls git_file:stage_hunk (nils cache) then diff() (re-fetches fresh index)
+      local new_hunks, err = git_buf:stage_hunk(hunks[1])
+      assert.is_nil(err)
+      -- After staging the hunk, re-diff should show fewer or zero hunks
+      assert.is_table(new_hunks)
+      assert(#new_hunks < count_before, 'hunks should decrease after staging')
+    end
+  end)
+
+  it('should set _signs_dirty to true after diff', function()
+    local bufnr = vim.fn.bufadd(test_file)
+    vim.fn.bufload(bufnr)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    assert.is_false(git_buf._signs_dirty)
+
+    git_buf:diff()
+
+    assert.is_true(git_buf._signs_dirty)
+  end)
+
+  it('should clear _signs_dirty flag after render_signs', function()
+    local bufnr = vim.fn.bufadd(test_file)
+    vim.fn.bufload(bufnr)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    git_buf:diff()
+    assert.is_true(git_buf._signs_dirty)
+
+    git_buf:render_signs()
+    assert.is_false(git_buf._signs_dirty)
+  end)
+end)

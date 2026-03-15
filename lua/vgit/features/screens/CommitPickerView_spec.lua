@@ -22,6 +22,9 @@ package.loaded['vgit.ui.display_service'] = {
   show_blame_view = function() end,
 }
 
+local mock_tree_commit = nil
+local mock_tree_files = nil
+
 local mock_repo = {
   diff = function(_, spec)
     return { hunks = {} }
@@ -29,15 +32,25 @@ local mock_repo = {
   file_lines = function(_, filename, ref)
     return {}
   end,
+  log_search = function(_, opts)
+    return {}, nil
+  end,
+  tree = function(_, commit_ref)
+    return {
+      commit = function()
+        return mock_tree_commit, nil
+      end,
+      files = function()
+        return mock_tree_files, nil
+      end,
+    }
+  end,
 }
 package.loaded['vgit.git.repository'] = {
   current = function()
     return mock_repo, nil
   end,
 }
-
-local mock_tree_commit = nil
-local mock_tree_files = nil
 package.loaded['vgit.git.GitTree'] = setmetatable({}, {
   __call = function(_, repo, commit_ref)
     return {
@@ -92,11 +105,15 @@ local SearchComponentMock = setmetatable({}, {
     mounted_props = props
     return {
       mounted = true,
+      _mounted = true,
       _loading = false,
       close = function()
         close_called = true
       end,
       render = function() end,
+      is_mounted = function(self)
+        return self._mounted
+      end,
       set_loading = function() end,
       set_items = function(_, items)
         set_items_called_with = items
@@ -154,6 +171,26 @@ local function make_commit(opts)
   }
 end
 
+local function make_mock_repo_for_data(overrides)
+  overrides = overrides or {}
+  return {
+    log_search = overrides.log_search or function(_, opts)
+      git_log_calls[#git_log_calls + 1] = { repo_path = overrides.repo_path or '/tmp/test-repo', opts = opts }
+      return {}, nil
+    end,
+    tree = overrides.tree or function(_, commit_ref)
+      return {
+        commit = function()
+          return mock_tree_commit, nil
+        end,
+        files = function()
+          return mock_tree_files, nil
+        end,
+      }
+    end,
+  }
+end
+
 local function make_data(overrides)
   overrides = overrides or {}
   return {
@@ -167,6 +204,7 @@ local function make_data(overrides)
       end,
     },
     repo_path = overrides.repo_path or '/tmp/test-repo',
+    repo = overrides.repo or make_mock_repo_for_data({ repo_path = overrides.repo_path }),
   }
 end
 
@@ -392,7 +430,7 @@ describe('CommitPickerView:', function()
       local view = CommitPickerView()
       view._search_query = 'fix'
       view._search_skip = 100
-      view._repo_path = '/tmp/repo'
+      view._repo = make_mock_repo_for_data({ repo_path = '/tmp/repo' })
 
       view:_on_load_more()
 

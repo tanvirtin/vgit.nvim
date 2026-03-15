@@ -177,3 +177,153 @@ describe('LiveGutter:', function()
     end)
   end)
 end)
+
+-- Integration tests using real git repos
+package.loaded['lint'] = package.loaded['lint'] or { try_lint = function() end }
+
+local test_repo = require('tests.helpers.test_repo')
+test_repo.use_driver('raw')
+
+describe('LiveGutter fetch (integration):', function()
+  local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
+  local it = async.it
+  local before_each = async.before_each
+  local after_each = async.after_each
+
+  local GitBuffer = require('vgit.git.GitBuffer')
+  local LiveGutter = require('vgit.features.buffer.LiveGutter')
+  local repo
+  local test_file
+  local created_bufnrs = {}
+
+  before_each(function()
+    created_bufnrs = {}
+    local err
+    repo, err = test_repo.create_repo({
+      initial_commit = true,
+      files = { ['test.txt'] = { 'line 1', 'line 2', 'line 3' } },
+    })
+    assert(not err, 'Failed to create test repo')
+    test_file = repo .. '/test.txt'
+  end)
+
+  after_each(function()
+    for _, bufnr in ipairs(created_bufnrs) do
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        vim.api.nvim_buf_delete(bufnr, { force = true })
+      end
+    end
+    if repo then test_repo.cleanup(repo) end
+  end)
+
+  local function create_buf(filepath)
+    local bufnr = vim.fn.bufadd(filepath)
+    vim.fn.bufload(bufnr)
+    created_bufnrs[#created_bufnrs + 1] = bufnr
+    return bufnr
+  end
+
+  it('should produce non-empty signs for modified buffer', function()
+    local bufnr = create_buf(test_file)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    local instance = LiveGutter()
+    instance:fetch(git_buf)
+
+    assert.is_table(git_buf.state.signs)
+    assert(#git_buf.state.signs > 0, 'should have signs for modified buffer')
+  end)
+
+  it('should produce empty signs for unmodified buffer', function()
+    local bufnr = create_buf(test_file)
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    local instance = LiveGutter()
+    instance:fetch(git_buf)
+
+    assert.is_table(git_buf.state.signs)
+    assert.equals(0, #git_buf.state.signs)
+  end)
+
+  it('should bail without error for invalid buffer', function()
+    local bufnr = create_buf(test_file)
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    -- Delete the buffer to make it invalid
+    vim.api.nvim_buf_delete(bufnr, { force = true })
+    -- Remove from cleanup list since already deleted
+    created_bufnrs[#created_bufnrs] = nil
+
+    local instance = LiveGutter()
+    -- Should not error
+    instance:fetch(git_buf)
+  end)
+
+  it('should not modify signs when buffer is locked', function()
+    local bufnr = create_buf(test_file)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    -- Lock the buffer
+    git_buf:acquire()
+
+    local instance = LiveGutter()
+    instance:fetch(git_buf)
+
+    -- Signs should still be empty (fetch bailed due to lock)
+    assert.is_table(git_buf.state.signs)
+    assert.equals(0, #git_buf.state.signs)
+
+    git_buf:release()
+  end)
+
+  it('should set vgit_status buffer var after fetch', function()
+    local bufnr = create_buf(test_file)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    local instance = LiveGutter()
+    instance:fetch(git_buf)
+
+    local status = vim.api.nvim_buf_get_var(bufnr, 'vgit_status')
+    assert.is_table(status)
+    assert.is_number(status.added)
+    assert.is_number(status.changed)
+    assert.is_number(status.removed)
+  end)
+
+  it('should reflect new state after external stage and cache clear', function()
+    -- Modify file
+    test_repo.write_file(repo, 'test.txt', { 'modified 1', 'line 2', 'line 3' })
+    local bufnr = create_buf(test_file)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    local instance = LiveGutter()
+
+    -- First fetch shows signs
+    instance:fetch(git_buf)
+    local signs_before = #git_buf.state.signs
+    assert(signs_before > 0, 'should have signs before staging')
+
+    -- Externally stage and clear cache
+    test_repo.stage(repo, 'test.txt')
+    git_buf:clear_blob_cache()
+
+    -- Second fetch should show no signs
+    instance:fetch(git_buf)
+    assert.equals(0, #git_buf.state.signs)
+  end)
+end)

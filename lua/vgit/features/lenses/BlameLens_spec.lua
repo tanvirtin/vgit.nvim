@@ -87,4 +87,121 @@ describe('BlameLens:', function()
       eq(nil, mock_diff_component.move_to_hunk_called_with)
     end)
   end)
+
+  describe('prev_hunk', function()
+    it('should call diff_component:hunk_up with top', function()
+      local lens = BlameLens()
+      local hunk_up_args = nil
+      lens.diff_component = {
+        hunk_up = function(_, pos)
+          hunk_up_args = pos
+        end,
+      }
+
+      lens:prev_hunk()
+
+      eq('top', hunk_up_args)
+    end)
+  end)
+
+  describe('next_hunk', function()
+    it('should call diff_component:hunk_down with top', function()
+      local lens = BlameLens()
+      local hunk_down_args = nil
+      lens.diff_component = {
+        hunk_down = function(_, pos)
+          hunk_down_args = pos
+        end,
+      }
+
+      lens:next_hunk()
+
+      eq('top', hunk_down_args)
+    end)
+  end)
+
+  describe('emit_cleanup_events', function()
+    it('should call component_will_unmount on blame_info_component', function()
+      local lens = BlameLens()
+      local unmount_called = false
+      lens.blame_info_component = {
+        component_will_unmount = function()
+          unmount_called = true
+        end,
+      }
+      lens.diff_component = nil
+
+      lens:emit_cleanup_events()
+
+      assert.is_true(unmount_called)
+    end)
+
+    it('should call component_will_unmount on diff_component when present', function()
+      local lens = BlameLens()
+      local blame_unmount = false
+      local diff_unmount = false
+      lens.blame_info_component = {
+        component_will_unmount = function()
+          blame_unmount = true
+        end,
+      }
+      lens.diff_component = {
+        component_will_unmount = function()
+          diff_unmount = true
+        end,
+      }
+
+      lens:emit_cleanup_events()
+
+      assert.is_true(blame_unmount)
+      assert.is_true(diff_unmount)
+    end)
+
+    it('should not error when diff_component is nil', function()
+      local lens = BlameLens()
+      lens.blame_info_component = {
+        component_will_unmount = function() end,
+      }
+      lens.diff_component = nil
+
+      -- Should not error
+      lens:emit_cleanup_events()
+    end)
+  end)
+
+  describe('destroy', function()
+    it('should call emit_cleanup_events and component_manager:destroy', function()
+      local lens = BlameLens()
+      local cm_destroyed = false
+      local blame_unmount = false
+      lens.blame_info_component = {
+        component_will_unmount = function()
+          blame_unmount = true
+        end,
+      }
+      lens.diff_component = nil
+      lens.component_manager = {
+        destroy = function()
+          cm_destroyed = true
+        end,
+      }
+
+      lens:destroy()
+
+      assert.is_true(blame_unmount)
+      assert.is_true(cm_destroyed)
+    end)
+  end)
+
+  describe('constructor', function()
+    it('should initialize all fields as nil', function()
+      local lens = BlameLens()
+      assert.is_nil(lens.blame)
+      assert.is_nil(lens.buffer)
+      assert.is_nil(lens.blame_info_component)
+      assert.is_nil(lens.diff_component)
+      assert.is_nil(lens.component_manager)
+      assert.is_nil(lens.pending_quit_key)
+    end)
+  end)
 end)

@@ -177,6 +177,10 @@ function GitBuffer:get_hunks()
   return self._git_file:get_hunks()
 end
 
+function GitBuffer:get_file_lines(commit_hash)
+  return self._git_file:lines(commit_hash)
+end
+
 function GitBuffer:get_conflicts()
   return self.state.conflicts
 end
