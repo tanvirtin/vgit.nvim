@@ -36,7 +36,7 @@ function LayoutRenderer:render_view_layout(layout)
 
   if not view then return end
 
-  if self.context:is_screen_mode() and #self.windows > 0 then
+  if (self.context:is_screen_mode() or self.context:is_split_mode()) and #self.windows > 0 then
     self.window_index = self.window_index + 1
     if self.window_index <= #self.windows then
       local target_window = self.windows[self.window_index]
@@ -56,7 +56,7 @@ function LayoutRenderer:render_view_layout(layout)
 
   if view.mount then view:mount() end
 
-  if self.context:is_screen_mode() and view.ensure_window_options then
+  if (self.context:is_screen_mode() or self.context:is_split_mode()) and view.ensure_window_options then
     event.await()
     view:ensure_window_options()
   end
@@ -80,7 +80,7 @@ function LayoutRenderer:render_layout(layout)
 end
 
 function LayoutRenderer:create_screen_splits(layout)
-  if not self.context:is_screen_mode() then return end
+  if not self.context:is_screen_mode() and not self.context:is_split_mode() then return end
 
   local function create_splits_for_layout(node)
     if node.spec.type == LayoutSpec.Type.VIEW then
@@ -119,7 +119,7 @@ function LayoutRenderer:render(spec, parent_bounds)
 
   local layout = self.calculator:calculate(spec, parent_bounds, self.context)
 
-  if self.context:is_screen_mode() then self:create_screen_splits(layout) end
+  if self.context:is_screen_mode() or self.context:is_split_mode() then self:create_screen_splits(layout) end
   self:render_layout(layout)
 
   return layout

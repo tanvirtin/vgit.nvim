@@ -54,23 +54,10 @@ function Element:mount()
   if win_plot.width then win_plot.width = LayoutContext.convert_dimension(win_plot.width) end
   if win_plot.height then win_plot.height = LayoutContext.convert_dimension(win_plot.height) end
 
-  if window_mode == 'screen' then
+  if window_mode == 'screen' or window_mode == 'split' then
     win_plot = vim.tbl_extend('force', win_plot or {}, {
       win_options = self._config.win_options,
     })
-  elseif window_mode == 'split' then
-    local split_height = win_plot.height or 20
-    local split_direction = win_plot.split_direction or 'botright'
-    vim.cmd(string.format('%s %dsplit', split_direction, split_height))
-    self._window = Window.get_current()
-    self._window:set_buffer(self._buffer)
-    self._window:assign_options(self._config.win_options)
-    self._mounted = true
-    if self._lines then
-      self:set_lines(self._lines)
-      self._lines = nil
-    end
-    return self
   end
 
   win_plot.mode = window_mode

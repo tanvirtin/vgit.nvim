@@ -74,8 +74,19 @@ function ComponentManager:prepare_layout(layout_config)
   self.root_component = layout_config.component
   if not self.root_component then error('ComponentManager:render() requires layout_config.component') end
 
-  local default_width = layout_config.mode == 'lens' and '100vw' or '80vw'
-  local default_height = layout_config.mode == 'lens' and '35vh' or '60vh'
+  local mode = layout_config.mode or 'popup'
+  local default_width, default_height
+
+  if mode == 'split' then
+    default_width = '100vw'
+    default_height = layout_config.split_height or 20
+  elseif mode == 'lens' then
+    default_width = '100vw'
+    default_height = '35vh'
+  else
+    default_width = '80vw'
+    default_height = '60vh'
+  end
 
   self.context = LayoutContext({
     zindex = layout_config.zindex or 2,
@@ -140,6 +151,10 @@ function ComponentManager:render(layout_config)
   if self.context:is_screen_mode() then
     vim.api.nvim_command('tabnew')
     scratch_buffer = Buffer(0)
+  elseif self.context:is_split_mode() then
+    local height = layout_config.split_height or 20
+    local direction = layout_config.split_direction or 'botright'
+    vim.cmd(string.format('%s %dsplit', direction, height))
   end
   self:mount_components()
   self:render_layout()

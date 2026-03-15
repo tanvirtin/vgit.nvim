@@ -1914,14 +1914,14 @@ describe('StatusDiffView:', function()
 
     describe('commit', function()
       it('should cancel on empty message via _confirm_commit', function()
-        view._commit_component = {
+        view._commit_view = {
           is_valid = function()
             return true
           end,
           get_lines = function()
             return { '', '# comment line' }
           end,
-          unmount = function() end,
+          destroy = function() end,
         }
 
         view:_confirm_commit()
@@ -1931,14 +1931,14 @@ describe('StatusDiffView:', function()
       end)
 
       it('should filter out comment lines', function()
-        view._commit_component = {
+        view._commit_view = {
           is_valid = function()
             return true
           end,
           get_lines = function()
             return { 'feat: add new feature', '# This is a comment', 'More details here' }
           end,
-          unmount = function() end,
+          destroy = function() end,
         }
 
         view:_confirm_commit()
@@ -1949,14 +1949,14 @@ describe('StatusDiffView:', function()
       end)
 
       it('should call repo:commit with message via _confirm_commit', function()
-        view._commit_component = {
+        view._commit_view = {
           is_valid = function()
             return true
           end,
           get_lines = function()
             return { 'feat: add new feature' }
           end,
-          unmount = function() end,
+          destroy = function() end,
         }
 
         view:_confirm_commit()
@@ -1967,14 +1967,14 @@ describe('StatusDiffView:', function()
       end)
 
       it('should show success message after commit', function()
-        view._commit_component = {
+        view._commit_view = {
           is_valid = function()
             return true
           end,
           get_lines = function()
             return { 'test commit' }
           end,
-          unmount = function() end,
+          destroy = function() end,
         }
 
         view:_confirm_commit()

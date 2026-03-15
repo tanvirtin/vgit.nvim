@@ -51,7 +51,7 @@ function Window:open(buffer, opts)
   if opts.mode ~= nil then opts.mode = nil end
   if opts.focus ~= nil then opts.focus = nil end
 
-  if mode == 'screen' then return Window.open_screen(buffer, opts) end
+  if mode == 'screen' or mode == 'split' then return Window.open_screen(buffer, opts) end
 
   local win_id = vim.api.nvim_open_win(buffer.bufnr, focus ~= nil and focus or false, opts)
 
