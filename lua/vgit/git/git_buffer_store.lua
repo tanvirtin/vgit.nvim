@@ -33,7 +33,7 @@ git_buffer_store.register_events = event.async(function()
   event.custom_on('VGitChange', function()
     git_repo.clear_cache()
     git_buffer_store.for_each(function(buffer)
-      if buffer.git_file then buffer.git_file:clear_blob_cache() end
+      buffer:clear_blob_cache()
       git_buffer_store.dispatch(buffer, 'sync')
     end)
 

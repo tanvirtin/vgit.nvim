@@ -575,6 +575,82 @@ describe('git_buffer_store:', function()
     end)
   end)
 
+  describe('VGitChange sync flow', function()
+    it('should call clear_blob_cache on buffers during sync iteration', function()
+      local cache_cleared = false
+      local sync_dispatched = false
+
+      local buffer_with_cache = {
+        bufnr = 10,
+        clear_blob_cache = function()
+          cache_cleared = true
+        end,
+      }
+
+      git_buffer_store.on('sync', function()
+        sync_dispatched = true
+      end)
+
+      git_buffer_store.add(buffer_with_cache)
+
+      -- Simulate the VGitChange handler's for_each logic
+      git_buffer_store.for_each(function(buffer)
+        buffer:clear_blob_cache()
+        git_buffer_store.dispatch(buffer, 'sync')
+      end)
+
+      eq(cache_cleared, true)
+      eq(sync_dispatched, true)
+    end)
+
+    it('should handle buffers without clear_blob_cache gracefully', function()
+      local buffer_without_cache = {
+        bufnr = 11,
+      }
+
+      git_buffer_store.add(buffer_without_cache)
+
+      -- Should error when clear_blob_cache is missing, catching the contract violation
+      local success = pcall(function()
+        git_buffer_store.for_each(function(buffer)
+          buffer:clear_blob_cache()
+        end)
+      end)
+
+      eq(success, false)
+    end)
+
+    it('should clear blob cache and dispatch sync for all buffers', function()
+      local cleared = {}
+      local synced = {}
+
+      for i = 1, 3 do
+        git_buffer_store.add({
+          bufnr = 20 + i,
+          clear_blob_cache = function(self)
+            cleared[#cleared + 1] = self.bufnr
+          end,
+        })
+      end
+
+      git_buffer_store.on('sync', function(buffer)
+        synced[#synced + 1] = buffer.bufnr
+      end)
+
+      git_buffer_store.for_each(function(buffer)
+        buffer:clear_blob_cache()
+        git_buffer_store.dispatch(buffer, 'sync')
+      end)
+
+      table.sort(cleared)
+      table.sort(synced)
+
+      eq(#cleared, 3)
+      eq(#synced, 3)
+      eq(cleared, synced)
+    end)
+  end)
+
   describe('edge cases', function()
     it('should handle string bufnr conversion', function()
       -- Store uses tostring(bufnr) internally

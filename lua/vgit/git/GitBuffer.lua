@@ -64,6 +64,11 @@ function GitBuffer:sync()
   return self
 end
 
+function GitBuffer:clear_blob_cache()
+  if self._git_file then self._git_file:clear_blob_cache() end
+  return self
+end
+
 function GitBuffer:acquire()
   if self._op_lock then return false end
   self._op_lock = true
