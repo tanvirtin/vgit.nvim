@@ -92,4 +92,62 @@ describe('HunkLens:', function()
       eq(false, result)
     end)
   end)
+
+  describe('constructor', function()
+    it('should initialize all fields correctly', function()
+      local lens = HunkLens()
+      assert.is_false(lens.active)
+      assert.is_nil(lens.diff_component)
+      assert.is_nil(lens.component_manager)
+    end)
+  end)
+
+  describe('emit_cleanup_events', function()
+    it('should call component_will_unmount on diff_component', function()
+      local lens = HunkLens()
+      local unmount_called = false
+      lens.diff_component = {
+        component_will_unmount = function()
+          unmount_called = true
+        end,
+      }
+
+      lens:emit_cleanup_events()
+
+      assert.is_true(unmount_called)
+    end)
+  end)
+
+  describe('destroy', function()
+    it('should call hide', function()
+      local lens = HunkLens()
+      lens.active = true
+      local cm_destroyed = false
+      local unmount_called = false
+      lens.component_manager = {
+        destroy = function()
+          cm_destroyed = true
+        end,
+      }
+      lens.diff_component = {
+        component_will_unmount = function()
+          unmount_called = true
+        end,
+      }
+
+      lens:destroy()
+
+      assert.is_true(cm_destroyed)
+      assert.is_true(unmount_called)
+      assert.is_false(lens.active)
+    end)
+
+    it('should do nothing when not active', function()
+      local lens = HunkLens()
+      lens.active = false
+
+      -- Should not error
+      lens:destroy()
+    end)
+  end)
 end)

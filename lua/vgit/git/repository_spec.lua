@@ -136,25 +136,14 @@ describe('repository:', function()
   end)
 
   describe('invalidate', function()
-    it('should call reset on the cached instance', function()
-      local reset_called = false
-      local mock_repo = {
-        reset = function()
-          reset_called = true
-        end,
-      }
-
-      package.loaded['vgit.git.GitRepository'].discover = function()
-        return mock_repo, nil
-      end
-
-      package.loaded['vgit.git.repository'] = nil
-      repository = require('vgit.git.repository')
-
+    it('should clear the cached instance', function()
       repository.current()
+      assert.is_true(repository.is_loaded())
+
       repository.invalidate()
 
-      assert.is_true(reset_called)
+      assert.is_false(repository.is_loaded())
+      assert.is_nil(repository.get_cached())
     end)
 
     it('should clear the cache', function()

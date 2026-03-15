@@ -727,3 +727,184 @@ describe('git_buffer_store:', function()
     end)
   end)
 end)
+
+-- Integration tests using real git repos and real GitBuffer instances
+package.loaded['lint'] = package.loaded['lint'] or { try_lint = function() end }
+
+local test_repo = require('tests.helpers.test_repo')
+test_repo.use_driver('raw')
+
+describe('git_buffer_store (integration with real GitBuffer):', function()
+  local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
+  local it = async.it
+  local before_each = async.before_each
+  local after_each = async.after_each
+
+  local GitBuffer = require('vgit.git.GitBuffer')
+  local git_buffer_store = require('vgit.git.git_buffer_store')
+  local repo
+  local test_file
+  local created_bufnrs = {}
+
+  before_each(function()
+    git_buffer_store.reset()
+    created_bufnrs = {}
+    local err
+    repo, err = test_repo.create_repo({
+      initial_commit = true,
+      files = { ['test.txt'] = { 'line 1', 'line 2', 'line 3' } },
+    })
+    assert(not err, 'Failed to create test repo')
+    test_file = repo .. '/test.txt'
+  end)
+
+  after_each(function()
+    git_buffer_store.reset()
+    for _, bufnr in ipairs(created_bufnrs) do
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        vim.api.nvim_buf_delete(bufnr, { force = true })
+      end
+    end
+    if repo then test_repo.cleanup(repo) end
+  end)
+
+  local function create_buf(filepath)
+    local bufnr = vim.fn.bufadd(filepath)
+    vim.fn.bufload(bufnr)
+    created_bufnrs[#created_bufnrs + 1] = bufnr
+    return bufnr
+  end
+
+  it('should create real GitBuffer with clear_blob_cache method', function()
+    local bufnr = create_buf(test_file)
+    local git_buffer = GitBuffer(bufnr)
+    git_buffer:sync()
+
+    assert.is_not_nil(git_buffer)
+    assert.is_function(git_buffer.clear_blob_cache)
+  end)
+
+  it('should return nil for non-git file', function()
+    local temp_file = '/tmp/not-in-repo-' .. os.time() .. '.txt'
+    vim.fn.writefile({ 'content' }, temp_file)
+    local bufnr = create_buf(temp_file)
+
+    local git_buffer = git_buffer_store.create_and_validate_buffer(bufnr)
+
+    assert.is_nil(git_buffer)
+    vim.fn.delete(temp_file)
+  end)
+
+  it('should clear blob cache on all real GitBuffers during VGitChange loop', function()
+    local bufnr = create_buf(test_file)
+    local git_buffer = GitBuffer(bufnr)
+    git_buffer:sync()
+
+    -- Populate blob cache via diff
+    local _, err = git_buffer:diff()
+    assert.is_nil(err)
+    -- After diff, live_hunks populates _blob_cache['index']
+    assert.is_not_nil(git_buffer._git_file._blob_cache['index'])
+
+    -- Add to store
+    git_buffer_store.add(git_buffer)
+
+    -- Simulate VGitChange loop
+    git_buffer_store.for_each(function(buffer)
+      buffer:clear_blob_cache()
+    end)
+
+    -- Verify cache was cleared
+    assert.is_table(git_buffer._git_file._blob_cache)
+    assert.is_nil(git_buffer._git_file._blob_cache['index'])
+  end)
+
+  it('should return fresh hunks after cache clear and external stage', function()
+    -- Modify file
+    test_repo.write_file(repo, 'test.txt', { 'modified 1', 'line 2', 'line 3' })
+    local bufnr = create_buf(test_file)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buffer = GitBuffer(bufnr)
+    git_buffer:sync()
+
+    -- First diff should show hunks
+    local hunks1, err1 = git_buffer:diff()
+    assert.is_nil(err1)
+    assert.is_table(hunks1)
+    local count1 = #hunks1
+
+    -- Externally stage the file
+    test_repo.stage(repo, 'test.txt')
+
+    -- Clear cache (as VGitChange would do)
+    git_buffer:clear_blob_cache()
+
+    -- Diff again should show zero hunks (buffer matches staged content)
+    local hunks2, err2 = git_buffer:diff()
+    assert.is_nil(err2)
+    assert.is_table(hunks2)
+
+    -- After staging, working tree matches index so no hunks
+    assert.equals(0, #hunks2)
+    assert.is_true(count1 > 0)
+  end)
+
+  it('should clear blob cache on multiple real GitBuffers', function()
+    -- Create a second file
+    test_repo.write_file(repo, 'test2.txt', { 'content' })
+    test_repo.create_commit(repo, {
+      files = { 'test2.txt' },
+      message = 'add test2',
+    })
+    local test_file2 = repo .. '/test2.txt'
+
+    local bufnr1 = create_buf(test_file)
+    local bufnr2 = create_buf(test_file2)
+
+    local git_buf1 = GitBuffer(bufnr1)
+    git_buf1:sync()
+    local git_buf2 = GitBuffer(bufnr2)
+    git_buf2:sync()
+
+    -- Populate caches
+    git_buf1:diff()
+    git_buf2:diff()
+
+    git_buffer_store.add(git_buf1)
+    git_buffer_store.add(git_buf2)
+
+    -- Simulate VGitChange
+    git_buffer_store.for_each(function(buffer)
+      buffer:clear_blob_cache()
+    end)
+
+    assert.is_nil(git_buf1._git_file._blob_cache['index'])
+    assert.is_nil(git_buf2._git_file._blob_cache['index'])
+  end)
+
+  it('should dispatch attach with real GitBuffer that has all expected methods', function()
+    local bufnr = create_buf(test_file)
+    local git_buffer = GitBuffer(bufnr)
+    git_buffer:sync()
+
+    local attached_buffer
+    git_buffer_store.on('attach', function(buffer)
+      attached_buffer = buffer
+    end)
+
+    git_buffer_store.add(git_buffer)
+    git_buffer_store.dispatch(git_buffer, 'attach')
+
+    assert.is_not_nil(attached_buffer)
+    assert.is_function(attached_buffer.clear_blob_cache)
+    assert.is_function(attached_buffer.diff)
+    assert.is_function(attached_buffer.stage)
+    assert.is_function(attached_buffer.unstage)
+    assert.is_function(attached_buffer.blame)
+    assert.is_function(attached_buffer.render_signs)
+    assert.is_function(attached_buffer.generate_status)
+    assert.is_function(attached_buffer.acquire)
+    assert.is_function(attached_buffer.release)
+  end)
+end)

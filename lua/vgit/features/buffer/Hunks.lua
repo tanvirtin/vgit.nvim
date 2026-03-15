@@ -122,7 +122,7 @@ function Hunks:reset_all()
   local hunks = buffer:get_hunks()
   if not hunks or #hunks == 0 then return end
 
-  local lines, err = buffer.git_file:lines()
+  local lines, err = buffer:get_file_lines()
   if err then return console.debug.error(err) end
 
   buffer:set_lines(lines)

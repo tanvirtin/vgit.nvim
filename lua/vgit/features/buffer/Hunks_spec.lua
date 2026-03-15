@@ -106,12 +106,10 @@ local function make_mock_buffer(opts)
     _stage_hunk_called = false,
     _stage_hunk_arg = nil,
     _unstage_called = false,
-    git_file = {
-      lines = function()
-        return opts.git_file_lines or { 'original line' }, opts.git_file_lines_err
-      end,
-    },
   }
+  function buffer:get_file_lines()
+    return opts.git_file_lines or { 'original line' }, opts.git_file_lines_err
+  end
   function buffer:get_hunks()
     return opts.hunks
   end

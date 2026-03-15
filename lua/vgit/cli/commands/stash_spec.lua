@@ -4,10 +4,29 @@ local mock_event = require('tests.helpers.mock_event').install()
 describe('stash_command:', function()
   local save_package, restore_packages = require('tests.helpers.package_mock').create()
 
-  local function make_mock_repo()
+  local function make_mock_repo(overrides)
+    overrides = overrides or {}
     return {
       get_path = function()
         return '/tmp/repo'
+      end,
+      stash_add = overrides.stash_add or function()
+        return {}, nil
+      end,
+      stash_pop = overrides.stash_pop or function()
+        return {}, nil
+      end,
+      stash_apply = overrides.stash_apply or function()
+        return {}, nil
+      end,
+      stash_drop = overrides.stash_drop or function()
+        return {}, nil
+      end,
+      stash_clear = overrides.stash_clear or function()
+        return {}, nil
+      end,
+      stash_list = overrides.stash_list or function()
+        return {}, nil
       end,
     }
   end
@@ -20,30 +39,7 @@ describe('stash_command:', function()
     package.loaded['vgit.git.repository'] = overrides.repository
       or {
         current = function()
-          return make_mock_repo(), nil
-        end,
-      }
-
-    save_package('vgit.git.git_stash')
-    package.loaded['vgit.git.git_stash'] = overrides.git_stash
-      or {
-        add = function()
-          return {}, nil
-        end,
-        apply = function()
-          return {}, nil
-        end,
-        pop = function()
-          return {}, nil
-        end,
-        drop = function()
-          return {}, nil
-        end,
-        clear = function()
-          return {}, nil
-        end,
-        list = function()
-          return {}, nil
+          return make_mock_repo(overrides.repo_methods), nil
         end,
       }
 
@@ -77,8 +73,8 @@ describe('stash_command:', function()
       local show_stash_data = nil
       local stashes = { { context = { revision = 'stash@{0}' }, message = 'WIP' } }
       setup_defaults({
-        git_stash = {
-          list = function()
+        repo_methods = {
+          stash_list = function()
             return stashes, nil
           end,
         },
@@ -93,11 +89,11 @@ describe('stash_command:', function()
       eq(stashes, show_stash_data.stashes)
     end)
 
-    it('"add" → calls git_stash.add', function()
+    it('"add" → calls repo:stash_add', function()
       local add_called = false
       setup_defaults({
-        git_stash = {
-          add = function()
+        repo_methods = {
+          stash_add = function()
             add_called = true
             return {}, nil
           end,
@@ -107,11 +103,11 @@ describe('stash_command:', function()
       assert.is_true(add_called)
     end)
 
-    it('"pop" (no index) → calls git_stash.pop with stash@{0}', function()
+    it('"pop" (no index) → calls repo:stash_pop with stash@{0}', function()
       local pop_ref = nil
       setup_defaults({
-        git_stash = {
-          pop = function(_, ref)
+        repo_methods = {
+          stash_pop = function(_, ref)
             pop_ref = ref
             return {}, nil
           end,
@@ -121,11 +117,11 @@ describe('stash_command:', function()
       eq('stash@{0}', pop_ref)
     end)
 
-    it('"pop 2" → calls git_stash.pop with stash@{2}', function()
+    it('"pop 2" → calls repo:stash_pop with stash@{2}', function()
       local pop_ref = nil
       setup_defaults({
-        git_stash = {
-          pop = function(_, ref)
+        repo_methods = {
+          stash_pop = function(_, ref)
             pop_ref = ref
             return {}, nil
           end,
@@ -135,11 +131,11 @@ describe('stash_command:', function()
       eq('stash@{2}', pop_ref)
     end)
 
-    it('"apply" (no index) → calls git_stash.apply with stash@{0}', function()
+    it('"apply" (no index) → calls repo:stash_apply with stash@{0}', function()
       local apply_ref = nil
       setup_defaults({
-        git_stash = {
-          apply = function(_, ref)
+        repo_methods = {
+          stash_apply = function(_, ref)
             apply_ref = ref
             return {}, nil
           end,
@@ -149,11 +145,11 @@ describe('stash_command:', function()
       eq('stash@{0}', apply_ref)
     end)
 
-    it('"apply 3" → calls git_stash.apply with stash@{3}', function()
+    it('"apply 3" → calls repo:stash_apply with stash@{3}', function()
       local apply_ref = nil
       setup_defaults({
-        git_stash = {
-          apply = function(_, ref)
+        repo_methods = {
+          stash_apply = function(_, ref)
             apply_ref = ref
             return {}, nil
           end,
@@ -163,11 +159,11 @@ describe('stash_command:', function()
       eq('stash@{3}', apply_ref)
     end)
 
-    it('"drop" (no index) → calls git_stash.drop with stash@{0}', function()
+    it('"drop" (no index) → calls repo:stash_drop with stash@{0}', function()
       local drop_ref = nil
       setup_defaults({
-        git_stash = {
-          drop = function(_, ref)
+        repo_methods = {
+          stash_drop = function(_, ref)
             drop_ref = ref
             return {}, nil
           end,
@@ -177,11 +173,11 @@ describe('stash_command:', function()
       eq('stash@{0}', drop_ref)
     end)
 
-    it('"drop 1" → calls git_stash.drop with stash@{1}', function()
+    it('"drop 1" → calls repo:stash_drop with stash@{1}', function()
       local drop_ref = nil
       setup_defaults({
-        git_stash = {
-          drop = function(_, ref)
+        repo_methods = {
+          stash_drop = function(_, ref)
             drop_ref = ref
             return {}, nil
           end,
@@ -191,11 +187,11 @@ describe('stash_command:', function()
       eq('stash@{1}', drop_ref)
     end)
 
-    it('"clear" → calls git_stash.clear', function()
+    it('"clear" → calls repo:stash_clear', function()
       local clear_called = false
       setup_defaults({
-        git_stash = {
-          clear = function()
+        repo_methods = {
+          stash_clear = function()
             clear_called = true
             return {}, nil
           end,
@@ -209,8 +205,8 @@ describe('stash_command:', function()
       local show_stash_data = nil
       local stashes = { { context = { revision = 'stash@{0}' }, message = 'WIP' } }
       setup_defaults({
-        git_stash = {
-          list = function()
+        repo_methods = {
+          stash_list = function()
             return stashes, nil
           end,
         },
@@ -248,8 +244,8 @@ describe('stash_command:', function()
     it('should show info when no stashes exist', function()
       local info_msg = nil
       setup_defaults({
-        git_stash = {
-          list = function()
+        repo_methods = {
+          stash_list = function()
             return {}, nil
           end,
         },
@@ -267,8 +263,8 @@ describe('stash_command:', function()
     it('should show error when stash list fails', function()
       local error_msg = nil
       setup_defaults({
-        git_stash = {
-          list = function()
+        repo_methods = {
+          stash_list = function()
             return nil, { 'failed to list stashes' }
           end,
         },
@@ -283,11 +279,11 @@ describe('stash_command:', function()
       eq('failed to list stashes', error_msg)
     end)
 
-    it('should show error when git_stash.add fails', function()
+    it('should show error when stash_add fails', function()
       local error_msg = nil
       setup_defaults({
-        git_stash = {
-          add = function()
+        repo_methods = {
+          stash_add = function()
             return nil, { 'nothing to stash' }
           end,
         },
@@ -302,11 +298,11 @@ describe('stash_command:', function()
       eq('nothing to stash', error_msg)
     end)
 
-    it('should show error when git_stash.pop fails', function()
+    it('should show error when stash_pop fails', function()
       local error_msg = nil
       setup_defaults({
-        git_stash = {
-          pop = function()
+        repo_methods = {
+          stash_pop = function()
             return nil, { 'cannot pop stash' }
           end,
         },
@@ -321,11 +317,11 @@ describe('stash_command:', function()
       eq('cannot pop stash', error_msg)
     end)
 
-    it('should show error when git_stash.apply fails', function()
+    it('should show error when stash_apply fails', function()
       local error_msg = nil
       setup_defaults({
-        git_stash = {
-          apply = function()
+        repo_methods = {
+          stash_apply = function()
             return nil, { 'conflict during apply' }
           end,
         },
@@ -340,11 +336,11 @@ describe('stash_command:', function()
       eq('conflict during apply', error_msg)
     end)
 
-    it('should show error when git_stash.drop fails', function()
+    it('should show error when stash_drop fails', function()
       local error_msg = nil
       setup_defaults({
-        git_stash = {
-          drop = function()
+        repo_methods = {
+          stash_drop = function()
             return nil, { 'invalid stash reference' }
           end,
         },
@@ -359,11 +355,11 @@ describe('stash_command:', function()
       eq('invalid stash reference', error_msg)
     end)
 
-    it('should show error when git_stash.clear fails', function()
+    it('should show error when stash_clear fails', function()
       local error_msg = nil
       setup_defaults({
-        git_stash = {
-          clear = function()
+        repo_methods = {
+          stash_clear = function()
             return nil, { 'cannot clear stash' }
           end,
         },

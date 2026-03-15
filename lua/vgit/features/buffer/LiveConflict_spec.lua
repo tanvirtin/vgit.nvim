@@ -78,3 +78,88 @@ describe('LiveConflict:', function()
     end)
   end)
 end)
+
+-- Integration tests using real git repos
+package.loaded['lint'] = package.loaded['lint'] or { try_lint = function() end }
+
+local test_repo = require('tests.helpers.test_repo')
+test_repo.use_driver('raw')
+
+describe('LiveConflict conflict flow (integration):', function()
+  local async = require('tests.helpers.async')({ it = it, before_each = before_each, after_each = after_each })
+  local it = async.it
+  local before_each = async.before_each
+  local after_each = async.after_each
+
+  local GitBuffer = require('vgit.git.GitBuffer')
+  local repo
+  local test_file
+  local created_bufnrs = {}
+
+  before_each(function()
+    created_bufnrs = {}
+    local err
+    repo, err = test_repo.create_repo({
+      initial_commit = true,
+      files = { ['test.txt'] = { 'line 1', 'line 2', 'line 3' } },
+    })
+    assert(not err, 'Failed to create test repo')
+    test_file = repo .. '/test.txt'
+  end)
+
+  after_each(function()
+    for _, bufnr in ipairs(created_bufnrs) do
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        vim.api.nvim_buf_delete(bufnr, { force = true })
+      end
+    end
+    if repo then test_repo.cleanup(repo) end
+  end)
+
+  local function create_buf(filepath)
+    local bufnr = vim.fn.bufadd(filepath)
+    vim.fn.bufload(bufnr)
+    created_bufnrs[#created_bufnrs + 1] = bufnr
+    return bufnr
+  end
+
+  it('should return empty conflicts on non-conflict file', function()
+    local bufnr = create_buf(test_file)
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    local conflicts = git_buf:conflicts()
+
+    assert.is_table(conflicts)
+    assert.equals(0, #conflicts)
+  end)
+
+  it('should clear stale conflict state', function()
+    local bufnr = create_buf(test_file)
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    -- Manually set stale conflict state
+    git_buf.state.conflicts = { { current = { top = 1, bot = 2 }, incoming = { top = 3, bot = 4 } } }
+    assert.equals(1, #git_buf.state.conflicts)
+
+    -- Calling conflicts() on a non-conflict file should clear stale state
+    local conflicts = git_buf:conflicts()
+
+    assert.is_table(conflicts)
+    assert.equals(0, #conflicts)
+    assert.equals(0, #git_buf.state.conflicts)
+  end)
+
+  it('should render conflicts without error on real buffer', function()
+    local bufnr = create_buf(test_file)
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    -- No conflicts, but render should still succeed
+    git_buf:conflicts()
+    local result = git_buf:render_conflicts()
+
+    assert.equals(git_buf, result)
+  end)
+end)
