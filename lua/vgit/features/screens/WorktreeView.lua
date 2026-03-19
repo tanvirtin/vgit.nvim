@@ -1,35 +1,33 @@
 local lazy = require('vgit.core.lazy')
 
-local Layout = lazy('vgit.ui.Layout')
+local View = lazy('vgit.ui.View')
+local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
-local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
 local git_repo = lazy('vgit.git.git_repo')
 local repository = lazy('vgit.git.repository')
 local git_worktree = lazy('vgit.git.git_worktree')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
-local WorktreeView = Object:extend()
+local WorktreeView = View:extend()
 
 WorktreeView.DEBOUNCE_MS = 200
 
 function WorktreeView:constructor()
-  return {
-    _data = nil,
-    _repo = nil,
-    _search_component = nil,
-    _component_manager = nil,
-    _debounce_cleanups = {},
-    _destroyed = false,
-  }
+  local instance = View.constructor(self)
+  instance._data = nil
+  instance._repo = nil
+  instance._search_component = nil
+  return instance
 end
 
 function WorktreeView:_is_current_worktree(worktree)
   if not self._repo then return false end
   local repo_path = self._repo:get_path()
   if not repo_path or not worktree.path then return false end
-  return vim.fn.resolve(repo_path) == vim.fn.resolve(worktree.path)
+  return fs.resolve(repo_path) == fs.resolve(worktree.path)
 end
 
 function WorktreeView:_build_items(worktrees)
@@ -59,7 +57,7 @@ function WorktreeView:_switch_to_worktree(worktree)
   self:destroy()
   repository.invalidate()
   git_repo.clear_cache()
-  vim.cmd('cd ' .. vim.fn.fnameescape(worktree.path))
+  fs.chdir(worktree.path)
   console.info('Switched to worktree: ' .. worktree.path)
 end
 
@@ -149,30 +147,12 @@ function WorktreeView:create(data)
   })
 
   self._component_manager = ComponentManager()
-  self._component_manager:render(Layout.popup(self._search_component))
+  self._component_manager:render({
+    component = self._search_component,
+    mode = 'popup',
+  })
 
   return true
-end
-
-function WorktreeView:is_destroyed()
-  return self._destroyed
-end
-
-function WorktreeView:destroy()
-  if self._destroyed then return end
-  self._destroyed = true
-
-  for _, cleanup in ipairs(self._debounce_cleanups) do
-    cleanup()
-  end
-  self._debounce_cleanups = {}
-
-  if self._component_manager then
-    self._component_manager:destroy()
-    self._component_manager = nil
-  end
-
-  self._search_component = nil
 end
 
 return WorktreeView

@@ -1,17 +1,15 @@
 local lazy = require('vgit.core.lazy')
 
-local Object = lazy('vgit.core.Object')
+local View = lazy('vgit.ui.View')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local CommitComponent = lazy('vgit.ui.components.CommitComponent')
 
-local CommitView = Object:extend()
+local CommitView = View:extend()
 
 function CommitView:constructor()
-  return {
-    _component = nil,
-    _component_manager = nil,
-    _destroyed = false,
-  }
+  local instance = View.constructor(self)
+  instance._component = nil
+  return instance
 end
 
 function CommitView:create(opts)
@@ -56,20 +54,14 @@ function CommitView:focus()
   return self
 end
 
+function CommitView:start_insert()
+  if self._component then self._component:start_insert() end
+  return self
+end
+
 function CommitView:is_valid()
   if self._component then return self._component:is_valid() end
   return false
-end
-
-function CommitView:destroy()
-  if self._destroyed then return end
-  self._destroyed = true
-
-  if self._component_manager then
-    self._component_manager:destroy()
-    self._component_manager = nil
-  end
-  self._component = nil
 end
 
 return CommitView

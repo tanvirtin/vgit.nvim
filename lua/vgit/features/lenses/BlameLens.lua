@@ -1,6 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
-local Layout = lazy('vgit.ui.Layout')
+local keymap = lazy('vgit.core.keymap')
 local Object = lazy('vgit.core.Object')
 local event = lazy('vgit.core.event')
 local Buffer = lazy('vgit.core.Buffer')
@@ -10,7 +10,6 @@ local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local BorderComponent = lazy('vgit.ui.components.BorderComponent')
-local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
 local BlameInfoComponent = lazy('vgit.ui.components.BlameInfoComponent')
 local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
 local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
@@ -83,16 +82,10 @@ function BlameLens:create(data)
 
   table.insert(layout_children, LayoutSpec.view(bottom_border, { height = 1 }))
 
-  local wrapper = LayoutComponent({
-    spec = LayoutSpec.vertical(layout_children),
-  })
-
   local height = diff_component and '35vh' or '5'
 
-  self.component_manager:render(Layout.lens(wrapper, {
+  self.component_manager:render(LayoutSpec.lens(LayoutSpec.vertical(layout_children), {
     height = height,
-    relative = 'cursor',
-    zindex = 2,
   }))
 
   if data.diff and data.blame and data.blame.lnum then self:set_relative_lnum(data.blame.lnum, data.diff) end
@@ -102,19 +95,11 @@ function BlameLens:create(data)
   return true
 end
 
-function BlameLens:get_key(keymap)
-  if type(keymap) == 'string' then
-    return keymap
-  elseif type(keymap) == 'table' then
-    return keymap.key
-  end
-end
-
 function BlameLens:setup_keymaps()
   local scene_keymaps = scene_setting:get('keymaps')
 
   if scene_keymaps and scene_keymaps.quit then
-    local quit_key = self:get_key(scene_keymaps.quit)
+    local quit_key = keymap.get_key(scene_keymaps.quit)
     if quit_key then
       if self.diff_component then
         self.diff_component:set_keymap({
@@ -141,7 +126,7 @@ function BlameLens:setup_hunk_keymaps()
 
   if not keymaps then return end
 
-  local prev_key = self:get_key(keymaps.previous)
+  local prev_key = keymap.get_key(keymaps.previous)
   if prev_key then
     local prev_fn = event.async(function()
       self:prev_hunk()
@@ -152,7 +137,7 @@ function BlameLens:setup_hunk_keymaps()
     }, prev_fn)
   end
 
-  local next_key = self:get_key(keymaps.next)
+  local next_key = keymap.get_key(keymaps.next)
   if next_key then
     local next_fn = event.async(function()
       self:next_hunk()
@@ -192,13 +177,7 @@ function BlameLens:set_relative_lnum(lnum, diff)
   end)
 end
 
-function BlameLens:emit_cleanup_events()
-  self.blame_info_component:component_will_unmount()
-  if self.diff_component then self.diff_component:component_will_unmount() end
-end
-
 function BlameLens:destroy()
-  self:emit_cleanup_events()
   self.component_manager:destroy()
 end
 

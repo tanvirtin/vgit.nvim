@@ -1,5 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
+local Window = lazy('vgit.core.Window')
+local fs = lazy('vgit.core.fs')
 local hunks_setting = lazy('vgit.settings.hunks')
 local live_gutter_setting = lazy('vgit.settings.live_gutter')
 
@@ -116,6 +118,47 @@ function navigation.down(window, marks)
     window:set_lnum(new_lnum):scroll_to(alignment, get_hunk_alignment_offset())
 
     return selected
+  end
+end
+
+function navigation.get_mark_index(marks, lnum)
+  if not marks or #marks == 0 then return nil, 0 end
+
+  for i, mark in ipairs(marks) do
+    if lnum >= mark.top and lnum <= mark.bot then
+      return i, #marks
+    elseif mark.top > lnum then
+      return math.max(1, i - 1), #marks
+    end
+  end
+
+  return #marks, #marks
+end
+
+function navigation.get_current_lnum()
+  return Window(0):get_lnum()
+end
+
+function navigation.set_current_lnum(lnum)
+  Window(0):set_lnum(lnum)
+end
+
+function navigation.get_current_cursor()
+  return Window(0):get_cursor()
+end
+
+function navigation.current_window()
+  return Window(0)
+end
+
+function navigation.open_file(filename, lnum, scroll)
+  fs.open(filename)
+
+  if lnum then
+    local window = Window(0)
+    window:set_lnum(lnum)
+
+    if scroll then window:scroll_to(scroll) end
   end
 end
 

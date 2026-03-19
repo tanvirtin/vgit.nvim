@@ -142,32 +142,38 @@ end
 
 function LayoutSpec.screen(children, opts)
   opts = opts or {}
-  return LayoutSpec.absolute(LayoutSpec.vertical(children, opts), {
+  local spec = LayoutSpec.absolute(LayoutSpec.vertical(children, opts), {
     anchor = LayoutSpec.Anchor.CENTER,
     width = '100vw',
     height = '100vh',
     zindex = opts.zindex or 1,
   })
+  spec.mode = 'screen'
+  return spec
 end
 
 function LayoutSpec.popup(child, opts)
   opts = opts or {}
-  return LayoutSpec.absolute(child, {
+  local spec = LayoutSpec.absolute(child, {
     anchor = LayoutSpec.Anchor.CENTER,
     width = opts.width or '80vw',
     height = opts.height or '60vh',
     zindex = opts.zindex or 2,
   })
+  spec.mode = 'popup'
+  return spec
 end
 
 function LayoutSpec.lens(child, opts)
   opts = opts or {}
-  return LayoutSpec.absolute(child, {
+  local spec = LayoutSpec.absolute(child, {
     anchor = LayoutSpec.Anchor.CENTER,
     width = opts.width or '100vw',
     height = opts.height or '35vh',
     zindex = opts.zindex or 2,
   })
+  spec.mode = 'lens'
+  return spec
 end
 
 function LayoutSpec.center(child, opts)

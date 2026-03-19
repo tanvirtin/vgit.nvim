@@ -146,6 +146,14 @@ function Buffer:is_valid()
   return vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr)
 end
 
+function Buffer:save()
+  self:call(function()
+    vim.cmd('update')
+  end)
+
+  return self
+end
+
 function Buffer:delete(opts)
   opts = opts or {}
   vim.tbl_extend('keep', opts, { force = true })

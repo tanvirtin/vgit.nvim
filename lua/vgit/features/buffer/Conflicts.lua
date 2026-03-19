@@ -1,7 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
 local utils = lazy('vgit.core.utils')
-local Window = lazy('vgit.core.Window')
 local Object = lazy('vgit.core.Object')
 local navigation = lazy('vgit.core.navigation')
 local git_buffer_store = lazy('vgit.git.git_buffer_store')
@@ -21,7 +20,7 @@ function Conflicts:hunk_up()
   local conflicts = buffer:get_conflicts()
   if not conflicts or #conflicts == 0 then return end
 
-  local window = Window(0)
+  local window = navigation.current_window()
 
   local marks = buffer:get_conflict_marks()
   navigation.up(window, marks)
@@ -34,7 +33,7 @@ function Conflicts:hunk_down()
   local conflicts = buffer:get_conflicts()
   if not conflicts or #conflicts == 0 then return end
 
-  local window = Window(0)
+  local window = navigation.current_window()
 
   local marks = buffer:get_conflict_marks()
   navigation.down(window, marks)
@@ -47,8 +46,7 @@ function Conflicts:accept_both()
   local conflicts = buffer:get_conflicts()
   if not conflicts or #conflicts == 0 then return end
 
-  local window = Window(0)
-  local cursor = window:get_cursor()
+  local cursor = navigation.get_current_cursor()
   local conflict = buffer:get_conflict(cursor[1])
   if not conflict then return end
 
@@ -70,8 +68,7 @@ function Conflicts:accept_current()
   local conflicts = buffer:get_conflicts()
   if not conflicts or #conflicts == 0 then return end
 
-  local window = Window(0)
-  local cursor = window:get_cursor()
+  local cursor = navigation.get_current_cursor()
   local conflict = buffer:get_conflict(cursor[1])
   if not conflict then return end
 
@@ -91,8 +88,7 @@ function Conflicts:accept_incoming()
   local conflicts = buffer:get_conflicts()
   if not conflicts or #conflicts == 0 then return end
 
-  local window = Window(0)
-  local cursor = window:get_cursor()
+  local cursor = navigation.get_current_cursor()
   local conflict = buffer:get_conflict(cursor[1])
   if not conflict then return end
 

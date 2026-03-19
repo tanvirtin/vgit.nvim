@@ -1,22 +1,54 @@
 local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
-local Window = lazy('vgit.core.Window')
-local Component = lazy('vgit.ui.Component')
 local Element = lazy('vgit.ui.elements.Element')
-local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
-local SearchFilter = lazy('vgit.ui.components.SearchComponent.SearchFilter')
+local Component = lazy('vgit.ui.Component')
+local SearchFilter = lazy('vgit.core.SearchFilter')
 
-local SearchComponent = Component:extend()
+local SearchComponent = Component({
+  elements = {
+    input = { buf_options = { modifiable = true, buflisted = false, bufhidden = 'wipe' } },
+    list = { buf_options = { modifiable = false, buflisted = false, bufhidden = 'wipe' } },
+  },
+
+  on_mount = function(self)
+    local prompt = self.props.prompt or '> '
+    self.elements.input:set_lines({ prompt })
+
+    self:_setup_input_tracking()
+    self:_setup_keymaps()
+    self:_apply_filter()
+
+    if self.props.popup == false then
+      self.elements.list:on('CursorMoved', function()
+        if not self._mounted then return end
+        local cursor = self.elements.list:get_cursor()
+        if not cursor then return end
+        local lnum = cursor[1]
+        if lnum ~= self.state.selected_index then
+          self.state.selected_index = lnum
+          self:_fire_on_move()
+        end
+      end)
+    end
+
+    self.elements.input:focus()
+    self.elements.input:start_insert()
+  end,
+
+  on_unmount = function(self)
+    if self.elements.input then
+      self.elements.input:stop_insert()
+    end
+  end,
+})
 
 function SearchComponent:constructor(props)
-  local instance = Component.constructor(self, props)
+  local instance = SearchComponent.super.constructor(self, props)
 
+  instance.elements = {}
   instance._loading = false
   instance._exhausted = false
-  instance._list_element = nil
-  instance._input_element = nil
   instance._filter = SearchFilter()
 
   return instance
@@ -28,6 +60,108 @@ function SearchComponent:get_initial_state()
     filtered_items = {},
     selected_index = 1,
   }
+end
+
+function SearchComponent:mount()
+  if self._mounted then return end
+  local border_hl = self.props.border_hl or 'GitBorder'
+  local winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl
+  local list_winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl .. ',CursorLine:GitSelected'
+
+  local is_popup = self.props.popup ~= false
+  local input_border = is_popup and (self.props.border or { '', '', '', '│', '', '', '', '│' }) or 'none'
+  local list_border = is_popup and { '├', '─', '┤', '│', '╯', '─', '╰', '│' } or 'none'
+  local list_focusable = not is_popup
+
+  if not self.elements.input then
+    self.elements.input = Element({
+      buf_options = {
+        modifiable = true,
+        buflisted = false,
+        bufhidden = 'wipe',
+      },
+      win_options = {
+        cursorline = false,
+        number = false,
+        relativenumber = false,
+        wrap = false,
+        winhl = winhl,
+      },
+      win_plot = {
+        focusable = true,
+        border = input_border,
+      },
+    })
+  end
+
+  if not self.elements.list then
+    self.elements.list = Element({
+      buf_options = {
+        modifiable = false,
+        buflisted = false,
+        bufhidden = 'wipe',
+      },
+      win_options = {
+        cursorline = true,
+        number = false,
+        relativenumber = false,
+        wrap = false,
+        winhl = list_winhl,
+      },
+      win_plot = {
+        focusable = list_focusable,
+        border = list_border,
+      },
+    })
+  end
+  self._mounted = true
+end
+
+function SearchComponent:layout(spec)
+  local LayoutContext = require('vgit.ui.layout.LayoutContext')
+  local zindex = self.props.zindex or 50
+
+  if self.props.popup ~= false then
+    local width = self.props.width or '60vw'
+    width = LayoutContext.convert_dimension(width) or width
+
+    return spec.absolute(
+      spec.vertical({
+        spec.view(self.elements.input, { height = 1, zindex = zindex + 1 }),
+        spec.view(self.elements.list, { flex = 1, zindex = zindex }),
+      }),
+      {
+        anchor = spec.Anchor.TOP_CENTER,
+        width = width,
+        height = 1 + (self.props.max_height or 20),
+      }
+    )
+  end
+
+  return spec.flex({
+    direction = spec.Direction.VERTICAL,
+    children = {
+      spec.view(self.elements.input, { height = 1, zindex = zindex + 1 }),
+      spec.view(self.elements.list, { flex = 1, zindex = zindex }),
+    },
+    height = self.props.height,
+    flex = self.props.flex,
+  })
+end
+
+function SearchComponent:is_valid()
+  if self.elements.input and self.elements.input:is_valid() then return true end
+  if self.elements.list and self.elements.list:is_valid() then return true end
+  return false
+end
+
+function SearchComponent:on(event_name, callback)
+  if self.elements.list then self.elements.list:on(event_name, callback) end
+  if self.elements.input then self.elements.input:on(event_name, callback) end
+end
+
+function SearchComponent:set_keymap(mode_or_opts, key_or_callback, handler, desc)
+  if self.elements.input then self.elements.input:set_keymap(mode_or_opts, key_or_callback, handler, desc) end
 end
 
 function SearchComponent:set_items(items)
@@ -43,7 +177,6 @@ function SearchComponent:set_items(items)
     selected_index = 1,
     visible_count = page_size and math.min(page_size, #filtered_items) or #filtered_items,
   })
-
   self:_fire_on_move()
 end
 
@@ -81,7 +214,6 @@ function SearchComponent:_apply_filter()
     selected_index = 1,
     visible_count = page_size and math.min(page_size, #filtered_items) or #filtered_items,
   })
-
   self:_fire_on_move()
 end
 
@@ -138,6 +270,7 @@ function SearchComponent:move(direction)
         local page_size = self.props.page_size or visible_count
         local new_visible = math.min(visible_count + page_size, #items)
         self:set_state({ visible_count = new_visible, selected_index = index })
+        if self._mounted then self:render() end
         self:_fire_on_move()
         return
       elseif self.props.on_load_more and not self._exhausted then
@@ -152,8 +285,7 @@ function SearchComponent:move(direction)
     if index < 1 then index = visible_count end
   end
 
-  self:set_state({ selected_index = index })
-  self:_fire_on_move()
+  self:set_state({ selected_index = index })  self:_fire_on_move()
 end
 
 function SearchComponent:select()
@@ -183,155 +315,23 @@ function SearchComponent:get_selected_item()
   return items[self.state.selected_index]
 end
 
-function SearchComponent:is_valid()
-  if self._input_element and self._input_element:is_valid() then return true end
-  if self._list_element and self._list_element:is_valid() then return true end
-  return false
-end
-
-function SearchComponent:on(event_name, callback)
-  if self._list_element then self._list_element:on(event_name, callback) end
-  if self._input_element then self._input_element:on(event_name, callback) end
-end
-
-function SearchComponent:set_keymap(mode_or_opts, key_or_callback, handler, desc)
-  if self._input_element then self._input_element:set_keymap(mode_or_opts, key_or_callback, handler, desc) end
-end
-
-function SearchComponent:_get_width()
-  local width = self.props.width or '60vw'
-  return LayoutContext.convert_dimension(width) or width
-end
-
-function SearchComponent:get_layout_spec()
-  local zindex = self.props.zindex or 50
-
-  if self.props.popup ~= false then
-    return LayoutSpec.absolute(
-      LayoutSpec.vertical({
-        LayoutSpec.view(self._input_element, { height = 1, zindex = zindex + 1 }),
-        LayoutSpec.view(self._list_element, { flex = 1, zindex = zindex }),
-      }),
-      {
-        anchor = LayoutSpec.Anchor.TOP_CENTER,
-        width = self:_get_width(),
-        height = 1 + (self.props.max_height or 20),
-      }
-    )
-  end
-
-  return LayoutSpec.flex({
-    direction = LayoutSpec.Direction.VERTICAL,
-    children = {
-      LayoutSpec.view(self._input_element, { height = 1, zindex = zindex + 1 }),
-      LayoutSpec.view(self._list_element, { flex = 1, zindex = zindex }),
-    },
-    height = self.props.height,
-    flex = self.props.flex,
-  })
-end
-
-function SearchComponent:component_will_mount()
-  local border_hl = self.props.border_hl or 'GitBorder'
-  local winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl
-  local list_winhl = 'Normal:GitBackground,FloatBorder:' .. border_hl .. ',CursorLine:GitSelected'
-
-  local is_popup = self.props.popup ~= false
-  local input_border = is_popup and (self.props.border or { '', '', '', '│', '', '', '', '│' }) or 'none'
-  local list_border = is_popup and { '├', '─', '┤', '│', '╯', '─', '╰', '│' } or 'none'
-  local list_focusable = not is_popup
-
-  if not self._input_element then
-    self._input_element = Element({
-      buf_options = {
-        modifiable = true,
-        buflisted = false,
-        bufhidden = 'wipe',
-      },
-      win_options = {
-        cursorline = false,
-        number = false,
-        relativenumber = false,
-        wrap = false,
-        winhl = winhl,
-      },
-      win_plot = {
-        focusable = true,
-        border = input_border,
-      },
-    })
-  end
-
-  if not self._list_element then
-    self._list_element = Element({
-      buf_options = {
-        modifiable = false,
-        buflisted = false,
-        bufhidden = 'wipe',
-      },
-      win_options = {
-        cursorline = true,
-        number = false,
-        relativenumber = false,
-        wrap = false,
-        winhl = list_winhl,
-      },
-      win_plot = {
-        focusable = list_focusable,
-        border = list_border,
-      },
-    })
-  end
-end
-
-function SearchComponent:component_did_mount()
-  local prompt = self.props.prompt or '> '
-  self._input_element:set_lines({ prompt })
-
-  self:_setup_input_tracking()
-  self:_setup_keymaps()
-  self:_apply_filter()
-
-  if self.props.popup == false then
-    local list_buf = self._list_element:get_buffer()
-    if list_buf then
-      list_buf:on('CursorMoved', function()
-        if not self._mounted then return end
-        local win = self._list_element:get_window()
-        if not win then return end
-        local lnum = win:get_cursor()[1]
-        if lnum ~= self.state.selected_index then
-          self.state.selected_index = lnum
-          self:_fire_on_move()
-        end
-      end)
-    end
-  end
-
-  self._input_element:focus()
-  self._input_element:get_window():start_insert()
-end
-
 function SearchComponent:_setup_input_tracking()
   local prompt = self.props.prompt or '> '
-  local input_buf = self._input_element:get_buffer()
 
-  input_buf:attach_to_changes({
+  self.elements.input:attach_to_changes({
     on_lines = event.async(function()
       event.await()
 
       if not self._mounted then return end
-      if not input_buf:is_valid() then return end
+      if not self.elements.input or not self.elements.input:is_valid() then return end
 
-      local lines = input_buf:get_lines(0, 1)
+      local lines = self.elements.input:get_lines()
       local line = lines[1] or ''
 
       if not vim.startswith(line, prompt) then
         line = prompt
-        input_buf:set_lines({ line }, 0, 1)
-        local col = #prompt
-        local win = self._input_element:get_window()
-        win:set_cursor({ 1, col })
+        self.elements.input:set_lines({ line })
+        self.elements.input:set_cursor({ 1, #prompt })
         return
       end
 
@@ -346,7 +346,7 @@ function SearchComponent:_setup_input_tracking()
 end
 
 function SearchComponent:_setup_keymaps()
-  local input_element = self._input_element
+  local input_element = self.elements.input
 
   input_element:set_keymap('i', '<C-n>', function()
     self:move('down')
@@ -390,7 +390,7 @@ function SearchComponent:_setup_keymaps()
 end
 
 function SearchComponent:render()
-  if not self._list_element or not self._list_element:is_valid() then return end
+  if not self.elements.list or not self.elements.list:is_valid() then return end
 
   local items = self.state.filtered_items
   local max_height = self.props.max_height or 20
@@ -450,13 +450,11 @@ function SearchComponent:render()
     }
   end
 
-  local list_height = math.min(max_height, math.max(1, #lines))
-
-  self._list_element:set_lines(lines)
+  self.elements.list:set_lines(lines)
 
   for i = 1, #description_hls do
     local hl = description_hls[i]
-    self._list_element:place_extmark_highlight({
+    self.elements.list:place_extmark_highlight({
       hl = 'GitComment',
       row = hl.row,
       col_range = {
@@ -468,7 +466,7 @@ function SearchComponent:render()
 
   for i = 1, #icon_hls do
     local hl = icon_hls[i]
-    self._list_element:place_extmark_highlight({
+    self.elements.list:place_extmark_highlight({
       hl = hl.hl,
       row = hl.row,
       col_range = {
@@ -478,20 +476,22 @@ function SearchComponent:render()
     })
   end
 
-  if self._list_element:is_valid() then
-    if self.props.popup ~= false then self._list_element:set_height(list_height) end
+  if self.elements.list:is_valid() then
+    if self.props.popup ~= false then
+      local list_height = math.min(max_height, math.max(1, #lines))
+      self.elements.list:set_height(list_height)
+    end
 
     local selected = self.state.selected_index
     if selected >= 1 and selected <= visible_count then
-      local win = self._list_element:get_window()
-      if win then win:set_cursor({ selected, 0 }) end
+      self.elements.list:set_cursor({ selected, 0 })
     end
   end
 
   if #items == 0 then
     local placeholder = self.props.placeholder or 'Search...'
-    self._list_element:set_lines({ '' })
-    self._list_element:place_extmark_text({
+    self.elements.list:set_lines({ '' })
+    self.elements.list:place_extmark_text({
       text = padding .. placeholder,
       hl = 'GitComment',
       row = 0,
@@ -499,9 +499,9 @@ function SearchComponent:render()
     })
   end
 
-  if self._input_element and self._input_element:is_valid() then
+  if self.elements.input and self.elements.input:is_valid() then
     local count_text = tostring(#(self.props.items or {}))
-    self._input_element:place_extmark_text({
+    self.elements.input:place_extmark_text({
       text = count_text,
       hl = 'GitComment',
       row = 0,
@@ -514,24 +514,6 @@ end
 function SearchComponent:set_loading(value)
   self._loading = value
   if self._mounted then self:render() end
-end
-
-function SearchComponent:unmount()
-  if not self._mounted then return end
-
-  Window.stop_insert()
-
-  if self._input_element then
-    self._input_element:unmount()
-    self._input_element = nil
-  end
-
-  if self._list_element then
-    self._list_element:unmount()
-    self._list_element = nil
-  end
-
-  Component.unmount(self)
 end
 
 return SearchComponent

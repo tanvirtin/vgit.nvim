@@ -2,8 +2,8 @@ local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
 local Object = lazy('vgit.core.Object')
-local Window = lazy('vgit.core.Window')
 local console = lazy('vgit.core.console')
+local navigation = lazy('vgit.core.navigation')
 local git_buffer_store = lazy('vgit.git.git_buffer_store')
 local live_blame_setting = lazy('vgit.settings.live_blame')
 
@@ -27,8 +27,7 @@ function LiveBlame:constructor()
       return console.debug.error(config_err)
     end
 
-    local window = Window(0)
-    local lnum = window:get_lnum()
+    local lnum = navigation.get_current_lnum()
 
     local _, blame_err = buffer:blame(lnum)
     buffer:release()

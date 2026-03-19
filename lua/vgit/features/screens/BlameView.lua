@@ -1,125 +1,37 @@
 local lazy = require('vgit.core.lazy')
 
+local View = lazy('vgit.ui.View')
 local event = lazy('vgit.core.event')
-local Layout = lazy('vgit.ui.Layout')
-local Object = lazy('vgit.core.Object')
+local keymap = lazy('vgit.core.keymap')
 local console = lazy('vgit.core.console')
-local Component = lazy('vgit.ui.Component')
 local repository = lazy('vgit.git.repository')
-local Element = lazy('vgit.ui.elements.Element')
 local scene_setting = lazy('vgit.settings.scene')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local display_service = lazy('vgit.ui.display_service')
 local blame_view_setting = lazy('vgit.settings.blame_view')
-local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
+local BlameGutterComponent = lazy('vgit.ui.components.BlameGutterComponent')
+local BlameContentComponent = lazy('vgit.ui.components.BlameContentComponent')
 
-local BlameGutterComponent = Component:extend()
-
-function BlameGutterComponent:component_will_mount()
-  if not self._element then
-    self._element = Element({
-      buf_options = {
-        modifiable = false,
-        buflisted = false,
-        bufhidden = 'wipe',
-      },
-      win_options = {
-        winhl = 'Normal:GitBackground',
-        signcolumn = 'no',
-        wrap = false,
-        number = false,
-        cursorline = true,
-      },
-      win_plot = {
-        focusable = false,
-      },
-    })
-  end
-end
-
-function BlameGutterComponent:render() end
-
-function BlameGutterComponent:component_did_mount() end
-
-function BlameGutterComponent:get_layout_spec()
-  return LayoutSpec.view(self._element, {
-    width = self.props.width or '35%',
-  })
-end
-
-function BlameGutterComponent:unmount()
-  if not self._mounted then return end
-  if self._element then
-    self._element:unmount()
-    self._element = nil
-  end
-  Component.unmount(self)
-end
-
-local BlameContentComponent = Component:extend()
-
-function BlameContentComponent:component_will_mount()
-  if not self._element then
-    self._element = Element({
-      buf_options = {
-        modifiable = false,
-        buflisted = false,
-        bufhidden = 'wipe',
-      },
-      win_options = {
-        winhl = 'Normal:GitBackground',
-        signcolumn = 'no',
-        wrap = false,
-        number = true,
-        cursorline = true,
-      },
-    })
-  end
-end
-
-function BlameContentComponent:render() end
-
-function BlameContentComponent:component_did_mount() end
-
-function BlameContentComponent:get_layout_spec()
-  return LayoutSpec.view(self._element, {
-    flex = 1,
-    focus = true,
-  })
-end
-
-function BlameContentComponent:unmount()
-  if not self._mounted then return end
-  if self._element then
-    self._element:unmount()
-    self._element = nil
-  end
-  Component.unmount(self)
-end
-
-local BlameView = Object:extend()
+local BlameView = View:extend()
 
 BlameView.DEBOUNCE_MS = 100
 
 function BlameView:constructor()
-  return {
-    _gutter_component = nil,
-    _content_component = nil,
-    _component_manager = nil,
-    _repo = nil,
-    _history_stack = {},
-    _current_commit = nil,
-    _current_blames = {},
-    _blame_segments = {},
-    _opts = {
-      filename = nil,
-      filetype = nil,
-      reponame = nil,
-    },
-    _destroyed = false,
-    _debounce_cleanups = {},
+  local instance = View.constructor(self)
+  instance._gutter_component = nil
+  instance._content_component = nil
+  instance._repo = nil
+  instance._history_stack = {}
+  instance._current_commit = nil
+  instance._current_blames = {}
+  instance._blame_segments = {}
+  instance._opts = {
+    filename = nil,
+    filetype = nil,
+    reponame = nil,
   }
+  return instance
 end
 
 function BlameView:create(data)
@@ -167,18 +79,13 @@ function BlameView:_create_view(data)
   self._gutter_component = BlameGutterComponent()
   self._content_component = BlameContentComponent()
 
-  local wrapper = LayoutComponent({
-    spec = LayoutSpec.horizontal({
+  self._component_manager = ComponentManager()
+  event.await()
+  self._component_manager:render(LayoutSpec.screen({
+    LayoutSpec.horizontal({
       LayoutSpec.view(self._gutter_component, { width = '35%' }),
       LayoutSpec.view(self._content_component, { flex = 1 }),
     }),
-  })
-
-  self._component_manager = ComponentManager()
-  event.await()
-  self._component_manager:render(Layout.screen(wrapper, {
-    width = '100vw',
-    height = '100vh',
   }))
 
   self:_render_blame(data.blames)
@@ -699,21 +606,13 @@ function BlameView:_refresh_view(blames, lines, target_lnum)
   end
 end
 
-function BlameView:get_key(keymap)
-  if type(keymap) == 'string' then
-    return keymap
-  elseif type(keymap) == 'table' then
-    return keymap.key
-  end
-  return nil
-end
 
 function BlameView:_setup_keymaps()
   local scene_keymaps = scene_setting:get('keymaps')
   local components = { self._content_component, self._gutter_component }
 
   if scene_keymaps and scene_keymaps.quit then
-    local quit_key = self:get_key(scene_keymaps.quit)
+    local quit_key = keymap.get_key(scene_keymaps.quit)
     if quit_key then
       for _, component in ipairs(components) do
         component:set_keymap({
@@ -777,7 +676,7 @@ function BlameView:_setup_keymaps()
     }, project_diff_fn)
 
     if blame_keymaps and blame_keymaps.down then
-      local down_key = self:get_key(blame_keymaps.down)
+      local down_key = keymap.get_key(blame_keymaps.down)
       if down_key then component:set_keymap({
         mode = 'n',
         key = down_key,
@@ -785,29 +684,13 @@ function BlameView:_setup_keymaps()
     end
 
     if blame_keymaps and blame_keymaps.up then
-      local up_key = self:get_key(blame_keymaps.up)
+      local up_key = keymap.get_key(blame_keymaps.up)
       if up_key then component:set_keymap({
         mode = 'n',
         key = up_key,
       }, blame_up_fn) end
     end
   end
-end
-
-function BlameView:is_destroyed()
-  return self._destroyed
-end
-
-function BlameView:destroy()
-  if self._destroyed then return end
-  self._destroyed = true
-
-  for _, cleanup in ipairs(self._debounce_cleanups) do
-    cleanup()
-  end
-  self._debounce_cleanups = {}
-
-  if self._component_manager then self._component_manager:destroy() end
 end
 
 return BlameView

@@ -27,7 +27,7 @@ end
 
 function ComponentGroup:call_did_mount()
   for _, component in ipairs(self.mounted_components) do
-    if component.component_did_mount then component:component_did_mount() end
+    if component.on_mount then component:on_mount() end
   end
 end
 

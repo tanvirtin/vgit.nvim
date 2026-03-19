@@ -1,29 +1,27 @@
 local lazy = require('vgit.core.lazy')
 
+local View = lazy('vgit.ui.View')
 local event = lazy('vgit.core.event')
-local Layout = lazy('vgit.ui.Layout')
-local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local display_service = lazy('vgit.ui.display_service')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
-local CommitPickerView = Object:extend()
+local CommitPickerView = View:extend()
 
 function CommitPickerView:constructor()
-  return {
-    _search_component = nil,
-    _component_manager = nil,
-    _destroyed = false,
-    _history = nil,
-    _repo = nil,
-    _repo_path = nil,
-    _search_query = '',
-    _search_skip = 0,
-    _search_version = 0,
-  }
+  local instance = View.constructor(self)
+  instance._search_component = nil
+  instance._history = nil
+  instance._repo = nil
+  instance._repo_path = nil
+  instance._search_query = ''
+  instance._search_skip = 0
+  instance._search_version = 0
+  return instance
 end
 
 function CommitPickerView:_build_items(commits)
@@ -85,7 +83,10 @@ function CommitPickerView:create(data)
   })
 
   self._component_manager = ComponentManager()
-  self._component_manager:render(Layout.popup(self._search_component))
+  self._component_manager:render({
+    component = self._search_component,
+    mode = 'popup',
+  })
 
   return true
 end
@@ -269,26 +270,15 @@ function CommitPickerView:_on_load_more()
   return self:_build_items(commits)
 end
 
-function CommitPickerView:is_destroyed()
-  return self._destroyed
-end
-
 function CommitPickerView:destroy()
-  if self._destroyed then return end
-
-  self._destroyed = true
+  if self:is_destroyed() then return end
 
   if self._search_cleanup then
     self._search_cleanup()
     self._search_cleanup = nil
   end
 
-  if self._component_manager then
-    self._component_manager:destroy()
-    self._component_manager = nil
-  end
-
-  self._search_component = nil
+  View.destroy(self)
 end
 
 return CommitPickerView

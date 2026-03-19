@@ -50,45 +50,6 @@ end
 describe('DiffComponent:', function()
   after_each(ui_helper.cleanup_ui)
 
-  describe('should_component_update', function()
-    -- Pure logic: only needs self.props — no real UI required
-    it('should return true when diff changes', function()
-      local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local diff_ref = { lines = {} }
-      local component = DiffComponent({ diff = diff_ref, filetype = 'lua' })
-
-      local result = component:should_component_update({
-        diff = { lines = {} },
-        filetype = 'lua',
-      }, {})
-      assert.is_true(result)
-    end)
-
-    it('should return true when filetype changes', function()
-      local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local diff_ref = { lines = {} }
-      local component = DiffComponent({ diff = diff_ref, filetype = 'lua' })
-
-      local result = component:should_component_update({
-        diff = diff_ref,
-        filetype = 'python',
-      }, {})
-      assert.is_true(result)
-    end)
-
-    it('should return false when nothing changes', function()
-      local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local diff_ref = { lines = {} }
-      local component = DiffComponent({ diff = diff_ref, filetype = 'lua' })
-
-      local result = component:should_component_update({
-        diff = diff_ref,
-        filetype = 'lua',
-      }, {})
-      assert.is_false(result)
-    end)
-  end)
-
   describe('hunk_down', function()
     it('should navigate to first mark when cursor is before all marks', function()
       local component = create_diff_component({
@@ -795,33 +756,6 @@ describe('DiffComponent:', function()
     end)
   end)
 
-  describe('should_component_update edge cases', function()
-    it('should return false when both diff and filetype are same reference', function()
-      local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local diff_ref = { lines = { 'a', 'b' } }
-      local component = DiffComponent({ diff = diff_ref, filetype = 'lua' })
-
-      local result = component:should_component_update({
-        diff = diff_ref,
-        filetype = 'lua',
-      }, {})
-      assert.is_false(result)
-    end)
-
-    it('should return true when only diff reference changes', function()
-      local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local diff1 = { lines = {} }
-      local diff2 = { lines = {} }
-      local component = DiffComponent({ diff = diff1, filetype = 'lua' })
-
-      local result = component:should_component_update({
-        diff = diff2,
-        filetype = 'lua',
-      }, {})
-      assert.is_true(result)
-    end)
-  end)
-
   describe('get_lnum', function()
     it('should return lnum from element', function()
       local component = create_diff_component({ lnum = 42 })
@@ -1108,7 +1042,6 @@ describe('DiffComponent:', function()
 
     it('should return filetype from buffer when element is valid', function()
       local component = create_diff_component({})
-      -- DiffComponent sets filetype='diff' by default in component_will_mount
       eq('diff', component:get_filetype())
     end)
   end)

@@ -1,7 +1,9 @@
 local lazy = require('vgit.core.lazy')
 
+local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
+local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local HunkLens = lazy('vgit.features.lenses.HunkLens')
 local BlameLens = lazy('vgit.features.lenses.BlameLens')
@@ -247,6 +249,35 @@ display_service.show_blame_view = event.async(function(data)
     return
   end
   active_view = view
+end)
+
+display_service.show_blame_view_for_file = event.async(function(filename)
+  if not filename then return end
+
+  local repo, err = repository.current()
+  if err then
+    console.debug.error(err)
+    return
+  end
+
+  local filetype = fs.detect_filetype(filename)
+
+  local blames, blame_err = repo:blame_list(filename)
+  if blame_err or not blames or #blames == 0 then
+    console.info('No blame information available for this file')
+    return
+  end
+
+  local lines, lines_err = repo:file_lines(filename, 'HEAD')
+  if lines_err or not lines then lines = {} end
+
+  display_service.show_blame_view({
+    filename = filename,
+    filetype = filetype,
+    reponame = repo:get_path(),
+    blames = blames,
+    lines = lines,
+  })
 end)
 
 function display_service.toggle_diff_preference()

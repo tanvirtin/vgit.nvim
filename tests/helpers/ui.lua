@@ -5,56 +5,22 @@ local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
 local M = {}
 
 -- Minimal Component subclass that creates a real Element (floating window)
-local TestComponent = Component:extend()
+local TestComponent = Component({})
 
 function TestComponent:constructor(props)
-  local instance = TestComponent.super.constructor(self, props)
+  local Base = getmetatable(TestComponent)
+  local instance = Base.constructor(self, props)
   instance._log = {}
-  instance._element = nil
   return instance
 end
 
-function TestComponent:component_will_mount()
-  table.insert(self._log, 'will_mount')
-  self._element = Element({
-    win_plot = {
-      relative = 'editor',
-      width = 20,
-      height = 5,
-      row = 0,
-      col = 0,
-      style = 'minimal',
-    },
-    buf_options = {
-      modifiable = false,
-      buflisted = false,
-      bufhidden = 'wipe',
-    },
-    win_options = {
-      wrap = false,
-      number = false,
-      cursorline = false,
-    },
-  })
-end
-
-function TestComponent:component_did_mount()
+function TestComponent:on_mount()
   table.insert(self._log, 'did_mount')
-end
-
-function TestComponent:component_will_unmount()
-  table.insert(self._log, 'will_unmount')
-  if self._element then
-    self._element:unmount()
-    self._element = nil
-  end
 end
 
 function TestComponent:get_layout_spec()
   return LayoutSpec.view(self._element, { flex = 1 })
 end
-
-function TestComponent:render() end
 
 M.TestComponent = TestComponent
 

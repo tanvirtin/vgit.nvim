@@ -750,31 +750,6 @@ describe('PatchPreviewComponent:', function()
     end)
   end)
 
-  describe('should_component_update', function()
-    it('should return true when hunk_entries change', function()
-      local component = create_patch_preview({
-        props = { hunk_entries = { 'a' } },
-      })
-
-      local result = component:should_component_update({
-        hunk_entries = { 'b' },
-      }, {})
-      assert.is_true(result)
-    end)
-
-    it('should return false when nothing changes', function()
-      local entries = { 'same' }
-      local component = create_patch_preview({
-        props = { hunk_entries = entries },
-      })
-
-      local result = component:should_component_update({
-        hunk_entries = entries,
-      }, {})
-      assert.is_false(result)
-    end)
-  end)
-
   describe('forward', function()
     it('should delegate place_extmark_highlight to element when valid', function()
       local called_with = nil

@@ -105,8 +105,8 @@ describe('SearchComponent:', function()
         items = {},
         on_select = function() end,
       })
-      assert.is_nil(sc._input_element)
-      assert.is_nil(sc._list_element)
+      assert.is_nil(sc.elements.input)
+      assert.is_nil(sc.elements.list)
       assert.is_not_nil(sc._filter)
     end)
   end)
@@ -488,16 +488,16 @@ describe('SearchComponent:', function()
         on_select = function() end,
       })
 
-      sc._list_element = make_mock_element()
-      sc._input_element = make_mock_element()
+      sc.elements.list = make_mock_element()
+      sc.elements.input = make_mock_element()
 
       local list_called = false
       local input_called = false
 
-      sc._list_element.on = function(_, event_name)
+      sc.elements.list.on = function(_, event_name)
         if event_name == 'BufWinLeave' then list_called = true end
       end
-      sc._input_element.on = function(_, event_name)
+      sc.elements.input.on = function(_, event_name)
         if event_name == 'BufWinLeave' then input_called = true end
       end
 
@@ -592,7 +592,7 @@ describe('SearchComponent:', function()
         on_select = function() end,
       })
 
-      sc._input_element = make_mock_element({ valid = true })
+      sc.elements.input = make_mock_element({ valid = true })
 
       assert.is_true(sc:is_valid())
     end)
@@ -603,7 +603,7 @@ describe('SearchComponent:', function()
         on_select = function() end,
       })
 
-      sc._list_element = make_mock_element({ valid = true })
+      sc.elements.list = make_mock_element({ valid = true })
 
       assert.is_true(sc:is_valid())
     end)
@@ -614,8 +614,8 @@ describe('SearchComponent:', function()
         on_select = function() end,
       })
 
-      sc._input_element = make_mock_element({ valid = false })
-      sc._list_element = make_mock_element({ valid = false })
+      sc.elements.input = make_mock_element({ valid = false })
+      sc.elements.list = make_mock_element({ valid = false })
 
       assert.is_false(sc:is_valid())
     end)
@@ -629,8 +629,8 @@ describe('SearchComponent:', function()
       })
 
       local called_with = nil
-      sc._input_element = make_mock_element()
-      sc._input_element.set_keymap = function(_, mode, key, handler, desc)
+      sc.elements.input = make_mock_element()
+      sc.elements.input.set_keymap = function(_, mode, key, handler, desc)
         called_with = { mode = mode, key = key, desc = desc }
       end
 

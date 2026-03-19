@@ -177,6 +177,17 @@ function Element:focus()
   return self
 end
 
+function Element:start_insert()
+  if not self:is_valid() then return self end
+  self._window:start_insert()
+  return self
+end
+
+function Element:stop_insert()
+  Window.stop_insert()
+  return self
+end
+
 function Element:is_focused()
   if not self:is_valid() then return false end
   return self._window:is_focused()
@@ -273,6 +284,12 @@ end
 function Element:on(event_name, callback)
   if not self:is_valid() then return self end
   self._buffer:on(event_name, callback)
+  return self
+end
+
+function Element:attach_to_changes(opts)
+  if not self:is_valid() then return self end
+  self._buffer:attach_to_changes(opts)
   return self
 end
 

@@ -1,34 +1,28 @@
 local lazy = require('vgit.core.lazy')
 
 local Component = lazy('vgit.ui.Component')
-local Element = lazy('vgit.ui.elements.Element')
-local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 
-local BlameInfoComponent = Component:extend()
+local BlameInfoComponent = Component({
+  win_options = {
+    winhl = 'Normal:GitBackground',
+    cursorline = false,
+    wrap = false,
+  },
+  layout_opts = { height = 3 },
 
-function BlameInfoComponent:constructor(props)
-  return Component.constructor(self, props)
-end
+  on_mount = function(self)
+    self:render()
+  end,
+
+  on_props = function(self, prev_props)
+    self:render()
+  end,
+})
 
 function BlameInfoComponent:get_initial_state()
   return {
     blame = nil,
   }
-end
-
-function BlameInfoComponent:component_will_mount()
-  self._element = Element({
-    buf_options = {
-      modifiable = false,
-      buflisted = false,
-      bufhidden = 'wipe',
-    },
-    win_options = {
-      winhl = 'Normal:GitBackground',
-      cursorline = false,
-      wrap = false,
-    },
-  })
 end
 
 function BlameInfoComponent:render()
@@ -83,23 +77,6 @@ function BlameInfoComponent:render()
       pos = 'eol',
     })
   end)
-end
-
-function BlameInfoComponent:get_layout_spec()
-  return LayoutSpec.view(self._element, { height = 3 })
-end
-
-function BlameInfoComponent:component_did_mount()
-  self:render()
-end
-
-function BlameInfoComponent:unmount()
-  if not self._mounted then return end
-
-  self._element:unmount()
-  self._element = nil
-
-  Component.unmount(self)
 end
 
 return BlameInfoComponent

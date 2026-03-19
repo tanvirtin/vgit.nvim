@@ -19,6 +19,7 @@ function ComponentManager:constructor(config)
     is_destroying = false,
     _tracked_elements = {},
     _lifecycle_cleanup = nil,
+    _layout_spec = nil,
     ['$component_group'] = ComponentGroup(),
   }
 end
@@ -71,43 +72,69 @@ end
 function ComponentManager:prepare_layout(layout_config)
   if not layout_config then error('ComponentManager:render() requires layout_config') end
 
-  self.root_component = layout_config.component
-  if not self.root_component then error('ComponentManager:render() requires layout_config.component') end
+  -- Support both old { component = c, mode = 'popup' } and new LayoutSpec with embedded mode
+  local mode, spec
 
-  local mode = layout_config.mode or 'popup'
+  if layout_config.component then
+    -- Old style: { component = c, mode = 'popup', width = ..., height = ... }
+    self.root_component = layout_config.component
+    mode = layout_config.mode or 'popup'
+    spec = layout_config
+  elseif layout_config.type then
+    -- New style: LayoutSpec with mode embedded (from LayoutSpec.screen/popup/lens)
+    mode = layout_config.mode or 'popup'
+    self._layout_spec = layout_config
+    spec = layout_config
+  else
+    error('ComponentManager:render() requires a layout spec or { component = ... }')
+  end
+
   local default_width, default_height
 
   if mode == 'split' then
     default_width = '100vw'
-    default_height = layout_config.split_height or 20
+    default_height = spec.split_height or 20
   elseif mode == 'lens' then
     default_width = '100vw'
     default_height = '35vh'
+  elseif mode == 'screen' then
+    default_width = '100vw'
+    default_height = '100vh'
   else
     default_width = '80vw'
     default_height = '60vh'
   end
 
   self.context = LayoutContext({
-    zindex = layout_config.zindex or 2,
-    mode = layout_config.mode or 'popup',
-    width = layout_config.width or default_width,
-    height = layout_config.height or default_height,
-    relative = layout_config.relative or 'editor',
-    position = layout_config.position or 'center',
+    zindex = spec.zindex or 2,
+    mode = mode,
+    width = spec.width or default_width,
+    height = spec.height or default_height,
+    relative = spec.relative or 'editor',
+    position = spec.position or 'center',
   })
 
-  self.root_component.props = self.root_component.props or {}
-  self.root_component.props.layout_config = layout_config
+  if self.root_component then
+    self.root_component.props = self.root_component.props or {}
+    self.root_component.props.layout_config = spec
+  end
 end
 
 function ComponentManager:mount_components()
-  self.component_group:mount(self.root_component, self)
+  if self.root_component then self.component_group:mount(self.root_component, self) end
 end
 
 function ComponentManager:render_layout()
-  local layout_spec = self.root_component:get_layout_spec()
-  layout_spec = self:parse_layout_spec(layout_spec)
+  local layout_spec
+
+  if self._layout_spec then
+    -- New style: spec passed directly
+    layout_spec = self:parse_layout_spec(self._layout_spec)
+  else
+    -- Old style: get spec from root component
+    layout_spec = self.root_component:get_layout_spec()
+    layout_spec = self:parse_layout_spec(layout_spec)
+  end
 
   self.layout_renderer = LayoutRenderer(self.context)
   self.layout_renderer:render(layout_spec)
