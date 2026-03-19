@@ -5,12 +5,54 @@ local utils = lazy('vgit.core.utils')
 local event = lazy('vgit.core.event')
 local icons = lazy('vgit.core.icons')
 local Component = lazy('vgit.ui.Component')
-local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local symbols_setting = lazy('vgit.settings.symbols')
 local DepthTree = lazy('vgit.ui.components.TreeComponent.DepthTree')
 
-local TreeComponent = Component:extend()
+local TreeComponent = Component({
+  win_options = {
+    cursorline = true,
+    number = false,
+    relativenumber = false,
+    wrap = false,
+  },
+
+  on_mount = function(self)
+    self:render()
+
+    self:with_element(function(el)
+      if not self._keymaps_setup then
+        el:set_keymap('n', '<enter>', function()
+          local item = self:get_current_list_item()
+          if not item then return end
+          self:toggle_current_list_item()
+          if self._on_enter_callback then self._on_enter_callback(item) end
+        end, 'Enter item')
+
+        if self.props.keymaps then self:setup_keymaps(self.props.keymaps, self.props.keymap_handlers) end
+
+        el:on('CursorMoved', function()
+          if self._rendering then return end
+          local item = self:get_current_list_item()
+          if self._on_move_callback then self._on_move_callback(item) end
+        end)
+
+        self._keymaps_setup = true
+      end
+    end)
+  end,
+})
+
+function TreeComponent:constructor(props)
+  local instance = TreeComponent.super.constructor(self, props)
+  instance.state.list = props and props.list or {}
+  instance.state.title = props and props.title or ''
+  instance._on_enter_callback = nil
+  instance._on_move_callback = nil
+  instance._keymaps_setup = false
+  instance._rendering = false
+  return instance
+end
 
 function TreeComponent:get_initial_state()
   return {
@@ -20,18 +62,6 @@ function TreeComponent:get_initial_state()
     virtual_texts = {},
     shadow_list = {},
   }
-end
-
-function TreeComponent:constructor(props)
-  local instance = Component.constructor(self, props)
-  instance.state.list = props and props.list or {}
-  instance.state.title = props and props.title or ''
-  instance._element = nil
-  instance._on_enter_callback = nil
-  instance._on_move_callback = nil
-  instance._keymaps_setup = false
-  instance._rendering = false
-  return instance
 end
 
 function TreeComponent:get_display_name(filename)
@@ -421,24 +451,6 @@ function TreeComponent:set_on_move(callback)
   return self
 end
 
-function TreeComponent:component_will_mount()
-  if not self._element then
-    self._element = Element({
-      buf_options = {
-        modifiable = false,
-        buflisted = false,
-        bufhidden = 'wipe',
-      },
-      win_options = {
-        cursorline = true,
-        number = false,
-        relativenumber = false,
-        wrap = false,
-      },
-    })
-  end
-end
-
 function TreeComponent:paint()
   self:with_element(function(el)
     local virtual_texts = self.state.virtual_texts
@@ -502,34 +514,6 @@ function TreeComponent:get_layout_spec()
     height = self.props.height,
     focus = self.props.focus,
   })
-end
-
-function TreeComponent:component_did_mount()
-  self:render()
-
-  self:with_element(function(el)
-    if not self._keymaps_setup then
-      el:set_keymap('n', '<enter>', function()
-        local item = self:get_current_list_item()
-        if not item then return end
-        self:toggle_current_list_item()
-        if self._on_enter_callback then self._on_enter_callback(item) end
-      end, 'Enter item')
-
-      if self.props.keymaps then self:setup_keymaps(self.props.keymaps, self.props.keymap_handlers) end
-
-      local buf = el:get_buffer()
-      if buf then
-        buf:on('CursorMoved', function()
-          if self._rendering then return end
-          local item = self:get_current_list_item()
-          if self._on_move_callback then self._on_move_callback(item) end
-        end)
-      end
-
-      self._keymaps_setup = true
-    end
-  end)
 end
 
 function TreeComponent:setup_keymaps(keymaps, handlers)
@@ -605,15 +589,6 @@ function TreeComponent:focus()
   self:with_element(function(el)
     el:focus()
   end)
-end
-
-function TreeComponent:unmount()
-  if not self._mounted then return end
-
-  self._element:unmount()
-  self._element = nil
-
-  Component.unmount(self)
 end
 
 return TreeComponent

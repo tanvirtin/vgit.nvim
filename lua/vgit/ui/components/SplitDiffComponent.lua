@@ -1,23 +1,55 @@
 local lazy = require('vgit.core.lazy')
 local Component = lazy('vgit.ui.Component')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local LineNumberCalculator = lazy('vgit.ui.calculators.LineNumberCalculator')
 
-local SplitDiffComponent = Component:extend()
+local SplitDiffComponent = Component({
+  children = {
+    previous = DiffComponent,
+    current = DiffComponent,
+  },
+
+  on_mount = function(self)
+    self.children.previous:set_win_option('scrollbind', true)
+    self.children.previous:set_win_option('cursorbind', true)
+    self.children.current:set_win_option('scrollbind', true)
+    self.children.current:set_win_option('cursorbind', true)
+
+    if self.props.win_options then
+      for k, v in pairs(self.props.win_options) do
+        self.children.previous:set_win_option(k, v)
+        self.children.current:set_win_option(k, v)
+      end
+    end
+
+    self:render()
+  end,
+
+  on_props = function(self, prev_props)
+    if self.props.diff ~= prev_props.diff or self.props.filetype ~= prev_props.filetype then
+      self:render()
+    end
+  end,
+})
 
 function SplitDiffComponent:constructor(props)
-  local instance = Component.constructor(self, props)
-  instance._previous_component = nil
-  instance._current_component = nil
+  local instance = SplitDiffComponent.super.constructor(self, props)
+  instance.children = {}
   instance._line_number_calculator = LineNumberCalculator()
   return instance
 end
 
+function SplitDiffComponent:get_initial_state()
+  return {
+    previous_lines = {},
+    current_lines = {},
+  }
+end
+
 function SplitDiffComponent:_for_both(fn)
-  if self._previous_component then fn(self._previous_component) end
-  if self._current_component then fn(self._current_component) end
+  if self.children.previous then fn(self.children.previous) end
+  if self.children.current then fn(self.children.current) end
 end
 
 function SplitDiffComponent:calculate_split_line_numbers(diff)
@@ -45,107 +77,6 @@ function SplitDiffComponent:calculate_split_line_numbers(diff)
   }
 end
 
-function SplitDiffComponent:get_initial_state()
-  return {
-    previous_lines = {},
-    current_lines = {},
-  }
-end
-
-function SplitDiffComponent:should_component_update(next_props, next_state)
-  -- Only update if diff or filetype actually changed
-  if self.props.diff ~= next_props.diff then return true end
-  if self.props.filetype ~= next_props.filetype then return true end
-  -- Skip update if nothing changed
-  return false
-end
-
-function SplitDiffComponent:component_did_mount()
-  self:render()
-end
-
-function SplitDiffComponent:component_did_update(prev_state)
-  self:render()
-end
-
-function SplitDiffComponent:component_will_mount()
-  local child_win_options = {
-    scrollbind = true,
-    cursorbind = true,
-  }
-
-  if self.props.win_options then
-    child_win_options = vim.tbl_deep_extend('force', child_win_options, self.props.win_options)
-  end
-
-  local previous_plot = nil
-  local current_plot = nil
-
-  local window_mode = self._config and self._config.window_mode or 'popup'
-
-  if window_mode == 'lens' or window_mode == 'popup' then
-    local width = vim.o.columns
-    local height = '35vh'
-
-    if self.props.layout_config then height = self.props.layout_config.height or '35vh' end
-    height = LayoutContext.convert_dimension(height) or height
-
-    local half_width = math.floor(width / 2)
-    local zindex = (self.props.layout_config and self.props.layout_config.zindex) or 2
-
-    previous_plot = {
-      win_plot = {
-        relative = 'cursor',
-        row = 1,
-        col = 0,
-        width = half_width,
-        height = height,
-        style = 'minimal',
-        focusable = true,
-        zindex = zindex,
-      },
-    }
-
-    current_plot = {
-      win_plot = {
-        relative = 'cursor',
-        row = 1,
-        col = half_width,
-        width = half_width,
-        height = height,
-        style = 'minimal',
-        focusable = true,
-        focus = true,
-        zindex = zindex,
-      },
-    }
-  end
-
-  if not self._previous_component then
-    self._previous_component = DiffComponent({
-      filetype = self.props.filetype or 'diff',
-      win_options = child_win_options,
-      plot = previous_plot,
-    })
-    self._previous_component:mount()
-  end
-
-  if not self._current_component then
-    self._current_component = DiffComponent({
-      filetype = self.props.filetype or 'diff',
-      win_options = child_win_options,
-      plot = current_plot,
-    })
-    self._current_component:mount()
-  end
-end
-
-function SplitDiffComponent:component_will_unmount()
-  self:_for_both(function(c)
-    c:unmount()
-  end)
-end
-
 function SplitDiffComponent:render()
   local diff = self.props.diff
 
@@ -167,16 +98,16 @@ function SplitDiffComponent:render()
     lines = diff.current_lines or {},
   })
 
-  if self._previous_component then
-    self._previous_component:set_props({
+  if self.children.previous then
+    self.children.previous:set_props({
       diff = previous_diff,
       filetype = self.props.filetype,
       _split_line_numbers = result.previous.lines,
       _split_lines_changes = result.previous.changes,
     })
   end
-  if self._current_component then
-    self._current_component:set_props({
+  if self.children.current then
+    self.children.current:set_props({
       diff = current_diff,
       filetype = self.props.filetype,
       _split_line_numbers = result.current.lines,
@@ -188,18 +119,18 @@ function SplitDiffComponent:render()
   self.state.current_lines = diff.current_lines or {}
 end
 
-function SplitDiffComponent:get_layout_spec()
-  return LayoutSpec.horizontal({
-    LayoutSpec.view(self._previous_component, { flex = 1 }),
-    LayoutSpec.view(self._current_component, { flex = 1 }),
+function SplitDiffComponent:layout(spec)
+  return spec.horizontal({
+    spec.view(self.children.previous, { flex = 1 }),
+    spec.view(self.children.current, { flex = 1 }),
   })
 end
 
 function SplitDiffComponent:get_component(id)
   if id == 'current' then
-    return self._current_component
+    return self.children.current
   elseif id == 'previous' then
-    return self._previous_component
+    return self.children.previous
   end
   return nil
 end
@@ -209,7 +140,6 @@ function SplitDiffComponent:set_lines(previous_lines, current_lines)
     previous_lines = previous_lines or {},
     current_lines = current_lines or {},
   })
-  if self._mounted then self:render() end
   return self
 end
 
@@ -217,7 +147,8 @@ function SplitDiffComponent:clear_lines()
   self:_for_both(function(c)
     c:clear_lines():disable_cursorline()
   end)
-  self:set_state({ previous_lines = {}, current_lines = {} })
+  self.state.previous_lines = {}
+  self.state.current_lines = {}
 end
 
 function SplitDiffComponent:set_lnum(lnum, position)
@@ -228,7 +159,7 @@ function SplitDiffComponent:set_lnum(lnum, position)
 end
 
 function SplitDiffComponent:get_lnum()
-  if self._current_component then return self._current_component:get_lnum() end
+  if self.children.current then return self.children.current:get_lnum() end
   return 1
 end
 
@@ -257,7 +188,7 @@ function SplitDiffComponent:set_filetype(filetype)
 end
 
 function SplitDiffComponent:get_filetype()
-  if self._current_component then return self._current_component:get_filetype() end
+  if self.children.current then return self.children.current:get_filetype() end
   return ''
 end
 
@@ -274,55 +205,55 @@ function SplitDiffComponent:attach_to_renderer(callback)
 end
 
 function SplitDiffComponent:is_valid()
-  return (self._previous_component and self._previous_component:is_valid())
-    or (self._current_component and self._current_component:is_valid())
+  return (self.children.previous and self.children.previous:is_valid())
+    or (self.children.current and self.children.current:is_valid())
 end
 
 function SplitDiffComponent:hunk_down(pos, offset)
-  if self._current_component then return self._current_component:hunk_down(pos, offset) end
+  if self.children.current then return self.children.current:hunk_down(pos, offset) end
   return nil
 end
 
 function SplitDiffComponent:hunk_up(pos, offset)
-  if self._current_component then return self._current_component:hunk_up(pos, offset) end
+  if self.children.current then return self.children.current:hunk_up(pos, offset) end
   return nil
 end
 
 function SplitDiffComponent:move_to_hunk(mark_index, pos, offset)
-  if not self._current_component then return nil end
+  if not self.children.current then return nil end
 
-  local mark = self._current_component:move_to_hunk(mark_index, pos, offset)
+  local mark = self.children.current:move_to_hunk(mark_index, pos, offset)
 
-  if mark and self._previous_component then
-    self._previous_component:set_lnum(mark.top)
-    if pos then self._previous_component:scroll_to(pos, offset) end
+  if mark and self.children.previous then
+    self.children.previous:set_lnum(mark.top)
+    if pos then self.children.previous:scroll_to(pos, offset) end
   end
 
   return mark
 end
 
 function SplitDiffComponent:get_hunk_under_cursor()
-  if self._current_component then return self._current_component:get_hunk_under_cursor() end
+  if self.children.current then return self.children.current:get_hunk_under_cursor() end
   return nil
 end
 
 function SplitDiffComponent:get_current_mark_under_cursor()
-  if self._current_component then return self._current_component:get_current_mark_under_cursor() end
+  if self.children.current then return self.children.current:get_current_mark_under_cursor() end
   return nil
 end
 
 function SplitDiffComponent:get_relative_mark_index(lnum)
-  if self._current_component then return self._current_component:get_relative_mark_index(lnum) end
+  if self.children.current then return self.children.current:get_relative_mark_index(lnum) end
   return 1
 end
 
 function SplitDiffComponent:get_marks()
-  if self._current_component then return self._current_component:get_marks() end
+  if self.children.current then return self.children.current:get_marks() end
   return {}
 end
 
 function SplitDiffComponent:get_hunks()
-  if self._current_component then return self._current_component:get_hunks() end
+  if self.children.current then return self.children.current:get_hunks() end
   return {}
 end
 
@@ -339,8 +270,8 @@ function SplitDiffComponent:clear_folds()
 end
 
 function SplitDiffComponent:call(callback)
-  if self._current_component and self._current_component:is_valid() and callback then
-    self._current_component:call(callback)
+  if self.children.current and self.children.current:is_valid() and callback then
+    self.children.current:call(callback)
   end
 end
 
@@ -354,13 +285,6 @@ function SplitDiffComponent:set_keymap(mode_or_opts, key_or_callback, handler, d
   self:_for_both(function(c)
     c:set_keymap(mode_or_opts, key_or_callback, handler, desc)
   end)
-end
-
-function SplitDiffComponent:unmount()
-  self:_for_both(function(c)
-    c:unmount()
-  end)
-  Component.unmount(self)
 end
 
 return SplitDiffComponent

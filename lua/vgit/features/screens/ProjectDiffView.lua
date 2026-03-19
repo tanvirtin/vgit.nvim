@@ -1,11 +1,10 @@
 local lazy = require('vgit.core.lazy')
 
-local fs = lazy('vgit.core.fs')
+local View = lazy('vgit.ui.View')
 local utils = lazy('vgit.core.utils')
-local Layout = lazy('vgit.ui.Layout')
 local event = lazy('vgit.core.event')
-local Window = lazy('vgit.core.Window')
-local Object = lazy('vgit.core.Object')
+local keymap = lazy('vgit.core.keymap')
+local navigation = lazy('vgit.core.navigation')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
@@ -14,50 +13,29 @@ local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local statusline = lazy('vgit.core.statusline_state')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local display_service = lazy('vgit.ui.display_service')
-local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
 local LoadingIndicator = lazy('vgit.ui.decorators.LoadingIndicator')
 local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
 local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
 
-local ProjectDiffView = Object:extend()
+local ProjectDiffView = View:extend()
 
 ProjectDiffView.DEBOUNCE_MS = 100
 ProjectDiffView.LAYOUT_SPLIT = 'split'
 ProjectDiffView.LAYOUT_UNIFIED = 'unified'
 
 function ProjectDiffView:constructor()
-  return {
-    _data = nil,
-    _repo = nil,
-    _layout_type = nil,
-    _patch_component = nil,
-    _previous_component = nil,
-    _current_component = nil,
-    _component_manager = nil,
-    _diff_file_entries = {},
-    _line_to_file_map = {},
-    _debounce_cleanups = {},
-    _destroyed = false,
-    _update_gen = 0,
-    _loading_indicator = LoadingIndicator(),
-  }
-end
-
-function ProjectDiffView:_handle_git_error(err, operation_name)
-  if err then
-    console.debug.error(string.format('[ProjectDiffView] %s failed: %s', operation_name, err))
-    return false
-  end
-  return true
-end
-
-function ProjectDiffView:get_key(keymap)
-  if type(keymap) == 'string' then
-    return keymap
-  elseif type(keymap) == 'table' then
-    return keymap.key
-  end
-  return nil
+  local instance = View.constructor(self)
+  instance._data = nil
+  instance._repo = nil
+  instance._layout_type = nil
+  instance._patch_component = nil
+  instance._previous_component = nil
+  instance._current_component = nil
+  instance._diff_file_entries = {}
+  instance._line_to_file_map = {}
+  instance._update_gen = 0
+  instance._loading_indicator = LoadingIndicator()
+  return instance
 end
 
 function ProjectDiffView:create(data)
@@ -114,7 +92,7 @@ end
 
 function ProjectDiffView:_build_line_to_file_map(component)
   local line_to_file_map = {}
-  local line_metadata = component.state.line_metadata
+  local line_metadata = component:get_all_line_metadata()
 
   for lnum, meta in pairs(line_metadata) do
     if meta and meta.filename then
@@ -254,20 +232,7 @@ function ProjectDiffView:get_hunk_alignment_offset()
 end
 
 function ProjectDiffView:_get_current_mark_index(component)
-  local marks = component:get_marks()
-  if #marks == 0 then return nil, 0 end
-
-  local lnum = component:get_lnum()
-
-  for i, mark in ipairs(marks) do
-    if lnum >= mark.top and lnum <= mark.bot then
-      return i, #marks
-    elseif mark.top > lnum then
-      return math.max(1, i - 1), #marks
-    end
-  end
-
-  return #marks, #marks
+  return navigation.get_mark_index(component:get_marks(), component:get_lnum())
 end
 
 function ProjectDiffView:hunk_up()
@@ -312,10 +277,7 @@ function ProjectDiffView:jump_to_file()
   self:destroy()
   event.await()
 
-  fs.open(filename)
-
-  local window = Window(0)
-  window:set_lnum(target_lnum)
+  navigation.open_file(filename, target_lnum)
 
   console.debug.info(string.format('[ProjectDiffView:jump_to_file] opened file=%s, set lnum=%d', filename, target_lnum))
 end
@@ -328,29 +290,7 @@ function ProjectDiffView:show_blame_view()
   local file_info = self._line_to_file_map[lnum]
   if not file_info or not file_info.filename then return end
 
-  local filename = file_info.filename
-
-  local repo, err = repository.current()
-  if not self:_handle_git_error(err, 'repository.current') then return end
-
-  local filetype = fs.detect_filetype(filename)
-
-  local blames, blame_err = repo:blame_list(filename)
-  if blame_err or not blames or #blames == 0 then
-    console.info('No blame information available for this file')
-    return
-  end
-
-  local lines, lines_err = repo:file_lines(filename, 'HEAD')
-  if lines_err or not lines then lines = {} end
-
-  display_service.show_blame_view({
-    filename = filename,
-    filetype = filetype,
-    reponame = repo:get_path(),
-    blames = blames,
-    lines = lines,
-  })
+  display_service.show_blame_view_for_file(file_info.filename)
 end
 
 function ProjectDiffView:_set_keymap_on_component(component, mode, key, handler)
@@ -375,7 +315,7 @@ function ProjectDiffView:setup_keymaps()
   local hunks_keymaps = hunks_setting:get('keymaps')
 
   if scene_keymaps and scene_keymaps.quit then
-    local quit_key = self:get_key(scene_keymaps.quit)
+    local quit_key = keymap.get_key(scene_keymaps.quit)
     if quit_key then
       self:_set_keymap_all_components('n', quit_key, function()
         self._component_manager:destroy()
@@ -383,7 +323,7 @@ function ProjectDiffView:setup_keymaps()
     end
   end
 
-  local jump_key = self:get_key(project_diff_view_keymaps.jump)
+  local jump_key = keymap.get_key(project_diff_view_keymaps.jump)
   if jump_key then
     local jump_fn, jump_cleanup = event.debounce_async(function()
       self:jump_to_file()
@@ -393,7 +333,7 @@ function ProjectDiffView:setup_keymaps()
     self:_set_keymap_all_components('n', jump_key, jump_fn)
   end
 
-  local toggle_key = self:get_key(project_diff_view_keymaps.toggle_diff_preference)
+  local toggle_key = keymap.get_key(project_diff_view_keymaps.toggle_diff_preference)
   if toggle_key then
     self:_set_keymap_all_components('n', toggle_key, function()
       local current = scene_setting:get('diff_preference')
@@ -401,7 +341,7 @@ function ProjectDiffView:setup_keymaps()
     end)
   end
 
-  local down_key = self:get_key(hunks_keymaps.down)
+  local down_key = keymap.get_key(hunks_keymaps.down)
   if down_key then
     local down_fn = event.async(function()
       self:hunk_down()
@@ -409,7 +349,7 @@ function ProjectDiffView:setup_keymaps()
     self:_set_keymap_all_components('n', down_key, down_fn)
   end
 
-  local up_key = self:get_key(hunks_keymaps.up)
+  local up_key = keymap.get_key(hunks_keymaps.up)
   if up_key then
     local up_fn = event.async(function()
       self:hunk_up()
@@ -470,9 +410,8 @@ function ProjectDiffView:_mount_unified_view()
 
   self._component_manager = ComponentManager()
   event.await()
-  self._component_manager:render(Layout.screen(self._patch_component, {
-    width = '100vw',
-    height = '100vh',
+  self._component_manager:render(LayoutSpec.screen({
+    LayoutSpec.view(self._patch_component, { flex = 1 }),
   }))
 
   self:setup_keymaps()
@@ -501,18 +440,13 @@ function ProjectDiffView:_mount_split_view()
     },
   })
 
-  local wrapper = LayoutComponent({
-    spec = LayoutSpec.horizontal({
+  self._component_manager = ComponentManager()
+  event.await()
+  self._component_manager:render(LayoutSpec.screen({
+    LayoutSpec.horizontal({
       LayoutSpec.view(self._previous_component, { flex = 1 }),
       LayoutSpec.view(self._current_component, { flex = 1 }),
     }),
-  })
-
-  self._component_manager = ComponentManager()
-  event.await()
-  self._component_manager:render(Layout.screen(wrapper, {
-    width = '100vw',
-    height = '100vh',
   }))
 
   self:setup_keymaps()
@@ -565,20 +499,13 @@ function ProjectDiffView:_create_view(data)
   return true
 end
 
-function ProjectDiffView:is_destroyed()
-  return self._destroyed
-end
-
 function ProjectDiffView:destroy()
-  if self._destroyed then return end
-  self._destroyed = true
+  if self:is_destroyed() then return end
+
   self._loading_indicator:stop()
   self._update_gen = self._update_gen + 1
-  for _, cleanup in ipairs(self._debounce_cleanups) do
-    cleanup()
-  end
-  self._debounce_cleanups = {}
-  if self._component_manager then self._component_manager:destroy() end
+
+  View.destroy(self)
 end
 
 return ProjectDiffView

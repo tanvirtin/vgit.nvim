@@ -86,7 +86,7 @@ commit_command.execute = event.async(function()
 
   commit_view:set_lines(lines)
   commit_view:set_cursor({ 1, 0 })
-  vim.cmd('startinsert')
+  commit_view:start_insert()
 end)
 
 return commit_command

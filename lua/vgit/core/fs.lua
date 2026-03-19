@@ -28,15 +28,10 @@ function fs.detect_filetype(filename)
     if not ext then break end
 
     if strip_exts[ext] then
-      -- Strip suffix and retry (e.g. "example.rs.in" -> "example.rs").
-      -- Loop handles chained suffixes like "example.rs.bak.in".
       name = name:sub(1, #name - #ext - 1)
       ft = vim.filetype.match({ filename = name })
       if ft then return ft end
     else
-      -- Non-strippable suffix: try the last extension alone.
-      -- Handles old stable where a compound filename like "example.yaml.sed"
-      -- may not match, but ".sed" is directly in the extension table.
       return vim.filetype.match({ filename = 'x.' .. ext })
     end
   end
@@ -44,7 +39,6 @@ end
 
 function fs.make_relative(dirname, filepath)
   if not dirname or not filepath then return filepath end
-  -- Strip trailing separators to handle paths from git_repo.discover()
   while #dirname > 1 and dirname:sub(-1) == fs.sep do
     dirname = dirname:sub(1, -2)
   end
@@ -79,7 +73,7 @@ end
 
 function fs.read_file(filepath)
   if not fs.exists(filepath) then return nil, { 'file not found' } end
-  return vim.fn.readfile(filepath)
+  return vim.fn.readfile(filepath), nil
 end
 
 function fs.write_file(filepath, lines)
@@ -111,7 +105,7 @@ function fs.remove_file(filepath)
 end
 
 function fs.exists(filepath)
-  return (vim.loop.fs_stat(filepath) and true) or false
+  return vim.loop.fs_stat(filepath) ~= nil
 end
 
 function fs.dirname(filepath)
@@ -133,10 +127,16 @@ function fs.is_dir(filepath)
   return stat ~= nil and stat.type == 'directory'
 end
 
+function fs.resolve(filepath)
+  return vim.fn.resolve(filepath)
+end
+
+function fs.chdir(dirpath)
+  vim.cmd('cd ' .. vim.fn.fnameescape(dirpath))
+end
+
 function fs.open(filepath)
   vim.cmd(string.format('e %s', filepath))
-
-  return fs
 end
 
 return fs

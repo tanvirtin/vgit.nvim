@@ -1,32 +1,48 @@
 local lazy = require('vgit.core.lazy')
 
-local utils = lazy('vgit.core.utils')
 local Component = lazy('vgit.ui.Component')
-local Element = lazy('vgit.ui.elements.Element')
-local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local symbols_setting = lazy('vgit.settings.symbols')
-local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local DiffAnnotator = lazy('vgit.ui.annotators.DiffAnnotator')
 local FoldCalculator = lazy('vgit.ui.calculators.FoldCalculator')
 local LineNumberCalculator = lazy('vgit.ui.calculators.LineNumberCalculator')
 
-local DiffComponent = ViewportComponent:extend()
+local DiffComponent = Component({
+  viewport = true,
+  win_options = {
+    winhl = 'Normal:GitBackground',
+    signcolumn = 'auto',
+    wrap = false,
+    number = false,
+    cursorline = true,
+    foldmethod = 'manual',
+    foldenable = true,
+    foldlevel = 0,
+  },
+  buf_options = {
+    modifiable = false,
+    buflisted = false,
+    bufhidden = 'wipe',
+    filetype = 'diff',
+  },
+  layout_opts = { id = 'body', flex = 1, focus = true },
+  on_mount = function(self)
+    self:render()
+    self:_ensure_renderer_attached()
+  end,
+  on_props = function(self, prev_props)
+    if self.props.diff ~= prev_props.diff or self.props.filetype ~= prev_props.filetype then
+      self:render()
+    end
+  end,
+})
 
 function DiffComponent:constructor(props)
-  local instance = ViewportComponent.constructor(self, props)
+  local instance = DiffComponent.super.constructor(self, props)
   instance._element = nil
   instance._line_number_calculator = LineNumberCalculator()
   instance._diff_annotator = DiffAnnotator()
   instance._fold_calculator = FoldCalculator()
   return instance
-end
-
-function DiffComponent:calculate_folds(diff, line_count)
-  return self._fold_calculator:calculate_folds(diff.marks or {}, line_count)
-end
-
-function DiffComponent:calculate_unified_line_numbers(diff)
-  return self._line_number_calculator:calculate_unified_line_numbers(diff)
 end
 
 function DiffComponent:get_initial_state()
@@ -40,50 +56,13 @@ function DiffComponent:get_initial_state()
   }
 end
 
-function DiffComponent:should_component_update(next_props, next_state)
-  if self.props.diff ~= next_props.diff then return true end
-  if self.props.filetype ~= next_props.filetype then return true end
-  return false
+
+function DiffComponent:calculate_folds(diff, line_count)
+  return self._fold_calculator:calculate_folds(diff.marks or {}, line_count)
 end
 
-function DiffComponent:component_did_mount()
-  self:render()
-  self:_ensure_renderer_attached()
-end
-
-function DiffComponent:component_did_update(prev_state)
-  self:render()
-end
-
-function DiffComponent:component_will_mount()
-  if not self._element then
-    local default_win_options = {
-      winhl = 'Normal:GitBackground',
-      signcolumn = 'auto',
-      wrap = false,
-      number = false,
-      cursorline = true,
-      foldmethod = 'manual',
-      foldenable = true,
-      foldlevel = 0,
-    }
-
-    local win_options = utils.object.assign(default_win_options, self.props.win_options or {})
-
-    local element_config = {
-      buf_options = {
-        modifiable = false,
-        buflisted = false,
-        bufhidden = 'wipe',
-        filetype = self.props.filetype or 'diff',
-      },
-      win_options = win_options,
-    }
-
-    if self.props.plot then element_config.plot = self.props.plot end
-
-    self._element = Element(element_config)
-  end
+function DiffComponent:calculate_unified_line_numbers(diff)
+  return self._line_number_calculator:calculate_unified_line_numbers(diff)
 end
 
 function DiffComponent:build_diff_render_state(diff)
@@ -154,13 +133,8 @@ function DiffComponent:render()
   self:render_folds()
 end
 
-function DiffComponent:get_layout_spec()
-  return LayoutSpec.view(self._element, { id = 'body', flex = 1, focus = true })
-end
-
 function DiffComponent:set_lines(lines)
   self:set_state({ lines = lines })
-  if self._mounted then self:render() end
   return self
 end
 
@@ -171,8 +145,11 @@ function DiffComponent:get_lines()
 end
 
 function DiffComponent:clear_lines()
-  ViewportComponent.clear(self)
-  self:set_state({ lines = {} })
+  self:with_element(function(el)
+    el:clear_extmarks()
+    el:clear_lines()
+  end)
+  self.state.lines = {}
   return self
 end
 
@@ -189,35 +166,28 @@ function DiffComponent:get_cursor()
   end) or { 1, 1 }
 end
 
-function DiffComponent:set_lnum(lnum)
-  self:with_element(function(el)
-    el:set_lnum(lnum)
-  end)
-  return self
-end
-
 function DiffComponent:get_lnum()
   return self:with_element(function(el)
     return el:get_lnum()
   end) or 1
 end
 
-function DiffComponent:reset_cursor()
-  return self:set_cursor({ 1, 0 })
+function DiffComponent:get_line_count()
+  return self:with_element(function(el)
+    return el:get_line_count()
+  end) or 0
 end
 
-function DiffComponent:scroll_to(placement, offset)
-  self:with_element(function(el)
-    el:scroll_to(placement, offset)
-  end)
-  return self
+function DiffComponent:get_filetype()
+  return self:with_element(function(el)
+    return el:get_filetype()
+  end) or ''
 end
 
-function DiffComponent:call(callback)
-  if callback then self:with_element(function(el)
-    el:call(callback)
-  end) end
-  return self
+function DiffComponent:is_valid()
+  return self:with_element(function()
+    return true
+  end) or false
 end
 
 function DiffComponent:enable_cursorline()
@@ -234,54 +204,12 @@ function DiffComponent:disable_cursorline()
   return self
 end
 
-function DiffComponent:get_line_count()
-  return self:with_element(function(el)
-    return el:get_line_count()
-  end) or 0
-end
-
-function DiffComponent:get_filetype()
-  return self:with_element(function(el)
-    return el:get_filetype()
-  end) or ''
-end
-
 function DiffComponent:clear_extmarks()
   self:with_element(function(el)
     el:clear_extmarks()
   end)
   return self
 end
-
-function DiffComponent:set_keymap(config, handler)
-  self:with_element(function(el)
-    el:set_keymap(config, handler)
-  end)
-  return self
-end
-
-function DiffComponent:attach_to_renderer(callback)
-  self:with_element(function(el)
-    el:attach_to_renderer(callback)
-  end)
-  return self
-end
-
-function DiffComponent:is_valid()
-  return self:with_element(function()
-    return true
-  end) or false
-end
-
-Component.forward(DiffComponent, function(self)
-  return self._element and self._element:is_valid() and self._element
-end, {
-  'place_extmark_text',
-  'place_extmark_sign',
-  'place_extmark_lnum',
-  'place_extmark_highlight',
-  'set_filetype',
-})
 
 function DiffComponent:find_adjacent_mark_index(direction)
   local marks = self.state.marks
@@ -497,15 +425,6 @@ function DiffComponent:ensure_window_options()
     el:sync_win_options()
   end)
   return self
-end
-
-function DiffComponent:unmount()
-  if not self._mounted then return end
-
-  self._element:unmount()
-  self._element = nil
-
-  ViewportComponent.unmount(self)
 end
 
 return DiffComponent

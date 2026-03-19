@@ -1,10 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
-local utils = lazy('vgit.core.utils')
+local event = lazy('vgit.core.event')
 local Component = lazy('vgit.ui.Component')
-local Element = lazy('vgit.ui.elements.Element')
-local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local ViewportComponent = lazy('vgit.ui.ViewportComponent')
 local symbols_setting = lazy('vgit.settings.symbols')
 local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
 local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
@@ -415,10 +412,35 @@ local function format_line_numbers(raw_lnums, max_lnum)
   return line_numbers
 end
 
-local PatchPreviewComponent = ViewportComponent:extend()
+local PatchPreviewComponent = Component({
+  viewport = true,
+  win_options = {
+    winhl = 'Normal:GitBackground',
+    signcolumn = 'no',
+    wrap = false,
+    number = false,
+    cursorline = true,
+  },
+  buf_options = {
+    modifiable = false,
+    buflisted = false,
+    bufhidden = 'wipe',
+    filetype = 'diff',
+  },
+  on_mount = function(self)
+    self:render()
+    self:_ensure_renderer_attached()
+  end,
+  on_props = function(self, prev_props)
+    if self.props.hunk_entries ~= prev_props.hunk_entries then
+      self:render()
+    end
+  end,
+})
 
 function PatchPreviewComponent:constructor(props)
-  local instance = ViewportComponent.constructor(self, props)
+  local ViewportComponent = require('vgit.ui.ViewportComponent')
+  local instance = PatchPreviewComponent.super.constructor(self, props)
   instance._element = nil
   instance._diff_style_annotator = DiffStyleAnnotator()
   instance._syntax_mapping_annotator = SyntaxMappingAnnotator()
@@ -437,41 +459,13 @@ function PatchPreviewComponent:get_initial_state()
   }
 end
 
-function PatchPreviewComponent:should_component_update(next_props)
-  return self.props.hunk_entries ~= next_props.hunk_entries
-end
-
-function PatchPreviewComponent:component_did_mount()
-  self:render()
-  self:_ensure_renderer_attached()
-end
-
-function PatchPreviewComponent:component_did_update()
-  self:render()
-end
-
-function PatchPreviewComponent:component_will_mount()
-  if not self._element then
-    local default_win_options = {
-      winhl = 'Normal:GitBackground',
-      signcolumn = 'no',
-      wrap = false,
-      number = false,
-      cursorline = true,
-    }
-
-    local win_options = utils.object.assign(default_win_options, self.props.win_options or {})
-
-    self._element = Element({
-      buf_options = {
-        modifiable = false,
-        buflisted = false,
-        bufhidden = 'wipe',
-        filetype = 'diff',
-      },
-      win_options = win_options,
-    })
-  end
+function PatchPreviewComponent:get_layout_spec()
+  local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
+  return LayoutSpec.view(self._element, {
+    id = self.props.id or 'patch_preview',
+    flex = self.props.flex or 1,
+    focus = self.props.focus or false,
+  })
 end
 
 function PatchPreviewComponent:build_patch_lines_from_entries(hunk_entries)
@@ -555,12 +549,13 @@ function PatchPreviewComponent:render()
   self.state._syntax_hl_map = {}
   local sections = file_sections
   local gen = self._render_gen
-  vim.schedule(function()
+  event.async(function()
+    event.await()
     if not self._mounted or self._render_gen ~= gen then return end
     local syntax_highlights = self:_compute_syntax_highlights_from_full_files(sections)
     self.state._syntax_hl_map = self:_build_highlight_map(syntax_highlights)
     self:mark_viewport_dirty()
-  end)
+  end)()
 
   self:_ensure_renderer_attached()
 end
@@ -707,14 +702,6 @@ function PatchPreviewComponent:_ensure_renderer_attached()
   end)
 end
 
-function PatchPreviewComponent:get_layout_spec()
-  return LayoutSpec.view(self._element, {
-    id = self.props.id or 'patch_preview',
-    flex = self.props.flex or 1,
-    focus = self.props.focus or false,
-  })
-end
-
 function PatchPreviewComponent:get_marks()
   return self.state.marks or {}
 end
@@ -723,31 +710,14 @@ function PatchPreviewComponent:get_line_metadata(lnum)
   return self.state.line_metadata[lnum]
 end
 
+function PatchPreviewComponent:get_all_line_metadata()
+  return self.state.line_metadata or {}
+end
+
 function PatchPreviewComponent:get_lines()
   return self:with_element(function(el)
     return el:get_lines()
   end) or self.state.lines
-end
-
-function PatchPreviewComponent:set_lines(lines)
-  self:with_element(function(el)
-    el:set_lines(lines)
-  end)
-  return self
-end
-
-function PatchPreviewComponent:clear_lines()
-  ViewportComponent.clear(self)
-  self.state.lines = {}
-  self.state.line_metadata = {}
-  return self
-end
-
-function PatchPreviewComponent:set_cursor(cursor)
-  self:with_element(function(el)
-    el:set_cursor(cursor)
-  end)
-  return self
 end
 
 function PatchPreviewComponent:get_cursor()
@@ -756,35 +726,10 @@ function PatchPreviewComponent:get_cursor()
   end) or { 1, 1 }
 end
 
-function PatchPreviewComponent:set_lnum(lnum)
-  self:with_element(function(el)
-    el:set_lnum(lnum)
-  end)
-  return self
-end
-
 function PatchPreviewComponent:get_lnum()
   return self:with_element(function(el)
     return el:get_lnum()
   end) or 1
-end
-
-function PatchPreviewComponent:reset_cursor()
-  return self:set_cursor({ 1, 0 })
-end
-
-function PatchPreviewComponent:enable_cursorline()
-  self:with_element(function(el)
-    el:enable_cursorline()
-  end)
-  return self
-end
-
-function PatchPreviewComponent:disable_cursorline()
-  self:with_element(function(el)
-    el:disable_cursorline()
-  end)
-  return self
 end
 
 function PatchPreviewComponent:get_line_count()
@@ -805,6 +750,61 @@ function PatchPreviewComponent:get_width()
   end) or 0
 end
 
+function PatchPreviewComponent:is_valid()
+  return self:with_element(function()
+    return true
+  end) or false
+end
+
+function PatchPreviewComponent:set_lines(lines)
+  self:with_element(function(el)
+    el:set_lines(lines)
+  end)
+  return self
+end
+
+function PatchPreviewComponent:clear_lines()
+  self:with_element(function(el)
+    el:clear_extmarks()
+    el:clear_lines()
+  end)
+  self.state.lines = {}
+  self.state.line_metadata = {}
+  return self
+end
+
+function PatchPreviewComponent:set_cursor(cursor)
+  self:with_element(function(el)
+    el:set_cursor(cursor)
+  end)
+  return self
+end
+
+function PatchPreviewComponent:set_lnum(lnum)
+  self:with_element(function(el)
+    el:set_lnum(lnum)
+  end)
+  return self
+end
+
+function PatchPreviewComponent:reset_cursor()
+  return self:set_cursor({ 1, 0 })
+end
+
+function PatchPreviewComponent:enable_cursorline()
+  self:with_element(function(el)
+    el:enable_cursorline()
+  end)
+  return self
+end
+
+function PatchPreviewComponent:disable_cursorline()
+  self:with_element(function(el)
+    el:disable_cursorline()
+  end)
+  return self
+end
+
 function PatchPreviewComponent:clear_extmark_highlights()
   self:with_element(function(el)
     el:clear_extmark_highlights()
@@ -814,11 +814,7 @@ end
 
 function PatchPreviewComponent:scroll_to(pos, offset)
   self:with_element(function(el)
-    pos = pos or 'center'
-    offset = offset or 0
-    local win = el:get_window()
-    if not win then return end
-    win:scroll_to(pos, offset)
+    el:scroll_to(pos or 'center', offset or 0)
   end)
 
   return self
@@ -889,12 +885,6 @@ function PatchPreviewComponent:hunk_up(pos, offset)
   return self:move_to_hunk(mark_index, pos, offset)
 end
 
-Component.forward(PatchPreviewComponent, function(self)
-  return self._element and self._element:is_valid() and self._element
-end, {
-  'place_extmark_highlight',
-})
-
 function PatchPreviewComponent:clear_extmarks()
   self:with_element(function(el)
     el:clear_extmarks()
@@ -910,12 +900,6 @@ function PatchPreviewComponent:set_keymap(config, handler)
   return self
 end
 
-function PatchPreviewComponent:is_valid()
-  return self:with_element(function()
-    return true
-  end) or false
-end
-
 function PatchPreviewComponent:focus()
   self:with_element(function(el)
     el:focus()
@@ -927,15 +911,6 @@ function PatchPreviewComponent:call(callback)
     el:call(callback)
   end) end
   return self
-end
-
-function PatchPreviewComponent:unmount()
-  if not self._mounted then return end
-
-  self._element:unmount()
-  self._element = nil
-
-  ViewportComponent.unmount(self)
 end
 
 return PatchPreviewComponent

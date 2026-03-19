@@ -1,8 +1,8 @@
 local lazy = require('vgit.core.lazy')
 
-local Layout = lazy('vgit.ui.Layout')
+local View = lazy('vgit.ui.View')
 local event = lazy('vgit.core.event')
-local Object = lazy('vgit.core.Object')
+local keymap = lazy('vgit.core.keymap')
 local console = lazy('vgit.core.console')
 local git_stash = lazy('vgit.git.git_stash')
 local scene_setting = lazy('vgit.settings.scene')
@@ -10,12 +10,11 @@ local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local statusline = lazy('vgit.core.statusline_state')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
-local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
 local stash_view_setting = lazy('vgit.settings.stash_view')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
 
-local StashView = Object:extend()
+local StashView = View:extend()
 
 StashView.DEBOUNCE_MS = 200
 StashView.SEARCH_HEIGHT = 10
@@ -23,28 +22,20 @@ StashView.LAYOUT_SPLIT = 'split'
 StashView.LAYOUT_UNIFIED = 'unified'
 
 function StashView:constructor()
-  return {
-    _data = nil,
-    _repo = nil,
-    _layout_type = nil,
-    _search_component = nil,
-    _patch_component = nil,
-    _previous_component = nil,
-    _current_component = nil,
-    _component_manager = nil,
-    _debounce_cleanups = {},
-    _current_commit = nil,
-    _patch_cache = {},
-    _update_gen = 0,
-    _destroyed = false,
-  }
+  local instance = View.constructor(self)
+  instance._data = nil
+  instance._repo = nil
+  instance._layout_type = nil
+  instance._search_component = nil
+  instance._patch_component = nil
+  instance._previous_component = nil
+  instance._current_component = nil
+  instance._current_commit = nil
+  instance._patch_cache = {}
+  instance._update_gen = 0
+  return instance
 end
 
-function StashView:get_key(keymap)
-  if type(keymap) == 'string' then return keymap end
-  if type(keymap) == 'table' then return keymap.key end
-  return nil
-end
 
 function StashView:_get_active_component()
   if self._layout_type == self.LAYOUT_SPLIT then return self._current_component end
@@ -285,7 +276,7 @@ function StashView:setup_keymaps()
   local hunks_keymaps = hunks_setting:get('keymaps')
 
   if scene_keymaps and scene_keymaps.quit then
-    local quit_key = self:get_key(scene_keymaps.quit)
+    local quit_key = keymap.get_key(scene_keymaps.quit)
     if quit_key then
       self:_set_keymap_all_diff_components('n', quit_key, function()
         self._component_manager:destroy()
@@ -339,7 +330,7 @@ function StashView:setup_keymaps()
   }
 
   for _, mapping in ipairs(action_keymaps) do
-    local key = self:get_key(mapping.key)
+    local key = keymap.get_key(mapping.key)
     if key then self:_set_keymap_all_diff_components('n', key, mapping.fn) end
   end
 
@@ -350,10 +341,10 @@ function StashView:setup_keymaps()
     self:hunk_up()
   end)
 
-  local down_key = self:get_key(hunks_keymaps.down)
+  local down_key = keymap.get_key(hunks_keymaps.down)
   if down_key then self:_set_keymap_all_diff_components('n', down_key, down_fn) end
 
-  local up_key = self:get_key(hunks_keymaps.up)
+  local up_key = keymap.get_key(hunks_keymaps.up)
   if up_key then self:_set_keymap_all_diff_components('n', up_key, up_fn) end
 
   if self._search_component then
@@ -382,11 +373,10 @@ function StashView:_create_search_component(items)
   })
 end
 
-function StashView:_mount(layout_spec)
-  local wrapper = LayoutComponent({ spec = layout_spec })
+function StashView:_mount(children)
   self._component_manager = ComponentManager()
   event.await()
-  self._component_manager:render(Layout.screen(wrapper, { width = '100vw', height = '100vh' }))
+  self._component_manager:render(LayoutSpec.screen(children))
   self:setup_keymaps()
 end
 
@@ -394,10 +384,10 @@ function StashView:_create_unified(items)
   self._patch_component = PatchPreviewComponent({ hunk_entries = {}, focus = false })
   self:_create_search_component(items)
 
-  self:_mount(LayoutSpec.vertical({
+  self:_mount({
     LayoutSpec.view(self._patch_component),
     LayoutSpec.view(self._search_component),
-  }))
+  })
 end
 
 function StashView:_create_split(items)
@@ -415,13 +405,13 @@ function StashView:_create_split(items)
 
   self:_create_search_component(items)
 
-  self:_mount(LayoutSpec.vertical({
+  self:_mount({
     LayoutSpec.horizontal({
       LayoutSpec.view(self._previous_component, { flex = 1 }),
       LayoutSpec.view(self._current_component, { flex = 1 }),
     }),
     LayoutSpec.view(self._search_component),
-  }))
+  })
 end
 
 function StashView:create(data)
@@ -442,30 +432,6 @@ function StashView:create(data)
   end
 
   return true
-end
-
-function StashView:is_destroyed()
-  return self._destroyed
-end
-
-function StashView:destroy()
-  if self._destroyed then return end
-  self._destroyed = true
-
-  for _, cleanup in ipairs(self._debounce_cleanups) do
-    cleanup()
-  end
-  self._debounce_cleanups = {}
-
-  if self._component_manager then
-    self._component_manager:destroy()
-    self._component_manager = nil
-  end
-
-  self._search_component = nil
-  self._patch_component = nil
-  self._previous_component = nil
-  self._current_component = nil
 end
 
 return StashView

@@ -116,7 +116,7 @@ function git_hunks.list(reponame, opts)
   local empty_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
   local filenames = opts.filenames
-  if filenames and #filenames ~= 2 then error('incorrect number of files provided') end
+  if filenames and #filenames ~= 2 then return nil, { 'incorrect number of files provided' } end
 
   local args = {
     '--no-pager',

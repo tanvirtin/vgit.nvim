@@ -1,20 +1,18 @@
 local lazy = require('vgit.core.lazy')
 
-local Layout = lazy('vgit.ui.Layout')
-local Object = lazy('vgit.core.Object')
+local View = lazy('vgit.ui.View')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
+local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
-local BranchView = Object:extend()
+local BranchView = View:extend()
 
 function BranchView:constructor()
-  return {
-    _search_component = nil,
-    _component_manager = nil,
-    _destroyed = false,
-  }
+  local instance = View.constructor(self)
+  instance._search_component = nil
+  return instance
 end
 
 function BranchView:_build_items(branches, current_branch)
@@ -60,7 +58,10 @@ function BranchView:create(data)
   })
 
   self._component_manager = ComponentManager()
-  self._component_manager:render(Layout.popup(self._search_component))
+  self._component_manager:render({
+    component = self._search_component,
+    mode = 'popup',
+  })
 
   return true
 end
@@ -113,23 +114,6 @@ function BranchView:_on_no_match(query)
   end
 
   console.info('Created and switched to branch ' .. query)
-end
-
-function BranchView:is_destroyed()
-  return self._destroyed
-end
-
-function BranchView:destroy()
-  if self._destroyed then return end
-
-  self._destroyed = true
-
-  if self._component_manager then
-    self._component_manager:destroy()
-    self._component_manager = nil
-  end
-
-  self._search_component = nil
 end
 
 return BranchView

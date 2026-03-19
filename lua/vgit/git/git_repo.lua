@@ -1,5 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
+local gitcli = lazy('vgit.git.gitcli')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_repo = {}
@@ -31,17 +32,14 @@ function git_repo.discover(filepath)
 
   if discover_cache[search_dir] then return discover_cache[search_dir], nil end
 
-  -- Use git -C to search for repo in the specified directory
-  local system_result = vim.fn.system('git -C "' .. search_dir .. '" rev-parse --show-toplevel')
-  local system_exit_code = vim.v.shell_error
+  local result, err = gitcli.run({ '-C', search_dir, 'rev-parse', '--show-toplevel' })
 
-  if system_exit_code == 0 and system_result and system_result ~= '' then
-    local clean_result = system_result:gsub('\n', '')
-    discover_cache[search_dir] = clean_result
-    return clean_result, nil
-  end
+  if err then return nil, { 'not a git repository' } end
+  if not result or #result == 0 then return nil, { 'not a git repository' } end
 
-  return nil, { 'not a git repository' }
+  local clean_result = result[1]:gsub('\n', '')
+  discover_cache[search_dir] = clean_result
+  return clean_result, nil
 end
 
 function git_repo.dirname()

@@ -1,12 +1,11 @@
 local lazy = require('vgit.core.lazy')
 
-local fs = lazy('vgit.core.fs')
+local View = lazy('vgit.ui.View')
 local utils = lazy('vgit.core.utils')
-local Layout = lazy('vgit.ui.Layout')
 local event = lazy('vgit.core.event')
-local Object = lazy('vgit.core.Object')
-local Window = lazy('vgit.core.Window')
+local keymap = lazy('vgit.core.keymap')
 local console = lazy('vgit.core.console')
+local navigation = lazy('vgit.core.navigation')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local hunks_setting = lazy('vgit.settings.hunks')
@@ -15,12 +14,11 @@ local statusline = lazy('vgit.core.statusline_state')
 local ComponentManager = lazy('vgit.ui.ComponentManager')
 local TreeComponent = lazy('vgit.ui.components.TreeComponent')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
-local LayoutComponent = lazy('vgit.ui.components.LayoutComponent')
 local CommitView = lazy('vgit.features.screens.CommitView')
 local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
 local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
 
-local StatusDiffView = Object:extend()
+local StatusDiffView = View:extend()
 
 StatusDiffView.DEBOUNCE_MS = 100
 StatusDiffView.TREE_WIDTH = 50
@@ -28,22 +26,19 @@ StatusDiffView.LAYOUT_SPLIT = 'split'
 StatusDiffView.LAYOUT_UNIFIED = 'unified'
 
 function StatusDiffView:constructor()
-  return {
-    _opts = {
-      layout_type = self.LAYOUT_UNIFIED,
-    },
-    _data = nil,
-    _repo = nil,
-    _diff_component = nil,
-    _tree_component = nil,
-    _component_manager = nil,
-    _commit_view = nil,
-    _debounce_cleanups = {},
-    _refreshing = false,
-    _skip_on_move = false,
-    _destroyed = false,
-    _diff_gen = 0,
+  local instance = View.constructor(self)
+  instance._opts = {
+    layout_type = self.LAYOUT_UNIFIED,
   }
+  instance._data = nil
+  instance._repo = nil
+  instance._diff_component = nil
+  instance._tree_component = nil
+  instance._commit_view = nil
+  instance._refreshing = false
+  instance._skip_on_move = false
+  instance._diff_gen = 0
+  return instance
 end
 
 function StatusDiffView:_is_valid_entry(entry)
@@ -59,20 +54,7 @@ function StatusDiffView:get_current_entry()
 end
 
 function StatusDiffView:get_current_mark_index()
-  local marks = self._diff_component:get_marks()
-  if not marks or #marks == 0 then return nil, 0 end
-
-  local lnum = self._diff_component:get_lnum()
-
-  for i, mark in ipairs(marks) do
-    if lnum >= mark.top and lnum <= mark.bot then
-      return i, #marks
-    elseif mark.top > lnum then
-      return math.max(1, i - 1), #marks
-    end
-  end
-
-  return #marks, #marks
+  return navigation.get_mark_index(self._diff_component:get_marks(), self._diff_component:get_lnum())
 end
 
 function StatusDiffView:get_hunk_alignment()
@@ -216,22 +198,6 @@ function StatusDiffView:navigate_up()
   self:hunk_up()
 end
 
-function StatusDiffView:_handle_git_error(err, operation_name)
-  if err then
-    console.debug.error(string.format('[StatusDiffView] %s failed: %s', operation_name, err))
-    return false
-  end
-  return true
-end
-
-function StatusDiffView:get_key(keymap)
-  if type(keymap) == 'string' then
-    return keymap
-  elseif type(keymap) == 'table' then
-    return keymap.key
-  end
-  return nil
-end
 
 function StatusDiffView:_build_entry_diff(entry, repo)
   if not self:_is_valid_entry(entry) then return nil, { 'entry is invalid' } end
@@ -353,10 +319,16 @@ function StatusDiffView:_update_diff_component(hunk_index)
   if not self:_is_valid_entry(entry) then return false end
 
   local repo, repo_err = repository.current()
-  if not self:_handle_git_error(repo_err, 'repository.current') then return false end
+  if repo_err then
+    console.debug.error(repo_err)
+    return false
+  end
 
   local diff_data, err = self:_build_entry_diff(entry, repo)
-  if not self:_handle_git_error(err, '_build_entry_diff') then return false end
+  if err then
+    console.debug.error(err)
+    return false
+  end
 
   if self._diff_gen ~= gen then return false end
 
@@ -682,10 +654,16 @@ function StatusDiffView:_confirm_commit()
   end
 
   local repo, repo_err = repository.current()
-  if not self:_handle_git_error(repo_err, 'repository.current') then return end
+  if repo_err then
+    console.debug.error(repo_err)
+    return
+  end
 
   local _, err = repo:commit(message)
-  if not self:_handle_git_error(err, 'commit') then return end
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   console.info('Changes committed successfully')
 end
@@ -699,8 +677,8 @@ function StatusDiffView:commit()
   end
 
   local diff_keymaps = status_diff_view_setting:get('keymaps')
-  local confirm_key = self:get_key(diff_keymaps.commit_confirm) or '<C-s>'
-  local cancel_key = self:get_key(diff_keymaps.commit_cancel) or 'q'
+  local confirm_key = keymap.get_key(diff_keymaps.commit_confirm) or '<C-s>'
+  local cancel_key = keymap.get_key(diff_keymaps.commit_cancel) or 'q'
 
   local lines = { '' }
   lines[#lines + 1] = '# Press ' .. confirm_key .. ' to confirm, ' .. cancel_key .. ' to cancel.'
@@ -743,7 +721,7 @@ function StatusDiffView:commit()
 
   self._commit_view:set_lines(lines)
   self._commit_view:set_cursor({ 1, 0 })
-  vim.cmd('startinsert')
+  self._commit_view:start_insert()
 end
 
 function StatusDiffView:open_file()
@@ -755,9 +733,9 @@ function StatusDiffView:open_file()
 
   self:destroy()
   event.await()
-  fs.open(filename)
 
-  if mark then Window(0):set_lnum(mark.top_relative):scroll_to('center') end
+  local lnum = mark and mark.top_relative or nil
+  navigation.open_file(filename, lnum, 'center')
 end
 
 function StatusDiffView:_handle_file_selection_change(item)
@@ -786,10 +764,16 @@ function StatusDiffView:_handle_file_selection_change(item)
   if not self:_is_valid_entry(entry) then return end
 
   local repo, repo_err = repository.current()
-  if not self:_handle_git_error(repo_err, 'repository.current') then return end
+  if repo_err then
+    console.debug.error(repo_err)
+    return
+  end
 
   local diff_data, err = self:_build_entry_diff(entry, repo)
-  if not self:_handle_git_error(err, '_build_entry_diff') then return end
+  if err then
+    console.debug.error(err)
+    return
+  end
 
   if self._diff_gen ~= gen then return end
 
@@ -903,7 +887,10 @@ function StatusDiffView:refresh_data()
   if err then return end
 
   local data, status_err = repo:status(self._opts)
-  if not self:_handle_git_error(status_err, 'status') then return end
+  if status_err then
+    console.debug.error(status_err)
+    return
+  end
 
   if not data or utils.object.is_empty(data.entries) then return false end
 
@@ -926,7 +913,7 @@ function StatusDiffView:setup_keymaps()
   local hunks_keymaps = hunks_setting:get('keymaps')
 
   if scene_keymaps and scene_keymaps.quit then
-    local quit_key = self:get_key(scene_keymaps.quit)
+    local quit_key = keymap.get_key(scene_keymaps.quit)
     if quit_key then
       event.await()
       if self._tree_component:is_valid() then
@@ -944,7 +931,7 @@ function StatusDiffView:setup_keymaps()
     end
   end
 
-  local stage_hunk_key = self:get_key(diff_keymaps.stage_hunk)
+  local stage_hunk_key = keymap.get_key(diff_keymaps.stage_hunk)
   if stage_hunk_key then
     local stage_hunk_fn, stage_hunk_cleanup = event.debounce_async(function()
       self:stage_hunk()
@@ -956,7 +943,7 @@ function StatusDiffView:setup_keymaps()
     }, stage_hunk_fn)
   end
 
-  local unstage_hunk_key = self:get_key(diff_keymaps.unstage_hunk)
+  local unstage_hunk_key = keymap.get_key(diff_keymaps.unstage_hunk)
   if unstage_hunk_key then
     local unstage_hunk_fn, unstage_hunk_cleanup = event.debounce_async(function()
       self:unstage_hunk()
@@ -969,7 +956,7 @@ function StatusDiffView:setup_keymaps()
   end
 
   -- Reset hunk keymap
-  local reset_hunk_key = self:get_key(diff_keymaps.reset_hunk)
+  local reset_hunk_key = keymap.get_key(diff_keymaps.reset_hunk)
   if reset_hunk_key then
     local reset_hunk_fn, reset_hunk_cleanup = event.debounce_async(function()
       self:reset_hunk()
@@ -982,7 +969,7 @@ function StatusDiffView:setup_keymaps()
   end
 
   -- File-level operations on diff component
-  local stage_file_key = self:get_key(diff_keymaps.stage)
+  local stage_file_key = keymap.get_key(diff_keymaps.stage)
   if stage_file_key then
     local fn, cleanup = event.debounce_async(function()
       self:stage_entry_from_diff()
@@ -994,7 +981,7 @@ function StatusDiffView:setup_keymaps()
     }, fn)
   end
 
-  local unstage_file_key = self:get_key(diff_keymaps.unstage)
+  local unstage_file_key = keymap.get_key(diff_keymaps.unstage)
   if unstage_file_key then
     local fn, cleanup = event.debounce_async(function()
       self:unstage_entry_from_diff()
@@ -1006,7 +993,7 @@ function StatusDiffView:setup_keymaps()
     }, fn)
   end
 
-  local reset_file_key = self:get_key(diff_keymaps.reset)
+  local reset_file_key = keymap.get_key(diff_keymaps.reset)
   if reset_file_key then
     local fn, cleanup = event.debounce_async(function()
       self:reset_entry_from_diff()
@@ -1018,7 +1005,7 @@ function StatusDiffView:setup_keymaps()
     }, fn)
   end
 
-  local down_key = self:get_key(hunks_keymaps.down)
+  local down_key = keymap.get_key(hunks_keymaps.down)
   if down_key then
     local down_fn = event.async(function()
       self:navigate_down()
@@ -1032,7 +1019,7 @@ function StatusDiffView:setup_keymaps()
     if self._tree_component:is_valid() then self._tree_component:set_keymap('n', down_key, down_fn, 'Next') end
   end
 
-  local up_key = self:get_key(hunks_keymaps.up)
+  local up_key = keymap.get_key(hunks_keymaps.up)
   if up_key then
     local up_fn = event.async(function()
       self:navigate_up()
@@ -1046,7 +1033,7 @@ function StatusDiffView:setup_keymaps()
     if self._tree_component:is_valid() then self._tree_component:set_keymap('n', up_key, up_fn, 'Previous') end
   end
 
-  local stash_key = self:get_key(diff_keymaps.stash)
+  local stash_key = keymap.get_key(diff_keymaps.stash)
   if stash_key then
     local stash_fn, stash_cleanup = event.debounce_async(function()
       local _, err = self._repo:stash_add()
@@ -1171,18 +1158,13 @@ function StatusDiffView:_create_entries_view(data)
     filetype = nil,
   })
 
-  local wrapper = LayoutComponent({
-    spec = LayoutSpec.horizontal({
+  self._component_manager = ComponentManager()
+  event.await()
+  self._component_manager:render(LayoutSpec.screen({
+    LayoutSpec.horizontal({
       LayoutSpec.view(self._tree_component, { width = '30%' }),
       LayoutSpec.view(self._diff_component, { flex = 1 }),
     }),
-  })
-
-  self._component_manager = ComponentManager()
-  event.await()
-  self._component_manager:render(Layout.screen(wrapper, {
-    width = '100vw',
-    height = '100vh',
   }))
 
   self:setup_keymaps()
@@ -1252,19 +1234,12 @@ function StatusDiffView:on_git_change()
   end
 end
 
-function StatusDiffView:is_destroyed()
-  return self._destroyed
-end
-
 function StatusDiffView:destroy()
-  if self._destroyed then return end
-  self._destroyed = true
+  if self:is_destroyed() then return end
+
   self:_close_commit_split()
-  for _, cleanup in ipairs(self._debounce_cleanups) do
-    cleanup()
-  end
-  self._debounce_cleanups = {}
-  self._component_manager:destroy()
+
+  View.destroy(self)
 end
 
 return StatusDiffView

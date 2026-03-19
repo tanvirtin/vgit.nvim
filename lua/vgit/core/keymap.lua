@@ -1,5 +1,11 @@
 local keymap = {}
 
+function keymap.get_key(config)
+  if type(config) == 'string' then return config end
+  if type(config) == 'table' then return config.key end
+  return nil
+end
+
 function keymap.set(opts, callback)
   opts = opts or {}
 

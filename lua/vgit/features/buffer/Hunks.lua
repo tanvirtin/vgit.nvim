@@ -1,7 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
-local Window = lazy('vgit.core.Window')
 local Object = lazy('vgit.core.Object')
 local console = lazy('vgit.core.console')
 local navigation = lazy('vgit.core.navigation')
@@ -30,7 +29,7 @@ function Hunks:hunk_up()
   local hunks = buffer:get_hunks()
   if not hunks or #hunks == 0 then return end
 
-  local window = Window(0)
+  local window = navigation.current_window()
   local selected = navigation.up(window, hunks)
   statusline.set_hunk({ index = selected, count = #hunks })
 end
@@ -44,7 +43,7 @@ function Hunks:hunk_down()
   local hunks = buffer:get_hunks()
   if not hunks or #hunks == 0 then return end
 
-  local window = Window(0)
+  local window = navigation.current_window()
   local selected = navigation.down(window, hunks)
   statusline.set_hunk({ index = selected, count = #hunks })
 end
@@ -54,8 +53,7 @@ function Hunks:cursor_hunk()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
-  local window = Window(0)
-  local lnum = window:get_lnum()
+  local lnum = navigation.get_current_lnum()
 
   local hunks = buffer:get_hunks()
   if not hunks then return end
@@ -85,12 +83,9 @@ function Hunks:cursor_stage()
   if buffer:is_modified() then return end
 
   -- Performance: Deferred sync of only the current buffer after staging
-  vim.defer_fn(
-    event.async(function()
-      if buffer:is_valid() then git_buffer_store.dispatch(buffer, 'sync') end
-    end),
-    200
-  )
+  event.defer(event.async(function()
+    if buffer:is_valid() then git_buffer_store.dispatch(buffer, 'sync') end
+  end), 200)
 
   if not buffer:is_tracked() then
     local _, err = buffer:stage()
@@ -135,8 +130,7 @@ function Hunks:cursor_reset()
   local buffer = git_buffer_store.current()
   if not buffer then return end
 
-  local window = Window(0)
-  local lnum = window:get_lnum()
+  local lnum = navigation.get_current_lnum()
   local hunks = buffer:get_hunks()
   if not hunks then return end
 
@@ -193,9 +187,9 @@ function Hunks:cursor_reset()
 
       if new_lnum < 1 then new_lnum = 1 end
 
-      window:set_lnum(new_lnum)
+      navigation.set_current_lnum(new_lnum)
       table.remove(hunks, selected_hunk_index)
-      vim.cmd('update')
+      buffer:save()
     end
   end
 end

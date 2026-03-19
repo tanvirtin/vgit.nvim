@@ -4,8 +4,8 @@ describe('SearchFilter:', function()
   local SearchFilter
 
   before_each(function()
-    package.loaded['vgit.ui.components.SearchComponent.SearchFilter'] = nil
-    SearchFilter = require('vgit.ui.components.SearchComponent.SearchFilter')
+    package.loaded['vgit.core.SearchFilter'] = nil
+    SearchFilter = require('vgit.core.SearchFilter')
   end)
 
   describe('filter', function()
