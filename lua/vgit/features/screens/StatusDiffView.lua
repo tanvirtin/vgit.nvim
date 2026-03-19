@@ -198,7 +198,6 @@ function StatusDiffView:navigate_up()
   self:hunk_up()
 end
 
-
 function StatusDiffView:_build_entry_diff(entry, repo)
   if not self:_is_valid_entry(entry) then return nil, { 'entry is invalid' } end
 
