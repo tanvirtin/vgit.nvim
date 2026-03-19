@@ -26,6 +26,12 @@ end
 
 function ComponentManager:parse_layout_spec(layout_spec)
   if layout_spec and layout_spec.type then
+    -- Track leaf VIEW elements
+    if layout_spec.type == LayoutSpec.Type.VIEW and layout_spec.view
+      and not (type(layout_spec.view.get_layout_spec) == 'function') then
+      self._tracked_elements[#self._tracked_elements + 1] = layout_spec.view
+    end
+
     if layout_spec.children then
       for i, child in ipairs(layout_spec.children) do
         if child.view and type(child.view.get_layout_spec) == 'function' then
@@ -143,7 +149,8 @@ function ComponentManager:render_layout()
 end
 
 function ComponentManager:register_lifecycle_events()
-  if self.context:is_floating_mode() then
+  if self.context:is_floating_mode() and #self._tracked_elements <= 1 then
+    -- Single-element popups: dismiss when focus leaves
     self._lifecycle_cleanup = event.disposable_on('WinLeave', function()
       event.defer(function()
         if self.is_destroying then return end
@@ -153,6 +160,36 @@ function ComponentManager:register_lifecycle_events()
           if el:is_valid() then
             local win = el:get_window()
             if win and current_win:is_same(win) then return end
+          end
+        end
+
+        self:destroy()
+      end, 50)
+    end)
+  elseif self.context:is_floating_mode() then
+    -- Multi-element floating layouts: dismiss when focus leaves ALL windows
+    self._lifecycle_cleanup = event.disposable_on('WinLeave', function()
+      event.defer(function()
+        if self.is_destroying then return end
+
+        local current_win = Window.get_current()
+
+        -- Check if focus is still on any of our windows
+        for _, el in ipairs(self._tracked_elements) do
+          if el:is_valid() then
+            local win = el:get_window()
+            if win and current_win:is_same(win) then return end
+          end
+        end
+
+        -- Also check component group windows (for components that own their own elements)
+        for _, component in ipairs(self.component_group:get_mounted_components()) do
+          if component.with_element then
+            local still_focused = component:with_element(function(el)
+              local win = el:get_window()
+              return win and current_win:is_same(win)
+            end)
+            if still_focused then return end
           end
         end
 
