@@ -4,14 +4,10 @@ local View = lazy('vgit.ui.View')
 local utils = lazy('vgit.core.utils')
 local event = lazy('vgit.core.event')
 local keymap = lazy('vgit.core.keymap')
-local navigation = lazy('vgit.core.navigation')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
-local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local statusline = lazy('vgit.core.statusline_state')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
 local display_service = lazy('vgit.ui.display_service')
 local LoadingIndicator = lazy('vgit.ui.decorators.LoadingIndicator')
 local project_diff_view_setting = lazy('vgit.settings.project_diff_view')
@@ -191,7 +187,18 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
     end
   end
 
-  -- Precomputed entries (from CLI commands like :VGit diff, :VGit show)
+  local precomputed = self:_collect_precomputed_entries(data)
+  for _, entry in ipairs(precomputed) do
+    all_entries[#all_entries + 1] = entry
+  end
+
+  console.debug.info(string.format('[ProjectDiffView] built %d diff_file entries', #all_entries))
+  return all_entries
+end
+
+function ProjectDiffView:_collect_precomputed_entries(data)
+  local entries = {}
+
   for _, section in ipairs(data.entries or {}) do
     for _, file_entry in ipairs(section.entries or {}) do
       if file_entry.diff then
@@ -201,7 +208,7 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
           if status.old_filename then
             display_filename = status.old_filename .. ' -> ' .. status.filename
           end
-          all_entries[#all_entries + 1] = {
+          entries[#entries + 1] = {
             type = 'diff_file',
             filename = display_filename,
             filetype = status.filetype,
@@ -214,13 +221,7 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
     end
   end
 
-  console.debug.info(string.format('[ProjectDiffView] built %d diff_file entries', #all_entries))
-  return all_entries
-end
-
-function ProjectDiffView:_get_active_component()
-  if self._layout_type == self.LAYOUT_SPLIT then return self._current_component end
-  return self._patch_component
+  return entries
 end
 
 function ProjectDiffView:get_hunk_alignment()
@@ -231,30 +232,8 @@ function ProjectDiffView:get_hunk_alignment_offset()
   return project_diff_view_setting:get('hunk_alignment_offset') or 0
 end
 
-function ProjectDiffView:_get_current_mark_index(component)
-  return navigation.get_mark_index(component:get_marks(), component:get_lnum())
-end
-
-function ProjectDiffView:hunk_up()
-  local component = self:_get_active_component()
-  if component and component:is_valid() then
-    component:hunk_up(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
-    local index, count = self:_get_current_mark_index(component)
-    if index then statusline.set_hunk({ index = index, count = count }) end
-  end
-end
-
-function ProjectDiffView:hunk_down()
-  local component = self:_get_active_component()
-  if component and component:is_valid() then
-    component:hunk_down(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
-    local index, count = self:_get_current_mark_index(component)
-    if index then statusline.set_hunk({ index = index, count = count }) end
-  end
-end
-
 function ProjectDiffView:jump_to_file()
-  local component = self:_get_active_component()
+  local component = self:get_navigatable_component()
   if not component or not component:is_valid() then return end
 
   local lnum = component:get_lnum()
@@ -283,7 +262,7 @@ function ProjectDiffView:jump_to_file()
 end
 
 function ProjectDiffView:show_blame_view()
-  local component = self:_get_active_component()
+  local component = self:get_navigatable_component()
   if not component or not component:is_valid() then return end
 
   local lnum = component:get_lnum()
@@ -293,43 +272,14 @@ function ProjectDiffView:show_blame_view()
   display_service.show_blame_view_for_file(file_info.filename)
 end
 
-function ProjectDiffView:_set_keymap_on_component(component, mode, key, handler)
-  if component and component:is_valid() then component:set_keymap({
-    mode = mode,
-    key = key,
-  }, handler) end
-end
-
-function ProjectDiffView:_set_keymap_all_components(mode, key, handler)
-  if self._layout_type == self.LAYOUT_SPLIT then
-    self:_set_keymap_on_component(self._previous_component, mode, key, handler)
-    self:_set_keymap_on_component(self._current_component, mode, key, handler)
-  else
-    self:_set_keymap_on_component(self._patch_component, mode, key, handler)
-  end
-end
-
 function ProjectDiffView:setup_keymaps()
-  local scene_keymaps = scene_setting:get('keymaps')
   local project_diff_view_keymaps = project_diff_view_setting:get('keymaps')
-  local hunks_keymaps = hunks_setting:get('keymaps')
 
-  if scene_keymaps and scene_keymaps.quit then
-    local quit_key = keymap.get_key(scene_keymaps.quit)
-    if quit_key then
-      self:_set_keymap_all_components('n', quit_key, function()
-        self._component_manager:destroy()
-      end)
-    end
-  end
+  self:_setup_quit_keymap()
 
   local jump_key = keymap.get_key(project_diff_view_keymaps.jump)
   if jump_key then
-    local jump_fn, jump_cleanup = event.debounce_async(function()
-      self:jump_to_file()
-    end, self.DEBOUNCE_MS)
-    table.insert(self._debounce_cleanups, jump_cleanup)
-
+    local jump_fn = self:_make_debounced(function() self:jump_to_file() end)
     self:_set_keymap_all_components('n', jump_key, jump_fn)
   end
 
@@ -341,63 +291,10 @@ function ProjectDiffView:setup_keymaps()
     end)
   end
 
-  local down_key = keymap.get_key(hunks_keymaps.down)
-  if down_key then
-    local down_fn = event.async(function()
-      self:hunk_down()
-    end)
-    self:_set_keymap_all_components('n', down_key, down_fn)
-  end
+  self:_setup_hunk_navigation_keymaps()
 
-  local up_key = keymap.get_key(hunks_keymaps.up)
-  if up_key then
-    local up_fn = event.async(function()
-      self:hunk_up()
-    end)
-    self:_set_keymap_all_components('n', up_key, up_fn)
-  end
-
-  local blame_fn, blame_cleanup = event.debounce_async(function()
-    self:show_blame_view()
-  end, self.DEBOUNCE_MS)
-  table.insert(self._debounce_cleanups, blame_cleanup)
+  local blame_fn = self:_make_debounced(function() self:show_blame_view() end)
   self:_set_keymap_all_components('n', 'b', blame_fn)
-end
-
-function ProjectDiffView:_get_diff_components()
-  if self._layout_type == self.LAYOUT_SPLIT then
-    local targets = {}
-    if self._previous_component and self._previous_component:is_valid() then targets[#targets + 1] = self._previous_component end
-    if self._current_component and self._current_component:is_valid() then targets[#targets + 1] = self._current_component end
-    return targets
-  end
-
-  if self._patch_component and self._patch_component:is_valid() then return { self._patch_component } end
-
-  return {}
-end
-
-function ProjectDiffView:_set_diff_file_entries(diff_file_entries)
-  if self._layout_type == self.LAYOUT_SPLIT then
-    local previous_entries = {}
-    local current_entries = {}
-    for _, entry in ipairs(diff_file_entries) do
-      if entry.type == 'diff_file' then
-        previous_entries[#previous_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'previous' })
-        current_entries[#current_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'current' })
-      end
-    end
-    if self._previous_component and self._previous_component:is_valid() then
-      self._previous_component:set_props({ hunk_entries = previous_entries })
-    end
-    if self._current_component and self._current_component:is_valid() then
-      self._current_component:set_props({ hunk_entries = current_entries })
-    end
-  else
-    if self._patch_component and self._patch_component:is_valid() then
-      self._patch_component:set_props({ hunk_entries = diff_file_entries })
-    end
-  end
 end
 
 function ProjectDiffView:_mount_unified_view()
@@ -408,9 +305,8 @@ function ProjectDiffView:_mount_unified_view()
     focus = true,
   })
 
-  self._component_manager = ComponentManager()
   event.await()
-  self._component_manager:render(LayoutSpec.screen({
+  self:_render(LayoutSpec.screen({
     LayoutSpec.view(self._patch_component, { flex = 1 }),
   }))
 
@@ -440,9 +336,8 @@ function ProjectDiffView:_mount_split_view()
     },
   })
 
-  self._component_manager = ComponentManager()
   event.await()
-  self._component_manager:render(LayoutSpec.screen({
+  self:_render(LayoutSpec.screen({
     LayoutSpec.horizontal({
       LayoutSpec.view(self._previous_component, { flex = 1 }),
       LayoutSpec.view(self._current_component, { flex = 1 }),
@@ -454,9 +349,9 @@ function ProjectDiffView:_mount_split_view()
   if self._current_component and self._current_component:is_valid() then self._current_component:focus() end
 end
 
-function ProjectDiffView:_populate_diff(diff_file_entries)
+function ProjectDiffView:_refresh_diff(diff_file_entries)
   self._diff_file_entries = diff_file_entries
-  self:_set_diff_file_entries(diff_file_entries)
+  self:_set_hunk_entries(diff_file_entries)
 
   local map_component = self._layout_type == self.LAYOUT_SPLIT and self._current_component or self._patch_component
   if map_component then self._line_to_file_map = self:_build_line_to_file_map(map_component) end
@@ -481,7 +376,7 @@ function ProjectDiffView:_create_view(data)
     self:_mount_unified_view()
   end
 
-  self._loading_indicator:start(self:_get_diff_components())
+  self._loading_indicator:start(self:_get_all_diff_components())
 
   local diff_file_entries = self:_build_diff_file_entries(repo, data)
 
@@ -494,7 +389,7 @@ function ProjectDiffView:_create_view(data)
     return false
   end
 
-  self:_populate_diff(diff_file_entries)
+  self:_refresh_diff(diff_file_entries)
 
   return true
 end

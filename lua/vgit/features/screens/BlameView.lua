@@ -7,7 +7,6 @@ local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
 local display_service = lazy('vgit.ui.display_service')
 local blame_view_setting = lazy('vgit.settings.blame_view')
 local BlameGutterComponent = lazy('vgit.ui.components.BlameGutterComponent')
@@ -16,6 +15,15 @@ local BlameContentComponent = lazy('vgit.ui.components.BlameContentComponent')
 local BlameView = View:extend()
 
 BlameView.DEBOUNCE_MS = 100
+
+BlameView.AUTHOR_COLORS = {
+  'Directory',
+  'String',
+  'Keyword',
+  'Type',
+  'Constant',
+  'Special',
+}
 
 function BlameView:constructor()
   local instance = View.constructor(self)
@@ -79,9 +87,8 @@ function BlameView:_create_view(data)
   self._gutter_component = BlameGutterComponent()
   self._content_component = BlameContentComponent()
 
-  self._component_manager = ComponentManager()
   event.await()
-  self._component_manager:render(LayoutSpec.screen({
+  self:_render(LayoutSpec.screen({
     LayoutSpec.horizontal({
       LayoutSpec.view(self._gutter_component, { width = '35%' }),
       LayoutSpec.view(self._content_component, { flex = 1 }),
@@ -89,21 +96,12 @@ function BlameView:_create_view(data)
   }))
 
   self:_render_blame(data.blames)
-  self:_render_content(data.lines, data.filetype)
+  self._content_component:set_props({ lines = data.lines, filetype = data.filetype })
   self:_setup_scroll_sync()
-  self:_setup_keymaps()
+  self:setup_keymaps()
 
   return true
 end
-
-BlameView.AUTHOR_COLORS = {
-  'Directory',
-  'String',
-  'Keyword',
-  'Type',
-  'Constant',
-  'Special',
-}
 
 function BlameView:_get_author_hl(author)
   local hash = 0
@@ -112,165 +110,6 @@ function BlameView:_get_author_hl(author)
   end
   local colors = self.AUTHOR_COLORS
   return colors[(hash % #colors) + 1]
-end
-
-function BlameView:_render_blame(blames)
-  local lines = {}
-  local highlights = {}
-  local line_highlights = {}
-  local line_count = #blames
-  local group_index = 0
-
-  local i = 1
-  while i <= line_count do
-    local blame = blames[i]
-    local hash = blame.commit_hash or blame.hash
-    local group_start = i
-
-    while i <= line_count do
-      local b = blames[i]
-      local h = b.commit_hash or b.hash
-      if h ~= hash then break end
-      i = i + 1
-    end
-    local group_end = i - 1
-
-    local is_uncommitted = blame:is_uncommitted()
-    local bg_hl = group_index % 2 == 0 and 'GitBlameEven' or 'GitBlameOdd'
-    group_index = group_index + 1
-
-    local short_hash = ''
-    if not is_uncommitted then short_hash = (blame:short_hash() or ''):sub(1, 7) end
-
-    local message = blame.message or blame.commit_message or ''
-    if #message > 35 then message = message:sub(1, 34) .. '..' end
-
-    local age_display = ''
-    if blame.author_time then
-      local age = blame:age()
-      if age then age_display = age.display end
-    end
-
-    local author = blame.author or 'Unknown'
-    if #author > 16 then author = author:sub(1, 15) .. '..' end
-
-    local initial = ''
-    if not is_uncommitted and #author > 0 then initial = author:sub(1, 1):upper() end
-
-    -- Line 1: initial  short_hash  commit_message  age
-    local line1
-    if is_uncommitted then
-      line1 = '  Uncommitted'
-    else
-      line1 = string.format(' %s %s  %s  %s', initial, short_hash, message, age_display)
-    end
-    lines[#lines + 1] = line1
-    line_highlights[#line_highlights + 1] = { row = group_start - 1, hl = bg_hl }
-
-    if is_uncommitted then
-      highlights[#highlights + 1] = {
-        row = group_start - 1,
-        hl = 'GitComment',
-        from = 0,
-        to = #line1,
-      }
-    else
-      local author_hl = self:_get_author_hl(author)
-      -- Initial
-      highlights[#highlights + 1] = {
-        row = group_start - 1,
-        hl = author_hl,
-        from = 1,
-        to = 1 + #initial,
-      }
-      -- Short hash
-      local hash_start = 1 + #initial + 1
-      highlights[#highlights + 1] = {
-        row = group_start - 1,
-        hl = 'NonText',
-        from = hash_start,
-        to = hash_start + #short_hash,
-      }
-      -- Commit message
-      local msg_start = hash_start + #short_hash + 2
-      highlights[#highlights + 1] = {
-        row = group_start - 1,
-        hl = 'Normal',
-        from = msg_start,
-        to = msg_start + #message,
-      }
-      -- Age
-      if #age_display > 0 then
-        local age_start = msg_start + #message + 2
-        highlights[#highlights + 1] = {
-          row = group_start - 1,
-          hl = 'GitComment',
-          from = age_start,
-          to = age_start + #age_display,
-        }
-      end
-    end
-
-    -- Line 2: author name (if group has 2+ lines)
-    if group_end > group_start then
-      local line2
-      if is_uncommitted then
-        line2 = '  '
-      else
-        local author_hl = self:_get_author_hl(author)
-        line2 = string.format('   %s', author)
-        highlights[#highlights + 1] = {
-          row = group_start,
-          hl = author_hl,
-          from = 3,
-          to = 3 + #author,
-        }
-      end
-      lines[#lines + 1] = line2
-      line_highlights[#line_highlights + 1] = { row = group_start, hl = bg_hl }
-    end
-
-    -- Remaining lines: continuation markers
-    for j = group_start + 2, group_end do
-      lines[#lines + 1] = ''
-      line_highlights[#line_highlights + 1] = { row = j - 1, hl = bg_hl }
-    end
-  end
-
-  -- Ensure gutter has exactly the same number of lines as content
-  while #lines < line_count do
-    lines[#lines + 1] = ''
-  end
-
-  self._gutter_component:with_element(function(el)
-    el:set_lines(lines)
-    el:clear_extmark_highlights()
-
-    for _, lh in ipairs(line_highlights) do
-      el:place_extmark_highlight({
-        hl = lh.hl,
-        row = lh.row,
-        line_hl = true,
-      })
-    end
-
-    for _, h in ipairs(highlights) do
-      el:place_extmark_highlight({
-        hl = h.hl,
-        row = h.row,
-        col_range = { from = h.from, to = h.to },
-      })
-    end
-
-    self._blame_segments = self:_compute_blame_segments(blames)
-  end)
-end
-
-function BlameView:_render_content(lines, filetype)
-  self._content_component:with_element(function(el)
-    el:set_lines(lines)
-    if filetype then el:set_filetype(filetype) end
-  end)
 end
 
 function BlameView:_compute_blame_segments(blames)
@@ -291,13 +130,20 @@ function BlameView:_compute_blame_segments(blames)
     end
     local segment_end = i - 1
 
-    table.insert(segments, {
-      start = segment_start,
-      finish = segment_end,
-    })
+    table.insert(segments, { start = segment_start, finish = segment_end })
   end
 
   return segments
+end
+
+function BlameView:_render_blame(blames)
+  self._gutter_component:set_props({
+    blames = blames,
+    get_author_hl = function(author)
+      return self:_get_author_hl(author)
+    end,
+  })
+  self._blame_segments = self:_compute_blame_segments(blames)
 end
 
 function BlameView:blame_down()
@@ -485,45 +331,19 @@ function BlameView:show_commit_diff()
   })
 end
 
-function BlameView:show_commit_project_diff()
-  local lnum = self._content_component:with_element(function(el)
-    return el:get_lnum()
-  end)
-  if not lnum then return end
-  local blame = self._current_blames[lnum]
-  if not blame then return end
-
-  if blame:is_uncommitted() then
-    console.info('Line is uncommitted')
-    return
-  end
-
-  local commit_hash = blame.commit_hash or blame.hash
-
+function BlameView:_fetch_commit_diffs(commit_hash)
   local repo, repo_err = repository.current()
-  if repo_err then
-    console.error(repo_err)
-    return
-  end
+  if repo_err then return nil, repo_err end
 
   local tree = repo:tree(commit_hash)
 
   local commit, commit_err = tree:commit()
-  if commit_err then
-    console.error('Failed to get commit info: ' .. tostring(commit_err))
-    return
-  end
+  if commit_err then return nil, 'Failed to get commit info: ' .. tostring(commit_err) end
 
   local files, files_err = tree:files()
-  if files_err then
-    console.error('Failed to get commit files: ' .. tostring(files_err))
-    return
-  end
+  if files_err then return nil, 'Failed to get commit files: ' .. tostring(files_err) end
 
-  if not files or #files == 0 then
-    console.info('No files changed in this commit')
-    return
-  end
+  if not files or #files == 0 then return nil, nil end
 
   local EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
   local layout_type = scene_setting:get('diff_preference') or 'unified'
@@ -536,7 +356,7 @@ function BlameView:show_commit_project_diff()
     local filename = file.filename
     local file_old_filename = file.old_filename
 
-    table.insert(funcs, function()
+    funcs[#funcs + 1] = function()
       local diff, diff_err = repo:diff({
         type = 'range',
         filename = filename,
@@ -561,17 +381,41 @@ function BlameView:show_commit_project_diff()
         original_lines = repo:file_lines(from_filename, from_ref) or {},
         current_lines = repo:file_lines(filename, to_ref) or {},
       }
-    end)
+    end
   end
 
   local results = event.all(funcs)
 
   local entries = {}
   for i = 1, #funcs do
-    if results[i] then table.insert(entries, results[i]) end
+    if results[i] then entries[#entries + 1] = results[i] end
   end
 
-  if #entries == 0 then
+  return { entries = entries, commit_hash = commit_hash, layout_type = layout_type }
+end
+
+function BlameView:show_commit_project_diff()
+  local lnum = self._content_component:with_element(function(el)
+    return el:get_lnum()
+  end)
+  if not lnum then return end
+  local blame = self._current_blames[lnum]
+  if not blame then return end
+
+  if blame:is_uncommitted() then
+    console.info('Line is uncommitted')
+    return
+  end
+
+  local commit_hash = blame.commit_hash or blame.hash
+  local result, err = self:_fetch_commit_diffs(commit_hash)
+
+  if err then
+    console.error(err)
+    return
+  end
+
+  if not result or #result.entries == 0 then
     console.info('No diffs available for this commit')
     return
   end
@@ -584,16 +428,16 @@ function BlameView:show_commit_project_diff()
     entries = {
       {
         title = string.format('Commit: %s', commit_hash:sub(1, 7)),
-        entries = entries,
+        entries = result.entries,
       },
     },
-    layout_type = layout_type,
+    layout_type = result.layout_type,
   })
 end
 
 function BlameView:_refresh_view(blames, lines, target_lnum)
   self:_render_blame(blames)
-  self:_render_content(lines, self._opts.filetype)
+  self._content_component:set_props({ lines = lines, filetype = self._opts.filetype })
 
   if target_lnum then
     local max_lnum = #lines
@@ -606,44 +450,23 @@ function BlameView:_refresh_view(blames, lines, target_lnum)
   end
 end
 
-
-function BlameView:_setup_keymaps()
-  local scene_keymaps = scene_setting:get('keymaps')
+function BlameView:setup_keymaps()
   local components = { self._content_component, self._gutter_component }
 
-  if scene_keymaps and scene_keymaps.quit then
-    local quit_key = keymap.get_key(scene_keymaps.quit)
-    if quit_key then
-      for _, component in ipairs(components) do
-        component:set_keymap({
-          mode = 'n',
-          key = quit_key,
-        }, function()
-          self:destroy()
-        end)
-      end
-    end
-  end
+  self:_setup_quit_keymap()
 
-  local enter_fn, enter_cleanup = event.debounce_async(function()
+  local enter_fn = self:_make_debounced(function()
     self:enter_parent()
-  end, self.DEBOUNCE_MS)
-  table.insert(self._debounce_cleanups, enter_cleanup)
-
-  local back_fn, back_cleanup = event.debounce_async(function()
+  end)
+  local back_fn = self:_make_debounced(function()
     self:go_back()
-  end, self.DEBOUNCE_MS)
-  table.insert(self._debounce_cleanups, back_cleanup)
-
-  local diff_fn, diff_cleanup = event.debounce_async(function()
+  end)
+  local diff_fn = self:_make_debounced(function()
     self:show_commit_diff()
-  end, self.DEBOUNCE_MS)
-  table.insert(self._debounce_cleanups, diff_cleanup)
-
-  local project_diff_fn, project_diff_cleanup = event.debounce_async(function()
+  end)
+  local project_diff_fn = self:_make_debounced(function()
     self:show_commit_project_diff()
-  end, self.DEBOUNCE_MS)
-  table.insert(self._debounce_cleanups, project_diff_cleanup)
+  end)
 
   local blame_keymaps = blame_view_setting:get('keymaps')
 
@@ -655,40 +478,19 @@ function BlameView:_setup_keymaps()
   end
 
   for _, component in ipairs(components) do
-    component:set_keymap({
-      mode = 'n',
-      key = '<CR>',
-    }, enter_fn)
-
-    component:set_keymap({
-      mode = 'n',
-      key = '<BS>',
-    }, back_fn)
-
-    component:set_keymap({
-      mode = 'n',
-      key = 'd',
-    }, diff_fn)
-
-    component:set_keymap({
-      mode = 'n',
-      key = 'D',
-    }, project_diff_fn)
+    component:set_keymap({ mode = 'n', key = '<CR>' }, enter_fn)
+    component:set_keymap({ mode = 'n', key = '<BS>' }, back_fn)
+    component:set_keymap({ mode = 'n', key = 'd' }, diff_fn)
+    component:set_keymap({ mode = 'n', key = 'D' }, project_diff_fn)
 
     if blame_keymaps and blame_keymaps.down then
       local down_key = keymap.get_key(blame_keymaps.down)
-      if down_key then component:set_keymap({
-        mode = 'n',
-        key = down_key,
-      }, blame_down_fn) end
+      if down_key then component:set_keymap({ mode = 'n', key = down_key }, blame_down_fn) end
     end
 
     if blame_keymaps and blame_keymaps.up then
       local up_key = keymap.get_key(blame_keymaps.up)
-      if up_key then component:set_keymap({
-        mode = 'n',
-        key = up_key,
-      }, blame_up_fn) end
+      if up_key then component:set_keymap({ mode = 'n', key = up_key }, blame_up_fn) end
     end
   end
 end

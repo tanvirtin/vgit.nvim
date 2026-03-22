@@ -15,7 +15,7 @@ local BlameInfoComponent = Component({
   end,
 
   on_props = function(self, prev_props)
-    self:render()
+    if self.props.blame ~= prev_props.blame then self:render() end
   end,
 })
 
@@ -40,7 +40,7 @@ function BlameInfoComponent:render()
   local lines = {
     commit_details,
     string.format('%s (%s)', blame.author, blame.author_mail),
-    string.format('%s', commit_message),
+    commit_message,
   }
 
   self:with_element(function(el)

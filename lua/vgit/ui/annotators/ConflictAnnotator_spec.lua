@@ -24,21 +24,21 @@ describe('ConflictAnnotator:', function()
       eq(7, #result.signs)
 
       -- Current mark
-      eq({ col = 0, name = 'GitConflictCurrentMark' }, result.signs[1])
+      eq({ row = 0, name = 'GitConflictCurrentMark' }, result.signs[1])
 
       -- Current body lines 2-3
-      eq({ col = 1, name = 'GitConflictCurrent' }, result.signs[2])
-      eq({ col = 2, name = 'GitConflictCurrent' }, result.signs[3])
+      eq({ row = 1, name = 'GitConflictCurrent' }, result.signs[2])
+      eq({ row = 2, name = 'GitConflictCurrent' }, result.signs[3])
 
       -- Middle
-      eq({ col = 3, name = 'GitConflictMiddle' }, result.signs[4])
+      eq({ row = 3, name = 'GitConflictMiddle' }, result.signs[4])
 
       -- Incoming body lines 5-6
-      eq({ col = 4, name = 'GitConflictIncoming' }, result.signs[5])
-      eq({ col = 5, name = 'GitConflictIncoming' }, result.signs[6])
+      eq({ row = 4, name = 'GitConflictIncoming' }, result.signs[5])
+      eq({ row = 5, name = 'GitConflictIncoming' }, result.signs[6])
 
       -- Incoming mark
-      eq({ col = 6, name = 'GitConflictIncomingMark' }, result.signs[7])
+      eq({ row = 6, name = 'GitConflictIncomingMark' }, result.signs[7])
 
       -- Texts
       eq(2, #result.texts)

@@ -3,17 +3,15 @@ local eq = assert.are.same
 
 describe('Component:', function()
   local Component
-  local ComponentManager
 
   before_each(function()
     Component = require('vgit.ui.Component')
-    ComponentManager = require('vgit.ui.ComponentManager')
   end)
 
   after_each(ui_helper.cleanup_ui)
 
   local function mount_component(component)
-    ComponentManager():render({ component = component, mode = 'popup', width = 40, height = 20 })
+    ui_helper.mount({ component = component, mode = 'popup', width = 40, height = 20 })
     return component
   end
 
@@ -159,7 +157,9 @@ describe('Component:', function()
     it('should not call on_props when not mounted', function()
       local called = false
       local MyComponent = Component({
-        on_props = function() called = true end,
+        on_props = function()
+          called = true
+        end,
       })
       local instance = MyComponent({ x = 1 })
       instance:set_props({ x = 2 })
@@ -171,7 +171,9 @@ describe('Component:', function()
     it('should not call on_props when updates is nil', function()
       local called = false
       local MyComponent = Component({
-        on_props = function() called = true end,
+        on_props = function()
+          called = true
+        end,
       })
       local instance = mount_component(MyComponent({}))
       instance:set_props(nil)
@@ -204,7 +206,9 @@ describe('Component:', function()
     it('should be safe to unmount twice', function()
       local count = 0
       local MyComponent = Component({
-        on_unmount = function() count = count + 1 end,
+        on_unmount = function()
+          count = count + 1
+        end,
       })
       local instance = mount_component(MyComponent({}))
       instance:unmount()
@@ -217,7 +221,9 @@ describe('Component:', function()
       local called = false
       local MyComponent = Component({})
       local instance = mount_component(MyComponent({}))
-      instance:set_props({ x = 1 }, function() called = true end)
+      instance:set_props({ x = 1 }, function()
+        called = true
+      end)
 
       assert.is_true(called)
     end)
@@ -266,11 +272,11 @@ describe('Component:', function()
       eq(instance, result)
     end)
 
-    it('should return nil when element is not valid', function()
+    it('should return self for chaining when element is not valid', function()
       local MyComponent = Component({})
       local instance = MyComponent({})
 
-      assert.is_nil(instance:set_lines({ 'test' }))
+      eq(instance, instance:set_lines({ 'test' }))
     end)
 
     it('should allow class methods to override delegation', function()
@@ -509,7 +515,7 @@ describe('Component:', function()
       assert.is_table(instance.children.child.props)
     end)
 
-    it('should not unmount children (ComponentManager handles that)', function()
+    it('should not unmount children (View handles that)', function()
       local ChildComponent = Component({})
       local ParentComponent = Component({
         children = { child = ChildComponent },
@@ -576,28 +582,30 @@ describe('Component:', function()
     end)
   end)
 
-  describe('ComponentManager compatibility', function()
-    it('should work with ComponentManager render', function()
+  describe('View compatibility', function()
+    it('should work with View render', function()
       local mounted = false
       local MyComponent = Component({
-        on_mount = function() mounted = true end,
+        on_mount = function()
+          mounted = true
+        end,
       })
 
-      local cm = ComponentManager()
-      cm:render({ component = MyComponent({}), mode = 'popup', width = 40, height = 20 })
+      local view = ui_helper.mount({ component = MyComponent({}), mode = 'popup', width = 40, height = 20 })
 
       assert.is_true(mounted)
     end)
 
-    it('should be destroyable via ComponentManager', function()
+    it('should be destroyable via View', function()
       local unmounted = false
       local MyComponent = Component({
-        on_unmount = function() unmounted = true end,
+        on_unmount = function()
+          unmounted = true
+        end,
       })
 
-      local cm = ComponentManager()
-      cm:render({ component = MyComponent({}), mode = 'popup', width = 40, height = 20 })
-      cm:destroy()
+      local view = ui_helper.mount({ component = MyComponent({}), mode = 'popup', width = 40, height = 20 })
+      view:destroy()
 
       assert.is_true(unmounted)
     end)

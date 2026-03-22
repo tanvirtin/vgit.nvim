@@ -83,9 +83,12 @@ function Hunks:cursor_stage()
   if buffer:is_modified() then return end
 
   -- Performance: Deferred sync of only the current buffer after staging
-  event.defer(event.async(function()
-    if buffer:is_valid() then git_buffer_store.dispatch(buffer, 'sync') end
-  end), 200)
+  event.defer(
+    event.async(function()
+      if buffer:is_valid() then git_buffer_store.dispatch(buffer, 'sync') end
+    end),
+    200
+  )
 
   if not buffer:is_tracked() then
     local _, err = buffer:stage()

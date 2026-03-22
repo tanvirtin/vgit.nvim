@@ -18,11 +18,10 @@ end
 -- Mounted helper for tests that interact with the real element
 local function create_mounted_patch_preview(overrides)
   local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
-  local ComponentManager = require('vgit.ui.ComponentManager')
   overrides = overrides or {}
 
   local component = PatchPreviewComponent(overrides.props or {})
-  ComponentManager():render({ component = component, mode = 'popup', width = 80, height = 40 })
+  ui_helper.mount({ component = component, mode = 'popup', width = 80, height = 40 })
 
   -- Apply state overrides
   for k, v in pairs(overrides.state or {}) do
@@ -557,7 +556,7 @@ describe('PatchPreviewComponent:', function()
     end)
   end)
 
-  describe('_render_viewport', function()
+  describe('render_viewport', function()
     it('should render line numbers and highlights for visible range', function()
       local lnum_calls = {}
       local hl_calls = {}
@@ -594,7 +593,7 @@ describe('PatchPreviewComponent:', function()
       end
 
       -- Render rows 0-1 (visible viewport)
-      component:_render_viewport(0, 1)
+      component:render_viewport(0, 1)
 
       -- Should render 2 line numbers (rows 0 and 1)
       eq(2, #lnum_calls)
@@ -620,12 +619,12 @@ describe('PatchPreviewComponent:', function()
       })
 
       -- Should not error
-      component:_render_viewport(0, 10)
+      component:render_viewport(0, 10)
     end)
   end)
 
   describe('viewport dirty tracking', function()
-    it('should skip _render_viewport when viewport is unchanged', function()
+    it('should skip render_viewport when viewport is unchanged', function()
       local hl_calls = {}
       local component = create_mounted_patch_preview({
         state = {
@@ -649,11 +648,11 @@ describe('PatchPreviewComponent:', function()
       end
 
       -- First call should render
-      component:_render_viewport(0, 0)
+      component:render_viewport(0, 0)
       local first_count = #hl_calls
 
       -- Second call with same range should skip
-      component:_render_viewport(0, 0)
+      component:render_viewport(0, 0)
       eq(first_count, #hl_calls)
     end)
 
@@ -682,11 +681,11 @@ describe('PatchPreviewComponent:', function()
         return orig_hl(self_el, opts)
       end
 
-      component:_render_viewport(0, 0)
+      component:render_viewport(0, 0)
       local first_count = #hl_calls
 
       -- Different range should render
-      component:_render_viewport(0, 1)
+      component:render_viewport(0, 1)
       assert.is_true(#hl_calls > first_count)
     end)
 
@@ -713,12 +712,12 @@ describe('PatchPreviewComponent:', function()
         return orig_hl(self_el, opts)
       end
 
-      component:_render_viewport(0, 0)
+      component:render_viewport(0, 0)
       local first_count = #hl_calls
 
       -- Mark dirty, same range should re-render
       component._viewport_dirty = true
-      component:_render_viewport(0, 0)
+      component:render_viewport(0, 0)
       assert.is_true(#hl_calls > first_count)
     end)
 
@@ -741,11 +740,11 @@ describe('PatchPreviewComponent:', function()
         return orig_clear(self_el, ...)
       end
 
-      component:_render_viewport(0, 5)
+      component:render_viewport(0, 5)
       eq(1, clear_called)
 
       -- Change range to trigger re-render
-      component:_render_viewport(0, 10)
+      component:render_viewport(0, 10)
       eq(2, clear_called)
     end)
   end)

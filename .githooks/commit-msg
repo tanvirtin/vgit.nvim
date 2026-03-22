@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -e
+
+commit_msg_file="$1"
+commit_msg=$(head -1 "$commit_msg_file")
+
+# Allow merge commits
+if echo "$commit_msg" | grep -qE '^Merge '; then
+  exit 0
+fi
+
+# Conventional commits pattern: type(optional-scope): description
+# Types aligned with webiny/action-conventional-commits used in CI
+types="feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
+pattern="^($types)(\(.+\))?(!)?: .+"
+
+if ! echo "$commit_msg" | grep -qE "$pattern"; then
+  echo "FAILED: Commit message does not follow Conventional Commits format."
+  echo ""
+  echo "Expected: <type>(<optional-scope>): <description>"
+  echo "Types: $types"
+  echo ""
+  echo "Examples:"
+  echo "  feat: add blame lens support"
+  echo "  fix(ui): prevent layout overflow"
+  echo "  chore: refactor"
+  echo ""
+  echo "Your message: $commit_msg"
+  exit 1
+fi

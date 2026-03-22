@@ -37,9 +37,7 @@ local SearchComponent = Component({
   end,
 
   on_unmount = function(self)
-    if self.elements.input then
-      self.elements.input:stop_insert()
-    end
+    if self.elements.input then self.elements.input:stop_insert() end
   end,
 })
 
@@ -118,12 +116,12 @@ function SearchComponent:mount()
 end
 
 function SearchComponent:layout(spec)
-  local LayoutContext = require('vgit.ui.layout.LayoutContext')
+  local LayoutBounds = require('vgit.ui.layout.LayoutBounds')
   local zindex = self.props.zindex or 50
 
   if self.props.popup ~= false then
     local width = self.props.width or '60vw'
-    width = LayoutContext.convert_dimension(width) or width
+    width = LayoutBounds.convert_dimension(width) or width
 
     return spec.absolute(
       spec.vertical({
@@ -285,7 +283,8 @@ function SearchComponent:move(direction)
     if index < 1 then index = visible_count end
   end
 
-  self:set_state({ selected_index = index })  self:_fire_on_move()
+  self:set_state({ selected_index = index })
+  self:_fire_on_move()
 end
 
 function SearchComponent:select()
@@ -483,9 +482,7 @@ function SearchComponent:render()
     end
 
     local selected = self.state.selected_index
-    if selected >= 1 and selected <= visible_count then
-      self.elements.list:set_cursor({ selected, 0 })
-    end
+    if selected >= 1 and selected <= visible_count then self.elements.list:set_cursor({ selected, 0 }) end
   end
 
   if #items == 0 then

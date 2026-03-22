@@ -2,7 +2,6 @@ local lazy = require('vgit.core.lazy')
 
 local Object = lazy('vgit.core.Object')
 local Window = lazy('vgit.core.Window')
-local dimensions = lazy('vgit.ui.dimensions')
 local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
 
 local LayoutContext = Object:extend()
@@ -23,43 +22,31 @@ LayoutContext.WINDOW_OPTIONS = {
 function LayoutContext:constructor(config)
   config = config or {}
 
+  local captured = LayoutContext.capture_window_options()
+
   return {
-    ['$mode'] = config.mode or 'popup', -- 'screen', 'lens', 'popup'
+    ['$mode'] = config.mode or 'popup',
     ['$width'] = config.width,
     ['$height'] = config.height,
     ['$zindex'] = config.zindex or 2,
     ['$relative'] = config.relative or 'editor',
     ['$position'] = config.position or 'center',
-    ['$original_win_options'] = LayoutContext.capture_window_options(),
+    ['$original_win_options'] = captured and captured.options,
+    ['$original_win_id'] = captured and captured.win_id,
   }
 end
 
 function LayoutContext.capture_window_options()
-  local win_options = {}
   local win = Window.get_current()
-  if not win or not win:is_valid() then return end
+  if not win or not win:is_valid() then return nil end
 
+  local win_options = {}
   for _, option_name in ipairs(LayoutContext.WINDOW_OPTIONS) do
     local value = win:get_option(option_name)
     if value ~= nil then win_options[option_name] = value end
   end
 
-  return win_options
-end
-
-function LayoutContext.convert_dimension(value, parent_dimension)
-  if not value then return nil end
-
-  if type(value) == 'number' then return math.floor(value) end
-
-  if type(value) == 'string' then
-    if value:match('%%$') then
-      local percent = tonumber(value:match('^(.-)%%$'))
-      if percent and parent_dimension then return math.floor((percent / 100) * parent_dimension) end
-    end
-
-    if value:match('vh$') or value:match('vw$') then return dimensions.convert(value) end
-  end
+  return { options = win_options, win_id = win.win_id }
 end
 
 function LayoutContext:is_screen_mode()
@@ -84,22 +71,9 @@ end
 
 function LayoutContext:get_dimensions()
   return {
-    width = LayoutContext.convert_dimension(self.width),
-    height = LayoutContext.convert_dimension(self.height),
+    width = LayoutBounds.convert_dimension(self.width),
+    height = LayoutBounds.convert_dimension(self.height),
   }
-end
-
-function LayoutContext:derive(overrides)
-  overrides = overrides or {}
-
-  return LayoutContext({
-    mode = overrides.mode or self.mode,
-    width = overrides.width or self.width,
-    height = overrides.height or self.height,
-    zindex = overrides.zindex or self.zindex,
-    relative = overrides.relative or self.relative,
-    position = overrides.position or self.position,
-  })
 end
 
 function LayoutContext:get_props_for_component()
@@ -129,9 +103,8 @@ function LayoutContext:create_parent_bounds()
 end
 
 function LayoutContext:create_lens_bounds(viewport_bounds)
-  local cursor_row = vim.fn.winline() - 1 -- Convert to 0-based
+  local cursor_row = vim.fn.winline() - 1
 
-  -- Position lens 1 row below cursor (not at cursor)
   local lens_start_row = cursor_row + 1
 
   local available_height = viewport_bounds.height - lens_start_row
@@ -143,7 +116,6 @@ function LayoutContext:create_lens_bounds(viewport_bounds)
   local final_height = requested_height
 
   if requested_height > available_height then
-    -- Not enough space below cursor - shift lens upward
     local overflow = requested_height - available_height
     final_row = math.max(0, lens_start_row - overflow)
     final_height = math.min(requested_height, viewport_bounds.height)
@@ -160,7 +132,12 @@ end
 function LayoutContext:restore_window_options()
   if not self.original_win_options then return end
 
-  local win = Window.get_current()
+  local win
+  if self.original_win_id then
+    win = Window(self.original_win_id)
+  else
+    win = Window.get_current()
+  end
   if not win or not win:is_valid() then return end
 
   pcall(function()

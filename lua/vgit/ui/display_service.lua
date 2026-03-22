@@ -5,8 +5,8 @@ local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
-local HunkLens = lazy('vgit.features.lenses.HunkLens')
-local BlameLens = lazy('vgit.features.lenses.BlameLens')
+local HunkLensView = lazy('vgit.features.lenses.HunkLensView')
+local BlameLensView = lazy('vgit.features.lenses.BlameLensView')
 local BlameView = lazy('vgit.features.screens.BlameView')
 local StashView = lazy('vgit.features.screens.StashView')
 local BranchView = lazy('vgit.features.screens.BranchView')
@@ -18,13 +18,14 @@ local CommitPickerView = lazy('vgit.features.screens.CommitPickerView')
 
 local active_view = nil
 local _events_registered = false
+local _event_cleanups = {}
 local display_service = {}
 
 function display_service.register_events()
   if _events_registered then return end
   _events_registered = true
 
-  event.custom_on('VGitChange', function()
+  _event_cleanups[#_event_cleanups + 1] = event.custom_on('VGitChange', function()
     if active_view and active_view.on_git_change then
       active_view:on_git_change()
       -- View may have destroyed itself (e.g. no more changes after commit)
@@ -32,21 +33,35 @@ function display_service.register_events()
     end
   end)
 
-  event.custom_on('VGitDirChanged', function()
+  _event_cleanups[#_event_cleanups + 1] = event.custom_on('VGitDirChanged', function()
     if active_view and active_view.destroy then active_view:destroy() end
     active_view = nil
   end)
 end
 
-display_service.show_diff = event.async(function(data)
+local function show_view(ViewClass, data, name)
   if not data then
-    console.error('No data provided')
+    console.error('No ' .. name .. ' data')
     return
   end
 
   if active_view and active_view.destroy then
     active_view:destroy()
     active_view = nil
+  end
+
+  event.await()
+
+  local view = ViewClass()
+  local success = view:create(data)
+  if success == false then return end
+  active_view = view
+end
+
+display_service.show_diff = event.async(function(data)
+  if not data then
+    console.error('No diff data')
+    return
   end
 
   if data.type == 'empty' then
@@ -54,64 +69,25 @@ display_service.show_diff = event.async(function(data)
     return
   end
 
-  event.await()
-
-  local view
   if data.type == 'file' then
-    view = FileDiffView()
+    show_view(FileDiffView, data, 'diff')
   elseif data.type == 'files' then
-    -- Check if there are any changes to display
     if not data.entries or #data.entries == 0 then
       console.info('No changes to display')
       return
     end
-    view = ProjectDiffView()
+    show_view(ProjectDiffView, data, 'diff')
   else
     console.error('Unknown data type: ' .. tostring(data.type))
-    return
   end
-
-  local success = view:create(data)
-  if not success then return end
-  active_view = view
 end)
 
 display_service.show_hunk = event.async(function(data)
-  if not data then
-    console.error('No hunk data')
-    return
-  end
-
-  if active_view and active_view.destroy then
-    active_view:destroy()
-    active_view = nil
-  end
-
-  event.await()
-
-  local lens = HunkLens()
-  lens:create(data)
-
-  active_view = lens
+  show_view(HunkLensView, data, 'hunk')
 end)
 
 display_service.show_blame = event.async(function(data)
-  if not data then
-    console.error('No blame data')
-    return
-  end
-
-  if active_view and active_view.destroy then
-    active_view:destroy()
-    active_view = nil
-  end
-
-  event.await()
-
-  local lens = BlameLens()
-  lens:create(data)
-
-  active_view = lens
+  show_view(BlameLensView, data, 'blame')
 end)
 
 display_service.show_status = event.async(function(data)
@@ -120,135 +96,32 @@ display_service.show_status = event.async(function(data)
     return
   end
 
-  if active_view and active_view.destroy then
-    active_view:destroy()
-    active_view = nil
-  end
-
   if not data.entries or #data.entries == 0 then
     console.info('No changes to display')
     return
   end
 
-  event.await()
-
-  local view = StatusDiffView()
-  local success = view:create(data)
-  if not success then
-    console.error('Failed to create status view')
-    return
-  end
-  active_view = view
+  show_view(StatusDiffView, data, 'status')
 end)
 
 display_service.show_branch = event.async(function(data)
-  if not data then
-    console.error('No branch data')
-    return
-  end
-
-  if active_view and active_view.destroy then
-    active_view:destroy()
-    active_view = nil
-  end
-
-  event.await()
-
-  local view = BranchView()
-  local success = view:create(data)
-  if not success then
-    console.error('Failed to create branch view')
-    return
-  end
-  active_view = view
+  show_view(BranchView, data, 'branch')
 end)
 
 display_service.show_stash = event.async(function(data)
-  if not data then
-    console.error('No stash data')
-    return
-  end
-
-  if active_view and active_view.destroy then
-    active_view:destroy()
-    active_view = nil
-  end
-
-  event.await()
-
-  local view = StashView()
-  local success = view:create(data)
-  if not success then
-    console.error('Failed to create stash view')
-    return
-  end
-  active_view = view
+  show_view(StashView, data, 'stash')
 end)
 
 display_service.show_worktree = event.async(function(data)
-  if not data then
-    console.error('No worktree data')
-    return
-  end
-
-  if active_view and active_view.destroy then
-    active_view:destroy()
-    active_view = nil
-  end
-
-  event.await()
-
-  local view = WorktreeView()
-  local success = view:create(data)
-  if not success then
-    console.error('Failed to create worktree view')
-    return
-  end
-  active_view = view
+  show_view(WorktreeView, data, 'worktree')
 end)
 
 display_service.show_log = event.async(function(data)
-  if not data then
-    console.error('No log data')
-    return
-  end
-
-  if active_view and active_view.destroy then
-    active_view:destroy()
-    active_view = nil
-  end
-
-  event.await()
-
-  local view = CommitPickerView()
-  local success = view:create(data)
-  if not success then
-    console.error('Failed to create log view')
-    return
-  end
-  active_view = view
+  show_view(CommitPickerView, data, 'log')
 end)
 
 display_service.show_blame_view = event.async(function(data)
-  if not data then
-    console.error('No blame view data')
-    return
-  end
-
-  if active_view and active_view.destroy then
-    active_view:destroy()
-    active_view = nil
-  end
-
-  event.await()
-
-  local view = BlameView()
-  local success = view:create(data)
-  if not success then
-    console.error('Failed to create blame view')
-    return
-  end
-  active_view = view
+  show_view(BlameView, data, 'blame view')
 end)
 
 display_service.show_blame_view_for_file = event.async(function(filename)
@@ -301,6 +174,10 @@ end
 function display_service.reset()
   if active_view and active_view.destroy then active_view:destroy() end
   active_view = nil
+  for _, cleanup in ipairs(_event_cleanups) do
+    cleanup()
+  end
+  _event_cleanups = {}
   _events_registered = false
 end
 

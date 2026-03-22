@@ -8,7 +8,6 @@ local git_repo = lazy('vgit.git.git_repo')
 local repository = lazy('vgit.git.repository')
 local git_worktree = lazy('vgit.git.git_worktree')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
 local WorktreeView = View:extend()
@@ -42,7 +41,7 @@ function WorktreeView:_build_items(worktrees)
       icon = is_current and '' or nil,
       icon_hl = is_current and 'GitSignsAdd' or nil,
       description = is_current and '(current)' or (wt.locked and '(locked)' or nil),
-      value = { worktree = wt },
+      value = { type = 'worktree', data = wt },
     }
   end
   return items
@@ -108,7 +107,7 @@ end
 function WorktreeView:_get_current_worktree()
   if self._search_component and self._search_component:is_valid() then
     local item = self._search_component:get_selected_item()
-    if item and item.value and item.value.worktree then return item.value.worktree end
+    if item and item.value and item.value.data then return item.value.data end
   end
   return nil
 end
@@ -136,7 +135,7 @@ function WorktreeView:create(data)
     page_size = 25,
     placeholder = 'No worktrees found',
     on_select = function(value)
-      if value and value.worktree then self:_switch_to_worktree(value.worktree) end
+      if value and value.data then self:_switch_to_worktree(value.data) end
     end,
     on_no_match = function(query)
       self:_on_no_match(query)
@@ -146,8 +145,7 @@ function WorktreeView:create(data)
     end,
   })
 
-  self._component_manager = ComponentManager()
-  self._component_manager:render({
+  self:_render({
     component = self._search_component,
     mode = 'popup',
   })

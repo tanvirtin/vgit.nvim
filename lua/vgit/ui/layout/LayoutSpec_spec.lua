@@ -58,29 +58,12 @@ describe('LayoutSpec:', function()
 
     it('should accept align and justify options', function()
       local spec = LayoutSpec.vertical({}, {
-        align = LayoutSpec.Align.CENTER,
-        justify = LayoutSpec.Justify.SPACE_BETWEEN,
+        align = 'center',
+        justify = 'space-between',
       })
 
-      eq(LayoutSpec.Align.CENTER, spec.align)
-      eq(LayoutSpec.Justify.SPACE_BETWEEN, spec.justify)
-    end)
-  end)
-
-  describe('row', function()
-    it('should create horizontal spec with default align and justify', function()
-      local spec = LayoutSpec.row({})
-
-      eq(LayoutSpec.Type.FLEX, spec.type)
-      eq(LayoutSpec.Direction.HORIZONTAL, spec.direction)
-      eq(LayoutSpec.Align.CENTER, spec.align)
-      eq(LayoutSpec.Justify.START, spec.justify)
-      eq(0, spec.gap)
-    end)
-
-    it('should accept custom gap', function()
-      local spec = LayoutSpec.row({}, { gap = 10 })
-      eq(10, spec.gap)
+      eq('center', spec.align)
+      eq('space-between', spec.justify)
     end)
   end)
 

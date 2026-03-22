@@ -13,11 +13,14 @@ end
 function ComponentGroup:mount(component, renderer)
   if component:is_mounted() then return end
 
-  if renderer.context then
-    component.props = component.props or {}
-    local context_props = renderer.context:get_props_for_component()
-    for k, v in pairs(context_props) do
-      if component.props[k] == nil then component.props[k] = v end
+  if type(renderer.get_context) == 'function' then
+    local context = renderer:get_context()
+    if context then
+      component.props = component.props or {}
+      local context_props = context:get_props_for_component()
+      for k, v in pairs(context_props) do
+        if component.props[k] == nil then component.props[k] = v end
+      end
     end
   end
 

@@ -3,18 +3,16 @@ local eq = assert.are.same
 
 describe('BlameInfoComponent:', function()
   local BlameInfoComponent
-  local ComponentManager
 
   before_each(function()
     BlameInfoComponent = require('vgit.ui.components.BlameInfoComponent')
-    ComponentManager = require('vgit.ui.ComponentManager')
   end)
 
   after_each(ui_helper.cleanup_ui)
 
   local function mount_component(props)
     local component = BlameInfoComponent(props or {})
-    ComponentManager():render({ component = component, mode = 'popup', width = 80, height = 20 })
+    ui_helper.mount({ component = component, mode = 'popup', width = 80, height = 20 })
     return component
   end
 

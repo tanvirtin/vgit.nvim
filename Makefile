@@ -1,4 +1,4 @@
-.PHONY: test test-filter test-file lint format format-check check ci install-deps clean
+.PHONY: test test-filter test-file lint format format-check check ci install-deps clean setup-hooks
 
 LUA_VERSION ?= 5.1
 
@@ -40,5 +40,9 @@ install-deps:
 
 clean:
 	rm -rf luacov.stats.out luacov.report.out
+
+setup-hooks:
+	git config core.hooksPath .githooks
+	@echo "Git hooks activated from .githooks/"
 
 ci: check test

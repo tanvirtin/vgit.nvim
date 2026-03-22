@@ -1,10 +1,10 @@
 local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
-local Component = lazy('vgit.ui.Component')
 local symbols_setting = lazy('vgit.settings.symbols')
 local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
 local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
+local DiffViewportComponent = lazy('vgit.ui.DiffViewportComponent')
 
 local separator = string.rep('─', 60)
 local CONTEXT = 3
@@ -412,40 +412,45 @@ local function format_line_numbers(raw_lnums, max_lnum)
   return line_numbers
 end
 
-local PatchPreviewComponent = Component({
-  viewport = true,
-  win_options = {
+local PatchPreviewComponent = DiffViewportComponent:extend()
+
+function PatchPreviewComponent:constructor(props)
+  local instance = DiffViewportComponent.constructor(self, props)
+  instance._diff_style_annotator = DiffStyleAnnotator()
+  instance._syntax_mapping_annotator = SyntaxMappingAnnotator()
+  instance._render_gen = 0
+  return instance
+end
+
+function PatchPreviewComponent:get_buf_options()
+  return {
+    modifiable = false,
+    buflisted = false,
+    bufhidden = 'wipe',
+    filetype = 'diff',
+  }
+end
+
+function PatchPreviewComponent:get_win_options()
+  return {
     winhl = 'Normal:GitBackground',
     signcolumn = 'no',
     wrap = false,
     number = false,
     cursorline = true,
-  },
-  buf_options = {
-    modifiable = false,
-    buflisted = false,
-    bufhidden = 'wipe',
-    filetype = 'diff',
-  },
-  on_mount = function(self)
-    self:render()
-    self:_ensure_renderer_attached()
-  end,
-  on_props = function(self, prev_props)
-    if self.props.hunk_entries ~= prev_props.hunk_entries then
-      self:render()
-    end
-  end,
-})
+  }
+end
 
-function PatchPreviewComponent:constructor(props)
-  local ViewportComponent = require('vgit.ui.ViewportComponent')
-  local instance = PatchPreviewComponent.super.constructor(self, props)
-  instance._element = nil
-  instance._diff_style_annotator = DiffStyleAnnotator()
-  instance._syntax_mapping_annotator = SyntaxMappingAnnotator()
-  instance._render_gen = 0
-  return instance
+function PatchPreviewComponent:get_layout_opts()
+  return {
+    id = self.props.id or 'patch_preview',
+    flex = self.props.flex or 1,
+    focus = self.props.focus or false,
+  }
+end
+
+function PatchPreviewComponent:on_props(prev_props)
+  if self.props.hunk_entries ~= prev_props.hunk_entries then self:render() end
 end
 
 function PatchPreviewComponent:get_initial_state()
@@ -457,15 +462,6 @@ function PatchPreviewComponent:get_initial_state()
     _syntax_hl_map = {},
     _line_numbers = {},
   }
-end
-
-function PatchPreviewComponent:get_layout_spec()
-  local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-  return LayoutSpec.view(self._element, {
-    id = self.props.id or 'patch_preview',
-    flex = self.props.flex or 1,
-    focus = self.props.focus or false,
-  })
 end
 
 function PatchPreviewComponent:build_patch_lines_from_entries(hunk_entries)
@@ -553,6 +549,7 @@ function PatchPreviewComponent:render()
     event.await()
     if not self._mounted or self._render_gen ~= gen then return end
     local syntax_highlights = self:_compute_syntax_highlights_from_full_files(sections)
+    if not self._mounted or self._render_gen ~= gen then return end
     self.state._syntax_hl_map = self:_build_highlight_map(syntax_highlights)
     self:mark_viewport_dirty()
   end)()
@@ -599,7 +596,7 @@ function PatchPreviewComponent:_build_highlight_map(highlights)
   return map
 end
 
-function PatchPreviewComponent:_render_viewport(top, bot)
+function PatchPreviewComponent:render_viewport(top, bot)
   if self:is_viewport_unchanged(top, bot) then return end
 
   local rendered = self:with_element(function(el)
@@ -692,75 +689,12 @@ function PatchPreviewComponent:_render_viewport(top, bot)
   if rendered then self:commit_viewport(top, bot) end
 end
 
-function PatchPreviewComponent:_ensure_renderer_attached()
-  self:ensure_renderer_attached(function()
-    self:with_element(function(el)
-      el:attach_to_renderer(function(top, bot)
-        self:_render_viewport(top, bot)
-      end)
-    end)
-  end)
-end
-
-function PatchPreviewComponent:get_marks()
-  return self.state.marks or {}
-end
-
 function PatchPreviewComponent:get_line_metadata(lnum)
   return self.state.line_metadata[lnum]
 end
 
 function PatchPreviewComponent:get_all_line_metadata()
   return self.state.line_metadata or {}
-end
-
-function PatchPreviewComponent:get_lines()
-  return self:with_element(function(el)
-    return el:get_lines()
-  end) or self.state.lines
-end
-
-function PatchPreviewComponent:get_cursor()
-  return self:with_element(function(el)
-    return el:get_cursor()
-  end) or { 1, 1 }
-end
-
-function PatchPreviewComponent:get_lnum()
-  return self:with_element(function(el)
-    return el:get_lnum()
-  end) or 1
-end
-
-function PatchPreviewComponent:get_line_count()
-  return self:with_element(function(el)
-    return el:get_line_count()
-  end) or 0
-end
-
-function PatchPreviewComponent:get_height()
-  return self:with_element(function(el)
-    return el:get_height()
-  end) or 0
-end
-
-function PatchPreviewComponent:get_width()
-  return self:with_element(function(el)
-    return el:get_width()
-  end) or 0
-end
-
-function PatchPreviewComponent:is_valid()
-  return self:with_element(function()
-    return true
-  end) or false
-end
-
-function PatchPreviewComponent:set_lines(lines)
-  self:with_element(function(el)
-    el:set_lines(lines)
-  end)
-  return self
 end
 
 function PatchPreviewComponent:clear_lines()
@@ -773,118 +707,6 @@ function PatchPreviewComponent:clear_lines()
   return self
 end
 
-function PatchPreviewComponent:set_cursor(cursor)
-  self:with_element(function(el)
-    el:set_cursor(cursor)
-  end)
-  return self
-end
-
-function PatchPreviewComponent:set_lnum(lnum)
-  self:with_element(function(el)
-    el:set_lnum(lnum)
-  end)
-  return self
-end
-
-function PatchPreviewComponent:reset_cursor()
-  return self:set_cursor({ 1, 0 })
-end
-
-function PatchPreviewComponent:enable_cursorline()
-  self:with_element(function(el)
-    el:enable_cursorline()
-  end)
-  return self
-end
-
-function PatchPreviewComponent:disable_cursorline()
-  self:with_element(function(el)
-    el:disable_cursorline()
-  end)
-  return self
-end
-
-function PatchPreviewComponent:clear_extmark_highlights()
-  self:with_element(function(el)
-    el:clear_extmark_highlights()
-  end)
-  return self
-end
-
-function PatchPreviewComponent:scroll_to(pos, offset)
-  self:with_element(function(el)
-    el:scroll_to(pos or 'center', offset or 0)
-  end)
-
-  return self
-end
-
-function PatchPreviewComponent:move_to_hunk(mark_index, pos, offset)
-  pos = pos or 'center'
-  mark_index = mark_index or 1
-
-  local marks = self.state.marks
-  if not marks or #marks == 0 then return nil end
-
-  if mark_index < 1 then
-    mark_index = #marks
-  elseif mark_index > #marks then
-    mark_index = 1
-  end
-
-  local mark = marks[mark_index]
-  if mark then
-    self:set_lnum(mark.top)
-    self:scroll_to(pos, offset)
-    return mark
-  end
-
-  return nil
-end
-
-function PatchPreviewComponent:find_adjacent_mark_index(direction)
-  local marks = self.state.marks
-  if not marks or #marks == 0 then return nil end
-
-  local lnum = self:get_lnum()
-  local num_marks = #marks
-
-  if direction == 'next' then
-    for i = 1, num_marks do
-      local mark = marks[i]
-      if lnum >= mark.top and lnum <= mark.bot then
-        return i + 1
-      elseif mark.top > lnum then
-        return i
-      end
-    end
-    return 1
-  else
-    for i = num_marks, 1, -1 do
-      local mark = marks[i]
-      if lnum >= mark.top and lnum <= mark.bot then
-        return i - 1
-      elseif mark.top < lnum then
-        return i
-      end
-    end
-    return num_marks
-  end
-end
-
-function PatchPreviewComponent:hunk_down(pos, offset)
-  local mark_index = self:find_adjacent_mark_index('next')
-  if not mark_index then return nil end
-  return self:move_to_hunk(mark_index, pos, offset)
-end
-
-function PatchPreviewComponent:hunk_up(pos, offset)
-  local mark_index = self:find_adjacent_mark_index('prev')
-  if not mark_index then return nil end
-  return self:move_to_hunk(mark_index, pos, offset)
-end
-
 function PatchPreviewComponent:clear_extmarks()
   self:with_element(function(el)
     el:clear_extmarks()
@@ -893,23 +715,27 @@ function PatchPreviewComponent:clear_extmarks()
   return self
 end
 
-function PatchPreviewComponent:set_keymap(config, handler)
-  self:with_element(function(el)
-    el:set_keymap(config, handler)
-  end)
+function PatchPreviewComponent:render_folds()
   return self
 end
 
-function PatchPreviewComponent:focus()
-  self:with_element(function(el)
-    el:focus()
-  end)
+function PatchPreviewComponent:clear_folds()
+  return self
 end
 
-function PatchPreviewComponent:call(callback)
-  if callback then self:with_element(function(el)
-    el:call(callback)
-  end) end
+function PatchPreviewComponent:get_hunks()
+  return {}
+end
+
+function PatchPreviewComponent:get_hunk_under_cursor()
+  return nil
+end
+
+function PatchPreviewComponent:reset()
+  DiffViewportComponent.reset(self)
+  self.state.line_metadata = {}
+  self.state._diff_hl_map = {}
+  self.state._syntax_hl_map = {}
   return self
 end
 

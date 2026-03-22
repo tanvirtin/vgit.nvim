@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -e
+
+echo "Running pre-commit checks..."
+
+failed=0
+
+if command -v stylua >/dev/null 2>&1; then
+  echo "=> stylua format check"
+  if ! stylua --check --config-path stylua.toml lua/ tests/; then
+    echo "FAILED: stylua format check. Run 'make format' to fix."
+    failed=1
+  fi
+else
+  echo "SKIPPED: stylua not installed"
+fi
+
+if command -v luacheck >/dev/null 2>&1; then
+  echo "=> luacheck"
+  if ! luacheck lua/ tests/ --config .luacheckrc; then
+    echo "FAILED: luacheck found issues."
+    failed=1
+  fi
+else
+  echo "SKIPPED: luacheck not installed"
+fi
+
+if [ $failed -ne 0 ]; then
+  echo ""
+  echo "Pre-commit checks failed. Commit aborted."
+  exit 1
+fi
+
+echo "Pre-commit checks passed."

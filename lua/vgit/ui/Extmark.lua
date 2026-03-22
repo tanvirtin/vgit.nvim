@@ -26,37 +26,45 @@ function Extmark:constructor(bufnr, ns_name_extension)
 
   return {
     ['$bufnr'] = bufnr,
-    ['$groups'] = {
-      text = 10,
-      sign = 100,
-      lnum = 1000,
-    },
     ['$ns_id'] = ns_id,
   }
 end
 
-function Extmark:derive_id(col, name)
-  local base = self.groups[name]
-  if not base then error('invalid extmark group') end
-  return base + col
+function Extmark:derive_id(col)
+  return col + 1
 end
 
-function Extmark:highlight(opts)
+function Extmark:highlight_pattern(opts)
   local hl = opts.hl
   local row = opts.row
   local pattern = opts.pattern
-  local col_range = opts.col_range
   local priority = opts.priority
-  local line_hl = opts.line_hl -- For full line highlighting
 
-  if pattern then
-    local result = {}
-    local lines
-    if row ~= nil then
-      lines = vim.api.nvim_buf_get_lines(self.bufnr, row, row + 1, false)
-      if #lines == 0 then return true, result end
+  local result = {}
+  local lines
+  if row ~= nil then
+    lines = vim.api.nvim_buf_get_lines(self.bufnr, row, row + 1, false)
+    if #lines == 0 then return true, result end
+    local j = 0
+    local line = lines[1]
+    while true do
+      local from, to = line:find(pattern, j + 1)
+      if from == nil then break end
+      local extmark_opts = {
+        end_col = to,
+        hl_group = hl,
+      }
+      if priority then extmark_opts.priority = priority end
+      local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, from - 1, extmark_opts)
+      if not ok then return false, value end
+      j = from
+      result[#result + 1] = value
+    end
+  else
+    lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
+    for i = 1, #lines do
       local j = 0
-      local line = lines[1]
+      local line = lines[i]
       while true do
         local from, to = line:find(pattern, j + 1)
         if from == nil then break end
@@ -65,44 +73,34 @@ function Extmark:highlight(opts)
           hl_group = hl,
         }
         if priority then extmark_opts.priority = priority end
-        local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, from - 1, extmark_opts)
+        local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, i - 1, from - 1, extmark_opts)
         if not ok then return false, value end
         j = from
         result[#result + 1] = value
       end
-    else
-      lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
-      for i = 1, #lines do
-        local j = 0
-        local line = lines[i]
-        while true do
-          local from, to = line:find(pattern, j + 1)
-          if from == nil then break end
-          local extmark_opts = {
-            end_col = to,
-            hl_group = hl,
-          }
-          if priority then extmark_opts.priority = priority end
-          local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, i - 1, from - 1, extmark_opts)
-          if not ok then return false, value end
-          j = from
-          result[#result + 1] = value
-        end
-      end
     end
-
-    return true, result
   end
 
-  -- Full line highlighting
-  if line_hl then
-    return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, 0, {
-      line_hl_group = hl,
-      priority = priority,
-    })
-  end
+  return true, result
+end
 
-  -- Column range highlighting
+function Extmark:highlight_line(opts)
+  local hl = opts.hl
+  local row = opts.row
+  local priority = opts.priority
+
+  return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, 0, {
+    line_hl_group = hl,
+    priority = priority,
+  })
+end
+
+function Extmark:highlight_range(opts)
+  local hl = opts.hl
+  local row = opts.row
+  local col_range = opts.col_range
+  local priority = opts.priority
+
   local extmark_opts = {
     end_col = col_range.to,
     hl_group = hl,
@@ -110,6 +108,12 @@ function Extmark:highlight(opts)
   if priority then extmark_opts.priority = priority end
 
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, col_range.from, extmark_opts)
+end
+
+function Extmark:highlight(opts)
+  if opts.pattern then return self:highlight_pattern(opts) end
+  if opts.line_hl then return self:highlight_line(opts) end
+  return self:highlight_range(opts)
 end
 
 function Extmark:text(opts)
@@ -122,7 +126,7 @@ function Extmark:text(opts)
   local hl_mode = opts.hl_mode or 'combine'
   local virt_text = opts.texts or { { text, hl } }
 
-  local id = self:derive_id(row, 'text')
+  local id = self:derive_id(row)
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, col, {
     id = id,
     virt_text = virt_text,
@@ -139,7 +143,7 @@ function Extmark:lnum(opts)
   local priority = opts.priority
   local hl_mode = opts.hl_mode or 'combine'
 
-  local id = self:derive_id(row, 'lnum')
+  local id = self:derive_id(row)
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, 0, {
     id = id,
     virt_text = { { text, hl } },
@@ -150,15 +154,15 @@ function Extmark:lnum(opts)
 end
 
 function Extmark:sign(sign)
-  local col = sign.col
+  local row = sign.row
   local name = sign.name
   local priority = sign.priority or get_sign_priority()
 
-  local id = self:derive_id(col, 'sign')
+  local id = self:derive_id(row)
   local sign_definition = get_sign_definition(name)
   local sign_text = sign_definition.text
 
-  return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, col, 0, {
+  return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, 0, {
     id = id,
     sign_text = sign_text,
     sign_hl_group = sign_definition.texthl,
@@ -167,13 +171,13 @@ function Extmark:sign(sign)
   })
 end
 
-function Extmark:clear(from_col, to_col)
-  from_col = from_col or 0
-  to_col = to_col or -1
+function Extmark:clear(from_row, to_row)
+  from_row = from_row or 0
+  to_row = to_row or -1
 
-  if to_col ~= -1 then to_col = to_col + 1 end
+  if to_row ~= -1 then to_row = to_row + 1 end
 
-  return pcall(vim.api.nvim_buf_clear_namespace, self.bufnr, self.ns_id, from_col, to_col)
+  return pcall(vim.api.nvim_buf_clear_namespace, self.bufnr, self.ns_id, from_row, to_row)
 end
 
 return Extmark

@@ -6,7 +6,6 @@ local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
 local display_service = lazy('vgit.ui.display_service')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
@@ -82,8 +81,7 @@ function CommitPickerView:create(data)
     end,
   })
 
-  self._component_manager = ComponentManager()
-  self._component_manager:render({
+  self:_render({
     component = self._search_component,
     mode = 'popup',
   })

@@ -163,8 +163,8 @@ describe('StatusDiffView:', function()
 
       it('should store layout_type from data in opts via _process_entries_data', function()
         local view = StatusDiffView()
-        -- Mock _create_entries_view to avoid UI creation
-        view._create_entries_view = function()
+        -- Mock _create_view to avoid UI creation
+        view._create_view = function()
           return true
         end
         view:create(make_data({ layout_type = 'split' }))
@@ -173,7 +173,7 @@ describe('StatusDiffView:', function()
 
       it('should store data in view via _process_entries_data', function()
         local view = StatusDiffView()
-        view._create_entries_view = function()
+        view._create_view = function()
           return true
         end
         local data = make_data()
@@ -277,33 +277,27 @@ describe('StatusDiffView:', function()
       end)
     end)
 
-    describe('create_diff_component', function()
+    describe('_create_diff_component', function()
       it('should return DiffComponent for unified layout', function()
         local view = StatusDiffView()
-        view._opts.layout_type = 'unified'
-        local component = view:create_diff_component({})
+        local component = view:_create_diff_component({}, 'unified')
 
         assert.is_not_nil(component)
-        -- SplitDiffComponent has _previous_component/_current_component, DiffComponent does not
         assert.is_nil(component._previous_component)
         assert.is_nil(component._current_component)
       end)
 
       it('should return SplitDiffComponent for split layout', function()
         local view = StatusDiffView()
-        view._opts.layout_type = 'split'
-        local component = view:create_diff_component({})
+        local component = view:_create_diff_component({}, 'split')
 
         assert.is_not_nil(component)
-        -- SplitDiffComponent has _previous_component/_current_component fields
-        -- (initially nil until mount, but the field exists on the instance)
         assert.is_not_nil(component.calculate_split_line_numbers)
       end)
 
       it('should use unified as default layout type', function()
         local view = StatusDiffView()
-        view._opts.layout_type = nil
-        local component = view:create_diff_component({})
+        local component = view:_create_diff_component({})
 
         assert.is_not_nil(component)
         -- Default is unified (DiffComponent), which lacks SplitDiffComponent methods
@@ -313,7 +307,7 @@ describe('StatusDiffView:', function()
       it('should pass diff data to component props', function()
         local view = StatusDiffView()
         local diff_data = { lines = { 'line1' }, marks = {} }
-        local component = view:create_diff_component({
+        local component = view:_create_diff_component({
           diff = diff_data,
           filename = 'test.lua',
           filetype = 'lua',
@@ -463,7 +457,7 @@ describe('StatusDiffView:', function()
         local refreshing_during_nav = nil
 
         view.refresh_data = function() end
-        view._update_diff_component = function() end
+        view._refresh_diff = function() end
 
         view:refresh_and_navigate(function()
           refreshing_during_nav = view._refreshing
@@ -480,7 +474,7 @@ describe('StatusDiffView:', function()
         view.refresh_data = function()
           table.insert(call_order, 'refresh')
         end
-        view._update_diff_component = function()
+        view._refresh_diff = function()
           table.insert(call_order, 'update_diff')
         end
 
@@ -491,12 +485,12 @@ describe('StatusDiffView:', function()
         eq({ 'refresh', 'navigate', 'update_diff' }, call_order)
       end)
 
-      it('should call _update_diff_component after navigate_fn', function()
+      it('should call _refresh_diff after navigate_fn', function()
         setup_mock_tree({}, 1)
         local update_called = false
 
         view.refresh_data = function() end
-        view._update_diff_component = function()
+        view._refresh_diff = function()
           update_called = true
         end
 
@@ -536,6 +530,7 @@ describe('StatusDiffView:', function()
         clear_lines = function() end,
         clear_folds = function() end,
         reset_cursor = function() end,
+        reset = function() end,
         call = function(_, cb)
           cb()
         end,
@@ -672,26 +667,26 @@ describe('StatusDiffView:', function()
       end)
     end)
 
-    describe('navigate_down', function()
+    describe('hunk_down', function()
       it('should delegate to hunk_down', function()
         local called = false
         view.hunk_down = function()
           called = true
         end
 
-        view:navigate_down()
+        view:hunk_down()
         assert.is_true(called)
       end)
     end)
 
-    describe('navigate_up', function()
+    describe('hunk_up', function()
       it('should delegate to hunk_up', function()
         local called = false
         view.hunk_up = function()
           called = true
         end
 
-        view:navigate_up()
+        view:hunk_up()
         assert.is_true(called)
       end)
     end)
@@ -806,6 +801,7 @@ describe('StatusDiffView:', function()
         clear_lines = function() end,
         clear_folds = function() end,
         reset_cursor = function() end,
+        reset = function() end,
         call = function(_, cb)
           cb()
         end,
@@ -1252,12 +1248,12 @@ describe('StatusDiffView:', function()
       end)
     end)
 
-    describe('stage_entry_from_diff', function()
+    describe('stage_entry with follow_same_file', function()
       it('should return early if entry is invalid', function()
         view._tree_component.get_selected_entry = function()
           return nil
         end
-        view:stage_entry_from_diff()
+        view:stage_entry({ follow_same_file = true })
         eq(0, #repo_calls)
       end)
 
@@ -1265,7 +1261,7 @@ describe('StatusDiffView:', function()
         view._tree_component.get_selected_entry = function()
           return make_entry({ type = 'staged', filename = 'test.lua' })
         end
-        view:stage_entry_from_diff()
+        view:stage_entry({ follow_same_file = true })
         eq(0, #repo_calls)
       end)
 
@@ -1273,7 +1269,7 @@ describe('StatusDiffView:', function()
         view._tree_component.get_selected_entry = function()
           return make_entry({ type = 'unstaged', filename = 'diff_stage.lua' })
         end
-        view:stage_entry_from_diff()
+        view:stage_entry({ follow_same_file = true })
 
         eq(1, #repo_calls)
         eq('stage_file', repo_calls[1][1])
@@ -1281,12 +1277,12 @@ describe('StatusDiffView:', function()
       end)
     end)
 
-    describe('unstage_entry_from_diff', function()
+    describe('unstage_entry with follow_same_file', function()
       it('should return early if entry is invalid', function()
         view._tree_component.get_selected_entry = function()
           return nil
         end
-        view:unstage_entry_from_diff()
+        view:unstage_entry({ follow_same_file = true })
         eq(0, #repo_calls)
       end)
 
@@ -1294,7 +1290,7 @@ describe('StatusDiffView:', function()
         view._tree_component.get_selected_entry = function()
           return make_entry({ type = 'unstaged', filename = 'test.lua' })
         end
-        view:unstage_entry_from_diff()
+        view:unstage_entry({ follow_same_file = true })
         eq(0, #repo_calls)
       end)
 
@@ -1302,23 +1298,11 @@ describe('StatusDiffView:', function()
         view._tree_component.get_selected_entry = function()
           return make_entry({ type = 'staged', filename = 'diff_unstage.lua' })
         end
-        view:unstage_entry_from_diff()
+        view:unstage_entry({ follow_same_file = true })
 
         eq(1, #repo_calls)
         eq('unstage_file', repo_calls[1][1])
         eq('diff_unstage.lua', repo_calls[1][2])
-      end)
-    end)
-
-    describe('reset_entry_from_diff', function()
-      it('should delegate to reset_entry', function()
-        local reset_entry_called = false
-        view.reset_entry = function()
-          reset_entry_called = true
-        end
-
-        view:reset_entry_from_diff()
-        assert.is_true(reset_entry_called)
       end)
     end)
 
@@ -1430,7 +1414,7 @@ describe('StatusDiffView:', function()
       }
       view._tree_component = mock_tree
       view.refresh_data = function() end
-      view._update_diff_component = function() end
+      view._refresh_diff = function() end
     end
 
     before_each(function()
@@ -1653,6 +1637,7 @@ describe('StatusDiffView:', function()
         clear_lines = function() end,
         clear_folds = function() end,
         reset_cursor = function() end,
+        reset = function() end,
         call = function(_, cb)
           cb()
         end,
@@ -1706,12 +1691,12 @@ describe('StatusDiffView:', function()
       setup_view_mocks()
     end)
 
-    describe('_update_diff_component', function()
+    describe('_refresh_diff', function()
       it('should return false if entry is invalid', function()
         mock_tree.get_selected_entry = function()
           return nil
         end
-        local result = view:_update_diff_component()
+        local result = view:_refresh_diff()
         assert.is_false(result)
       end)
 
@@ -1723,7 +1708,7 @@ describe('StatusDiffView:', function()
           return make_entry()
         end
 
-        local result = view:_update_diff_component()
+        local result = view:_refresh_diff()
         assert.is_false(result)
       end)
 
@@ -1735,7 +1720,7 @@ describe('StatusDiffView:', function()
           return make_entry()
         end
 
-        local result = view:_update_diff_component()
+        local result = view:_refresh_diff()
         assert.is_false(result)
       end)
 
@@ -1748,7 +1733,7 @@ describe('StatusDiffView:', function()
           return make_entry({ filename = 'test.lua', filetype = 'lua' })
         end
 
-        view:_update_diff_component()
+        view:_refresh_diff()
 
         assert.is_not_nil(props_set)
         eq('test.lua', props_set.filename)
@@ -1764,15 +1749,15 @@ describe('StatusDiffView:', function()
           return make_entry()
         end
 
-        view:_update_diff_component(3)
+        view:_refresh_diff(3)
 
         eq(3, moved_to)
       end)
     end)
 
     describe('_handle_file_selection_change', function()
-      it('should return early if no component_manager', function()
-        view._component_manager = nil
+      it('should return early if destroyed', function()
+        view._destroyed = true
         -- Should not error
         view:_handle_file_selection_change({ entry = make_entry() })
       end)
@@ -1797,42 +1782,24 @@ describe('StatusDiffView:', function()
         view = StatusDiffView()
         view._diff_component = mock_diff
         view._tree_component = mock_tree
-        view._component_manager = {}
 
         view:_handle_file_selection_change(nil)
         assert.is_true(warned)
       end)
 
       it('should clear diff component state', function()
-        local cleared_extmarks = false
-        local cleared_lines = false
-        local cleared_folds = false
-        local reset_cursor_called = false
+        local reset_called = false
 
-        mock_diff.clear_extmarks = function()
-          cleared_extmarks = true
-        end
-        mock_diff.clear_lines = function()
-          cleared_lines = true
-        end
-        mock_diff.clear_folds = function()
-          cleared_folds = true
-        end
-        mock_diff.reset_cursor = function()
-          reset_cursor_called = true
+        mock_diff.reset = function()
+          reset_called = true
         end
 
-        view._component_manager = {}
         view:_handle_file_selection_change({ entry = make_entry() })
 
-        assert.is_true(cleared_extmarks)
-        assert.is_true(cleared_lines)
-        assert.is_true(cleared_folds)
-        assert.is_true(reset_cursor_called)
+        assert.is_true(reset_called)
       end)
 
       it('should process valid entry from item', function()
-        view._component_manager = {}
         local entry = make_entry({ filename = 'selected.lua' })
 
         view:_handle_file_selection_change({ entry = entry })
@@ -1912,8 +1879,12 @@ describe('StatusDiffView:', function()
         assert.is_nil(view._tree_component)
       end)
 
-      it('should initialize component_manager as nil', function()
-        assert.is_nil(view._component_manager)
+      it('should initialize destroyed as false', function()
+        assert.is_false(view._destroyed)
+      end)
+
+      it('should initialize is_destroying as false', function()
+        assert.is_false(view._is_destroying)
       end)
     end)
 
@@ -1931,15 +1902,8 @@ describe('StatusDiffView:', function()
           end,
         }
 
-        view._diff_component = {
-          component_will_unmount = function() end,
-        }
-        view._tree_component = {
-          component_will_unmount = function() end,
-        }
-        view._component_manager = {
-          destroy = function() end,
-        }
+        view._component_group = { unmount = function() end }
+        view._context = { restore_window_options = function() end }
 
         view:destroy()
 
@@ -1949,27 +1913,33 @@ describe('StatusDiffView:', function()
 
       it('should clear debounce_cleanups array', function()
         view._debounce_cleanups = { function() end }
-        view._diff_component = { component_will_unmount = function() end }
-        view._tree_component = { component_will_unmount = function() end }
-        view._component_manager = { destroy = function() end }
+        view._component_group = { unmount = function() end }
+        view._context = { restore_window_options = function() end }
 
         view:destroy()
 
         eq({}, view._debounce_cleanups)
       end)
 
-      it('should call component_manager:destroy', function()
-        local manager_destroyed = false
+      it('should call component_group:unmount and context:restore_window_options', function()
+        local unmount_called = false
+        local restore_called = false
         view._debounce_cleanups = {}
-        view._component_manager = {
-          destroy = function()
-            manager_destroyed = true
+        view._component_group = {
+          unmount = function()
+            unmount_called = true
+          end,
+        }
+        view._context = {
+          restore_window_options = function()
+            restore_called = true
           end,
         }
 
         view:destroy()
 
-        assert.is_true(manager_destroyed)
+        assert.is_true(unmount_called)
+        assert.is_true(restore_called)
       end)
     end)
 
@@ -2077,7 +2047,7 @@ describe('StatusDiffView:', function()
         view.move_to_entry = function()
           move_to_entry_called = true
         end
-        view._update_diff_component = function() end
+        view._refresh_diff = function() end
 
         view:on_git_change()
 

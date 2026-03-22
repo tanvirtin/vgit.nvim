@@ -18,7 +18,7 @@ end
 
 function DiffAnnotator:annotate_line(line_changes)
   local lnum_change = line_changes.lnum_change
-  if not lnum_change then return nil end
+  if not lnum_change then return {} end
 
   local lnum = lnum_change.lnum
   local change_type = lnum_change.type
@@ -27,7 +27,7 @@ function DiffAnnotator:annotate_line(line_changes)
   local marks = {}
 
   if sign_name then marks.sign = {
-    col = lnum - 1,
+    row = lnum - 1,
     name = sign_name,
   } end
 

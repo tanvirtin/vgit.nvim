@@ -99,7 +99,7 @@ describe('StashView:', function()
 
       local value = items[1].value
       eq('stash', value.type)
-      eq(commit, value.commit)
+      eq(commit, value.data)
     end)
 
     it('should handle a stash with no context revision gracefully', function()
@@ -409,7 +409,7 @@ describe('StashView:', function()
           return true
         end,
         get_selected_item = function()
-          return { value = { type = 'stash', commit = selected } }
+          return { value = { type = 'stash', data = selected } }
         end,
       }
       eq(selected, view:_get_current_commit())
@@ -419,7 +419,7 @@ describe('StashView:', function()
   describe('destroy', function()
     it('should be idempotent (safe to call multiple times)', function()
       local view = StashView()
-      view._component_manager = { destroy = function() end }
+      view._component_group = { unmount = function() end }
 
       view:destroy()
       view:destroy() -- second call should not error
@@ -427,41 +427,37 @@ describe('StashView:', function()
 
     it('should set _destroyed to true', function()
       local view = StashView()
-      view._component_manager = { destroy = function() end }
+      view._component_group = { unmount = function() end }
 
       view:destroy()
       assert.is_true(view._destroyed)
     end)
 
-    it('should call component_manager:destroy()', function()
-      local cm_destroyed = false
+    it('should call component_group:unmount()', function()
+      local unmounted = false
       local view = StashView()
-      view._component_manager = {
-        destroy = function()
-          cm_destroyed = true
+      view._component_group = {
+        unmount = function()
+          unmounted = true
         end,
       }
 
       view:destroy()
-      assert.is_true(cm_destroyed)
+      assert.is_true(unmounted)
     end)
 
-    it('should nil out component_manager and search_component', function()
+    it('should set destroyed flag', function()
       local view = StashView()
-      view._component_manager = { destroy = function() end }
-      view._search_component = {}
-      view._patch_component = {}
+      view._component_group = { unmount = function() end }
 
       view:destroy()
-      assert.is_nil(view._component_manager)
-      assert.is_nil(view._search_component)
-      assert.is_nil(view._patch_component)
+      assert.is_true(view._destroyed)
     end)
 
     it('should cleanup debounce functions', function()
       local cleanup_called = false
       local view = StashView()
-      view._component_manager = { destroy = function() end }
+      view._component_group = { unmount = function() end }
       view._debounce_cleanups = {
         function()
           cleanup_called = true

@@ -1,55 +1,50 @@
 local lazy = require('vgit.core.lazy')
 
 local keymap = lazy('vgit.core.keymap')
-local Object = lazy('vgit.core.Object')
+local View = lazy('vgit.ui.View')
 local event = lazy('vgit.core.event')
 local Buffer = lazy('vgit.core.Buffer')
 local console = lazy('vgit.core.console')
-local scene_setting = lazy('vgit.settings.scene')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local BorderComponent = lazy('vgit.ui.components.BorderComponent')
 local BlameInfoComponent = lazy('vgit.ui.components.BlameInfoComponent')
 local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
 local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
 
-local BlameLens = Object:extend()
+local BlameLensView = View:extend()
 
-function BlameLens:constructor()
-  return {
-    blame = nil,
-    buffer = nil,
-    blame_info_component = nil,
-    diff_component = nil,
-    component_manager = nil,
-    pending_quit_key = nil,
-  }
+function BlameLensView:constructor()
+  local instance = View.constructor(self)
+  instance._blame = nil
+  instance._buffer = nil
+  instance._blame_info_component = nil
+  instance._diff_component = nil
+  return instance
 end
 
-function BlameLens:prev_hunk()
-  self.diff_component:hunk_up('top')
+function BlameLensView:hunk_up()
+  self._diff_component:hunk_up('top')
 end
 
-function BlameLens:next_hunk()
-  self.diff_component:hunk_down('top')
+function BlameLensView:hunk_down()
+  self._diff_component:hunk_down('top')
 end
 
-function BlameLens:create(data)
+function BlameLensView:create(data)
   if not data or not data.blame then
-    console.error('[BlameLens] No blame data provided')
+    console.error('[BlameLensView] No blame data provided')
     return false
   end
 
-  self.component_manager = ComponentManager()
-  self.blame = data.blame
+  self._blame = data.blame
   local layout_type = data.layout_type or 'unified'
 
   local buffer = Buffer(0)
-  self.buffer = buffer
+  self._buffer = buffer
 
-  self.blame_info_component = BlameInfoComponent({
-    blame = self.blame,
+  self._blame_info_component = BlameInfoComponent({
+    blame = self._blame,
   })
 
   local diff_component = nil
@@ -65,7 +60,7 @@ function BlameLens:create(data)
         filetype = data.filetype or 'text',
       })
     end
-    self.diff_component = diff_component
+    self._diff_component = diff_component
   end
 
   local top_border = BorderComponent({
@@ -75,7 +70,7 @@ function BlameLens:create(data)
 
   local layout_children = {
     LayoutSpec.view(top_border, { height = 1 }),
-    LayoutSpec.view(self.blame_info_component, { height = 3 }),
+    LayoutSpec.view(self._blame_info_component, { height = 3 }),
   }
 
   if diff_component then table.insert(layout_children, LayoutSpec.view(diff_component, { flex = 1 })) end
@@ -84,7 +79,7 @@ function BlameLens:create(data)
 
   local height = diff_component and '35vh' or '5'
 
-  self.component_manager:render(LayoutSpec.lens(LayoutSpec.vertical(layout_children), {
+  self:_render(LayoutSpec.lens(LayoutSpec.vertical(layout_children), {
     height = height,
   }))
 
@@ -95,32 +90,13 @@ function BlameLens:create(data)
   return true
 end
 
-function BlameLens:setup_keymaps()
-  local scene_keymaps = scene_setting:get('keymaps')
-
-  if scene_keymaps and scene_keymaps.quit then
-    local quit_key = keymap.get_key(scene_keymaps.quit)
-    if quit_key then
-      if self.diff_component then
-        self.diff_component:set_keymap({
-          mode = 'n',
-          key = quit_key,
-        }, function()
-          self.component_manager:destroy()
-        end)
-      else
-        self.pending_quit_key = {
-          key = quit_key,
-        }
-      end
-    end
-  end
-
+function BlameLensView:setup_keymaps()
+  self:_setup_quit_keymap()
   self:setup_hunk_keymaps()
 end
 
-function BlameLens:setup_hunk_keymaps()
-  if not self.diff_component then return end
+function BlameLensView:setup_hunk_keymaps()
+  if not self._diff_component then return end
 
   local keymaps = status_diff_view_setting:get('keymaps')
 
@@ -129,9 +105,9 @@ function BlameLens:setup_hunk_keymaps()
   local prev_key = keymap.get_key(keymaps.previous)
   if prev_key then
     local prev_fn = event.async(function()
-      self:prev_hunk()
+      self:hunk_up()
     end)
-    self.diff_component:set_keymap({
+    self._diff_component:set_keymap({
       mode = 'n',
       key = prev_key,
     }, prev_fn)
@@ -140,17 +116,17 @@ function BlameLens:setup_hunk_keymaps()
   local next_key = keymap.get_key(keymaps.next)
   if next_key then
     local next_fn = event.async(function()
-      self:next_hunk()
+      self:hunk_down()
     end)
-    self.diff_component:set_keymap({
+    self._diff_component:set_keymap({
       mode = 'n',
       key = next_key,
     }, next_fn)
   end
 end
 
-function BlameLens:set_relative_lnum(lnum, diff)
-  if not diff or not self.diff_component then return end
+function BlameLensView:set_relative_lnum(lnum, diff)
+  if not diff or not self._diff_component then return end
 
   local adjusted_lnum = lnum
 
@@ -167,26 +143,14 @@ function BlameLens:set_relative_lnum(lnum, diff)
     end
   end
 
-  if self.diff_component and self.diff_component.move_to_hunk then
-    local target_hunk = self.diff_component:get_relative_mark_index(adjusted_lnum)
-    if target_hunk then self.diff_component:move_to_hunk(target_hunk, 'top') end
+  if self._diff_component and self._diff_component.move_to_hunk then
+    local target_hunk = self._diff_component:get_relative_mark_index(adjusted_lnum)
+    if target_hunk then self._diff_component:move_to_hunk(target_hunk, 'top') end
   end
 
   vim.schedule(function()
-    if self.diff_component then self.diff_component:set_lnum(adjusted_lnum) end
+    if self._diff_component then self._diff_component:set_lnum(adjusted_lnum) end
   end)
 end
 
-function BlameLens:destroy()
-  self.component_manager:destroy()
-end
-
-function BlameLens:on(event_name, callback)
-  self.component_manager:on(event_name, callback)
-end
-
-function BlameLens:set_keymap(configs)
-  self.component_manager:set_keymap(configs)
-end
-
-return BlameLens
+return BlameLensView

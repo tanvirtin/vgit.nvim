@@ -1,7 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
 local View = lazy('vgit.ui.View')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
 local CommitComponent = lazy('vgit.ui.components.CommitComponent')
 
 local CommitView = View:extend()
@@ -23,15 +22,14 @@ function CommitView:create(opts)
     on_cancel = opts.on_cancel,
   })
 
-  self._component_manager = ComponentManager()
-  self._component_manager:render({
+  self:_render({
     component = self._component,
     mode = 'split',
     split_height = opts.height or 20,
     split_direction = opts.split_direction or 'botright',
   })
 
-  return self
+  return true
 end
 
 function CommitView:set_lines(lines)

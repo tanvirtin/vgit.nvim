@@ -16,22 +16,6 @@ LayoutSpec.Direction = {
   VERTICAL = 'vertical',
 }
 
-LayoutSpec.Align = {
-  START = 'start',
-  CENTER = 'center',
-  END = 'end',
-  STRETCH = 'stretch',
-}
-
-LayoutSpec.Justify = {
-  START = 'start',
-  CENTER = 'center',
-  END = 'end',
-  SPACE_BETWEEN = 'space-between',
-  SPACE_AROUND = 'space-around',
-  SPACE_EVENLY = 'space-evenly',
-}
-
 LayoutSpec.Anchor = {
   TOP_LEFT = 'top-left',
   TOP_CENTER = 'top-center',
@@ -70,15 +54,6 @@ function LayoutSpec.vertical(children, opts)
     gap = opts.gap,
     align = opts.align,
     justify = opts.justify,
-  })
-end
-
-function LayoutSpec.row(children, opts)
-  opts = opts or {}
-  return LayoutSpec.horizontal(children, {
-    gap = opts.gap or 0,
-    align = opts.align or LayoutSpec.Align.CENTER,
-    justify = opts.justify or LayoutSpec.Justify.START,
   })
 end
 
