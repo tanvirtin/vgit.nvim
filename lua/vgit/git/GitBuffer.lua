@@ -347,8 +347,8 @@ function GitBuffer:render_signs(top, bot)
   -- Only place extmarks for signs visible in the current viewport.
   local signs = self.state.signs or {}
   for _, sign in ipairs(signs) do
-    local col = sign.col
-    if col >= top and (bot == -1 or col <= bot) then self._gutter_extmark:sign(sign) end
+    local row = sign.row
+    if row >= top and (bot == -1 or row <= bot) then self._gutter_extmark:sign(sign) end
   end
 
   return self

@@ -6,7 +6,7 @@ local Object = lazy('vgit.core.Object')
 local Buffer = lazy('vgit.core.Buffer')
 local Window = lazy('vgit.core.Window')
 local renderer = lazy('vgit.core.renderer')
-local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
+local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
 
 local Element = Object:extend()
 
@@ -18,14 +18,13 @@ function Element:constructor(props)
     _buffer = nil,
     _window = nil,
     _mounted = false,
-    _lines = nil,
     _on_render = function() end,
     _is_attached_to_renderer = false,
     _plot = props.plot or {
       win_plot = utils.object.assign(props.win_plot or {}),
     },
     _config = {
-      window_mode = props.window_mode or nil,
+      window_mode = props.window_mode,
       buf_options = props.buf_options or {
         modifiable = false,
         buflisted = false,
@@ -51,8 +50,8 @@ function Element:mount()
   local win_plot = self._plot.win_plot or {}
   local window_mode = self._config.window_mode or 'popup'
 
-  if win_plot.width then win_plot.width = LayoutContext.convert_dimension(win_plot.width) end
-  if win_plot.height then win_plot.height = LayoutContext.convert_dimension(win_plot.height) end
+  if win_plot.width then win_plot.width = LayoutBounds.convert_dimension(win_plot.width) end
+  if win_plot.height then win_plot.height = LayoutBounds.convert_dimension(win_plot.height) end
 
   if window_mode == 'screen' or window_mode == 'split' then
     win_plot = vim.tbl_extend('force', win_plot or {}, {
@@ -66,11 +65,6 @@ function Element:mount()
   self:_apply_win_options()
 
   self._mounted = true
-
-  if self._lines then
-    self:set_lines(self._lines)
-    self._lines = nil
-  end
 
   return self
 end
@@ -274,11 +268,11 @@ function Element:set_keymap(opts_or_mode, callback_or_key, handler, desc)
 end
 
 function Element:get_buffer()
-  return self._buffer or nil
+  return self._buffer
 end
 
 function Element:get_window()
-  return self._window or nil
+  return self._window
 end
 
 function Element:on(event_name, callback)
@@ -363,9 +357,6 @@ function Element:apply_layout_win_plot(win_plot)
     local component_focusable = self._plot.win_plot.focusable
     self._plot.win_plot = utils.object.assign(self._plot.win_plot, win_plot)
     if component_focusable ~= nil then self._plot.win_plot.focusable = component_focusable end
-
-    self._plot.is_built = false
-    if type(self._plot.build) == 'function' then self._plot:build() end
   else
     self._plot.win_plot = win_plot
   end

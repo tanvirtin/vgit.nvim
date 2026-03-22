@@ -1,4 +1,5 @@
 local Component = require('vgit.ui.Component')
+local View = require('vgit.ui.View')
 local Element = require('vgit.ui.elements.Element')
 local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
 
@@ -23,6 +24,13 @@ function TestComponent:get_layout_spec()
 end
 
 M.TestComponent = TestComponent
+
+-- Render a component via a temporary View (replacement for ComponentManager in tests)
+function M.mount(config)
+  local view = View()
+  view:_render(config)
+  return view
+end
 
 function M.cleanup_ui()
   pcall(function()

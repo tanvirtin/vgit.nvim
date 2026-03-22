@@ -11,18 +11,14 @@ describe('SplitDiffComponent:', function()
   after_each(ui_helper.cleanup_ui)
 
   -- mount() creates child DiffComponents.
-  -- We then mount each child to create their Elements (simulating ComponentManager),
+  -- We then mount each child to create their Elements (simulating View rendering),
   -- and call _element:mount() to open real Neovim windows for tests that need UI.
   local function create_split_component(overrides)
     overrides = overrides or {}
     local component = SplitDiffComponent(overrides.props or {})
     component:mount()
-    if component.children.previous then
-      component.children.previous:mount()
-    end
-    if component.children.current then
-      component.children.current:mount()
-    end
+    if component.children.previous then component.children.previous:mount() end
+    if component.children.current then component.children.current:mount() end
     for k, v in pairs(overrides.state or {}) do
       component.state[k] = v
     end
@@ -104,7 +100,9 @@ describe('SplitDiffComponent:', function()
       local diff_ref = { lines = {} }
       local component = SplitDiffComponent({ diff = diff_ref, filetype = 'lua' })
       local render_called = false
-      component.render = function() render_called = true end
+      component.render = function()
+        render_called = true
+      end
       component._mounted = true
 
       component:set_props({ diff = { lines = {} } })
@@ -115,7 +113,9 @@ describe('SplitDiffComponent:', function()
       local diff_ref = { lines = {} }
       local component = SplitDiffComponent({ diff = diff_ref, filetype = 'lua' })
       local render_called = false
-      component.render = function() render_called = true end
+      component.render = function()
+        render_called = true
+      end
       component._mounted = true
 
       component:set_props({ filetype = 'python' })
@@ -126,7 +126,9 @@ describe('SplitDiffComponent:', function()
       local diff_ref = { lines = {} }
       local component = SplitDiffComponent({ diff = diff_ref, filetype = 'lua' })
       local render_called = false
-      component.render = function() render_called = true end
+      component.render = function()
+        render_called = true
+      end
       component._mounted = true
 
       component:set_props({ diff = diff_ref, filetype = 'lua' })
@@ -331,7 +333,11 @@ describe('SplitDiffComponent:', function()
     it('should return true when current child is valid', function()
       local component = create_split_component()
       component.children.previous = nil
-      component.children.current = { is_valid = function() return true end }
+      component.children.current = {
+        is_valid = function()
+          return true
+        end,
+      }
 
       assert.is_truthy(component:is_valid())
     end)
@@ -339,7 +345,11 @@ describe('SplitDiffComponent:', function()
     it('should return true when previous child is valid', function()
       local component = create_split_component()
       component.children.current = nil
-      component.children.previous = { is_valid = function() return true end }
+      component.children.previous = {
+        is_valid = function()
+          return true
+        end,
+      }
 
       assert.is_truthy(component:is_valid())
     end)

@@ -28,19 +28,19 @@ describe('GutterSignAnnotator:', function()
       local signs = annotator:annotate(hunks, sign_types)
 
       eq(3, #signs)
-      eq({ col = 0, name = 'GitSignsAdd' }, signs[1])
-      eq({ col = 1, name = 'GitSignsAdd' }, signs[2])
-      eq({ col = 2, name = 'GitSignsAdd' }, signs[3])
+      eq({ row = 0, name = 'GitSignsAdd' }, signs[1])
+      eq({ row = 1, name = 'GitSignsAdd' }, signs[2])
+      eq({ row = 2, name = 'GitSignsAdd' }, signs[3])
     end)
 
-    it('should clamp col to 0 for remove hunk with top=0', function()
+    it('should clamp row to 0 for remove hunk with top=0', function()
       local hunks = {
         { type = 'remove', top = 0, bot = 0 },
       }
       local signs = annotator:annotate(hunks, sign_types)
 
       eq(1, #signs)
-      eq({ col = 0, name = 'GitSignsDelete' }, signs[1])
+      eq({ row = 0, name = 'GitSignsDelete' }, signs[1])
     end)
 
     it('should produce correct sign names for mixed hunk types', function()
@@ -65,7 +65,7 @@ describe('GutterSignAnnotator:', function()
       local signs = annotator:annotate(hunks, sign_types)
 
       eq(1, #signs)
-      eq({ col = 4, name = 'GitSignsAdd' }, signs[1])
+      eq({ row = 4, name = 'GitSignsAdd' }, signs[1])
     end)
   end)
 end)

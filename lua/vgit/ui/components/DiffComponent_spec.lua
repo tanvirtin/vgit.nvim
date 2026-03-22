@@ -3,11 +3,10 @@ local eq = assert.are.same
 
 local function create_diff_component(overrides)
   local DiffComponent = require('vgit.ui.components.DiffComponent')
-  local ComponentManager = require('vgit.ui.ComponentManager')
   overrides = overrides or {}
 
   local component = DiffComponent(overrides.props or {})
-  ComponentManager():render({ component = component, mode = 'popup', width = 80, height = 40 })
+  ui_helper.mount({ component = component, mode = 'popup', width = 80, height = 40 })
 
   -- Apply state overrides
   for k, v in pairs(overrides.state or {}) do
@@ -572,7 +571,7 @@ describe('DiffComponent:', function()
     end)
   end)
 
-  describe('render_diff', function()
+  describe('render_viewport', function()
     it('should render line numbers for the specified range', function()
       local lnum_calls = {}
       local component = create_diff_component({
@@ -599,7 +598,7 @@ describe('DiffComponent:', function()
       end
 
       -- Render only lines 2-4 (viewport)
-      component:render_diff(2, 4)
+      component:render_viewport(2, 4)
 
       eq(3, #lnum_calls)
       eq(1, lnum_calls[1].row) -- line 2, 0-indexed
@@ -626,7 +625,7 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      component:render_diff(1, 5)
+      component:render_viewport(1, 5)
       eq(0, #lnum_calls)
     end)
 
@@ -653,13 +652,13 @@ describe('DiffComponent:', function()
       end
 
       -- Request range beyond line_numbers length
-      component:render_diff(1, 100)
+      component:render_viewport(1, 100)
       eq(2, #lnum_calls)
     end)
   end)
 
   describe('viewport dirty tracking', function()
-    it('should skip render_diff when viewport is unchanged', function()
+    it('should skip render_viewport when viewport is unchanged', function()
       local lnum_calls = {}
       local component = create_diff_component({
         lnum = 1,
@@ -683,11 +682,11 @@ describe('DiffComponent:', function()
       end
 
       -- First call should render
-      component:render_diff(1, 3)
+      component:render_viewport(1, 3)
       eq(3, #lnum_calls)
 
       -- Second call with same range should skip (no new calls)
-      component:render_diff(1, 3)
+      component:render_viewport(1, 3)
       eq(3, #lnum_calls)
     end)
 
@@ -716,11 +715,11 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      component:render_diff(1, 3)
+      component:render_viewport(1, 3)
       eq(3, #lnum_calls)
 
       -- Different range should render
-      component:render_diff(3, 5)
+      component:render_viewport(3, 5)
       eq(6, #lnum_calls)
     end)
 
@@ -746,12 +745,12 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      component:render_diff(1, 2)
+      component:render_viewport(1, 2)
       eq(2, #lnum_calls)
 
       -- Mark dirty and re-render same range
       component._viewport_dirty = true
-      component:render_diff(1, 2)
+      component:render_viewport(1, 2)
       eq(4, #lnum_calls)
     end)
   end)
@@ -794,31 +793,31 @@ describe('DiffComponent:', function()
       eq({ row = 0, text = 'hi' }, called_with)
     end)
 
-    it('should return nil for place_extmark_text when element is nil', function()
+    it('should not call element for place_extmark_text when element is nil', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
       local component = DiffComponent({})
 
-      local result = component:place_extmark_text({ row = 0 })
-      assert.is_nil(result)
+      -- Should not error when element is nil
+      local ok = pcall(function()
+        component:place_extmark_text({ row = 0 })
+      end)
+      assert.is_true(ok)
     end)
 
-    it('should return nil for place_extmark_sign when element is invalid', function()
+    it('should not call element for place_extmark_sign when element is invalid', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
-      local instance = {
-        props = {},
-        state = { lines = {}, line_numbers = {}, lines_changes = {}, folds = {}, marks = {}, hunks = {} },
-        _mounted = false,
-        _needs_update = false,
-        _element = {
-          is_valid = function()
-            return false
-          end,
-        },
+      local component = DiffComponent({})
+      component._element = {
+        is_valid = function()
+          return false
+        end,
       }
-      setmetatable(instance, DiffComponent)
 
-      local result = instance:place_extmark_sign({ col = 0 })
-      assert.is_nil(result)
+      -- Should not error when element is invalid
+      local ok = pcall(function()
+        component:place_extmark_sign({ col = 0 })
+      end)
+      assert.is_true(ok)
     end)
 
     it('should delegate set_filetype to element', function()

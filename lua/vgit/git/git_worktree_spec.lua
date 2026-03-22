@@ -44,7 +44,9 @@ describe('git_worktree:', function()
 
   describe('list', function()
     it('should return error when reponame is nil', function()
-      setup_defaults({ GitQueryBuilder = make_query_builder(function() return {}, nil end) })
+      setup_defaults({ GitQueryBuilder = make_query_builder(function()
+        return {}, nil
+      end) })
       local git_worktree = load_module()
       local result, err = git_worktree.list(nil)
       assert.is_nil(result)
@@ -71,7 +73,8 @@ describe('git_worktree:', function()
             'HEAD abc123def456',
             'branch refs/heads/main',
             '',
-          }, nil
+          },
+            nil
         end),
       })
       local git_worktree = load_module()
@@ -95,7 +98,8 @@ describe('git_worktree:', function()
             'HEAD def456',
             'branch refs/heads/feature',
             '',
-          }, nil
+          },
+            nil
         end),
       })
       local git_worktree = load_module()
@@ -116,7 +120,8 @@ describe('git_worktree:', function()
             'HEAD abc123',
             'detached',
             '',
-          }, nil
+          },
+            nil
         end),
       })
       local git_worktree = load_module()
@@ -133,7 +138,8 @@ describe('git_worktree:', function()
             'HEAD abc123',
             'bare',
             '',
-          }, nil
+          },
+            nil
         end),
       })
       local git_worktree = load_module()
@@ -152,7 +158,8 @@ describe('git_worktree:', function()
             'locked',
             'prunable',
             '',
-          }, nil
+          },
+            nil
         end),
       })
       local git_worktree = load_module()
@@ -169,7 +176,8 @@ describe('git_worktree:', function()
             'worktree /home/user/project',
             'HEAD abc123',
             'branch refs/heads/main',
-          }, nil
+          },
+            nil
         end),
       })
       local git_worktree = load_module()
@@ -194,7 +202,9 @@ describe('git_worktree:', function()
 
   describe('add', function()
     it('should return error when reponame is nil', function()
-      setup_defaults({ GitQueryBuilder = make_query_builder(function() return {}, nil end) })
+      setup_defaults({ GitQueryBuilder = make_query_builder(function()
+        return {}, nil
+      end) })
       local git_worktree = load_module()
       local result, err = git_worktree.add(nil, '/tmp/wt')
       assert.is_nil(result)
@@ -202,7 +212,9 @@ describe('git_worktree:', function()
     end)
 
     it('should return error when path is nil', function()
-      setup_defaults({ GitQueryBuilder = make_query_builder(function() return {}, nil end) })
+      setup_defaults({ GitQueryBuilder = make_query_builder(function()
+        return {}, nil
+      end) })
       local git_worktree = load_module()
       local result, err = git_worktree.add('/tmp/repo', nil)
       assert.is_nil(result)
@@ -264,7 +276,9 @@ describe('git_worktree:', function()
 
   describe('remove', function()
     it('should return error when reponame is nil', function()
-      setup_defaults({ GitQueryBuilder = make_query_builder(function() return {}, nil end) })
+      setup_defaults({ GitQueryBuilder = make_query_builder(function()
+        return {}, nil
+      end) })
       local git_worktree = load_module()
       local result, err = git_worktree.remove(nil, '/tmp/wt')
       assert.is_nil(result)
@@ -272,7 +286,9 @@ describe('git_worktree:', function()
     end)
 
     it('should return error when path is nil', function()
-      setup_defaults({ GitQueryBuilder = make_query_builder(function() return {}, nil end) })
+      setup_defaults({ GitQueryBuilder = make_query_builder(function()
+        return {}, nil
+      end) })
       local git_worktree = load_module()
       local result, err = git_worktree.remove('/tmp/repo', nil)
       assert.is_nil(result)
@@ -308,7 +324,9 @@ describe('git_worktree:', function()
 
   describe('prune', function()
     it('should return error when reponame is nil', function()
-      setup_defaults({ GitQueryBuilder = make_query_builder(function() return {}, nil end) })
+      setup_defaults({ GitQueryBuilder = make_query_builder(function()
+        return {}, nil
+      end) })
       local git_worktree = load_module()
       local result, err = git_worktree.prune(nil)
       assert.is_nil(result)

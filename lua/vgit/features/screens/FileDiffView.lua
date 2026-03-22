@@ -8,15 +8,11 @@ local keymap = lazy('vgit.core.keymap')
 local console = lazy('vgit.core.console')
 local navigation = lazy('vgit.core.navigation')
 local repository = lazy('vgit.git.repository')
-local hunks_setting = lazy('vgit.settings.hunks')
 local scene_setting = lazy('vgit.settings.scene')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local statusline = lazy('vgit.core.statusline_state')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
 local display_service = lazy('vgit.ui.display_service')
-local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local file_diff_view_setting = lazy('vgit.settings.file_diff_view')
-local SplitDiffComponent = lazy('vgit.ui.components.SplitDiffComponent')
 
 local FileDiffView = View:extend()
 
@@ -39,30 +35,16 @@ function FileDiffView:constructor()
   return instance
 end
 
+function FileDiffView:get_navigatable_component()
+  return self._diff_component
+end
+
 function FileDiffView:get_hunk_alignment()
   return file_diff_view_setting:get('hunk_alignment')
 end
 
 function FileDiffView:get_hunk_alignment_offset()
   return file_diff_view_setting:get('hunk_alignment_offset') or 0
-end
-
-function FileDiffView:get_current_mark_index()
-  return navigation.get_mark_index(self._diff_component:get_marks(), self._diff_component:get_lnum())
-end
-
-function FileDiffView:hunk_up()
-  if not self._diff_component or not self._diff_component:is_valid() then return end
-  self._diff_component:hunk_up(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
-  local index, count = self:get_current_mark_index()
-  if index then statusline.set_hunk({ index = index, count = count }) end
-end
-
-function FileDiffView:hunk_down()
-  if not self._diff_component or not self._diff_component:is_valid() then return end
-  self._diff_component:hunk_down(self:get_hunk_alignment(), self:get_hunk_alignment_offset())
-  local index, count = self:get_current_mark_index()
-  if index then statusline.set_hunk({ index = index, count = count }) end
 end
 
 function FileDiffView:_refresh_diff_data()
@@ -133,7 +115,7 @@ function FileDiffView:_process_file_data(data)
     target_hunk_index = data.target_hunk_index,
   }
 
-  return self:_create_file_view(diff_data)
+  return self:_create_view(diff_data)
 end
 
 function FileDiffView:create(data)
@@ -164,30 +146,16 @@ function FileDiffView:create(data)
   return self:_process_file_data(data)
 end
 
-function FileDiffView:create_diff_component(opts)
-  opts = opts or {}
+function FileDiffView:_create_view(data)
   local layout_type = self._opts.layout_type or self.LAYOUT_UNIFIED
-
-  local props = {
-    diff = opts.diff,
-    filename = opts.filename,
-    filetype = opts.filetype or 'text',
-  }
-
-  if layout_type == self.LAYOUT_SPLIT then return SplitDiffComponent(props) end
-  return DiffComponent(props)
-end
-
-function FileDiffView:_create_file_view(data)
-  self._diff_component = self:create_diff_component({
+  self._diff_component = self:_create_diff_component({
     diff = data.diff,
     filename = data.filename,
     filetype = data.filetype,
-  })
+  }, layout_type)
 
-  self._component_manager = ComponentManager()
   event.await()
-  self._component_manager:render(LayoutSpec.screen({
+  self:_render(LayoutSpec.screen({
     LayoutSpec.view(self._diff_component, { flex = 1 }),
   }))
 
@@ -207,7 +175,7 @@ function FileDiffView:_create_file_view(data)
   return true
 end
 
-function FileDiffView:_reconcile(opts)
+function FileDiffView:_refresh_diff(opts)
   opts = opts or {}
   event.await()
 
@@ -235,17 +203,14 @@ function FileDiffView:toggle_view()
   if not self._opts.filename then return end
 
   self._opts.is_staged = not self._opts.is_staged
-  if not self:_reconcile({ hunk_index = 1 }) then self._opts.is_staged = not self._opts.is_staged end
+  if not self:_refresh_diff({ hunk_index = 1 }) then self._opts.is_staged = not self._opts.is_staged end
 end
 
 function FileDiffView:reset_current()
   if self._opts.is_staged then return end
 
   event.await()
-  local decision = console.input('Are you sure you want to discard all unstaged changes? (y/N) ')
-  if not decision then return end
-  decision = decision:lower()
-  if decision ~= 'yes' and decision ~= 'y' then return end
+  if not self:_confirm('Are you sure you want to discard all unstaged changes? (y/N) ') then return end
 
   local filename = self._opts.filename
   if not filename then return end
@@ -261,10 +226,10 @@ function FileDiffView:reset_current()
     return
   end
 
-  self:_reconcile()
+  self:_refresh_diff()
 end
 
-function FileDiffView:enter_view()
+function FileDiffView:open_file()
   event.await()
   local mark = self._diff_component:get_current_mark_under_cursor()
   if not mark then return end
@@ -300,7 +265,7 @@ function FileDiffView:stage_hunk()
     return
   end
 
-  self:_reconcile({ hunk_index = index })
+  self:_refresh_diff({ hunk_index = index })
 
   local idx, count = self:get_current_mark_index()
   if idx then statusline.set_hunk({ index = idx, count = count }) end
@@ -328,7 +293,7 @@ function FileDiffView:unstage_hunk()
     return
   end
 
-  self:_reconcile({ hunk_index = index })
+  self:_refresh_diff({ hunk_index = index })
 
   local idx, count = self:get_current_mark_index()
   if idx then statusline.set_hunk({ index = idx, count = count }) end
@@ -353,7 +318,7 @@ function FileDiffView:stage_current()
     return
   end
 
-  self:_reconcile()
+  self:_refresh_diff()
 end
 
 function FileDiffView:unstage_current()
@@ -375,7 +340,7 @@ function FileDiffView:unstage_current()
     return
   end
 
-  self:_reconcile()
+  self:_refresh_diff()
 end
 
 function FileDiffView:show_blame_view()
@@ -385,136 +350,62 @@ function FileDiffView:show_blame_view()
 end
 
 function FileDiffView:setup_keymaps()
-  local scene_keymaps = scene_setting:get('keymaps')
   local diff_keymaps = file_diff_view_setting:get('keymaps')
-  local hunks_keymaps = hunks_setting:get('keymaps')
 
-  if scene_keymaps and scene_keymaps.quit then
-    local quit_key = keymap.get_key(scene_keymaps.quit)
-    if quit_key then
-      self._diff_component:set_keymap({
-        mode = 'n',
-        key = quit_key,
-      }, function()
-        self._component_manager:destroy()
-      end)
-    end
-  end
-
-  local up_key = keymap.get_key(hunks_keymaps.up)
-  if up_key then
-    local up_fn = event.async(function()
-      self:hunk_up()
-    end)
-    self._diff_component:set_keymap({
-      mode = 'n',
-      key = up_key,
-    }, up_fn)
-  end
-
-  local down_key = keymap.get_key(hunks_keymaps.down)
-  if down_key then
-    local down_fn = event.async(function()
-      self:hunk_down()
-    end)
-    self._diff_component:set_keymap({
-      mode = 'n',
-      key = down_key,
-    }, down_fn)
-  end
+  self:_setup_quit_keymap()
+  self:_setup_hunk_navigation_keymaps()
 
   -- Only set up staging/unstaging keymaps for live diffs (not historical)
   if self._opts.is_live then
     local stage_key = keymap.get_key(diff_keymaps.stage)
     if stage_key then
-      local stage_fn, stage_cleanup = event.debounce_async(function()
+      self:_register_keymap(self._diff_component, 'n', stage_key, function()
         self:stage_current()
-      end, self.DEBOUNCE_MS)
-      table.insert(self._debounce_cleanups, stage_cleanup)
-      self._diff_component:set_keymap({
-        mode = 'n',
-        key = stage_key,
-      }, stage_fn)
+      end)
     end
 
     local unstage_key = keymap.get_key(diff_keymaps.unstage)
     if unstage_key then
-      local unstage_fn, unstage_cleanup = event.debounce_async(function()
+      self:_register_keymap(self._diff_component, 'n', unstage_key, function()
         self:unstage_current()
-      end, self.DEBOUNCE_MS)
-      table.insert(self._debounce_cleanups, unstage_cleanup)
-      self._diff_component:set_keymap({
-        mode = 'n',
-        key = unstage_key,
-      }, unstage_fn)
+      end)
     end
 
     local reset_key = keymap.get_key(diff_keymaps.reset)
     if reset_key then
-      local reset_fn, reset_cleanup = event.debounce_async(function()
+      self:_register_keymap(self._diff_component, 'n', reset_key, function()
         self:reset_current()
-      end, self.DEBOUNCE_MS)
-      table.insert(self._debounce_cleanups, reset_cleanup)
-      self._diff_component:set_keymap({
-        mode = 'n',
-        key = reset_key,
-      }, reset_fn)
+      end)
     end
 
     local stage_hunk_key = keymap.get_key(diff_keymaps.stage_hunk)
     if stage_hunk_key then
-      local stage_hunk_fn, stage_hunk_cleanup = event.debounce_async(function()
+      self:_register_keymap(self._diff_component, 'n', stage_hunk_key, function()
         self:stage_hunk()
-      end, self.DEBOUNCE_MS)
-      table.insert(self._debounce_cleanups, stage_hunk_cleanup)
-      self._diff_component:set_keymap({
-        mode = 'n',
-        key = stage_hunk_key,
-      }, stage_hunk_fn)
+      end)
     end
 
     local unstage_hunk_key = keymap.get_key(diff_keymaps.unstage_hunk)
     if unstage_hunk_key then
-      local unstage_hunk_fn, unstage_hunk_cleanup = event.debounce_async(function()
+      self:_register_keymap(self._diff_component, 'n', unstage_hunk_key, function()
         self:unstage_hunk()
-      end, self.DEBOUNCE_MS)
-      table.insert(self._debounce_cleanups, unstage_hunk_cleanup)
-      self._diff_component:set_keymap({
-        mode = 'n',
-        key = unstage_hunk_key,
-      }, unstage_hunk_fn)
+      end)
     end
 
     local toggle_view_key = keymap.get_key(diff_keymaps.toggle_view)
     if toggle_view_key then
-      local toggle_view_fn, toggle_view_cleanup = event.debounce_async(function()
+      self:_register_keymap(self._diff_component, 'n', toggle_view_key, function()
         self:toggle_view()
-      end, self.DEBOUNCE_MS)
-      table.insert(self._debounce_cleanups, toggle_view_cleanup)
-      self._diff_component:set_keymap({
-        mode = 'n',
-        key = toggle_view_key,
-      }, toggle_view_fn)
+      end)
     end
   end
 
-  local enter_fn, enter_cleanup = event.debounce_async(function()
-    self:enter_view()
-  end, self.DEBOUNCE_MS)
-  table.insert(self._debounce_cleanups, enter_cleanup)
-  self._diff_component:set_keymap({
-    mode = 'n',
-    key = '<enter>',
-  }, enter_fn)
-
-  local blame_fn, blame_cleanup = event.debounce_async(function()
+  self:_register_keymap(self._diff_component, 'n', '<enter>', function()
+    self:open_file()
+  end)
+  self:_register_keymap(self._diff_component, 'n', 'b', function()
     self:show_blame_view()
-  end, self.DEBOUNCE_MS)
-  table.insert(self._debounce_cleanups, blame_cleanup)
-  self._diff_component:set_keymap({
-    mode = 'n',
-    key = 'b',
-  }, blame_fn)
+  end)
 end
 
 return FileDiffView

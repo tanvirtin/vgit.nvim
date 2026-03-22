@@ -1,14 +1,32 @@
 local lazy = require('vgit.core.lazy')
 
-local Component = lazy('vgit.ui.Component')
 local symbols_setting = lazy('vgit.settings.symbols')
 local DiffAnnotator = lazy('vgit.ui.annotators.DiffAnnotator')
 local FoldCalculator = lazy('vgit.ui.calculators.FoldCalculator')
 local LineNumberCalculator = lazy('vgit.ui.calculators.LineNumberCalculator')
+local DiffViewportComponent = lazy('vgit.ui.DiffViewportComponent')
 
-local DiffComponent = Component({
-  viewport = true,
-  win_options = {
+local DiffComponent = DiffViewportComponent:extend()
+
+function DiffComponent:constructor(props)
+  local instance = DiffViewportComponent.constructor(self, props)
+  instance._line_number_calculator = LineNumberCalculator()
+  instance._diff_annotator = DiffAnnotator()
+  instance._fold_calculator = FoldCalculator()
+  return instance
+end
+
+function DiffComponent:get_buf_options()
+  return {
+    modifiable = false,
+    buflisted = false,
+    bufhidden = 'wipe',
+    filetype = 'diff',
+  }
+end
+
+function DiffComponent:get_win_options()
+  return {
     winhl = 'Normal:GitBackground',
     signcolumn = 'auto',
     wrap = false,
@@ -17,32 +35,15 @@ local DiffComponent = Component({
     foldmethod = 'manual',
     foldenable = true,
     foldlevel = 0,
-  },
-  buf_options = {
-    modifiable = false,
-    buflisted = false,
-    bufhidden = 'wipe',
-    filetype = 'diff',
-  },
-  layout_opts = { id = 'body', flex = 1, focus = true },
-  on_mount = function(self)
-    self:render()
-    self:_ensure_renderer_attached()
-  end,
-  on_props = function(self, prev_props)
-    if self.props.diff ~= prev_props.diff or self.props.filetype ~= prev_props.filetype then
-      self:render()
-    end
-  end,
-})
+  }
+end
 
-function DiffComponent:constructor(props)
-  local instance = DiffComponent.super.constructor(self, props)
-  instance._element = nil
-  instance._line_number_calculator = LineNumberCalculator()
-  instance._diff_annotator = DiffAnnotator()
-  instance._fold_calculator = FoldCalculator()
-  return instance
+function DiffComponent:get_layout_opts()
+  return { id = 'body', flex = 1, focus = true }
+end
+
+function DiffComponent:on_props(prev_props)
+  if self.props.diff ~= prev_props.diff or self.props.filetype ~= prev_props.filetype then self:render() end
 end
 
 function DiffComponent:get_initial_state()
@@ -55,7 +56,6 @@ function DiffComponent:get_initial_state()
     hunks = {},
   }
 end
-
 
 function DiffComponent:calculate_folds(diff, line_count)
   return self._fold_calculator:calculate_folds(diff.marks or {}, line_count)
@@ -138,12 +138,6 @@ function DiffComponent:set_lines(lines)
   return self
 end
 
-function DiffComponent:get_lines()
-  return self:with_element(function(el)
-    return el:get_lines()
-  end) or self.state.lines
-end
-
 function DiffComponent:clear_lines()
   self:with_element(function(el)
     el:clear_extmarks()
@@ -153,179 +147,7 @@ function DiffComponent:clear_lines()
   return self
 end
 
-function DiffComponent:set_cursor(cursor)
-  self:with_element(function(el)
-    el:set_cursor(cursor)
-  end)
-  return self
-end
-
-function DiffComponent:get_cursor()
-  return self:with_element(function(el)
-    return el:get_cursor()
-  end) or { 1, 1 }
-end
-
-function DiffComponent:get_lnum()
-  return self:with_element(function(el)
-    return el:get_lnum()
-  end) or 1
-end
-
-function DiffComponent:get_line_count()
-  return self:with_element(function(el)
-    return el:get_line_count()
-  end) or 0
-end
-
-function DiffComponent:get_filetype()
-  return self:with_element(function(el)
-    return el:get_filetype()
-  end) or ''
-end
-
-function DiffComponent:is_valid()
-  return self:with_element(function()
-    return true
-  end) or false
-end
-
-function DiffComponent:enable_cursorline()
-  self:with_element(function(el)
-    el:enable_cursorline()
-  end)
-  return self
-end
-
-function DiffComponent:disable_cursorline()
-  self:with_element(function(el)
-    el:disable_cursorline()
-  end)
-  return self
-end
-
-function DiffComponent:clear_extmarks()
-  self:with_element(function(el)
-    el:clear_extmarks()
-  end)
-  return self
-end
-
-function DiffComponent:find_adjacent_mark_index(direction)
-  local marks = self.state.marks
-  if #marks == 0 then return nil end
-
-  local lnum = self:get_lnum()
-
-  if direction == 'next' then
-    for i = 1, #marks do
-      local mark = marks[i]
-      if lnum >= mark.top and lnum <= mark.bot then
-        return i + 1
-      end
-      if mark.top > lnum then
-        return i
-      end
-    end
-    return 1
-  end
-
-  for i = #marks, 1, -1 do
-    local mark = marks[i]
-    if lnum >= mark.top and lnum <= mark.bot then
-      return i - 1
-    end
-    if mark.top < lnum then
-      return i
-    end
-  end
-  return #marks
-end
-
-function DiffComponent:hunk_down(pos, offset)
-  local mark_index = self:find_adjacent_mark_index('next')
-  if not mark_index then return nil end
-  return self:move_to_hunk(mark_index, pos, offset)
-end
-
-function DiffComponent:hunk_up(pos, offset)
-  local mark_index = self:find_adjacent_mark_index('prev')
-  if not mark_index then return nil end
-  return self:move_to_hunk(mark_index, pos, offset)
-end
-
-function DiffComponent:move_to_hunk(mark_index, pos, offset)
-  pos = pos or 'center'
-  mark_index = mark_index or 1
-
-  local marks = self.state.marks
-  if #marks == 0 then return nil end
-
-  if mark_index < 1 then
-    mark_index = #marks
-  elseif mark_index > #marks then
-    mark_index = 1
-  end
-
-  local mark = marks[mark_index]
-  if not mark then return nil end
-
-  self:set_lnum(mark.top)
-  if pos then self:scroll_to(pos, offset) end
-
-  return mark
-end
-
-function DiffComponent:get_hunk_under_cursor()
-  local marks = self.state.marks
-  local hunks = self.state.hunks
-  if #marks == 0 or #hunks == 0 then return nil end
-
-  local lnum = self:get_lnum()
-
-  for i = 1, #marks do
-    local mark = marks[i]
-    if lnum >= mark.top and lnum <= mark.bot then return hunks[i], i end
-  end
-
-  return nil
-end
-
-function DiffComponent:get_current_mark_under_cursor()
-  local marks = self.state.marks
-  if #marks == 0 then return nil end
-
-  local lnum = self:get_lnum()
-
-  for i = 1, #marks do
-    local mark = marks[i]
-    if lnum >= mark.top and lnum <= mark.bot then return mark, i end
-  end
-
-  return nil
-end
-
-function DiffComponent:get_marks()
-  return self.state.marks or {}
-end
-
-function DiffComponent:get_hunks()
-  return self.state.hunks or {}
-end
-
-function DiffComponent:get_relative_mark_index(lnum)
-  local marks = self.state.marks
-  if #marks == 0 then return 1 end
-
-  for i = 1, #marks do
-    local mark = marks[i]
-    if lnum >= mark.top_relative and lnum <= mark.bot_relative then return i end
-  end
-
-  return 1
-end
-
-function DiffComponent:render_diff(top, bot)
+function DiffComponent:render_viewport(top, bot)
   top = top or 1
   bot = bot or #self.state.lines_changes
 
@@ -359,23 +181,21 @@ function DiffComponent:render_diff(top, bot)
         local line_changes = lines_changes[lnum]
 
         local line_marks = self._diff_annotator:annotate_line(line_changes)
-        if line_marks then
-          if line_marks.sign then
-            el:place_extmark_sign({
-              col = line_marks.sign.col,
-              name = line_marks.sign.name,
-            })
-          end
+        if line_marks.sign then
+          el:place_extmark_sign({
+            row = line_marks.sign.row,
+            name = line_marks.sign.name,
+          })
+        end
 
-          if line_marks.void_text then
-            if not void_text then void_text = string.rep(symbols_setting:get('void'), el:get_width()) end
-            el:place_extmark_text({
-              row = line_marks.void_text.row,
-              col = line_marks.void_text.col,
-              text = void_text,
-              hl = line_marks.void_text.hl,
-            })
-          end
+        if line_marks.void_text then
+          if not void_text then void_text = string.rep(symbols_setting:get('void'), el:get_width()) end
+          el:place_extmark_text({
+            row = line_marks.void_text.row,
+            col = line_marks.void_text.col,
+            text = void_text,
+            hl = line_marks.void_text.hl,
+          })
         end
 
         local word_marks = self._diff_annotator:annotate_word(line_changes, lnum)
@@ -398,14 +218,9 @@ end
 function DiffComponent:_ensure_renderer_attached()
   self:ensure_renderer_attached(function()
     self:attach_to_renderer(function(top, bot)
-      self:render_diff(top, bot + 1)
+      self:render_viewport(top, bot + 1)
     end)
   end)
-end
-
-function DiffComponent:render_diff_partially()
-  self:_ensure_renderer_attached()
-  return self
 end
 
 function DiffComponent:render_folds()
@@ -420,10 +235,9 @@ function DiffComponent:clear_folds()
   return self
 end
 
-function DiffComponent:ensure_window_options()
-  self:with_element(function(el)
-    el:sync_win_options()
-  end)
+function DiffComponent:reset()
+  DiffViewportComponent.reset(self)
+  self:clear_folds()
   return self
 end
 

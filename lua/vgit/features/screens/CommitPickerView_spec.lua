@@ -4,7 +4,7 @@ local eq = assert.are.same
 package.loaded['vgit.core.lazy'] = nil
 package.loaded['vgit.features.screens.CommitPickerView'] = nil
 package.loaded['vgit.ui.components.SearchComponent'] = nil
-package.loaded['vgit.ui.ComponentManager'] = nil
+package.loaded['vgit.ui.View'] = nil
 package.loaded['vgit.ui.Layout'] = nil
 package.loaded['vgit.core.event'] = nil
 package.loaded['vgit.git.git_log'] = nil
@@ -123,23 +123,8 @@ local SearchComponentMock = setmetatable({}, {
 })
 package.loaded['vgit.ui.components.SearchComponent'] = SearchComponentMock
 
-local cm_render_called = false
-local cm_render_config = nil
-local cm_destroy_called = false
-local ComponentManagerMock = setmetatable({}, {
-  __call = function()
-    return {
-      render = function(_, config)
-        cm_render_called = true
-        cm_render_config = config
-      end,
-      destroy = function()
-        cm_destroy_called = true
-      end,
-    }
-  end,
-})
-package.loaded['vgit.ui.ComponentManager'] = ComponentManagerMock
+local view_render_called = false
+local view_render_config = nil
 
 package.loaded['vgit.ui.Layout'] = {
   popup = function(component, opts)
@@ -154,6 +139,13 @@ package.loaded['vgit.ui.Layout'] = {
 }
 
 local CommitPickerView = require('vgit.features.screens.CommitPickerView')
+
+-- Mock _render on the View prototype so CommitPickerView instances capture the call
+local original_render = CommitPickerView._render
+CommitPickerView._render = function(self, config)
+  view_render_called = true
+  view_render_config = config
+end
 
 local function make_commit(opts)
   opts = opts or {}
@@ -216,9 +208,8 @@ describe('CommitPickerView:', function()
     mounted_props = nil
     close_called = false
     set_items_called_with = nil
-    cm_render_called = false
-    cm_render_config = nil
-    cm_destroy_called = false
+    view_render_called = false
+    view_render_config = nil
     git_log_calls = {}
   end)
 
@@ -302,14 +293,14 @@ describe('CommitPickerView:', function()
       assert.is_false(view:create({ commits = { make_commit() } }))
     end)
 
-    it('should create search component and render via ComponentManager', function()
+    it('should create search component and render via View', function()
       local view = CommitPickerView()
       local result = view:create(make_data())
 
       assert.is_true(result)
-      assert.is_true(cm_render_called)
-      assert.is_not_nil(cm_render_config)
-      eq('popup', cm_render_config.mode)
+      assert.is_true(view_render_called)
+      assert.is_not_nil(view_render_config)
+      eq('popup', view_render_config.mode)
       assert.is_not_nil(mounted_props)
       eq(1, #mounted_props.items)
       eq('60vw', mounted_props.width)
@@ -481,24 +472,24 @@ describe('CommitPickerView:', function()
       view:create(make_data())
 
       view._destroyed = false
+      view._is_destroying = false
       view:destroy()
       assert.is_true(view._destroyed)
-      assert.is_true(cm_destroy_called)
 
-      cm_destroy_called = false
-      view:destroy()
-      assert.is_false(cm_destroy_called)
+      -- Second call should be a no-op
+      assert.has_no.errors(function()
+        view:destroy()
+      end)
     end)
 
-    it('should clean up component manager and search component', function()
+    it('should clean up on destroy', function()
       local view = CommitPickerView()
       view:create(make_data())
 
       view._destroyed = false
+      view._is_destroying = false
       view:destroy()
-      assert.is_true(cm_destroy_called)
-      assert.is_nil(view._search_component)
-      assert.is_nil(view._component_manager)
+      assert.is_true(view._destroyed)
     end)
   end)
 end)

@@ -2,7 +2,6 @@ local lazy = require('vgit.core.lazy')
 
 local Object = lazy('vgit.core.Object')
 local Window = lazy('vgit.core.Window')
-local LayoutContext = lazy('vgit.ui.layout.LayoutContext')
 
 local LayoutBounds = Object:extend()
 
@@ -13,8 +12,31 @@ function LayoutBounds:constructor(opts)
     ['$col'] = opts.col or 0,
     ['$width'] = opts.width or 0,
     ['$height'] = opts.height or 0,
-    ['$parent'] = opts.parent or nil,
+    ['$parent'] = opts.parent,
   }
+end
+
+function LayoutBounds.convert_dimension(value, parent_dimension)
+  if not value then return nil end
+
+  if type(value) == 'number' then return math.floor(value) end
+
+  if type(value) == 'string' then
+    if value:match('%%$') then
+      local percent = tonumber(value:match('^(.-)%%$'))
+      if percent and parent_dimension then return math.floor((percent / 100) * parent_dimension) end
+    end
+
+    if value:match('vh$') then
+      local n = tonumber(value:sub(1, #value - 2))
+      return math.ceil((n / 100) * vim.o.lines)
+    end
+
+    if value:match('vw$') then
+      local n = tonumber(value:sub(1, #value - 2))
+      return math.ceil((n / 100) * vim.o.columns)
+    end
+  end
 end
 
 function LayoutBounds.from_viewport()
@@ -23,7 +45,6 @@ function LayoutBounds.from_viewport()
     col = 0,
     width = vim.o.columns,
     height = vim.o.lines,
-    parent = nil,
   })
 end
 
@@ -41,12 +62,7 @@ function LayoutBounds.from_window(win_id)
     col = pos[2],
     width = width,
     height = height,
-    parent = nil,
   })
-end
-
-function LayoutBounds:parse_dimension(value, parent_dimension)
-  return LayoutContext.convert_dimension(value, parent_dimension)
 end
 
 function LayoutBounds:apply_constraints(value, min_value, max_value, parent_dimension)
@@ -55,12 +71,12 @@ function LayoutBounds:apply_constraints(value, min_value, max_value, parent_dime
   local result = value
 
   if min_value then
-    local min_parsed = self:parse_dimension(min_value, parent_dimension)
+    local min_parsed = LayoutBounds.convert_dimension(min_value, parent_dimension)
     if min_parsed and result < min_parsed then result = min_parsed end
   end
 
   if max_value then
-    local max_parsed = self:parse_dimension(max_value, parent_dimension)
+    local max_parsed = LayoutBounds.convert_dimension(max_value, parent_dimension)
     if max_parsed and result > max_parsed then result = max_parsed end
   end
 
@@ -118,8 +134,8 @@ function LayoutBounds:child_bounds(spec, allocated)
   local child_row = allocated.row or self.row
   local child_col = allocated.col or self.col
 
-  if spec.width then child_width = self:parse_dimension(spec.width, self.width) end
-  if spec.height then child_height = self:parse_dimension(spec.height, self.height) end
+  if spec.width then child_width = LayoutBounds.convert_dimension(spec.width, self.width) end
+  if spec.height then child_height = LayoutBounds.convert_dimension(spec.height, self.height) end
 
   child_width = self:apply_constraints(child_width, spec.min_width, spec.max_width, self.width)
   child_height = self:apply_constraints(child_height, spec.min_height, spec.max_height, self.height)
@@ -178,15 +194,6 @@ function LayoutBounds:shrink(margin)
     height = math.max(0, self.height - (margin * 2)),
     parent = self.parent,
   })
-end
-
-function LayoutBounds:available_space(direction)
-  if direction == 'horizontal' then
-    return self.width
-  elseif direction == 'vertical' then
-    return self.height
-  end
-  return 0
 end
 
 return LayoutBounds

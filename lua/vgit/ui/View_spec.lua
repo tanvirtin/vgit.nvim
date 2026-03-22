@@ -1,5 +1,5 @@
 local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
-local ComponentManager = require('vgit.ui.ComponentManager')
+local View = require('vgit.ui.View')
 local ui_helper = require('tests.helpers.ui')
 local TestComponent = ui_helper.TestComponent
 local cleanup_ui = ui_helper.cleanup_ui
@@ -7,29 +7,29 @@ local count_floating_windows = ui_helper.count_floating_windows
 
 local eq = assert.are.same
 
-local function create_manager()
-  return ComponentManager()
+local function create_view()
+  return View()
 end
 
-describe('ComponentManager:', function()
-  local mgr
+describe('View:', function()
+  local view
 
   before_each(function()
-    mgr = create_manager()
+    view = create_view()
   end)
 
   after_each(function()
     cleanup_ui()
   end)
 
-  describe('parse_layout_spec', function()
+  describe('_resolve_layout_spec', function()
     it('should return a spec with type unchanged when no children', function()
       local spec = {
         type = LayoutSpec.Type.FLEX,
         direction = 'horizontal',
         children = {},
       }
-      local result = mgr:parse_layout_spec(spec)
+      local result = view:_resolve_layout_spec(spec)
       assert.are.equal(LayoutSpec.Type.FLEX, result.type)
       eq({}, result.children)
     end)
@@ -39,7 +39,7 @@ describe('ComponentManager:', function()
       local spec = LayoutSpec.horizontal({
         LayoutSpec.view(child_view, { id = 'test', flex = 1 }),
       })
-      mgr:parse_layout_spec(spec)
+      view:_resolve_layout_spec(spec)
       assert.is_true(child_view._mounted)
     end)
 
@@ -55,7 +55,7 @@ describe('ComponentManager:', function()
       local spec = LayoutSpec.horizontal({
         LayoutSpec.view(child_view, { id = 'test', flex = 1 }),
       })
-      mgr:parse_layout_spec(spec)
+      view:_resolve_layout_spec(spec)
       assert.are.equal(0, mount_count)
     end)
 
@@ -64,7 +64,7 @@ describe('ComponentManager:', function()
       local spec = LayoutSpec.horizontal({
         LayoutSpec.view(child_view, { id = 'wrapper', flex = 1 }),
       })
-      local result = mgr:parse_layout_spec(spec)
+      local result = view:_resolve_layout_spec(spec)
       -- The child should have been replaced with the inner spec (VIEW wrapping element)
       assert.are.equal(LayoutSpec.Type.VIEW, result.children[1].type)
     end)
@@ -72,7 +72,7 @@ describe('ComponentManager:', function()
     it('should mount single child component via child property', function()
       local child_view = TestComponent({ name = 'child' })
       local spec = LayoutSpec.container(LayoutSpec.view(child_view, { id = 'c', flex = 1 }))
-      mgr:parse_layout_spec(spec)
+      view:_resolve_layout_spec(spec)
       assert.is_true(child_view._mounted)
     end)
 
@@ -92,7 +92,7 @@ describe('ComponentManager:', function()
       end
       local outer_child = OuterComponent({ name = 'outer' })
       local spec = LayoutSpec.container(LayoutSpec.view(outer_child, { id = 'outer', flex = 1 }))
-      mgr:parse_layout_spec(spec)
+      view:_resolve_layout_spec(spec)
       assert.is_true(outer_child._mounted)
       assert.is_true(inner_child._mounted)
     end)
@@ -103,7 +103,7 @@ describe('ComponentManager:', function()
           win_plot = { width = 100, height = 50, row = 0, col = 0, relative = 'editor' },
         },
       }
-      local result = mgr:parse_layout_spec(spec)
+      local result = view:_resolve_layout_spec(spec)
       assert.are.equal(LayoutSpec.Type.CONTAINER, result.type)
       assert.is_not_nil(result.child)
       assert.are.equal(LayoutSpec.Type.VIEW, result.child.type)
@@ -117,14 +117,14 @@ describe('ComponentManager:', function()
         children = {},
       }
       local spec = { layout = inner }
-      local result = mgr:parse_layout_spec(spec)
+      local result = view:_resolve_layout_spec(spec)
       assert.are.equal(LayoutSpec.Type.FLEX, result.type)
       assert.are.equal('vertical', result.direction)
     end)
 
     it('should wrap plain table in container/view', function()
       local spec = { some_field = 'value' }
-      local result = mgr:parse_layout_spec(spec)
+      local result = view:_resolve_layout_spec(spec)
       assert.are.equal(LayoutSpec.Type.CONTAINER, result.type)
       assert.is_not_nil(result.child)
       assert.are.equal(LayoutSpec.Type.VIEW, result.child.type)
@@ -133,7 +133,7 @@ describe('ComponentManager:', function()
 
     it('should error on nil input', function()
       assert.has_error(function()
-        mgr:parse_layout_spec(nil)
+        view:_resolve_layout_spec(nil)
       end, 'Unable to convert UI description to LayoutSpec')
     end)
 
@@ -147,7 +147,7 @@ describe('ComponentManager:', function()
           LayoutSpec.view(comp_b, { flex = 1 }),
         }),
       })
-      mgr:parse_layout_spec(spec)
+      view:_resolve_layout_spec(spec)
       assert.is_true(comp_a._mounted, 'comp_a inside nested horizontal should be mounted')
       assert.is_true(comp_b._mounted, 'comp_b inside nested horizontal should be mounted')
     end)
@@ -164,17 +164,17 @@ describe('ComponentManager:', function()
         }),
         LayoutSpec.view(comp_c),
       })
-      mgr:parse_layout_spec(spec)
+      view:_resolve_layout_spec(spec)
       assert.is_true(comp_a._mounted, 'comp_a (inside nested horizontal) should be mounted')
       assert.is_true(comp_b._mounted, 'comp_b (inside nested horizontal) should be mounted')
       assert.is_true(comp_c._mounted, 'comp_c (direct view child) should be mounted')
     end)
   end)
 
-  describe('render', function()
+  describe('_render', function()
     it('should render a single TestComponent with real floating window', function()
       local root = TestComponent({ name = 'root' })
-      mgr:render({
+      view:_render({
         component = root,
         mode = 'popup',
         width = 40,
@@ -195,7 +195,7 @@ describe('ComponentManager:', function()
       end
 
       local wrapper = WrapperComponent({ name = 'wrapper' })
-      mgr:render({
+      view:_render({
         component = wrapper,
         mode = 'popup',
         width = 40,
@@ -209,7 +209,7 @@ describe('ComponentManager:', function()
   describe('destroy', function()
     it('should unmount all components and close windows', function()
       local root = TestComponent({ name = 'root' })
-      mgr:render({
+      view:_render({
         component = root,
         mode = 'popup',
         width = 40,
@@ -218,28 +218,28 @@ describe('ComponentManager:', function()
       assert.is_true(root._mounted)
       assert.is_true(count_floating_windows() >= 1)
 
-      mgr:destroy()
+      view:destroy()
       assert.is_false(root._mounted)
       assert.are.equal(0, count_floating_windows())
     end)
 
     it('should be idempotent', function()
       local root = TestComponent({ name = 'root' })
-      mgr:render({
+      view:_render({
         component = root,
         mode = 'popup',
         width = 40,
         height = 20,
       })
-      mgr:destroy()
+      view:destroy()
       assert.has_no.errors(function()
-        mgr:destroy()
+        view:destroy()
       end)
       assert.is_false(root._mounted)
     end)
   end)
 
-  describe('render (screen mode)', function()
+  describe('_render (screen mode)', function()
     local initial_tab_count
 
     before_each(function()
@@ -248,7 +248,7 @@ describe('ComponentManager:', function()
 
     after_each(function()
       pcall(function()
-        mgr:destroy()
+        view:destroy()
       end)
       while vim.fn.tabpagenr('$') > initial_tab_count do
         vim.cmd('tabclose!')
@@ -256,30 +256,30 @@ describe('ComponentManager:', function()
     end)
 
     it('should open a new tab', function()
-      mgr:render({ component = TestComponent(), mode = 'screen' })
+      view:_render({ component = TestComponent(), mode = 'screen' })
       assert.are.equal(initial_tab_count + 1, vim.fn.tabpagenr('$'))
     end)
 
     it('should close the new tab on destroy', function()
-      mgr:render({ component = TestComponent(), mode = 'screen' })
-      mgr:destroy()
+      view:_render({ component = TestComponent(), mode = 'screen' })
+      view:destroy()
       assert.are.equal(initial_tab_count, vim.fn.tabpagenr('$'))
     end)
 
     it('should preserve the original window after destroy', function()
       local original_win = vim.api.nvim_get_current_win()
-      mgr:render({ component = TestComponent(), mode = 'screen' })
-      mgr:destroy()
+      view:_render({ component = TestComponent(), mode = 'screen' })
+      view:destroy()
       assert.is_true(vim.api.nvim_win_is_valid(original_win))
     end)
 
     it('should not leave orphaned scratch buffers after render', function()
       local buf_count_before = #vim.api.nvim_list_bufs()
-      mgr:render({ component = TestComponent(), mode = 'screen' })
+      view:_render({ component = TestComponent(), mode = 'screen' })
       -- tabnew creates a scratch buffer; it should be deleted once VGit
       -- sets its own buffer into the window, leaving only the component buffer
       assert.are.equal(buf_count_before + 1, #vim.api.nvim_list_bufs())
-      mgr:destroy()
+      view:destroy()
     end)
   end)
 end)

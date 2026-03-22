@@ -19,7 +19,7 @@ function GutterSignAnnotator:annotate(hunks, sign_types)
       local lnum = (hunk_type == 'remove' and j == 0) and 1 or j
       signs_len = signs_len + 1
       signs[signs_len] = {
-        col = lnum - 1,
+        row = lnum - 1,
         name = sign_name,
       }
     end

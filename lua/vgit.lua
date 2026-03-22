@@ -220,7 +220,7 @@ controller.execute_command = event.async(function(args)
     debug = true,
     stash = true,
     worktree = true,
-    commit = true
+    commit = true,
   }
 
   if porcelain_commands[cmd] then

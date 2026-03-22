@@ -10,17 +10,18 @@ describe('ProjectDiffView:', function()
   describe('_build_line_to_file_map', function()
     it('should extract filename and file_lnum from component line_metadata', function()
       local view = ProjectDiffView()
+      local metadata = {
+        [1] = { type = 'separator' },
+        [2] = { type = 'filename', filename = 'test.lua' },
+        [3] = { type = 'separator' },
+        [4] = { type = 'code', filetype = 'lua', filename = 'test.lua', file_lnum = 5 },
+        [5] = { type = 'code', filetype = 'lua', filename = 'test.lua', file_lnum = 6 },
+        [6] = { type = 'blank' },
+      }
       local mock_component = {
-        state = {
-          line_metadata = {
-            [1] = { type = 'separator' },
-            [2] = { type = 'filename', filename = 'test.lua' },
-            [3] = { type = 'separator' },
-            [4] = { type = 'code', filetype = 'lua', filename = 'test.lua', file_lnum = 5 },
-            [5] = { type = 'code', filetype = 'lua', filename = 'test.lua', file_lnum = 6 },
-            [6] = { type = 'blank' },
-          },
-        },
+        get_all_line_metadata = function()
+          return metadata
+        end,
       }
 
       local map = view:_build_line_to_file_map(mock_component)
@@ -35,14 +36,15 @@ describe('ProjectDiffView:', function()
 
     it('should handle multiple files in metadata', function()
       local view = ProjectDiffView()
+      local metadata = {
+        [1] = { type = 'code', filetype = 'lua', filename = 'a.lua', file_lnum = 1 },
+        [2] = { type = 'code', filetype = 'lua', filename = 'a.lua', file_lnum = 2 },
+        [3] = { type = 'code', filetype = 'lua', filename = 'b.lua', file_lnum = 10 },
+      }
       local mock_component = {
-        state = {
-          line_metadata = {
-            [1] = { type = 'code', filetype = 'lua', filename = 'a.lua', file_lnum = 1 },
-            [2] = { type = 'code', filetype = 'lua', filename = 'a.lua', file_lnum = 2 },
-            [3] = { type = 'code', filetype = 'lua', filename = 'b.lua', file_lnum = 10 },
-          },
-        },
+        get_all_line_metadata = function()
+          return metadata
+        end,
       }
 
       local map = view:_build_line_to_file_map(mock_component)
@@ -55,7 +57,11 @@ describe('ProjectDiffView:', function()
 
     it('should return empty map for empty metadata', function()
       local view = ProjectDiffView()
-      local mock_component = { state = { line_metadata = {} } }
+      local mock_component = {
+        get_all_line_metadata = function()
+          return {}
+        end,
+      }
 
       local map = view:_build_line_to_file_map(mock_component)
       eq(0, vim.tbl_count(map))
@@ -63,12 +69,13 @@ describe('ProjectDiffView:', function()
 
     it('should default file_lnum to 1 when not set', function()
       local view = ProjectDiffView()
+      local metadata = {
+        [1] = { type = 'code', filename = 'test.lua' },
+      }
       local mock_component = {
-        state = {
-          line_metadata = {
-            [1] = { type = 'code', filename = 'test.lua' },
-          },
-        },
+        get_all_line_metadata = function()
+          return metadata
+        end,
       }
 
       local map = view:_build_line_to_file_map(mock_component)
@@ -436,14 +443,14 @@ describe('ProjectDiffView:', function()
     end)
   end)
 
-  describe('_get_active_component', function()
+  describe('get_navigatable_component', function()
     it('should return current_component for split layout', function()
       local view = ProjectDiffView()
       view._layout_type = ProjectDiffView.LAYOUT_SPLIT
       view._current_component = 'current'
       view._patch_component = 'patch'
 
-      eq('current', view:_get_active_component())
+      eq('current', view:get_navigatable_component())
     end)
 
     it('should return patch_component for unified layout', function()
@@ -452,7 +459,7 @@ describe('ProjectDiffView:', function()
       view._current_component = 'current'
       view._patch_component = 'patch'
 
-      eq('patch', view:_get_active_component())
+      eq('patch', view:get_navigatable_component())
     end)
 
     it('should return patch_component for nil layout', function()
@@ -460,15 +467,17 @@ describe('ProjectDiffView:', function()
       view._layout_type = nil
       view._patch_component = 'patch'
 
-      eq('patch', view:_get_active_component())
+      eq('patch', view:get_navigatable_component())
     end)
   end)
 
   describe('destroy', function()
     it('should be idempotent (safe to call multiple times)', function()
       local view = ProjectDiffView()
-      view._component_manager = { destroy = function() end }
-      view._patch_component = { component_will_unmount = function() end }
+      view._component_group = { unmount = function() end }
+      view._context = { restore_window_options = function() end }
+      view._destroyed = false
+      view._is_destroying = false
 
       view:destroy()
       view:destroy() -- second call should not error
@@ -477,7 +486,10 @@ describe('ProjectDiffView:', function()
 
     it('should set _destroyed to true', function()
       local view = ProjectDiffView()
-      view._component_manager = { destroy = function() end }
+      view._component_group = { unmount = function() end }
+      view._context = { restore_window_options = function() end }
+      view._destroyed = false
+      view._is_destroying = false
 
       assert.is_false(view._destroyed)
       view:destroy()
@@ -486,7 +498,10 @@ describe('ProjectDiffView:', function()
 
     it('should increment _update_gen to invalidate background enrichment', function()
       local view = ProjectDiffView()
-      view._component_manager = { destroy = function() end }
+      view._component_group = { unmount = function() end }
+      view._context = { restore_window_options = function() end }
+      view._destroyed = false
+      view._is_destroying = false
 
       local gen_before = view._update_gen
       view:destroy()
@@ -505,7 +520,10 @@ describe('ProjectDiffView:', function()
           cleanup2_calls = cleanup2_calls + 1
         end,
       }
-      view._component_manager = { destroy = function() end }
+      view._component_group = { unmount = function() end }
+      view._context = { restore_window_options = function() end }
+      view._destroyed = false
+      view._is_destroying = false
 
       view:destroy()
       eq(1, cleanup1_calls)
@@ -517,82 +535,42 @@ describe('ProjectDiffView:', function()
     end)
   end)
   describe('Hunk Navigation', function()
-    describe('_get_current_mark_index', function()
+    describe('get_current_mark_index', function()
       it('should return nil,0 when no marks', function()
-        local view = ProjectDiffView()
-        local component = {
-          get_marks = function()
-            return {}
-          end,
-          get_lnum = function()
-            return 1
-          end,
-        }
-        local index, count = view:_get_current_mark_index(component)
+        local navigation = require('vgit.core.navigation')
+        local index, count = navigation.get_mark_index({}, 1)
         assert.is_nil(index)
         eq(0, count)
       end)
 
       it('should return correct index when cursor inside a mark', function()
-        local view = ProjectDiffView()
+        local navigation = require('vgit.core.navigation')
         local marks = { { top = 5, bot = 10 }, { top = 20, bot = 30 } }
-        local component = {
-          get_marks = function()
-            return marks
-          end,
-          get_lnum = function()
-            return 7
-          end,
-        }
-        local index, count = view:_get_current_mark_index(component)
+        local index, count = navigation.get_mark_index(marks, 7)
         eq(1, index)
         eq(2, count)
       end)
 
       it('should return previous index when cursor between marks', function()
-        local view = ProjectDiffView()
+        local navigation = require('vgit.core.navigation')
         local marks = { { top = 5, bot = 10 }, { top = 20, bot = 30 } }
-        local component = {
-          get_marks = function()
-            return marks
-          end,
-          get_lnum = function()
-            return 15
-          end,
-        }
-        local index, count = view:_get_current_mark_index(component)
+        local index, count = navigation.get_mark_index(marks, 15)
         eq(1, index)
         eq(2, count)
       end)
 
       it('should return last index when cursor after all marks', function()
-        local view = ProjectDiffView()
+        local navigation = require('vgit.core.navigation')
         local marks = { { top = 5, bot = 10 }, { top = 20, bot = 30 } }
-        local component = {
-          get_marks = function()
-            return marks
-          end,
-          get_lnum = function()
-            return 100
-          end,
-        }
-        local index, count = view:_get_current_mark_index(component)
+        local index, count = navigation.get_mark_index(marks, 100)
         eq(2, index)
         eq(2, count)
       end)
 
       it('should return 1 when cursor before first mark', function()
-        local view = ProjectDiffView()
+        local navigation = require('vgit.core.navigation')
         local marks = { { top = 10, bot = 15 } }
-        local component = {
-          get_marks = function()
-            return marks
-          end,
-          get_lnum = function()
-            return 1
-          end,
-        }
-        local index, count = view:_get_current_mark_index(component)
+        local index, count = navigation.get_mark_index(marks, 1)
         eq(1, index)
         eq(1, count)
       end)

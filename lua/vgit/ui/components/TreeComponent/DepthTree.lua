@@ -118,6 +118,7 @@ function DepthTree:sort()
 end
 
 function DepthTree:from_entries(entries)
+  self._tree = {}
   local separator = fs.sep
   local normalized_entries = {}
 

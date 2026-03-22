@@ -390,19 +390,27 @@ describe('BlameView:', function()
       eq(0, #view._debounce_cleanups)
     end)
 
-    it('should destroy component manager if present', function()
-      local destroyed = false
-      view._component_manager = {
-        destroy = function()
-          destroyed = true
+    it('should unmount component_group and restore window options on destroy', function()
+      local unmounted = false
+      local restored = false
+      view._component_group = {
+        unmount = function()
+          unmounted = true
+        end,
+      }
+      view._context = {
+        restore_window_options = function()
+          restored = true
         end,
       }
       view:destroy()
-      assert.is_true(destroyed)
+      assert.is_true(unmounted)
+      assert.is_true(restored)
     end)
 
-    it('should not destroy component manager if nil', function()
-      view._component_manager = nil
+    it('should be safe to call destroy when already destroyed', function()
+      view:destroy()
+      assert.is_true(view:is_destroyed())
       view:destroy()
       assert.is_true(view:is_destroyed())
     end)

@@ -4,7 +4,6 @@ local View = lazy('vgit.ui.View')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
-local ComponentManager = lazy('vgit.ui.ComponentManager')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
 local BranchView = View:extend()
@@ -57,8 +56,7 @@ function BranchView:create(data)
     end,
   })
 
-  self._component_manager = ComponentManager()
-  self._component_manager:render({
+  self:_render({
     component = self._search_component,
     mode = 'popup',
   })

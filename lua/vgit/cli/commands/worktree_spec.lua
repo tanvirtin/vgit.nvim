@@ -7,10 +7,18 @@ describe('worktree_command:', function()
   local function make_mock_repo(overrides)
     overrides = overrides or {}
     return {
-      get_path = function() return '/tmp/repo' end,
-      worktree_add = overrides.worktree_add or function() return {}, nil end,
-      worktree_remove = overrides.worktree_remove or function() return {}, nil end,
-      worktree_list = overrides.worktree_list or function() return {}, nil end,
+      get_path = function()
+        return '/tmp/repo'
+      end,
+      worktree_add = overrides.worktree_add or function()
+        return {}, nil
+      end,
+      worktree_remove = overrides.worktree_remove or function()
+        return {}, nil
+      end,
+      worktree_list = overrides.worktree_list or function()
+        return {}, nil
+      end,
     }
   end
 
@@ -20,13 +28,16 @@ describe('worktree_command:', function()
     save_package('vgit.git.repository')
     package.loaded['vgit.git.repository'] = overrides.repository
       or {
-        current = function() return make_mock_repo(overrides.repo_methods), nil end,
+        current = function()
+          return make_mock_repo(overrides.repo_methods), nil
+        end,
       }
 
     save_package('vgit.ui.display_service')
-    package.loaded['vgit.ui.display_service'] = overrides.display_service or {
-      show_worktree = function() end,
-    }
+    package.loaded['vgit.ui.display_service'] = overrides.display_service
+      or {
+        show_worktree = function() end,
+      }
 
     save_package('vgit.core.console')
     package.loaded['vgit.core.console'] = overrides.console
@@ -53,10 +64,14 @@ describe('worktree_command:', function()
       local worktrees = { { path = '/tmp/wt', head = 'abc', branch = 'feat' } }
       setup_defaults({
         repo_methods = {
-          worktree_list = function() return worktrees, nil end,
+          worktree_list = function()
+            return worktrees, nil
+          end,
         },
         display_service = {
-          show_worktree = function(data) show_data = data end,
+          show_worktree = function(data)
+            show_data = data
+          end,
         },
       })
       load_cmd().execute({})
@@ -114,10 +129,14 @@ describe('worktree_command:', function()
       local error_msg = nil
       setup_defaults({
         repository = {
-          current = function() return nil, 'not a git repository' end,
+          current = function()
+            return nil, 'not a git repository'
+          end,
         },
         console = {
-          error = function(msg) error_msg = msg end,
+          error = function(msg)
+            error_msg = msg
+          end,
           info = function() end,
         },
       })
@@ -129,7 +148,9 @@ describe('worktree_command:', function()
       local error_msg = nil
       setup_defaults({
         console = {
-          error = function(msg) error_msg = msg end,
+          error = function(msg)
+            error_msg = msg
+          end,
           info = function() end,
         },
       })
@@ -141,7 +162,9 @@ describe('worktree_command:', function()
       local error_msg = nil
       setup_defaults({
         console = {
-          error = function(msg) error_msg = msg end,
+          error = function(msg)
+            error_msg = msg
+          end,
           info = function() end,
         },
       })
@@ -153,7 +176,9 @@ describe('worktree_command:', function()
       local error_msg = nil
       setup_defaults({
         console = {
-          error = function(msg) error_msg = msg end,
+          error = function(msg)
+            error_msg = msg
+          end,
           info = function() end,
         },
       })
@@ -165,10 +190,14 @@ describe('worktree_command:', function()
       local error_msg = nil
       setup_defaults({
         repo_methods = {
-          worktree_add = function() return nil, { 'fatal: path already exists' } end,
+          worktree_add = function()
+            return nil, { 'fatal: path already exists' }
+          end,
         },
         console = {
-          error = function(msg) error_msg = msg end,
+          error = function(msg)
+            error_msg = msg
+          end,
           info = function() end,
         },
       })
@@ -180,10 +209,14 @@ describe('worktree_command:', function()
       local error_msg = nil
       setup_defaults({
         repo_methods = {
-          worktree_remove = function() return nil, { 'fatal: not a valid worktree' } end,
+          worktree_remove = function()
+            return nil, { 'fatal: not a valid worktree' }
+          end,
         },
         console = {
-          error = function(msg) error_msg = msg end,
+          error = function(msg)
+            error_msg = msg
+          end,
           info = function() end,
         },
       })
@@ -195,10 +228,14 @@ describe('worktree_command:', function()
       local error_msg = nil
       setup_defaults({
         repo_methods = {
-          worktree_list = function() return nil, { 'failed to list' } end,
+          worktree_list = function()
+            return nil, { 'failed to list' }
+          end,
         },
         console = {
-          error = function(msg) error_msg = msg end,
+          error = function(msg)
+            error_msg = msg
+          end,
           info = function() end,
         },
       })
@@ -210,11 +247,15 @@ describe('worktree_command:', function()
       local info_msg = nil
       setup_defaults({
         repo_methods = {
-          worktree_list = function() return {}, nil end,
+          worktree_list = function()
+            return {}, nil
+          end,
         },
         console = {
           error = function() end,
-          info = function(msg) info_msg = msg end,
+          info = function(msg)
+            info_msg = msg
+          end,
         },
       })
       load_cmd().execute({})
@@ -227,11 +268,15 @@ describe('worktree_command:', function()
       local info_msg = nil
       setup_defaults({
         repo_methods = {
-          worktree_add = function() return {}, nil end,
+          worktree_add = function()
+            return {}, nil
+          end,
         },
         console = {
           error = function() end,
-          info = function(msg) info_msg = msg end,
+          info = function(msg)
+            info_msg = msg
+          end,
         },
       })
       load_cmd().execute({ 'add', '/tmp/new-wt' })
@@ -242,11 +287,15 @@ describe('worktree_command:', function()
       local info_msg = nil
       setup_defaults({
         repo_methods = {
-          worktree_remove = function() return {}, nil end,
+          worktree_remove = function()
+            return {}, nil
+          end,
         },
         console = {
           error = function() end,
-          info = function(msg) info_msg = msg end,
+          info = function(msg)
+            info_msg = msg
+          end,
         },
       })
       load_cmd().execute({ 'remove', '/tmp/old-wt' })

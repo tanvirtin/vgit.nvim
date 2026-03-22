@@ -51,6 +51,7 @@ function TreeComponent:constructor(props)
   instance._on_move_callback = nil
   instance._keymaps_setup = false
   instance._rendering = false
+  instance._depth_tree = DepthTree()
   return instance
 end
 
@@ -94,38 +95,32 @@ function TreeComponent:get_status_highlight(status)
 end
 
 function TreeComponent:get_parent_folder(segmented_folders, current_index)
-  local depth_tree = DepthTree()
-  return depth_tree:get_parent_folder(segmented_folders, current_index)
+  return self._depth_tree:get_parent_folder(segmented_folders, current_index)
 end
 
 function TreeComponent:normalize_entries(entries)
-  local depth_tree = DepthTree()
-  return depth_tree:normalize_entries(entries)
+  return self._depth_tree:normalize_entries(entries)
 end
 
 function TreeComponent:generate_tree(entries)
-  local depth_tree = DepthTree()
-  depth_tree:from_entries(entries)
-  return depth_tree:value()
+  self._depth_tree:from_entries(entries)
+  return self._depth_tree:value()
 end
 
 function TreeComponent:transform_entries_to_tree(entries)
-  local depth_tree = DepthTree()
-  depth_tree:from_entries(entries)
-  depth_tree:sort()
-  return depth_tree:value()
+  self._depth_tree:from_entries(entries)
+  self._depth_tree:sort()
+  return self._depth_tree:value()
 end
 
 function TreeComponent:sort_tree(tree)
-  local depth_tree = DepthTree()
-  depth_tree:set_tree(tree)
-  depth_tree:sort()
-  return depth_tree:value()
+  self._depth_tree:set_tree(tree)
+  self._depth_tree:sort()
+  return self._depth_tree:value()
 end
 
 function TreeComponent:create_node(entry)
-  local depth_tree = DepthTree()
-  local node = depth_tree:create_node(entry)
+  local node = self._depth_tree:create_node(entry)
 
   if node.entry and node.entry.status and not node.items then
     local status = node.entry.status
@@ -418,8 +413,7 @@ function TreeComponent:generate_lines()
   for i = 1, #processed_list do
     local fold = processed_list[i]
     if fold.items and #fold.items > 0 and fold.items[1].status then
-      local depth_tree = DepthTree()
-      fold.items = depth_tree:from_entries(fold.items):sort():value()
+      fold.items = self._depth_tree:from_entries(fold.items):sort():value()
     end
   end
 
@@ -431,7 +425,7 @@ function TreeComponent:generate_lines()
       type = 'after',
       hl = 'GitSignsChange',
       lnum = depth_0_item_count.lnum,
-      text = string.format('%s', depth_0_item_count.count),
+      text = tostring(depth_0_item_count.count),
     }
   end
 
@@ -499,10 +493,13 @@ end
 function TreeComponent:render()
   self:with_element(function(el)
     self._rendering = true
-    el:clear_extmarks()
-    el:set_lines(self:generate_lines())
+    local ok, err = pcall(function()
+      el:clear_extmarks()
+      el:set_lines(self:generate_lines())
+      self:paint()
+    end)
     self._rendering = false
-    self:paint()
+    if not ok then error(err) end
   end)
 end
 

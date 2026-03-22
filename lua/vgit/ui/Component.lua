@@ -15,7 +15,9 @@ function Component:constructor(props)
   }
 end
 
-function Component:get_initial_state() return {} end
+function Component:get_initial_state()
+  return {}
+end
 
 function Component:mount()
   if self._mounted then return end
@@ -27,6 +29,9 @@ function Component:render() end
 
 function Component:set_props(updates)
   if updates then self.props = utils.object.extend(self.props, updates) end
+  for k, v in pairs(self.props) do
+    if v == vim.NIL then self.props[k] = nil end
+  end
 end
 
 function Component:set_state(updates)
@@ -46,23 +51,6 @@ end
 function Component:with_element(fn)
   if self._element and self._element:is_valid() then return fn(self._element) end
 end
-
--- Factory
-
-local DELEGATED_METHODS = {
-  'set_lines', 'get_lines', 'clear_lines', 'get_line_count',
-  'set_cursor', 'get_cursor', 'set_lnum', 'get_lnum',
-  'scroll_to', 'reset_cursor',
-  'set_width', 'set_height', 'get_width', 'get_height',
-  'focus', 'start_insert', 'stop_insert', 'is_focused',
-  'set_filetype', 'get_filetype',
-  'place_extmark_text', 'place_extmark_lnum', 'place_extmark_sign', 'place_extmark_highlight',
-  'clear_extmarks', 'clear_extmark_lnums', 'clear_extmark_texts', 'clear_extmark_signs', 'clear_extmark_highlights',
-  'set_keymap', 'on', 'attach_to_changes',
-  'call', 'set_win_option', 'enable_cursorline', 'disable_cursorline',
-  'attach_to_renderer', 'detach_from_renderer',
-  'is_valid',
-}
 
 local DEFAULT_BUF_OPTIONS = {
   modifiable = false,
@@ -88,13 +76,13 @@ local function create_element(config, props)
   end
 
   if config.win_plot then el_config.win_plot = utils.object.clone(config.win_plot) end
-  if props.win_plot then
-    el_config.win_plot = utils.object.extend(el_config.win_plot or {}, props.win_plot)
-  end
+  if props.win_plot then el_config.win_plot = utils.object.extend(el_config.win_plot or {}, props.win_plot) end
   if props.plot then el_config.plot = props.plot end
 
   return Element(el_config)
 end
+
+local define_single_element_methods = require('vgit.ui.element_delegation')
 
 local function CreateComponent(config)
   local ViewportComponent = lazy('vgit.ui.ViewportComponent')
@@ -108,8 +96,6 @@ local function CreateComponent(config)
   local Base = config.viewport and ViewportComponent or Component
   local Class = Base:extend()
   Class.super = Base
-
-  -- Constructor
 
   if is_single then
     function Class:constructor(props)
@@ -130,8 +116,6 @@ local function CreateComponent(config)
       return instance
     end
   end
-
-  -- mount
 
   if is_single then
     function Class:mount()
@@ -157,25 +141,17 @@ local function CreateComponent(config)
     function Class:mount()
       if self._mounted then return end
       for name, ChildClass in pairs(config.children) do
-        if not self.children[name] then
-          self.children[name] = ChildClass({})
-        end
+        if not self.children[name] then self.children[name] = ChildClass({}) end
       end
       self._mounted = true
     end
   end
 
-  -- on_mount
-
   function Class:on_mount()
     if config.on_mount then config.on_mount(self) end
   end
 
-  -- render
-
   function Class:render() end
-
-  -- set_props
 
   function Class:set_props(updates, callback)
     if not updates then return end
@@ -183,14 +159,14 @@ local function CreateComponent(config)
     local prev_props = utils.object.clone(self.props)
     self.props = utils.object.extend(self.props, updates)
 
-    if self._mounted and config.on_props then
-      config.on_props(self, prev_props)
+    for k, v in pairs(self.props) do
+      if v == vim.NIL then self.props[k] = nil end
     end
+
+    if self._mounted and config.on_props then config.on_props(self, prev_props) end
 
     if callback then callback() end
   end
-
-  -- unmount
 
   if is_single then
     function Class:unmount()
@@ -232,21 +208,7 @@ local function CreateComponent(config)
     end
   end
 
-  -- Auto-delegation for single-element
-
-  if is_single then
-    for _, method in ipairs(DELEGATED_METHODS) do
-      if not rawget(Class, method) then
-        Class[method] = function(self, ...)
-          if self._element and self._element:is_valid() then
-            local result = self._element[method](self._element, ...)
-            if result == self._element then return self end
-            return result
-          end
-        end
-      end
-    end
-  end
+  if is_single then define_single_element_methods(Class) end
 
   return Class
 end

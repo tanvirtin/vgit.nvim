@@ -761,9 +761,7 @@ describe('git_buffer_store (integration with real GitBuffer):', function()
   after_each(function()
     git_buffer_store.reset()
     for _, bufnr in ipairs(created_bufnrs) do
-      if vim.api.nvim_buf_is_valid(bufnr) then
-        vim.api.nvim_buf_delete(bufnr, { force = true })
-      end
+      if vim.api.nvim_buf_is_valid(bufnr) then vim.api.nvim_buf_delete(bufnr, { force = true }) end
     end
     if repo then test_repo.cleanup(repo) end
   end)

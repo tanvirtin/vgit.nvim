@@ -3,18 +3,16 @@ local eq = assert.are.same
 
 describe('BorderComponent:', function()
   local BorderComponent
-  local ComponentManager
 
   before_each(function()
     BorderComponent = require('vgit.ui.components.BorderComponent')
-    ComponentManager = require('vgit.ui.ComponentManager')
   end)
 
   after_each(ui_helper.cleanup_ui)
 
   local function mount_component(props)
     local component = BorderComponent(props or {})
-    ComponentManager():render({ component = component, mode = 'popup', width = 40, height = 20 })
+    ui_helper.mount({ component = component, mode = 'popup', width = 40, height = 20 })
     return component
   end
 

@@ -10,9 +10,9 @@ describe('DiffAnnotator:', function()
   end)
 
   describe('annotate_line', function()
-    it('should return nil when lnum_change is nil', function()
+    it('should return empty table when lnum_change is nil', function()
       local result = annotator:annotate_line({})
-      assert.is_nil(result)
+      eq({}, result)
     end)
 
     it('should return sign for add change type', function()
@@ -21,7 +21,7 @@ describe('DiffAnnotator:', function()
       })
       assert.is_not_nil(result)
       assert.is_not_nil(result.sign)
-      assert.are.equal(4, result.sign.col) -- lnum - 1
+      assert.are.equal(4, result.sign.row) -- lnum - 1
       assert.are.equal('GitSignsAddLn', result.sign.name)
     end)
 
@@ -31,7 +31,7 @@ describe('DiffAnnotator:', function()
       })
       assert.is_not_nil(result)
       assert.is_not_nil(result.sign)
-      assert.are.equal(2, result.sign.col)
+      assert.are.equal(2, result.sign.row)
       assert.are.equal('GitSignsDeleteLn', result.sign.name)
     end)
 

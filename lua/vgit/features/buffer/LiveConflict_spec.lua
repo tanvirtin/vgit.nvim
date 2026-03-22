@@ -109,9 +109,7 @@ describe('LiveConflict conflict flow (integration):', function()
 
   after_each(function()
     for _, bufnr in ipairs(created_bufnrs) do
-      if vim.api.nvim_buf_is_valid(bufnr) then
-        vim.api.nvim_buf_delete(bufnr, { force = true })
-      end
+      if vim.api.nvim_buf_is_valid(bufnr) then vim.api.nvim_buf_delete(bufnr, { force = true }) end
     end
     if repo then test_repo.cleanup(repo) end
   end)
