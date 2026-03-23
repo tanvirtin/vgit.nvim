@@ -1,12 +1,11 @@
 local lazy = require('vgit.core.lazy')
 
-local Object = lazy('vgit.core.Object')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
 
-local LayoutCalculator = Object:extend()
+local LayoutCalculator = {}
 
-function LayoutCalculator:apply_mode_wrapping(spec, context)
+function LayoutCalculator.apply_mode_wrapping(spec, context)
   if context:is_popup_mode() then
     if spec.type == LayoutSpec.Type.ABSOLUTE then return spec end
 
@@ -32,29 +31,29 @@ function LayoutCalculator:apply_mode_wrapping(spec, context)
   return spec
 end
 
-function LayoutCalculator:calculate(spec, parent_bounds, context)
-  if not spec then error('LayoutCalculator:calculate() requires a spec') end
+function LayoutCalculator.calculate(spec, parent_bounds, context)
+  if not spec then error('LayoutCalculator.calculate() requires a spec') end
 
   if not parent_bounds then parent_bounds = LayoutBounds.from_viewport() end
-  if context then spec = self:apply_mode_wrapping(spec, context) end
+  if context then spec = LayoutCalculator.apply_mode_wrapping(spec, context) end
 
   local spec_type = spec.type
 
   if spec_type == LayoutSpec.Type.CONTAINER then
-    return self:calculate_container(spec, parent_bounds)
+    return LayoutCalculator.calculate_container(spec, parent_bounds)
   elseif spec_type == LayoutSpec.Type.FLEX then
-    return self:calculate_flex(spec, parent_bounds)
+    return LayoutCalculator.calculate_flex(spec, parent_bounds)
   elseif spec_type == LayoutSpec.Type.ABSOLUTE then
-    return self:calculate_absolute(spec, parent_bounds)
+    return LayoutCalculator.calculate_absolute(spec, parent_bounds)
   elseif spec_type == LayoutSpec.Type.VIEW then
-    return self:calculate_view(spec, parent_bounds)
+    return LayoutCalculator.calculate_view(spec, parent_bounds)
   else
     error('Unknown layout type: ' .. tostring(spec_type))
   end
 end
 
-function LayoutCalculator:calculate_container(spec, parent_bounds)
-  local child_layout = self:calculate(spec.child, parent_bounds)
+function LayoutCalculator.calculate_container(spec, parent_bounds)
+  local child_layout = LayoutCalculator.calculate(spec.child, parent_bounds)
 
   return {
     bounds = parent_bounds,
@@ -63,7 +62,7 @@ function LayoutCalculator:calculate_container(spec, parent_bounds)
   }
 end
 
-function LayoutCalculator:calculate_view(spec, parent_bounds)
+function LayoutCalculator.calculate_view(spec, parent_bounds)
   local allocated = {
     row = parent_bounds.row,
     col = parent_bounds.col,
@@ -80,7 +79,7 @@ function LayoutCalculator:calculate_view(spec, parent_bounds)
   }
 end
 
-function LayoutCalculator:calculate_flex(spec, parent_bounds)
+function LayoutCalculator.calculate_flex(spec, parent_bounds)
   local direction = spec.direction or 'horizontal'
   local gap = spec.gap or 0
   local children = spec.children or {}
@@ -188,7 +187,7 @@ function LayoutCalculator:calculate_flex(spec, parent_bounds)
 
     local child_bounds = parent_bounds:child_bounds(child, child_allocated)
 
-    local child_layout = self:calculate(child, child_bounds)
+    local child_layout = LayoutCalculator.calculate(child, child_bounds)
     table.insert(child_layouts, child_layout)
 
     current_pos = current_pos + child_size + gap
@@ -201,7 +200,7 @@ function LayoutCalculator:calculate_flex(spec, parent_bounds)
   }
 end
 
-function LayoutCalculator:calculate_absolute(spec, parent_bounds)
+function LayoutCalculator.calculate_absolute(spec, parent_bounds)
   local width = LayoutBounds.convert_dimension(spec.width, parent_bounds.width) or parent_bounds.width
   local height = LayoutBounds.convert_dimension(spec.height, parent_bounds.height) or parent_bounds.height
 
@@ -239,7 +238,7 @@ function LayoutCalculator:calculate_absolute(spec, parent_bounds)
 
   local children = {}
   if spec.child then
-    local child_layout = self:calculate(spec.child, bounds)
+    local child_layout = LayoutCalculator.calculate(spec.child, bounds)
     table.insert(children, child_layout)
   end
 

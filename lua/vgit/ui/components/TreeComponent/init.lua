@@ -98,10 +98,6 @@ function TreeComponent:get_parent_folder(segmented_folders, current_index)
   return self._depth_tree:get_parent_folder(segmented_folders, current_index)
 end
 
-function TreeComponent:normalize_entries(entries)
-  return self._depth_tree:normalize_entries(entries)
-end
-
 function TreeComponent:generate_tree(entries)
   self._depth_tree:from_entries(entries)
   return self._depth_tree:value()
@@ -277,6 +273,11 @@ function TreeComponent:generate_lines()
     for i = 1, #list do
       local item = list[i]
 
+      local value = item.value
+      local icon_before = item.icon_before
+      local icon_after = item.icon_after
+      local virtual_text = nil
+
       if item.entry and item.entry.status then
         local status = item.entry.status
         local filename = status.filename
@@ -284,26 +285,26 @@ function TreeComponent:generate_lines()
         local icon, icon_hl = icons.get(filename, filetype)
 
         if status.old_filename then
-          item.value = string.format(
+          value = string.format(
             '%s -> %s',
             self:get_display_name(status.old_filename),
             self:get_display_name(status.filename)
           )
         end
 
-        if icon then item.icon_before = {
+        if icon then icon_before = {
           icon = icon,
           hl = icon_hl,
         } end
 
-        item.virtual_text = {
+        virtual_text = {
           before = {
             text = status.value,
             hl = self:get_status_highlight(status),
           },
         }
       else
-        item.icon_before = function(node)
+        icon_before = function(node)
           return { icon = node.open and '' or '' }
         end
       end
@@ -317,10 +318,7 @@ function TreeComponent:generate_lines()
 
       self.state.shadow_list[current_lnum] = item
 
-      local value = item.value
       local items = item.items
-      local icon_before = item.icon_before
-      local icon_after = item.icon_after
       local icon_hl_range_offset = 0
 
       if items then spacing = 2 end
@@ -329,12 +327,12 @@ function TreeComponent:generate_lines()
 
       if items then icon_hl_range_offset = 3 end
 
-      if item.virtual_text then
+      if virtual_text then
         virtual_texts[#virtual_texts + 1] = {
           type = 'before',
-          hl = item.virtual_text.before.hl,
+          hl = virtual_text.before.hl,
           lnum = current_lnum,
-          text = item.virtual_text.before.text,
+          text = virtual_text.before.text,
         }
         indentation_count = indentation_count + 1
       end
@@ -409,11 +407,14 @@ function TreeComponent:generate_lines()
 
   if not self.state.list then return {} end
 
-  local processed_list = self.state.list
-  for i = 1, #processed_list do
-    local fold = processed_list[i]
+  local processed_list = {}
+  for i = 1, #self.state.list do
+    local fold = self.state.list[i]
     if fold.items and #fold.items > 0 and fold.items[1].status then
-      fold.items = self._depth_tree:from_entries(fold.items):sort():value()
+      local sorted_items = self._depth_tree:from_entries(fold.items):sort():value()
+      processed_list[i] = { value = fold.value, open = fold.open, items = sorted_items, entry = fold.entry }
+    else
+      processed_list[i] = fold
     end
   end
 

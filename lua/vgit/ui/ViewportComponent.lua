@@ -33,11 +33,4 @@ function ViewportComponent:ensure_renderer_attached(attach_fn)
   self._renderer_attached = true
 end
 
-function ViewportComponent:clear()
-  self:with_element(function(el)
-    el:clear_extmarks()
-    el:clear_lines()
-  end)
-end
-
 return ViewportComponent

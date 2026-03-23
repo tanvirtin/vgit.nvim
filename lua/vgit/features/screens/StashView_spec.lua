@@ -473,7 +473,7 @@ describe('StashView:', function()
     local diff_invariants = require('tests.helpers.diff_invariants')
     local Diff = require('vgit.core.diff.Diff')
     local GitHunk = require('vgit.git.GitHunk')
-    local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
+    local PatchLineBuilder = require('vgit.ui.components.PatchLineBuilder')
 
     local function make_hunk(header, diff_lines)
       local hunk = GitHunk(header)
@@ -609,8 +609,7 @@ describe('StashView:', function()
       local entries = view:_build_diff_file_entries_for_commit(make_commit('stash@{0}'))
 
       eq(2, #entries)
-      local component = PatchPreviewComponent({})
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       assert.is_true(#marks >= 2)
       diff_invariants.assert_patch_marks(marks, #lines)

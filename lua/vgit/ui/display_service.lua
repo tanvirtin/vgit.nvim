@@ -19,6 +19,7 @@ local CommitPickerView = lazy('vgit.features.screens.CommitPickerView')
 local active_view = nil
 local _events_registered = false
 local _event_cleanups = {}
+local _showing = false
 local display_service = {}
 
 function display_service.register_events()
@@ -40,22 +41,29 @@ function display_service.register_events()
 end
 
 local function show_view(ViewClass, data, name)
+  if _showing then return end
   if not data then
     console.error('No ' .. name .. ' data')
     return
   end
 
-  if active_view and active_view.destroy then
-    active_view:destroy()
-    active_view = nil
-  end
+  _showing = true
+  local ok, err = pcall(function()
+    if active_view and active_view.destroy then
+      active_view:destroy()
+      active_view = nil
+    end
 
-  event.await()
+    event.await()
 
-  local view = ViewClass()
-  local success = view:create(data)
-  if success == false then return end
-  active_view = view
+    local view = ViewClass()
+    local success = view:create(data)
+    if success == false then return end
+    active_view = view
+  end)
+  _showing = false
+
+  if not ok then error(err) end
 end
 
 display_service.show_diff = event.async(function(data)
@@ -179,10 +187,6 @@ function display_service.reset()
   end
   _event_cleanups = {}
   _events_registered = false
-end
-
-function display_service.cleanup()
-  display_service.reset()
 end
 
 return display_service

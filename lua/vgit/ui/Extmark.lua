@@ -30,8 +30,8 @@ function Extmark:constructor(bufnr, ns_name_extension)
   }
 end
 
-function Extmark:derive_id(col)
-  return col + 1
+function Extmark:derive_id(row)
+  return row + 1
 end
 
 function Extmark:highlight_pattern(opts)
@@ -153,10 +153,10 @@ function Extmark:lnum(opts)
   })
 end
 
-function Extmark:sign(sign)
-  local row = sign.row
-  local name = sign.name
-  local priority = sign.priority or get_sign_priority()
+function Extmark:sign(opts)
+  local row = opts.row
+  local name = opts.name
+  local priority = opts.priority or get_sign_priority()
 
   local id = self:derive_id(row)
   local sign_definition = get_sign_definition(name)

@@ -9,11 +9,7 @@ local DiffViewportComponent = lazy('vgit.ui.DiffViewportComponent')
 local DiffComponent = DiffViewportComponent:extend()
 
 function DiffComponent:constructor(props)
-  local instance = DiffViewportComponent.constructor(self, props)
-  instance._line_number_calculator = LineNumberCalculator()
-  instance._diff_annotator = DiffAnnotator()
-  instance._fold_calculator = FoldCalculator()
-  return instance
+  return DiffViewportComponent.constructor(self, props)
 end
 
 function DiffComponent:get_buf_options()
@@ -58,11 +54,11 @@ function DiffComponent:get_initial_state()
 end
 
 function DiffComponent:calculate_folds(diff, line_count)
-  return self._fold_calculator:calculate_folds(diff.marks or {}, line_count)
+  return FoldCalculator.calculate_folds(diff.marks or {}, line_count)
 end
 
 function DiffComponent:calculate_unified_line_numbers(diff)
-  return self._line_number_calculator:calculate_unified_line_numbers(diff)
+  return LineNumberCalculator.calculate_unified_line_numbers(diff)
 end
 
 function DiffComponent:build_diff_render_state(diff)
@@ -148,23 +144,19 @@ function DiffComponent:clear_lines()
 end
 
 function DiffComponent:render_viewport(top, bot)
-  top = top or 1
-  bot = bot or #self.state.lines_changes
-
   if self:is_viewport_unchanged(top, bot) then return end
 
-  -- Single with_element call for entire viewport — avoids per-line validity checks
   local rendered = self:with_element(function(el)
     local lines_changes = self.state.lines_changes
     local line_numbers = self.state.line_numbers
 
-    -- Render pre-padded line numbers for visible range
     if line_numbers and #line_numbers > 0 then
-      for i = top, math.min(bot, #line_numbers) do
-        local ln = line_numbers[i]
+      for row = top, bot do
+        local idx = row + 1
+        local ln = line_numbers[idx]
         if ln then
           el:place_extmark_lnum({
-            row = i - 1,
+            row = row,
             hl = ln[2],
             text = ln[1],
           })
@@ -172,15 +164,14 @@ function DiffComponent:render_viewport(top, bot)
       end
     end
 
-    -- Hoist void text computation — same for all void lines in this viewport
     local void_text
 
-    -- Render diff marks for visible range
-    for lnum = top, bot do
-      if lines_changes and lines_changes[lnum] then
-        local line_changes = lines_changes[lnum]
+    for row = top, bot do
+      local idx = row + 1
+      if lines_changes and lines_changes[idx] then
+        local line_changes = lines_changes[idx]
 
-        local line_marks = self._diff_annotator:annotate_line(line_changes)
+        local line_marks = DiffAnnotator.annotate_line(line_changes)
         if line_marks.sign then
           el:place_extmark_sign({
             row = line_marks.sign.row,
@@ -198,7 +189,7 @@ function DiffComponent:render_viewport(top, bot)
           })
         end
 
-        local word_marks = self._diff_annotator:annotate_word(line_changes, lnum)
+        local word_marks = DiffAnnotator.annotate_word(line_changes, idx)
         if word_marks then
           el:place_extmark_text({
             row = word_marks.row,
@@ -215,23 +206,15 @@ function DiffComponent:render_viewport(top, bot)
   if rendered then self:commit_viewport(top, bot) end
 end
 
-function DiffComponent:_ensure_renderer_attached()
-  self:ensure_renderer_attached(function()
-    self:attach_to_renderer(function(top, bot)
-      self:render_viewport(top, bot + 1)
-    end)
-  end)
-end
-
 function DiffComponent:render_folds()
   local folds = self.state.folds
   if #folds == 0 then return self end
-  self._fold_calculator:apply_folds(self, folds)
+  FoldCalculator.apply_folds(self, folds)
   return self
 end
 
 function DiffComponent:clear_folds()
-  self._fold_calculator:clear_folds(self)
+  FoldCalculator.clear_folds(self)
   return self
 end
 

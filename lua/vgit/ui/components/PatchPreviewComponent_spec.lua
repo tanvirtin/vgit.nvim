@@ -1,4 +1,5 @@
 local ui_helper = require('tests.helpers.ui')
+local PatchLineBuilder = require('vgit.ui.components.PatchLineBuilder')
 
 local eq = assert.are.same
 
@@ -59,7 +60,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, line_metadata, file_sections, marks = component:build_patch_lines_from_entries(entries)
+      local lines, line_metadata, file_sections, marks = PatchLineBuilder.build(entries)
 
       -- File header produces: separator, filename, separator
       eq(3, #lines)
@@ -101,7 +102,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, line_metadata, file_sections, marks = component:build_patch_lines_from_entries(entries)
+      local lines, line_metadata, file_sections, marks = PatchLineBuilder.build(entries)
 
       -- 3 (file header) + 1 (hunk header) + 4 (diff lines) = 8
       -- trailing blank is removed
@@ -172,7 +173,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, line_metadata, file_sections, marks = component:build_patch_lines_from_entries(entries)
+      local lines, line_metadata, file_sections, marks = PatchLineBuilder.build(entries)
 
       -- Should have 3 marks (3 hunks)
       eq(3, #marks)
@@ -205,7 +206,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, line_metadata = component:build_patch_lines_from_entries(entries)
+      local lines, line_metadata = PatchLineBuilder.build(entries)
 
       -- Find the diff content lines
       local found_code = false
@@ -217,7 +218,7 @@ describe('PatchPreviewComponent:', function()
 
     it('should handle empty entries', function()
       local component = create_patch_preview({})
-      local lines, line_metadata, file_sections, marks = component:build_patch_lines_from_entries({})
+      local lines, line_metadata, file_sections, marks = PatchLineBuilder.build({})
 
       eq(0, #lines)
       eq(0, #marks)
@@ -225,7 +226,7 @@ describe('PatchPreviewComponent:', function()
 
     it('should handle nil entries', function()
       local component = create_patch_preview({})
-      local lines, line_metadata, file_sections, marks = component:build_patch_lines_from_entries(nil)
+      local lines, line_metadata, file_sections, marks = PatchLineBuilder.build(nil)
 
       eq(0, #lines)
       eq(0, #marks)
@@ -250,7 +251,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines = component:build_patch_lines_from_entries(entries)
+      local lines = PatchLineBuilder.build(entries)
 
       -- Last line should not be empty (trailing blank removed)
       assert.are_not.equal('', lines[#lines])
@@ -284,7 +285,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, _, _, _, line_numbers = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, _, line_numbers = PatchLineBuilder.build(entries)
 
       eq(#lines, #line_numbers)
 
@@ -310,7 +311,7 @@ describe('PatchPreviewComponent:', function()
 
     it('should return empty line numbers for empty entries', function()
       local component = create_patch_preview({})
-      local _, _, _, _, line_numbers = component:build_patch_lines_from_entries({})
+      local _, _, _, _, line_numbers = PatchLineBuilder.build({})
       eq(0, #line_numbers)
     end)
 
@@ -337,7 +338,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local _, _, _, _, line_numbers = component:build_patch_lines_from_entries(entries)
+      local _, _, _, _, line_numbers = PatchLineBuilder.build(entries)
 
       -- Context line is at index 5 (3 file header lines + 1 hunk header + 1 context)
       -- Should show line 20 (current start from hunk header)
@@ -356,7 +357,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local _, _, _, _, line_numbers = component:build_patch_lines_from_entries(entries)
+      local _, _, _, _, line_numbers = PatchLineBuilder.build(entries)
 
       -- All 3 file header lines should be GitLineNr
       for i = 1, #line_numbers do
@@ -843,7 +844,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       eq(1, #marks)
       assert.is_true(marks[1].top >= 1)
@@ -880,7 +881,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local _, line_metadata, _, marks = component:build_patch_lines_from_entries(entries)
+      local _, line_metadata, _, marks = PatchLineBuilder.build(entries)
 
       local mark = marks[1]
       local mark_has_change = false
@@ -929,7 +930,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       eq(2, #marks)
       assert.is_true(marks[1].bot < marks[2].top)
@@ -973,7 +974,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       eq(2, #marks)
       assert.is_true(marks[1].bot < marks[2].top)
@@ -1016,7 +1017,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local _, line_metadata, _, marks = component:build_patch_lines_from_entries(entries)
+      local _, line_metadata, _, marks = PatchLineBuilder.build(entries)
 
       eq(2, #marks)
 
@@ -1075,7 +1076,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       assert.is_true(#marks > 0, 'should produce at least one mark')
       invariants.assert_patch_marks(marks, #lines)
@@ -1098,7 +1099,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       assert.is_true(#marks > 0)
       invariants.assert_patch_marks(marks, #lines)
@@ -1124,7 +1125,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local _, line_metadata = component:build_patch_lines_from_entries(entries)
+      local _, line_metadata = PatchLineBuilder.build(entries)
 
       local found_word_diff = false
       for _, meta in pairs(line_metadata) do
@@ -1152,7 +1153,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, _, _, _, line_numbers = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, _, line_numbers = PatchLineBuilder.build(entries)
 
       eq(#lines, #line_numbers)
     end)
@@ -1184,7 +1185,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       assert.is_true(#marks >= 2, 'should produce marks for each file')
       invariants.assert_patch_marks(marks, #lines)
@@ -1209,7 +1210,7 @@ describe('PatchPreviewComponent:', function()
         },
       }
 
-      local _, line_metadata = component:build_patch_lines_from_entries(entries)
+      local _, line_metadata = PatchLineBuilder.build(entries)
 
       -- Check that remove type is preserved
       local found_remove = false

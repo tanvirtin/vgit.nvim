@@ -10,6 +10,7 @@ function SyntaxAnnotator:constructor()
     _cache = {},
     _cache_max = 50,
     _cache_order = {},
+    _scratch_buffer = nil,
   }
 end
 
@@ -34,6 +35,12 @@ end
 function SyntaxAnnotator:clear_cache()
   self._cache = {}
   self._cache_order = {}
+end
+
+function SyntaxAnnotator:dispose()
+  if self._scratch_buffer and self._scratch_buffer:is_valid() then self._scratch_buffer:delete() end
+  self._scratch_buffer = nil
+  self:clear_cache()
 end
 
 function SyntaxAnnotator:_parse_highlights(scratch_buffer, filetype)
@@ -79,17 +86,17 @@ function SyntaxAnnotator:annotate(lines, filetype)
   local key = self:_cache_key(lines, filetype)
   if key and self._cache[key] then return self._cache[key] end
 
-  local scratch_buffer = Buffer():create(false, true)
+  if not self._scratch_buffer or not self._scratch_buffer:is_valid() then
+    self._scratch_buffer = Buffer():create(false, true)
+  end
+
+  local scratch_buffer = self._scratch_buffer
   scratch_buffer:set_lines(lines)
-  if filetype and filetype ~= '' then scratch_buffer:set_option('filetype', filetype) end
+  scratch_buffer:set_option('filetype', filetype)
 
   local highlights = self:_parse_highlights(scratch_buffer, filetype)
 
   if key then self:_cache_put(key, highlights) end
-
-  vim.schedule(function()
-    if scratch_buffer:is_valid() then scratch_buffer:delete({ force = true }) end
-  end)
 
   return highlights
 end

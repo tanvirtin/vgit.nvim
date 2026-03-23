@@ -3,16 +3,10 @@ local DiffStyleAnnotator = require('vgit.ui.annotators.DiffStyleAnnotator')
 local eq = assert.are.same
 
 describe('DiffStyleAnnotator:', function()
-  local annotator
-
-  before_each(function()
-    annotator = DiffStyleAnnotator()
-  end)
-
   describe('_annotate_header', function()
     it('should produce highlights for standard hunk header', function()
       local line = '@@ -1,3 +1,5 @@'
-      local highlights = annotator:_annotate_header(line, 0)
+      local highlights = DiffStyleAnnotator._annotate_header(line, 0)
 
       -- Should have at least: background, opening @@, minus range, plus range, closing @@
       assert.is_true(#highlights >= 4)
@@ -30,7 +24,7 @@ describe('DiffStyleAnnotator:', function()
 
     it('should highlight minus range', function()
       local line = '@@ -10,3 +20,5 @@'
-      local highlights = annotator:_annotate_header(line, 5)
+      local highlights = DiffStyleAnnotator._annotate_header(line, 5)
 
       local found_remove = false
       for _, hl in ipairs(highlights) do
@@ -44,7 +38,7 @@ describe('DiffStyleAnnotator:', function()
 
     it('should highlight plus range', function()
       local line = '@@ -10,3 +20,5 @@'
-      local highlights = annotator:_annotate_header(line, 0)
+      local highlights = DiffStyleAnnotator._annotate_header(line, 0)
 
       local found_add = false
       for _, hl in ipairs(highlights) do
@@ -71,7 +65,7 @@ describe('DiffStyleAnnotator:', function()
         [5] = { type = 'code', lnum_change = { type = 'remove' } },
       }
 
-      local highlights = annotator:annotate(lines, line_metadata)
+      local highlights = DiffStyleAnnotator.annotate(lines, line_metadata)
 
       -- Check separator highlights
       local sep_count = 0
@@ -104,7 +98,7 @@ describe('DiffStyleAnnotator:', function()
         [1] = { type = 'code', is_header = true },
       }
 
-      local highlights = annotator:annotate(lines, line_metadata)
+      local highlights = DiffStyleAnnotator.annotate(lines, line_metadata)
 
       local found_header = false
       for _, hl in ipairs(highlights) do
@@ -117,7 +111,7 @@ describe('DiffStyleAnnotator:', function()
       local lines = { 'some line' }
       local line_metadata = {}
 
-      local highlights = annotator:annotate(lines, line_metadata)
+      local highlights = DiffStyleAnnotator.annotate(lines, line_metadata)
       eq(0, #highlights)
     end)
   end)

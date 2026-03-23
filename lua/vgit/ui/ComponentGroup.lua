@@ -45,7 +45,7 @@ function ComponentGroup:get_mounted_components()
   return self.mounted_components
 end
 
-function ComponentGroup:is_mounted(component)
+function ComponentGroup:has(component)
   for _, mounted_component in ipairs(self.mounted_components) do
     if mounted_component == component then return true end
   end

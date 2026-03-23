@@ -515,7 +515,7 @@ describe('Component:', function()
       assert.is_table(instance.children.child.props)
     end)
 
-    it('should not unmount children (View handles that)', function()
+    it('should unmount children when parent unmounts', function()
       local ChildComponent = Component({})
       local ParentComponent = Component({
         children = { child = ChildComponent },
@@ -528,7 +528,7 @@ describe('Component:', function()
 
       instance:unmount()
 
-      assert.is_true(child._mounted)
+      assert.is_false(child._mounted)
     end)
 
     it('should call layout() for get_layout_spec', function()

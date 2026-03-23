@@ -237,10 +237,9 @@ function SearchComponent:_load_more_items()
       return
     end
 
-    local items = self.props.items or {}
-    for i = 1, #new_items do
-      items[#items + 1] = new_items[i]
-    end
+    local items = vim.list_extend({}, self.props.items or {})
+    vim.list_extend(items, new_items)
+    self.props.items = items
 
     local prev_visible = self.state.visible_count or 0
     local prev_index = self.state.selected_index

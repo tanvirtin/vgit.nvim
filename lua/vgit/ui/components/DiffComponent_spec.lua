@@ -597,13 +597,13 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      -- Render only lines 2-4 (viewport)
-      component:render_viewport(2, 4)
+      -- Render rows 1-3 (0-indexed), which map to line_numbers[2..4]
+      component:render_viewport(1, 3)
 
       eq(3, #lnum_calls)
-      eq(1, lnum_calls[1].row) -- line 2, 0-indexed
-      eq(2, lnum_calls[2].row) -- line 3, 0-indexed
-      eq(3, lnum_calls[3].row) -- line 4, 0-indexed
+      eq(1, lnum_calls[1].row) -- row 1 (0-indexed)
+      eq(2, lnum_calls[2].row) -- row 2 (0-indexed)
+      eq(3, lnum_calls[3].row) -- row 3 (0-indexed)
     end)
 
     it('should not render line numbers when line_numbers is empty', function()
@@ -625,7 +625,7 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      component:render_viewport(1, 5)
+      component:render_viewport(0, 4)
       eq(0, #lnum_calls)
     end)
 
@@ -651,8 +651,8 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      -- Request range beyond line_numbers length
-      component:render_viewport(1, 100)
+      -- Request range beyond line_numbers length (0-indexed)
+      component:render_viewport(0, 99)
       eq(2, #lnum_calls)
     end)
   end)
@@ -681,12 +681,12 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      -- First call should render
-      component:render_viewport(1, 3)
+      -- First call should render (0-indexed)
+      component:render_viewport(0, 2)
       eq(3, #lnum_calls)
 
       -- Second call with same range should skip (no new calls)
-      component:render_viewport(1, 3)
+      component:render_viewport(0, 2)
       eq(3, #lnum_calls)
     end)
 
@@ -715,11 +715,11 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      component:render_viewport(1, 3)
+      component:render_viewport(0, 2)
       eq(3, #lnum_calls)
 
-      -- Different range should render
-      component:render_viewport(3, 5)
+      -- Different range should render (0-indexed)
+      component:render_viewport(2, 4)
       eq(6, #lnum_calls)
     end)
 
@@ -745,12 +745,12 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      component:render_viewport(1, 2)
+      component:render_viewport(0, 1)
       eq(2, #lnum_calls)
 
       -- Mark dirty and re-render same range
       component._viewport_dirty = true
-      component:render_viewport(1, 2)
+      component:render_viewport(0, 1)
       eq(4, #lnum_calls)
     end)
   end)

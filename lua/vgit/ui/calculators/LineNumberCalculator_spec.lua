@@ -4,17 +4,11 @@ local symbols_setting = require('vgit.settings.symbols')
 local eq = assert.are.same
 
 describe('LineNumberCalculator:', function()
-  local calc
-
-  before_each(function()
-    calc = LineNumberCalculator()
-  end)
-
   describe('_calculate_line_numbers', function()
     it('should produce numbered lines for normal lines', function()
       local lines = { 'a', 'b', 'c' }
       local lnum_change_map = {}
-      local result, changes = calc:_calculate_line_numbers(lines, lnum_change_map)
+      local result, changes = LineNumberCalculator._calculate_line_numbers(lines, lnum_change_map)
 
       assert.are.equal(3, #result)
       assert.are.equal('1 ', result[1][1])
@@ -29,7 +23,7 @@ describe('LineNumberCalculator:', function()
       local lnum_change_map = {
         [2] = { type = 'void' },
       }
-      local result = calc:_calculate_line_numbers(lines, lnum_change_map)
+      local result = LineNumberCalculator._calculate_line_numbers(lines, lnum_change_map)
 
       assert.are.equal(3, #result)
       assert.are.equal('1 ', result[1][1])
@@ -45,7 +39,7 @@ describe('LineNumberCalculator:', function()
       local lnum_change_map = {
         [2] = { type = 'add' },
       }
-      local result = calc:_calculate_line_numbers(lines, lnum_change_map)
+      local result = LineNumberCalculator._calculate_line_numbers(lines, lnum_change_map)
 
       assert.are.equal('GitLineNr', result[1][2])
       assert.are.equal('GitSignsAdd', result[2][2])
@@ -56,7 +50,7 @@ describe('LineNumberCalculator:', function()
       local lnum_change_map = {
         [2] = { type = 'remove' },
       }
-      local result = calc:_calculate_line_numbers(lines, lnum_change_map)
+      local result = LineNumberCalculator._calculate_line_numbers(lines, lnum_change_map)
 
       assert.are.equal('GitSignsDelete', result[2][2])
     end)
@@ -66,7 +60,7 @@ describe('LineNumberCalculator:', function()
       local lnum_change_map = {
         [2] = { type = 'add' },
       }
-      local result = calc:_calculate_line_numbers(lines, lnum_change_map)
+      local result = LineNumberCalculator._calculate_line_numbers(lines, lnum_change_map)
 
       assert.are.equal('1 ', result[1][1])
       assert.are.equal('2 ', result[2][1])
@@ -78,7 +72,7 @@ describe('LineNumberCalculator:', function()
       local lnum_change_map = {
         [2] = { type = 'void' },
       }
-      local result = calc:_calculate_line_numbers(lines, lnum_change_map)
+      local result = LineNumberCalculator._calculate_line_numbers(lines, lnum_change_map)
 
       assert.are.equal('1 ', result[1][1])
       -- void does not increment
@@ -91,7 +85,7 @@ describe('LineNumberCalculator:', function()
       local lnum_change_map = {
         [1] = { type = 'add' },
       }
-      local _, changes = calc:_calculate_line_numbers(lines, lnum_change_map)
+      local _, changes = LineNumberCalculator._calculate_line_numbers(lines, lnum_change_map)
 
       assert.are.equal(2, #changes)
       assert.is_not_nil(changes[1].line_number)
@@ -102,7 +96,7 @@ describe('LineNumberCalculator:', function()
     it('should handle empty lines', function()
       local lines = {}
       local lnum_change_map = {}
-      local result = calc:_calculate_line_numbers(lines, lnum_change_map)
+      local result = LineNumberCalculator._calculate_line_numbers(lines, lnum_change_map)
 
       assert.are.equal(0, #result)
     end)
@@ -110,7 +104,7 @@ describe('LineNumberCalculator:', function()
     it('should start from custom line_count_start', function()
       local lines = { 'a', 'b' }
       local lnum_change_map = {}
-      local result = calc:_calculate_line_numbers(lines, lnum_change_map, 10)
+      local result = LineNumberCalculator._calculate_line_numbers(lines, lnum_change_map, 10)
 
       assert.are.equal('10 ', result[1][1])
       assert.are.equal('11 ', result[2][1])
@@ -125,7 +119,7 @@ describe('LineNumberCalculator:', function()
           { lnum = 2, type = 'remove', buftype = 'current' },
         },
       }
-      local result = calc:calculate_unified_line_numbers(diff)
+      local result = LineNumberCalculator.calculate_unified_line_numbers(diff)
 
       assert.are.equal(3, #result)
       assert.are.equal('1 ', result[1][1])
@@ -141,7 +135,7 @@ describe('LineNumberCalculator:', function()
           { lnum = 2, type = 'add', buftype = 'current' },
         },
       }
-      local result = calc:calculate_unified_line_numbers(diff)
+      local result = LineNumberCalculator.calculate_unified_line_numbers(diff)
 
       assert.are.equal('1 ', result[1][1])
       assert.are.equal('2 ', result[2][1])
@@ -157,7 +151,7 @@ describe('LineNumberCalculator:', function()
           { lnum = 2, type = 'add', buftype = 'current' },
         },
       }
-      local result = calc:calculate_unified_line_numbers(diff)
+      local result = LineNumberCalculator.calculate_unified_line_numbers(diff)
 
       assert.are.equal('  ', result[1][1])
       assert.are.equal('1 ', result[2][1])
@@ -166,7 +160,7 @@ describe('LineNumberCalculator:', function()
 
     it('should handle empty diff', function()
       local diff = { lines = {}, lnum_changes = {} }
-      local result, changes = calc:calculate_unified_line_numbers(diff)
+      local result, changes = LineNumberCalculator.calculate_unified_line_numbers(diff)
 
       assert.are.equal(0, #result)
       assert.are.equal(0, #changes)
@@ -179,7 +173,7 @@ describe('LineNumberCalculator:', function()
           { lnum = 1, type = 'add', buftype = 'current' },
         },
       }
-      local _, changes = calc:calculate_unified_line_numbers(diff)
+      local _, changes = LineNumberCalculator.calculate_unified_line_numbers(diff)
 
       assert.are.equal(2, #changes)
       assert.is_not_nil(changes[1].lnum_change)
@@ -198,7 +192,7 @@ describe('LineNumberCalculator:', function()
           { lnum = 1, type = 'void', buftype = 'previous' },
         },
       }
-      local result = calc:calculate_split_line_numbers(diff)
+      local result = LineNumberCalculator.calculate_split_line_numbers(diff)
 
       assert.is_not_nil(result.current)
       assert.is_not_nil(result.previous)
@@ -215,7 +209,7 @@ describe('LineNumberCalculator:', function()
           { lnum = 1, type = 'void', buftype = 'previous' },
         },
       }
-      local result = calc:calculate_split_line_numbers(diff)
+      local result = LineNumberCalculator.calculate_split_line_numbers(diff)
 
       assert.are.equal('GitSignsAdd', result.current.lines[1][2])
     end)
@@ -230,7 +224,7 @@ describe('LineNumberCalculator:', function()
           { lnum = 1, type = 'void', buftype = 'previous' },
         },
       }
-      local result = calc:calculate_split_line_numbers(diff)
+      local result = LineNumberCalculator.calculate_split_line_numbers(diff)
 
       assert.truthy(result.previous.lines[1][1]:match(vim.pesc(void_symbol)))
     end)
@@ -244,7 +238,7 @@ describe('LineNumberCalculator:', function()
           { lnum = 1, type = 'remove', buftype = 'previous' },
         },
       }
-      local result = calc:calculate_split_line_numbers(diff)
+      local result = LineNumberCalculator.calculate_split_line_numbers(diff)
 
       assert.are.equal('GitSignsDelete', result.previous.lines[1][2])
     end)
@@ -255,7 +249,7 @@ describe('LineNumberCalculator:', function()
         previous_lines = {},
         lnum_changes = {},
       }
-      local result = calc:calculate_split_line_numbers(diff)
+      local result = LineNumberCalculator.calculate_split_line_numbers(diff)
 
       assert.are.equal(0, #result.current.lines)
       assert.are.equal(0, #result.previous.lines)
@@ -267,7 +261,7 @@ describe('LineNumberCalculator:', function()
         previous_lines = { 'a' },
         lnum_changes = {},
       }
-      local result = calc:calculate_split_line_numbers(diff)
+      local result = LineNumberCalculator.calculate_split_line_numbers(diff)
 
       assert.are.equal(1, #result.current.changes)
       assert.are.equal(1, #result.previous.changes)

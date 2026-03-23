@@ -106,7 +106,7 @@ local function cleanup()
   live_blame:cleanup()
   live_gutter:cleanup()
   live_conflict:cleanup()
-  display_service.cleanup()
+  display_service.reset()
 end
 
 local function register_modules()
