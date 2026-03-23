@@ -5,7 +5,6 @@ local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
-local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local display_service = lazy('vgit.ui.display_service')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 

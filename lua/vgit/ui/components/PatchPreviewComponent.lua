@@ -41,15 +41,15 @@ local function advance_source_counters(lnum_change_map, from, to)
   for i = from, to do
     local lc = lnum_change_map[i]
     local ct = lc and lc.type or nil
-    if ct == 'void' then
-      -- no counter advance
-    elseif ct == 'remove' then
-      orig_delta = orig_delta + 1
-    elseif ct == 'add' then
-      curr_delta = curr_delta + 1
-    else
-      orig_delta = orig_delta + 1
-      curr_delta = curr_delta + 1
+    if ct ~= 'void' then
+      if ct == 'remove' then
+        orig_delta = orig_delta + 1
+      elseif ct == 'add' then
+        curr_delta = curr_delta + 1
+      else
+        orig_delta = orig_delta + 1
+        curr_delta = curr_delta + 1
+      end
     end
   end
   return orig_delta, curr_delta
@@ -334,18 +334,18 @@ local function process_diff_file(ctx, entry)
       }
 
       local syntax_mapping
-      if change_type == 'void' then
-        -- no mapping, no counter increment
-      elseif change_type == 'remove' then
-        syntax_mapping = { source = 'original', source_line = ctx.orig_lnum, display_row = display_row }
-        ctx.orig_lnum = ctx.orig_lnum + 1
-      elseif change_type == 'add' then
-        syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
-        ctx.curr_lnum = ctx.curr_lnum + 1
-      else
-        syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
-        ctx.orig_lnum = ctx.orig_lnum + 1
-        ctx.curr_lnum = ctx.curr_lnum + 1
+      if change_type ~= 'void' then
+        if change_type == 'remove' then
+          syntax_mapping = { source = 'original', source_line = ctx.orig_lnum, display_row = display_row }
+          ctx.orig_lnum = ctx.orig_lnum + 1
+        elseif change_type == 'add' then
+          syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
+          ctx.curr_lnum = ctx.curr_lnum + 1
+        else
+          syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
+          ctx.orig_lnum = ctx.orig_lnum + 1
+          ctx.curr_lnum = ctx.curr_lnum + 1
+        end
       end
 
       local lnum_val

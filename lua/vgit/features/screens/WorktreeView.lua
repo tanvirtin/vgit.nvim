@@ -7,7 +7,6 @@ local console = lazy('vgit.core.console')
 local git_repo = lazy('vgit.git.git_repo')
 local repository = lazy('vgit.git.repository')
 local git_worktree = lazy('vgit.git.git_worktree')
-local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
 local WorktreeView = View:extend()

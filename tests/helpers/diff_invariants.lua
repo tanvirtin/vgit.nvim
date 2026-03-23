@@ -6,7 +6,7 @@ end
 
 function M.assert_marks_ascending(marks)
   for i = 2, #marks do
-    if not (marks[i].top > marks[i - 1].bot) then
+    if marks[i].top <= marks[i - 1].bot then
       fail(string.format('marks[%d].top (%d) should be > marks[%d].bot (%d)', i, marks[i].top, i - 1, marks[i - 1].bot))
     end
   end

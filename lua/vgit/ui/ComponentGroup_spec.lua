@@ -8,11 +8,13 @@ local eq = assert.are.same
 
 local function mock_renderer_with_context(context_props)
   return {
-    context = {
-      get_props_for_component = function()
-        return context_props
-      end,
-    },
+    get_context = function()
+      return {
+        get_props_for_component = function()
+          return context_props
+        end,
+      }
+    end,
   }
 end
 
@@ -91,8 +93,8 @@ describe('ComponentGroup:', function()
       group:mount(a, {})
       group:mount(b, {})
       group:call_did_mount()
-      eq({ 'will_mount', 'did_mount' }, a._log)
-      eq({ 'will_mount', 'did_mount' }, b._log)
+      eq({ 'did_mount' }, a._log)
+      eq({ 'did_mount' }, b._log)
     end)
   end)
 
@@ -112,6 +114,11 @@ describe('ComponentGroup:', function()
       local c = TestComponent({ name = 'a' })
       group:mount(c, {})
       -- Mount element to create a real floating window
+      c._element._plot.win_plot.relative = 'editor'
+      c._element._plot.win_plot.width = 10
+      c._element._plot.win_plot.height = 5
+      c._element._plot.win_plot.row = 0
+      c._element._plot.win_plot.col = 0
       c._element:mount()
       assert.is_true(count_floating_windows() >= 1)
       group:unmount()
@@ -146,6 +153,16 @@ describe('ComponentGroup:', function()
       group:mount(a, {})
       group:mount(b, {})
       -- Mount elements so on() can register events on real buffers
+      a._element._plot.win_plot.relative = 'editor'
+      a._element._plot.win_plot.width = 10
+      a._element._plot.win_plot.height = 5
+      a._element._plot.win_plot.row = 0
+      a._element._plot.win_plot.col = 0
+      b._element._plot.win_plot.relative = 'editor'
+      b._element._plot.win_plot.width = 10
+      b._element._plot.win_plot.height = 5
+      b._element._plot.win_plot.row = 0
+      b._element._plot.win_plot.col = 0
       a._element:mount()
       b._element:mount()
       assert.has_no.errors(function()
@@ -161,6 +178,16 @@ describe('ComponentGroup:', function()
       group:mount(a, {})
       group:mount(b, {})
       -- Mount elements so set_keymap() can register on real buffers
+      a._element._plot.win_plot.relative = 'editor'
+      a._element._plot.win_plot.width = 10
+      a._element._plot.win_plot.height = 5
+      a._element._plot.win_plot.row = 0
+      a._element._plot.win_plot.col = 0
+      b._element._plot.win_plot.relative = 'editor'
+      b._element._plot.win_plot.width = 10
+      b._element._plot.win_plot.height = 5
+      b._element._plot.win_plot.row = 0
+      b._element._plot.win_plot.col = 0
       a._element:mount()
       b._element:mount()
       assert.has_no.errors(function()

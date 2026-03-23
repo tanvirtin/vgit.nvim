@@ -158,10 +158,10 @@ describe('FileDiffView:', function()
       setup_view_mocks()
     end)
 
-    describe('_reconcile', function()
+    describe('_refresh_diff', function()
       it('should return false when diff_component is nil', function()
         view._diff_component = nil
-        local result = view:_reconcile()
+        local result = view:_refresh_diff()
         assert.is_false(result)
       end)
 
@@ -169,7 +169,7 @@ describe('FileDiffView:', function()
         mock_diff.is_valid = function()
           return false
         end
-        local result = view:_reconcile()
+        local result = view:_refresh_diff()
         assert.is_false(result)
       end)
 
@@ -189,7 +189,7 @@ describe('FileDiffView:', function()
           props_set = props
         end
 
-        view:_reconcile()
+        view:_refresh_diff()
 
         assert.is_true(refresh_called)
         assert.is_not_nil(props_set)
@@ -201,7 +201,7 @@ describe('FileDiffView:', function()
         view._refresh_diff_data = function()
           return nil
         end
-        local result = view:_reconcile()
+        local result = view:_refresh_diff()
         assert.is_false(result)
       end)
 
@@ -218,7 +218,7 @@ describe('FileDiffView:', function()
           moved_to = idx
         end
 
-        view:_reconcile({ hunk_index = 3 })
+        view:_refresh_diff({ hunk_index = 3 })
 
         eq(3, moved_to)
       end)
@@ -236,7 +236,7 @@ describe('FileDiffView:', function()
           move_called = true
         end
 
-        view:_reconcile()
+        view:_refresh_diff()
 
         assert.is_false(move_called)
       end)
@@ -250,15 +250,15 @@ describe('FileDiffView:', function()
           }
         end
 
-        local result = view:_reconcile()
+        local result = view:_refresh_diff()
         assert.is_true(result)
       end)
     end)
 
     describe('toggle_view', function()
-      it('should call _reconcile with hunk_index 1', function()
+      it('should call _refresh_diff with hunk_index 1', function()
         local reconcile_opts = nil
-        view._reconcile = function(_, opts)
+        view._refresh_diff = function(_, opts)
           reconcile_opts = opts
           return true
         end
@@ -271,7 +271,7 @@ describe('FileDiffView:', function()
       end)
 
       it('should revert is_staged on failure', function()
-        view._reconcile = function()
+        view._refresh_diff = function()
           return false
         end
         view._opts.is_staged = false
@@ -282,7 +282,7 @@ describe('FileDiffView:', function()
       end)
 
       it('should keep is_staged flipped on success', function()
-        view._reconcile = function()
+        view._refresh_diff = function()
           return true
         end
         view._opts.is_staged = false
@@ -292,9 +292,9 @@ describe('FileDiffView:', function()
         assert.is_true(view._opts.is_staged)
       end)
 
-      it('should not call _reconcile when filename is nil', function()
+      it('should not call _refresh_diff when filename is nil', function()
         local reconcile_called = false
-        view._reconcile = function()
+        view._refresh_diff = function()
           reconcile_called = true
           return true
         end
@@ -307,14 +307,14 @@ describe('FileDiffView:', function()
     end)
 
     describe('reset_current', function()
-      it('should call _reconcile after repo:reset', function()
+      it('should call _refresh_diff after repo:reset', function()
         local reset_called = false
         local reconcile_called = false
 
         mock_repo.reset = function()
           reset_called = true
         end
-        view._reconcile = function()
+        view._refresh_diff = function()
           reconcile_called = true
           return true
         end
@@ -337,7 +337,7 @@ describe('FileDiffView:', function()
         mock_repo.reset = function()
           reset_called = true
         end
-        view._reconcile = function()
+        view._refresh_diff = function()
           reconcile_called = true
           return true
         end
@@ -348,9 +348,9 @@ describe('FileDiffView:', function()
         assert.is_true(reconcile_called)
       end)
 
-      it('should not call _reconcile when is_staged', function()
+      it('should not call _refresh_diff when is_staged', function()
         local reconcile_called = false
-        view._reconcile = function()
+        view._refresh_diff = function()
           reconcile_called = true
           return true
         end

@@ -33,34 +33,6 @@ local git_buffer_store_stub = {
   for_each = function() end,
 }
 
-local navigation_up_called = false
-local navigation_up_args = {}
-local navigation_down_called = false
-local navigation_down_args = {}
-local navigation_stub = {
-  up = function(window, hunks)
-    navigation_up_called = true
-    navigation_up_args = { window = window, hunks = hunks }
-  end,
-  down = function(window, hunks)
-    navigation_down_called = true
-    navigation_down_args = { window = window, hunks = hunks }
-  end,
-}
-
-local console_error_called = false
-local console_error_msg = nil
-local console_stub = {
-  debug = {
-    error = function(msg)
-      console_error_called = true
-      console_error_msg = msg
-    end,
-  },
-  error = function() end,
-  info = function() end,
-}
-
 local event_stub = require('tests.helpers.mock_event').create()
 
 local window_lnum = 1
@@ -84,6 +56,48 @@ local Window_stub = setmetatable({}, {
     return window_instance
   end,
 })
+
+local navigation_up_called = false
+local navigation_up_args = {}
+local navigation_down_called = false
+local navigation_down_args = {}
+local navigation_stub = {
+  up = function(window, hunks)
+    navigation_up_called = true
+    navigation_up_args = { window = window, hunks = hunks }
+  end,
+  down = function(window, hunks)
+    navigation_down_called = true
+    navigation_down_args = { window = window, hunks = hunks }
+  end,
+  current_window = function()
+    return window_instance
+  end,
+  get_current_lnum = function()
+    return window_lnum
+  end,
+  get_current_cursor = function()
+    return { window_lnum, 0 }
+  end,
+  set_current_lnum = function(lnum)
+    window_lnum = lnum
+    window_set_lnum_called = true
+    window_set_lnum_value = lnum
+  end,
+}
+
+local console_error_called = false
+local console_error_msg = nil
+local console_stub = {
+  debug = {
+    error = function(msg)
+      console_error_called = true
+      console_error_msg = msg
+    end,
+  },
+  error = function() end,
+  info = function() end,
+}
 
 -- Install stubs BEFORE requiring Hunks
 package.loaded['vgit.core.event'] = event_stub
@@ -145,6 +159,7 @@ local function make_mock_buffer(opts)
   function buffer:is_valid()
     return opts.is_valid ~= false
   end
+  function buffer:save() end
   return buffer
 end
 

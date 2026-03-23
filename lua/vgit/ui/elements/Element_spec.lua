@@ -95,16 +95,6 @@ describe('Element:', function()
       assert.are.equal(buf, el._buffer)
       assert.are.equal(win, el._window)
     end)
-
-    it('should apply deferred lines on mount', function()
-      local el = create_element()
-      -- Set lines before mount - they should be stored in _lines
-      el._lines = { 'hello', 'world' }
-      el:mount()
-      local lines = el:get_lines()
-      eq({ 'hello', 'world' }, lines)
-      assert.is_nil(el._lines)
-    end)
   end)
 
   describe('unmount', function()

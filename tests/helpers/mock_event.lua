@@ -23,6 +23,12 @@ function M.create(overrides)
     end,
     group = 'VGitGroup',
     register_module = function() end,
+    defer = function(fn, ms)
+      if type(fn) == 'function' then fn() end
+    end,
+    disposable_on = function()
+      return function() end
+    end,
   }
 
   if overrides then
