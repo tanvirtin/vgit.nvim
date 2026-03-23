@@ -1,10 +1,6 @@
-local lazy = require('vgit.core.lazy')
+local FoldCalculator = {}
 
-local Object = lazy('vgit.core.Object')
-
-local FoldCalculator = Object:extend()
-
-function FoldCalculator:calculate_folds(marks, line_count, num_focus_lines)
+function FoldCalculator.calculate_folds(marks, line_count, num_focus_lines)
   num_focus_lines = num_focus_lines or 7
   local folds = {}
 
@@ -56,8 +52,8 @@ function FoldCalculator:calculate_folds(marks, line_count, num_focus_lines)
   return folds
 end
 
-function FoldCalculator:apply_folds(element, folds)
-  self:clear_folds(element)
+function FoldCalculator.apply_folds(element, folds)
+  FoldCalculator.clear_folds(element)
   if #folds == 0 then return end
 
   element:call(function()
@@ -67,7 +63,7 @@ function FoldCalculator:apply_folds(element, folds)
   end)
 end
 
-function FoldCalculator:clear_folds(element)
+function FoldCalculator.clear_folds(element)
   element:call(function()
     vim.api.nvim_command('normal! zR')
   end)

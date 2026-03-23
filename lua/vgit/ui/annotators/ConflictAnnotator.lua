@@ -1,14 +1,6 @@
-local lazy = require('vgit.core.lazy')
+local ConflictAnnotator = {}
 
-local Object = lazy('vgit.core.Object')
-
-local ConflictAnnotator = Object:extend()
-
-function ConflictAnnotator:constructor()
-  return {}
-end
-
-function ConflictAnnotator:annotate(conflict)
+function ConflictAnnotator.annotate(conflict)
   local current = conflict.current
   local ancestor = conflict.ancestor
   local middle = conflict.middle

@@ -151,34 +151,4 @@ function LayoutSpec.lens(child, opts)
   return spec
 end
 
-function LayoutSpec.center(child, opts)
-  opts = opts or {}
-  return LayoutSpec.absolute(child, {
-    anchor = LayoutSpec.Anchor.CENTER,
-    width = opts.width,
-    height = opts.height,
-    zindex = opts.zindex,
-  })
-end
-
-function LayoutSpec.full_width(child, opts)
-  opts = opts or {}
-  return LayoutSpec.absolute(child, {
-    anchor = opts.anchor or LayoutSpec.Anchor.TOP_LEFT,
-    width = '100vw',
-    height = opts.height,
-    zindex = opts.zindex,
-  })
-end
-
-function LayoutSpec.full_height(child, opts)
-  opts = opts or {}
-  return LayoutSpec.absolute(child, {
-    anchor = opts.anchor or LayoutSpec.Anchor.TOP_LEFT,
-    width = opts.width,
-    height = '100vh',
-    zindex = opts.zindex,
-  })
-end
-
 return LayoutSpec

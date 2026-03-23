@@ -3,20 +3,14 @@ local DiffAnnotator = require('vgit.ui.annotators.DiffAnnotator')
 local eq = assert.are.same
 
 describe('DiffAnnotator:', function()
-  local annotator
-
-  before_each(function()
-    annotator = DiffAnnotator()
-  end)
-
   describe('annotate_line', function()
     it('should return empty table when lnum_change is nil', function()
-      local result = annotator:annotate_line({})
+      local result = DiffAnnotator.annotate_line({})
       eq({}, result)
     end)
 
     it('should return sign for add change type', function()
-      local result = annotator:annotate_line({
+      local result = DiffAnnotator.annotate_line({
         lnum_change = { lnum = 5, type = 'add' },
       })
       assert.is_not_nil(result)
@@ -26,7 +20,7 @@ describe('DiffAnnotator:', function()
     end)
 
     it('should return sign for remove change type', function()
-      local result = annotator:annotate_line({
+      local result = DiffAnnotator.annotate_line({
         lnum_change = { lnum = 3, type = 'remove' },
       })
       assert.is_not_nil(result)
@@ -36,7 +30,7 @@ describe('DiffAnnotator:', function()
     end)
 
     it('should return void_text for void change type', function()
-      local result = annotator:annotate_line({
+      local result = DiffAnnotator.annotate_line({
         lnum_change = { lnum = 7, type = 'void' },
       })
       assert.is_not_nil(result)
@@ -48,7 +42,7 @@ describe('DiffAnnotator:', function()
 
     it('should not have sign when scene_signs has no mapping for type', function()
       -- void is not in scene_signs, so sign should be nil
-      local result = annotator:annotate_line({
+      local result = DiffAnnotator.annotate_line({
         lnum_change = { lnum = 1, type = 'void' },
       })
       assert.is_nil(result.sign)
@@ -57,19 +51,19 @@ describe('DiffAnnotator:', function()
 
   describe('annotate_word', function()
     it('should return nil when lnum_change is nil', function()
-      local result = annotator:annotate_word({}, 1)
+      local result = DiffAnnotator.annotate_word({}, 1)
       assert.is_nil(result)
     end)
 
     it('should return nil when word_diff is nil', function()
-      local result = annotator:annotate_word({
+      local result = DiffAnnotator.annotate_word({
         lnum_change = { lnum = 1, type = 'add' },
       }, 1)
       assert.is_nil(result)
     end)
 
     it('should produce texts from word_diff for add type', function()
-      local result = annotator:annotate_word({
+      local result = DiffAnnotator.annotate_word({
         lnum_change = {
           lnum = 2,
           type = 'add',
@@ -88,7 +82,7 @@ describe('DiffAnnotator:', function()
     end)
 
     it('should use GitWordDelete for remove type', function()
-      local result = annotator:annotate_word({
+      local result = DiffAnnotator.annotate_word({
         lnum_change = {
           lnum = 3,
           type = 'remove',
@@ -103,7 +97,7 @@ describe('DiffAnnotator:', function()
     end)
 
     it('should skip operation 1 (insertions in other side)', function()
-      local result = annotator:annotate_word({
+      local result = DiffAnnotator.annotate_word({
         lnum_change = {
           lnum = 1,
           type = 'add',
@@ -121,7 +115,7 @@ describe('DiffAnnotator:', function()
     end)
 
     it('should handle empty word_diff', function()
-      local result = annotator:annotate_word({
+      local result = DiffAnnotator.annotate_word({
         lnum_change = {
           lnum = 1,
           type = 'add',

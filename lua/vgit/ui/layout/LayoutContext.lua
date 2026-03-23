@@ -29,8 +29,6 @@ function LayoutContext:constructor(config)
     ['$width'] = config.width,
     ['$height'] = config.height,
     ['$zindex'] = config.zindex or 2,
-    ['$relative'] = config.relative or 'editor',
-    ['$position'] = config.position or 'center',
     ['$original_win_options'] = captured and captured.options,
     ['$original_win_id'] = captured and captured.win_id,
   }

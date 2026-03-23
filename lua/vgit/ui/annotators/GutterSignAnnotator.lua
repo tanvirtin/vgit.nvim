@@ -1,14 +1,6 @@
-local lazy = require('vgit.core.lazy')
+local GutterSignAnnotator = {}
 
-local Object = lazy('vgit.core.Object')
-
-local GutterSignAnnotator = Object:extend()
-
-function GutterSignAnnotator:constructor()
-  return {}
-end
-
-function GutterSignAnnotator:annotate(hunks, sign_types)
+function GutterSignAnnotator.annotate(hunks, sign_types)
   local signs = {}
   local signs_len = 0
   for i = 1, #hunks do

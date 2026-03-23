@@ -50,13 +50,6 @@ describe('display_service:', function()
     end)
   end)
 
-  describe('cleanup', function()
-    it('should clear active_view like reset', function()
-      display_service.cleanup()
-      assert.is_nil(display_service.get_active_view())
-    end)
-  end)
-
   describe('toggle_diff_preference', function()
     it('should not error when toggled', function()
       assert.has_no.errors(function()

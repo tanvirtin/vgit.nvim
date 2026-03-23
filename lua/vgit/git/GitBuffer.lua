@@ -30,10 +30,6 @@ function GitBuffer:constructor(...)
   buffer._blame_extmark = Extmark(bufnr, 'blame')
   buffer._gutter_extmark = Extmark(bufnr, 'gutter')
   buffer._conflict_extmark = Extmark(bufnr, 'conflict')
-  buffer._gutter_sign_annotator = GutterSignAnnotator()
-  buffer._conflict_annotator = ConflictAnnotator()
-  buffer._blame_annotator = BlameAnnotator()
-
   return buffer
 end
 
@@ -43,9 +39,6 @@ function GitBuffer:create(...)
   self._blame_extmark = Extmark(self.bufnr, 'blame')
   self._gutter_extmark = Extmark(self.bufnr, 'gutter')
   self._conflict_extmark = Extmark(self.bufnr, 'conflict')
-  self._gutter_sign_annotator = GutterSignAnnotator()
-  self._conflict_annotator = ConflictAnnotator()
-  self._blame_annotator = BlameAnnotator()
 
   return self
 end
@@ -237,7 +230,7 @@ function GitBuffer:diff()
   if not hunks then return nil end
 
   local sign_types = signs_setting:get('usage').main
-  local signs = self._gutter_sign_annotator:annotate(hunks, sign_types)
+  local signs = GutterSignAnnotator.annotate(hunks, sign_types)
 
   self:set_state({ signs = signs })
   self._signs_dirty = true
@@ -304,7 +297,7 @@ function GitBuffer:render_conflict_help_text(conflict)
 end
 
 function GitBuffer:render_conflict(conflict)
-  local annotation = self._conflict_annotator:annotate(conflict)
+  local annotation = ConflictAnnotator.annotate(conflict)
   for _, sign in ipairs(annotation.signs) do
     self._conflict_extmark:sign(sign)
   end
@@ -364,7 +357,7 @@ function GitBuffer:render_blames(top, bot)
   local format_fn = live_blame_setting:get('format')
   for lnum, blame in pairs(blames) do
     if blame and lnum >= top and (bot == -1 or lnum <= bot) then
-      local annotation = self._blame_annotator:annotate(blame, lnum, self.state.config, format_fn)
+      local annotation = BlameAnnotator.annotate(blame, lnum, self.state.config, format_fn)
       if annotation then self._blame_extmark:text(annotation) end
     end
   end

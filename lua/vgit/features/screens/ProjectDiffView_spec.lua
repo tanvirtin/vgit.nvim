@@ -807,7 +807,7 @@ describe('ProjectDiffView:', function()
     local diff_invariants = require('tests.helpers.diff_invariants')
     local Diff = require('vgit.core.diff.Diff')
     local GitHunk = require('vgit.git.GitHunk')
-    local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
+    local PatchLineBuilder = require('vgit.ui.components.PatchLineBuilder')
 
     local function make_hunk(header, diff_lines)
       local hunk = GitHunk(header)
@@ -951,8 +951,7 @@ describe('ProjectDiffView:', function()
       -- Use the real diff from generate_unified
       diff_file_entries[1].diff = diff
 
-      local component = PatchPreviewComponent({})
-      local lines, _, _, marks = component:build_patch_lines_from_entries(diff_file_entries)
+      local lines, _, _, marks = PatchLineBuilder.build(diff_file_entries)
 
       assert.is_true(#marks > 0)
       diff_invariants.assert_patch_marks(marks, #lines)
@@ -968,8 +967,7 @@ describe('ProjectDiffView:', function()
       local entry1 = make_real_diff_entry('a.lua', 'lua', { hunk1 }, { 'new', 'added' })
       local entry2 = make_real_diff_entry('b.lua', 'lua', { hunk2 }, { 'changed' })
 
-      local component = PatchPreviewComponent({})
-      local lines, _, _, marks = component:build_patch_lines_from_entries({ entry1, entry2 })
+      local lines, _, _, marks = PatchLineBuilder.build({ entry1, entry2 })
 
       assert.is_true(#marks >= 2)
       diff_invariants.assert_patch_marks(marks, #lines)

@@ -1301,10 +1301,9 @@ describe('Diff:', function()
 
   describe('adversarial PatchPreviewComponent pipeline', function()
     local invariants = require('tests.helpers.diff_invariants')
-    local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
+    local PatchLineBuilder = require('vgit.ui.components.PatchLineBuilder')
 
     it('diff_file with no marks should produce no output marks', function()
-      local component = PatchPreviewComponent({})
       local entries = {
         {
           type = 'diff_file',
@@ -1321,7 +1320,7 @@ describe('Diff:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       -- Should still produce file header lines but no change marks
       assert.is_true(#lines > 0)
@@ -1332,7 +1331,6 @@ describe('Diff:', function()
       local h = make_hunk('@@ -1,1 +1,1 @@', { '-old', '+new' })
       local real_diff = Diff():generate_unified({ h }, { 'new' })
 
-      local component = PatchPreviewComponent({})
       local entries = {
         {
           type = 'diff_file',
@@ -1357,7 +1355,7 @@ describe('Diff:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       -- Only first file should contribute marks
       assert.is_true(#lines > 0)
@@ -1377,7 +1375,6 @@ describe('Diff:', function()
       end
       local real_diff = Diff():generate_unified(hunks, current)
 
-      local component = PatchPreviewComponent({})
       local entries = {
         {
           type = 'diff_file',
@@ -1389,7 +1386,7 @@ describe('Diff:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       assert.is_true(#marks > 0)
       invariants.assert_patch_marks(marks, #lines)
@@ -1404,7 +1401,6 @@ describe('Diff:', function()
       local d2 = Diff():generate_unified({ h2 }, { 'd' })
       local d3 = Diff():generate_unified({ h3 }, { 'f' })
 
-      local component = PatchPreviewComponent({})
       local entries = {
         {
           type = 'diff_file',
@@ -1432,7 +1428,7 @@ describe('Diff:', function()
         },
       }
 
-      local lines, _, _, marks = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, marks = PatchLineBuilder.build(entries)
 
       eq(3, #marks)
       invariants.assert_patch_marks(marks, #lines)
@@ -1448,7 +1444,6 @@ describe('Diff:', function()
       local h = make_hunk('@@ -1,1 +1,50 @@', diff_lines)
       local real_diff = Diff():generate_unified({ h }, current)
 
-      local component = PatchPreviewComponent({})
       local entries = {
         {
           type = 'diff_file',
@@ -1460,7 +1455,7 @@ describe('Diff:', function()
         },
       }
 
-      local lines, _, _, patch_marks, line_numbers = component:build_patch_lines_from_entries(entries)
+      local lines, _, _, patch_marks, line_numbers = PatchLineBuilder.build(entries)
 
       eq(#lines, #line_numbers)
       if #patch_marks > 0 then invariants.assert_patch_marks(patch_marks, #lines) end

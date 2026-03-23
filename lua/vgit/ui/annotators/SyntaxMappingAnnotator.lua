@@ -15,6 +15,10 @@ function SyntaxMappingAnnotator:clear_cache()
   self._syntax_annotator:clear_cache()
 end
 
+function SyntaxMappingAnnotator:dispose()
+  if self._syntax_annotator then self._syntax_annotator:dispose() end
+end
+
 function SyntaxMappingAnnotator:_build_source_map(highlights)
   local map = {}
 

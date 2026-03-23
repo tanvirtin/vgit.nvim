@@ -190,7 +190,6 @@ end
 function Element:set_filetype(filetype)
   if not self:is_valid() then return self end
   self._buffer:set_option('filetype', filetype)
-  self._buffer:set_option('ft', filetype)
   self._buffer:set_option('syntax', filetype)
   return self
 end

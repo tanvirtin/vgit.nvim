@@ -1,18 +1,14 @@
 local lazy = require('vgit.core.lazy')
 
 local utils = lazy('vgit.core.utils')
-local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local ViewportComponent = lazy('vgit.ui.ViewportComponent')
-local define_single_element_methods = require('vgit.ui.element_delegation')
+local create_component_element = require('vgit.ui.create_component_element')
+local element_delegation = require('vgit.ui.element_delegation')
+local define_single_element_methods = element_delegation.define_single_element_methods
+local define_getters_with_fallbacks = element_delegation.define_getters_with_fallbacks
 
 local DiffViewportComponent = ViewportComponent:extend()
-
-local DEFAULT_BUF_OPTIONS = {
-  modifiable = false,
-  buflisted = false,
-  bufhidden = 'wipe',
-}
 
 function DiffViewportComponent:constructor(props)
   local instance = ViewportComponent.constructor(self, props)
@@ -37,25 +33,11 @@ end
 function DiffViewportComponent:mount()
   if self._mounted then return end
   if not self._element then
-    local buf_opts = utils.object.extend(DEFAULT_BUF_OPTIONS, self:get_buf_options())
-    if self.props.buf_options then buf_opts = utils.object.extend(buf_opts, self.props.buf_options) end
-    if self.props.filetype then buf_opts.filetype = self.props.filetype end
-
-    local el_config = { buf_options = buf_opts }
-
-    local win_opts = self:get_win_options()
-    if win_opts or self.props.win_options then
-      el_config.win_options = utils.object.extend(win_opts or {}, self.props.win_options or {})
-    end
-
-    local win_plot = self:get_win_plot()
-    if win_plot then el_config.win_plot = utils.object.clone(win_plot) end
-    if self.props.win_plot then
-      el_config.win_plot = utils.object.extend(el_config.win_plot or {}, self.props.win_plot)
-    end
-    if self.props.plot then el_config.plot = self.props.plot end
-
-    self._element = Element(el_config)
+    self._element = create_component_element({
+      buf_options = self:get_buf_options(),
+      win_options = self:get_win_options(),
+      win_plot = self:get_win_plot(),
+    }, self.props)
   end
   self._mounted = true
 end
@@ -73,9 +55,8 @@ function DiffViewportComponent:set_props(updates, callback)
   local prev_props = utils.object.clone(self.props)
   self.props = utils.object.extend(self.props, updates)
 
-  for k, v in pairs(self.props) do
-    if v == vim.NIL then self.props[k] = nil end
-  end
+  local Component = require('vgit.ui.Component')
+  Component.clean_nil_values(self.props)
 
   if self._mounted then self:on_props(prev_props) end
 
@@ -87,6 +68,10 @@ function DiffViewportComponent:on_props(prev_props) end
 function DiffViewportComponent:unmount()
   if not self._mounted then return end
   self:on_unmount()
+  self._renderer_attached = false
+  self._viewport_dirty = true
+  self._last_top = nil
+  self._last_bot = nil
   if self._element then
     self._element:unmount()
     self._element = nil
@@ -101,51 +86,34 @@ function DiffViewportComponent:get_layout_spec()
 end
 
 -- Generate shared element delegation methods (chainable + return-value)
-define_single_element_methods(DiffViewportComponent)
+-- Exclude getters that are overridden below with fallback defaults
+define_single_element_methods(DiffViewportComponent, {
+  exclude = {
+    get_lines = true,
+    get_lnum = true,
+    get_cursor = true,
+    get_line_count = true,
+    get_width = true,
+    get_height = true,
+    get_filetype = true,
+  },
+})
 
 -- Override getters with fallback defaults for viewport rendering
 -- (viewport rendering runs hot and cannot nil-check every frame)
+define_getters_with_fallbacks(DiffViewportComponent, {
+  get_lnum = 1,
+  get_cursor = { 1, 1 },
+  get_line_count = 0,
+  get_width = 0,
+  get_height = 0,
+  get_filetype = '',
+})
 
 function DiffViewportComponent:get_lines()
   return self:with_element(function(el)
     return el:get_lines()
   end) or self.state.lines or {}
-end
-
-function DiffViewportComponent:get_lnum()
-  return self:with_element(function(el)
-    return el:get_lnum()
-  end) or 1
-end
-
-function DiffViewportComponent:get_cursor()
-  return self:with_element(function(el)
-    return el:get_cursor()
-  end) or { 1, 1 }
-end
-
-function DiffViewportComponent:get_line_count()
-  return self:with_element(function(el)
-    return el:get_line_count()
-  end) or 0
-end
-
-function DiffViewportComponent:get_width()
-  return self:with_element(function(el)
-    return el:get_width()
-  end) or 0
-end
-
-function DiffViewportComponent:get_height()
-  return self:with_element(function(el)
-    return el:get_height()
-  end) or 0
-end
-
-function DiffViewportComponent:get_filetype()
-  return self:with_element(function(el)
-    return el:get_filetype()
-  end) or ''
 end
 
 function DiffViewportComponent:reset()

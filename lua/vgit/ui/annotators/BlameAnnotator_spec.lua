@@ -3,12 +3,6 @@ local BlameAnnotator = require('vgit.ui.annotators.BlameAnnotator')
 local eq = assert.are.same
 
 describe('BlameAnnotator:', function()
-  local annotator
-
-  before_each(function()
-    annotator = BlameAnnotator()
-  end)
-
   describe('annotate', function()
     it('should return text record for normal blame', function()
       local blame = { author = 'John', commit_hash = 'abc123' }
@@ -17,7 +11,7 @@ describe('BlameAnnotator:', function()
         return b.author .. ' ' .. b.commit_hash
       end
 
-      local result = annotator:annotate(blame, 5, config, format_fn)
+      local result = BlameAnnotator.annotate(blame, 5, config, format_fn)
 
       eq({
         text = 'John abc123',
@@ -35,7 +29,7 @@ describe('BlameAnnotator:', function()
         return nil
       end
 
-      local result = annotator:annotate(blame, 1, config, format_fn)
+      local result = BlameAnnotator.annotate(blame, 1, config, format_fn)
 
       assert.is_nil(result)
     end)
@@ -47,7 +41,7 @@ describe('BlameAnnotator:', function()
         return 42
       end
 
-      local result = annotator:annotate(blame, 1, config, format_fn)
+      local result = BlameAnnotator.annotate(blame, 1, config, format_fn)
 
       assert.is_nil(result)
     end)
@@ -59,7 +53,7 @@ describe('BlameAnnotator:', function()
         return 'text'
       end
 
-      local result = annotator:annotate(blame, 10, config, format_fn)
+      local result = BlameAnnotator.annotate(blame, 10, config, format_fn)
 
       eq(9, result.row)
     end)
@@ -74,7 +68,7 @@ describe('BlameAnnotator:', function()
         return 'formatted'
       end
 
-      annotator:annotate(blame, 1, config, format_fn)
+      BlameAnnotator.annotate(blame, 1, config, format_fn)
 
       eq(blame, received_blame)
       eq(config, received_config)

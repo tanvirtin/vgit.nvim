@@ -230,9 +230,8 @@ function View:_render_layout()
     layout_spec = self:_resolve_layout_spec(layout_spec)
   end
 
-  local calculator = LayoutCalculator()
   local parent_bounds = self._context:create_parent_bounds()
-  local layout = calculator:calculate(layout_spec, parent_bounds, self._context)
+  local layout = LayoutCalculator.calculate(layout_spec, parent_bounds, self._context)
 
   if self._context:is_screen_mode() or self._context:is_split_mode() then self:_create_screen_splits(layout) end
 

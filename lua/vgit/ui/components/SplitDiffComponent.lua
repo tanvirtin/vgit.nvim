@@ -33,7 +33,6 @@ local SplitDiffComponent = Component({
 function SplitDiffComponent:constructor(props)
   local instance = SplitDiffComponent.super.constructor(self, props)
   instance.children = {}
-  instance._line_number_calculator = LineNumberCalculator()
   return instance
 end
 
@@ -64,9 +63,9 @@ function SplitDiffComponent:calculate_split_line_numbers(diff)
   end
 
   local previous_lines, previous_changes =
-    self._line_number_calculator:calculate_split_previous_line_numbers(diff, previous_lnum_change_map)
+    LineNumberCalculator.calculate_split_previous_line_numbers(diff, previous_lnum_change_map)
   local current_lines, current_changes =
-    self._line_number_calculator:calculate_split_current_line_numbers(diff, current_lnum_change_map)
+    LineNumberCalculator.calculate_split_current_line_numbers(diff, current_lnum_change_map)
 
   return {
     previous = { lines = previous_lines, changes = previous_changes },

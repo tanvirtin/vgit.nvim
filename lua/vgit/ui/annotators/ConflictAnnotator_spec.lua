@@ -3,12 +3,6 @@ local ConflictAnnotator = require('vgit.ui.annotators.ConflictAnnotator')
 local eq = assert.are.same
 
 describe('ConflictAnnotator:', function()
-  local annotator
-
-  before_each(function()
-    annotator = ConflictAnnotator()
-  end)
-
   describe('annotate', function()
     it('should produce correct signs and texts for basic conflict without ancestor', function()
       local conflict = {
@@ -18,7 +12,7 @@ describe('ConflictAnnotator:', function()
         incoming = { top = 5, bot = 7 },
       }
 
-      local result = annotator:annotate(conflict)
+      local result = ConflictAnnotator.annotate(conflict)
 
       -- Signs: 1 current mark + 2 current body + 1 middle + 2 incoming body + 1 incoming mark = 7
       eq(7, #result.signs)
@@ -61,7 +55,7 @@ describe('ConflictAnnotator:', function()
         incoming = { top = 7, bot = 8 },
       }
 
-      local result = annotator:annotate(conflict)
+      local result = ConflictAnnotator.annotate(conflict)
 
       -- Find ancestor signs
       local ancestor_mark_found = false
@@ -83,7 +77,7 @@ describe('ConflictAnnotator:', function()
         incoming = { top = 3, bot = 3 },
       }
 
-      local result = annotator:annotate(conflict)
+      local result = ConflictAnnotator.annotate(conflict)
 
       -- Current: 1 mark, 0 body (top+1 > bot for single line)
       -- Middle: 1 sign
@@ -102,7 +96,7 @@ describe('ConflictAnnotator:', function()
         incoming = { top = 14, bot = 16 },
       }
 
-      local result = annotator:annotate(conflict)
+      local result = ConflictAnnotator.annotate(conflict)
 
       eq(9, result.texts[1].row)
       eq(15, result.texts[2].row)

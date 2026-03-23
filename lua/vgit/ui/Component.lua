@@ -2,10 +2,18 @@ local lazy = require('vgit.core.lazy')
 
 local utils = lazy('vgit.core.utils')
 local Object = lazy('vgit.core.Object')
-local Element = lazy('vgit.ui.elements.Element')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
+local create_component_element = require('vgit.ui.create_component_element')
 
 local Component = Object:extend()
+
+local function clean_nil_values(props)
+  for k, v in pairs(props) do
+    if v == vim.NIL then props[k] = nil end
+  end
+end
+
+Component.clean_nil_values = clean_nil_values
 
 function Component:constructor(props)
   return {
@@ -29,9 +37,7 @@ function Component:render() end
 
 function Component:set_props(updates)
   if updates then self.props = utils.object.extend(self.props, updates) end
-  for k, v in pairs(self.props) do
-    if v == vim.NIL then self.props[k] = nil end
-  end
+  clean_nil_values(self.props)
 end
 
 function Component:set_state(updates)
@@ -52,37 +58,20 @@ function Component:with_element(fn)
   if self._element and self._element:is_valid() then return fn(self._element) end
 end
 
-local DEFAULT_BUF_OPTIONS = {
-  modifiable = false,
-  buflisted = false,
-  bufhidden = 'wipe',
-}
-
 local function resolve(value, props)
   if type(value) == 'function' then return value(props) end
   return value
 end
 
 local function create_element(config, props)
-  local buf_opts = utils.object.extend(DEFAULT_BUF_OPTIONS, resolve(config.buf_options, props) or {})
-  if props.buf_options then buf_opts = utils.object.extend(buf_opts, props.buf_options) end
-  if props.filetype then buf_opts.filetype = props.filetype end
-
-  local el_config = { buf_options = buf_opts }
-
-  local config_win = resolve(config.win_options, props)
-  if config_win or props.win_options then
-    el_config.win_options = utils.object.extend(config_win or {}, props.win_options or {})
-  end
-
-  if config.win_plot then el_config.win_plot = utils.object.clone(config.win_plot) end
-  if props.win_plot then el_config.win_plot = utils.object.extend(el_config.win_plot or {}, props.win_plot) end
-  if props.plot then el_config.plot = props.plot end
-
-  return Element(el_config)
+  return create_component_element({
+    buf_options = resolve(config.buf_options, props),
+    win_options = resolve(config.win_options, props),
+    win_plot = config.win_plot,
+  }, props)
 end
 
-local define_single_element_methods = require('vgit.ui.element_delegation')
+local define_single_element_methods = require('vgit.ui.element_delegation').define_single_element_methods
 
 local function CreateComponent(config)
   local ViewportComponent = lazy('vgit.ui.ViewportComponent')
@@ -128,11 +117,11 @@ local function CreateComponent(config)
       if self._mounted then return end
       for name, el_cfg in pairs(config.elements) do
         if not self.elements[name] then
-          self.elements[name] = Element({
-            buf_options = el_cfg.buf_options or DEFAULT_BUF_OPTIONS,
+          self.elements[name] = create_component_element({
+            buf_options = el_cfg.buf_options,
             win_options = el_cfg.win_options,
             win_plot = el_cfg.win_plot,
-          })
+          }, self.props)
         end
       end
       self._mounted = true
@@ -159,9 +148,7 @@ local function CreateComponent(config)
     local prev_props = utils.object.clone(self.props)
     self.props = utils.object.extend(self.props, updates)
 
-    for k, v in pairs(self.props) do
-      if v == vim.NIL then self.props[k] = nil end
-    end
+    clean_nil_values(self.props)
 
     if self._mounted and config.on_props then config.on_props(self, prev_props) end
 
@@ -192,6 +179,11 @@ local function CreateComponent(config)
     function Class:unmount()
       if not self._mounted then return end
       if config.on_unmount then config.on_unmount(self) end
+      if self.children then
+        for _, child in pairs(self.children) do
+          if child.unmount then child:unmount() end
+        end
+      end
       self._mounted = false
     end
   end

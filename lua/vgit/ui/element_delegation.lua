@@ -1,4 +1,6 @@
-local function define_single_element_methods(Class)
+local function define_single_element_methods(Class, opts)
+  local exclude = opts and opts.exclude or {}
+
   -- Chainable methods
 
   function Class:set_lines(lines)
@@ -186,46 +188,60 @@ local function define_single_element_methods(Class)
 
   -- Return-value methods
 
-  function Class:get_lines()
-    return self:with_element(function(el)
-      return el:get_lines()
-    end)
+  if not exclude.get_lines then
+    function Class:get_lines()
+      return self:with_element(function(el)
+        return el:get_lines()
+      end)
+    end
   end
 
-  function Class:get_line_count()
-    return self:with_element(function(el)
-      return el:get_line_count()
-    end)
+  if not exclude.get_line_count then
+    function Class:get_line_count()
+      return self:with_element(function(el)
+        return el:get_line_count()
+      end)
+    end
   end
 
-  function Class:get_cursor()
-    return self:with_element(function(el)
-      return el:get_cursor()
-    end)
+  if not exclude.get_cursor then
+    function Class:get_cursor()
+      return self:with_element(function(el)
+        return el:get_cursor()
+      end)
+    end
   end
 
-  function Class:get_lnum()
-    return self:with_element(function(el)
-      return el:get_lnum()
-    end)
+  if not exclude.get_lnum then
+    function Class:get_lnum()
+      return self:with_element(function(el)
+        return el:get_lnum()
+      end)
+    end
   end
 
-  function Class:get_width()
-    return self:with_element(function(el)
-      return el:get_width()
-    end)
+  if not exclude.get_width then
+    function Class:get_width()
+      return self:with_element(function(el)
+        return el:get_width()
+      end)
+    end
   end
 
-  function Class:get_height()
-    return self:with_element(function(el)
-      return el:get_height()
-    end)
+  if not exclude.get_height then
+    function Class:get_height()
+      return self:with_element(function(el)
+        return el:get_height()
+      end)
+    end
   end
 
-  function Class:get_filetype()
-    return self:with_element(function(el)
-      return el:get_filetype()
-    end)
+  if not exclude.get_filetype then
+    function Class:get_filetype()
+      return self:with_element(function(el)
+        return el:get_filetype()
+      end)
+    end
   end
 
   function Class:is_focused()
@@ -240,21 +256,55 @@ local function define_single_element_methods(Class)
     end) or false
   end
 
-  function Class:place_extmark_text(opts)
-    if self._element and self._element:is_valid() then return self._element:place_extmark_text(opts) end
+  function Class:place_extmark_text(extmark_opts)
+    return self:with_element(function(el)
+      return el:place_extmark_text(extmark_opts)
+    end)
   end
 
-  function Class:place_extmark_lnum(opts)
-    if self._element and self._element:is_valid() then return self._element:place_extmark_lnum(opts) end
+  function Class:place_extmark_lnum(extmark_opts)
+    return self:with_element(function(el)
+      return el:place_extmark_lnum(extmark_opts)
+    end)
   end
 
-  function Class:place_extmark_sign(opts)
-    if self._element and self._element:is_valid() then return self._element:place_extmark_sign(opts) end
+  function Class:place_extmark_sign(extmark_opts)
+    return self:with_element(function(el)
+      return el:place_extmark_sign(extmark_opts)
+    end)
   end
 
-  function Class:place_extmark_highlight(opts)
-    if self._element and self._element:is_valid() then return self._element:place_extmark_highlight(opts) end
+  function Class:place_extmark_highlight(extmark_opts)
+    return self:with_element(function(el)
+      return el:place_extmark_highlight(extmark_opts)
+    end)
   end
 end
 
-return define_single_element_methods
+local GETTER_ELEMENT_METHODS = {
+  get_lines = 'get_lines',
+  get_lnum = 'get_lnum',
+  get_cursor = 'get_cursor',
+  get_line_count = 'get_line_count',
+  get_width = 'get_width',
+  get_height = 'get_height',
+  get_filetype = 'get_filetype',
+}
+
+local function define_getters_with_fallbacks(Class, fallbacks)
+  for method_name, fallback in pairs(fallbacks) do
+    local el_method = GETTER_ELEMENT_METHODS[method_name]
+    if el_method then
+      Class[method_name] = function(self)
+        return self:with_element(function(el)
+          return el[el_method](el)
+        end) or fallback
+      end
+    end
+  end
+end
+
+return {
+  define_single_element_methods = define_single_element_methods,
+  define_getters_with_fallbacks = define_getters_with_fallbacks,
+}

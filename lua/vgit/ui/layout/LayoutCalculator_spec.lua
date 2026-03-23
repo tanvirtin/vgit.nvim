@@ -5,11 +5,9 @@ local LayoutBounds = require('vgit.ui.layout.LayoutBounds')
 local eq = assert.are.same
 
 describe('LayoutCalculator:', function()
-  local calculator
   local mock_view
 
   before_each(function()
-    calculator = LayoutCalculator()
     mock_view = { mount = function() end }
   end)
 
@@ -18,7 +16,7 @@ describe('LayoutCalculator:', function()
       local bounds = LayoutBounds({ row = 0, col = 0, width = 100, height = 50 })
       local spec = LayoutSpec.view(mock_view, { flex = 1 })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       assert.is_not_nil(result)
       assert.is_not_nil(result.bounds)
@@ -30,7 +28,7 @@ describe('LayoutCalculator:', function()
       local child_spec = LayoutSpec.view(mock_view, { flex = 1 })
       local spec = LayoutSpec.container(child_spec)
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       assert.is_not_nil(result)
       eq(1, #result.children)
@@ -43,7 +41,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 1 }),
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       assert.is_not_nil(result)
       eq(2, #result.children)
@@ -58,7 +56,7 @@ describe('LayoutCalculator:', function()
         anchor = 'center',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       assert.is_not_nil(result)
       eq(1, #result.children)
@@ -69,13 +67,13 @@ describe('LayoutCalculator:', function()
       local spec = { type = 'unknown_type' }
 
       assert.has_error(function()
-        calculator:calculate(spec, bounds)
+        LayoutCalculator.calculate(spec, bounds)
       end)
     end)
 
     it('should error when spec is nil', function()
       assert.has_error(function()
-        calculator:calculate(nil)
+        LayoutCalculator.calculate(nil)
       end)
     end)
   end)
@@ -86,7 +84,7 @@ describe('LayoutCalculator:', function()
       local child_spec = LayoutSpec.view(mock_view, { flex = 1 })
       local spec = LayoutSpec.container(child_spec)
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(bounds, result.bounds)
       eq(1, #result.children)
@@ -100,7 +98,7 @@ describe('LayoutCalculator:', function()
       local bounds = LayoutBounds({ row = 5, col = 10, width = 200, height = 100 })
       local spec = LayoutSpec.view(mock_view, { flex = 1 })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(200, result.bounds.width)
       eq(100, result.bounds.height)
@@ -118,7 +116,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 1 }),
       })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(2, #result.children)
       eq(50, result.children[1].bounds.width)
@@ -132,7 +130,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 2 }),
       })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(100, result.children[1].bounds.width)
       eq(200, result.children[2].bounds.width)
@@ -145,7 +143,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 2 }),
       })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(100, result.children[1].bounds.height)
       eq(200, result.children[2].bounds.height)
@@ -160,7 +158,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 1 }),
       }, { gap = 4 })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(50, result.children[1].bounds.width)
       eq(50, result.children[2].bounds.width)
@@ -175,7 +173,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 1 }),
       })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(100, result.children[1].bounds.width)
       eq(200, result.children[2].bounds.width)
@@ -190,7 +188,7 @@ describe('LayoutCalculator:', function()
         children = {},
       }
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(0, #result.children)
       eq(bounds, result.bounds)
@@ -204,7 +202,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 1 }),
       })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(10, result.children[1].bounds.col)
       eq(110, result.children[2].bounds.col)
@@ -222,7 +220,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 1 }),
       })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(5, result.children[1].bounds.row)
       eq(105, result.children[2].bounds.row)
@@ -239,7 +237,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 1 }),
       })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       local total = result.children[1].bounds.width + result.children[2].bounds.width
       eq(101, total)
@@ -252,7 +250,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 1 }),
       }, { gap = 10 })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(50, result.children[1].bounds.height)
       eq(50, result.children[2].bounds.height)
@@ -265,7 +263,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 1 }),
       })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(1, #result.children)
       eq(200, result.children[1].bounds.width)
@@ -280,7 +278,7 @@ describe('LayoutCalculator:', function()
         LayoutSpec.view(mock_view, { flex = 3 }),
       })
 
-      local result = calculator:calculate_flex(spec, bounds)
+      local result = LayoutCalculator.calculate_flex(spec, bounds)
 
       eq(100, result.children[1].bounds.width)
       eq(200, result.children[2].bounds.width)
@@ -308,7 +306,7 @@ describe('LayoutCalculator:', function()
       })
 
       local parent_bounds = LayoutBounds({ row = 0, col = 0, width = 200, height = 100 })
-      local layout = calculator:calculate_flex(nested_spec, parent_bounds)
+      local layout = LayoutCalculator.calculate_flex(nested_spec, parent_bounds)
 
       eq(2, #layout.children)
       eq(100, layout.children[1].bounds.width)
@@ -330,7 +328,7 @@ describe('LayoutCalculator:', function()
         anchor = 'center',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(100, result.bounds.width)
       eq(50, result.bounds.height)
@@ -347,7 +345,7 @@ describe('LayoutCalculator:', function()
         anchor = 'top-left',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(0, result.bounds.row)
       eq(0, result.bounds.col)
@@ -364,7 +362,7 @@ describe('LayoutCalculator:', function()
         anchor = 'top-right',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(0, result.bounds.row)
       eq(120, result.bounds.col)
@@ -379,7 +377,7 @@ describe('LayoutCalculator:', function()
         anchor = 'bottom-left',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(60, result.bounds.row)
       eq(0, result.bounds.col)
@@ -394,7 +392,7 @@ describe('LayoutCalculator:', function()
         anchor = 'bottom-right',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(60, result.bounds.row)
       eq(120, result.bounds.col)
@@ -405,7 +403,7 @@ describe('LayoutCalculator:', function()
       local child_spec = LayoutSpec.view(mock_view, { flex = 1 })
       local spec = LayoutSpec.absolute(child_spec, {})
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(200, result.bounds.width)
       eq(100, result.bounds.height)
@@ -421,7 +419,7 @@ describe('LayoutCalculator:', function()
         offset = { row = 5, col = 10 },
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(5, result.bounds.row)
       eq(10, result.bounds.col)
@@ -439,7 +437,7 @@ describe('LayoutCalculator:', function()
         col = 20,
       }
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(10, result.bounds.row)
       eq(20, result.bounds.col)
@@ -455,7 +453,7 @@ describe('LayoutCalculator:', function()
         anchor = 'center',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(0, #result.children)
     end)
@@ -471,7 +469,7 @@ describe('LayoutCalculator:', function()
         anchor = 'center',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       assert.is_true(result.bounds.width <= 180)
       assert.is_true(result.bounds.height <= 80)
@@ -488,7 +486,7 @@ describe('LayoutCalculator:', function()
         anchor = 'center',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       assert.is_true(result.bounds.width >= 50)
       assert.is_true(result.bounds.height >= 30)
@@ -503,7 +501,7 @@ describe('LayoutCalculator:', function()
         anchor = 'center',
       })
 
-      local result = calculator:calculate(spec, bounds)
+      local result = LayoutCalculator.calculate(spec, bounds)
 
       eq(45, result.bounds.row)
       eq(80, result.bounds.col)

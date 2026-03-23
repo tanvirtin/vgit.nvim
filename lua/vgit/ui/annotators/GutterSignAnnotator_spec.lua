@@ -3,11 +3,9 @@ local GutterSignAnnotator = require('vgit.ui.annotators.GutterSignAnnotator')
 local eq = assert.are.same
 
 describe('GutterSignAnnotator:', function()
-  local annotator
   local sign_types
 
   before_each(function()
-    annotator = GutterSignAnnotator()
     sign_types = {
       add = 'GitSignsAdd',
       remove = 'GitSignsDelete',
@@ -17,7 +15,7 @@ describe('GutterSignAnnotator:', function()
 
   describe('annotate', function()
     it('should return empty array for empty hunks', function()
-      local signs = annotator:annotate({}, sign_types)
+      local signs = GutterSignAnnotator.annotate({}, sign_types)
       eq({}, signs)
     end)
 
@@ -25,7 +23,7 @@ describe('GutterSignAnnotator:', function()
       local hunks = {
         { type = 'add', top = 1, bot = 3 },
       }
-      local signs = annotator:annotate(hunks, sign_types)
+      local signs = GutterSignAnnotator.annotate(hunks, sign_types)
 
       eq(3, #signs)
       eq({ row = 0, name = 'GitSignsAdd' }, signs[1])
@@ -37,7 +35,7 @@ describe('GutterSignAnnotator:', function()
       local hunks = {
         { type = 'remove', top = 0, bot = 0 },
       }
-      local signs = annotator:annotate(hunks, sign_types)
+      local signs = GutterSignAnnotator.annotate(hunks, sign_types)
 
       eq(1, #signs)
       eq({ row = 0, name = 'GitSignsDelete' }, signs[1])
@@ -49,7 +47,7 @@ describe('GutterSignAnnotator:', function()
         { type = 'remove', top = 3, bot = 3 },
         { type = 'change', top = 5, bot = 6 },
       }
-      local signs = annotator:annotate(hunks, sign_types)
+      local signs = GutterSignAnnotator.annotate(hunks, sign_types)
 
       eq(4, #signs)
       eq('GitSignsAdd', signs[1].name)
@@ -62,7 +60,7 @@ describe('GutterSignAnnotator:', function()
       local hunks = {
         { type = 'add', top = 5, bot = 5 },
       }
-      local signs = annotator:annotate(hunks, sign_types)
+      local signs = GutterSignAnnotator.annotate(hunks, sign_types)
 
       eq(1, #signs)
       eq({ row = 4, name = 'GitSignsAdd' }, signs[1])
