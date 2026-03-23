@@ -697,7 +697,7 @@ describe('GitBuffer:', function()
         vim.fn.bufload(bufnr)
         local git_buf = GitBuffer(bufnr)
 
-        git_buf.state.signs = { { col = 0, name = 'GitSignsAdd' } }
+        git_buf.state.signs = { { row = 0, name = 'GitSignsAdd' } }
         git_buf._signs_dirty = true
         local result = git_buf:render_signs()
 
@@ -709,7 +709,7 @@ describe('GitBuffer:', function()
         vim.fn.bufload(bufnr)
         local git_buf = GitBuffer(bufnr)
 
-        git_buf.state.signs = { { col = 5, name = 'GitSignsAdd' }, { col = 15, name = 'GitSignsAdd' } }
+        git_buf.state.signs = { { row = 5, name = 'GitSignsAdd' }, { row = 15, name = 'GitSignsAdd' } }
         git_buf._signs_dirty = true
         local result = git_buf:render_signs(0, 10)
 
@@ -721,7 +721,7 @@ describe('GitBuffer:', function()
         vim.fn.bufload(bufnr)
         local git_buf = GitBuffer(bufnr)
 
-        git_buf.state.signs = { { col = 0, name = 'GitSignsAdd' } }
+        git_buf.state.signs = { { row = 0, name = 'GitSignsAdd' } }
         git_buf._signs_dirty = false
         local result = git_buf:render_signs()
 
@@ -733,7 +733,7 @@ describe('GitBuffer:', function()
         vim.fn.bufload(bufnr)
         local git_buf = GitBuffer(bufnr)
 
-        git_buf.state.signs = { { col = 0, name = 'GitSignsAdd' } }
+        git_buf.state.signs = { { row = 0, name = 'GitSignsAdd' } }
         git_buf._signs_dirty = true
         git_buf:render_signs()
 
@@ -746,13 +746,13 @@ describe('GitBuffer:', function()
         local git_buf = GitBuffer(bufnr)
 
         git_buf.state.signs = {
-          { col = 2, name = 'GitSignsAdd' },
-          { col = 5, name = 'GitSignsAdd' },
-          { col = 8, name = 'GitSignsAdd' },
+          { row = 2, name = 'GitSignsAdd' },
+          { row = 5, name = 'GitSignsAdd' },
+          { row = 8, name = 'GitSignsAdd' },
         }
         git_buf._signs_dirty = true
 
-        -- Render with viewport 3-6: only sign at col=5 is in range
+        -- Render with viewport 3-6: only sign at row=5 is in range
         local result = git_buf:render_signs(3, 6)
 
         assert.equals(git_buf, result)

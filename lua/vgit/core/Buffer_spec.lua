@@ -296,7 +296,7 @@ describe('Buffer:', function()
       buffer:set_lines({ 'test line' })
 
       buffer:place_extmark_sign({
-        col = 0,
+        row = 0,
         name = 'GitSignsAdd',
       })
 
@@ -310,7 +310,7 @@ describe('Buffer:', function()
     it('should clear all extmarks from the buffer', function()
       buffer:set_lines({ 'test line' })
 
-      buffer:place_extmark_sign({ col = 0, name = 'GitSignsAdd' })
+      buffer:place_extmark_sign({ row = 0, name = 'GitSignsAdd' })
       local ns_id = buffer._sign_extmark.ns_id
       local before = vim.api.nvim_buf_get_extmarks(buffer.bufnr, ns_id, 0, -1, {})
       assert.is_true(#before > 0)
@@ -326,7 +326,7 @@ describe('Buffer:', function()
     it('should clear sign extmarks from the buffer', function()
       buffer:set_lines({ 'test line' })
 
-      buffer:place_extmark_sign({ col = 0, name = 'GitSignsAdd' })
+      buffer:place_extmark_sign({ row = 0, name = 'GitSignsAdd' })
       local ns_id = buffer._sign_extmark.ns_id
       local before = vim.api.nvim_buf_get_extmarks(buffer.bufnr, ns_id, 0, -1, {})
       assert.is_true(#before > 0)

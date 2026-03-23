@@ -6,12 +6,25 @@ local eq = assert.are.same
 local navigation_up_calls = {}
 local navigation_down_calls = {}
 
+local window_get_cursor_return = { 1, 0 }
+local window_instance = {
+  get_cursor = function()
+    return window_get_cursor_return
+  end,
+}
+
 local navigation_stub = {
   up = function(window, marks)
     navigation_up_calls[#navigation_up_calls + 1] = { window = window, marks = marks }
   end,
   down = function(window, marks)
     navigation_down_calls[#navigation_down_calls + 1] = { window = window, marks = marks }
+  end,
+  current_window = function()
+    return window_instance
+  end,
+  get_current_cursor = function()
+    return window_get_cursor_return
   end,
 }
 
@@ -21,12 +34,6 @@ local git_buffer_store_stub = {
   end,
 }
 
-local window_get_cursor_return = { 1, 0 }
-local window_instance = {
-  get_cursor = function()
-    return window_get_cursor_return
-  end,
-}
 local Window_stub = setmetatable({}, {
   __index = require('vgit.core.Object'),
   __call = function(_, ...)

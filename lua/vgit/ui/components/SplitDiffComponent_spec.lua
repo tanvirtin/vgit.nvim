@@ -330,9 +330,13 @@ describe('SplitDiffComponent:', function()
   end)
 
   describe('is_valid', function()
-    it('should return true when current child is valid', function()
+    it('should return true when both children are valid', function()
       local component = create_split_component()
-      component.children.previous = nil
+      component.children.previous = {
+        is_valid = function()
+          return true
+        end,
+      }
       component.children.current = {
         is_valid = function()
           return true
@@ -342,7 +346,19 @@ describe('SplitDiffComponent:', function()
       assert.is_truthy(component:is_valid())
     end)
 
-    it('should return true when previous child is valid', function()
+    it('should return false when only current child is valid', function()
+      local component = create_split_component()
+      component.children.previous = nil
+      component.children.current = {
+        is_valid = function()
+          return true
+        end,
+      }
+
+      assert.is_falsy(component:is_valid())
+    end)
+
+    it('should return false when only previous child is valid', function()
       local component = create_split_component()
       component.children.current = nil
       component.children.previous = {
@@ -351,7 +367,7 @@ describe('SplitDiffComponent:', function()
         end,
       }
 
-      assert.is_truthy(component:is_valid())
+      assert.is_falsy(component:is_valid())
     end)
 
     it('should return false when both children are nil', function()
