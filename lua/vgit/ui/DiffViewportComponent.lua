@@ -7,6 +7,7 @@ local create_component_element = require('vgit.ui.create_component_element')
 local element_delegation = require('vgit.ui.element_delegation')
 local define_single_element_methods = element_delegation.define_single_element_methods
 local define_getters_with_fallbacks = element_delegation.define_getters_with_fallbacks
+local clean_nil_values = require('vgit.ui.Component').clean_nil_values
 
 local DiffViewportComponent = ViewportComponent:extend()
 
@@ -55,8 +56,7 @@ function DiffViewportComponent:set_props(updates, callback)
   local prev_props = utils.object.clone(self.props)
   self.props = utils.object.extend(self.props, updates)
 
-  local Component = require('vgit.ui.Component')
-  Component.clean_nil_values(self.props)
+  clean_nil_values(self.props)
 
   if self._mounted then self:on_props(prev_props) end
 
@@ -103,7 +103,7 @@ define_single_element_methods(DiffViewportComponent, {
 -- (viewport rendering runs hot and cannot nil-check every frame)
 define_getters_with_fallbacks(DiffViewportComponent, {
   get_lnum = 1,
-  get_cursor = { 1, 1 },
+  get_cursor = { 1, 0 },
   get_line_count = 0,
   get_width = 0,
   get_height = 0,

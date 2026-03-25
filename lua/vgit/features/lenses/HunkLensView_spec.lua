@@ -72,7 +72,6 @@ describe('HunkLensView:', function()
       local view = HunkLensView()
       assert.is_nil(view.diff_component)
       assert.is_false(view._destroyed)
-      assert.is_false(view._is_destroying)
     end)
   end)
 

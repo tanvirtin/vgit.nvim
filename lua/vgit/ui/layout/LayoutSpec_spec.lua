@@ -55,16 +55,6 @@ describe('LayoutSpec:', function()
       eq(LayoutSpec.Direction.VERTICAL, spec.direction)
       eq(1, #spec.children)
     end)
-
-    it('should accept align and justify options', function()
-      local spec = LayoutSpec.vertical({}, {
-        align = 'center',
-        justify = 'space-between',
-      })
-
-      eq('center', spec.align)
-      eq('space-between', spec.justify)
-    end)
   end)
 
   describe('flex', function()

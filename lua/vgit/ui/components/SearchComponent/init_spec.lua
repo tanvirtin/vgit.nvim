@@ -586,7 +586,7 @@ describe('SearchComponent:', function()
       assert.is_false(sc:is_valid())
     end)
 
-    it('should return true when input element is valid', function()
+    it('should return false when only input element is valid', function()
       local sc = SearchComponent({
         items = {},
         on_select = function() end,
@@ -594,15 +594,27 @@ describe('SearchComponent:', function()
 
       sc.elements.input = make_mock_element({ valid = true })
 
-      assert.is_true(sc:is_valid())
+      assert.is_false(sc:is_valid())
     end)
 
-    it('should return true when list element is valid', function()
+    it('should return false when only list element is valid', function()
       local sc = SearchComponent({
         items = {},
         on_select = function() end,
       })
 
+      sc.elements.list = make_mock_element({ valid = true })
+
+      assert.is_false(sc:is_valid())
+    end)
+
+    it('should return true when both elements are valid', function()
+      local sc = SearchComponent({
+        items = {},
+        on_select = function() end,
+      })
+
+      sc.elements.input = make_mock_element({ valid = true })
       sc.elements.list = make_mock_element({ valid = true })
 
       assert.is_true(sc:is_valid())

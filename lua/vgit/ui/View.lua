@@ -23,7 +23,6 @@ function View:constructor()
     _debounce_cleanups = {},
     _context = nil,
     _root_component = nil,
-    _is_destroying = false,
     _tracked_elements = {},
     _lifecycle_cleanup = nil,
     _layout_spec = nil,
@@ -48,31 +47,41 @@ function View:_resolve_layout_spec(layout_spec)
     end
 
     if layout_spec.children then
+      local resolved_children = {}
       for i, child in ipairs(layout_spec.children) do
         if child.view and type(child.view.get_layout_spec) == 'function' then
           if not child.view:is_mounted() and type(child.view.mount) == 'function' then
             self._component_group:mount(child.view, self)
           end
           local child_layout_spec = child.view:get_layout_spec()
-          layout_spec.children[i] = self:_resolve_layout_spec(child_layout_spec)
+          resolved_children[i] = self:_resolve_layout_spec(child_layout_spec)
         elseif child.type and child.type == LayoutSpec.Type.VIEW and child.view then
           self._tracked_elements[#self._tracked_elements + 1] = child.view
+          resolved_children[i] = child
         elseif child.type and child.type ~= LayoutSpec.Type.VIEW then
-          layout_spec.children[i] = self:_resolve_layout_spec(child)
+          resolved_children[i] = self:_resolve_layout_spec(child)
+        else
+          resolved_children[i] = child
         end
       end
+      layout_spec = vim.tbl_extend('force', layout_spec, { children = resolved_children })
     elseif layout_spec.child then
+      local resolved_child
       if layout_spec.child.view and type(layout_spec.child.view.get_layout_spec) == 'function' then
         if not layout_spec.child.view:is_mounted() and type(layout_spec.child.view.mount) == 'function' then
           self._component_group:mount(layout_spec.child.view, self)
         end
         local child_layout_spec = layout_spec.child.view:get_layout_spec()
-        layout_spec.child = self:_resolve_layout_spec(child_layout_spec)
+        resolved_child = self:_resolve_layout_spec(child_layout_spec)
       elseif layout_spec.child.type and layout_spec.child.type == LayoutSpec.Type.VIEW and layout_spec.child.view then
         self._tracked_elements[#self._tracked_elements + 1] = layout_spec.child.view
+        resolved_child = layout_spec.child
       elseif layout_spec.child.type and layout_spec.child.type ~= LayoutSpec.Type.VIEW then
-        layout_spec.child = self:_resolve_layout_spec(layout_spec.child)
+        resolved_child = self:_resolve_layout_spec(layout_spec.child)
+      else
+        resolved_child = layout_spec.child
       end
+      layout_spec = vim.tbl_extend('force', layout_spec, { child = resolved_child })
     end
     return layout_spec
   end
@@ -128,8 +137,6 @@ function View:_prepare_layout(layout_config)
     mode = mode,
     width = spec.width or default_width,
     height = spec.height or default_height,
-    relative = spec.relative or 'editor',
-    position = spec.position or 'center',
   })
 
   if self._root_component then
@@ -240,26 +247,10 @@ function View:_render_layout()
 end
 
 function View:_register_lifecycle_events()
-  if self._context:is_floating_mode() and #self._tracked_elements <= 1 then
+  if self._context:is_floating_mode() then
     self._lifecycle_cleanup = event.disposable_on('WinLeave', function()
       event.defer(function()
-        if self._is_destroying then return end
-
-        local current_win = Window.get_current()
-        for _, el in ipairs(self._tracked_elements) do
-          if el:is_valid() then
-            local win = el:get_window()
-            if win and current_win:is_same(win) then return end
-          end
-        end
-
-        self:destroy()
-      end, 50)
-    end)
-  elseif self._context:is_floating_mode() then
-    self._lifecycle_cleanup = event.disposable_on('WinLeave', function()
-      event.defer(function()
-        if self._is_destroying then return end
+        if self._destroyed then return end
 
         local current_win = Window.get_current()
 
@@ -316,8 +307,6 @@ end
 
 function View:destroy()
   if self._destroyed then return end
-  if self._is_destroying then return end
-  self._is_destroying = true
   self._destroyed = true
 
   for _, cleanup in ipairs(self._debounce_cleanups) do
@@ -331,6 +320,10 @@ function View:destroy()
   end
 
   self._component_group:unmount()
+
+  self._tracked_elements = {}
+  self._split_windows = {}
+  self._split_window_index = 0
 
   if self._context then self._context:restore_window_options() end
 end

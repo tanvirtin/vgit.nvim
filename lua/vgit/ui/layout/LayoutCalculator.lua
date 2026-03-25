@@ -11,7 +11,7 @@ function LayoutCalculator.apply_mode_wrapping(spec, context)
 
     local dims = context:get_dimensions()
     return LayoutSpec.absolute(spec, {
-      anchor = 'center',
+      anchor = LayoutSpec.Anchor.CENTER,
       width = dims.width,
       height = dims.height,
       zindex = context.zindex,
@@ -80,7 +80,7 @@ function LayoutCalculator.calculate_view(spec, parent_bounds)
 end
 
 function LayoutCalculator.calculate_flex(spec, parent_bounds)
-  local direction = spec.direction or 'horizontal'
+  local direction = spec.direction or LayoutSpec.Direction.HORIZONTAL
   local gap = spec.gap or 0
   local children = spec.children or {}
 
@@ -90,8 +90,8 @@ function LayoutCalculator.calculate_flex(spec, parent_bounds)
     children = {},
   } end
 
-  local main_axis_size = direction == 'horizontal' and parent_bounds.width or parent_bounds.height
-  local cross_axis_size = direction == 'horizontal' and parent_bounds.height or parent_bounds.width
+  local main_axis_size = direction == LayoutSpec.Direction.HORIZONTAL and parent_bounds.width or parent_bounds.height
+  local cross_axis_size = direction == LayoutSpec.Direction.HORIZONTAL and parent_bounds.height or parent_bounds.width
 
   local total_gap_space = gap * (#children - 1)
   local available_space = main_axis_size - total_gap_space
@@ -102,7 +102,7 @@ function LayoutCalculator.calculate_flex(spec, parent_bounds)
   local total_flex = 0
 
   for i, child in ipairs(children) do
-    local dimension_key = direction == 'horizontal' and 'width' or 'height'
+    local dimension_key = direction == LayoutSpec.Direction.HORIZONTAL and 'width' or 'height'
     local fixed_size = child[dimension_key]
 
     if fixed_size then
@@ -169,7 +169,7 @@ function LayoutCalculator.calculate_flex(spec, parent_bounds)
     local child_size = child_sizes[i]
 
     local child_allocated
-    if direction == 'horizontal' then
+    if direction == LayoutSpec.Direction.HORIZONTAL then
       child_allocated = {
         row = parent_bounds.row,
         col = parent_bounds.col + current_pos,
@@ -204,8 +204,8 @@ function LayoutCalculator.calculate_absolute(spec, parent_bounds)
   local width = LayoutBounds.convert_dimension(spec.width, parent_bounds.width) or parent_bounds.width
   local height = LayoutBounds.convert_dimension(spec.height, parent_bounds.height) or parent_bounds.height
 
-  width = parent_bounds:apply_constraints(width, spec.min_width, spec.max_width, parent_bounds.width)
-  height = parent_bounds:apply_constraints(height, spec.min_height, spec.max_height, parent_bounds.height)
+  width = LayoutBounds.apply_constraints(width, spec.min_width, spec.max_width, parent_bounds.width)
+  height = LayoutBounds.apply_constraints(height, spec.min_height, spec.max_height, parent_bounds.height)
 
   local row, col
 
@@ -233,7 +233,6 @@ function LayoutCalculator.calculate_absolute(spec, parent_bounds)
     col = col,
     width = width,
     height = height,
-    parent = parent_bounds,
   })
 
   local children = {}

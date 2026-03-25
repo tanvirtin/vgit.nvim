@@ -472,7 +472,7 @@ describe('CommitPickerView:', function()
       view:create(make_data())
 
       view._destroyed = false
-      view._is_destroying = false
+
       view:destroy()
       assert.is_true(view._destroyed)
 
@@ -487,7 +487,7 @@ describe('CommitPickerView:', function()
       view:create(make_data())
 
       view._destroyed = false
-      view._is_destroying = false
+
       view:destroy()
       assert.is_true(view._destroyed)
     end)

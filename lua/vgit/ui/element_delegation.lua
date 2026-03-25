@@ -247,7 +247,7 @@ local function define_single_element_methods(Class, opts)
   function Class:is_focused()
     return self:with_element(function(el)
       return el:is_focused()
-    end)
+    end) or false
   end
 
   function Class:is_valid()
@@ -281,25 +281,12 @@ local function define_single_element_methods(Class, opts)
   end
 end
 
-local GETTER_ELEMENT_METHODS = {
-  get_lines = 'get_lines',
-  get_lnum = 'get_lnum',
-  get_cursor = 'get_cursor',
-  get_line_count = 'get_line_count',
-  get_width = 'get_width',
-  get_height = 'get_height',
-  get_filetype = 'get_filetype',
-}
-
 local function define_getters_with_fallbacks(Class, fallbacks)
   for method_name, fallback in pairs(fallbacks) do
-    local el_method = GETTER_ELEMENT_METHODS[method_name]
-    if el_method then
-      Class[method_name] = function(self)
-        return self:with_element(function(el)
-          return el[el_method](el)
-        end) or fallback
-      end
+    Class[method_name] = function(self)
+      return self:with_element(function(el)
+        return el[method_name](el)
+      end) or fallback
     end
   end
 end

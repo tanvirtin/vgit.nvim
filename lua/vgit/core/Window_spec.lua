@@ -83,11 +83,11 @@ describe('Window:', function()
       assert.are.equal(2, #cursor)
     end)
 
-    it('should return {1, 1} if get_cursor fails', function()
+    it('should return {1, 0} if get_cursor fails', function()
       win = Window(-1) -- Invalid window
 
       local cursor = win:get_cursor()
-      eq({ 1, 1 }, cursor)
+      eq({ 1, 0 }, cursor)
     end)
   end)
 

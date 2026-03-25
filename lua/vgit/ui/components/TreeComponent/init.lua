@@ -46,7 +46,6 @@ local TreeComponent = Component({
 function TreeComponent:constructor(props)
   local instance = TreeComponent.super.constructor(self, props)
   instance.state.list = props and props.list or {}
-  instance.state.title = props and props.title or ''
   instance._on_enter_callback = nil
   instance._on_move_callback = nil
   instance._keymaps_setup = false
@@ -58,7 +57,6 @@ end
 function TreeComponent:get_initial_state()
   return {
     list = {},
-    title = '',
     hls = {},
     virtual_texts = {},
     shadow_list = {},
@@ -98,11 +96,6 @@ function TreeComponent:get_parent_folder(segmented_folders, current_index)
   return self._depth_tree:get_parent_folder(segmented_folders, current_index)
 end
 
-function TreeComponent:generate_tree(entries)
-  self._depth_tree:from_entries(entries)
-  return self._depth_tree:value()
-end
-
 function TreeComponent:transform_entries_to_tree(entries)
   self._depth_tree:from_entries(entries)
   self._depth_tree:sort()
@@ -136,11 +129,6 @@ function TreeComponent:set_list(list)
   return self
 end
 
-function TreeComponent:set_title(text)
-  self:set_state({ title = text })
-  return self
-end
-
 function TreeComponent:toggle_list_item(item)
   if item.items then item.open = not item.open end
   return self
@@ -155,13 +143,13 @@ function TreeComponent:get_list_item(lnum)
 end
 
 function TreeComponent:each_list_item(callback)
-  for lnum, item in pairs(self.state.shadow_list) do
+  for lnum, item in ipairs(self.state.shadow_list) do
     callback(item, lnum)
   end
 end
 
 function TreeComponent:find_list_item(callback)
-  for lnum, item in pairs(self.state.shadow_list) do
+  for lnum, item in ipairs(self.state.shadow_list) do
     if callback(item, lnum) then return item, lnum end
   end
 end
@@ -405,7 +393,11 @@ function TreeComponent:generate_lines()
     end
   end
 
-  if not self.state.list then return {} end
+  if not self.state.list then
+    self.state.hls = {}
+    self.state.virtual_texts = {}
+    return {}
+  end
 
   local processed_list = {}
   for i = 1, #self.state.list do

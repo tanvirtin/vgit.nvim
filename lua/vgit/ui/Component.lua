@@ -163,6 +163,12 @@ local function CreateComponent(config)
         self._element:unmount()
         self._element = nil
       end
+      if config.viewport then
+        self._renderer_attached = false
+        self._viewport_dirty = true
+        self._last_top = nil
+        self._last_bot = nil
+      end
       self._mounted = false
     end
   elseif has_elements then
@@ -179,11 +185,10 @@ local function CreateComponent(config)
     function Class:unmount()
       if not self._mounted then return end
       if config.on_unmount then config.on_unmount(self) end
-      if self.children then
-        for _, child in pairs(self.children) do
-          if child.unmount then child:unmount() end
-        end
+      for _, child in pairs(self.children) do
+        if child.unmount then child:unmount() end
       end
+      self.children = {}
       self._mounted = false
     end
   end

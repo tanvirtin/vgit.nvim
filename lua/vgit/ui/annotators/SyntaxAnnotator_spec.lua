@@ -47,6 +47,20 @@ describe('SyntaxAnnotator:', function()
       assert.is_truthy(key)
       assert.is_truthy(key:match('lua'))
     end)
+
+    it('should produce different keys when only a non-sampled middle line differs', function()
+      local lines1 = {}
+      local lines2 = {}
+      for i = 1, 20 do
+        lines1[i] = 'line ' .. i
+        lines2[i] = 'line ' .. i
+      end
+      -- Change only line 7, which is not first(1), Q1(6), Q2(11), Q3(16), or last(20)
+      lines2[7] = 'CHANGED'
+      local key1 = annotator:_cache_key(lines1, 'lua')
+      local key2 = annotator:_cache_key(lines2, 'lua')
+      assert.are_not.equal(key1, key2)
+    end)
   end)
 
   describe('clear_cache', function()

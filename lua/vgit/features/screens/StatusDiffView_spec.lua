@@ -1882,10 +1882,6 @@ describe('StatusDiffView:', function()
       it('should initialize destroyed as false', function()
         assert.is_false(view._destroyed)
       end)
-
-      it('should initialize is_destroying as false', function()
-        assert.is_false(view._is_destroying)
-      end)
     end)
 
     describe('destroy', function()

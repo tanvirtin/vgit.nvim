@@ -51,9 +51,10 @@ end
 function SplitDiffComponent:calculate_split_line_numbers(diff)
   local current_lnum_change_map = {}
   local previous_lnum_change_map = {}
+  local lnum_changes = diff.lnum_changes or {}
 
-  for i = 1, #diff.lnum_changes do
-    local lnum_change = diff.lnum_changes[i]
+  for i = 1, #lnum_changes do
+    local lnum_change = lnum_changes[i]
 
     if lnum_change.buftype == 'current' then
       current_lnum_change_map[lnum_change.lnum] = lnum_change

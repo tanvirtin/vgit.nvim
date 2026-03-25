@@ -53,11 +53,12 @@ function Extmark:highlight_pattern(opts)
       local extmark_opts = {
         end_col = to,
         hl_group = hl,
+        priority = priority,
       }
-      if priority then extmark_opts.priority = priority end
       local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, from - 1, extmark_opts)
       if not ok then return false, value end
-      j = from
+      j = to
+      if to < from then break end
       result[#result + 1] = value
     end
   else
@@ -71,11 +72,12 @@ function Extmark:highlight_pattern(opts)
         local extmark_opts = {
           end_col = to,
           hl_group = hl,
+          priority = priority,
         }
-        if priority then extmark_opts.priority = priority end
         local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, i - 1, from - 1, extmark_opts)
         if not ok then return false, value end
-        j = from
+        j = to
+        if to < from then break end
         result[#result + 1] = value
       end
     end
@@ -101,13 +103,11 @@ function Extmark:highlight_range(opts)
   local col_range = opts.col_range
   local priority = opts.priority
 
-  local extmark_opts = {
+  return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, col_range.from, {
     end_col = col_range.to,
     hl_group = hl,
-  }
-  if priority then extmark_opts.priority = priority end
-
-  return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, col_range.from, extmark_opts)
+    priority = priority,
+  })
 end
 
 function Extmark:highlight(opts)
@@ -160,6 +160,7 @@ function Extmark:sign(opts)
 
   local id = self:derive_id(row)
   local sign_definition = get_sign_definition(name)
+  if not sign_definition then return false, 'unknown sign: ' .. tostring(name) end
   local sign_text = sign_definition.text
 
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, 0, {

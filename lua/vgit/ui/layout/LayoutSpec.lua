@@ -1,8 +1,4 @@
-local lazy = require('vgit.core.lazy')
-
-local Object = lazy('vgit.core.Object')
-
-local LayoutSpec = Object:extend()
+local LayoutSpec = {}
 
 LayoutSpec.Type = {
   CONTAINER = 'container',
@@ -41,8 +37,6 @@ function LayoutSpec.horizontal(children, opts)
     direction = LayoutSpec.Direction.HORIZONTAL,
     children = children or {},
     gap = opts.gap,
-    align = opts.align,
-    justify = opts.justify,
   })
 end
 
@@ -52,8 +46,6 @@ function LayoutSpec.vertical(children, opts)
     direction = LayoutSpec.Direction.VERTICAL,
     children = children or {},
     gap = opts.gap,
-    align = opts.align,
-    justify = opts.justify,
   })
 end
 
@@ -64,8 +56,6 @@ function LayoutSpec.flex(opts)
     direction = opts.direction or LayoutSpec.Direction.HORIZONTAL,
     children = opts.children or {},
     gap = opts.gap,
-    align = opts.align,
-    justify = opts.justify,
     flex = opts.flex,
     width = opts.width,
     height = opts.height,

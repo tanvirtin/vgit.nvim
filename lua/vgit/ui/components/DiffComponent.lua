@@ -140,6 +140,11 @@ function DiffComponent:clear_lines()
     el:clear_lines()
   end)
   self.state.lines = {}
+  self.state.marks = {}
+  self.state.hunks = {}
+  self.state.line_numbers = {}
+  self.state.lines_changes = {}
+  self.state.folds = {}
   return self
 end
 
@@ -209,12 +214,19 @@ end
 function DiffComponent:render_folds()
   local folds = self.state.folds
   if #folds == 0 then return self end
-  FoldCalculator.apply_folds(self, folds)
+  self:clear_folds()
+  self:call(function()
+    for _, fold in ipairs(folds) do
+      vim.cmd(string.format('%s,%sfold', fold.top, fold.bot))
+    end
+  end)
   return self
 end
 
 function DiffComponent:clear_folds()
-  FoldCalculator.clear_folds(self)
+  self:call(function()
+    vim.cmd('normal! zR')
+  end)
   return self
 end
 

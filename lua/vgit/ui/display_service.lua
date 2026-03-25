@@ -48,6 +48,7 @@ local function show_view(ViewClass, data, name)
   end
 
   _showing = true
+  local view
   local ok, err = pcall(function()
     if active_view and active_view.destroy then
       active_view:destroy()
@@ -56,14 +57,21 @@ local function show_view(ViewClass, data, name)
 
     event.await()
 
-    local view = ViewClass()
+    view = ViewClass()
     local success = view:create(data)
-    if success == false then return end
+    if success == false then
+      view:destroy()
+      view = nil
+      return
+    end
     active_view = view
   end)
   _showing = false
 
-  if not ok then error(err) end
+  if not ok then
+    if view and view.destroy then pcall(view.destroy, view) end
+    error(err)
+  end
 end
 
 display_service.show_diff = event.async(function(data)
@@ -99,12 +107,7 @@ display_service.show_blame = event.async(function(data)
 end)
 
 display_service.show_status = event.async(function(data)
-  if not data then
-    console.error('No status data')
-    return
-  end
-
-  if not data.entries or #data.entries == 0 then
+  if not data or not data.entries or #data.entries == 0 then
     console.info('No changes to display')
     return
   end
@@ -182,6 +185,7 @@ end
 function display_service.reset()
   if active_view and active_view.destroy then active_view:destroy() end
   active_view = nil
+  _showing = false
   for _, cleanup in ipairs(_event_cleanups) do
     cleanup()
   end
