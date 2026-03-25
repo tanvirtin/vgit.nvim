@@ -1,7 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
 local Object = lazy('vgit.core.Object')
-local Window = lazy('vgit.core.Window')
 
 local LayoutBounds = Object:extend()
 
@@ -12,7 +11,6 @@ function LayoutBounds:constructor(opts)
     ['$col'] = opts.col or 0,
     ['$width'] = opts.width or 0,
     ['$height'] = opts.height or 0,
-    ['$parent'] = opts.parent,
   }
 end
 
@@ -29,12 +27,12 @@ function LayoutBounds.convert_dimension(value, parent_dimension)
 
     if value:match('vh$') then
       local n = tonumber(value:sub(1, #value - 2))
-      return math.ceil((n / 100) * vim.o.lines)
+      if n then return math.floor((n / 100) * vim.o.lines) end
     end
 
     if value:match('vw$') then
       local n = tonumber(value:sub(1, #value - 2))
-      return math.ceil((n / 100) * vim.o.columns)
+      if n then return math.floor((n / 100) * vim.o.columns) end
     end
   end
 end
@@ -48,24 +46,7 @@ function LayoutBounds.from_viewport()
   })
 end
 
-function LayoutBounds.from_window(win_id)
-  local win = win_id and Window(win_id) or Window(0)
-
-  if not win:is_valid() then return LayoutBounds.from_viewport() end
-
-  local width = win:get_width()
-  local height = win:get_height()
-  local pos = win:get_position()
-
-  return LayoutBounds({
-    row = pos[1],
-    col = pos[2],
-    width = width,
-    height = height,
-  })
-end
-
-function LayoutBounds:apply_constraints(value, min_value, max_value, parent_dimension)
+function LayoutBounds.apply_constraints(value, min_value, max_value, parent_dimension)
   if not value then return end
 
   local result = value
@@ -137,8 +118,8 @@ function LayoutBounds:child_bounds(spec, allocated)
   if spec.width then child_width = LayoutBounds.convert_dimension(spec.width, self.width) end
   if spec.height then child_height = LayoutBounds.convert_dimension(spec.height, self.height) end
 
-  child_width = self:apply_constraints(child_width, spec.min_width, spec.max_width, self.width)
-  child_height = self:apply_constraints(child_height, spec.min_height, spec.max_height, self.height)
+  child_width = LayoutBounds.apply_constraints(child_width, spec.min_width, spec.max_width, self.width)
+  child_height = LayoutBounds.apply_constraints(child_height, spec.min_height, spec.max_height, self.height)
 
   if spec.anchor then
     child_row, child_col = self:calculate_anchor_position(spec.anchor, child_width, child_height, spec.offset)
@@ -149,7 +130,6 @@ function LayoutBounds:child_bounds(spec, allocated)
     col = child_col,
     width = child_width,
     height = child_height,
-    parent = self,
   })
 end
 
@@ -181,7 +161,6 @@ function LayoutBounds:clone()
     col = self.col,
     width = self.width,
     height = self.height,
-    parent = self.parent,
   })
 end
 
@@ -192,7 +171,6 @@ function LayoutBounds:shrink(margin)
     col = self.col + margin,
     width = math.max(0, self.width - (margin * 2)),
     height = math.max(0, self.height - (margin * 2)),
-    parent = self.parent,
   })
 end
 

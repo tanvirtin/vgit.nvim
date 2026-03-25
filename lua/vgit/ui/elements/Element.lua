@@ -14,7 +14,6 @@ function Element:constructor(props)
   props = props or {}
 
   return {
-    ['$props'] = props,
     _buffer = nil,
     _window = nil,
     _mounted = false,
@@ -47,14 +46,14 @@ function Element:mount()
   self._buffer = Buffer():create()
   self._buffer:assign_options(self._config.buf_options)
 
-  local win_plot = self._plot.win_plot or {}
+  local win_plot = utils.object.assign(self._plot.win_plot or {})
   local window_mode = self._config.window_mode or 'popup'
 
   if win_plot.width then win_plot.width = LayoutBounds.convert_dimension(win_plot.width) end
   if win_plot.height then win_plot.height = LayoutBounds.convert_dimension(win_plot.height) end
 
   if window_mode == 'screen' or window_mode == 'split' then
-    win_plot = vim.tbl_extend('force', win_plot or {}, {
+    win_plot = vim.tbl_extend('force', win_plot, {
       win_options = self._config.win_options,
     })
   end
@@ -75,8 +74,10 @@ function Element:unmount()
   self:detach_from_renderer()
 
   if self._window and self._window:is_valid() then self._window:close() end
+  self._window = nil
 
   if self._buffer and self._buffer:is_valid() then self._buffer:delete({ force = true }) end
+  self._buffer = nil
 
   self._mounted = false
 
@@ -118,7 +119,7 @@ function Element:set_cursor(cursor)
 end
 
 function Element:get_cursor()
-  if not self:is_valid() then return { 1, 1 } end
+  if not self:is_valid() then return { 1, 0 } end
   return self._window:get_cursor()
 end
 
@@ -178,6 +179,7 @@ function Element:start_insert()
 end
 
 function Element:stop_insert()
+  if not self:is_valid() then return self end
   Window.stop_insert()
   return self
 end
@@ -327,15 +329,10 @@ function Element:detach_from_renderer()
   return self
 end
 
-function Element:render(top, bot)
-  self._on_render(top, bot)
-  return self
-end
-
 function Element:_apply_win_options()
   if not self._window or not self._window:is_valid() then return self end
 
-  local options = self._config.win_options or {}
+  local options = self._config.win_options
 
   for key, value in pairs(options) do
     self._window:set_option(key, value)
@@ -350,8 +347,6 @@ function Element:set_window_mode(mode)
 end
 
 function Element:apply_layout_win_plot(win_plot)
-  if not self._plot or type(self._plot) ~= 'table' then return self end
-
   if self._plot.win_plot then
     local component_focusable = self._plot.win_plot.focusable
     self._plot.win_plot = utils.object.assign(self._plot.win_plot, win_plot)

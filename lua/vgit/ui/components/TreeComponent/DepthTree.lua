@@ -159,8 +159,14 @@ function DepthTree:from_entries(entries)
     end
   end
 
-  for i = 1, #normalized_entries_by_depth do
-    local entries_at_depth = normalized_entries_by_depth[i]
+  local depths = {}
+  for depth in pairs(normalized_entries_by_depth) do
+    depths[#depths + 1] = depth
+  end
+  table.sort(depths)
+
+  for _, depth in ipairs(depths) do
+    local entries_at_depth = normalized_entries_by_depth[depth]
     for j = 1, #entries_at_depth do
       local entry = entries_at_depth[j]
       local parent_node = self:find_parent_node(entry)

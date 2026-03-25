@@ -46,7 +46,7 @@ function SyntaxMappingAnnotator:_map_highlights(result, hl_map, source_line, tar
     result[#result + 1] = {
       row = target_row,
       col_start = hl.col_start,
-      col_end = hl.col_end > 0 and hl.col_end or -1,
+      col_end = hl.col_end,
       hl_group = hl.hl_group,
     }
   end

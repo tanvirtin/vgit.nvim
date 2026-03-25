@@ -11,7 +11,6 @@ local BlameGutterComponent = Component({
     cursorline = true,
   },
   win_plot = { focusable = false },
-  layout_opts = { width = '35%' },
 
   on_props = function(self, prev_props)
     if self.props.blames ~= prev_props.blames then self:render() end
@@ -35,7 +34,6 @@ function BlameGutterComponent:render()
   local line_highlights = {}
   local line_count = #blames
   local group_index = 0
-  local blame_segments = {}
 
   local i = 1
   while i <= line_count do
@@ -50,8 +48,6 @@ function BlameGutterComponent:render()
       i = i + 1
     end
     local group_end = i - 1
-
-    table.insert(blame_segments, { start = group_start, finish = group_end })
 
     local is_uncommitted = blame:is_uncommitted()
     local bg_hl = group_index % 2 == 0 and 'GitBlameEven' or 'GitBlameOdd'
@@ -172,12 +168,6 @@ function BlameGutterComponent:render()
       })
     end
   end)
-
-  return blame_segments
-end
-
-function BlameGutterComponent:render_blame(blames, get_author_hl)
-  self:set_props({ blames = blames, get_author_hl = get_author_hl })
 end
 
 return BlameGutterComponent

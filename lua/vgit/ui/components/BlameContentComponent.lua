@@ -25,8 +25,4 @@ function BlameContentComponent:render()
   end)
 end
 
-function BlameContentComponent:render_content(lines, filetype)
-  self:set_props({ lines = lines, filetype = filetype })
-end
-
 return BlameContentComponent

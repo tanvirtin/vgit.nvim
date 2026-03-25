@@ -767,7 +767,7 @@ describe('DiffComponent:', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
       local component = DiffComponent({})
 
-      eq({ 1, 1 }, component:get_cursor())
+      eq({ 1, 0 }, component:get_cursor())
     end)
 
     it('should return real cursor when element is valid', function()
@@ -1163,6 +1163,31 @@ describe('DiffComponent:', function()
       eq({}, state.hunks)
       eq({}, state.lines_changes)
       eq({}, state.line_numbers)
+    end)
+  end)
+
+  describe('clear_lines', function()
+    it('should reset all state fields', function()
+      local component = create_diff_component({
+        lnum = 1,
+        state = {
+          lines = { 'a', 'b' },
+          marks = { { top = 0, bot = 1 } },
+          hunks = { { header = '@@ -1,1 +1,1 @@' } },
+          line_numbers = { { '1', 'GitLineNr' }, { '2', 'GitLineNr' } },
+          lines_changes = { { lnum_change = { lnum = 1 } }, {} },
+          folds = { { top = 0, bot = 1 } },
+        },
+      })
+
+      component:clear_lines()
+
+      eq({}, component.state.lines)
+      eq({}, component.state.marks)
+      eq({}, component.state.hunks)
+      eq({}, component.state.line_numbers)
+      eq({}, component.state.lines_changes)
+      eq({}, component.state.folds)
     end)
   end)
 end)

@@ -56,7 +56,7 @@ describe('LayoutContext:', function()
   end)
 
   describe('get_dimensions', function()
-    it('should cache dimensions', function()
+    it('should return consistent dimensions', function()
       local ctx = LayoutContext({
         width = 100,
         height = 50,

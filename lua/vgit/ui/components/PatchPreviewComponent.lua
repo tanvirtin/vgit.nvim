@@ -227,7 +227,7 @@ function PatchPreviewComponent:render_viewport(top, bot)
             row = hl.row,
             col_range = {
               from = hl.col_start,
-              to = hl.col_end > 0 and hl.col_end or nil,
+              to = hl.col_end >= 0 and hl.col_end or #(self.state.lines[row + 1] or ''),
             },
             priority = 20,
           })
@@ -262,7 +262,6 @@ end
 function PatchPreviewComponent:clear_extmarks()
   self:with_element(function(el)
     el:clear_extmarks()
-    el:clear_extmark_lnums()
   end)
   return self
 end
@@ -285,6 +284,8 @@ end
 
 function PatchPreviewComponent:reset()
   DiffViewportComponent.reset(self)
+  self.state.marks = {}
+  self.state._line_numbers = {}
   self.state.line_metadata = {}
   self.state._diff_hl_map = {}
   self.state._syntax_hl_map = {}

@@ -9,29 +9,6 @@ describe('TreeComponent:', function()
     component = TreeComponent({})
   end)
 
-  describe('filename extraction', function()
-    it('should extract filename from simple path', function()
-      local full_path = 'file.lua'
-      local parts = vim.split(full_path, '/')
-      local filename = parts[#parts] or full_path
-      assert.are.equal('file.lua', filename)
-    end)
-
-    it('should extract filename from nested path', function()
-      local full_path = 'src/components/file.lua'
-      local parts = vim.split(full_path, '/')
-      local filename = parts[#parts] or full_path
-      assert.are.equal('file.lua', filename)
-    end)
-
-    it('should handle deeply nested paths', function()
-      local full_path = 'a/b/c/d/e/file.lua'
-      local parts = vim.split(full_path, '/')
-      local filename = parts[#parts] or full_path
-      assert.are.equal('file.lua', filename)
-    end)
-  end)
-
   describe('get_display_name', function()
     it('should extract filename from simple path', function()
       local result = component:get_display_name('file.lua')
@@ -144,18 +121,8 @@ describe('TreeComponent:', function()
       assert.are.equal(list, component.state.list)
     end)
 
-    it('should set title', function()
-      component:set_title('Test Title')
-      assert.are.equal('Test Title', component.state.title)
-    end)
-
     it('should chain set_list', function()
       local result = component:set_list({})
-      assert.are.equal(component, result)
-    end)
-
-    it('should chain set_title', function()
-      local result = component:set_title('Title')
       assert.are.equal(component, result)
     end)
   end)

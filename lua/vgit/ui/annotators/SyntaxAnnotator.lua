@@ -17,10 +17,15 @@ end
 function SyntaxAnnotator:_cache_key(lines, filetype)
   local n = #lines
   if n == 0 then return nil end
-  local q1 = lines[math.floor(n * 0.25) + 1] or ''
-  local q2 = lines[math.floor(n * 0.50) + 1] or ''
-  local q3 = lines[math.floor(n * 0.75) + 1] or ''
-  return string.format('%s:%d:%s:%s:%s:%s:%s', filetype or '', n, lines[1] or '', q1, q2, q3, lines[n] or '')
+  local hash = 5381
+  for i = 1, n do
+    local line = lines[i]
+    for j = 1, #line do
+      hash = ((hash * 33) + string.byte(line, j)) % 0x100000000
+    end
+    hash = ((hash * 33) + 10) % 0x100000000
+  end
+  return string.format('%s:%d:%u', filetype or '', n, hash)
 end
 
 function SyntaxAnnotator:_cache_put(key, value)

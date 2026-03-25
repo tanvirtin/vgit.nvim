@@ -477,7 +477,6 @@ describe('ProjectDiffView:', function()
       view._component_group = { unmount = function() end }
       view._context = { restore_window_options = function() end }
       view._destroyed = false
-      view._is_destroying = false
 
       view:destroy()
       view:destroy() -- second call should not error
@@ -489,7 +488,6 @@ describe('ProjectDiffView:', function()
       view._component_group = { unmount = function() end }
       view._context = { restore_window_options = function() end }
       view._destroyed = false
-      view._is_destroying = false
 
       assert.is_false(view._destroyed)
       view:destroy()
@@ -501,7 +499,6 @@ describe('ProjectDiffView:', function()
       view._component_group = { unmount = function() end }
       view._context = { restore_window_options = function() end }
       view._destroyed = false
-      view._is_destroying = false
 
       local gen_before = view._update_gen
       view:destroy()
@@ -523,7 +520,6 @@ describe('ProjectDiffView:', function()
       view._component_group = { unmount = function() end }
       view._context = { restore_window_options = function() end }
       view._destroyed = false
-      view._is_destroying = false
 
       view:destroy()
       eq(1, cleanup1_calls)

@@ -6,11 +6,6 @@ local Component = lazy('vgit.ui.Component')
 local SearchFilter = lazy('vgit.core.SearchFilter')
 
 local SearchComponent = Component({
-  elements = {
-    input = { buf_options = { modifiable = true, buflisted = false, bufhidden = 'wipe' } },
-    list = { buf_options = { modifiable = false, buflisted = false, bufhidden = 'wipe' } },
-  },
-
   on_mount = function(self)
     local prompt = self.props.prompt or '> '
     self.elements.input:set_lines({ prompt })
@@ -147,10 +142,24 @@ function SearchComponent:layout(spec)
   })
 end
 
+function SearchComponent:get_layout_spec()
+  local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
+  return self:layout(LayoutSpec)
+end
+
 function SearchComponent:is_valid()
-  if self.elements.input and self.elements.input:is_valid() then return true end
-  if self.elements.list and self.elements.list:is_valid() then return true end
-  return false
+  if not self.elements.input or not self.elements.input:is_valid() then return false end
+  if not self.elements.list or not self.elements.list:is_valid() then return false end
+  return true
+end
+
+function SearchComponent:unmount()
+  if not self._mounted then return end
+  if self.elements.input then self.elements.input:stop_insert() end
+  if self.elements.input then self.elements.input:unmount() end
+  if self.elements.list then self.elements.list:unmount() end
+  self.elements = {}
+  self._mounted = false
 end
 
 function SearchComponent:on(event_name, callback)
@@ -223,7 +232,7 @@ function SearchComponent:_load_more_items()
   self:render()
 
   event.async(function()
-    local new_items = self.props.on_load_more()
+    local ok, new_items = pcall(self.props.on_load_more)
 
     event.await()
 
@@ -231,7 +240,7 @@ function SearchComponent:_load_more_items()
 
     if not self._mounted then return end
 
-    if not new_items or #new_items == 0 then
+    if not ok or not new_items or #new_items == 0 then
       self._exhausted = true
       self:render()
       return
@@ -267,7 +276,6 @@ function SearchComponent:move(direction)
         local page_size = self.props.page_size or visible_count
         local new_visible = math.min(visible_count + page_size, #items)
         self:set_state({ visible_count = new_visible, selected_index = index })
-        if self._mounted then self:render() end
         self:_fire_on_move()
         return
       elseif self.props.on_load_more and not self._exhausted then
@@ -449,6 +457,7 @@ function SearchComponent:render()
   end
 
   self.elements.list:set_lines(lines)
+  self.elements.list:clear_extmark_highlights()
 
   for i = 1, #description_hls do
     local hl = description_hls[i]

@@ -60,7 +60,7 @@ end
 
 function Window:get_cursor()
   local ok, cursor = pcall(vim.api.nvim_win_get_cursor, self.win_id)
-  if not ok or not cursor then return { 1, 1 } end
+  if not ok or not cursor then return { 1, 0 } end
 
   return cursor
 end

@@ -128,7 +128,6 @@ describe('BlameLensView:', function()
       assert.is_nil(view._blame_info_component)
       assert.is_nil(view._diff_component)
       assert.is_false(view._destroyed)
-      assert.is_false(view._is_destroying)
     end)
   end)
 

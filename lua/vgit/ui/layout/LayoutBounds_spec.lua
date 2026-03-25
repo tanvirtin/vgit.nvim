@@ -61,7 +61,6 @@ describe('LayoutBounds:', function()
       assert.are.equal(0, b.col)
       assert.are.equal(0, b.width)
       assert.are.equal(0, b.height)
-      assert.is_nil(b.parent)
     end)
 
     it('should set values from opts', function()
@@ -71,41 +70,29 @@ describe('LayoutBounds:', function()
       assert.are.equal(100, b.width)
       assert.are.equal(50, b.height)
     end)
-
-    it('should store parent reference', function()
-      local parent = LayoutBounds({ width = 200, height = 100 })
-      local child = LayoutBounds({ parent = parent })
-      assert.are.equal(parent, child.parent)
-    end)
   end)
 
   describe('apply_constraints', function()
-    local bounds
-
-    before_each(function()
-      bounds = LayoutBounds({ width = 200, height = 100 })
-    end)
-
     it('should return nil when value is nil', function()
-      assert.is_nil(bounds:apply_constraints(nil, nil, nil, 200))
+      assert.is_nil(LayoutBounds.apply_constraints(nil, nil, nil, 200))
     end)
 
     it('should return value unchanged when no constraints', function()
-      assert.are.equal(50, bounds:apply_constraints(50, nil, nil, 200))
+      assert.are.equal(50, LayoutBounds.apply_constraints(50, nil, nil, 200))
     end)
 
     it('should clamp to min_value when value is too small', function()
-      assert.are.equal(30, bounds:apply_constraints(10, 30, nil, 200))
+      assert.are.equal(30, LayoutBounds.apply_constraints(10, 30, nil, 200))
     end)
 
     it('should clamp to max_value when value is too large', function()
-      assert.are.equal(80, bounds:apply_constraints(100, nil, 80, 200))
+      assert.are.equal(80, LayoutBounds.apply_constraints(100, nil, 80, 200))
     end)
 
     it('should apply both min and max constraints', function()
-      assert.are.equal(30, bounds:apply_constraints(10, 30, 80, 200))
-      assert.are.equal(80, bounds:apply_constraints(100, 30, 80, 200))
-      assert.are.equal(50, bounds:apply_constraints(50, 30, 80, 200))
+      assert.are.equal(30, LayoutBounds.apply_constraints(10, 30, 80, 200))
+      assert.are.equal(80, LayoutBounds.apply_constraints(100, 30, 80, 200))
+      assert.are.equal(50, LayoutBounds.apply_constraints(50, 30, 80, 200))
     end)
   end)
 
@@ -235,11 +222,6 @@ describe('LayoutBounds:', function()
       assert.are.equal(80, child.col) -- (200 - 40) / 2
     end)
 
-    it('should set parent reference', function()
-      local child = parent:child_bounds({}, { width = 50, height = 30 })
-      assert.are.equal(parent, child.parent)
-    end)
-
     it('should default row/col to parent origin when not allocated', function()
       local child = parent:child_bounds({}, { width = 50, height = 30 })
       assert.are.equal(0, child.row)
@@ -287,13 +269,6 @@ describe('LayoutBounds:', function()
       assert.are.equal(40, copy.height)
       -- Clone is a distinct object
       assert.are_not.equal(original, copy)
-    end)
-
-    it('should preserve parent reference', function()
-      local parent = LayoutBounds({ width = 200 })
-      local original = LayoutBounds({ row = 0, col = 0, width = 50, height = 25, parent = parent })
-      local copy = original:clone()
-      assert.are.equal(parent, copy.parent)
     end)
   end)
 

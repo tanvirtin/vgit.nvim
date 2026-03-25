@@ -19,17 +19,15 @@ describe('display_service:', function()
   end)
 
   describe('register_events', function()
-    it('should be idempotent — calling twice does not double-register VGitChange', function()
+    it('should be idempotent — calling twice does not double-register handlers', function()
       display_service.register_events()
       display_service.register_events()
 
-      local count = 0
-      event.custom_on('VGitChange', function()
-        count = count + 1
-      end)
-      event.emit('VGitChange', {})
-
-      eq(count, 1)
+      -- If handlers were double-registered, emitting VGitDirChanged would
+      -- call destroy twice on active_view, which could error. Verify no error.
+      local ok = pcall(event.emit, 'VGitDirChanged', {})
+      assert.is_true(ok)
+      assert.is_nil(display_service.get_active_view())
     end)
   end)
 

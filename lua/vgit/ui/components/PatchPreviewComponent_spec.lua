@@ -49,7 +49,6 @@ describe('PatchPreviewComponent:', function()
 
   describe('build_patch_lines_from_entries', function()
     it('should build lines from file_header entries', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'file_header',
@@ -77,7 +76,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should build lines from hunk entries', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'file_header',
@@ -132,7 +130,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should handle multiple hunks and files', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'file_header',
@@ -189,7 +186,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should handle diff_content entries', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'file_header',
@@ -217,7 +213,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should handle empty entries', function()
-      local component = create_patch_preview({})
       local lines, line_metadata, file_sections, marks = PatchLineBuilder.build({})
 
       eq(0, #lines)
@@ -225,7 +220,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should handle nil entries', function()
-      local component = create_patch_preview({})
       local lines, line_metadata, file_sections, marks = PatchLineBuilder.build(nil)
 
       eq(0, #lines)
@@ -233,7 +227,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should strip trailing blank line', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'file_header',
@@ -260,7 +253,6 @@ describe('PatchPreviewComponent:', function()
 
   describe('line numbers from build_patch_lines_from_entries', function()
     it('should compute line numbers for unified diff', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'file_header',
@@ -310,13 +302,11 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should return empty line numbers for empty entries', function()
-      local component = create_patch_preview({})
       local _, _, _, _, line_numbers = PatchLineBuilder.build({})
       eq(0, #line_numbers)
     end)
 
     it('should reset counters at each hunk header', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'file_header',
@@ -346,7 +336,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should produce GitLineNr for non-code lines', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'file_header',
@@ -783,7 +772,7 @@ describe('PatchPreviewComponent:', function()
 
     it('should return default for get_cursor when element is nil', function()
       local component = create_patch_preview({})
-      eq({ 1, 1 }, component:get_cursor())
+      eq({ 1, 0 }, component:get_cursor())
     end)
 
     it('should return default for get_lnum when element is nil', function()
@@ -816,7 +805,6 @@ describe('PatchPreviewComponent:', function()
 
   describe('process_diff_file mark remapping', function()
     it('should produce marks within buffer line bounds for a single-hunk file', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'diff_file',
@@ -853,7 +841,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should remap marks to lines that contain actual changes', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'diff_file',
@@ -940,7 +927,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should produce marks from two files that are non-overlapping and ascending', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'diff_file',
@@ -1064,7 +1050,6 @@ describe('PatchPreviewComponent:', function()
       local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
       local diff = Diff():generate_unified({ hunk }, { 'a', 'new', 'c' })
 
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'diff_file',
@@ -1087,7 +1072,6 @@ describe('PatchPreviewComponent:', function()
       local hunk2 = make_hunk('@@ -4,1 +6,1 @@', { '-old', '+changed' })
       local diff = Diff():generate_unified({ hunk1, hunk2 }, { 'new1', 'new2', 'a', 'b', 'c', 'changed' })
 
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'diff_file',
@@ -1106,7 +1090,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should preserve word_diff through to line_metadata', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'diff_file',
@@ -1141,7 +1124,6 @@ describe('PatchPreviewComponent:', function()
       local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old', '+new' })
       local diff = Diff():generate_unified({ hunk }, { 'a', 'new', 'c' })
 
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'diff_file',
@@ -1165,7 +1147,6 @@ describe('PatchPreviewComponent:', function()
       local hunk2 = make_hunk('@@ -1,1 +1,1 @@', { '-old', '+changed' })
       local diff2 = Diff():generate_unified({ hunk2 }, { 'changed' })
 
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'diff_file',
@@ -1192,7 +1173,6 @@ describe('PatchPreviewComponent:', function()
     end)
 
     it('should set void lnum_change type in line_metadata for void lines', function()
-      local component = create_patch_preview({})
       local entries = {
         {
           type = 'diff_file',

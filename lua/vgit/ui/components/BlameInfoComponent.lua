@@ -19,12 +19,6 @@ local BlameInfoComponent = Component({
   end,
 })
 
-function BlameInfoComponent:get_initial_state()
-  return {
-    blame = nil,
-  }
-end
-
 function BlameInfoComponent:render()
   local blame = self.props.blame
   if not blame then return end
@@ -69,13 +63,16 @@ function BlameInfoComponent:render()
       })
     end
 
-    el:place_extmark_text({
-      text = string.format('%s (%s)', blame:age().display, os.date('%c', blame.author_time)),
-      hl = 'GitComment',
-      row = 1,
-      col = 0,
-      pos = 'eol',
-    })
+    local age = blame:age()
+    if age then
+      el:place_extmark_text({
+        text = string.format('%s (%s)', age.display, os.date('%c', blame.author_time)),
+        hl = 'GitComment',
+        row = 1,
+        col = 0,
+        pos = 'eol',
+      })
+    end
   end)
 end
 

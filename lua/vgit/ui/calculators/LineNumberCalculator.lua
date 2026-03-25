@@ -85,29 +85,4 @@ function LineNumberCalculator.calculate_split_previous_line_numbers(diff, lnum_c
   return LineNumberCalculator._calculate_line_numbers(diff.previous_lines, lnum_change_map, 1)
 end
 
-function LineNumberCalculator.calculate_split_line_numbers(diff)
-  local current_lnum_change_map = {}
-  local previous_lnum_change_map = {}
-
-  for i = 1, #diff.lnum_changes do
-    local lnum_change = diff.lnum_changes[i]
-
-    if lnum_change.buftype == 'current' then
-      current_lnum_change_map[lnum_change.lnum] = lnum_change
-    elseif lnum_change.buftype == 'previous' then
-      previous_lnum_change_map[lnum_change.lnum] = lnum_change
-    end
-  end
-
-  local previous_lines, previous_changes =
-    LineNumberCalculator.calculate_split_previous_line_numbers(diff, previous_lnum_change_map)
-  local current_lines, current_changes =
-    LineNumberCalculator.calculate_split_current_line_numbers(diff, current_lnum_change_map)
-
-  return {
-    previous = { lines = previous_lines, changes = previous_changes },
-    current = { lines = current_lines, changes = current_changes },
-  }
-end
-
 return LineNumberCalculator
