@@ -22,22 +22,31 @@ describe('Diff:', function()
       eq({}, diff.lnum_changes)
       eq({ added = 0, removed = 0 }, diff.stat)
     end)
-
-    it('should accept opts', function()
-      local diff = Diff({ stat = { added = 5, removed = 3 } })
-      assert.are.equal(5, diff.stat.added)
-    end)
   end)
 
   describe('generate', function()
-    it('should error when shape is nil', function()
+    it('should error when hunks is nil', function()
+      local diff = Diff()
+      assert.has_error(function()
+        diff:generate(nil, {}, 'unified')
+      end)
+    end)
+
+    it('should error when lines is nil', function()
+      local diff = Diff()
+      assert.has_error(function()
+        diff:generate({}, nil, 'unified')
+      end)
+    end)
+
+    it('should error when layout_type is nil', function()
       local diff = Diff()
       assert.has_error(function()
         diff:generate({}, {}, nil)
       end)
     end)
 
-    it('should error on invalid shape', function()
+    it('should error on invalid layout_type', function()
       local diff = Diff()
       assert.has_error(function()
         diff:generate({}, {}, 'invalid')
@@ -167,6 +176,25 @@ describe('Diff:', function()
       assert.is_true(found['removed2'])
       assert.is_nil(found['-removed1'])
       assert.is_nil(found['-removed2'])
+    end)
+
+    it('should produce word_diff for change hunks with equal removed and added lines', function()
+      local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-old_word', '+new_word' })
+      local diff = Diff()
+      local lines = { 'a', 'new_word', 'c' }
+
+      local result = diff:generate({ hunk }, lines, 'unified')
+
+      local remove_lc, add_lc
+      for _, lc in ipairs(result.lnum_changes) do
+        if lc.type == 'remove' then remove_lc = lc end
+        if lc.type == 'add' then add_lc = lc end
+      end
+
+      assert.is_not_nil(remove_lc)
+      assert.is_not_nil(add_lc)
+      assert.is_not_nil(remove_lc.word_diff)
+      assert.is_not_nil(add_lc.word_diff)
     end)
   end)
 
@@ -365,6 +393,8 @@ describe('Diff:', function()
 
       assert.are.equal(1, #result.marks)
       assert.are.equal(1, result.marks[1].top)
+      assert.is_not_nil(result.marks[1].top_relative)
+      assert.is_not_nil(result.marks[1].bot_relative)
 
       -- All lnum_changes should be remove
       for _, lc in ipairs(result.lnum_changes) do
@@ -379,6 +409,20 @@ describe('Diff:', function()
       local result = diff:generate_unified_deleted({ hunk }, { 'x', 'y' })
       assert.are.equal(0, result.stat.added)
       assert.are.equal(2, result.stat.removed)
+    end)
+
+    it('should process multiple hunks', function()
+      local hunk1 = make_hunk('@@ -1,2 +0,0 @@', { '-a', '-b' })
+      local hunk2 = make_hunk('@@ -5,2 +0,0 @@', { '-e', '-f' })
+      local diff = Diff()
+      local result = diff:generate_unified_deleted({ hunk1, hunk2 }, { 'a', 'b', 'c', 'd', 'e', 'f' })
+
+      assert.are.equal(2, #result.marks)
+      assert.are.equal(4, #result.lnum_changes)
+      assert.are.equal(0, result.stat.added)
+      assert.are.equal(4, result.stat.removed)
+      assert.is_not_nil(result.marks[1].top_relative)
+      assert.is_not_nil(result.marks[2].top_relative)
     end)
   end)
 
@@ -398,6 +442,9 @@ describe('Diff:', function()
       local result = diff:generate_split_deleted({ hunk }, lines)
 
       assert.are.equal(#result.current_lines, #result.previous_lines)
+      assert.are.equal(1, #result.marks)
+      assert.is_not_nil(result.marks[1].top_relative)
+      assert.is_not_nil(result.marks[1].bot_relative)
 
       local remove_count = 0
       local void_count = 0
@@ -418,6 +465,21 @@ describe('Diff:', function()
       for _, line in ipairs(result.current_lines) do
         assert.are.equal('', line)
       end
+    end)
+
+    it('should process multiple hunks', function()
+      local hunk1 = make_hunk('@@ -1,2 +0,0 @@', { '-a', '-b' })
+      local hunk2 = make_hunk('@@ -5,2 +0,0 @@', { '-e', '-f' })
+      local diff = Diff()
+      local result = diff:generate_split_deleted({ hunk1, hunk2 }, { 'a', 'b', 'c', 'd', 'e', 'f' })
+
+      assert.are.equal(2, #result.marks)
+      assert.are.equal(4, #result.current_lines)
+      assert.are.equal(8, #result.lnum_changes) -- 2 per diff line (remove + void)
+      assert.are.equal(0, result.stat.added)
+      assert.are.equal(4, result.stat.removed)
+      assert.is_not_nil(result.marks[1].top_relative)
+      assert.is_not_nil(result.marks[2].top_relative)
     end)
   end)
 

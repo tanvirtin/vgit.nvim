@@ -18,10 +18,6 @@ describe('GitRepository:', function()
     it('should define INVALID constant', function()
       assert.are.equal('invalid', GitRepository.State.INVALID)
     end)
-
-    it('should define BARE constant', function()
-      assert.are.equal('bare', GitRepository.State.BARE)
-    end)
   end)
 
   describe('constructor', function()
@@ -29,7 +25,6 @@ describe('GitRepository:', function()
       local repo = GitRepository()
       assert.are.equal(GitRepository.State.UNINITIALIZED, repo._state)
       assert.is_nil(repo._path)
-      assert.is_false(repo._is_bare)
     end)
 
     it('should create a repository with provided path', function()
@@ -50,15 +45,6 @@ describe('GitRepository:', function()
       local repo = GitRepository()
       repo._state = GitRepository.State.INVALID
       assert.is_nil(repo:get_path())
-    end)
-  end)
-
-  describe('is_bare', function()
-    it('should return the _is_bare field', function()
-      local repo = GitRepository('/repo')
-      repo._state = GitRepository.State.VALID
-      repo._is_bare = false
-      assert.is_false(repo:is_bare())
     end)
   end)
 
@@ -157,12 +143,6 @@ describe('GitRepository:', function()
     it('remove_remote requires name', function()
       assert.has_error(function()
         repo:remove_remote(nil)
-      end)
-    end)
-
-    it('file_content requires filename', function()
-      assert.has_error(function()
-        repo:file_content(nil)
       end)
     end)
 
@@ -464,7 +444,6 @@ describe('GitRepository:', function()
         assert.is_not_nil(result)
 
         -- Verify it's no longer staged
-        index:reset_cache()
         has_staged, _ = index:has_staged_changes()
         assert.is_false(has_staged)
       end)

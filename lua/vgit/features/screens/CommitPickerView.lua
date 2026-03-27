@@ -6,6 +6,7 @@ local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
+local GitCommit = lazy('vgit.git.GitCommit')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
 local CommitPickerView = View:extend()
@@ -19,6 +20,7 @@ function CommitPickerView:constructor()
   instance._search_query = ''
   instance._search_skip = 0
   instance._search_version = 0
+  instance._search_cleanup = nil
   return instance
 end
 
@@ -169,9 +171,8 @@ CommitPickerView._on_select = event.async(function(self, value)
 
   local layout_type = scene_setting:get('diff_preference') or 'unified'
 
-  local EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
   local parent_hash = commit.parent_hash or ''
-  local from_ref = parent_hash ~= '' and parent_hash or EMPTY_TREE
+  local from_ref = parent_hash ~= '' and parent_hash or GitCommit.EMPTY_TREE_HASH
   local to_ref = commit.commit_hash or commit.hash
 
   local funcs = {}

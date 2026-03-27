@@ -4,7 +4,6 @@ local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_remote = {}
 
--- List all remotes with their URLs
 function git_remote.list(reponame, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -53,7 +52,6 @@ function git_remote.list(reponame, opts)
   end
 end
 
--- Get URL for a specific remote
 function git_remote.get_url(reponame, remote, opts)
   if not reponame then return nil, { 'reponame is required' } end
   if not remote then return nil, { 'remote name is required' } end
@@ -71,7 +69,6 @@ function git_remote.get_url(reponame, remote, opts)
   return result[1], nil
 end
 
--- Add a new remote
 function git_remote.add(reponame, name, url, opts)
   if not reponame then return nil, { 'reponame is required' } end
   if not name then return nil, { 'remote name is required' } end
@@ -103,7 +100,6 @@ function git_remote.add(reponame, name, url, opts)
   return query:execute()
 end
 
--- Remove a remote
 function git_remote.remove(reponame, name)
   if not reponame then return nil, { 'reponame is required' } end
   if not name then return nil, { 'remote name is required' } end
@@ -111,7 +107,6 @@ function git_remote.remove(reponame, name)
   return GitQueryBuilder(reponame):raw_args('remote', 'remove', name):execute()
 end
 
--- Rename a remote
 function git_remote.rename(reponame, old_name, new_name)
   if not reponame then return nil, { 'reponame is required' } end
   if not old_name then return nil, { 'old name is required' } end
@@ -120,7 +115,6 @@ function git_remote.rename(reponame, old_name, new_name)
   return GitQueryBuilder(reponame):raw_args('remote', 'rename', old_name, new_name):execute()
 end
 
--- Set URL for a remote
 function git_remote.set_url(reponame, name, url, opts)
   if not reponame then return nil, { 'reponame is required' } end
   if not name then return nil, { 'remote name is required' } end
@@ -141,7 +135,6 @@ function git_remote.set_url(reponame, name, url, opts)
   return query:execute()
 end
 
--- Show information about a remote
 function git_remote.show(reponame, name)
   if not reponame then return nil, { 'reponame is required' } end
   if not name then return nil, { 'remote name is required' } end
@@ -216,7 +209,6 @@ function git_remote.update(reponame, opts)
   return query:execute()
 end
 
--- Fetch from a remote
 function git_remote.fetch(reponame, remote, refspec, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -242,7 +234,6 @@ function git_remote.fetch(reponame, remote, refspec, opts)
   return query:execute()
 end
 
--- Push to a remote
 function git_remote.push(reponame, remote, refspec, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -267,9 +258,7 @@ function git_remote.push(reponame, remote, refspec, opts)
 
   if opts.dry_run then query:raw_arg('--dry-run') end
 
-  if opts.set_upstream then query:raw_arg('--set-upstream') end
-
-  if opts.upstream or opts.u then query:raw_arg('-u') end
+  if opts.set_upstream or opts.upstream or opts.u then query:raw_arg('-u') end
 
   if remote then query:raw_arg(remote) end
 
@@ -278,7 +267,6 @@ function git_remote.push(reponame, remote, refspec, opts)
   return query:execute()
 end
 
--- Pull from a remote
 function git_remote.pull(reponame, remote, refspec, opts)
   if not reponame then return nil, { 'reponame is required' } end
 

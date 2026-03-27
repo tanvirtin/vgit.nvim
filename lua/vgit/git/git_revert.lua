@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
 local fs = lazy('vgit.core.fs')
+local git_repo = lazy('vgit.git.git_repo')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_revert = {}
@@ -34,7 +35,7 @@ function git_revert.revert(reponame, commits, opts)
     query:raw_arg(opts.strategy_option)
   end
 
-  if opts.signoff or opts.s then query:raw_arg('-s') end
+  if opts.signoff or opts.s then query:raw_arg('--signoff') end
 
   if type(commits) == 'string' then
     query:raw_arg(commits)
@@ -74,7 +75,8 @@ end
 function git_revert.in_progress(reponame)
   if not reponame or reponame == '' then return false end
 
-  local git_dir = string.format('%s/.git', reponame)
+  local git_dir = git_repo.git_dir(reponame)
+  if not git_dir then return false end
 
   return fs.exists(string.format('%s/REVERT_HEAD', git_dir))
 end

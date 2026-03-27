@@ -37,7 +37,7 @@ function debug_logger.error(msg)
   debug_logger.append(msg, 'error', call_info.source, call_info.name)
 end
 
-function debug_logger.warning(msg)
+function debug_logger.warn(msg)
   local call_info = debug.getinfo(2)
   debug_logger.append(msg, 'warn', call_info.source, call_info.name)
 end

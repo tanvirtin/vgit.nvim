@@ -574,165 +574,6 @@ describe('DiffBuilder:', function()
     end)
   end)
 
-  describe('_get_metadata', function()
-    it('should generate range metadata for unstaged changes', function()
-      local spec = {
-        type = 'range',
-        filename = 'test.lua',
-        from = 'HEAD',
-        to = 'disk',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(metadata.comparison_mode, 'range')
-      assert.are.equal(metadata.filename, 'test.lua')
-      assert.are.equal(metadata.from, 'HEAD')
-      assert.are.equal(metadata.to, 'disk')
-    end)
-
-    it('should generate range metadata for staged changes', function()
-      local spec = {
-        type = 'range',
-        filename = 'test.lua',
-        from = 'index',
-        to = 'disk',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(metadata.comparison_mode, 'range')
-      assert.are.equal(metadata.from, 'index')
-      assert.are.equal(metadata.to, 'disk')
-    end)
-
-    it('should generate range metadata with defaults', function()
-      local spec = {
-        type = 'range',
-        filename = 'test.lua',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(metadata.comparison_mode, 'range')
-      assert.are.equal(metadata.from, 'HEAD~1')
-      assert.are.equal(metadata.to, 'HEAD')
-      assert.are.equal(metadata.filename, 'test.lua')
-    end)
-
-    it('should generate range metadata with custom refs', function()
-      local spec = {
-        type = 'range',
-        filename = 'test.lua',
-        from = 'v1.0',
-        to = 'v2.0',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(metadata.comparison_mode, 'range')
-      assert.are.equal(metadata.from, 'v1.0')
-      assert.are.equal(metadata.to, 'v2.0')
-    end)
-
-    it('should generate blame metadata', function()
-      local spec = {
-        type = 'blame',
-        filename = 'test.lua',
-        blame_commit = 'abc123',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(metadata.comparison_mode, 'blame')
-      assert.are.equal(metadata.blamed_commit, 'abc123')
-      assert.are.equal(metadata.current_ref, 'abc123')
-      assert.are.equal(metadata.filename, 'test.lua')
-    end)
-
-    it('should generate blame metadata with custom parent', function()
-      local spec = {
-        type = 'blame',
-        filename = 'test.lua',
-        blame_commit = 'abc123',
-        parent_commit = 'xyz789',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(metadata.comparison_mode, 'blame')
-      assert.are.equal(metadata.base_ref, 'xyz789')
-    end)
-
-    it('should generate range metadata with branch comparison', function()
-      local spec = {
-        type = 'range',
-        filename = 'test.lua',
-        from = 'main',
-        to = 'feature',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(metadata.comparison_mode, 'range')
-      assert.are.equal(metadata.from, 'main')
-      assert.are.equal(metadata.to, 'feature')
-    end)
-
-    it('should generate conflict metadata', function()
-      local spec = {
-        type = 'conflict',
-        filename = 'test.lua',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(metadata.comparison_mode, 'conflict')
-      assert.are.equal(metadata.filename, 'test.lua')
-      assert.is_true(metadata.is_unmerged)
-    end)
-
-    it('should return empty metadata for unknown type', function()
-      local spec = {
-        type = 'unknown',
-        filename = 'test.lua',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(vim.tbl_count(metadata), 0)
-    end)
-
-    it('should preserve all metadata fields', function()
-      local spec = {
-        type = 'range',
-        filename = 'src/main.lua',
-        from = 'v1.0',
-        to = 'v2.0',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.is_not_nil(metadata.comparison_mode)
-      assert.is_not_nil(metadata.from)
-      assert.is_not_nil(metadata.to)
-      assert.is_not_nil(metadata.filename)
-    end)
-
-    it('should handle deeply nested filenames in metadata', function()
-      local spec = {
-        type = 'range',
-        filename = 'src/very/deeply/nested/file.lua',
-        from = 'HEAD',
-        to = 'disk',
-      }
-
-      local metadata = builder:_get_metadata(spec)
-
-      assert.are.equal(metadata.filename, 'src/very/deeply/nested/file.lua')
-    end)
-  end)
-
   describe('build', function()
     it('should require spec', function()
       assert.has_error(function()
@@ -744,6 +585,23 @@ describe('DiffBuilder:', function()
       assert.has_error(function()
         builder:build({ filename = 'test.lua' })
       end)
+    end)
+
+    it('should return nil for directory filename', function()
+      local original_is_dir = fs.is_dir
+      fs.is_dir = function()
+        return true
+      end
+
+      local result = builder:build({
+        type = 'range',
+        filename = 'some_directory',
+        from = 'HEAD',
+        to = 'disk',
+      })
+
+      assert.is_nil(result)
+      fs.is_dir = original_is_dir
     end)
 
     it('should build range diff for unstaged changes', function()
@@ -2303,6 +2161,45 @@ describe('DiffBuilder:', function()
       -- Second file: remove (all hunks are remove → is_deleted path)
       eq('remove.lua', result[2].filename)
       eq('remove', result[2].diff.marks[1].type)
+    end)
+
+    it('should not treat empty file as deleted', function()
+      repository.file_lines = function(_, _, ref)
+        if ref == 'HEAD' then return {} end
+        return { 'old line 1', 'old line 2' }
+      end
+
+      mock_multi_file_diff({
+        { type = 'file_header', filename = 'test.lua', filetype = 'lua' },
+        {
+          type = 'hunk',
+          hunk = {
+            header = '@@ -1,2 +0,0 @@',
+            diff = {
+              '-old line 1',
+              '-old line 2',
+            },
+            top = 1,
+            bot = 1,
+          },
+          filename = 'test.lua',
+          filetype = 'lua',
+        },
+      })
+
+      local result = builder:build_multi_file_diffs({
+        type = 'range',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        layout_type = 'unified',
+      })
+
+      -- Empty target file should NOT be treated as deleted — it exists, just has no content
+      assert.are.equal(1, #result)
+      local diff = result[1].diff
+      -- Non-deleted path: marks should exist but NOT be from the deleted codepath
+      -- The file has hunks but current_lines is {} (empty, not nil), so is_deleted = false
+      assert.is_not_nil(diff)
     end)
   end)
 end)

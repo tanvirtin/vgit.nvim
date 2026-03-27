@@ -294,8 +294,11 @@ function ProjectDiffView:setup_keymaps()
 
   self:_setup_hunk_navigation_keymaps()
 
-  local blame_fn = self:_make_debounced(function() self:show_blame_view() end)
-  self:_set_keymap_all_components('n', 'b', blame_fn)
+  local blame_key = keymap.get_key(project_diff_view_keymaps.blame)
+  if blame_key then
+    local blame_fn = self:_make_debounced(function() self:show_blame_view() end)
+    self:_set_keymap_all_components('n', blame_key, blame_fn)
+  end
 end
 
 function ProjectDiffView:_mount_unified_view()

@@ -6,7 +6,7 @@ local keymap = lazy('vgit.core.keymap')
 local Buffer = lazy('vgit.core.Buffer')
 local Extmark = lazy('vgit.ui.Extmark')
 local GitFile = lazy('vgit.git.GitFile')
-local git_repo = lazy('vgit.libgit2.git_repo')
+local git_repo = lazy('vgit.git.git_repo')
 local signs_setting = lazy('vgit.settings.signs')
 local live_blame_setting = lazy('vgit.settings.live_blame')
 local BlameAnnotator = lazy('vgit.ui.annotators.BlameAnnotator')
@@ -213,12 +213,13 @@ end
 
 function GitBuffer:conflicts()
   local state = self.state
-  if not self._git_file:has_conflict() then
+  local has_conflict = self._git_file:has_conflict()
+  if not has_conflict then
     state.conflicts = {}
     return state.conflicts
   end
   local lines = self:get_lines()
-  local conflicts = self._git_file:conflicts(lines)
+  local conflicts = self._git_file:conflicts(lines) or {}
   self:set_state({ conflicts = conflicts })
   return conflicts
 end
@@ -248,7 +249,7 @@ function GitBuffer:exists()
 
   if not self:is_in_disk() then return false end
 
-  if self:is_ignored() then return false end
+  if self:is_ignored() == true then return false end
 
   return true
 end

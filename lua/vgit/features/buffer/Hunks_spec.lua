@@ -780,16 +780,17 @@ describe('Hunks:', function()
         eq(1, window_set_lnum_value)
       end)
 
-      it('should remove the hunk from the hunks table after resetting', function()
+      it('should not mutate the original hunks table after resetting', function()
         window_lnum = 7
         local hunk1 = { top = 5, bot = 10, type = 'change', diff = { '-old' } }
         local hunk2 = { top = 20, bot = 30, type = 'add', diff = { '+new' } }
         local test_hunks = { hunk1, hunk2 }
         current_buffer = make_mock_buffer({ hunks = test_hunks })
         hunks_instance:cursor_reset()
-        -- The selected hunk should be removed from the hunks table
-        eq(1, #test_hunks)
-        eq(hunk2, test_hunks[1])
+        -- The original hunks table should NOT be mutated (cursor_reset works on a copy)
+        eq(2, #test_hunks)
+        eq(hunk1, test_hunks[1])
+        eq(hunk2, test_hunks[2])
       end)
 
       it('should do nothing when cursor is not on any hunk', function()
@@ -844,10 +845,11 @@ describe('Hunks:', function()
         -- Non-remove hunk: top - 1, bot
         eq(19, call.top)
         eq(30, call.bot)
-        -- hunk2 should be removed from the table
-        eq(2, #test_hunks)
+        -- The original hunks table should NOT be mutated
+        eq(3, #test_hunks)
         eq(hunk1, test_hunks[1])
-        eq(hunk3, test_hunks[2])
+        eq(hunk2, test_hunks[2])
+        eq(hunk3, test_hunks[3])
       end)
     end)
   end)

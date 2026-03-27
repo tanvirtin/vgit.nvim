@@ -127,7 +127,7 @@ describe('fs:', function()
 
   describe('relative_filename', function()
     it('should convert an absolute path to a relative path', function()
-      local current = vim.loop.cwd()
+      local current = vim.uv.cwd()
       local path = current .. '/lua/vgit/init.lua'
       local filepath = fs.relative_filename(path)
 

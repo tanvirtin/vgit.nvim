@@ -11,16 +11,8 @@ function console.format(msg)
   return LogFormatter(msg, { timestamp = false }):format():value()
 end
 
-console.log = event.async(function(msg, hi, is_persisted)
-  event.await()
-  if is_persisted == nil then is_persisted = false end
-  msg = console.format(msg)
-  vim.api.nvim_echo({ { msg, hi } }, is_persisted, {})
-
-  return console
-end)
-
 console.error = event.async(function(msg)
+  event.await()
   msg = console.format(msg)
   vim.notify(msg, vim.log.levels.ERROR)
 
@@ -30,7 +22,7 @@ end)
 console.warn = event.async(function(msg)
   event.await()
   msg = console.format(msg)
-  vim.api.nvim_echo({ { msg, 'WarningMsg' } }, false, {})
+  vim.notify(msg, vim.log.levels.WARN)
 
   return console
 end)

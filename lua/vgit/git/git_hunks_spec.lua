@@ -299,7 +299,7 @@ describe('git_hunks:', function()
       assert.are.equal(hunks[1].type, 'remove')
       assert.are.equal(hunks[1].top, 1)
       assert.are.equal(hunks[1].bot, 3)
-      eq(hunks[1].diff, { '+a', '+b', '+c' })
+      eq(hunks[1].diff, { '-a', '-b', '-c' })
       eq(hunks[1].stat, { added = 0, removed = 3 })
       assert.truthy(hunks[1].header:match('^@@ %-1,3 %+0,0 @@'))
     end)
@@ -357,7 +357,7 @@ describe('git_hunks:', function()
       eq(hunks[1].diff, { '+a', '+b' })
     end)
 
-    it('should always prefix diff lines with +', function()
+    it('should prefix diff lines with + for untracked', function()
       local lines = { 'line1', 'line2', 'line3' }
 
       local hunks = git_hunks.custom(lines, { untracked = true })
@@ -365,6 +365,29 @@ describe('git_hunks:', function()
       for _, diff_line in ipairs(hunks[1].diff) do
         assert.are.equal('+', diff_line:sub(1, 1))
       end
+    end)
+
+    it('should prefix diff lines with - for deleted', function()
+      local lines = { 'line1', 'line2', 'line3' }
+
+      local hunks = git_hunks.custom(lines, { deleted = true })
+
+      for _, diff_line in ipairs(hunks[1].diff) do
+        assert.are.equal('-', diff_line:sub(1, 1))
+      end
+    end)
+
+    it('should handle single line for deleted', function()
+      local lines = { 'hello world' }
+
+      local hunks = git_hunks.custom(lines, { deleted = true })
+
+      assert.are.equal(#hunks, 1)
+      assert.are.equal(hunks[1].type, 'remove')
+      assert.are.equal(hunks[1].top, 1)
+      assert.are.equal(hunks[1].bot, 1)
+      eq(hunks[1].diff, { '-hello world' })
+      eq(hunks[1].stat, { added = 0, removed = 1 })
     end)
   end)
 

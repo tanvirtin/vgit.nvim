@@ -13,7 +13,6 @@ function GitIndex:constructor(repository)
 
   local index = {
     ['$_repo_path'] = repository:get_path(),
-    _staged_files = nil,
   }
 
   return index
@@ -22,8 +21,6 @@ end
 function GitIndex:add(filename)
   local _, err = git_stager.stage(self._repo_path, filename)
   if err then return nil, err end
-
-  self._staged_files = nil
 
   return true, nil
 end
@@ -36,8 +33,6 @@ function GitIndex:remove(filename)
   local _, err = git_stager.unstage(self._repo_path, filename)
   if err then return nil, err end
 
-  self._staged_files = nil
-
   return true, nil
 end
 
@@ -46,27 +41,15 @@ function GitIndex:reset()
 end
 
 function GitIndex:add_hunk(filename, hunk)
-  if not filename then return nil, { 'filename is required' } end
-
-  if not hunk then return nil, { 'hunk is required' } end
-
   local _, err = git_stager.stage_hunk(self._repo_path, filename, hunk)
   if err then return nil, err end
-
-  self._staged_files = nil
 
   return true, nil
 end
 
 function GitIndex:remove_hunk(filename, hunk)
-  if not filename then return nil, { 'filename is required' } end
-
-  if not hunk then return nil, { 'hunk is required' } end
-
   local _, err = git_stager.unstage_hunk(self._repo_path, filename, hunk)
   if err then return nil, err end
-
-  self._staged_files = nil
 
   return true, nil
 end
@@ -82,19 +65,15 @@ function GitIndex:file_status(filename)
 end
 
 function GitIndex:staged_files()
-  if not self._staged_files then
-    local all_files, err = self:status()
-    if err then return nil, err end
+  local all_files, err = self:status()
+  if err then return nil, err end
 
-    local staged = {}
-    for _, file in ipairs(all_files) do
-      if file:is_staged() then staged[#staged + 1] = file end
-    end
-
-    self._staged_files = staged
+  local staged = {}
+  for _, file in ipairs(all_files) do
+    if file:is_staged() then staged[#staged + 1] = file end
   end
 
-  return self._staged_files, nil
+  return staged, nil
 end
 
 function GitIndex:unstaged_files()
@@ -163,23 +142,15 @@ function GitIndex:commit(message)
   local success, commit_err = git_commit.create(self._repo_path, message)
   if commit_err then return nil, commit_err end
 
-  self._staged_files = nil
-
   return success, nil
 end
 
 function GitIndex:can_commit()
-  local result, err = self:has_staged_changes()
-  if err then return nil, err end
-  return result, nil
+  return self:has_staged_changes()
 end
 
 function GitIndex:commit_dry_run()
   return git_commit.dry_run(self._repo_path)
-end
-
-function GitIndex:reset_cache()
-  self._staged_files = nil
 end
 
 return GitIndex

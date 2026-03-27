@@ -15,6 +15,7 @@ function GitTree:constructor(repository, commit)
   if not commit then error('GitTree requires a commit reference') end
 
   local tree = {
+    ['$_repository'] = repository,
     ['$_repo_path'] = repository:get_path(),
     ['$_commit_ref'] = commit,
     _commit_data = nil,
@@ -213,7 +214,7 @@ function GitTree:is_merge()
   local commit, err = self:commit()
   if err then return false end
 
-  if commit.parent_hash and commit.parent_hash:find(' ') then return true end
+  if commit.parent_hashes and commit.parent_hashes:find(' ') then return true end
 
   return false
 end

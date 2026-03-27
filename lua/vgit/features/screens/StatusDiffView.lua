@@ -63,7 +63,12 @@ end
 
 function StatusDiffView:_after_hunk_operation(entry_type, filename, hunk_index, fallback_fn)
   self._refreshing = true
-  self:refresh_data()
+  local has_data = self:refresh_data()
+  if has_data == false then
+    self._refreshing = false
+    self:destroy()
+    return
+  end
 
   local still_has_entries = false
   self._tree_component:each_entry(function(status, et)
@@ -116,8 +121,8 @@ function StatusDiffView:reset_hunk()
   self:_after_hunk_operation('unstaged', filename, hunk_index, function()
     if next_file then
       self:move_to_entry(next_file, 'unstaged')
-    elseif not self:_move_to_first_entry_of_type('unstaged') then
-      if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
+    else
+      self:_navigate_to_preferred_entry('unstaged', 'staged')
     end
   end)
 end
@@ -137,7 +142,7 @@ function StatusDiffView:find_next_file(filename, target_type)
 end
 
 function StatusDiffView:move_to_entry(filename, entry_type)
-  self._tree_component:move_to(function(status, et)
+  return self._tree_component:move_to(function(status, et)
     return status.filename == filename and et == entry_type
   end)
 end
@@ -162,9 +167,20 @@ function StatusDiffView:_move_to_first_entry_of_type(target_type)
   end) ~= nil
 end
 
+function StatusDiffView:_navigate_to_preferred_entry(preferred_type, fallback_type)
+  if not self:_move_to_first_entry_of_type(preferred_type) then
+    if not self:_move_to_first_entry_of_type(fallback_type) then self:_move_to_first_entry() end
+  end
+end
+
 function StatusDiffView:refresh_and_navigate(navigate_fn)
   self._refreshing = true
-  self:refresh_data()
+  local has_data = self:refresh_data()
+  if has_data == false then
+    self._refreshing = false
+    self:destroy()
+    return
+  end
   navigate_fn()
   self._refreshing = false
   self:_refresh_diff()
@@ -329,13 +345,7 @@ function StatusDiffView:stage_hunk()
 
   self:_after_hunk_operation('unstaged', filename, hunk_index, function()
     if not self:_move_to_first_entry_of_type('unstaged') then
-      if
-        not self._tree_component:move_to(function(s, et)
-          return s.filename == filename and et == 'staged'
-        end)
-      then
-        if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
-      end
+      if not self:move_to_entry(filename, 'staged') then self:_navigate_to_preferred_entry('staged', 'unstaged') end
     end
   end)
 end
@@ -366,13 +376,7 @@ function StatusDiffView:unstage_hunk()
 
   self:_after_hunk_operation('staged', filename, hunk_index, function()
     if not self:_move_to_first_entry_of_type('staged') then
-      if
-        not self._tree_component:move_to(function(s, et)
-          return s.filename == filename and et == 'unstaged'
-        end)
-      then
-        if not self:_move_to_first_entry_of_type('unstaged') then self:_move_to_first_entry() end
-      end
+      if not self:move_to_entry(filename, 'unstaged') then self:_navigate_to_preferred_entry('unstaged', 'staged') end
     end
   end)
 end
@@ -401,18 +405,12 @@ function StatusDiffView:stage_entry(opts)
 
   self:refresh_and_navigate(function()
     if follow_same_file then
-      if
-        not self._tree_component:move_to(function(s, et)
-          return s.filename == filename and et == 'staged'
-        end)
-      then
-        if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
-      end
+      if not self:move_to_entry(filename, 'staged') then self:_navigate_to_preferred_entry('staged', 'unstaged') end
     else
       if next_file then
         self:move_to_entry(next_file, 'unstaged')
-      elseif not self:_move_to_first_entry_of_type('unstaged') then
-        if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
+      else
+        self:_navigate_to_preferred_entry('unstaged', 'staged')
       end
     end
   end)
@@ -442,18 +440,12 @@ function StatusDiffView:unstage_entry(opts)
 
   self:refresh_and_navigate(function()
     if follow_same_file then
-      if
-        not self._tree_component:move_to(function(s, et)
-          return s.filename == filename and et == 'unstaged'
-        end)
-      then
-        if not self:_move_to_first_entry_of_type('unstaged') then self:_move_to_first_entry() end
-      end
+      if not self:move_to_entry(filename, 'unstaged') then self:_navigate_to_preferred_entry('unstaged', 'staged') end
     else
       if next_file then
         self:move_to_entry(next_file, 'staged')
-      elseif not self:_move_to_first_entry_of_type('staged') then
-        if not self:_move_to_first_entry_of_type('unstaged') then self:_move_to_first_entry() end
+      else
+        self:_navigate_to_preferred_entry('staged', 'unstaged')
       end
     end
   end)
@@ -494,8 +486,8 @@ function StatusDiffView:reset_entry()
   self:refresh_and_navigate(function()
     if next_file then
       self:move_to_entry(next_file, entry_type)
-    elseif not self:_move_to_first_entry_of_type('unstaged') then
-      if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
+    else
+      self:_navigate_to_preferred_entry('unstaged', 'staged')
     end
   end)
 end
@@ -748,7 +740,7 @@ function StatusDiffView:reset_all()
     console.debug.error(err)
     return
   end
-  local _, reset_err = repo:reset()
+  local _, reset_err = repo:reset('.')
   if reset_err then
     console.debug.error(reset_err)
     return
@@ -872,7 +864,13 @@ function StatusDiffView:setup_keymaps()
       end
       console.info('Changes stashed')
       self._refreshing = true
-      self:refresh_data()
+      local has_data = self:refresh_data()
+      if has_data == false then
+        self._refreshing = false
+        self:destroy()
+        return
+      end
+      self._refreshing = false
     end)
     self._diff_component:set_keymap({ mode = 'n', key = stash_key }, stash_fn)
     if self._tree_component:is_valid() then
@@ -1053,6 +1051,9 @@ function StatusDiffView:on_git_change()
       self:_move_to_first_entry()
       self:_refresh_diff()
     end
+  else
+    self:_move_to_first_entry()
+    self:_refresh_diff()
   end
 end
 

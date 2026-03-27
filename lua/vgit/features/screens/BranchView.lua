@@ -95,11 +95,7 @@ function BranchView:_on_no_match(query)
 
   self:destroy()
 
-  local decision = console.input(string.format('Branch \'%s\' does not exist. Create it? (y/N) ', query))
-  if not decision then return end
-
-  decision = decision:lower()
-  if decision ~= 'y' and decision ~= 'yes' then return end
+  if not self:_confirm(string.format('Branch \'%s\' does not exist. Create it? (y/N) ', query)) then return end
 
   local repo, repo_err = repository.current()
   if repo_err then

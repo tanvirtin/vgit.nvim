@@ -24,12 +24,6 @@ function Buffer:constructor(bufnr)
   }
 end
 
-function Buffer:set_state(state)
-  for key, value in pairs(state) do
-    self.state[key] = value
-  end
-end
-
 function Buffer:call(callback)
   vim.api.nvim_buf_call(self.bufnr, callback)
   return self
@@ -97,19 +91,25 @@ function Buffer:place_extmark_highlight(opts)
 end
 
 function Buffer:clear_extmark_texts()
-  if not self:is_valid() then return end
-  return self._text_extmark:clear()
+  if not self:is_valid() then return self end
+  self._text_extmark:clear()
+  return self
 end
 
 function Buffer:clear_extmark_lnums()
-  return self._lnum_extmark:clear()
+  if not self:is_valid() then return self end
+  self._lnum_extmark:clear()
+  return self
 end
 
 function Buffer:clear_extmark_signs()
-  return self._sign_extmark:clear()
+  if not self:is_valid() then return self end
+  self._sign_extmark:clear()
+  return self
 end
 
 function Buffer:clear_extmark_highlights(from, to)
+  if not self:is_valid() then return self end
   self._highlight_extmark:clear(from, to)
   return self
 end
@@ -156,7 +156,7 @@ end
 
 function Buffer:delete(opts)
   opts = opts or {}
-  vim.tbl_extend('keep', opts, { force = true })
+  opts = vim.tbl_extend('keep', opts, { force = true })
   vim.api.nvim_buf_delete(self.bufnr, opts)
 
   return self
@@ -207,7 +207,7 @@ function Buffer:assign_options(options)
 
   for key, value in pairs(options) do
     if key == 'modifiable' then self._modifiable = value end
-    vim.api.nvim_set_option_value(key, value, { buf = bufnr })
+    pcall(vim.api.nvim_set_option_value, key, value, { buf = bufnr })
   end
 
   return self

@@ -70,7 +70,7 @@ function LogFormatter:add_indentation(line)
 end
 
 function LogFormatter:format(log_type, fn_source, fn_name)
-  if self._is_formatted then return end
+  if self._is_formatted then return self end
 
   self._is_formatted = true
 

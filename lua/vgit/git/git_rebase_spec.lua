@@ -122,7 +122,7 @@ describe('git_rebase:', function()
       assert.is_not_nil(result, 'Result should be returned')
     end)
 
-    it('should support rebase with preserve-merges option', function()
+    it('should support rebase with rebase-merges option', function()
       local base_commit = test_repo.get_head_commit(repo)
       local err
 
@@ -135,12 +135,10 @@ describe('git_rebase:', function()
       })
       assert.is_nil(err, 'Failed to create feature commit')
 
-      -- Test that preserve_merges option is accepted
       local result, rebase_err = git_rebase.rebase(repo:get_path(), base_commit, {
-        preserve_merges = true,
+        rebase_merges = true,
       })
 
-      -- Should either succeed or fail with appropriate error
       if rebase_err then
         assert.is_table(rebase_err, 'Error should be a table')
       else

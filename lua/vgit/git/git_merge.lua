@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
 local fs = lazy('vgit.core.fs')
+local git_repo = lazy('vgit.git.git_repo')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_merge = {}
@@ -85,9 +86,10 @@ function git_merge.quit(reponame)
 end
 
 function git_merge.in_progress(reponame)
-  if not reponame then return nil, { 'reponame is required' } end
+  if not reponame or reponame == '' then return false end
 
-  local git_dir = string.format('%s/.git', reponame)
+  local git_dir = git_repo.git_dir(reponame)
+  if not git_dir then return false end
 
   return fs.exists(string.format('%s/MERGE_HEAD', git_dir))
 end

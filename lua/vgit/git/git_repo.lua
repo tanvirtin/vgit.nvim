@@ -54,6 +54,17 @@ function git_repo.dirname()
   return reponame .. '/' .. git_dir, nil
 end
 
+function git_repo.git_dir(reponame)
+  if not reponame then return nil, { 'reponame is required' } end
+
+  local result, err = GitQueryBuilder(reponame):raw_args('rev-parse', '--git-dir'):execute()
+  if err or #result == 0 then return nil, err or { 'git directory not found' } end
+
+  local dir = result[1]
+  if not vim.startswith(dir, '/') then dir = reponame .. '/' .. dir end
+  return dir
+end
+
 function git_repo.exists(filepath)
   local dirname = (filepath and vim.fn.fnamemodify(filepath, ':p:h')) or vim.loop.cwd()
   local _, err = GitQueryBuilder(dirname):raw_args('rev-parse', '--is-inside-git-dir'):execute()

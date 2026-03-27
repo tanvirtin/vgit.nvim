@@ -20,10 +20,8 @@ function GitPatch:constructor(filename, hunk)
     string.format('diff --git a/%s b/%s', filename, filename),
     'index 000000..000000',
     string.format('--- a/%s', filename),
-    string.format('+++ a/%s', filename),
+    string.format('+++ b/%s', filename),
     header,
-    _filename = filename,
-    _hunk = hunk,
   }
 
   for i = 1, #hunk.diff do

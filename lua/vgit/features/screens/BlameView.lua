@@ -10,6 +10,7 @@ local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local display_service = lazy('vgit.ui.display_service')
 local blame_view_setting = lazy('vgit.settings.blame_view')
 local BlameGutterComponent = lazy('vgit.ui.components.BlameGutterComponent')
+local GitCommit = lazy('vgit.git.GitCommit') -- luacheck: ignore
 local BlameContentComponent = lazy('vgit.ui.components.BlameContentComponent')
 
 local BlameView = View:extend()
@@ -272,6 +273,7 @@ function BlameView:go_back()
   self._current_commit = commit
   self._current_blames = new_blames
 
+  self._opts.filename = filename
   self:_refresh_view(new_blames, new_lines, entry.lnum)
 end
 
@@ -345,10 +347,9 @@ function BlameView:_fetch_commit_diffs(commit_hash)
 
   if not files or #files == 0 then return nil, nil end
 
-  local EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
   local layout_type = scene_setting:get('diff_preference') or 'unified'
   local parent_hash = commit.parent_hash or ''
-  local from_ref = parent_hash ~= '' and parent_hash or EMPTY_TREE
+  local from_ref = parent_hash ~= '' and parent_hash or GitCommit.EMPTY_TREE_HASH
   local to_ref = commit.commit_hash or commit.hash
 
   local funcs = {}
@@ -477,21 +478,20 @@ function BlameView:setup_keymaps()
     self:blame_up()
   end
 
+  local enter_key = keymap.get_key(blame_keymaps.enter)
+  local back_key = keymap.get_key(blame_keymaps.back)
+  local diff_key = keymap.get_key(blame_keymaps.diff)
+  local project_diff_key = keymap.get_key(blame_keymaps.project_diff)
+  local down_key = keymap.get_key(blame_keymaps.down)
+  local up_key = keymap.get_key(blame_keymaps.up)
+
   for _, component in ipairs(components) do
-    component:set_keymap({ mode = 'n', key = '<CR>' }, enter_fn)
-    component:set_keymap({ mode = 'n', key = '<BS>' }, back_fn)
-    component:set_keymap({ mode = 'n', key = 'd' }, diff_fn)
-    component:set_keymap({ mode = 'n', key = 'D' }, project_diff_fn)
-
-    if blame_keymaps and blame_keymaps.down then
-      local down_key = keymap.get_key(blame_keymaps.down)
-      if down_key then component:set_keymap({ mode = 'n', key = down_key }, blame_down_fn) end
-    end
-
-    if blame_keymaps and blame_keymaps.up then
-      local up_key = keymap.get_key(blame_keymaps.up)
-      if up_key then component:set_keymap({ mode = 'n', key = up_key }, blame_up_fn) end
-    end
+    if enter_key then component:set_keymap({ mode = 'n', key = enter_key }, enter_fn) end
+    if back_key then component:set_keymap({ mode = 'n', key = back_key }, back_fn) end
+    if diff_key then component:set_keymap({ mode = 'n', key = diff_key }, diff_fn) end
+    if project_diff_key then component:set_keymap({ mode = 'n', key = project_diff_key }, project_diff_fn) end
+    if down_key then component:set_keymap({ mode = 'n', key = down_key }, blame_down_fn) end
+    if up_key then component:set_keymap({ mode = 'n', key = up_key }, blame_up_fn) end
   end
 end
 

@@ -8,7 +8,7 @@ local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local hunk_lens_setting = lazy('vgit.settings.hunk_lens')
 local BorderComponent = lazy('vgit.ui.components.BorderComponent')
-local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
+local hunks_setting = lazy('vgit.settings.hunks')
 
 local HunkLensView = View:extend()
 
@@ -19,25 +19,22 @@ function HunkLensView:constructor()
 end
 
 function HunkLensView:hunk_up()
-  self._diff_component:hunk_up(
-    hunk_lens_setting:get('hunk_alignment'),
-    hunk_lens_setting:get('hunk_alignment_offset') or 0
-  )
+  self._diff_component:hunk_up(hunk_lens_setting:get('hunk_alignment'), hunk_lens_setting:get('hunk_alignment_offset'))
 end
 
 function HunkLensView:hunk_down()
   self._diff_component:hunk_down(
     hunk_lens_setting:get('hunk_alignment'),
-    hunk_lens_setting:get('hunk_alignment_offset') or 0
+    hunk_lens_setting:get('hunk_alignment_offset')
   )
 end
 
 function HunkLensView:setup_keymaps()
-  local diff_keymaps = status_diff_view_setting:get('keymaps')
+  local hunk_keymaps = hunks_setting:get('keymaps')
 
   self:_setup_quit_keymap()
 
-  local prev_key = keymap.get_key(diff_keymaps.previous)
+  local prev_key = keymap.get_key(hunk_keymaps.up)
   if prev_key then
     local prev_fn = event.async(function()
       self:hunk_up()
@@ -48,7 +45,7 @@ function HunkLensView:setup_keymaps()
     }, prev_fn)
   end
 
-  local next_key = keymap.get_key(diff_keymaps.next)
+  local next_key = keymap.get_key(hunk_keymaps.down)
   if next_key then
     local next_fn = event.async(function()
       self:hunk_down()
@@ -113,7 +110,7 @@ function HunkLensView:create(data)
   ))
 
   local hunk_alignment = hunk_lens_setting:get('hunk_alignment')
-  local hunk_alignment_offset = hunk_lens_setting:get('hunk_alignment_offset') or 0
+  local hunk_alignment_offset = hunk_lens_setting:get('hunk_alignment_offset')
   self._diff_component:move_to_hunk(data.target_hunk_index, hunk_alignment, hunk_alignment_offset)
 
   self:setup_keymaps()

@@ -5,13 +5,13 @@ local hls_setting = lazy('vgit.settings.hls')
 
 local highlight = {}
 
-function highlight.get_hl_by_name(name, ...)
-  return vim.api.nvim_get_hl_by_name(name, ...)
+function highlight.get_hl_by_name(name)
+  return vim.api.nvim_get_hl(0, { name = name, link = false })
 end
 
 function highlight.define(group, color, force)
   if type(color) == 'string' then
-    vim.api.nvim_exec(string.format('highlight default link %s %s', group, color), false)
+    vim.api.nvim_exec2(string.format('highlight default link %s %s', group, color), {})
 
     return highlight
   end
@@ -24,7 +24,7 @@ function highlight.define(group, color, force)
   local sp = color.sp and 'guisp = ' .. color.sp or ''
 
   local default = (not force and color.override == false) and 'default ' or ''
-  vim.api.nvim_exec('highlight ' .. default .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp, false)
+  vim.api.nvim_exec2('highlight ' .. default .. group .. ' ' .. gui .. ' ' .. fg .. ' ' .. bg .. ' ' .. sp, {})
 
   return highlight
 end

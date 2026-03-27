@@ -24,6 +24,8 @@ local function get_hunk_alignment_offset()
 end
 
 function navigation.up(window, marks)
+  if #marks == 0 then return nil end
+
   local new_lnum = nil
   local selected = nil
   local lnum = window:get_lnum()
@@ -73,6 +75,8 @@ function navigation.up(window, marks)
 end
 
 function navigation.down(window, marks)
+  if #marks == 0 then return nil end
+
   local new_lnum = nil
   local selected = nil
   local lnum = window:get_lnum()

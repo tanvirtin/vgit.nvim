@@ -7,14 +7,14 @@ local assertion = lazy('vgit.core.assertion')
 local git_diff = lazy('vgit.git.git_diff')
 local GitHunk = lazy('vgit.git.GitHunk')
 local git_conflict = lazy('vgit.git.git_conflict')
-local LiveHunkGenerator = lazy('vgit.core.diff.hunks.LiveHunkGenerator')
-local DiffLayoutGenerator = lazy('vgit.core.diff.layout.DiffLayoutGenerator')
+local Diff = lazy('vgit.core.diff.Diff')
+local git_hunks = lazy('vgit.git.git_hunks')
 
 local DiffBuilder = Object:extend()
 
 local function split_raw_hunk(raw_hunk)
   local header = raw_hunk.header
-  local _, current = GitHunk():parse_header(header)
+  local _, current = GitHunk.parse_header(GitHunk, header)
   local old_pos = tonumber(header:match('@@ %-(%d+)')) or 1
   local new_pos = current[1]
 
@@ -44,7 +44,8 @@ local function split_raw_hunk(raw_hunk)
       h_new_start = add_start_new
     end
 
-    local git_hunk = GitHunk(GitHunk():generate_header({ h_old_start, h_old_count }, { h_new_start, h_new_count }))
+    local header_str = string.format('@@ -%s,%s +%s,%s @@', h_old_start, h_old_count, h_new_start, h_new_count)
+    local git_hunk = GitHunk(header_str)
     for _, line in ipairs(pending_removes) do
       git_hunk:push(line)
     end
@@ -128,8 +129,6 @@ function DiffBuilder:_get_blame_lines(spec)
   local filename = spec.filename
   local old_filename = spec.old_filename
 
-  assertion.assert(blame_commit, 'blame_commit is required').assert(filename, 'filename is required')
-
   local effective_parent_commit = parent_commit or blame_commit .. '~1'
 
   local original_lines = self._repository:file_lines(old_filename or filename, effective_parent_commit)
@@ -193,42 +192,6 @@ function DiffBuilder:_get_lines(spec)
   end
 end
 
-function DiffBuilder:_get_metadata(spec)
-  local type = spec.type
-  local filename = spec.filename
-  local blame_commit = spec.blame_commit
-  local parent_commit = spec.parent_commit
-  local from = spec.from
-  local to = spec.to
-
-  assertion.assert(type, 'type is required').assert(filename, 'filename is required')
-
-  if type == 'blame' then
-    return {
-      comparison_mode = 'blame',
-      blamed_commit = blame_commit,
-      base_ref = parent_commit or blame_commit .. '~1',
-      current_ref = blame_commit,
-      filename = filename,
-    }
-  elseif type == 'range' then
-    return {
-      comparison_mode = 'range',
-      from = from or 'HEAD~1',
-      to = to or 'HEAD',
-      filename = filename,
-    }
-  elseif type == 'conflict' then
-    return {
-      comparison_mode = 'conflict',
-      filename = filename,
-      is_unmerged = true,
-    }
-  end
-
-  return {}
-end
-
 function DiffBuilder:_build_conflict_diff(spec)
   local layout_type = spec.layout_type or 'unified'
 
@@ -237,11 +200,8 @@ function DiffBuilder:_build_conflict_diff(spec)
 
   local conflicts = git_conflict.parse(conflict_lines)
 
-  local layout_generator = DiffLayoutGenerator()
-  local diff = layout_generator:generate({}, conflict_lines, {
-    layout_type = layout_type,
-    conflict = conflicts,
-    metadata = self:_get_metadata(spec),
+  local diff = Diff():generate({}, conflict_lines, layout_type, {
+    conflicts = conflicts,
   })
 
   return diff
@@ -273,15 +233,15 @@ function DiffBuilder:build_multi_file_diffs(spec)
   for _, fg in ipairs(grouped_files) do
     local file_group = fg
     build_funcs[#build_funcs + 1] = function()
-      local git_hunks = {}
+      local file_hunks = {}
       for _, raw_hunk in ipairs(file_group.raw_hunks) do
         local sub_hunks = split_raw_hunk(raw_hunk)
         for _, h in ipairs(sub_hunks) do
-          git_hunks[#git_hunks + 1] = h
+          file_hunks[#file_hunks + 1] = h
         end
       end
 
-      if #git_hunks == 0 then return nil end
+      if #file_hunks == 0 then return nil end
 
       -- Always try to fetch the target-side content first
       local display_lines, original_lines, current_lines
@@ -293,10 +253,10 @@ function DiffBuilder:build_multi_file_diffs(spec)
       end
 
       -- File is truly deleted only when it doesn't exist on the target side
-      local is_deleted = not current_lines or #current_lines == 0
+      local is_deleted = not current_lines
       if is_deleted then
         local all_removes = true
-        for _, hunk in ipairs(git_hunks) do
+        for _, hunk in ipairs(file_hunks) do
           if hunk.type ~= 'remove' then
             all_removes = false
             break
@@ -318,9 +278,7 @@ function DiffBuilder:build_multi_file_diffs(spec)
         display_lines = current_lines
       end
 
-      local layout_generator = DiffLayoutGenerator()
-      local diff = layout_generator:generate(git_hunks, display_lines, {
-        layout_type = layout_type,
+      local diff = Diff():generate(file_hunks, display_lines, layout_type, {
         is_deleted = is_deleted,
       })
 
@@ -352,7 +310,7 @@ function DiffBuilder:build(spec)
 
   if not spec.filename then return self:build_multi_file_diffs(spec) end
 
-  if fs.is_dir(spec.filename) then return end
+  if fs.is_dir(fs.absolute_path(self._repository:get_path(), spec.filename)) then return end
   if type == 'conflict' then return self:_build_conflict_diff(spec) end
 
   local original_lines, current_lines = self:_get_lines(spec)
@@ -372,17 +330,12 @@ function DiffBuilder:build(spec)
     display_lines = original_lines
   end
 
-  local hunk_generator = spec.hunk_generator or LiveHunkGenerator()
   local hunks = (spec.hunks and #spec.hunks > 0) and spec.hunks
-    or hunk_generator:generate(original_lines, current_lines, spec)
+    or git_hunks.live(self._repository:get_path(), original_lines, current_lines)
   assertion.assert(hunks, 'hunk generator returned nil')
 
-  local layout_generator = DiffLayoutGenerator()
-  local diff = layout_generator:generate(hunks, display_lines, {
-    layout_type = layout_type,
-    original_lines = original_lines,
+  local diff = Diff():generate(hunks, display_lines, layout_type, {
     is_deleted = is_deleted,
-    metadata = self:_get_metadata(spec),
   })
 
   return diff

@@ -1499,7 +1499,7 @@ describe('StatusDiffView:', function()
         eq('reset', repo_calls[1][1])
       end)
 
-      it('should call repo:reset with no filename (reset all)', function()
+      it('should call repo:reset with dot to reset all files', function()
         package.loaded['vgit.core.console'].input = function()
           return 'y'
         end
@@ -1507,7 +1507,7 @@ describe('StatusDiffView:', function()
         view:reset_all()
 
         eq(1, #repo_calls)
-        assert.is_nil(repo_calls[1][2]) -- no filename = reset all
+        eq('.', repo_calls[1][2])
       end)
     end)
 

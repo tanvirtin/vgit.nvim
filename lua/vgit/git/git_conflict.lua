@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
 local fs = lazy('vgit.core.fs')
+local git_repo = lazy('vgit.git.git_repo')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_conflict = {}
@@ -59,7 +60,7 @@ function git_conflict.parse(lines)
     if has_start and has_middle and match_line(line, markers.finish) then
       conflict.incoming.bot = lnum
 
-      if has_start and has_middle then conflicts[#conflicts + 1] = conflict end
+      conflicts[#conflicts + 1] = conflict
 
       conflict = nil
       has_start = false
@@ -74,7 +75,8 @@ end
 function git_conflict.status(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
-  local git_dir = string.format('%s/.git', reponame)
+  local git_dir = git_repo.git_dir(reponame)
+  if not git_dir then return nil end
   if fs.exists(string.format('%s/rebase-apply/applying', git_dir)) then return 'APPLY-MAILBOX' end
   if fs.exists(string.format('%s/rebase-apply/rebasing', git_dir)) then return 'REBASE' end
   if fs.exists(string.format('%s/rebase-apply', git_dir)) then return 'APPLY-MAILBOX-REBASE' end

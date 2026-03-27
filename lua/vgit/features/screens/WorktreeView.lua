@@ -2,7 +2,6 @@ local lazy = require('vgit.core.lazy')
 
 local View = lazy('vgit.ui.View')
 local fs = lazy('vgit.core.fs')
-local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
 local git_repo = lazy('vgit.git.git_repo')
 local repository = lazy('vgit.git.repository')
@@ -85,11 +84,7 @@ function WorktreeView:_on_no_match(query)
 
   self:destroy()
 
-  local decision = console.input(string.format('Create worktree at \'%s\'? (y/N) ', query))
-  if not decision then return end
-
-  decision = decision:lower()
-  if decision ~= 'y' and decision ~= 'yes' then return end
+  if not self:_confirm(string.format('Create worktree at \'%s\'? (y/N) ', query)) then return end
 
   local repo = self._repo
   if not repo then return end
@@ -109,12 +104,6 @@ function WorktreeView:_get_current_worktree()
     if item and item.value and item.value.data then return item.value.data end
   end
   return nil
-end
-
-function WorktreeView:_make_debounced(fn)
-  local debounced, cleanup = event.debounce_async(fn, self.DEBOUNCE_MS)
-  table.insert(self._debounce_cleanups, cleanup)
-  return debounced
 end
 
 function WorktreeView:create(data)
