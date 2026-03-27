@@ -34,28 +34,8 @@ function GitBlob:exists()
   return result, nil
 end
 
-function GitBlob:content()
-  local content, err = git_show.content(self._repo_path, self._filename, self._commit)
-
-  if err then return nil, err end
-  return content, nil
-end
-
 function GitBlob:lines()
   local result, err = git_show.lines(self._repo_path, self._filename, self._commit)
-  if err then return nil, err end
-  return result, nil
-end
-
-function GitBlob:size()
-  local content, err = self:content()
-  if err then return nil, err end
-  if not content then return 0, nil end
-  return #content, nil
-end
-
-function GitBlob:hash()
-  local result, err = git_show.hash(self._repo_path, self._filename, self._commit)
   if err then return nil, err end
   return result, nil
 end

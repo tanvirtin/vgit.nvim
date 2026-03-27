@@ -12,10 +12,12 @@ local function parse_log_line(line, reponame, revision_count)
 
   local parent_hash = parents[1]
   if parent_hash == '' then parent_hash = nil end
+  local parent_hashes = parts[2] ~= '' and parts[2] or nil
 
   return GitCommit({
     hash = parts[1]:sub(2, #parts[1]),
     parent_hash = parent_hash,
+    parent_hashes = parent_hashes,
     author = parts[4],
     author_mail = parts[5],
     author_time = tonumber(parts[3]),
@@ -34,6 +36,7 @@ function git_log.get(reponame, commit)
   local result, err = GitQueryBuilder(reponame):show(commit):pretty(git_log.format):no_patch():execute()
 
   if err then return nil, err end
+  if not result or #result == 0 then return nil, { 'no log entry found' } end
   return parse_log_line(result[1], reponame)
 end
 

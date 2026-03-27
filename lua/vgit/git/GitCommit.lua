@@ -7,6 +7,7 @@ local git_log = lazy('vgit.git.git_log')
 local GitCommit = Object:extend()
 
 GitCommit.EMPTY_HASH = '0000000000000000000000000000000000000000'
+GitCommit.EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
 function GitCommit:constructor(data)
   if not data then error('GitCommit requires data') end
@@ -34,6 +35,7 @@ function GitCommit:constructor(data)
     message = data.message or data.commit_message or data.summary,
 
     _parent_hash = data.parent_hash,
+    _parent_hashes = data.parent_hashes,
     _parent = nil,
     ['$_repo_path'] = repo_path,
 
@@ -43,7 +45,8 @@ function GitCommit:constructor(data)
   if commit._parent_hash == '' then commit._parent_hash = nil end
 
   commit.commit_hash = commit.hash
-  commit.parent_hash = commit._parent_hash -- Direct access to parent hash (string)
+  commit.parent_hash = commit._parent_hash
+  commit.parent_hashes = commit._parent_hashes
   commit.commit_message = commit.message
   commit.author_name = commit.author
   commit.author_email = commit.author_mail

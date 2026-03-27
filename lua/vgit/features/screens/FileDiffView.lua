@@ -139,7 +139,7 @@ function FileDiffView:create(data)
   end
 
   if data.filetype and type(data.filetype) ~= 'string' then
-    console.warn('[FileDiffView] Invalid filetype, using default')
+    console.warn('[FileDiffView] Invalid filetype')
     return false
   end
 
@@ -184,7 +184,6 @@ function FileDiffView:_refresh_diff(opts)
   local data = self:_refresh_diff_data()
   if not data then return false end
 
-  if not self._diff_component or not self._diff_component:is_valid() then return false end
   self._diff_component:set_props({
     diff = data.diff,
     filename = data.filename,

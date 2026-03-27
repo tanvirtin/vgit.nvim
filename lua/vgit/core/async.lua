@@ -3,7 +3,10 @@ local co = coroutine
 local async = {}
 
 local function is_callable(fn)
-  return type(fn) == 'function' or (type(fn) == 'table' and type(getmetatable(fn).__call) == 'function')
+  if type(fn) == 'function' then return true end
+  if type(fn) ~= 'table' then return false end
+  local mt = getmetatable(fn)
+  return mt ~= nil and type(mt.__call) == 'function'
 end
 
 local function rotate(nargs, ...)

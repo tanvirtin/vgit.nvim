@@ -6,7 +6,7 @@ function keymap.get_key(config)
   return nil
 end
 
-function keymap.set(opts, callback)
+local function resolve_opts(opts)
   opts = opts or {}
 
   local key = opts.key
@@ -24,6 +24,12 @@ function keymap.set(opts, callback)
       key = mapping
     end
   end
+
+  return key, mode, desc, silent, noremap
+end
+
+function keymap.set(opts, callback)
+  local key, mode, desc, silent, noremap = resolve_opts(opts)
 
   if type(callback) == 'string' then
     local command = callback
@@ -49,23 +55,7 @@ function keymap.set(opts, callback)
 end
 
 function keymap.buffer_set(buffer, opts, callback)
-  opts = opts or {}
-
-  local key = opts.key
-  local mode = opts.mode
-  local desc = opts.desc
-  local mapping = opts.mapping
-  local silent = opts.silent == nil and true or opts.silent
-  local noremap = opts.noremap == nil and true or opts.noremap
-
-  if mapping then
-    if type(mapping) == 'table' then
-      key = mapping.key
-      desc = mapping.desc
-    else
-      key = mapping
-    end
-  end
+  local key, mode, desc, silent, noremap = resolve_opts(opts)
 
   vim.keymap.set(mode, key, callback, {
     desc = desc,

@@ -3,6 +3,7 @@ local lazy = require('vgit.core.lazy')
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
 local GitTree = lazy('vgit.git.GitTree')
+local GitCommit = lazy('vgit.git.GitCommit')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
@@ -74,9 +75,8 @@ show_command.execute = event.async(function(args)
   local layout_type = scene_setting:get('diff_preference') or 'unified'
 
   -- Get parent hash for diff comparison
-  local EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
   local parent_hash = commit.parent_hash or ''
-  local from_ref = parent_hash ~= '' and parent_hash or EMPTY_TREE
+  local from_ref = parent_hash ~= '' and parent_hash or GitCommit.EMPTY_TREE_HASH
   local to_ref = commit.commit_hash or commit.hash
 
   -- Build entries for ProjectDiffView (parallel)

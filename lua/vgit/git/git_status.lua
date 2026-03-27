@@ -1,5 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
+local GitCommit = lazy('vgit.git.GitCommit')
 local GitStatus = lazy('vgit.git.GitStatus')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
@@ -35,10 +36,9 @@ function git_status.tree(reponame, opts)
 
   local commit_hash = opts.commit_hash
   local parent_hash = opts.parent_hash
-  local empty_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
   local result, err =
-    GitQueryBuilder(reponame):diff_tree():refs(parent_hash == '' and empty_hash or parent_hash, commit_hash):execute()
+    GitQueryBuilder(reponame):diff_tree():refs(parent_hash == '' and GitCommit.EMPTY_TREE_HASH or parent_hash, commit_hash):execute()
   if err then return nil, err end
 
   local result_len = #result

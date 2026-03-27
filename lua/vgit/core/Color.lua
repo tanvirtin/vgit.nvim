@@ -25,8 +25,8 @@ function Color:_load()
   if self.hex then return self.hex end
 
   local spec = self.spec
-  local attribute = spec.attribute == 'fg' and 'foreground' or 'background'
-  local ok, hl = pcall(highlight.get_hl_by_name, spec.name, true)
+  local attribute = spec.attribute
+  local ok, hl = pcall(highlight.get_hl_by_name, spec.name)
 
   if ok and hl and hl[attribute] then self.hex = '#' .. bit.tohex(hl[attribute], 6) end
 

@@ -15,7 +15,6 @@ function LiveGutter:constructor()
 
   return {
     _name = 'Live Gutter',
-    _debounce_cleanups = {},
     _fetch_debounced = fetch_debounced_fn,
     _fetch_debounced_cleanup = fetch_debounced_cleanup,
   }
@@ -79,6 +78,8 @@ function LiveGutter:register_events()
     .on('detach', function(buffer)
       buffer:clear_extmarks()
     end)
+
+  return self
 end
 
 return LiveGutter

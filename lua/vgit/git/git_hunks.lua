@@ -4,6 +4,7 @@ local fs = lazy('vgit.core.fs')
 local utils = lazy('vgit.core.utils')
 local gitcli = lazy('vgit.git.gitcli')
 local GitHunk = lazy('vgit.git.GitHunk')
+local GitCommit = lazy('vgit.git.GitCommit')
 local console = lazy('vgit.core.console')
 local git_setting = lazy('vgit.settings.git')
 
@@ -78,8 +79,9 @@ end
 function git_hunks.custom(lines, opts)
   local diff = {}
   local line_count = #lines
+  local prefix = opts.deleted and '-' or '+'
   for i = 1, line_count do
-    diff[i] = '+' .. lines[i]
+    diff[i] = prefix .. lines[i]
   end
 
   local deleted = opts.deleted
@@ -109,11 +111,9 @@ function git_hunks.list(reponame, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
   local staged = opts.staged
-  local unmerged = opts.unmerged
   local current = opts.current
   local parent = opts.parent
   local filename = opts.filename
-  local empty_hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
   local filenames = opts.filenames
   if filenames and #filenames ~= 2 then return nil, { 'incorrect number of files provided' } end
@@ -132,17 +132,9 @@ function git_hunks.list(reponame, opts)
   if staged == true then utils.list.concat(args, { '--cached' }) end
   if filenames then
     utils.list.concat(args, { '--no-index' }, filenames)
-  elseif unmerged == true then
-    if not parent then return nil, { 'parent is required' } end
-    if not current then return nil, { 'current is required' } end
-
-    utils.list.concat(args, {
-      string.format('%s:%s', current, filename),
-      string.format('%s:%s', parent, filename),
-    })
   elseif parent and current then
     utils.list.concat(args, {
-      #parent > 0 and parent or empty_hash,
+      #parent > 0 and parent or GitCommit.EMPTY_TREE_HASH,
       current,
     })
   elseif parent and not current then

@@ -48,7 +48,7 @@ function fs.make_relative(dirname, filepath)
 end
 
 function fs.relative_filename(filepath)
-  return fs.make_relative(vim.loop.cwd(), filepath)
+  return fs.make_relative(vim.uv.cwd(), filepath)
 end
 
 function fs.short_filename(filepath)
@@ -105,7 +105,7 @@ function fs.remove_file(filepath)
 end
 
 function fs.exists(filepath)
-  return vim.loop.fs_stat(filepath) ~= nil
+  return vim.uv.fs_stat(filepath) ~= nil
 end
 
 function fs.dirname(filepath)
@@ -123,7 +123,7 @@ function fs.absolute_path(base_path, relative_path)
 end
 
 function fs.is_dir(filepath)
-  local stat = vim.loop.fs_stat(filepath)
+  local stat = vim.uv.fs_stat(filepath)
   return stat ~= nil and stat.type == 'directory'
 end
 
@@ -136,7 +136,7 @@ function fs.chdir(dirpath)
 end
 
 function fs.open(filepath)
-  vim.cmd(string.format('e %s', filepath))
+  vim.cmd('e ' .. vim.fn.fnameescape(filepath))
 end
 
 return fs

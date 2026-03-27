@@ -10,13 +10,17 @@ local git_stager = {}
 function git_stager.stage(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
-  return GitQueryBuilder(reponame):raw_args('--no-pager', 'add', '--', filename or '.'):execute()
+  local _, err = GitQueryBuilder(reponame):raw_args('--no-pager', 'add', '--', filename or '.'):execute()
+  if err then return nil, err end
+  return nil, nil
 end
 
 function git_stager.unstage(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
-  return GitQueryBuilder(reponame):raw_args('reset', '-q', 'HEAD', '--', filename or '.'):execute()
+  local _, err = GitQueryBuilder(reponame):raw_args('reset', '-q', 'HEAD', '--', filename or '.'):execute()
+  if err then return nil, err end
+  return nil, nil
 end
 
 function git_stager.stage_hunk(reponame, filename, hunk)
@@ -66,7 +70,6 @@ function git_stager.unstage_hunk(reponame, filename, hunk)
   return nil, err
 end
 
--- Reset (discard) a hunk in the working directory
 function git_stager.reset_hunk(reponame, filename, hunk)
   if not reponame then return nil, { 'reponame is required' } end
   if not filename then return nil, { 'filename is required' } end
@@ -81,7 +84,6 @@ function git_stager.reset_hunk(reponame, filename, hunk)
     return nil, write_err
   end
 
-  -- Apply the patch in reverse to the working directory (not staged)
   local _, err = GitQueryBuilder(reponame)
     :raw_args('--no-pager', 'apply', '--reverse', '--whitespace=nowarn', '--unidiff-zero', patch_filename)
     :execute()

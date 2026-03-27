@@ -1,14 +1,10 @@
 local lazy = require('vgit.core.lazy')
 
+local fs = lazy('vgit.core.fs')
 local GitHunk = lazy('vgit.git.GitHunk')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_diff = {}
-
-local function detect_filetype(filename)
-  if not filename or filename == '' then return 'text' end
-  return vim.filetype.match({ filename = filename }) or 'text'
-end
 
 local function parse_hunk_entries(lines)
   local entries = {}
@@ -42,7 +38,7 @@ local function parse_hunk_entries(lines)
       flush_hunk()
       filename = b_path
       old_filename = nil
-      filetype = detect_filetype(b_path)
+      filetype = fs.detect_filetype(b_path)
       file_header = {
         type = 'file_header',
         filename = filename,
@@ -53,7 +49,7 @@ local function parse_hunk_entries(lines)
     elseif line:match('^rename to ') then
       local new_name = line:match('^rename to (.+)$')
       filename = new_name
-      filetype = detect_filetype(new_name)
+      filetype = fs.detect_filetype(new_name)
       if file_header then
         file_header.filename = (old_filename or new_name) .. ' -> ' .. new_name
         file_header.filetype = filetype

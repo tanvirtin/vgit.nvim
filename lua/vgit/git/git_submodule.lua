@@ -4,7 +4,6 @@ local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_submodule = {}
 
--- Add a submodule
 function git_submodule.add(reponame, url, path, opts)
   if not reponame then return nil, { 'reponame is required' } end
   if not url then return nil, { 'url is required' } end
@@ -41,7 +40,6 @@ function git_submodule.add(reponame, url, path, opts)
   return query:execute({ config = { 'protocol.file.allow=always' } })
 end
 
--- List submodules
 function git_submodule.list(reponame, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -88,14 +86,10 @@ function git_submodule.list(reponame, opts)
   return submodules, nil
 end
 
--- Initialize submodules
-function git_submodule.init(reponame, paths, opts)
+function git_submodule.init(reponame, paths)
   if not reponame then return nil, { 'reponame is required' } end
 
-  opts = opts or {}
   local query = GitQueryBuilder(reponame):raw_args('submodule', 'init')
-
-  if opts.all then query:raw_arg('--all') end
 
   if paths then
     if type(paths) == 'string' then
@@ -110,7 +104,6 @@ function git_submodule.init(reponame, paths, opts)
   return query:execute()
 end
 
--- Deinitialize submodules
 function git_submodule.deinit(reponame, paths, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -134,7 +127,6 @@ function git_submodule.deinit(reponame, paths, opts)
   return query:execute()
 end
 
--- Update submodules
 function git_submodule.update(reponame, paths, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -178,7 +170,6 @@ function git_submodule.update(reponame, paths, opts)
   return query:execute({ config = { 'protocol.file.allow=always' } })
 end
 
--- Sync submodules
 function git_submodule.sync(reponame, paths, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -200,7 +191,6 @@ function git_submodule.sync(reponame, paths, opts)
   return query:execute()
 end
 
--- Execute command in each submodule
 function git_submodule.foreach(reponame, command, opts)
   if not reponame then return nil, { 'reponame is required' } end
   if not command then return nil, { 'command is required' } end
@@ -217,7 +207,6 @@ function git_submodule.foreach(reponame, command, opts)
   return query:execute()
 end
 
--- Set branch for a submodule
 function git_submodule.set_branch(reponame, branch, path, opts)
   if not reponame then return nil, { 'reponame is required' } end
   if not path then return nil, { 'path is required' } end
@@ -239,7 +228,6 @@ function git_submodule.set_branch(reponame, branch, path, opts)
   return query:execute()
 end
 
--- Set URL for a submodule
 function git_submodule.set_url(reponame, path, url)
   if not reponame then return nil, { 'reponame is required' } end
   if not path then return nil, { 'path is required' } end
@@ -248,14 +236,12 @@ function git_submodule.set_url(reponame, path, url)
   return GitQueryBuilder(reponame):raw_args('submodule', 'set-url', path, url):execute()
 end
 
--- Unregister submodule
 function git_submodule.absorbgitdirs(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
   return GitQueryBuilder(reponame):raw_args('submodule', 'absorbgitdirs'):execute()
 end
 
--- Get submodule summary
 function git_submodule.summary(reponame, opts)
   if not reponame then return nil, { 'reponame is required' } end
 

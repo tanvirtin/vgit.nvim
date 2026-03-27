@@ -1,15 +1,12 @@
 local lazy = require('vgit.core.lazy')
 
-local fs = lazy('vgit.core.fs')
 local utils = lazy('vgit.core.utils')
-local event = lazy('vgit.core.event')
 local GitRef = lazy('vgit.git.GitRef')
 local Object = lazy('vgit.core.Object')
 local GitFile = lazy('vgit.git.GitFile')
 local GitBlob = lazy('vgit.git.GitBlob')
 local GitTree = lazy('vgit.git.GitTree')
 local git_log = lazy('vgit.git.git_log')
-local git_show = lazy('vgit.git.git_show')
 local GitIndex = lazy('vgit.git.GitIndex')
 local git_repo = lazy('vgit.git.git_repo')
 local DiffBuilder = lazy('vgit.core.diff')
@@ -37,14 +34,12 @@ GitRepository.State = {
   UNINITIALIZED = 'uninitialized',
   VALID = 'valid',
   INVALID = 'invalid',
-  BARE = 'bare',
 }
 
 function GitRepository:constructor(path)
   local repo = {
     _path = nil,
     _state = GitRepository.State.UNINITIALIZED,
-    _is_bare = false,
   }
 
   if path then repo._path = path end
@@ -113,11 +108,6 @@ end
 function GitRepository:is_valid()
   if self._state == GitRepository.State.UNINITIALIZED then self:_ensure_initialized() end
   return self._state == GitRepository.State.VALID
-end
-
-function GitRepository:is_bare()
-  self:_ensure_initialized()
-  return self._is_bare
 end
 
 function GitRepository:get_path()
@@ -311,12 +301,12 @@ end
 
 function GitRepository:cherry_pick_status()
   self:_ensure_initialized()
-  return git_cherry.status(self._path)
+  return git_cherry.in_progress(self._path)
 end
 
 function GitRepository:revert_status()
   self:_ensure_initialized()
-  return git_revert.status(self._path)
+  return git_revert.in_progress(self._path)
 end
 
 function GitRepository:bisect_start(opts)
@@ -412,13 +402,6 @@ function GitRepository:blame_list(filename, commit)
   assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
   return git_blame_mod.list(self._path, filename, commit)
-end
-
-function GitRepository:file_content(filename, commit)
-  assertion.assert(filename, 'filename is required')
-  self:_ensure_initialized()
-  local blob = GitBlob(self, filename, commit)
-  return blob:content()
 end
 
 function GitRepository:file_lines(filename, commit)
@@ -583,18 +566,6 @@ function GitRepository:status(opts)
   }
 end
 
-function GitRepository:get_file_lines(filename, is_staged, git_file)
-  if is_staged then return git_file:lines() end
-  event.await()
-  return fs.read_file(filename)
-end
-
-function GitRepository:show_lines(filename, commit)
-  assertion.assert(filename, 'filename is required')
-  self:_ensure_initialized()
-  return git_show.lines(self._path, filename, commit)
-end
-
 function GitRepository:live_hunks(filename, current_lines)
   assertion.assert(filename, 'filename is required')
   self:_ensure_initialized()
@@ -677,10 +648,12 @@ function GitRepository:stash_clear()
 end
 
 function GitRepository:conflict_status()
+  self:_ensure_initialized()
   return git_conflict_mod.status(self:get_path())
 end
 
 function GitRepository:diff(spec, opts)
+  self:_ensure_initialized()
   opts = opts or {}
 
   assertion.assert(spec, 'spec is required').assert(spec.type, 'type is required')

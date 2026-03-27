@@ -149,7 +149,7 @@ function GitQueryBuilder:diff()
   self._command = 'diff'
   self:_add_arg('--no-pager')
   self:_add_arg('diff')
-  self:_add_arg('--no-color')
+  self:_add_arg('--color=never')
   return self
 end
 
@@ -173,12 +173,9 @@ function GitQueryBuilder:paginate(count, offset)
   if self._has_pagination then error('GitQueryBuilder: limit/skip/paginate already called') end
 
   self:_validate_number(count, 'count', 1)
-  if offset and offset > 0 then self:_validate_number(offset, 'offset', 0) end
 
-  if count then
-    self:_add_arg('-n')
-    self:_add_arg(tostring(count))
-  end
+  self:_add_arg('-n')
+  self:_add_arg(tostring(count))
 
   if offset and offset > 0 then self:_add_arg(string.format('--skip=%d', offset)) end
 
@@ -331,7 +328,7 @@ function GitQueryBuilder:_validate_query()
 end
 
 function GitQueryBuilder:_add_arg(arg)
-  if arg ~= nil then self._args[#self._args + 1] = arg end
+  self._args[#self._args + 1] = arg
 end
 
 return GitQueryBuilder

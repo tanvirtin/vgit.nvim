@@ -70,7 +70,7 @@ end
 function statusline_state.reset()
   if hunk_timer then
     hunk_timer:stop()
-    hunk_timer:close()
+    if not hunk_timer:is_closing() then hunk_timer:close() end
     hunk_timer = nil
   end
   state.hunk_index = nil

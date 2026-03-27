@@ -48,8 +48,9 @@ function Window:open(buffer, opts)
   local mode = opts.mode or 'floating'
   local focus = opts.focus
 
-  if opts.mode ~= nil then opts.mode = nil end
-  if opts.focus ~= nil then opts.focus = nil end
+  opts = vim.tbl_extend('force', opts, {})
+  opts.mode = nil
+  opts.focus = nil
 
   if mode == 'screen' or mode == 'split' then return Window.open_screen(buffer, opts) end
 
@@ -119,7 +120,8 @@ function Window:set_width(width)
 end
 
 function Window:set_config(config)
-  if config.focus ~= nil then config.focus = nil end
+  config = vim.tbl_extend('force', config, {})
+  config.focus = nil
   vim.api.nvim_win_set_config(self.win_id, config)
   return self
 end
@@ -130,7 +132,7 @@ end
 
 function Window:assign_options(options)
   for key, value in pairs(options) do
-    vim.api.nvim_set_option_value(key, value, { win = self.win_id })
+    pcall(vim.api.nvim_set_option_value, key, value, { win = self.win_id })
   end
   return self
 end

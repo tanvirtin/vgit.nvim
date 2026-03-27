@@ -46,7 +46,7 @@ function Config:assign(config)
         self.data[key] = value
       end
     else
-      console.debug.warning(string.format('Unknown config key "%s" will be ignored', key))
+      console.debug.warn(string.format('Unknown config key "%s" will be ignored', key))
     end
   end
 

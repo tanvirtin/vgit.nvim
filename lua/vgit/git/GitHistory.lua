@@ -12,7 +12,6 @@ function GitHistory:constructor(repository, opts)
 
   local history = {
     ['$_repo_path'] = repository:get_path(),
-    ['$_from'] = opts.from or 'HEAD',
     ['$_count'] = opts.count,
     ['$_path'] = opts.path,
     ['$_skip'] = opts.skip or 0,

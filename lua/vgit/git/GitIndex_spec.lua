@@ -25,7 +25,6 @@ describe('GitIndex:', function()
       local index = GitIndex(make_repo('/my/repo'))
 
       eq('/my/repo', index._repo_path)
-      assert.is_nil(index._staged_files)
     end)
   end)
 
@@ -93,15 +92,6 @@ describe('GitIndex:', function()
     end)
   end)
 
-  describe('reset_cache', function()
-    it('should clear _staged_files', function()
-      local index = GitIndex(make_repo())
-      index._staged_files = { 'cached' }
-
-      index:reset_cache()
-      assert.is_nil(index._staged_files)
-    end)
-  end)
   describe('integration', function()
     local repo
     local it = async.it
@@ -233,22 +223,20 @@ describe('GitIndex:', function()
         eq(true, has)
       end)
 
-      it('should invalidate staged_files cache on success', function()
+      it('should reflect changes after add', function()
         test_repo.modify_file(repo, 'file1.txt', { 'modified content' })
         test_repo.stage(repo, { 'file1.txt' })
 
         local index = GitIndex(make_repo(repo))
-        -- populate cache
         local staged, _ = index:staged_files()
-        assert.is_not_nil(staged)
-        assert.is_not_nil(index._staged_files)
+        eq(1, #staged)
 
         -- modify another file and add it
         test_repo.modify_file(repo, 'file2.txt', { 'also modified' })
         index:add('file2.txt')
 
-        -- cache should be invalidated
-        assert.is_nil(index._staged_files)
+        local staged2, _ = index:staged_files()
+        eq(2, #staged2)
       end)
     end)
 
@@ -312,10 +300,10 @@ describe('GitIndex:', function()
         assert.is_nil(err1)
         eq(1, #staged1)
 
-        -- Second call should use cache (same object reference)
+        -- Second call should also return staged files
         local staged2, err2 = index:staged_files()
         assert.is_nil(err2)
-        assert.is_true(rawequal(staged1, staged2))
+        eq(1, #staged2)
       end)
     end)
 
@@ -441,8 +429,6 @@ describe('GitIndex:', function()
         assert.is_nil(err)
         eq(true, result)
 
-        -- Reset cache so staged_files refetches
-        index:reset_cache()
         local has_after, has_err = index:has_staged_changes()
         assert.is_nil(has_err)
         eq(false, has_after)
@@ -453,18 +439,18 @@ describe('GitIndex:', function()
         eq(true, has_unstaged)
       end)
 
-      it('should invalidate staged_files cache on success', function()
+      it('should reflect changes after remove', function()
         test_repo.modify_file(repo, 'file1.txt', { 'changed' })
         test_repo.stage(repo, { 'file1.txt' })
 
         local index = GitIndex(make_repo(repo))
-        -- Populate cache
-        index:staged_files()
-        assert.is_not_nil(index._staged_files)
+        local staged1, _ = index:staged_files()
+        eq(1, #staged1)
 
-        -- Remove
         index:remove('file1.txt')
-        assert.is_nil(index._staged_files)
+
+        local staged2, _ = index:staged_files()
+        eq(0, #staged2)
       end)
     end)
 
@@ -488,8 +474,6 @@ describe('GitIndex:', function()
         assert.is_nil(err)
         eq(true, result)
 
-        -- After reset, nothing should be staged
-        index:reset_cache()
         local staged_after, staged_err = index:staged_files()
         assert.is_nil(staged_err)
         eq(0, #staged_after)
@@ -531,17 +515,18 @@ describe('GitIndex:', function()
         eq({ 'no staged changes to commit' }, err)
       end)
 
-      it('should invalidate cache after successful commit', function()
+      it('should reflect changes after successful commit', function()
         test_repo.modify_file(repo, 'file1.txt', { 'changed' })
         test_repo.stage(repo, { 'file1.txt' })
 
         local index = GitIndex(make_repo(repo))
-        -- Populate cache
-        index:staged_files()
-        assert.is_not_nil(index._staged_files)
+        local staged1, _ = index:staged_files()
+        eq(1, #staged1)
 
         index:commit('test commit')
-        assert.is_nil(index._staged_files)
+
+        local staged2, _ = index:staged_files()
+        eq(0, #staged2)
       end)
     end)
 
@@ -651,90 +636,38 @@ describe('GitIndex:', function()
     end)
 
     -- -----------------------------------------------------------------------
-    -- staged_files caching and invalidation
+    -- staged_files always re-fetches
     -- -----------------------------------------------------------------------
-    describe('staged_files caching', function()
-      it('should cache results and return same reference', function()
-        test_repo.modify_file(repo, 'file1.txt', { 'modified' })
-        test_repo.stage(repo, { 'file1.txt' })
-
-        local index = GitIndex(make_repo(repo))
-        local staged1, _ = index:staged_files()
-        local staged2, _ = index:staged_files()
-
-        assert.is_true(rawequal(staged1, staged2))
-      end)
-
-      it('should invalidate cache after add()', function()
-        test_repo.modify_file(repo, 'file1.txt', { 'modified' })
-        test_repo.stage(repo, { 'file1.txt' })
-
-        local index = GitIndex(make_repo(repo))
-        index:staged_files()
-        assert.is_not_nil(index._staged_files)
-
-        test_repo.modify_file(repo, 'file2.txt', { 'also modified' })
-        index:add('file2.txt')
-        assert.is_nil(index._staged_files)
-
-        -- Now refetch; should have both files
-        local staged, err = index:staged_files()
-        assert.is_nil(err)
-        eq(2, #staged)
-      end)
-
-      it('should invalidate cache after remove()', function()
-        test_repo.modify_file(repo, 'file1.txt', { 'modified' })
-        test_repo.stage(repo, { 'file1.txt' })
-
-        local index = GitIndex(make_repo(repo))
-        index:staged_files()
-        assert.is_not_nil(index._staged_files)
-
-        index:remove('file1.txt')
-        assert.is_nil(index._staged_files)
-
-        -- Now refetch; should be empty
-        local staged, err = index:staged_files()
-        assert.is_nil(err)
-        eq(0, #staged)
-      end)
-
-      it('should invalidate cache after commit()', function()
-        test_repo.modify_file(repo, 'file1.txt', { 'modified' })
-        test_repo.stage(repo, { 'file1.txt' })
-
-        local index = GitIndex(make_repo(repo))
-        index:staged_files()
-        assert.is_not_nil(index._staged_files)
-
-        index:commit('test commit')
-        assert.is_nil(index._staged_files)
-      end)
-    end)
-
-    -- -----------------------------------------------------------------------
-    -- reset_cache with real data
-    -- -----------------------------------------------------------------------
-    describe('reset_cache with real data', function()
-      it('should allow staged_files to refetch after reset_cache', function()
+    describe('staged_files freshness', function()
+      it('should reflect add changes immediately', function()
         test_repo.modify_file(repo, 'file1.txt', { 'modified' })
         test_repo.stage(repo, { 'file1.txt' })
 
         local index = GitIndex(make_repo(repo))
         local staged1, _ = index:staged_files()
         eq(1, #staged1)
-        assert.is_not_nil(index._staged_files)
 
-        index:reset_cache()
-        assert.is_nil(index._staged_files)
+        test_repo.modify_file(repo, 'file2.txt', { 'also modified' })
+        index:add('file2.txt')
 
-        -- After reset_cache, next call should refetch
         local staged2, err = index:staged_files()
         assert.is_nil(err)
-        eq(1, #staged2)
-        -- Should not be the same object reference (refetched)
-        assert.is_false(rawequal(staged1, staged2))
+        eq(2, #staged2)
+      end)
+
+      it('should reflect remove changes immediately', function()
+        test_repo.modify_file(repo, 'file1.txt', { 'modified' })
+        test_repo.stage(repo, { 'file1.txt' })
+
+        local index = GitIndex(make_repo(repo))
+        local staged1, _ = index:staged_files()
+        eq(1, #staged1)
+
+        index:remove('file1.txt')
+
+        local staged2, err = index:staged_files()
+        assert.is_nil(err)
+        eq(0, #staged2)
       end)
     end)
 
@@ -789,7 +722,7 @@ describe('GitIndex:', function()
         eq(true, result)
 
         -- Verify it was unstaged
-        index:reset_cache()
+
         local has, has_err = index:has_staged_changes()
         assert.is_nil(has_err)
         eq(false, has)
@@ -870,7 +803,6 @@ describe('GitIndex:', function()
         local has_unstaged, _ = index:has_unstaged_changes()
         eq(true, has_unstaged)
 
-        index:reset_cache()
         local has_staged, _ = index:has_staged_changes()
         eq(false, has_staged)
 
@@ -885,7 +817,7 @@ describe('GitIndex:', function()
         eq(false, has_unstaged2)
 
         -- Can commit should be true
-        index:reset_cache()
+
         local can, _ = index:can_commit()
         eq(true, can)
 

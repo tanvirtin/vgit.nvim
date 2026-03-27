@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
 local fs = lazy('vgit.core.fs')
+local git_repo = lazy('vgit.git.git_repo')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_cherry = {}
@@ -40,7 +41,7 @@ function git_cherry.pick(reponame, commits, opts)
 
   if opts.keep_redundant_commits then query:raw_arg('--keep-redundant-commits') end
 
-  if opts.signoff or opts.s then query:raw_arg('-s') end
+  if opts.signoff or opts.s then query:raw_arg('--signoff') end
 
   if opts.ff then query:raw_arg('--ff') end
 
@@ -82,7 +83,8 @@ end
 function git_cherry.in_progress(reponame)
   if not reponame or reponame == '' then return false end
 
-  local git_dir = string.format('%s/.git', reponame)
+  local git_dir = git_repo.git_dir(reponame)
+  if not git_dir then return false end
 
   return fs.exists(string.format('%s/CHERRY_PICK_HEAD', git_dir))
 end

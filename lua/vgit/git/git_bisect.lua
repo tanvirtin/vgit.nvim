@@ -1,11 +1,11 @@
 local lazy = require('vgit.core.lazy')
 
 local fs = lazy('vgit.core.fs')
+local git_repo = lazy('vgit.git.git_repo')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_bisect = {}
 
--- Start bisect session
 function git_bisect.start(reponame, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -16,7 +16,6 @@ function git_bisect.start(reponame, opts)
 
   if opts.first_parent then query:raw_arg('--first-parent') end
 
-  -- Add bad and good commits if provided
   if opts.bad then query:raw_arg(opts.bad) end
 
   if opts.good then
@@ -29,7 +28,6 @@ function git_bisect.start(reponame, opts)
     end
   end
 
-  -- Path limiters
   if opts.paths then
     query:raw_arg('--')
     if type(opts.paths) == 'string' then
@@ -44,7 +42,6 @@ function git_bisect.start(reponame, opts)
   return query:execute()
 end
 
--- Mark current commit as bad
 function git_bisect.bad(reponame, commit)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -55,7 +52,6 @@ function git_bisect.bad(reponame, commit)
   return query:execute()
 end
 
--- Mark current commit as good
 function git_bisect.good(reponame, commits)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -74,7 +70,6 @@ function git_bisect.good(reponame, commits)
   return query:execute()
 end
 
--- Skip current commit (can't test)
 function git_bisect.skip(reponame, commits)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -93,7 +88,6 @@ function git_bisect.skip(reponame, commits)
   return query:execute()
 end
 
--- Reset bisect session
 function git_bisect.reset(reponame, commit)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -104,14 +98,12 @@ function git_bisect.reset(reponame, commit)
   return query:execute()
 end
 
--- Visualize bisect session
 function git_bisect.visualize(reponame, opts)
   if not reponame then return nil, { 'reponame is required' } end
 
   opts = opts or {}
   local query = GitQueryBuilder(reponame):raw_args('bisect', 'visualize')
 
-  -- Add any additional arguments
   if opts.args then
     for _, arg in ipairs(opts.args) do
       query:raw_arg(arg)
@@ -121,14 +113,12 @@ function git_bisect.visualize(reponame, opts)
   return query:execute()
 end
 
--- View bisect log
 function git_bisect.log(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
   return GitQueryBuilder(reponame):raw_args('bisect', 'log'):execute()
 end
 
--- Replay bisect log
 function git_bisect.replay(reponame, logfile)
   if not reponame then return nil, { 'reponame is required' } end
   if not logfile then return nil, { 'logfile is required' } end
@@ -136,7 +126,6 @@ function git_bisect.replay(reponame, logfile)
   return GitQueryBuilder(reponame):raw_args('bisect', 'replay', logfile):execute()
 end
 
--- Run automated bisect with a command
 function git_bisect.run(reponame, command, args)
   if not reponame then return nil, { 'reponame is required' } end
   if not command then return nil, { 'command is required' } end
@@ -156,20 +145,20 @@ function git_bisect.run(reponame, command, args)
   return query:execute()
 end
 
--- Check if bisect is in progress
 function git_bisect.in_progress(reponame)
-  if not reponame then return nil, { 'reponame is required' } end
+  if not reponame or reponame == '' then return false end
 
-  local git_dir = string.format('%s/.git', reponame)
+  local git_dir = git_repo.git_dir(reponame)
+  if not git_dir then return false end
 
   return fs.exists(string.format('%s/BISECT_LOG', git_dir))
 end
 
--- Get bisect status
 function git_bisect.status(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
-  local git_dir = string.format('%s/.git', reponame)
+  local git_dir = git_repo.git_dir(reponame)
+  if not git_dir then return nil, { 'git directory not found' } end
 
   local status = {
     in_progress = false,
@@ -183,12 +172,10 @@ function git_bisect.status(reponame)
 
   status.in_progress = true
 
-  -- Read bisect log
   local log_file = fs.read_file(string.format('%s/BISECT_LOG', git_dir))
   if log_file then
     status.log = log_file
 
-    -- Parse log for good/bad commits
     for _, line in ipairs(log_file) do
       local good_commit = line:match('^git bisect good (%S+)')
       if good_commit then table.insert(status.good, good_commit) end
@@ -201,7 +188,6 @@ function git_bisect.status(reponame)
     end
   end
 
-  -- Read BISECT_START
   local start_file = fs.read_file(string.format('%s/BISECT_START', git_dir))
   if start_file and start_file[1] then status.original_head = start_file[1]:match('^%s*(.-)%s*$') end
 

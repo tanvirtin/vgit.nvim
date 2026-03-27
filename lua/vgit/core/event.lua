@@ -9,6 +9,17 @@ local _augroup_created = false
 local _dir_watcher_registered = false
 local _handle = nil
 
+local function close_handle()
+  if not _handle then return end
+  pcall(function()
+    _handle:stop()
+  end)
+  pcall(function()
+    _handle:close()
+  end)
+  _handle = nil
+end
+
 local function ensure_augroup()
   if _augroup_created then return end
   _augroup_created = true
@@ -106,7 +117,7 @@ function event.disposable_on(event_names, callback)
 end
 
 function event.defer(fn, ms)
-  local timer = vim.loop.new_timer()
+  local timer = vim.uv.new_timer()
   timer:start(ms, 0, function()
     if not timer:is_closing() then timer:close() end
     vim.schedule(fn)
@@ -129,7 +140,7 @@ function event.custom_on(event_name, callback)
   return function()
     if cleaned_up then return end
     cleaned_up = true
-    vim.api.nvim_del_augroup_by_name(group_name)
+    pcall(vim.api.nvim_del_augroup_by_name, group_name)
   end
 end
 
@@ -158,7 +169,7 @@ function event.debounce(fn, ms)
       cooldown = true
       fn(...)
       close_timer()
-      timer = vim.loop.new_timer()
+      timer = vim.uv.new_timer()
       timer:start(ms, 0, function()
         close_timer()
         cooldown = false
@@ -167,7 +178,7 @@ function event.debounce(fn, ms)
     end
 
     close_timer()
-    timer = vim.loop.new_timer()
+    timer = vim.uv.new_timer()
     timer:start(ms, 0, function()
       close_timer()
       cooldown = false
@@ -203,7 +214,7 @@ function event.debounce_trailing(fn, ms)
     argc = select('#', ...)
 
     close_timer()
-    timer = vim.loop.new_timer()
+    timer = vim.uv.new_timer()
     timer:start(ms, 0, function()
       close_timer()
       vim.schedule(function()
@@ -224,22 +235,14 @@ function event.debounce_trailing_async(fn, ms)
 end
 
 local function _start_watcher()
-  if _handle then
-    pcall(function()
-      _handle:stop()
-    end)
-    pcall(function()
-      _handle:close()
-    end)
-    _handle = nil
-  end
+  close_handle()
 
   if not git_repo.exists() then return end
 
   local git_dirname = git_repo.discover(nil, { git_dirname = true })
   if not git_dirname then return end
 
-  local handle = vim.loop.new_fs_event()
+  local handle = vim.uv.new_fs_event()
   if not handle then return end
 
   local ok = handle:start(git_dirname, {}, function(err, filename, ev_name)
@@ -271,15 +274,7 @@ function event.register_module()
   _start_watcher()
 
   event.on({ 'VimLeavePre' }, function()
-    if _handle then
-      pcall(function()
-        _handle:stop()
-      end)
-      pcall(function()
-        _handle:close()
-      end)
-      _handle = nil
-    end
+    close_handle()
   end)
 
   if not _dir_watcher_registered then
@@ -294,15 +289,7 @@ function event.register_module()
 end
 
 function event.reset()
-  if _handle then
-    pcall(function()
-      _handle:stop()
-    end)
-    pcall(function()
-      _handle:close()
-    end)
-    _handle = nil
-  end
+  close_handle()
   _is_registered = false
   _augroup_created = false
   _dir_watcher_registered = false

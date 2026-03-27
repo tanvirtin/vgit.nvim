@@ -237,7 +237,7 @@ describe('GitTree:', function()
     end)
 
     describe('parent', function()
-      it('should error due to self._repository being nil', function()
+      it('should return parent tree for non-initial commit', function()
         test_repo.create_commit(repo, {
           files = { ['file2.txt'] = { 'second content' } },
           message = 'Second commit',
@@ -246,12 +246,10 @@ describe('GitTree:', function()
         local commit_hash = test_repo.get_head_commit(repo)
         local tree = GitTree(make_repo(repo), commit_hash)
 
-        -- parent() references self._repository which is never set
-        -- (constructor stores _repo_path as a string)
-        local ok, _ = pcall(function()
-          return tree:parent()
-        end)
-        assert.is_false(ok)
+        local parent, err = tree:parent()
+        assert.is_nil(err)
+        assert.is_not_nil(parent)
+        assert.is_not_nil(parent:ref())
       end)
     end)
 

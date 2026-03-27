@@ -17,6 +17,7 @@ function LiveBlame:constructor()
     if not buffer then return end
 
     event.await()
+    if not buffer:is_valid() then return end
     local conflicts = buffer:get_conflicts()
     if #conflicts ~= 0 then return end
     if not buffer:acquire() then return end

@@ -14,5 +14,9 @@ return Config({
       key = 'x',
       desc = 'Toggle split/unified view',
     },
+    blame = {
+      key = 'b',
+      desc = 'Show blame view',
+    },
   },
 })

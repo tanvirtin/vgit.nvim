@@ -134,8 +134,9 @@ function Hunks:cursor_reset()
   if not buffer then return end
 
   local lnum = navigation.get_current_lnum()
-  local hunks = buffer:get_hunks()
-  if not hunks then return end
+  local source_hunks = buffer:get_hunks()
+  if not source_hunks then return end
+  local hunks = vim.list_extend({}, source_hunks)
 
   if lnum == 1 then
     local current_lines = buffer:get_lines()
@@ -148,7 +149,10 @@ function Hunks:cursor_reset()
           break
         end
       end
-      if all_removes then self:reset_all() end
+      if all_removes then
+        self:reset_all()
+        return
+      end
     end
   end
 
@@ -179,21 +183,19 @@ function Hunks:cursor_reset()
     local top = selected_hunk.top
     local bot = selected_hunk.bot
 
-    if top and bot then
-      if selected_hunk.type == 'remove' then
-        buffer:set_lines(replaced_lines, top, bot)
-      else
-        buffer:set_lines(replaced_lines, top - 1, bot)
-      end
-
-      local new_lnum = top
-
-      if new_lnum < 1 then new_lnum = 1 end
-
-      navigation.set_current_lnum(new_lnum)
-      table.remove(hunks, selected_hunk_index)
-      buffer:save()
+    if selected_hunk.type == 'remove' then
+      buffer:set_lines(replaced_lines, top, bot)
+    else
+      buffer:set_lines(replaced_lines, top - 1, bot)
     end
+
+    local new_lnum = top
+
+    if new_lnum < 1 then new_lnum = 1 end
+
+    navigation.set_current_lnum(new_lnum)
+    table.remove(hunks, selected_hunk_index)
+    buffer:save()
   end
 end
 

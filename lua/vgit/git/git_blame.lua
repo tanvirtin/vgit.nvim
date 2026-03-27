@@ -6,7 +6,7 @@ local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_blame = {}
 
-local function parse_blame(blame_lines, filename)
+local function parse_blame(blame_lines)
   local str_split = utils.str.split
   local header = str_split(blame_lines[1], ' ')
   local blame_data = {
@@ -52,10 +52,6 @@ local function parse_blame(blame_lines, filename)
     committer_mail = committer_mail:sub(2, #committer_mail - 1)
   end
 
-  local commit_message = ''
-  if #blame_lines >= 10 and blame_lines[10]:match('^summary ') then
-    commit_message = blame_lines[10]:sub(9, #blame_lines[10])
-  end
   return GitCommit({
     hash = blame_data.commit_hash,
     parent_hash = blame_data.previous,
@@ -67,7 +63,7 @@ local function parse_blame(blame_lines, filename)
     committer_mail = committer_mail,
     committer_time = tonumber(blame_data['committer-time']),
     committer_tz = blame_data['committer-tz'],
-    message = commit_message,
+    message = blame_data.summary or '',
     repository = blame_data.filename and vim.fn.fnamemodify(blame_data.filename, ':h'),
     context = {
       lnum = blame_data.lnum,
@@ -94,12 +90,12 @@ function git_blame.list(reponame, filename, commit)
   for i = 1, #lines do
     local line = lines[i]
 
-    if string.byte(line:sub(1, 3)) ~= 9 then
+    if line:byte(1) ~= 9 then
       blame_info_len = blame_info_len + 1
       blame_info[blame_info_len] = line
     else
       commits_len = commits_len + 1
-      commits[commits_len] = parse_blame(blame_info, filename)
+      commits[commits_len] = parse_blame(blame_info)
       blame_info = {}
       blame_info_len = 0
     end
@@ -121,7 +117,7 @@ function git_blame.get(reponame, filename, lnum)
 
   if err then return nil, err end
 
-  return parse_blame(blame_info, filename)
+  return parse_blame(blame_info)
 end
 
 return git_blame

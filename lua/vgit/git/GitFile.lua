@@ -6,10 +6,10 @@ local git_log = lazy('vgit.git.git_log')
 local GitBlob = lazy('vgit.git.GitBlob')
 local git_hunks = lazy('vgit.git.git_hunks')
 local git_blame = lazy('vgit.git.git_blame')
-local git_repo = lazy('vgit.libgit2.git_repo')
+local git_repo = lazy('vgit.git.git_repo')
 local git_status = lazy('vgit.git.git_status')
 local git_stager = lazy('vgit.git.git_stager')
-local git_conflict = lazy('vgit.libgit2.git_conflict')
+local git_conflict = lazy('vgit.git.git_conflict')
 
 local GitFile = Object:extend()
 
@@ -191,22 +191,6 @@ function GitFile:live_hunks(current_lines)
   self.state.hunks = hunks
 
   return self.state.hunks, nil
-end
-
-function GitFile:list_hunks(opts)
-  if opts.deleted then
-    local lines = opts.lines
-    opts.lines = nil
-    return git_hunks.custom(lines, opts)
-  end
-  if opts.untracked then
-    local lines = opts.lines
-    opts.lines = nil
-    return git_hunks.custom(lines, opts)
-  end
-
-  opts.filename = self.filename
-  return git_hunks.list(self.reponame, opts)
 end
 
 return GitFile
