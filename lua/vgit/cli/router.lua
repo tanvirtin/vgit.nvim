@@ -37,7 +37,11 @@ function router.execute(args)
   end
 
   local ok, handler = pcall(require, handler_module)
-  if not ok or not handler or type(handler.execute) ~= 'function' then
+  if not ok then
+    console.error('Failed to load command: ' .. command .. ': ' .. tostring(handler))
+    return
+  end
+  if type(handler.execute) ~= 'function' then
     console.error('Failed to load command: ' .. command)
     return
   end

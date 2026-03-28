@@ -11,6 +11,7 @@ local display_service = lazy('vgit.ui.display_service')
 local blame_view_setting = lazy('vgit.settings.blame_view')
 local BlameGutterComponent = lazy('vgit.ui.components.BlameGutterComponent')
 local GitCommit = lazy('vgit.git.GitCommit') -- luacheck: ignore
+local git_blame = lazy('vgit.git.git_blame')
 local BlameContentComponent = lazy('vgit.ui.components.BlameContentComponent')
 
 local BlameView = View:extend()
@@ -114,27 +115,7 @@ function BlameView:_get_author_hl(author)
 end
 
 function BlameView:_compute_blame_segments(blames)
-  local segments = {}
-  local line_count = #blames
-  local i = 1
-
-  while i <= line_count do
-    local blame = blames[i]
-    local hash = blame.commit_hash or blame.hash
-    local segment_start = i
-
-    while i <= line_count do
-      local b = blames[i]
-      local h = b.commit_hash or b.hash
-      if h ~= hash then break end
-      i = i + 1
-    end
-    local segment_end = i - 1
-
-    table.insert(segments, { start = segment_start, finish = segment_end })
-  end
-
-  return segments
+  return git_blame.compute_segments(blames)
 end
 
 function BlameView:_render_blame(blames)

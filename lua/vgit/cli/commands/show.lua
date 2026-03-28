@@ -7,6 +7,7 @@ local GitCommit = lazy('vgit.git.GitCommit')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
+local build_file_diff_entries = require('vgit.cli.commands.build_file_diff_entries')
 
 local show_command = {}
 
@@ -38,7 +39,7 @@ show_command.execute = event.async(function(args)
 
   -- TODO: Implement flag support (e.g., --stat, --name-only)
   if #opts.flags > 0 then
-    console.error('Show flags not implemented yet: ' .. table.concat(opts.flags, ', '))
+    console.info('Flag options not yet supported')
     return
   end
 
@@ -55,14 +56,14 @@ show_command.execute = event.async(function(args)
   -- Get commit info
   local commit, commit_err = tree:commit()
   if commit_err then
-    console.error('Failed to get commit info: ' .. tostring(commit_err))
+    console.error('Failed to get commit info: ' .. (commit_err[1] or tostring(commit_err)))
     return
   end
 
   -- Get list of files changed in this commit
   local files, files_err = tree:files()
   if files_err then
-    console.error('Failed to get commit files: ' .. tostring(files_err))
+    console.error('Failed to get commit files: ' .. (files_err[1] or tostring(files_err)))
     return
   end
 
@@ -79,42 +80,7 @@ show_command.execute = event.async(function(args)
   local from_ref = parent_hash ~= '' and parent_hash or GitCommit.EMPTY_TREE_HASH
   local to_ref = commit.commit_hash or commit.hash
 
-  -- Build entries for ProjectDiffView (parallel)
-  local funcs = {}
-  for _, file in ipairs(files) do
-    local filename = file.filename
-    local file_old_filename = file.old_filename
-
-    table.insert(funcs, function()
-      local diff = repo:diff({
-        type = 'range',
-        filename = filename,
-        old_filename = file_old_filename,
-        from = from_ref,
-        to = to_ref,
-        layout_type = layout_type,
-      })
-
-      if not diff then return nil end
-
-      local from_filename = file_old_filename or filename
-      return {
-        filename = filename,
-        filetype = file.get_filetype and file:get_filetype() or 'text',
-        diff = diff,
-        status = file,
-        original_lines = repo:file_lines(from_filename, from_ref) or {},
-        current_lines = repo:file_lines(filename, to_ref) or {},
-      }
-    end)
-  end
-
-  local results = event.all(funcs)
-
-  local entries = {}
-  for i = 1, #funcs do
-    if results[i] then table.insert(entries, results[i]) end
-  end
+  local entries = build_file_diff_entries(repo, files, from_ref, to_ref, layout_type)
 
   if #entries == 0 then
     console.info('No diffs available for commit ' .. opts.commit)

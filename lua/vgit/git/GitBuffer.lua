@@ -43,6 +43,12 @@ function GitBuffer:create(...)
   return self
 end
 
+function GitBuffer:set_state(partial)
+  for key, value in pairs(partial) do
+    self.state[key] = value
+  end
+end
+
 function GitBuffer:sync()
   self.state = {
     signs = {},

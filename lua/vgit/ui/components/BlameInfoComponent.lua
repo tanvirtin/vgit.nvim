@@ -24,7 +24,7 @@ function BlameInfoComponent:render()
   if not blame then return end
 
   local max_line_length = 88
-  local commit_message = blame.commit_message
+  local commit_message = blame.commit_message or ''
 
   if #commit_message > max_line_length then commit_message = commit_message:sub(1, max_line_length) .. '...' end
 

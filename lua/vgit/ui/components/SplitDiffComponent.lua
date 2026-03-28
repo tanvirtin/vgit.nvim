@@ -30,12 +30,6 @@ local SplitDiffComponent = Component({
   end,
 })
 
-function SplitDiffComponent:constructor(props)
-  local instance = SplitDiffComponent.super.constructor(self, props)
-  instance.children = {}
-  return instance
-end
-
 function SplitDiffComponent:get_initial_state()
   return {
     previous_lines = {},
@@ -240,16 +234,6 @@ end
 function SplitDiffComponent:get_relative_mark_index(lnum)
   if self.children.current then return self.children.current:get_relative_mark_index(lnum) end
   return 1
-end
-
--- Custom implementations
-
-function SplitDiffComponent:set_lines(previous_lines, current_lines)
-  self:set_state({
-    previous_lines = previous_lines or {},
-    current_lines = current_lines or {},
-  })
-  return self
 end
 
 function SplitDiffComponent:clear_lines()

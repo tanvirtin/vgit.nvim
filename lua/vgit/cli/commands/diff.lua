@@ -8,6 +8,8 @@ local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
+local normalize_file_path = require('vgit.cli.commands.normalize_file_path')
+local build_file_diff_entries = require('vgit.cli.commands.build_file_diff_entries')
 
 local diff_command = {}
 
@@ -15,12 +17,6 @@ local function format_ref_for_display(ref)
   -- Only truncate if it looks like a full commit hash (40 hex chars)
   if ref:match('^[a-f0-9]+$') and #ref == 40 then return ref:sub(1, 7) end
   return ref
-end
-
-local function normalize_file_path(filepath, repo_path)
-  if not filepath or filepath == '' then return filepath end
-  local absolute = vim.fn.fnamemodify(filepath, ':p')
-  return fs.make_relative(repo_path, absolute)
 end
 
 function diff_command.parse_args(args)
@@ -170,9 +166,9 @@ diff_command.execute = event.async(function(args)
     opts.compare_ref = compare_ref
   end
 
+  -- TODO: Support for git diff output flags (e.g., --word-diff, --stat)
   if #opts.flags > 0 then
-    console.error('Additional flags not implemented yet (e.g., --word-diff, --stat)')
-    console.info('TODO: Support for git diff output flags')
+    console.info('Flag options not yet supported')
     return
   end
 
@@ -272,7 +268,7 @@ diff_command.execute = event.async(function(args)
     })
 
     if files_err then
-      console.error('Failed to get files between refs: ' .. tostring(files_err[1]))
+      console.error('Failed to get files between refs: ' .. (files_err[1] or tostring(files_err)))
       return
     end
 
@@ -281,42 +277,7 @@ diff_command.execute = event.async(function(args)
       return
     end
 
-    -- Build entries for each changed file (parallel)
-    local funcs = {}
-    for _, file in ipairs(files) do
-      local filename = file.filename
-      local file_old_filename = file.old_filename
-
-      table.insert(funcs, function()
-        local diff = repo:diff({
-          type = 'range',
-          filename = filename,
-          old_filename = file_old_filename,
-          from = from_ref,
-          to = to_ref,
-          layout_type = opts.layout_type,
-        })
-
-        if not diff then return nil end
-
-        local from_filename = file_old_filename or filename
-        return {
-          filename = filename,
-          filetype = file.filetype or 'text',
-          diff = diff,
-          status = file,
-          original_lines = repo:file_lines(from_filename, from_ref) or {},
-          current_lines = repo:file_lines(filename, to_ref) or {},
-        }
-      end)
-    end
-
-    local results = event.all(funcs)
-
-    local entries = {}
-    for i = 1, #funcs do
-      if results[i] then table.insert(entries, results[i]) end
-    end
+    local entries = build_file_diff_entries(repo, files, from_ref, to_ref, opts.layout_type)
 
     if #entries == 0 then
       console.info('No diffs available between ' .. from_ref .. ' and ' .. to_ref)
@@ -368,6 +329,11 @@ diff_command.execute = event.async(function(args)
 
   if err then
     console.error(err)
+    return
+  end
+
+  if not data then
+    console.info('No changes')
     return
   end
 

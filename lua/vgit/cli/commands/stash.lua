@@ -7,7 +7,7 @@ local display_service = lazy('vgit.ui.display_service')
 
 local stash_command = {}
 
-local function parse_args(args)
+function stash_command.parse_args(args)
   local opts = { action = 'screen', index = nil }
   if not args or #args == 0 then return opts end
 
@@ -33,7 +33,7 @@ end
 
 stash_command.execute = event.async(function(args)
   args = args or {}
-  local opts = parse_args(args)
+  local opts = stash_command.parse_args(args)
 
   event.await()
 

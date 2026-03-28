@@ -12,10 +12,11 @@ local display_service = lazy('vgit.ui.display_service')
 local status_command = {}
 
 status_command.execute = event.async(function()
-  event.await()
-
   local buffer = Buffer(0)
   local buf_name = buffer:get_name()
+  local cursor_lnum = Window(0):get_lnum()
+
+  event.await()
 
   local repo, repo_err = repository.current()
   if repo_err then
@@ -36,8 +37,6 @@ status_command.execute = event.async(function()
   end
 
   local layout_type = scene_setting:get('diff_preference') or 'unified'
-
-  local cursor_lnum = Window(0):get_lnum()
 
   local current_filename = nil
   if buf_name and buf_name ~= '' then current_filename = fs.make_relative(repo:get_path(), buf_name) end

@@ -35,6 +35,12 @@ debug_command.execute = event.async(function(args)
     console.debug.open()
     return
   end
+
+  if subcommand then
+    console.error('Unknown debug subcommand: ' .. tostring(subcommand))
+  else
+    console.info('Usage: VGit debug <on|off|status|open>')
+  end
 end)
 
 return debug_command

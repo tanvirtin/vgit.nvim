@@ -267,7 +267,7 @@ function controller.autocomplete(arg_lead, cmd_line, _)
     if command_def and command_def.options then
       local options = {}
       for opt_name, _ in pairs(command_def.options) do
-        table.insert(options, '--' .. opt_name)
+        table.insert(options, '--' .. opt_name:gsub('_', '-'))
       end
       return vim.tbl_filter(function(opt)
         return vim.startswith(opt, arg_lead)

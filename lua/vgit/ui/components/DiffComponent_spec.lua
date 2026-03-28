@@ -1,5 +1,14 @@
 local ui_helper = require('tests.helpers.ui')
 local eq = assert.are.same
+local GitHunk = require('vgit.git.GitHunk')
+
+local function make_hunk(header, diff_lines)
+  local hunk = GitHunk(header)
+  for _, line in ipairs(diff_lines or {}) do
+    hunk:push(line)
+  end
+  return hunk
+end
 
 local function create_diff_component(overrides)
   local DiffComponent = require('vgit.ui.components.DiffComponent')
@@ -834,16 +843,7 @@ describe('DiffComponent:', function()
 
   describe('build_diff_render_state data pipeline', function()
     local Diff = require('vgit.core.diff.Diff')
-    local GitHunk = require('vgit.git.GitHunk')
     local invariants = require('tests.helpers.diff_invariants')
-
-    local function make_hunk(header, diff_lines)
-      local hunk = GitHunk(header)
-      for _, line in ipairs(diff_lines or {}) do
-        hunk:push(line)
-      end
-      return hunk
-    end
 
     local function make_unified_diff(hunks, lines)
       return Diff():generate_unified(hunks, lines)
@@ -1047,16 +1047,7 @@ describe('DiffComponent:', function()
 
   describe('adversarial build_diff_render_state', function()
     local Diff = require('vgit.core.diff.Diff')
-    local GitHunk = require('vgit.git.GitHunk')
     local DiffComponent = require('vgit.ui.components.DiffComponent')
-
-    local function make_hunk(header, diff_lines)
-      local hunk = GitHunk(header)
-      for _, line in ipairs(diff_lines) do
-        hunk:push(line)
-      end
-      return hunk
-    end
 
     it('change with 10 removes and 1 add should have correct line count', function()
       local diff_lines = {}
