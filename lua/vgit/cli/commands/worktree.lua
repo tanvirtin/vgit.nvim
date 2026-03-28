@@ -7,7 +7,7 @@ local display_service = lazy('vgit.ui.display_service')
 
 local worktree_command = {}
 
-local function parse_args(args)
+function worktree_command.parse_args(args)
   local opts = { action = 'screen', path = nil, branch = nil }
   if not args or #args == 0 then return opts end
 
@@ -30,7 +30,7 @@ end
 
 worktree_command.execute = event.async(function(args)
   args = args or {}
-  local opts = parse_args(args)
+  local opts = worktree_command.parse_args(args)
 
   event.await()
 

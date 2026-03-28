@@ -129,11 +129,6 @@ function DiffComponent:render()
   self:render_folds()
 end
 
-function DiffComponent:set_lines(lines)
-  self:set_state({ lines = lines })
-  return self
-end
-
 function DiffComponent:clear_lines()
   self:with_element(function(el)
     el:clear_extmarks()

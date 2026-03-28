@@ -374,4 +374,63 @@ describe('stash_command:', function()
       eq('cannot clear stash', error_msg)
     end)
   end)
+
+  describe('parse_args', function()
+    local stash_cmd
+
+    before_each(function()
+      package.loaded['vgit.cli.commands.stash'] = nil
+      stash_cmd = require('vgit.cli.commands.stash')
+    end)
+
+    it('should default to screen action with no args', function()
+      local opts = stash_cmd.parse_args({})
+      eq('screen', opts.action)
+      assert.is_nil(opts.index)
+    end)
+
+    it('should default to screen action with nil args', function()
+      local opts = stash_cmd.parse_args(nil)
+      eq('screen', opts.action)
+    end)
+
+    it('should parse add action', function()
+      local opts = stash_cmd.parse_args({ 'add' })
+      eq('add', opts.action)
+    end)
+
+    it('should parse pop action with default index', function()
+      local opts = stash_cmd.parse_args({ 'pop' })
+      eq('pop', opts.action)
+      eq(0, opts.index)
+    end)
+
+    it('should parse pop action with explicit index', function()
+      local opts = stash_cmd.parse_args({ 'pop', '2' })
+      eq('pop', opts.action)
+      eq(2, opts.index)
+    end)
+
+    it('should parse apply action with index', function()
+      local opts = stash_cmd.parse_args({ 'apply', '3' })
+      eq('apply', opts.action)
+      eq(3, opts.index)
+    end)
+
+    it('should parse drop action', function()
+      local opts = stash_cmd.parse_args({ 'drop', '1' })
+      eq('drop', opts.action)
+      eq(1, opts.index)
+    end)
+
+    it('should parse clear action', function()
+      local opts = stash_cmd.parse_args({ 'clear' })
+      eq('clear', opts.action)
+    end)
+
+    it('should default to screen for unrecognized subcommand', function()
+      local opts = stash_cmd.parse_args({ 'unknown' })
+      eq('screen', opts.action)
+    end)
+  end)
 end)

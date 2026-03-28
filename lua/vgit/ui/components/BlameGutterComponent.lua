@@ -1,6 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
 local Component = lazy('vgit.ui.Component')
+local git_blame = lazy('vgit.git.git_blame')
 
 local BlameGutterComponent = Component({
   win_options = {
@@ -33,25 +34,15 @@ function BlameGutterComponent:render()
   local highlights = {}
   local line_highlights = {}
   local line_count = #blames
-  local group_index = 0
+  local segments = git_blame.compute_segments(blames)
 
-  local i = 1
-  while i <= line_count do
-    local blame = blames[i]
-    local hash = blame.commit_hash or blame.hash
-    local group_start = i
-
-    while i <= line_count do
-      local b = blames[i]
-      local h = b.commit_hash or b.hash
-      if h ~= hash then break end
-      i = i + 1
-    end
-    local group_end = i - 1
+  for group_index, segment in ipairs(segments) do
+    local group_start = segment.start
+    local group_end = segment.finish
+    local blame = blames[group_start]
 
     local is_uncommitted = blame:is_uncommitted()
-    local bg_hl = group_index % 2 == 0 and 'GitBlameEven' or 'GitBlameOdd'
-    group_index = group_index + 1
+    local bg_hl = group_index % 2 == 1 and 'GitBlameEven' or 'GitBlameOdd'
 
     local short_hash = ''
     if not is_uncommitted then short_hash = (blame:short_hash() or ''):sub(1, 7) end

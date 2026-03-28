@@ -32,11 +32,6 @@ describe('router:', function()
       assert.are.equal('Unknown command: nonexistent', last_error)
     end)
 
-    it('should error for another unknown command', function()
-      router.execute({ 'foobar' })
-      assert.are.equal('Unknown command: foobar', last_error)
-    end)
-
     for _, cmd in ipairs({ 'diff', 'blame', 'hunk', 'status', 'show' }) do
       describe('command: ' .. cmd, function()
         local captured_args
@@ -93,6 +88,22 @@ describe('router:', function()
       assert.are.equal('Failed to load command: blame', last_error)
 
       package.loaded['vgit.cli.commands.blame'] = nil
+    end)
+
+    it('should include the underlying error when require fails', function()
+      -- Force require to fail by injecting a loader that throws
+      package.loaded['vgit.cli.commands.diff'] = nil
+      local saved = package.preload['vgit.cli.commands.diff']
+      package.preload['vgit.cli.commands.diff'] = function()
+        error('intentional test error')
+      end
+
+      router.execute({ 'diff' })
+      assert.is_not_nil(last_error)
+      assert.truthy(last_error:match('Failed to load command: diff'))
+      assert.truthy(last_error:match('intentional test error'))
+
+      package.preload['vgit.cli.commands.diff'] = saved
     end)
   end)
 end)

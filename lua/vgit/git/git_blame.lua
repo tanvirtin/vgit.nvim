@@ -73,6 +73,27 @@ local function parse_blame(blame_lines)
   })
 end
 
+function git_blame.compute_segments(blames)
+  local segments = {}
+  local line_count = #blames
+  local i = 1
+
+  while i <= line_count do
+    local hash = blames[i].commit_hash or blames[i].hash
+    local segment_start = i
+
+    while i <= line_count do
+      local h = blames[i].commit_hash or blames[i].hash
+      if h ~= hash then break end
+      i = i + 1
+    end
+
+    segments[#segments + 1] = { start = segment_start, finish = i - 1 }
+  end
+
+  return segments
+end
+
 function git_blame.list(reponame, filename, commit)
   if not reponame then return nil, { 'reponame is required' } end
   if not filename then return nil, { 'filename is required' } end

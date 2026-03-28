@@ -302,4 +302,56 @@ describe('worktree_command:', function()
       eq('Worktree removed: /tmp/old-wt', info_msg)
     end)
   end)
+
+  describe('parse_args', function()
+    local wt_cmd
+
+    before_each(function()
+      package.loaded['vgit.cli.commands.worktree'] = nil
+      wt_cmd = require('vgit.cli.commands.worktree')
+    end)
+
+    it('should default to screen action with no args', function()
+      local opts = wt_cmd.parse_args({})
+      eq('screen', opts.action)
+      assert.is_nil(opts.path)
+      assert.is_nil(opts.branch)
+    end)
+
+    it('should default to screen action with nil args', function()
+      local opts = wt_cmd.parse_args(nil)
+      eq('screen', opts.action)
+    end)
+
+    it('should parse add action with path', function()
+      local opts = wt_cmd.parse_args({ 'add', '/tmp/wt' })
+      eq('add', opts.action)
+      eq('/tmp/wt', opts.path)
+      assert.is_nil(opts.branch)
+    end)
+
+    it('should parse add action with path and branch', function()
+      local opts = wt_cmd.parse_args({ 'add', '/tmp/wt', 'develop' })
+      eq('add', opts.action)
+      eq('/tmp/wt', opts.path)
+      eq('develop', opts.branch)
+    end)
+
+    it('should parse remove action with path', function()
+      local opts = wt_cmd.parse_args({ 'remove', '/tmp/old-wt' })
+      eq('remove', opts.action)
+      eq('/tmp/old-wt', opts.path)
+    end)
+
+    it('should parse switch action with path', function()
+      local opts = wt_cmd.parse_args({ 'switch', '/tmp/other-wt' })
+      eq('switch', opts.action)
+      eq('/tmp/other-wt', opts.path)
+    end)
+
+    it('should default to screen for unrecognized subcommand', function()
+      local opts = wt_cmd.parse_args({ 'unknown' })
+      eq('screen', opts.action)
+    end)
+  end)
 end)

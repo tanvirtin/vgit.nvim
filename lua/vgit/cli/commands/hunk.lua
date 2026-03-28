@@ -74,7 +74,6 @@ hunk_command.execute = event.async(function(args)
 
   local data = {
     type = 'hunk',
-    file_path = filename,
     cursor_line = lnum,
     diff = diff,
     target_hunk_index = target_hunk_index,

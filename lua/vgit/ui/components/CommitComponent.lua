@@ -30,17 +30,11 @@ local CommitComponent = Component({
         if self.props.on_confirm then self.props.on_confirm() end
       end)
 
-      el:set_keymap('n', cancel_key, function()
+      el:set_keymap({ mode = 'n', key = cancel_key, desc = 'Cancel commit' }, function()
         if self.props.on_cancel then self.props.on_cancel() end
-      end, 'Cancel commit')
+      end)
     end)
   end,
 })
-
-function CommitComponent:get_lines()
-  return self:with_element(function(el)
-    return el:get_lines()
-  end) or {}
-end
 
 return CommitComponent

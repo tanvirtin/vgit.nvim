@@ -51,6 +51,7 @@ function TreeComponent:constructor(props)
   instance._keymaps_setup = false
   instance._rendering = false
   instance._depth_tree = DepthTree()
+  instance._processed_list = {}
   return instance
 end
 
@@ -124,8 +125,25 @@ function TreeComponent:create_node(entry)
   return node
 end
 
+function TreeComponent:_build_processed_list()
+  local list = self.state.list
+  local processed = {}
+  for i = 1, #list do
+    local fold = list[i]
+    if fold.items and #fold.items > 0 and fold.items[1].status then
+      local sorted_items = self._depth_tree:from_entries(fold.items):sort():value()
+      processed[i] = { value = fold.value, open = fold.open, items = sorted_items, entry = fold.entry }
+    else
+      processed[i] = fold
+    end
+  end
+  self._processed_list = processed
+end
+
 function TreeComponent:set_list(list)
-  self:set_state({ list = list })
+  self.state.list = list
+  self:_build_processed_list()
+  if self._mounted then self:render() end
   return self
 end
 
@@ -342,13 +360,14 @@ function TreeComponent:generate_lines()
       elseif icon_after then
         if type(icon_after) == 'function' then icon_after = icon_after(item) end
 
+        local value_len = utils.str.length(value)
         value = string.format('%s %s', value, icon_after.icon)
         hls[#hls + 1] = {
           hl = icon_after.hl,
           lnum = current_lnum,
           range = {
-            top = indentation_count + icon_hl_range_offset + utils.str.length(value),
-            bot = indentation_count + icon_hl_range_offset + utils.str.length(value) + #icon_after.icon,
+            top = indentation_count + icon_hl_range_offset + value_len + 1,
+            bot = indentation_count + icon_hl_range_offset + value_len + 1 + #icon_after.icon,
           },
         }
       end
@@ -393,24 +412,15 @@ function TreeComponent:generate_lines()
     end
   end
 
-  if not self.state.list then
+  if not self.state.list or #self.state.list == 0 then
     self.state.hls = {}
     self.state.virtual_texts = {}
     return {}
   end
 
-  local processed_list = {}
-  for i = 1, #self.state.list do
-    local fold = self.state.list[i]
-    if fold.items and #fold.items > 0 and fold.items[1].status then
-      local sorted_items = self._depth_tree:from_entries(fold.items):sort():value()
-      processed_list[i] = { value = fold.value, open = fold.open, items = sorted_items, entry = fold.entry }
-    else
-      processed_list[i] = fold
-    end
-  end
+  if not self._processed_list or #self._processed_list == 0 then self:_build_processed_list() end
 
-  generate_lines_recursive(processed_list, 0)
+  generate_lines_recursive(self._processed_list, 0)
 
   for i = 1, #depth_0_item_counts do
     local depth_0_item_count = depth_0_item_counts[i]

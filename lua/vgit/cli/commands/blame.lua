@@ -8,14 +8,9 @@ local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
+local normalize_file_path = require('vgit.cli.commands.normalize_file_path')
 
 local blame_command = {}
-
-local function normalize_file_path(filepath, repo_path)
-  if not filepath or filepath == '' then return filepath end
-  local absolute = vim.fn.fnamemodify(filepath, ':p')
-  return fs.make_relative(repo_path, absolute)
-end
 
 function blame_command.parse_args(args)
   local opts = {
@@ -75,7 +70,7 @@ local function execute_screen_blame(opts, repo, filename)
 end
 
 local function execute_lens_blame(opts, repo, filename)
-  local layout_type = scene_setting:get('diff_preference')
+  local layout_type = scene_setting:get('diff_preference') or 'unified'
   local filetype = fs.detect_filetype(filename)
 
   local blame, blame_err = repo:blame_file(filename, opts.line_number)
@@ -140,9 +135,9 @@ blame_command.execute = event.async(function(args)
 
   local opts = blame_command.parse_args(args)
 
+  -- TODO: Support for git blame options (e.g., -w, -C, -M)
   if #opts.flags > 0 then
-    console.error('Blame flags not implemented yet (e.g., -w, -C, -M)')
-    console.info('TODO: Support for git blame options')
+    console.info('Flag options not yet supported')
     return
   end
 

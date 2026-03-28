@@ -65,17 +65,20 @@ local function flush_file_section(ctx)
 end
 
 local function track_lnum(ctx, change_type, syntax_mapping)
+  local lnum_val
   if change_type == 'remove' then
-    if ctx.orig_lnum > ctx.max_lnum then ctx.max_lnum = ctx.orig_lnum end
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = ctx.orig_lnum, hl = 'GitSignsDelete' }
+    lnum_val = ctx.orig_lnum
+    if lnum_val > ctx.max_lnum then ctx.max_lnum = lnum_val end
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, hl = 'GitSignsDelete' }
     if syntax_mapping and ctx.file_section then
       local sm = ctx.file_section.syntax_mappings
       sm[#sm + 1] = syntax_mapping
     end
     ctx.orig_lnum = ctx.orig_lnum + 1
   elseif change_type == 'add' then
-    if ctx.curr_lnum > ctx.max_lnum then ctx.max_lnum = ctx.curr_lnum end
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = ctx.curr_lnum, hl = 'GitSignsAdd' }
+    lnum_val = ctx.curr_lnum
+    if lnum_val > ctx.max_lnum then ctx.max_lnum = lnum_val end
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, hl = 'GitSignsAdd' }
     if syntax_mapping and ctx.file_section then
       local sm = ctx.file_section.syntax_mappings
       sm[#sm + 1] = syntax_mapping
@@ -84,8 +87,9 @@ local function track_lnum(ctx, change_type, syntax_mapping)
   elseif change_type == 'void' then
     ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
   else
-    if ctx.curr_lnum > ctx.max_lnum then ctx.max_lnum = ctx.curr_lnum end
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = ctx.curr_lnum, hl = 'GitLineNr' }
+    lnum_val = ctx.curr_lnum
+    if lnum_val > ctx.max_lnum then ctx.max_lnum = lnum_val end
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, hl = 'GitLineNr' }
     if syntax_mapping and ctx.file_section then
       local sm = ctx.file_section.syntax_mappings
       sm[#sm + 1] = syntax_mapping
@@ -93,6 +97,7 @@ local function track_lnum(ctx, change_type, syntax_mapping)
     ctx.orig_lnum = ctx.orig_lnum + 1
     ctx.curr_lnum = ctx.curr_lnum + 1
   end
+  return lnum_val
 end
 
 local function process_file_header(ctx, entry)
@@ -130,6 +135,7 @@ local function process_diff_content(ctx, entry)
 
   for i, line in ipairs(diff_lines) do
     ctx.lines[#ctx.lines + 1] = line
+    local display_row = #ctx.lines - 1
     local lnum_change = lnum_change_map[i]
     ctx.line_metadata[#ctx.lines] = {
       type = 'code',
@@ -138,7 +144,13 @@ local function process_diff_content(ctx, entry)
     }
 
     local change_type = lnum_change and lnum_change.type or nil
-    track_lnum(ctx, change_type)
+    local syntax_mapping
+    if change_type == 'remove' then
+      syntax_mapping = { source = 'original', source_line = ctx.orig_lnum, display_row = display_row }
+    elseif change_type ~= 'void' then
+      syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
+    end
+    track_lnum(ctx, change_type, syntax_mapping)
   end
 
   if ctx.file_section then ctx.file_section.line_count = #diff_lines end
@@ -307,64 +319,22 @@ local function process_diff_file(ctx, entry)
       local lc = lnum_change_map[i]
       local change_type = lc and lc.type or nil
 
-      local file_lnum
-      if change_type == 'void' then
-        file_lnum = nil
-      elseif change_type == 'remove' then
-        file_lnum = ctx.orig_lnum
-      else
-        file_lnum = ctx.curr_lnum
+      local syntax_mapping
+      if change_type == 'remove' then
+        syntax_mapping = { source = 'original', source_line = ctx.orig_lnum, display_row = display_row }
+      elseif change_type ~= 'void' then
+        syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
       end
+
+      local lnum_val = track_lnum(ctx, change_type, syntax_mapping)
 
       ctx.line_metadata[#ctx.lines] = {
         type = 'code',
         filetype = filetype,
         lnum_change = lc,
-        file_lnum = file_lnum,
+        file_lnum = lnum_val,
         filename = filename,
       }
-
-      local syntax_mapping
-      if change_type ~= 'void' then
-        if change_type == 'remove' then
-          syntax_mapping = { source = 'original', source_line = ctx.orig_lnum, display_row = display_row }
-          ctx.orig_lnum = ctx.orig_lnum + 1
-        elseif change_type == 'add' then
-          syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
-          ctx.curr_lnum = ctx.curr_lnum + 1
-        else
-          syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
-          ctx.orig_lnum = ctx.orig_lnum + 1
-          ctx.curr_lnum = ctx.curr_lnum + 1
-        end
-      end
-
-      local lnum_val
-      if change_type == 'void' then
-        lnum_val = nil
-      elseif change_type == 'remove' then
-        lnum_val = ctx.orig_lnum - 1
-      elseif change_type == 'add' then
-        lnum_val = ctx.curr_lnum - 1
-      else
-        lnum_val = ctx.curr_lnum - 1
-      end
-
-      if lnum_val and lnum_val > ctx.max_lnum then ctx.max_lnum = lnum_val end
-
-      local hl = 'GitLineNr'
-      if change_type == 'remove' then
-        hl = 'GitSignsDelete'
-      elseif change_type == 'add' then
-        hl = 'GitSignsAdd'
-      end
-
-      ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, hl = hl }
-
-      if syntax_mapping and ctx.file_section then
-        local sm = ctx.file_section.syntax_mappings
-        sm[#sm + 1] = syntax_mapping
-      end
     end
   end
 
