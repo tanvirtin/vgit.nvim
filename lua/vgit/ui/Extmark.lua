@@ -16,6 +16,7 @@ function Extmark:constructor(bufnr, ns_name_extension)
       text = 10,
       sign = 100,
       lnum = 1000,
+      virt_line = 10000,
     },
     ns_id = ns_id,
   }
@@ -87,6 +88,23 @@ function Extmark:text(opts)
     virt_text = virt_text,
     virt_text_pos = pos,
     hl_mode = hl_mode,
+    priority = priority,
+  })
+end
+
+function Extmark:virt_line(opts)
+  local hl = opts.hl
+  local row = opts.row
+  local text = opts.text
+  local priority = opts.priority
+  local above = opts.above
+  if above == nil then above = true end
+
+  local id = self:derive_id(row, 'virt_line')
+  return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, 0, {
+    id = id,
+    virt_lines = { { { text, hl } } },
+    virt_lines_above = above,
     priority = priority,
   })
 end
