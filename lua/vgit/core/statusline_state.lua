@@ -15,12 +15,15 @@ local function redraw()
   vim.cmd('redrawstatus')
 end
 
+local function close_hunk_timer()
+  if not hunk_timer then return end
+  hunk_timer:stop()
+  if not hunk_timer:is_closing() then hunk_timer:close() end
+  hunk_timer = nil
+end
+
 local function clear_hunk()
-  if hunk_timer then
-    hunk_timer:stop()
-    if not hunk_timer:is_closing() then hunk_timer:close() end
-    hunk_timer = nil
-  end
+  close_hunk_timer()
   state.hunk_index = nil
   state.hunk_count = nil
   vim.g.vgit_hunk_index = nil
@@ -29,11 +32,7 @@ local function clear_hunk()
 end
 
 function statusline_state.set_hunk(hunk)
-  if hunk_timer then
-    hunk_timer:stop()
-    if not hunk_timer:is_closing() then hunk_timer:close() end
-    hunk_timer = nil
-  end
+  close_hunk_timer()
 
   local index = hunk.index
   local count = hunk.count
@@ -68,11 +67,7 @@ function statusline_state.set_branch(name)
 end
 
 function statusline_state.reset()
-  if hunk_timer then
-    hunk_timer:stop()
-    if not hunk_timer:is_closing() then hunk_timer:close() end
-    hunk_timer = nil
-  end
+  close_hunk_timer()
   state.hunk_index = nil
   state.hunk_count = nil
   state.diff_stats = nil

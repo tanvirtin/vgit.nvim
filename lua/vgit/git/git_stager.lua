@@ -23,7 +23,7 @@ function git_stager.unstage(reponame, filename)
   return nil, nil
 end
 
-function git_stager.stage_hunk(reponame, filename, hunk)
+local function apply_hunk_patch(reponame, filename, hunk, apply_args)
   if not reponame then return nil, { 'reponame is required' } end
   if not filename then return nil, { 'filename is required' } end
   if not hunk then return nil, { 'hunk is required' } end
@@ -37,60 +37,31 @@ function git_stager.stage_hunk(reponame, filename, hunk)
     return nil, write_err
   end
 
-  local _, err = GitQueryBuilder(reponame)
-    :raw_args('--no-pager', 'apply', '--cached', '--whitespace=nowarn', '--unidiff-zero', patch_filename)
-    :execute()
+  local args = { '--no-pager', 'apply' }
+  for i = 1, #apply_args do
+    args[#args + 1] = apply_args[i]
+  end
+  args[#args + 1] = '--whitespace=nowarn'
+  args[#args + 1] = '--unidiff-zero'
+  args[#args + 1] = patch_filename
+
+  local _, err = GitQueryBuilder(reponame):raw_args(unpack(args)):execute()
 
   fs.remove_file(patch_filename)
 
   return nil, err
+end
+
+function git_stager.stage_hunk(reponame, filename, hunk)
+  return apply_hunk_patch(reponame, filename, hunk, { '--cached' })
 end
 
 function git_stager.unstage_hunk(reponame, filename, hunk)
-  if not reponame then return nil, { 'reponame is required' } end
-  if not filename then return nil, { 'filename is required' } end
-  if not hunk then return nil, { 'hunk is required' } end
-
-  local patch = GitPatch(filename, hunk)
-  local patch_filename = fs.tmpname()
-
-  local _, write_err = fs.write_file(patch_filename, patch)
-  if write_err then
-    console.debug.error(write_err)
-    return nil, write_err
-  end
-
-  local _, err =
-    GitQueryBuilder(reponame)
-      :raw_args('--no-pager', 'apply', '--reverse', '--cached', '--whitespace=nowarn', '--unidiff-zero', patch_filename)
-      :execute()
-
-  fs.remove_file(patch_filename)
-
-  return nil, err
+  return apply_hunk_patch(reponame, filename, hunk, { '--reverse', '--cached' })
 end
 
 function git_stager.reset_hunk(reponame, filename, hunk)
-  if not reponame then return nil, { 'reponame is required' } end
-  if not filename then return nil, { 'filename is required' } end
-  if not hunk then return nil, { 'hunk is required' } end
-
-  local patch = GitPatch(filename, hunk)
-  local patch_filename = fs.tmpname()
-
-  local _, write_err = fs.write_file(patch_filename, patch)
-  if write_err then
-    console.debug.error(write_err)
-    return nil, write_err
-  end
-
-  local _, err = GitQueryBuilder(reponame)
-    :raw_args('--no-pager', 'apply', '--reverse', '--whitespace=nowarn', '--unidiff-zero', patch_filename)
-    :execute()
-
-  fs.remove_file(patch_filename)
-
-  return nil, err
+  return apply_hunk_patch(reponame, filename, hunk, { '--reverse' })
 end
 
 return git_stager

@@ -34,6 +34,24 @@ function Extmark:derive_id(row)
   return row + 1
 end
 
+function Extmark:_highlight_pattern_line(line, line_row, pattern, hl, priority, result)
+  local j = 0
+  while true do
+    local from, to = line:find(pattern, j + 1)
+    if from == nil then break end
+    local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, line_row, from - 1, {
+      end_col = to,
+      hl_group = hl,
+      priority = priority,
+    })
+    if not ok then return false, value end
+    j = to
+    if to < from then break end
+    result[#result + 1] = value
+  end
+  return true
+end
+
 function Extmark:highlight_pattern(opts)
   local hl = opts.hl
   local row = opts.row
@@ -41,45 +59,16 @@ function Extmark:highlight_pattern(opts)
   local priority = opts.priority
 
   local result = {}
-  local lines
   if row ~= nil then
-    lines = vim.api.nvim_buf_get_lines(self.bufnr, row, row + 1, false)
+    local lines = vim.api.nvim_buf_get_lines(self.bufnr, row, row + 1, false)
     if #lines == 0 then return true, result end
-    local j = 0
-    local line = lines[1]
-    while true do
-      local from, to = line:find(pattern, j + 1)
-      if from == nil then break end
-      local extmark_opts = {
-        end_col = to,
-        hl_group = hl,
-        priority = priority,
-      }
-      local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, from - 1, extmark_opts)
-      if not ok then return false, value end
-      j = to
-      if to < from then break end
-      result[#result + 1] = value
-    end
+    local ok, err = self:_highlight_pattern_line(lines[1], row, pattern, hl, priority, result)
+    if not ok then return false, err end
   else
-    lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
+    local lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
     for i = 1, #lines do
-      local j = 0
-      local line = lines[i]
-      while true do
-        local from, to = line:find(pattern, j + 1)
-        if from == nil then break end
-        local extmark_opts = {
-          end_col = to,
-          hl_group = hl,
-          priority = priority,
-        }
-        local ok, value = pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, i - 1, from - 1, extmark_opts)
-        if not ok then return false, value end
-        j = to
-        if to < from then break end
-        result[#result + 1] = value
-      end
+      local ok, err = self:_highlight_pattern_line(lines[i], i - 1, pattern, hl, priority, result)
+      if not ok then return false, err end
     end
   end
 

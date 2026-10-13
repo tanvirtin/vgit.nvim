@@ -6,6 +6,19 @@ local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_rebase = {}
 
+local rebase_flags = {
+  { opt = 'rebase_merges', flag = '--rebase-merges' },
+  { opt = 'keep_empty', flag = '--keep-empty' },
+  { opt = 'keep_base', flag = '--keep-base' },
+  { opt = 'autosquash', flag = '--autosquash' },
+  { opt = 'no_autosquash', flag = '--no-autosquash' },
+  { opt = 'autostash', flag = '--autostash' },
+  { opt = 'no_autostash', flag = '--no-autostash' },
+  { opt = 'fork_point', flag = '--fork-point' },
+  { opt = 'no_fork_point', flag = '--no-fork-point' },
+  { opt = 'root', flag = '--root' },
+}
+
 function git_rebase.rebase(reponame, upstream, opts)
   if not reponame or reponame == '' then return nil, { 'reponame is required' } end
   if not upstream or upstream == '' then return nil, { 'upstream is required' } end
@@ -15,40 +28,14 @@ function git_rebase.rebase(reponame, upstream, opts)
 
   if opts.interactive or opts.i then query:raw_arg('-i') end
 
-  if opts.rebase_merges then query:raw_arg('--rebase-merges') end
+  if opts.strategy then query:raw_arg('-s'):raw_arg(opts.strategy) end
+  if opts.strategy_option then query:raw_arg('-X'):raw_arg(opts.strategy_option) end
 
-  if opts.strategy then
-    query:raw_arg('-s')
-    query:raw_arg(opts.strategy)
+  for _, entry in ipairs(rebase_flags) do
+    if opts[entry.opt] then query:raw_arg(entry.flag) end
   end
 
-  if opts.strategy_option then
-    query:raw_arg('-X')
-    query:raw_arg(opts.strategy_option)
-  end
-
-  if opts.keep_empty then query:raw_arg('--keep-empty') end
-
-  if opts.keep_base then query:raw_arg('--keep-base') end
-
-  if opts.autosquash then query:raw_arg('--autosquash') end
-
-  if opts.no_autosquash then query:raw_arg('--no-autosquash') end
-
-  if opts.autostash then query:raw_arg('--autostash') end
-
-  if opts.no_autostash then query:raw_arg('--no-autostash') end
-
-  if opts.fork_point then query:raw_arg('--fork-point') end
-
-  if opts.no_fork_point then query:raw_arg('--no-fork-point') end
-
-  if opts.onto then
-    query:raw_arg('--onto')
-    query:raw_arg(opts.onto)
-  end
-
-  if opts.root then query:raw_arg('--root') end
+  if opts.onto then query:raw_arg('--onto'):raw_arg(opts.onto) end
 
   query:raw_arg(upstream)
 
@@ -102,6 +89,12 @@ function git_rebase.in_progress(reponame)
   return fs.exists(string.format('%s/rebase-merge', git_dir)) or fs.exists(string.format('%s/rebase-apply', git_dir))
 end
 
+local function read_trimmed(dir, filename)
+  local content = fs.read_file(string.format('%s/%s', dir, filename))
+  if content and content[1] then return content[1]:match('^%s*(.-)%s*$') end
+  return nil
+end
+
 function git_rebase.status(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
@@ -121,24 +114,10 @@ function git_rebase.status(reponame)
   if fs.exists(rebase_merge_dir) then
     status.in_progress = true
     status.interactive = true
-
-    local msgnum = fs.read_file(string.format('%s/msgnum', rebase_merge_dir))
-    local end_num = fs.read_file(string.format('%s/end', rebase_merge_dir))
-    if msgnum and msgnum[1] then
-      local trimmed = msgnum[1]:match('^%s*(.-)%s*$')
-      status.current = tonumber(trimmed)
-    end
-    if end_num and end_num[1] then
-      local trimmed = end_num[1]:match('^%s*(.-)%s*$')
-      status.total = tonumber(trimmed)
-    end
-
-    local onto = fs.read_file(string.format('%s/onto', rebase_merge_dir))
-    if onto and onto[1] then status.onto = onto[1]:match('^%s*(.-)%s*$') end
-
-    local head_name = fs.read_file(string.format('%s/head-name', rebase_merge_dir))
-    if head_name and head_name[1] then status.head_name = head_name[1]:match('^%s*(.-)%s*$') end
-
+    status.current = tonumber(read_trimmed(rebase_merge_dir, 'msgnum'))
+    status.total = tonumber(read_trimmed(rebase_merge_dir, 'end'))
+    status.onto = read_trimmed(rebase_merge_dir, 'onto')
+    status.head_name = read_trimmed(rebase_merge_dir, 'head-name')
     return status, nil
   end
 
@@ -146,21 +125,9 @@ function git_rebase.status(reponame)
   if fs.exists(rebase_apply_dir) then
     status.in_progress = true
     status.interactive = false
-
-    local next_file = fs.read_file(string.format('%s/next', rebase_apply_dir))
-    local last_file = fs.read_file(string.format('%s/last', rebase_apply_dir))
-    if next_file and next_file[1] then
-      local trimmed = next_file[1]:match('^%s*(.-)%s*$')
-      status.current = tonumber(trimmed)
-    end
-    if last_file and last_file[1] then
-      local trimmed = last_file[1]:match('^%s*(.-)%s*$')
-      status.total = tonumber(trimmed)
-    end
-
-    local head_name = fs.read_file(string.format('%s/head-name', rebase_apply_dir))
-    if head_name and head_name[1] then status.head_name = head_name[1]:match('^%s*(.-)%s*$') end
-
+    status.current = tonumber(read_trimmed(rebase_apply_dir, 'next'))
+    status.total = tonumber(read_trimmed(rebase_apply_dir, 'last'))
+    status.head_name = read_trimmed(rebase_apply_dir, 'head-name')
     return status, nil
   end
 

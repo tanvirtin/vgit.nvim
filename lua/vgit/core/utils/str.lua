@@ -31,31 +31,7 @@ end
 function str.strip(given_string, substring)
   if substring == '' then return given_string end
 
-  local rc_s = ''
-  local i = 1
-  local found = false
-
-  while i <= #given_string do
-    local temp_i = 0
-
-    if not found then
-      for j = 1, #substring do
-        local s_j = substring:sub(j, j)
-        local s_i = given_string:sub(i + temp_i, i + temp_i)
-
-        if s_j == s_i then temp_i = temp_i + 1 end
-      end
-    end
-    if temp_i == #substring then
-      found = true
-      i = i + temp_i
-    else
-      rc_s = rc_s .. given_string:sub(i, i)
-      i = i + 1
-    end
-  end
-
-  return rc_s
+  return (given_string:gsub(vim.pesc(substring), '', 1))
 end
 
 return str

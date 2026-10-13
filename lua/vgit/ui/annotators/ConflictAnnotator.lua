@@ -1,5 +1,11 @@
 local ConflictAnnotator = {}
 
+local function add_signs_for_range(signs, top, bot, name)
+  for lnum = top, bot do
+    signs[#signs + 1] = { row = lnum - 1, name = name }
+  end
+end
+
 function ConflictAnnotator.annotate(conflict)
   local current = conflict.current
   local ancestor = conflict.ancestor
@@ -9,64 +15,20 @@ function ConflictAnnotator.annotate(conflict)
   local signs = {}
   local texts = {}
 
-  signs[#signs + 1] = {
-    row = current.top - 1,
-    name = 'GitConflictCurrentMark',
-  }
-  texts[#texts + 1] = {
-    text = '(Current Change)',
-    hl = 'GitComment',
-    row = current.top - 1,
-    col = 0,
-    pos = 'eol',
-  }
-
-  for lnum = current.top + 1, current.bot do
-    signs[#signs + 1] = {
-      row = lnum - 1,
-      name = 'GitConflictCurrent',
-    }
-  end
+  signs[#signs + 1] = { row = current.top - 1, name = 'GitConflictCurrentMark' }
+  texts[#texts + 1] = { text = '(Current Change)', hl = 'GitComment', row = current.top - 1, col = 0, pos = 'eol' }
+  add_signs_for_range(signs, current.top + 1, current.bot, 'GitConflictCurrent')
 
   if ancestor and ancestor.top then
-    signs[#signs + 1] = {
-      row = ancestor.top - 1,
-      name = 'GitConflictAncestorMark',
-    }
-    for lnum = ancestor.top + 1, ancestor.bot do
-      signs[#signs + 1] = {
-        row = lnum - 1,
-        name = 'GitConflictAncestor',
-      }
-    end
+    signs[#signs + 1] = { row = ancestor.top - 1, name = 'GitConflictAncestorMark' }
+    add_signs_for_range(signs, ancestor.top + 1, ancestor.bot, 'GitConflictAncestor')
   end
 
-  for lnum = middle.top, middle.bot do
-    signs[#signs + 1] = {
-      row = lnum - 1,
-      name = 'GitConflictMiddle',
-    }
-  end
+  add_signs_for_range(signs, middle.top, middle.bot, 'GitConflictMiddle')
+  add_signs_for_range(signs, incoming.top, incoming.bot - 1, 'GitConflictIncoming')
 
-  for lnum = incoming.top, incoming.bot - 1 do
-    signs[#signs + 1] = {
-      row = lnum - 1,
-      name = 'GitConflictIncoming',
-    }
-  end
-
-  signs[#signs + 1] = {
-    row = incoming.bot - 1,
-    name = 'GitConflictIncomingMark',
-  }
-
-  texts[#texts + 1] = {
-    text = '(Incoming Change)',
-    hl = 'GitComment',
-    row = incoming.bot - 1,
-    col = 0,
-    pos = 'eol',
-  }
+  signs[#signs + 1] = { row = incoming.bot - 1, name = 'GitConflictIncomingMark' }
+  texts[#texts + 1] = { text = '(Incoming Change)', hl = 'GitComment', row = incoming.bot - 1, col = 0, pos = 'eol' }
 
   return { signs = signs, texts = texts }
 end

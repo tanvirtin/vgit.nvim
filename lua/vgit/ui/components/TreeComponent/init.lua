@@ -538,24 +538,20 @@ function TreeComponent:setup_keymaps(keymaps, handlers)
       el:set_keymap(mode, key, handler, key_desc)
     end
 
-    if keymaps.commit and handlers.commit then set_safe_keymap('n', keymaps.commit, handlers.commit, 'Commit') end
-    if keymaps.buffer_reset and handlers.reset_file then
-      set_safe_keymap('n', keymaps.buffer_reset, handlers.reset_file, 'Reset')
-    end
-    if keymaps.buffer_stage and handlers.stage_file then
-      set_safe_keymap('n', keymaps.buffer_stage, handlers.stage_file, 'Stage')
-    end
-    if keymaps.buffer_unstage and handlers.unstage_file then
-      set_safe_keymap('n', keymaps.buffer_unstage, handlers.unstage_file, 'Unstage')
-    end
-    if keymaps.stage_all and handlers.stage_all then
-      set_safe_keymap('n', keymaps.stage_all, handlers.stage_all, 'Stage all')
-    end
-    if keymaps.unstage_all and handlers.unstage_all then
-      set_safe_keymap('n', keymaps.unstage_all, handlers.unstage_all, 'Unstage all')
-    end
-    if keymaps.reset_all and handlers.reset_all then
-      set_safe_keymap('n', keymaps.reset_all, handlers.reset_all, 'Reset all')
+    local bindings = {
+      { keymap = 'commit', handler = 'commit', desc = 'Commit' },
+      { keymap = 'buffer_reset', handler = 'reset_file', desc = 'Reset' },
+      { keymap = 'buffer_stage', handler = 'stage_file', desc = 'Stage' },
+      { keymap = 'buffer_unstage', handler = 'unstage_file', desc = 'Unstage' },
+      { keymap = 'stage_all', handler = 'stage_all', desc = 'Stage all' },
+      { keymap = 'unstage_all', handler = 'unstage_all', desc = 'Unstage all' },
+      { keymap = 'reset_all', handler = 'reset_all', desc = 'Reset all' },
+    }
+
+    for _, binding in ipairs(bindings) do
+      if keymaps[binding.keymap] and handlers[binding.handler] then
+        set_safe_keymap('n', keymaps[binding.keymap], handlers[binding.handler], binding.desc)
+      end
     end
   end)
 end

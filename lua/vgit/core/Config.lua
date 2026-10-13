@@ -35,18 +35,12 @@ function Config:assign(config)
   if config == nil then return self.data end
 
   for key, value in pairs(config) do
-    if self.data[key] ~= nil then
-      if type(self.data[key]) == 'table' and type(value) == 'table' then
-        if vim.islist(value) then
-          self.data[key] = value
-        else
-          self.data[key] = utils.object.assign(self.data[key], value)
-        end
-      else
-        self.data[key] = value
-      end
-    else
+    if self.data[key] == nil then
       console.debug.warn(string.format('Unknown config key "%s" will be ignored', key))
+    elseif type(self.data[key]) == 'table' and type(value) == 'table' and not vim.islist(value) then
+      self.data[key] = utils.object.assign(self.data[key], value)
+    else
+      self.data[key] = value
     end
   end
 

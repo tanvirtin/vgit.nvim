@@ -34,26 +34,16 @@ function HunkLensView:setup_keymaps()
 
   self:_setup_quit_keymap()
 
-  local prev_key = keymap.get_key(hunk_keymaps.up)
-  if prev_key then
-    local prev_fn = event.async(function()
-      self:hunk_up()
-    end)
-    self._diff_component:set_keymap({
-      mode = 'n',
-      key = prev_key,
-    }, prev_fn)
-  end
+  local bindings = {
+    { keymap = hunk_keymaps.up, handler = function() self:hunk_up() end },
+    { keymap = hunk_keymaps.down, handler = function() self:hunk_down() end },
+  }
 
-  local next_key = keymap.get_key(hunk_keymaps.down)
-  if next_key then
-    local next_fn = event.async(function()
-      self:hunk_down()
-    end)
-    self._diff_component:set_keymap({
-      mode = 'n',
-      key = next_key,
-    }, next_fn)
+  for _, binding in ipairs(bindings) do
+    local key = keymap.get_key(binding.keymap)
+    if key then
+      self._diff_component:set_keymap({ mode = 'n', key = key }, event.async(binding.handler))
+    end
   end
 end
 

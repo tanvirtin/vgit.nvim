@@ -1,4 +1,6 @@
-local Config = require('vgit.core.Config')
+local lazy = require('vgit.core.lazy')
+
+local Config = lazy('vgit.core.Config')
 
 return Config({
   -- Alignment when jumping to a hunk: 'top', 'center', or 'bottom'

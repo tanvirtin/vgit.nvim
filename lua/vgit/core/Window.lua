@@ -177,18 +177,16 @@ function Window:is_same(window)
   return self.win_id == window.win_id
 end
 
+
 function Window:scroll_to(placement, offset)
   placement = placement or 'center'
   offset = offset or 0
 
+  local scroll_commands = { top = 'norm! zt', center = 'norm! zz', bottom = 'norm! zb' }
+
   return self:call(function()
-    if placement == 'top' then
-      vim.cmd('norm! zt')
-    elseif placement == 'center' then
-      vim.cmd('norm! zz')
-    elseif placement == 'bottom' then
-      vim.cmd('norm! zb')
-    end
+    local cmd = scroll_commands[placement]
+    if cmd then vim.cmd(cmd) end
     if offset > 0 then vim.cmd(string.format('norm! %d\25', offset)) end
   end)
 end
