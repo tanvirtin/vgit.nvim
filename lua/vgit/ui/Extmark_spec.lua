@@ -17,23 +17,79 @@ describe('Extmark:', function()
   end)
 
   describe('derive_id', function()
-    it('should return row + 1', function()
+    it('should offset each extmark kind into its own id space', function()
       local extmark = Extmark(0)
-      assert.are.equal(6, extmark:derive_id(5))
-      assert.are.equal(1, extmark:derive_id(0))
-      assert.are.equal(11, extmark:derive_id(10))
+      assert.are.equal(15, extmark:derive_id(5, 'text'))
+      assert.are.equal(10, extmark:derive_id(0, 'text'))
+      assert.are.equal(105, extmark:derive_id(5, 'sign'))
+      assert.are.equal(1005, extmark:derive_id(5, 'lnum'))
+      assert.are.equal(10005, extmark:derive_id(5, 'virt_line'))
+    end)
+
+    it('should not collide across kinds on the same row', function()
+      local extmark = Extmark(0)
+      local row = 7
+      local ids = {
+        extmark:derive_id(row, 'text'),
+        extmark:derive_id(row, 'sign'),
+        extmark:derive_id(row, 'lnum'),
+        extmark:derive_id(row, 'virt_line'),
+      }
+
+      local seen = {}
+      for _, id in ipairs(ids) do
+        assert.is_nil(seen[id])
+        seen[id] = true
+      end
+    end)
+
+    it('should error on an unknown kind', function()
+      local extmark = Extmark(0)
+      assert.has_error(function()
+        extmark:derive_id(0, 'bogus')
+      end)
     end)
 
     it('should produce different IDs for different rows', function()
       local extmark = Extmark(0)
-      local id1 = extmark:derive_id(0)
-      local id2 = extmark:derive_id(1)
+      local id1 = extmark:derive_id(0, 'text')
+      local id2 = extmark:derive_id(1, 'text')
       assert.are_not.equal(id1, id2)
     end)
 
     it('should always return a positive ID', function()
       local extmark = Extmark(0)
-      assert.is_true(extmark:derive_id(0) > 0)
+      assert.is_true(extmark:derive_id(0, 'text') > 0)
+    end)
+  end)
+
+  describe('kind isolation', function()
+    it('should keep a sign and a text on the same row', function()
+      local buf = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'a', 'b', 'c', 'd' })
+      local extmark = Extmark(buf)
+
+      extmark:sign({ row = 3, name = 'GitConflictCurrentMark' })
+      extmark:text({ text = '(Current Change)', hl = 'GitComment', row = 3, col = 0, pos = 'eol' })
+
+      local marks = vim.api.nvim_buf_get_extmarks(buf, extmark.ns_id, 0, -1, { details = true })
+      assert.are.equal(2, #marks)
+
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end)
+
+    it('should keep a text and a virtual line on the same row', function()
+      local buf = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'a', 'b', 'c', 'd' })
+      local extmark = Extmark(buf)
+
+      extmark:text({ text = 'inline', hl = 'GitComment', row = 2, col = 0 })
+      extmark:virt_line({ text = 'help', hl = 'GitComment', row = 2, above = true })
+
+      local marks = vim.api.nvim_buf_get_extmarks(buf, extmark.ns_id, 0, -1, { details = true })
+      assert.are.equal(2, #marks)
+
+      vim.api.nvim_buf_delete(buf, { force = true })
     end)
   end)
 

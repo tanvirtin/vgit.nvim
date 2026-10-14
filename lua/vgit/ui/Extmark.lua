@@ -17,6 +17,16 @@ local function get_sign_definition(name)
   return _sign_definitions[name]
 end
 
+-- Each extmark kind gets its own id space so that different kinds placed on
+-- the same row (a sign and a text, or a text and a virtual line) coexist
+-- instead of overwriting one another.
+local ID_GROUPS = {
+  text = 10,
+  sign = 100,
+  lnum = 1000,
+  virt_line = 10000,
+}
+
 local Extmark = Object:extend()
 
 function Extmark:constructor(bufnr, ns_name_extension)
@@ -30,8 +40,10 @@ function Extmark:constructor(bufnr, ns_name_extension)
   }
 end
 
-function Extmark:derive_id(row)
-  return row + 1
+function Extmark:derive_id(row, kind)
+  local base = ID_GROUPS[kind]
+  if not base then error('invalid extmark group') end
+  return base + row
 end
 
 function Extmark:_highlight_pattern_line(line, line_row, pattern, hl, priority, result)
@@ -115,7 +127,7 @@ function Extmark:text(opts)
   local hl_mode = opts.hl_mode or 'combine'
   local virt_text = opts.texts or { { text, hl } }
 
-  local id = self:derive_id(row)
+  local id = self:derive_id(row, 'text')
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, col, {
     id = id,
     virt_text = virt_text,
@@ -149,7 +161,7 @@ function Extmark:lnum(opts)
   local priority = opts.priority
   local hl_mode = opts.hl_mode or 'combine'
 
-  local id = self:derive_id(row)
+  local id = self:derive_id(row, 'lnum')
   return pcall(vim.api.nvim_buf_set_extmark, self.bufnr, self.ns_id, row, 0, {
     id = id,
     virt_text = { { text, hl } },
@@ -164,7 +176,7 @@ function Extmark:sign(opts)
   local name = opts.name
   local priority = opts.priority or get_sign_priority()
 
-  local id = self:derive_id(row)
+  local id = self:derive_id(row, 'sign')
   local sign_definition = get_sign_definition(name)
   if not sign_definition then return false, 'unknown sign: ' .. tostring(name) end
   local sign_text = sign_definition.text

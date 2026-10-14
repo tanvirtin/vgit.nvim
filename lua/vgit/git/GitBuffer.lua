@@ -292,7 +292,7 @@ function GitBuffer:render_conflict_help_text(conflict)
   end
 
   if help_text ~= '' then
-    self._conflict_extmark:text({
+    self._conflict_extmark:virt_line({
       text = help_text,
       hl = 'GitComment',
       row = current.top - 1,
