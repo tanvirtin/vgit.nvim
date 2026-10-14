@@ -6,6 +6,7 @@ local Object = lazy('vgit.core.Object')
 local Buffer = lazy('vgit.core.Buffer')
 local Window = lazy('vgit.core.Window')
 local renderer = lazy('vgit.core.renderer')
+local mouse = lazy('vgit.core.mouse')
 local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
 
 local Element = Object:extend()
@@ -280,6 +281,13 @@ function Element:on(event_name, callback)
   if not self:is_valid() then return self end
   self._buffer:on(event_name, callback)
   return self
+end
+
+function Element:on_click(clicks, opts)
+  if not self:is_valid() then
+    return function() end
+  end
+  return mouse.attach(self._buffer, vim.tbl_extend('force', opts or {}, { clicks = clicks }))
 end
 
 function Element:attach_to_changes(opts)

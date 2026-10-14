@@ -881,6 +881,33 @@ function StatusDiffView:setup_keymaps()
   self:_register_keymap(self._diff_component, 'n', '<enter>', function()
     self:open_file()
   end)
+
+  self:_setup_double_click_open()
+end
+
+function StatusDiffView:_setup_double_click_open()
+  if self._tree_component:is_valid() then
+    self._tree_component:on_click({
+      [2] = function()
+        local item = self._tree_component:get_current_list_item()
+        if not item then return end
+
+        if item.entry and item.entry.status then
+          self:open_file()
+        else
+          self._tree_component:toggle_current_list_item()
+        end
+      end,
+    })
+  end
+
+  if self._diff_component:is_valid() then
+    self._diff_component:on_click({
+      [2] = function()
+        self:open_file()
+      end,
+    })
+  end
 end
 
 function StatusDiffView:_create_view(data)

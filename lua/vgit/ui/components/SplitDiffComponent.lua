@@ -176,6 +176,20 @@ function SplitDiffComponent:on(event_name, callback)
   end)
 end
 
+function SplitDiffComponent:on_click(clicks, click_opts)
+  local detachers = {}
+
+  self:_for_both(function(c)
+    detachers[#detachers + 1] = c:on_click(clicks, click_opts)
+  end)
+
+  return function()
+    for _, detach in ipairs(detachers) do
+      detach()
+    end
+  end
+end
+
 function SplitDiffComponent:set_keymap(mode_or_opts, key_or_callback, handler, desc)
   self:_for_both(function(c)
     c:set_keymap(mode_or_opts, key_or_callback, handler, desc)

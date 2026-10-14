@@ -299,6 +299,13 @@ function ProjectDiffView:setup_keymaps()
     local blame_fn = self:_make_debounced(function() self:show_blame_view() end)
     self:_set_keymap_all_components('n', blame_key, blame_fn)
   end
+
+  local double_click_fn = self:_make_debounced(function()
+    self:jump_to_file()
+  end)
+  for _, component in ipairs(self:_get_all_diff_components()) do
+    if component and component:is_valid() then component:on_click({ [2] = double_click_fn }) end
+  end
 end
 
 function ProjectDiffView:_mount_unified_view()

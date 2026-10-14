@@ -137,6 +137,12 @@ local function define_single_element_methods(Class, opts)
     return self
   end
 
+  function Class:on_click(clicks, click_opts)
+    return self:with_element(function(el)
+      return el:on_click(clicks, click_opts)
+    end) or function() end
+  end
+
   function Class:attach_to_changes(callback)
     self:with_element(function(el)
       el:attach_to_changes(callback)
