@@ -1,5 +1,3 @@
-local co = coroutine
-
 local async = {}
 
 local function is_callable(fn)
@@ -9,50 +7,30 @@ local function is_callable(fn)
   return mt ~= nil and type(mt.__call) == 'function'
 end
 
-local function rotate(nargs, ...)
-  if not nargs or nargs < 1 then return end
+local function run(fn, callback)
+  assert(is_callable(fn), 'type error :: expected func')
 
-  local args = { ... }
-  local first = args[1]
+  local task = vim.async.run(fn)
 
-  for i = 1, nargs - 1 do
-    args[i] = args[i + 1]
-  end
-  args[nargs] = first
-
-  return unpack(args, 1, nargs)
-end
-
-local function callback_or_next(step, thread, callback, ...)
-  local stat = select(1, ...)
-  if not stat then
-    local err = tostring(select(2, ...))
-    if err:find('Keyboard interrupt') then return end
-    error(string.format('The coroutine failed with this message: %s', err))
+  if task:completed() then
+    local res = { task:pwait(0) }
+    if not res[1] then error(res[2], 0) end
+    if callback then callback(unpack(res, 2, res.n)) end
+    return task
   end
 
-  if co.status(thread) == 'dead' then
-    if callback then callback(select(2, ...)) end
+  if callback then
+    task:on_complete(function(err, ...)
+      if err then error(err, 0) end
+      callback(...)
+    end)
   else
-    local returned_function = select(2, ...)
-    local nargs = select(3, ...)
-
-    assert(is_callable(returned_function), 'type error :: expected func')
-    returned_function(rotate(nargs, step, select(4, ...)))
-  end
-end
-
-local function execute(async_function, callback, ...)
-  assert(is_callable(async_function), 'type error :: expected func')
-
-  local thread = co.create(async_function)
-
-  local step
-  step = function(...)
-    callback_or_next(step, thread, callback, co.resume(thread, ...))
+    task:on_complete(function(err)
+      if err then error(err, 0) end
+    end)
   end
 
-  step(...)
+  return task
 end
 
 async.wrap = function(func, argc)
@@ -60,49 +38,47 @@ async.wrap = function(func, argc)
   assert(type(argc) == 'number', 'type error :: expected number, got ' .. type(argc))
 
   return function(...)
-    if select('#', ...) == argc then
-      return func(...)
-    else
-      return co.yield(func, argc, ...)
-    end
+    if select('#', ...) == argc then return func(...) end
+
+    return vim.async.await(argc, func, ...)
   end
 end
 
-async.run = function(async_function, callback)
-  execute(async_function, callback)
-end
+async.run = run
 
 async.void = function(func)
   return function(...)
-    execute(func, nil, ...)
+    assert(is_callable(func), 'type error :: expected func')
+    local args = { ... }
+    local argc = select('#', ...)
+    run(function()
+      func(unpack(args, 1, argc))
+    end)
+    return nil
   end
-end
-
-local function run_batch(funcs, from, to, results)
-  local remaining = to - from + 1
-
-  async.wrap(function(done)
-    for i = from, to do
-      execute(function()
-        local ok, result = pcall(funcs[i])
-        if ok then return result end
-      end, function(result)
-        results[i] = result
-        remaining = remaining - 1
-        if remaining == 0 then done() end
-      end)
-    end
-  end, 1)()
 end
 
 async.all = function(funcs, opts)
   if #funcs == 0 then return {} end
 
-  local results = {}
   local max = opts and opts.max_concurrent or #funcs
+  local semaphore = vim.async.semaphore(max)
 
-  for i = 1, #funcs, max do
-    run_batch(funcs, i, math.min(i + max - 1, #funcs), results)
+  local tasks = {}
+  for i, fn in ipairs(funcs) do
+    tasks[i] = vim.async.run(function()
+      return semaphore:with(function()
+        local ok, result = pcall(fn)
+        if ok then return result end
+        return nil
+      end)
+    end)
+  end
+
+  local results = {}
+  for i, task in ipairs(tasks) do
+    local ok, result = vim.async.pawait(task)
+    if ok then results[i] = result end
   end
 
   return results

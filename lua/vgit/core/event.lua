@@ -32,8 +32,10 @@ local function safe_async_void(func)
   return function(...)
     local args = { ... }
     local argc = select('#', ...)
+    local handled = false
 
     local function error_handler(err)
+      handled = true
       local error_trace = debug.traceback('', 2)
       local msg = string.format(
         '[VGit] Async Error: %s\n\n--- Error Location ---\n%s\n--- Call Site ---\n%s',
@@ -53,7 +55,9 @@ local function safe_async_void(func)
       end, error_handler)
     end
 
-    async.void(protected_func)()
+    vim.async.run(protected_func):on_complete(function(err)
+      if err ~= nil and not handled then error_handler(err) end
+    end)
   end
 end
 
