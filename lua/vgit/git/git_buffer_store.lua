@@ -55,6 +55,10 @@ git_buffer_store.register_events = event.async(function()
       if buffer:is_valid() then git_buffer_store.collect(buffer.bufnr) end
     end
   end)
+
+  for _, buffer in ipairs(buffers_module.list()) do
+    if buffer:is_valid() then git_buffer_store.collect(buffer.bufnr) end
+  end
 end)
 
 git_buffer_store.for_each = function(callback)

@@ -47,6 +47,43 @@ describe('gitcli:', function()
       eq(0, code)
     end)
 
+    it('should return an error instead of raising when the wait fails', function()
+      local original_task = gitcli.task
+      gitcli.task = function()
+        return {
+          pwait = function()
+            return false, 'timeout'
+          end,
+        }
+      end
+
+      local ok, result, err, code = pcall(gitcli.run, { '-C', repo:get_path(), 'status' }, { timeout = 1 })
+
+      gitcli.task = original_task
+
+      assert.is_true(ok, 'gitcli.run must not raise on wait failure')
+      assert.is_nil(result)
+      assert.is_true(#err > 0)
+      assert.matches('timeout', err[1])
+      assert.is_nil(code)
+    end)
+
+    it('should return an error instead of raising on a real timeout', function()
+      local ok, result, err, code = pcall(
+        gitcli.run,
+        { '-C', repo:get_path(), '-c', 'alias.slow=!sleep 0.4', 'slow' },
+        { timeout = 30 }
+      )
+
+      assert.is_true(ok, 'a real timeout must not raise out of gitcli.run')
+      assert.is_nil(result)
+      assert.is_not_nil(err)
+      assert.is_true(#err > 0)
+      assert.matches('timeout', err[1])
+      assert.matches('alias%.slow', err[1], 'the error must name the command so it is diagnosable')
+      assert.is_nil(code)
+    end)
+
     it('should accept opts parameter', function()
       local result, err, code = gitcli.run({ '-C', repo:get_path(), 'status', '--short' }, { debug = false })
 
