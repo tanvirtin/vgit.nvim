@@ -177,7 +177,6 @@ function Window:is_same(window)
   return self.win_id == window.win_id
 end
 
-
 function Window:scroll_to(placement, offset)
   placement = placement or 'center'
   offset = offset or 0

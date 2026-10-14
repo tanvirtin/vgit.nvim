@@ -1,9 +1,7 @@
 local FoldCalculator = {}
 
 local function try_add_fold(folds, top, bot, line_count)
-  if top <= bot and bot <= line_count and (bot - top + 1) >= 10 then
-    folds[#folds + 1] = { top = top, bot = bot }
-  end
+  if top <= bot and bot <= line_count and (bot - top + 1) >= 10 then folds[#folds + 1] = { top = top, bot = bot } end
 end
 
 function FoldCalculator.calculate_folds(marks, line_count, num_focus_lines)

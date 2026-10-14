@@ -284,9 +284,7 @@ function Element:on(event_name, callback)
 end
 
 function Element:on_click(clicks, opts)
-  if not self:is_valid() then
-    return function() end
-  end
+  if not self:is_valid() then return function() end end
   return mouse.attach(self._buffer, vim.tbl_extend('force', opts or {}, { clicks = clicks }))
 end
 

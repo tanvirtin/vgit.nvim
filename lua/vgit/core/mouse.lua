@@ -77,15 +77,9 @@ end
 
 function mouse.attach(buffer, opts)
   local bufnr = resolve_bufnr(buffer)
-  if not bufnr then
-    return function() end
-  end
-  if not opts or type(opts.clicks) ~= 'table' then
-    return function() end
-  end
-  if not vim.api.nvim_buf_is_valid(bufnr) then
-    return function() end
-  end
+  if not bufnr then return function() end end
+  if not opts or type(opts.clicks) ~= 'table' then return function() end end
+  if not vim.api.nvim_buf_is_valid(bufnr) then return function() end end
 
   prune_invalid_buffers()
 
