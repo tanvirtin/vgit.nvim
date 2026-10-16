@@ -14,6 +14,40 @@ describe('git_hunks:', function()
       eq(hunks, {})
     end)
 
+    it('should diff large inputs without a reponame', function()
+      local original_lines = {}
+      local current_lines = {}
+      for i = 1, 6000 do
+        original_lines[i] = 'line ' .. i
+        current_lines[i] = original_lines[i]
+      end
+      current_lines[3000] = 'changed line 3000'
+
+      local hunks = git_hunks.live(nil, original_lines, current_lines)
+
+      assert.are.equal(#hunks, 1)
+      assert.are.equal(hunks[1].type, 'change')
+      assert.are.equal(hunks[1].top, 3000)
+      assert.are.equal(hunks[1].bot, 3000)
+      eq(hunks[1].diff, { '-line 3000', '+changed line 3000' })
+    end)
+
+    it('should detect every hunk in a large heavily edited buffer', function()
+      local original_lines = {}
+      local current_lines = {}
+      for i = 1, 6000 do
+        original_lines[i] = 'line ' .. i
+        current_lines[i] = (i % 2 == 0) and ('changed ' .. i) or original_lines[i]
+      end
+
+      local hunks = git_hunks.live(nil, original_lines, current_lines)
+
+      assert.are.equal(#hunks, 3000)
+      for _, hunk in ipairs(hunks) do
+        assert.are.equal(hunk.type, 'change')
+      end
+    end)
+
     it('should detect added lines at the beginning', function()
       local original_lines = { 'b', 'c', 'd' }
       local current_lines = { 'a', 'b', 'c', 'd' }

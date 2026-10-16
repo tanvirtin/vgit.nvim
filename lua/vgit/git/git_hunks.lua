@@ -1,39 +1,15 @@
 local lazy = require('vgit.core.lazy')
 
-local fs = lazy('vgit.core.fs')
 local utils = lazy('vgit.core.utils')
 local gitcli = lazy('vgit.git.gitcli')
 local GitHunk = lazy('vgit.git.GitHunk')
 local GitCommit = lazy('vgit.git.GitCommit')
-local console = lazy('vgit.core.console')
 local git_setting = lazy('vgit.settings.git')
 
 local git_hunks = {}
 
-function git_hunks.live(reponame, original_lines, current_lines)
-  local lines_limit = 5000
+function git_hunks.live(_, original_lines, current_lines)
   local current_len = #current_lines
-
-  if current_len > lines_limit then
-    local temp_filename_a = fs.tmpname()
-    local temp_filename_b = fs.tmpname()
-
-    fs.write_file(temp_filename_a, original_lines)
-    fs.write_file(temp_filename_b, current_lines)
-
-    local ok, hunks, hunks_err = pcall(function()
-      return git_hunks.list(reponame, { filenames = { temp_filename_a, temp_filename_b } })
-    end)
-
-    fs.remove_file(temp_filename_a)
-    fs.remove_file(temp_filename_b)
-
-    if not ok then
-      console.debug.error(tostring(hunks))
-      return nil, { tostring(hunks) }
-    end
-    return hunks, hunks_err
-  end
 
   local o_lines_tbl = {}
   local c_lines_tbl = {}
