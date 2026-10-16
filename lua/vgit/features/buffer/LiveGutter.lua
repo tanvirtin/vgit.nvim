@@ -31,17 +31,22 @@ end
 function LiveGutter:fetch(buffer)
   event.await()
   if not buffer:is_valid() then return end
-  if not buffer:acquire() then return end
 
-  local _, err = buffer:diff()
-  buffer:release()
+  buffer:with_lock('gutter', function()
+    if not buffer:is_valid() then return end
 
-  if err then
-    console.debug.error(err)
-    return
-  end
+    local _, err = buffer:diff()
+    if err then
+      console.debug.error(err)
+      return
+    end
 
-  buffer:generate_status()
+    buffer:generate_status()
+    -- `change`/`sync` updates arrive asynchronously, i.e. after Neovim has
+    -- already redrawn. Render here so stale signs are cleared immediately
+    -- instead of lingering until the next unrelated redraw.
+    buffer:render_signs()
+  end)
 end
 
 function LiveGutter:fetch_debounced(buffer)
@@ -63,9 +68,7 @@ function LiveGutter:register_events()
   git_buffer_store
     .on({ 'attach', 'reload' }, function(buffer)
       if not self:is_enabled() then return end
-
       self:fetch(buffer)
-      buffer:render_signs()
     end)
     .on({ 'change' }, function(buffer)
       if not self:is_enabled() then return end

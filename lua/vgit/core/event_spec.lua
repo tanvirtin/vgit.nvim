@@ -100,6 +100,49 @@ describe('event:', function()
       cleanup()
     end)
 
+    it('should refresh during a continuous burst instead of only at its end', function()
+      local call_count = 0
+      local debounced, cleanup = event.debounce(function()
+        call_count = call_count + 1
+      end, 30)
+
+      -- Simulate an ongoing burst: keep calling for well past the interval
+      -- without letting a full quiet period elapse between calls.
+      for _ = 1, 12 do
+        vim.wait(20, function()
+          return false
+        end, 5)
+        debounced()
+      end
+
+      -- A pure trailing debounce would still be at 1 here (the leading call),
+      -- because the trailing run is pushed out by every call.
+      assert.is_true(call_count >= 3, 'expected intermediate refreshes during the burst, got ' .. call_count)
+
+      cleanup()
+    end)
+
+    it('should coalesce calls into a single trailing run after the burst', function()
+      local call_count = 0
+      local debounced, cleanup = event.debounce(function()
+        call_count = call_count + 1
+      end, 30)
+
+      for _ = 1, 5 do
+        debounced()
+      end
+
+      vim.wait(200, function()
+        return false
+      end, 10)
+
+      -- One leading run plus one trailing run; no duplicates for the 4
+      -- coalesced calls.
+      assert.are.equal(2, call_count)
+
+      cleanup()
+    end)
+
     it('cleanup should stop timer and reset state', function()
       local call_count = 0
       local debounced, cleanup = event.debounce(function()

@@ -26,7 +26,8 @@ function GitBuffer:constructor(...)
     conflicts = {},
   }
   buffer._signs_dirty = false
-  buffer._op_lock = false
+  buffer._op_locks = {}
+  buffer._op_pending = {}
   buffer._blame_extmark = Extmark(bufnr, 'blame')
   buffer._gutter_extmark = Extmark(bufnr, 'gutter')
   buffer._conflict_extmark = Extmark(bufnr, 'conflict')
@@ -36,6 +37,8 @@ end
 function GitBuffer:create(...)
   Buffer.create(self, ...)
 
+  self._op_locks = {}
+  self._op_pending = {}
   self._blame_extmark = Extmark(self.bufnr, 'blame')
   self._gutter_extmark = Extmark(self.bufnr, 'gutter')
   self._conflict_extmark = Extmark(self.bufnr, 'conflict')
@@ -57,7 +60,8 @@ function GitBuffer:sync()
     conflicts = {},
   }
   self._signs_dirty = false
-  self._op_lock = false
+  self._op_locks = {}
+  self._op_pending = {}
   self._git_file = GitFile(self:get_name())
 
   return self
@@ -68,14 +72,51 @@ function GitBuffer:clear_blob_cache()
   return self
 end
 
-function GitBuffer:acquire()
-  if self._op_lock then return false end
-  self._op_lock = true
+function GitBuffer:acquire(key)
+  key = key or '_default'
+  if self._op_locks[key] then return false end
+  self._op_locks[key] = true
   return true
 end
 
-function GitBuffer:release()
-  self._op_lock = false
+function GitBuffer:release(key)
+  key = key or '_default'
+  self:_release_lock(key)
+  return self
+end
+
+-- Runs `fn` while holding the lock for `key`. Locks are scoped per feature, so
+-- a slow operation for one feature never blocks another (e.g. a conflict scan
+-- cannot delay the live gutter). While the lock is held, newer requests for the
+-- same key supersede older ones: each request recomputes from current buffer
+-- state, so only the latest matters and the queue cannot grow without bound.
+function GitBuffer:with_lock(key, fn)
+  if type(key) == 'function' then
+    fn = key
+    key = '_default'
+  end
+
+  if self._op_locks[key] then
+    self._op_pending[key] = fn
+    return false
+  end
+
+  self._op_locks[key] = true
+  local ok, err = pcall(fn)
+  self:_release_lock(key)
+  if not ok then error(err) end
+
+  return true
+end
+
+function GitBuffer:_release_lock(key)
+  self._op_locks[key] = false
+
+  local next_fn = self._op_pending[key]
+  if not next_fn then return end
+
+  self._op_pending[key] = nil
+  self:with_lock(key, next_fn)
 end
 
 function GitBuffer:reset_signs()

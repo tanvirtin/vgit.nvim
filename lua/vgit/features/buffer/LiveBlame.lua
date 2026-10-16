@@ -20,21 +20,20 @@ function LiveBlame:constructor()
     if not buffer:is_valid() then return end
     local conflicts = buffer:get_conflicts()
     if #conflicts ~= 0 then return end
-    if not buffer:acquire() then return end
 
-    local _, config_err = buffer:config()
-    if config_err then
-      buffer:release()
-      return console.debug.error(config_err)
-    end
+    buffer:with_lock('blame', function()
+      if not buffer:is_valid() then return end
 
-    local lnum = navigation.get_current_lnum()
+      local _, config_err = buffer:config()
+      if config_err then return console.debug.error(config_err) end
 
-    local _, blame_err = buffer:blame(lnum)
-    buffer:release()
-    if blame_err then return console.debug.error(blame_err) end
+      local lnum = navigation.get_current_lnum()
 
-    buffer:render_blames()
+      local _, blame_err = buffer:blame(lnum)
+      if blame_err then return console.debug.error(blame_err) end
+
+      buffer:render_blames()
+    end)
   end, live_blame_setting:get('debounce_ms'))
 
   return {

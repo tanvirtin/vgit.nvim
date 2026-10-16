@@ -158,6 +158,7 @@ end
 function event.debounce(fn, ms)
   local args, argc
   local cooldown = false
+  local pending = false
   local timer = nil
 
   local function close_timer()
@@ -169,32 +170,38 @@ function event.debounce(fn, ms)
     args = { ... }
     argc = select('#', ...)
 
-    if not cooldown then
-      cooldown = true
-      fn(...)
-      close_timer()
-      timer = vim.uv.new_timer()
-      timer:start(ms, 0, function()
-        close_timer()
-        cooldown = false
-      end)
+    if cooldown then
+      -- Coalesce subsequent calls, but do not push the run out indefinitely:
+      -- the timer below flushes the latest args at most every `ms` while the
+      -- burst is ongoing, so long edits stay reactive instead of freezing on
+      -- the state captured when the burst started.
+      pending = true
       return
     end
 
+    cooldown = true
+    fn(...)
+
     close_timer()
     timer = vim.uv.new_timer()
-    timer:start(ms, 0, function()
+    timer:start(ms, ms, function()
+      if pending then
+        pending = false
+        vim.schedule(function()
+          fn(unpack(args, 1, argc))
+        end)
+        return
+      end
+
       close_timer()
       cooldown = false
-      vim.schedule(function()
-        fn(unpack(args, 1, argc))
-      end)
     end)
   end
 
   local cleanup = function()
     close_timer()
     cooldown = false
+    pending = false
   end
 
   return debounced, cleanup

@@ -248,6 +248,33 @@ describe('LiveGutter fetch (integration):', function()
     assert.equals(0, #git_buf.state.signs)
   end)
 
+  it('should render gutter signs during fetch and clear them once the buffer matches HEAD', function()
+    local ns = vim.api.nvim_create_namespace('vgit.extmarks.gutter')
+    local function gutter_mark_count(bufnr)
+      return #vim.api.nvim_buf_get_extmarks(bufnr, ns, 0, -1, {})
+    end
+
+    local bufnr = create_buf(test_file)
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
+
+    local git_buf = GitBuffer(bufnr)
+    git_buf:sync()
+
+    local instance = LiveGutter()
+
+    -- fetch (as the change handler does) must render signs itself, without
+    -- relying on a later redraw to invoke the decoration provider.
+    instance:fetch(git_buf)
+    assert(gutter_mark_count(bufnr) > 0, 'fetch should render signs for a modified buffer')
+
+    -- revert to the committed content: the stale sign must disappear
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'line 1', 'line 2', 'line 3' })
+    instance:fetch(git_buf)
+
+    assert.equals(0, #git_buf.state.signs)
+    assert.equals(0, gutter_mark_count(bufnr), 'fetch should clear stale gutter signs')
+  end)
+
   it('should bail without error for invalid buffer', function()
     local bufnr = create_buf(test_file)
     local git_buf = GitBuffer(bufnr)
@@ -270,8 +297,8 @@ describe('LiveGutter fetch (integration):', function()
     local git_buf = GitBuffer(bufnr)
     git_buf:sync()
 
-    -- Lock the buffer
-    git_buf:acquire()
+    -- Lock the gutter operation
+    git_buf:acquire('gutter')
 
     local instance = LiveGutter()
     instance:fetch(git_buf)
@@ -280,7 +307,7 @@ describe('LiveGutter fetch (integration):', function()
     assert.is_table(git_buf.state.signs)
     assert.equals(0, #git_buf.state.signs)
 
-    git_buf:release()
+    git_buf:release('gutter')
   end)
 
   it('should set vgit_status buffer var after fetch', function()

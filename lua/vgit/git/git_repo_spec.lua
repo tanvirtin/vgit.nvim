@@ -72,6 +72,29 @@ describe('git_repo:', function()
       assert(err)
       assert(not reponame)
     end)
+
+    it('should resolve the git dir when git_dirname is true', function()
+      local git_dir, err = git_repo.discover(repo, { git_dirname = true })
+
+      assert(not err)
+      eq(git_dir, repo .. '/.git')
+      eq(vim.fn.isdirectory(git_dir), 1)
+    end)
+
+    it('should resolve the git dir for a file path when git_dirname is true', function()
+      local filepath = repo .. '/file1.txt'
+      local git_dir, err = git_repo.discover(filepath, { git_dirname = true })
+
+      assert(not err)
+      eq(git_dir, repo .. '/.git')
+    end)
+
+    it('should still return the worktree root by default', function()
+      local reponame, err = git_repo.discover(repo)
+
+      assert(not err)
+      eq(reponame, repo)
+    end)
   end)
 
   describe('dirname()', function()

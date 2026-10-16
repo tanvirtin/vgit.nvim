@@ -14,7 +14,9 @@ function git_repo.config(reponame)
   return GitQueryBuilder(reponame):raw_args('config', '--list'):execute()
 end
 
-function git_repo.discover(filepath)
+function git_repo.discover(filepath, opts)
+  opts = opts or {}
+
   local search_dir
 
   -- If filepath is a file, get its directory
@@ -30,7 +32,8 @@ function git_repo.discover(filepath)
     search_dir = vim.loop.cwd()
   end
 
-  if discover_cache[search_dir] then return discover_cache[search_dir], nil end
+  local cache_key = opts.git_dirname and (search_dir .. '#git_dir') or search_dir
+  if discover_cache[cache_key] then return discover_cache[cache_key], nil end
 
   local result, err = gitcli.run({ '-C', search_dir, 'rev-parse', '--show-toplevel' })
 
@@ -38,7 +41,15 @@ function git_repo.discover(filepath)
   if not result or #result == 0 then return nil, { 'not a git repository' } end
 
   local clean_result = result[1]:gsub('\n', '')
-  discover_cache[search_dir] = clean_result
+
+  if opts.git_dirname then
+    local git_dir, git_dir_err = git_repo.git_dir(clean_result)
+    if git_dir_err or not git_dir then return nil, { 'git directory not found' } end
+    discover_cache[cache_key] = git_dir
+    return git_dir, nil
+  end
+
+  discover_cache[cache_key] = clean_result
   return clean_result, nil
 end
 

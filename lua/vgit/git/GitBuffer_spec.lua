@@ -90,15 +90,15 @@ describe('GitBuffer:', function()
       assert.is_nil(git_buf.state.config)
     end)
 
-    it('resets op_lock on sync', function()
+    it('resets op locks on sync', function()
       local bufnr = vim.fn.bufadd(test_file)
       vim.fn.bufload(bufnr)
       local git_buf = GitBuffer(bufnr)
 
-      git_buf._op_lock = true
+      git_buf._op_locks = { gutter = true }
       git_buf:sync()
 
-      assert.is_false(git_buf._op_lock)
+      eq({}, git_buf._op_locks)
     end)
   end)
 
@@ -108,25 +108,25 @@ describe('GitBuffer:', function()
         local bufnr = vim.fn.bufadd(test_file)
         local git_buf = GitBuffer(bufnr)
 
-        assert.is_true(git_buf:acquire())
+        assert.is_true(git_buf:acquire('gutter'))
       end)
 
       it('returns false when already acquired', function()
         local bufnr = vim.fn.bufadd(test_file)
         local git_buf = GitBuffer(bufnr)
 
-        git_buf:acquire()
+        git_buf:acquire('gutter')
 
-        assert.is_false(git_buf:acquire())
+        assert.is_false(git_buf:acquire('gutter'))
       end)
 
-      it('sets _op_lock to true', function()
+      it('locks are independent per key', function()
         local bufnr = vim.fn.bufadd(test_file)
         local git_buf = GitBuffer(bufnr)
 
-        git_buf:acquire()
+        git_buf:acquire('gutter')
 
-        assert.is_true(git_buf._op_lock)
+        assert.is_true(git_buf:acquire('conflict'))
       end)
     end)
 
@@ -135,20 +135,132 @@ describe('GitBuffer:', function()
         local bufnr = vim.fn.bufadd(test_file)
         local git_buf = GitBuffer(bufnr)
 
-        git_buf:acquire()
-        git_buf:release()
+        git_buf:acquire('gutter')
+        git_buf:release('gutter')
 
-        assert.is_false(git_buf._op_lock)
+        assert.is_falsy(git_buf._op_locks.gutter)
       end)
 
       it('allows re-acquire after release', function()
         local bufnr = vim.fn.bufadd(test_file)
         local git_buf = GitBuffer(bufnr)
 
-        git_buf:acquire()
-        git_buf:release()
+        git_buf:acquire('gutter')
+        git_buf:release('gutter')
 
-        assert.is_true(git_buf:acquire())
+        assert.is_true(git_buf:acquire('gutter'))
+      end)
+    end)
+
+    describe('with_lock', function()
+      it('runs the function immediately and releases when the lock is free', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        local ran = false
+        local acquired = git_buf:with_lock('gutter', function()
+          ran = true
+        end)
+
+        assert.is_true(ran)
+        assert.is_true(acquired)
+        assert.is_falsy(git_buf._op_locks.gutter)
+      end)
+
+      it('defers the function while the lock is held and runs it on release', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf:acquire('gutter')
+
+        local ran = false
+        local acquired = git_buf:with_lock('gutter', function()
+          ran = true
+        end)
+
+        assert.is_false(acquired)
+        assert.is_false(ran)
+
+        git_buf:release('gutter')
+
+        assert.is_true(ran)
+        assert.is_falsy(git_buf._op_locks.gutter)
+      end)
+
+      it('does not let one feature block another', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf:acquire('gutter')
+
+        local ran = false
+        local acquired = git_buf:with_lock('conflict', function()
+          ran = true
+        end)
+
+        assert.is_true(acquired)
+        assert.is_true(ran)
+      end)
+
+      it('coalesces pending requests so only the latest runs', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf:acquire('gutter')
+
+        local order = {}
+        git_buf:with_lock('gutter', function()
+          order[#order + 1] = 'a'
+        end)
+        git_buf:with_lock('gutter', function()
+          order[#order + 1] = 'b'
+        end)
+        git_buf:with_lock('gutter', function()
+          order[#order + 1] = 'c'
+        end)
+
+        git_buf:release('gutter')
+
+        eq({ 'c' }, order)
+        assert.is_falsy(git_buf._op_locks.gutter)
+      end)
+
+      it('releases the lock when the function errors', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        assert.has_error(function()
+          git_buf:with_lock('gutter', function()
+            error('boom')
+          end)
+        end)
+
+        assert.is_falsy(git_buf._op_locks.gutter)
+      end)
+
+      it('keeps processing the pending request after a pending function errors', function()
+        local bufnr = vim.fn.bufadd(test_file)
+        local git_buf = GitBuffer(bufnr)
+
+        git_buf:acquire('gutter')
+
+        git_buf:with_lock('gutter', function()
+          error('pending boom')
+        end)
+
+        -- A newer request supersedes the failing one before it ever runs, so
+        -- the lock keeps making progress.
+        local ran = false
+        git_buf:with_lock('gutter', function()
+          ran = true
+        end)
+
+        pcall(function()
+          git_buf:release('gutter')
+        end)
+
+        assert.is_true(ran)
+        assert.is_falsy(git_buf._op_locks.gutter)
       end)
     end)
   end)
