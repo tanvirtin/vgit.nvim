@@ -55,7 +55,6 @@ describe('SyntaxAnnotator:', function()
         lines1[i] = 'line ' .. i
         lines2[i] = 'line ' .. i
       end
-      -- Change only line 7, which is not first(1), Q1(6), Q2(11), Q3(16), or last(20)
       lines2[7] = 'CHANGED'
       local key1 = annotator:_cache_key(lines1, 'lua')
       local key2 = annotator:_cache_key(lines2, 'lua')

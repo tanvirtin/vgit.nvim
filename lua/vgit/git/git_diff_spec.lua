@@ -299,7 +299,6 @@ describe('git_diff:', function()
         '+d',
       }
       local entries = git_diff.range_hunk_entries('/repo', 'HEAD^', 'HEAD')
-      -- entries[1]=file_header, entries[2]=hunk1, entries[3]=hunk2
       eq(1, entries[2].hunk.top)
       eq(2, entries[2].hunk.bot)
       eq(10, entries[3].hunk.top)

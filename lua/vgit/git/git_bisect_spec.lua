@@ -253,7 +253,6 @@ describe('git_bisect:', function()
       assert(result, 'Should return result when marking commit as bad')
       assert(type(result) == 'table' or type(result) == 'string', 'Result should be table or string')
 
-      -- Verify bisect is still in progress
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true, 'Bisect should remain in progress after marking bad commit')
     end)
@@ -278,7 +277,6 @@ describe('git_bisect:', function()
       assert(not err, 'Should not error when marking specific commit as bad: ' .. vim.inspect(err))
       assert(result, 'Should return result when marking specific commit as bad')
 
-      -- Verify bisect is still in progress after marking a commit as bad
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true, 'Bisect should remain in progress after marking specific commit as bad')
     end)
@@ -347,7 +345,6 @@ describe('git_bisect:', function()
       assert(result, 'Should return result when marking commit as good')
       assert(type(result) == 'table' or type(result) == 'string', 'Result should be table or string')
 
-      -- Verify bisect is still in progress
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true, 'Bisect should remain in progress after marking good commit')
     end)
@@ -372,7 +369,6 @@ describe('git_bisect:', function()
       assert(not err, 'Should not error when marking specific commit as good: ' .. vim.inspect(err))
       assert(result, 'Should return result when marking specific commit as good')
 
-      -- Verify bisect is still in progress
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true, 'Bisect should remain in progress after marking specific commit as good')
     end)
@@ -396,7 +392,6 @@ describe('git_bisect:', function()
       assert(not err, 'Should not error when marking multiple commits as good: ' .. vim.inspect(err))
       assert(result, 'Should return result when marking multiple commits as good')
 
-      -- Verify bisect is still in progress
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true, 'Bisect should remain in progress after marking multiple commits as good')
     end)
@@ -419,7 +414,6 @@ describe('git_bisect:', function()
 
   describe('skip()', function()
     it('should skip current commit', function()
-      -- Setup bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       for i = 1, 5 do
@@ -436,19 +430,16 @@ describe('git_bisect:', function()
         good = good_commit,
       })
 
-      -- Skip current commit
       local result, err = git_bisect.skip(repo)
 
       assert(not err, 'Should not error when skipping current commit: ' .. vim.inspect(err))
       assert(result, 'Should return result when skipping commit')
 
-      -- Verify bisect is still in progress after skipping
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true, 'Bisect should remain in progress after skipping commit')
     end)
 
     it('should skip specific commits', function()
-      -- Setup bisect
       local commits = {}
       for i = 1, 5 do
         test_repo.create_commit(repo, {
@@ -463,13 +454,11 @@ describe('git_bisect:', function()
         good = commits[1],
       })
 
-      -- Skip specific commits
       local result, err = git_bisect.skip(repo, { commits[2], commits[3] })
 
       assert(not err, 'Should not error when skipping specific commits: ' .. vim.inspect(err))
       assert(result, 'Should return result when skipping specific commits')
 
-      -- Verify bisect is still in progress after skipping
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true, 'Bisect should remain in progress after skipping commits')
     end)
@@ -485,7 +474,6 @@ describe('git_bisect:', function()
 
   describe('reset()', function()
     it('should reset active bisect session', function()
-      -- Start bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -500,31 +488,25 @@ describe('git_bisect:', function()
         good = good_commit,
       })
 
-      -- Verify bisect is in progress
       local in_progress_before = git_bisect.in_progress(repo)
       eq(in_progress_before, true)
 
-      -- Reset
       local result, err = git_bisect.reset(repo)
 
-      -- Verify bisect is no longer in progress (this is what matters)
       local in_progress_after = git_bisect.in_progress(repo)
       eq(in_progress_after, false)
 
-      -- Reset should return result or acceptable error (like "Already on 'main'")
       assert(result or err, 'Reset should return result or error')
     end)
 
     it('should succeed when no bisect in progress', function()
       local result, err = git_bisect.reset(repo)
 
-      -- Should not error even if no bisect active
       assert(not err)
       assert(result)
     end)
 
     it('should end bisect when reset called with commit', function()
-      -- Start bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -539,18 +521,14 @@ describe('git_bisect:', function()
         good = good_commit,
       })
 
-      -- Verify bisect is in progress
       local in_progress_before = git_bisect.in_progress(repo)
       eq(in_progress_before, true)
 
-      -- Reset with commit (git bisect reset <commit> ends bisect and checks out commit)
       local result, err = git_bisect.reset(repo, good_commit)
 
-      -- The important thing is bisect should no longer be in progress
       local in_progress_after = git_bisect.in_progress(repo)
       eq(in_progress_after, false)
 
-      -- Result or error is acceptable (git may warn about checkout)
       assert(result or err, 'Should return something')
     end)
 
@@ -570,7 +548,6 @@ describe('git_bisect:', function()
     end)
 
     it('should return true when bisect is in progress', function()
-      -- Start bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -590,7 +567,6 @@ describe('git_bisect:', function()
     end)
 
     it('should return false after reset', function()
-      -- Start bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -622,7 +598,6 @@ describe('git_bisect:', function()
     end)
 
     it('should return bisect status when in progress', function()
-      -- Start bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -637,16 +612,13 @@ describe('git_bisect:', function()
         good = good_commit,
       })
 
-      -- Just check in_progress using the file-based check
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true)
 
-      -- Clean up
       git_bisect.reset(repo)
     end)
 
     it('should track good and bad commits', function()
-      -- Start bisect
       local commits = {}
       for i = 1, 5 do
         test_repo.create_commit(repo, {
@@ -661,11 +633,9 @@ describe('git_bisect:', function()
         good = commits[1],
       })
 
-      -- Verify bisect is in progress
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true)
 
-      -- Clean up
       git_bisect.reset(repo)
     end)
 
@@ -680,7 +650,6 @@ describe('git_bisect:', function()
 
   describe('log()', function()
     it('should return bisect log when bisect is in progress', function()
-      -- Start bisect
       local good_commit = test_repo.get_head_commit(repo)
 
       test_repo.create_commit(repo, {
@@ -705,7 +674,6 @@ describe('git_bisect:', function()
     it('should error when no bisect in progress', function()
       local log, err = git_bisect.log(repo)
 
-      -- Git will error if no bisect is in progress
       assert(err)
       assert(not log)
     end)
@@ -737,7 +705,6 @@ describe('git_bisect:', function()
 
       local result, err = git_bisect.terms(repo, 'old', good_commit)
 
-      -- terms() may succeed or fail depending on git version and state
       if err then
         assert(type(err) == 'table', 'Error should be a table')
         assert(#err > 0, 'Error should have messages')
@@ -745,7 +712,6 @@ describe('git_bisect:', function()
         assert(result, 'Should return result when setting terms succeeds')
       end
 
-      -- Verify bisect is still in progress
       local in_progress = git_bisect.in_progress(repo)
       eq(in_progress, true, 'Bisect should remain in progress after terms operation')
     end)

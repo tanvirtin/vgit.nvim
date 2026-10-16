@@ -80,7 +80,6 @@ worktree_command.execute = event.async(function(args)
     return
   end
 
-  -- Default: show worktree screen
   local worktrees, list_err = repo:worktree_list()
   if list_err then
     console.error(list_err[1] or tostring(list_err))

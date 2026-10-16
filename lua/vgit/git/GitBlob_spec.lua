@@ -6,7 +6,6 @@ local async = require('tests.helpers.async')({ it = it, before_each = before_eac
 local eq = assert.are.same
 
 describe('GitBlob:', function()
-  -- Unit tests (no repo needed)
   describe('constructor', function()
     it('should error when repo is nil', function()
       assert.has_error(function()
@@ -71,7 +70,6 @@ describe('GitBlob:', function()
     end)
   end)
 
-  -- Integration tests (real repo)
   describe('integration', function()
     local repo
     local it = async.it
@@ -132,20 +130,17 @@ describe('GitBlob:', function()
 
     describe('with multiple commits', function()
       it('should return content from specific commit', function()
-        -- Modify file and create second commit
         test_repo.write_file(repo, 'file.txt', { 'modified content' })
         test_repo.create_commit(repo, {
           files = { ['file.txt'] = { 'modified content' } },
           message = 'Modify file',
         })
 
-        -- Get content at HEAD (modified)
         local blob_head = GitBlob(repo, 'file.txt', 'HEAD')
         local lines_head, err1 = blob_head:lines()
         assert.is_nil(err1)
         eq('modified content', lines_head[1])
 
-        -- Get content at HEAD~1 (original)
         local blob_old = GitBlob(repo, 'file.txt', 'HEAD~1')
         local lines_old, err2 = blob_old:lines()
         assert.is_nil(err2)

@@ -8,15 +8,12 @@ describe('DiffStyleAnnotator:', function()
       local line = '@@ -1,3 +1,5 @@'
       local highlights = DiffStyleAnnotator._annotate_header(line, 0)
 
-      -- Should have at least: background, opening @@, minus range, plus range, closing @@
       assert.is_true(#highlights >= 4)
 
-      -- First highlight should be full line background
       eq(0, highlights[1].row)
       eq('GitPatchHeader', highlights[1].hl_group)
       assert.is_true(highlights[1].line)
 
-      -- Second highlight: opening @@
       eq(0, highlights[2].col_start)
       eq(2, highlights[2].col_end)
       eq('GitPatchHeaderMarker', highlights[2].hl_group)
@@ -67,21 +64,18 @@ describe('DiffStyleAnnotator:', function()
 
       local highlights = DiffStyleAnnotator.annotate(lines, line_metadata)
 
-      -- Check separator highlights
       local sep_count = 0
       for _, hl in ipairs(highlights) do
         if hl.hl_group == 'GitPatchSeparator' then sep_count = sep_count + 1 end
       end
       eq(2, sep_count)
 
-      -- Check filename highlight
       local found_filename = false
       for _, hl in ipairs(highlights) do
         if hl.hl_group == 'GitPatchFileHeader' then found_filename = true end
       end
       assert.is_true(found_filename)
 
-      -- Check code highlights
       local found_add = false
       local found_remove = false
       for _, hl in ipairs(highlights) do

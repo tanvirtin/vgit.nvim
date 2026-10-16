@@ -153,13 +153,9 @@ end
 function Window:close()
   if not self:is_valid() then return self end
 
-  -- Check if this is the last window
   local win_count = #vim.api.nvim_list_wins()
-  if win_count <= 1 then
-    return self -- Don't close the last window
-  end
+  if win_count <= 1 then return self end
 
-  -- Try to close the window (works for both splits and floating)
   pcall(vim.api.nvim_win_close, self.win_id, true)
   return self
 end

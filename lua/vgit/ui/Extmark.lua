@@ -3,7 +3,6 @@ local lazy = require('vgit.core.lazy')
 local Object = lazy('vgit.core.Object')
 local signs_setting = lazy('vgit.settings.signs')
 
--- Cache sign settings at module level — these never change after setup
 local _sign_priority
 local _sign_definitions
 
@@ -17,9 +16,6 @@ local function get_sign_definition(name)
   return _sign_definitions[name]
 end
 
--- Each extmark kind gets its own id space so that different kinds placed on
--- the same row (a sign and a text, or a text and a virtual line) coexist
--- instead of overwriting one another.
 local ID_GROUPS = {
   text = 10,
   sign = 100,

@@ -36,7 +36,6 @@ describe('git_stash:', function()
 
       assert(not err)
 
-      -- Working directory should be clean
       local files = git_status.ls(repo)
       eq(#files, 0)
     end)
@@ -85,8 +84,6 @@ describe('git_stash:', function()
       git_stash.add(repo)
 
       local files = git_status.ls(repo)
-      -- new.txt might still be there if untracked files aren't included
-      -- by default, depends on git version and stash flags
       assert(files)
     end)
 
@@ -103,18 +100,13 @@ describe('git_stash:', function()
     it('should handle stash with no changes', function()
       local result, err = git_stash.add(repo)
 
-      -- Git might warn but typically allows creating empty stash
-      -- Different git versions behave differently, but should not crash
       if err then
-        -- Some git versions error on empty stash
         assert(type(err) == 'table', 'Error should be a table')
         assert(#err > 0, 'Error should have message')
       else
-        -- Other versions succeed but may warn
         assert(result, 'Should return result on success')
       end
 
-      -- Verify no crash and repo is still valid
       local stashes = git_stash.list(repo)
       assert(type(stashes) == 'table', 'Should still be able to list stashes')
     end)
@@ -136,7 +128,6 @@ describe('git_stash:', function()
 
       assert(not err)
 
-      -- Changes should be back
       local files = git_status.ls(repo)
       eq(#files, 1)
       eq(files[1].filename, 'file1.txt')
@@ -148,7 +139,6 @@ describe('git_stash:', function()
 
       git_stash.apply(repo, 'stash@{0}')
 
-      -- Stash should still exist
       local stashes = git_stash.list(repo)
       eq(#stashes, 1)
     end)
@@ -157,10 +147,8 @@ describe('git_stash:', function()
       test_repo.modify_file(repo, 'file1.txt', { 'stashed content' })
       git_stash.add(repo)
 
-      -- Working tree is clean after stash
       eq(#git_status.ls(repo), 0)
 
-      -- Apply restores changes
       local _, err = git_stash.apply(repo, 'stash@{0}')
 
       assert(not err)
@@ -200,11 +188,9 @@ describe('git_stash:', function()
 
       assert(not err)
 
-      -- Changes should be applied
       local files = git_status.ls(repo)
       eq(#files, 1)
 
-      -- Stash should be removed
       local stashes = git_stash.list(repo)
       eq(#stashes, 0)
     end)
@@ -213,10 +199,8 @@ describe('git_stash:', function()
       test_repo.modify_file(repo, 'file1.txt', { 'stashed' })
       git_stash.add(repo)
 
-      -- Verify stash exists
       eq(#git_stash.list(repo), 1)
 
-      -- Pop should restore and remove
       local _, err = git_stash.pop(repo, 'stash@{0}')
 
       assert(not err)
@@ -264,7 +248,6 @@ describe('git_stash:', function()
 
       git_stash.drop(repo, 'stash@{0}')
 
-      -- Working directory should still be clean
       local files = git_status.ls(repo)
       eq(#files, 0)
     end)
@@ -273,11 +256,9 @@ describe('git_stash:', function()
       test_repo.modify_file(repo, 'file1.txt', { 'stashed' })
       git_stash.add(repo)
 
-      -- Verify clean and stash exists
       eq(#git_status.ls(repo), 0)
       eq(#git_stash.list(repo), 1)
 
-      -- Drop should remove but not apply
       local _, err = git_stash.drop(repo, 'stash@{0}')
 
       assert(not err)
@@ -311,7 +292,6 @@ describe('git_stash:', function()
       test_repo.modify_file(repo, 'file1.txt', { 'stashed' })
       git_stash.add(repo)
 
-      -- Verify stash exists
       eq(#git_stash.list(repo), 1)
 
       local _, err = git_stash.clear(repo)
@@ -337,7 +317,6 @@ describe('git_stash:', function()
 
       git_stash.clear(repo)
 
-      -- Working directory should still be clean
       local files = git_status.ls(repo)
       eq(#files, 0)
     end)

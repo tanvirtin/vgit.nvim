@@ -315,10 +315,8 @@ describe('DiffBuilder:', function()
 
       builder:_get_range_lines(spec)
 
-      -- The from side should use old_filename
       assert.are.equal(called_filenames[1].filename, 'old_name.lua')
       assert.are.equal(called_filenames[1].ref, 'HEAD')
-      -- The to side should use filename
       assert.are.equal(called_filenames[2].filename, 'new_name.lua')
       assert.are.equal(called_filenames[2].ref, 'index')
     end)
@@ -339,7 +337,6 @@ describe('DiffBuilder:', function()
 
       builder:_get_range_lines(spec)
 
-      -- Both sides should use filename
       assert.are.equal(called_filenames[1].filename, 'test.lua')
       assert.are.equal(called_filenames[2].filename, 'test.lua')
     end)
@@ -814,12 +811,8 @@ describe('DiffBuilder:', function()
 
       local diff = builder:build(spec)
 
-      -- DiffBuilder should not attach raw source lines to the diff.
-      -- current_lines/previous_lines are split-aligned display lines set by Diff:generate_split.
-      -- Raw source lines are the concern of the caller, not the diff object.
       assert.is_not_nil(diff.current_lines)
       assert.is_not_nil(diff.previous_lines)
-      -- Verify they are the split-aligned versions (equal length), not raw source
       assert.are.equal(#diff.current_lines, #diff.previous_lines)
     end)
 
@@ -1013,7 +1006,6 @@ describe('DiffBuilder:', function()
       })
 
       invariants.assert_unified_diff(diff)
-      -- All lnum_changes should be add
       for _, lc in ipairs(diff.lnum_changes) do
         assert.are.equal('add', lc.type)
       end
@@ -1279,7 +1271,6 @@ describe('DiffBuilder:', function()
         to = 'disk',
       }
 
-      -- Should handle gracefully by treating nil as empty
       local diff = builder:build(spec)
       assert.is_not_nil(diff)
     end)
@@ -1311,7 +1302,6 @@ describe('DiffBuilder:', function()
         to = 'disk',
       }
 
-      -- Should handle gracefully by treating nil as empty
       local diff = builder:build(spec)
       assert.is_not_nil(diff)
     end)
@@ -1449,7 +1439,6 @@ describe('DiffBuilder:', function()
         builder:build(spec)
       end
 
-      -- Should have called file_lines multiple times
       assert.is_true(vim.tbl_count(call_counts) > 0)
     end)
   end)
@@ -1765,11 +1754,7 @@ describe('DiffBuilder:', function()
       eq(#diff.current_lines, #diff.previous_lines)
     end)
 
-    -- Behavioral tests: verify EXPECTED output from the user's perspective
-
     it('should place removed lines before the following context, not after it', function()
-      -- If original has [ctx1, old, ctx2] and current has [ctx1, ctx2],
-      -- the display should show: ctx1, -old, ctx2 (not ctx1, ctx2, -old)
       repository.file_lines = function(_, _, ref)
         if ref == 'HEAD' then return { 'ctx1', 'ctx2', 'ctx3' } end
         return {}
@@ -1795,7 +1780,6 @@ describe('DiffBuilder:', function()
 
       eq(1, #result)
       local lines = result[1].diff.lines
-      -- Find positions of key lines
       local ctx1_pos, old_pos, ctx2_pos
       for i, line in ipairs(lines) do
         if line == 'ctx1' then ctx1_pos = i end
@@ -1810,8 +1794,6 @@ describe('DiffBuilder:', function()
     end)
 
     it('should place removed lines at the start when they precede all context', function()
-      -- Original: [old1, old2, ctx1], Current: [ctx1]
-      -- Display should show: -old1, -old2, ctx1
       repository.file_lines = function(_, _, ref)
         if ref == 'HEAD' then return { 'ctx1' } end
         return {}
@@ -1851,13 +1833,6 @@ describe('DiffBuilder:', function()
     end)
 
     it('should correctly position removes after prior adds cause line divergence', function()
-      -- This tests the critical bug: when a prior sub-hunk adds many lines,
-      -- old_pos and new_pos diverge. The remove sub-hunk must still place
-      -- removed lines at the correct position in the display.
-      --
-      -- Original: [ctx1, old_a, ctx2, old_b, ctx3]
-      -- Current:  [ctx1, new1, new2, new3, new4, new5, ctx2, ctx3]
-      -- The remove of old_b should appear between ctx2 and ctx3 in the display.
       repository.file_lines = function(_, _, ref)
         if ref == 'HEAD' then return { 'ctx1', 'new1', 'new2', 'new3', 'new4', 'new5', 'ctx2', 'ctx3' } end
         return {}
@@ -1896,10 +1871,8 @@ describe('DiffBuilder:', function()
       local lines = result[1].diff.lines
       local marks = result[1].diff.marks
 
-      -- Should have 2 marks (2 change blocks separated by context)
       eq(2, #marks, 'should produce 2 marks for 2 change blocks')
 
-      -- The removed old_b line should appear between ctx2 and ctx3
       local ctx2_pos, old_b_pos, ctx3_pos
       for i, line in ipairs(lines) do
         if line == 'ctx2' then ctx2_pos = i end
@@ -1915,7 +1888,6 @@ describe('DiffBuilder:', function()
     end)
 
     it('should produce non-overlapping marks in ascending order', function()
-      -- With multiple change blocks, marks should be sorted and non-overlapping
       repository.file_lines = function(_, _, ref)
         if ref == 'HEAD' then return { 'a', 'new_b', 'c', 'd', 'new_e', 'f' } end
         return {}
@@ -1952,14 +1924,12 @@ describe('DiffBuilder:', function()
       local marks = result[1].diff.marks
       eq(2, #marks)
 
-      -- Marks should be in ascending order and non-overlapping
       assert.is_true(marks[1].top <= marks[1].bot, 'mark 1: top <= bot')
       assert.is_true(marks[2].top <= marks[2].bot, 'mark 2: top <= bot')
       assert.is_true(marks[1].bot < marks[2].top, 'mark 1 should end before mark 2 starts')
     end)
 
     it('should have every mark line covered by a lnum_change', function()
-      -- Each line within a mark range must have a corresponding lnum_change entry
       repository.file_lines = function(_, _, ref)
         if ref == 'HEAD' then return { 'ctx', 'added_a', 'added_b', 'ctx2' } end
         return {}
@@ -2035,7 +2005,6 @@ describe('DiffBuilder:', function()
     end)
 
     it('should handle add-only at start of file', function()
-      -- New file or lines added at the very beginning
       repository.file_lines = function(_, _, ref)
         if ref == 'HEAD' then return { 'new1', 'new2', 'ctx1' } end
         return {}
@@ -2064,7 +2033,6 @@ describe('DiffBuilder:', function()
       assert.is_true(#diff.marks > 0, 'should have at least one mark')
       eq('add', diff.marks[1].type)
 
-      -- Added lines should appear before ctx1
       local new1_pos, ctx1_pos
       for i, line in ipairs(diff.lines) do
         if line == 'new1' then new1_pos = i end
@@ -2074,7 +2042,6 @@ describe('DiffBuilder:', function()
     end)
 
     it('should handle remove-only at start of file', function()
-      -- Lines removed from the very beginning
       repository.file_lines = function(_, _, ref)
         if ref == 'HEAD' then return { 'ctx1', 'ctx2' } end
         return {}
@@ -2103,7 +2070,6 @@ describe('DiffBuilder:', function()
       assert.is_true(#diff.marks > 0, 'should have at least one mark')
       eq('remove', diff.marks[1].type)
 
-      -- Removed lines should appear before ctx1
       local rm1_pos, ctx1_pos
       for i, line in ipairs(diff.lines) do
         if line == 'removed1' then rm1_pos = i end
@@ -2154,11 +2120,9 @@ describe('DiffBuilder:', function()
 
       eq(2, #result, 'should produce 2 file diffs')
 
-      -- First file: add
       eq('add.lua', result[1].filename)
       eq('add', result[1].diff.marks[1].type)
 
-      -- Second file: remove (all hunks are remove → is_deleted path)
       eq('remove.lua', result[2].filename)
       eq('remove', result[2].diff.marks[1].type)
     end)
@@ -2194,11 +2158,8 @@ describe('DiffBuilder:', function()
         layout_type = 'unified',
       })
 
-      -- Empty target file should NOT be treated as deleted — it exists, just has no content
       assert.are.equal(1, #result)
       local diff = result[1].diff
-      -- Non-deleted path: marks should exist but NOT be from the deleted codepath
-      -- The file has hunks but current_lines is {} (empty, not nil), so is_deleted = false
       assert.is_not_nil(diff)
     end)
   end)

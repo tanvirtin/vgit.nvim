@@ -14,7 +14,6 @@ local function make_repo(path)
 end
 
 describe('GitRef:', function()
-  -- Unit tests (no repo needed)
   describe('constructor', function()
     it('should error when repository is nil', function()
       assert.has_error(function()
@@ -64,7 +63,6 @@ describe('GitRef:', function()
     end)
   end)
 
-  -- Parameter validation tests
   describe('parameter validation', function()
     it('get should error when name is nil', function()
       local r = GitRef(make_repo('/path'))
@@ -130,7 +128,6 @@ describe('GitRef:', function()
     end)
   end)
 
-  -- Integration tests (real repo)
   describe('integration', function()
     local repo
     local it = async.it
@@ -403,7 +400,6 @@ describe('GitRef:', function()
         assert.is_nil(err)
         eq(true, result)
 
-        -- Verify branch exists
         local exists, _ = ref:branch_exists('new-feature')
         assert.is_true(exists)
       end)
@@ -476,7 +472,6 @@ describe('GitRef:', function()
         assert.is_nil(err)
         eq(true, result)
 
-        -- Verify we're on the new branch
         ref:reset_cache()
         local name, _ = ref:current_branch()
         eq('checkout-target', name)
@@ -557,8 +552,6 @@ describe('GitRef:', function()
         local current_cache = ref._current
         local branches_cache = ref._branches
 
-        -- Try to create branch with name that already exists
-        -- The current branch (master/main) already exists
         local branch_name, _ = ref:current_branch()
         ref:checkout_new_branch(branch_name)
 
@@ -631,7 +624,6 @@ describe('GitRef:', function()
         ref:tags()
         assert.is_not_nil(ref._tags)
 
-        -- Creating a tag with same name should fail
         ref:create_tag('v1.0.0')
         assert.is_not_nil(ref._tags)
       end)
@@ -698,7 +690,6 @@ describe('GitRef:', function()
         assert.is_nil(err1)
         eq(true, result1)
 
-        -- Creating the same tag again should fail
         local result2, err2 = ref:create_tag('v-duplicate')
         assert.is_nil(result2)
         assert.is_not_nil(err2)
@@ -709,14 +700,11 @@ describe('GitRef:', function()
       it('should allow fresh data to be fetched after reset', function()
         local ref = GitRef(make_repo(repo))
 
-        -- Fetch and cache tags
         ref:tags()
         assert.is_not_nil(ref._tags)
 
-        -- Create a new tag
         test_repo.create_tag(repo, 'v2.0.0')
 
-        -- Reset cache and re-fetch
         ref:reset_cache()
         local tags, err = ref:tags()
 

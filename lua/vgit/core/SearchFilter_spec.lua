@@ -116,7 +116,6 @@ describe('SearchFilter:', function()
         { label = 'test.file' },
         { label = 'testXfile' },
       }
-      -- '.' in plain find should match literal dot, not any character
       local result = filter:filter(items, 'test.file')
       eq(1, #result)
       eq('test.file', result[1].label)

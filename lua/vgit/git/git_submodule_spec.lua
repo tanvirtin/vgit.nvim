@@ -152,14 +152,12 @@ describe('git_submodule:', function()
     before_each(function()
       local err
 
-      -- Create a source repo to use as a submodule
       source_repo, err = test_repo.create_repo({
         initial_commit = true,
         files = { ['lib.txt'] = { 'library content' } },
       })
       assert(not err, 'Failed to create source repo: ' .. tostring(err))
 
-      -- Create the main repo
       repo, err = test_repo.create_repo({
         initial_commit = true,
         files = { ['main.txt'] = { 'main content' } },
@@ -172,9 +170,6 @@ describe('git_submodule:', function()
       if source_repo then test_repo.cleanup(source_repo) end
     end)
 
-    -- ----------------------------------------------------------
-    -- add()
-    -- ----------------------------------------------------------
     describe('add()', function()
       it('should add a submodule from a local repo', function()
         local result, err = git_submodule.add(repo, source_repo, 'deps/lib')
@@ -182,7 +177,6 @@ describe('git_submodule:', function()
         assert(not err, 'add() failed: ' .. vim.inspect(err))
         assert(result)
 
-        -- The submodule directory should exist on disk
         local stat = vim.loop.fs_stat(repo .. '/deps/lib/lib.txt')
         assert(stat, 'Submodule file should exist on disk')
       end)
@@ -191,7 +185,6 @@ describe('git_submodule:', function()
         local _, err = git_submodule.add(repo, source_repo, 'deps/lib')
         assert(not err, 'add() failed: ' .. vim.inspect(err))
 
-        -- Commit the submodule addition so status shows it cleanly
         vim.fn.system({ 'git', '-C', repo, 'commit', '-q', '-m', 'Add submodule' })
 
         local subs, list_err = git_submodule.list(repo)
@@ -208,9 +201,6 @@ describe('git_submodule:', function()
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- list()
-    -- ----------------------------------------------------------
     describe('list()', function()
       it('should return empty list when no submodules exist', function()
         local result, err = git_submodule.list(repo)
@@ -228,12 +218,10 @@ describe('git_submodule:', function()
         eq(1, #result)
         eq('deps/lib', result[1].path)
         assert(result[1].hash and #result[1].hash > 0, 'hash should be non-empty')
-        -- After add+commit, the submodule should be initialized
         eq('initialized', result[1].status)
       end)
 
       it('should list multiple submodules', function()
-        -- Create a second source repo
         local source_repo2, create_err = test_repo.create_repo({
           initial_commit = true,
           files = { ['util.txt'] = { 'util content' } },
@@ -248,7 +236,6 @@ describe('git_submodule:', function()
         assert(not err, 'list() failed: ' .. vim.inspect(err))
         eq(2, #result)
 
-        -- Sort by path for deterministic comparison
         table.sort(result, function(a, b)
           return a.path < b.path
         end)
@@ -261,7 +248,6 @@ describe('git_submodule:', function()
       it('should detect uninitialized submodule', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-        -- Clone the repo fresh so the submodule is registered but not initialized
         local clone_dir = vim.fn.tempname()
         clone_repo(repo, clone_dir)
 
@@ -272,33 +258,24 @@ describe('git_submodule:', function()
         eq('deps/lib', result[1].path)
         eq('uninitialized', result[1].status)
 
-        -- Cleanup the clone
         vim.fn.system({ 'rm', '-rf', clone_dir })
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- init() / update()
-    -- ----------------------------------------------------------
     describe('init()', function()
       it('should initialize submodules in a cloned repo', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-        -- Clone fresh (submodule will be uninitialized)
         local clone_dir = vim.fn.tempname()
         clone_repo(repo, clone_dir)
 
-        -- Before init, submodule should be uninitialized
         local subs_before, _ = git_submodule.list(clone_dir)
         eq('uninitialized', subs_before[1].status)
 
-        -- Init the submodule
         local result, err = git_submodule.init(clone_dir, 'deps/lib')
         assert(not err, 'init() failed: ' .. vim.inspect(err))
         assert(result)
 
-        -- After init, the submodule URL should be registered but files
-        -- won't appear until update
         local stat = vim.loop.fs_stat(clone_dir .. '/deps/lib/lib.txt')
         assert(not stat, 'Files should not appear until update')
 
@@ -326,7 +303,6 @@ describe('git_submodule:', function()
         local clone_dir = vim.fn.tempname()
         clone_repo(repo, clone_dir)
 
-        -- Init and update
         local _, init_err = git_submodule.init(clone_dir, 'deps/lib')
         assert(not init_err, 'init() failed: ' .. vim.inspect(init_err))
 
@@ -334,7 +310,6 @@ describe('git_submodule:', function()
         assert(not err, 'update() failed: ' .. vim.inspect(err))
         assert(result)
 
-        -- The submodule file should now exist
         local stat = vim.loop.fs_stat(clone_dir .. '/deps/lib/lib.txt')
         assert(stat, 'Submodule file should exist after update')
 
@@ -347,7 +322,6 @@ describe('git_submodule:', function()
         local clone_dir = vim.fn.tempname()
         clone_repo(repo, clone_dir)
 
-        -- update with init=true should combine both steps
         local result, err = git_submodule.update(clone_dir, 'deps/lib', { init = true })
         assert(not err, 'update(init=true) failed: ' .. vim.inspect(err))
         assert(result)
@@ -385,9 +359,6 @@ describe('git_submodule:', function()
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- sync()
-    -- ----------------------------------------------------------
     describe('sync()', function()
       it('should sync submodule URLs', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
@@ -417,33 +388,24 @@ describe('git_submodule:', function()
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- deinit() edge cases
-    -- ----------------------------------------------------------
     describe('deinit() edge cases', function()
       it('should deinit without force on a clean submodule', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-        -- deinit without --force succeeds on a clean submodule
         local result, err = git_submodule.deinit(repo, 'deps/lib')
 
         assert(not err, 'deinit() failed: ' .. vim.inspect(err))
         assert(result)
 
-        -- Submodule content should be removed
         local stat = vim.loop.fs_stat(repo .. '/deps/lib/lib.txt')
         assert(not stat, 'Submodule content should be removed after deinit')
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- list() edge cases
-    -- ----------------------------------------------------------
     describe('list() edge cases', function()
       it('should detect modified submodule with + prefix', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-        -- Create a commit inside the submodule directory to make it "modified"
         vim.fn.system({
           'git',
           '-C',
@@ -463,20 +425,15 @@ describe('git_submodule:', function()
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- deinit()
-    -- ----------------------------------------------------------
     describe('deinit()', function()
       it('should deinit an initialized submodule with force', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-        -- deinit requires --force for initialized submodules
         local result, err = git_submodule.deinit(repo, 'deps/lib', { force = true })
 
         assert(not err, 'deinit(force) failed: ' .. vim.inspect(err))
         assert(result)
 
-        -- After deinit, the submodule directory should be empty
         local stat = vim.loop.fs_stat(repo .. '/deps/lib/lib.txt')
         assert(not stat, 'Submodule content should be removed after deinit')
       end)
@@ -500,9 +457,6 @@ describe('git_submodule:', function()
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- foreach()
-    -- ----------------------------------------------------------
     describe('foreach()', function()
       it('should execute a command in each submodule', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
@@ -532,16 +486,12 @@ describe('git_submodule:', function()
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- set_branch()
-    -- ----------------------------------------------------------
     describe('set_branch()', function()
       it('should set a branch for a submodule', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
         local result, err = git_submodule.set_branch(repo, 'main', 'deps/lib')
 
-        -- set-branch may fail if the git version is too old, but should not crash
         if not err then assert(result) end
       end)
 
@@ -554,14 +504,10 @@ describe('git_submodule:', function()
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- set_url()
-    -- ----------------------------------------------------------
     describe('set_url()', function()
       it('should set the URL for a submodule', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
 
-        -- Create another source to use as new URL
         local new_source, create_err = test_repo.create_repo({
           initial_commit = true,
           files = { ['new_lib.txt'] = { 'new library' } },
@@ -577,9 +523,6 @@ describe('git_submodule:', function()
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- absorbgitdirs()
-    -- ----------------------------------------------------------
     describe('absorbgitdirs()', function()
       it('should absorb git dirs without error', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')
@@ -591,9 +534,6 @@ describe('git_submodule:', function()
       end)
     end)
 
-    -- ----------------------------------------------------------
-    -- summary()
-    -- ----------------------------------------------------------
     describe('summary()', function()
       it('should return summary for repo with submodules', function()
         test_repo.add_submodule(repo, source_repo, 'deps/lib')

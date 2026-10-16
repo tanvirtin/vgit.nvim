@@ -9,7 +9,6 @@ function git_show.lines(reponame, filename, commit_hash)
 
   commit_hash = commit_hash or ''
 
-  -- Normalize 'index' to ':' for git reference
   if commit_hash == 'index' then commit_hash = ':' end
 
   local ref

@@ -1,6 +1,5 @@
 local eq = assert.are.same
 
--- Mock the event module
 package.loaded['vgit.core.event'] = {
   await = function() end,
   async = function(fn)
@@ -49,7 +48,6 @@ describe('TreeComponent:', function()
     it('should return entry from current list item', function()
       local tc = TreeComponent({ list = {}, title = '' })
       local expected_entry = { type = 'unstaged', status = { filename = 'test.lua' } }
-      -- Override get_current_list_item to return a mock item
       tc.get_current_list_item = function()
         return { entry = expected_entry, value = 'test.lua' }
       end

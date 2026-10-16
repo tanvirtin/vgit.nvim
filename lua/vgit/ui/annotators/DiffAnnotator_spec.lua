@@ -15,7 +15,7 @@ describe('DiffAnnotator:', function()
       })
       assert.is_not_nil(result)
       assert.is_not_nil(result.sign)
-      assert.are.equal(4, result.sign.row) -- lnum - 1
+      assert.are.equal(4, result.sign.row)
       assert.are.equal('GitSignsAddLn', result.sign.name)
     end)
 
@@ -35,13 +35,12 @@ describe('DiffAnnotator:', function()
       })
       assert.is_not_nil(result)
       assert.is_not_nil(result.void_text)
-      assert.are.equal(6, result.void_text.row) -- lnum - 1
+      assert.are.equal(6, result.void_text.row)
       assert.are.equal(0, result.void_text.col)
       assert.are.equal('GitLineNr', result.void_text.hl)
     end)
 
     it('should not have sign when scene_signs has no mapping for type', function()
-      -- void is not in scene_signs, so sign should be nil
       local result = DiffAnnotator.annotate_line({
         lnum_change = { lnum = 1, type = 'void' },
       })
@@ -74,7 +73,7 @@ describe('DiffAnnotator:', function()
         },
       }, 2)
       assert.is_not_nil(result)
-      assert.are.equal(1, result.row) -- lnum - 1
+      assert.are.equal(1, result.row)
       assert.are.equal(0, result.col)
       assert.are.equal(2, #result.texts)
       eq({ 'hello ', nil }, result.texts[1])
@@ -108,7 +107,6 @@ describe('DiffAnnotator:', function()
           },
         },
       }, 1)
-      -- Operation 1 should be skipped
       assert.are.equal(2, #result.texts)
       eq({ 'same', nil }, result.texts[1])
       eq({ 'changed', 'GitWordAdd' }, result.texts[2])

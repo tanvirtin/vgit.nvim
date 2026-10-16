@@ -108,7 +108,6 @@ describe('ViewportComponent:', function()
 
   describe('inheritance', function()
     it('should be an instance of Component', function()
-      -- ViewportComponent instances should have all Component lifecycle methods
       assert.is_not_nil(component.mount)
       assert.is_not_nil(component.unmount)
       assert.is_not_nil(component.set_props)

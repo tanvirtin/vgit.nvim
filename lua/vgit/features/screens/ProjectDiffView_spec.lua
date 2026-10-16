@@ -479,7 +479,7 @@ describe('ProjectDiffView:', function()
       view._destroyed = false
 
       view:destroy()
-      view:destroy() -- second call should not error
+      view:destroy()
       assert.is_true(view._destroyed)
     end)
 
@@ -524,7 +524,6 @@ describe('ProjectDiffView:', function()
       view:destroy()
       eq(1, cleanup1_calls)
       eq(1, cleanup2_calls)
-      -- Second call is a no-op (idempotent)
       view:destroy()
       eq(1, cleanup1_calls)
       eq(1, cleanup2_calls)
@@ -577,7 +576,7 @@ describe('ProjectDiffView:', function()
         local view = ProjectDiffView()
         view._patch_component = nil
         view._layout_type = nil
-        view:hunk_down() -- should not error
+        view:hunk_down()
       end)
 
       it('should return early if active component is invalid', function()
@@ -587,7 +586,7 @@ describe('ProjectDiffView:', function()
             return false
           end,
         }
-        view:hunk_down() -- should not error
+        view:hunk_down()
       end)
 
       it('should delegate to patch_component for unified layout', function()
@@ -690,7 +689,7 @@ describe('ProjectDiffView:', function()
         local view = ProjectDiffView()
         view._patch_component = nil
         view._layout_type = nil
-        view:hunk_up() -- should not error
+        view:hunk_up()
       end)
 
       it('should return early if active component is invalid', function()
@@ -700,7 +699,7 @@ describe('ProjectDiffView:', function()
             return false
           end,
         }
-        view:hunk_up() -- should not error
+        view:hunk_up()
       end)
 
       it('should delegate to patch_component for unified layout', function()
@@ -944,7 +943,6 @@ describe('ProjectDiffView:', function()
       local diff_file_entries = {
         make_real_diff_entry('a.lua', 'lua', { hunk }, { 'ctx', 'new', 'added' }),
       }
-      -- Use the real diff from generate_unified
       diff_file_entries[1].diff = diff
 
       local lines, _, _, marks = PatchLineBuilder.build(diff_file_entries)

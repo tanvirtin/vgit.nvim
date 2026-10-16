@@ -85,11 +85,6 @@ function GitBuffer:release(key)
   return self
 end
 
--- Runs `fn` while holding the lock for `key`. Locks are scoped per feature, so
--- a slow operation for one feature never blocks another (e.g. a conflict scan
--- cannot delay the live gutter). While the lock is held, newer requests for the
--- same key supersede older ones: each request recomputes from current buffer
--- state, so only the latest matters and the queue cannot grow without bound.
 function GitBuffer:with_lock(key, fn)
   if type(key) == 'function' then
     fn = key
@@ -376,8 +371,6 @@ function GitBuffer:render_signs(top, bot)
   top = top or 0
   bot = bot or -1
 
-  -- When sign data has changed, do a full clear so stale signs outside
-  -- the current viewport are removed, then reset the flag.
   if self._signs_dirty then
     self:clear_signs()
     self._signs_dirty = false
@@ -385,7 +378,6 @@ function GitBuffer:render_signs(top, bot)
     self:clear_signs(top, bot)
   end
 
-  -- Only place extmarks for signs visible in the current viewport.
   local signs = self.state.signs or {}
   for _, sign in ipairs(signs) do
     local row = sign.row

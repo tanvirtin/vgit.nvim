@@ -5,7 +5,6 @@ local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
 
 local M = {}
 
--- Minimal Component subclass that creates a real Element (floating window)
 local TestComponent = Component({})
 
 function TestComponent:constructor(props)
@@ -25,7 +24,6 @@ end
 
 M.TestComponent = TestComponent
 
--- Render a component via a temporary View (replacement for ComponentManager in tests)
 function M.mount(config)
   local view = View()
   view:_render(config)

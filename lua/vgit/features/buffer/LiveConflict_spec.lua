@@ -79,7 +79,6 @@ describe('LiveConflict:', function()
   end)
 end)
 
--- Integration tests using real git repos
 package.loaded['lint'] = package.loaded['lint'] or { try_lint = function() end }
 
 local test_repo = require('tests.helpers.test_repo')
@@ -137,11 +136,9 @@ describe('LiveConflict conflict flow (integration):', function()
     local git_buf = GitBuffer(bufnr)
     git_buf:sync()
 
-    -- Manually set stale conflict state
     git_buf.state.conflicts = { { current = { top = 1, bot = 2 }, incoming = { top = 3, bot = 4 } } }
     assert.equals(1, #git_buf.state.conflicts)
 
-    -- Calling conflicts() on a non-conflict file should clear stale state
     local conflicts = git_buf:conflicts()
 
     assert.is_table(conflicts)
@@ -154,7 +151,6 @@ describe('LiveConflict conflict flow (integration):', function()
     local git_buf = GitBuffer(bufnr)
     git_buf:sync()
 
-    -- No conflicts, but render should still succeed
     git_buf:conflicts()
     local result = git_buf:render_conflicts()
 

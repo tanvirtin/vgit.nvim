@@ -183,7 +183,6 @@ local function process_hunk(ctx, entry)
     ctx.lines[#ctx.lines + 1] = cleaned_line
     local display_row = #ctx.lines - 1
 
-    -- hunk.lnum_changes carries conflict-type metadata that overrides prefix-derived type.
     local lnum_change = hunk.lnum_changes and hunk.lnum_changes[i]
     local change_type
     if lnum_change then

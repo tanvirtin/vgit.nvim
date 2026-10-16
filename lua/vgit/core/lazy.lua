@@ -10,8 +10,6 @@ local function lazy(mod_path)
     if resolved then return end
     resolved = true
     local mod = require(mod_path)
-    -- Copy metamethod keys so proxy works when used as a metatable
-    -- (Lua resolves metamethods via rawget on the metatable)
     for k, v in pairs(mod) do
       if type(k) == 'string' and k:sub(1, 2) == '__' then rawset(proxy, k, v) end
     end

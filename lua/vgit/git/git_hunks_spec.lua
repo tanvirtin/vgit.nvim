@@ -350,7 +350,6 @@ describe('git_hunks:', function()
 
       assert.are.equal(#hunks, 1)
       assert.is_nil(hunks[1].type)
-      -- stat keeps its default from GitHunk constructor
       eq(hunks[1].stat, { added = 0, removed = 0 })
       assert.are.equal(hunks[1].top, 1)
       assert.are.equal(hunks[1].bot, 2)

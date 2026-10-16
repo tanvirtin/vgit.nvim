@@ -1,8 +1,5 @@
 local eq = assert.are.same
 
--- Stubs must be set up before requiring Conflicts, because it captures
--- module-level references at require time.
-
 local navigation_up_calls = {}
 local navigation_down_calls = {}
 
@@ -49,7 +46,6 @@ local Conflicts = require('vgit.features.buffer.Conflicts')
 
 describe('Conflicts:', function()
   before_each(function()
-    -- Reset stubs before each test
     navigation_up_calls = {}
     navigation_down_calls = {}
     git_buffer_store_stub.current = function()
@@ -268,16 +264,6 @@ describe('Conflicts:', function()
     end)
 
     it('should merge both current and incoming lines and remove markers', function()
-      -- Simulate a conflict block in the middle of a file:
-      -- Line 1: "before conflict"
-      -- Line 2: "<<<<<<< HEAD"       -- current.top = 2
-      -- Line 3: "current line 1"
-      -- Line 4: "current line 2"     -- current.bot = 4
-      -- Line 5: "======="            -- separator
-      -- Line 6: "incoming line 1"    -- incoming.top = 6
-      -- Line 7: "incoming line 2"
-      -- Line 8: ">>>>>>> branch"     -- incoming.bot = 8
-      -- Line 9: "after conflict"
       local lines = {
         'before conflict',
         '<<<<<<< HEAD',
@@ -318,8 +304,6 @@ describe('Conflicts:', function()
       local conflicts = Conflicts()
       conflicts:accept_both()
 
-      -- The entire conflict block (lines 2-8) should be replaced
-      -- with current content (lines 3-4) + incoming content (lines 6-7).
       eq({
         'before conflict',
         'current line 1',
@@ -331,12 +315,6 @@ describe('Conflicts:', function()
     end)
 
     it('should handle a conflict at the start of the file', function()
-      -- Line 1: "<<<<<<< HEAD"       -- current.top = 1
-      -- Line 2: "my change"          -- current.bot = 2
-      -- Line 3: "======="
-      -- Line 4: "their change"       -- incoming.top = 4
-      -- Line 5: ">>>>>>> branch"     -- incoming.bot = 5
-      -- Line 6: "rest of file"
       local lines = {
         '<<<<<<< HEAD',
         'my change',

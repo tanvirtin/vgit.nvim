@@ -38,7 +38,6 @@ describe('git_stager:', function()
 
       assert(not err)
 
-      -- Verify file is staged
       local files = git_status.ls(repo)
       eq(#files, 1)
       eq(files[1].filename, 'file1.txt')
@@ -82,7 +81,6 @@ describe('git_stager:', function()
       local files = git_status.ls(repo)
       eq(#files, 3)
 
-      -- All should be staged
       for _, file in ipairs(files) do
         assert(file.value:match('^[AMD]'), 'File should be staged: ' .. file.filename)
       end
@@ -116,7 +114,6 @@ describe('git_stager:', function()
       test_repo.modify_file(repo, 'file1.txt', { 'modified' })
       git_stager.stage(repo, 'file1.txt')
 
-      -- Stage again
       local _, err = git_stager.stage(repo, 'file1.txt')
 
       assert(not err)
@@ -145,7 +142,6 @@ describe('git_stager:', function()
 
       assert(not err)
 
-      -- File should be unstaged but still modified
       local files = git_status.ls(repo)
       eq(#files, 1)
       eq(files[1].value, ' M')
@@ -163,7 +159,6 @@ describe('git_stager:', function()
       local files = git_status.ls(repo)
       eq(#files, 2)
 
-      -- All should be unstaged
       for _, file in ipairs(files) do
         eq(file.value, ' M')
       end
@@ -192,7 +187,6 @@ describe('git_stager:', function()
 
       assert(not err)
 
-      -- File should show unstaged changes
       local files = git_status.ls(repo)
       eq(#files, 1)
       eq(files[1].value, ' M')
@@ -226,7 +220,6 @@ describe('git_stager:', function()
     it('should handle unstaging non-staged file', function()
       test_repo.modify_file(repo, 'file1.txt', { 'modified' })
 
-      -- Try to unstage when nothing is staged
       local _, err = git_stager.unstage(repo, 'file1.txt')
 
       assert(not err)
@@ -242,10 +235,8 @@ describe('git_stager:', function()
 
   describe('stage_hunk()', function()
     it('should stage single hunk from file', function()
-      -- Create file with multiple hunks
       test_repo.modify_file(repo, 'file1.txt', { 'changed line 1', 'line 2', 'line 3' })
 
-      -- Get hunks
       local original = git_show.lines(repo, 'file1.txt', 'HEAD')
       local current = { 'changed line 1', 'line 2', 'line 3' }
       local hunks = git_hunks.live(nil, original, current)
@@ -256,13 +247,11 @@ describe('git_stager:', function()
 
       assert(not err)
 
-      -- Verify hunk is staged
       local files = git_status.ls(repo)
       assert(#files > 0)
     end)
 
     it('should stage add-type hunk for new content', function()
-      -- Add new lines to existing file
       test_repo.modify_file(repo, 'file1.txt', { 'line 1', 'line 2', 'line 3', 'new line 4' })
 
       local original = git_show.lines(repo, 'file1.txt', 'HEAD')
@@ -316,7 +305,6 @@ describe('git_stager:', function()
     end)
 
     it('should stage only specified hunk when multiple exist', function()
-      -- Create file with changes at beginning and end
       test_repo.modify_file(repo, 'file1.txt', {
         'changed line 1',
         'line 2',
@@ -327,9 +315,7 @@ describe('git_stager:', function()
       local current = { 'changed line 1', 'line 2', 'changed line 3' }
       local hunks = git_hunks.live(nil, original, current)
 
-      -- Should have 2 separate hunks
       if #hunks >= 2 then
-        -- Stage only first hunk
         local _, err = git_stager.stage_hunk(repo, 'file1.txt', hunks[1])
         assert(not err)
       end
@@ -361,11 +347,9 @@ describe('git_stager:', function()
 
   describe('unstage_hunk()', function()
     it('should unstage single hunk', function()
-      -- Make changes and stage
       test_repo.modify_file(repo, 'file1.txt', { 'changed line 1', 'line 2', 'line 3' })
       git_stager.stage(repo, 'file1.txt')
 
-      -- Get staged diff
       local original = git_show.lines(repo, 'file1.txt', 'HEAD')
       local current = { 'changed line 1', 'line 2', 'line 3' }
       local hunks = git_hunks.live(nil, original, current)
@@ -394,7 +378,6 @@ describe('git_stager:', function()
     end)
 
     it('should preserve other hunks when unstaging one', function()
-      -- Create multiple separate hunks
       local content = {}
       for i = 1, 20 do
         if i == 5 then
@@ -412,11 +395,9 @@ describe('git_stager:', function()
       local original = git_show.lines(repo, 'file1.txt', 'HEAD')
       local hunks = git_hunks.live(nil, original, content)
 
-      -- Unstage first hunk if multiple exist
       if #hunks >= 2 then
         local _, err = git_stager.unstage_hunk(repo, 'file1.txt', hunks[1])
         assert(not err)
-        -- Second hunk should still be staged
       end
     end)
 
@@ -448,24 +429,20 @@ describe('git_stager:', function()
     it('should handle stage/unstage cycle', function()
       test_repo.modify_file(repo, 'file1.txt', { 'modified' })
 
-      -- Stage
       git_stager.stage(repo, 'file1.txt')
       local files1 = git_status.ls(repo)
       eq(files1[1].value, 'M ')
 
-      -- Unstage
       git_stager.unstage(repo, 'file1.txt')
       local files2 = git_status.ls(repo)
       eq(files2[1].value, ' M')
 
-      -- Stage again
       git_stager.stage(repo, 'file1.txt')
       local files3 = git_status.ls(repo)
       eq(files3[1].value, 'M ')
     end)
 
     it('should handle partial staging workflow', function()
-      -- Create file with multiple changes
       test_repo.modify_file(repo, 'file1.txt', {
         'changed line 1',
         'line 2',
@@ -476,7 +453,6 @@ describe('git_stager:', function()
       local current = { 'changed line 1', 'line 2', 'changed line 3' }
       local hunks = git_hunks.live(nil, original, current)
 
-      -- Stage hunks one by one
       for _, hunk in ipairs(hunks) do
         local _, err = git_stager.stage_hunk(repo, 'file1.txt', hunk)
         assert(not err)

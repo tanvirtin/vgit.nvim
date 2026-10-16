@@ -33,7 +33,7 @@ describe('git_blame:', function()
 
       assert(not err, 'Error occurred: ' .. tostring(err))
       assert(blames, 'blames should not be nil')
-      eq(#blames, 3) -- 3 lines in file1.txt
+      eq(#blames, 3)
     end)
 
     it('should parse blame info correctly', function()
@@ -50,7 +50,6 @@ describe('git_blame:', function()
     end)
 
     it('should handle multi-author files', function()
-      -- Create second commit with different author
       test_repo.modify_file(repo, 'file1.txt', { 'line 1', 'modified by author 2', 'line 3' })
       test_repo.create_commit(repo, {
         files = { ['file1.txt'] = { 'line 1', 'modified by author 2', 'line 3' } },
@@ -63,13 +62,11 @@ describe('git_blame:', function()
       assert(not err)
       eq(#blames, 3)
 
-      -- Line 2 should have different author
       local authors = {}
       for _, blame in ipairs(blames) do
         authors[blame.lnum] = blame.author
       end
 
-      -- First and third lines should have same author, second should differ
       eq(authors[1], authors[3])
       assert(authors[2] ~= authors[1], 'Line 2 should have different author')
     end)
@@ -77,36 +74,30 @@ describe('git_blame:', function()
     it('should work with specific commit', function()
       local first_commit = test_repo.get_head_commit(repo)
 
-      -- Make another commit
       test_repo.modify_file(repo, 'file1.txt', { 'changed', 'line 2', 'line 3' })
       test_repo.create_commit(repo, {
         files = { ['file1.txt'] = { 'changed', 'line 2', 'line 3' } },
         message = 'Second commit',
       })
 
-      -- Blame at first commit should show original content
       local blames, err = git_blame.list(repo, 'file1.txt', first_commit)
 
       assert(not err)
       eq(#blames, 3)
-      -- All lines should have same commit hash (first commit)
       for _, blame in ipairs(blames) do
         eq(blame.commit_hash:sub(1, #first_commit), first_commit)
       end
     end)
 
     it('should handle files with merge commits', function()
-      -- Create a branch
       test_repo.create_branch(repo, 'feature')
 
-      -- Modify in branch
       test_repo.modify_file(repo, 'file1.txt', { 'branch change', 'line 2', 'line 3' })
       test_repo.create_commit(repo, {
         files = { ['file1.txt'] = { 'branch change', 'line 2', 'line 3' } },
         message = 'Branch commit',
       })
 
-      -- Go back to main and merge
       test_repo.checkout(repo, 'master')
       vim.fn.system({ 'git', '-C', repo, 'merge', 'feature', '--no-edit' })
 
@@ -122,7 +113,6 @@ describe('git_blame:', function()
       assert(not err)
       eq(#blames, 3)
 
-      -- Verify line numbers are sequential
       for i, blame in ipairs(blames) do
         eq(blame.lnum, i)
       end
@@ -207,7 +197,6 @@ describe('git_blame:', function()
       local blames, err = git_blame.list(repo, 'file1.txt')
 
       assert(not err)
-      -- Should strip angle brackets if present
       assert(not blames[1].author_mail:match('[<>]'), 'Email should not contain angle brackets')
     end)
 
@@ -257,7 +246,6 @@ describe('git_blame:', function()
     end)
 
     it('should handle different line numbers', function()
-      -- Create file with multiple commits
       local first_commit = test_repo.get_head_commit(repo)
 
       test_repo.modify_file(repo, 'file1.txt', { 'line 1', 'modified line 2', 'line 3' })
@@ -273,9 +261,7 @@ describe('git_blame:', function()
       assert(not err1)
       assert(not err2)
 
-      -- Line 1 should still be from first commit
       eq(blame1.commit_hash:sub(1, #first_commit), first_commit)
-      -- Line 2 should be from second commit
       eq(blame2.commit_hash:sub(1, #second_commit), second_commit)
     end)
 

@@ -138,7 +138,6 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
 
   local all_entries = {}
 
-  -- Staged file diffs
   if staged_fn_idx then
     local file_diffs = fetch_results[staged_fn_idx]
     if file_diffs then
@@ -155,7 +154,6 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
     end
   end
 
-  -- Unstaged file diffs
   if unstaged_fn_idx then
     local file_diffs = fetch_results[unstaged_fn_idx]
     if file_diffs then
@@ -172,7 +170,6 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
     end
   end
 
-  -- Conflict diffs
   for i, entry in ipairs(conflict_entries) do
     local result = fetch_results[conflict_start_idx + i - 1]
     if result and result[1] then

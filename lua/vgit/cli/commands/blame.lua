@@ -135,7 +135,6 @@ blame_command.execute = event.async(function(args)
 
   local opts = blame_command.parse_args(args)
 
-  -- TODO: Support for git blame options (e.g., -w, -C, -M)
   if #opts.flags > 0 then
     console.info('Flag options not yet supported')
     return

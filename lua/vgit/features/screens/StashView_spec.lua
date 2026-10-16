@@ -347,12 +347,11 @@ describe('StashView:', function()
       eq(1, call_count)
 
       view:_update_patch(make_commit('stash@{0}'))
-      eq(1, call_count) -- should not call diff again
+      eq(1, call_count)
     end)
 
     it('should not error when commit is nil', function()
       local view = StashView()
-      -- Should not error
       view:_update_patch(nil)
     end)
   end)
@@ -422,7 +421,7 @@ describe('StashView:', function()
       view._component_group = { unmount = function() end }
 
       view:destroy()
-      view:destroy() -- second call should not error
+      view:destroy()
     end)
 
     it('should set _destroyed to true', function()

@@ -27,35 +27,29 @@ describe('git_merge:', function()
 
   describe('merge', function()
     it('should merge a branch with fast-forward', function()
-      -- Create feature branch
       local _, err = test_repo.create_branch(repo, 'feature')
       assert.is_nil(err)
 
-      -- Add commit to feature
       _, err = test_repo.create_commit(repo, {
         files = { ['feature.txt'] = 'feature content' },
         message = 'Add feature',
       })
       assert.is_nil(err)
 
-      -- Go back to main
       _, err = test_repo.checkout(repo, 'master')
       if err then
         _, err = test_repo.checkout(repo, 'main')
       end
       assert.is_nil(err)
 
-      -- Merge feature (should fast-forward)
       _, err = git_merge.merge(repo:get_path(), 'feature')
       assert.is_nil(err)
 
-      -- Verify file exists
       local fs = require('vgit.core.fs')
       assert.is_true(fs.exists(repo:get_path() .. '/feature.txt'))
     end)
 
     it('should merge with --no-ff option', function()
-      -- Create and merge feature branch
       local _, err = test_repo.create_branch(repo, 'feature')
       assert.is_nil(err)
 
@@ -71,7 +65,6 @@ describe('git_merge:', function()
       end
       assert.is_nil(err)
 
-      -- Merge with no-ff
       _, err = git_merge.merge(repo:get_path(), 'feature', {
         no_ff = true,
         message = 'Merge feature branch',
@@ -101,11 +94,9 @@ describe('git_merge:', function()
       end
       assert.is_nil(err)
 
-      -- Squash merge
       _, err = git_merge.merge(repo:get_path(), 'feature', { squash = true })
       assert.is_nil(err)
 
-      -- Need to commit the squashed changes
       local index = repo:index()
       _, err = index:commit('Squashed feature')
       assert.is_nil(err)
@@ -122,7 +113,6 @@ describe('git_merge:', function()
 
   describe('merge with conflicts', function()
     before_each(function()
-      -- Create conflict scenario
       local _, err = test_repo.create_conflict(repo)
       assert.is_nil(err)
     end)
@@ -136,7 +126,6 @@ describe('git_merge:', function()
       local _, err = git_merge.abort(repo:get_path())
       assert.is_nil(err)
 
-      -- Verify merge is no longer in progress
       local in_progress = git_merge.in_progress(repo:get_path())
       assert.is_false(in_progress)
     end)
@@ -149,10 +138,8 @@ describe('git_merge:', function()
 
   describe('merge_base', function()
     it('should find merge base between commits', function()
-      -- Create two diverging branches
       local commit1 = test_repo.get_head_commit(repo)
 
-      -- Create branch A
       local _, err = test_repo.create_branch(repo, 'branch-a')
       assert.is_nil(err)
 
@@ -164,7 +151,6 @@ describe('git_merge:', function()
 
       local commit_a = test_repo.get_head_commit(repo)
 
-      -- Create branch B from base
       _, err = test_repo.checkout(repo, 'master')
       if err then
         _, err = test_repo.checkout(repo, 'main')
@@ -182,7 +168,6 @@ describe('git_merge:', function()
 
       local commit_b = test_repo.get_head_commit(repo)
 
-      -- Find merge base
       local base, base_err = git_merge.base(repo:get_path(), commit_a, commit_b)
       assert.is_nil(base_err)
       assert.is_not_nil(base)
@@ -194,7 +179,6 @@ describe('git_merge:', function()
     it('should check if commit is ancestor', function()
       local commit1 = test_repo.get_head_commit(repo)
 
-      -- Create another commit
       local _, err = test_repo.create_commit(repo, {
         files = { ['new.txt'] = 'new' },
         message = 'New commit',
@@ -203,11 +187,9 @@ describe('git_merge:', function()
 
       local commit2 = test_repo.get_head_commit(repo)
 
-      -- Check ancestry
       local is_ancestor = git_merge.is_ancestor(repo:get_path(), commit1, commit2)
       assert.is_true(is_ancestor)
 
-      -- Reverse should be false
       is_ancestor = git_merge.is_ancestor(repo:get_path(), commit2, commit1)
       assert.is_false(is_ancestor)
     end)

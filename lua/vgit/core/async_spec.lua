@@ -378,7 +378,6 @@ describe('async:', function()
 
     it('should preserve result ordering regardless of completion order', function()
       local result = nil
-      -- Simulate different completion times using vim.defer_fn
       local delayed = function(val, delay_ms)
         return async.wrap(function(cb)
           vim.defer_fn(function()

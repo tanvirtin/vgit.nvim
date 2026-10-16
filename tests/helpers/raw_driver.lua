@@ -214,29 +214,24 @@ function RawDriver.create_merge_commit(repo, opts)
   local base_file = opts.base_file or 'base.txt'
   local branch_file = opts.branch_file or 'branch.txt'
 
-  -- Create a branch from current HEAD
   local _, err = utils.git_exec({ 'git', '-C', repo, 'checkout', '-q', '-b', branch_name }, { check = true })
   if err then return nil, 'Failed to create branch: ' .. err end
 
-  -- Create a commit on the branch with a non-conflicting file
   _, err = RawDriver.create_commit(repo, {
     files = { [branch_file] = { 'branch content' } },
     message = opts.branch_message or 'Branch commit',
   })
   if err then return nil, err end
 
-  -- Go back to the original branch
   _, err = utils.git_exec({ 'git', '-C', repo, 'checkout', '-q', '-' }, { check = true })
   if err then return nil, 'Failed to checkout original branch: ' .. err end
 
-  -- Create a non-conflicting commit on the original branch
   _, err = RawDriver.create_commit(repo, {
     files = { [base_file] = { 'base content' } },
     message = opts.base_message or 'Base commit',
   })
   if err then return nil, err end
 
-  -- Merge the branch (should succeed cleanly)
   _, err = utils.git_exec({ 'git', '-C', repo, 'merge', branch_name, '--no-edit' }, { check = true })
   if err then return nil, 'Failed to merge: ' .. err end
 

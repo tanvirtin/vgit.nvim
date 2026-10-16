@@ -42,17 +42,15 @@ describe('git_show:', function()
     it('should retrieve file at specific commit', function()
       local first_commit = test_repo.get_head_commit(repo)
 
-      -- Modify file
       test_repo.create_commit(repo, {
         files = { ['file1.txt'] = { 'modified line 1', 'line 2', 'line 3' } },
         message = 'Modify file',
       })
 
-      -- Get file at first commit
       local lines, err = git_show.lines(repo, 'file1.txt', first_commit)
 
       assert(not err)
-      eq(lines[1], 'line 1') -- Should have original content
+      eq(lines[1], 'line 1')
     end)
 
     it('should default to empty string commit when nil', function()
@@ -171,7 +169,6 @@ describe('git_show:', function()
     it('should retrieve file at old commit', function()
       local commits = {}
 
-      -- Create multiple versions
       for i = 1, 5 do
         test_repo.modify_file(repo, 'file1.txt', { 'version ' .. i })
         test_repo.create_commit(repo, {
@@ -181,7 +178,6 @@ describe('git_show:', function()
         commits[i] = test_repo.get_head_commit(repo)
       end
 
-      -- Get file at version 2
       local lines, err = git_show.lines(repo, 'file1.txt', commits[2])
 
       assert(not err)
@@ -197,7 +193,6 @@ describe('git_show:', function()
 
       local lines, err = git_show.lines(repo, 'file1.txt', 'HEAD')
 
-      -- Should error because file doesn't exist at HEAD
       assert(err)
       assert(not lines)
     end)
@@ -205,14 +200,12 @@ describe('git_show:', function()
     it('should retrieve deleted files at old commit', function()
       local first_commit = test_repo.get_head_commit(repo)
 
-      -- Delete file
       test_repo.delete_file(repo, 'file1.txt', true)
       test_repo.create_commit(repo, {
         add_all = true,
         message = 'Delete file',
       })
 
-      -- Should still be able to get file at old commit
       local lines, err = git_show.lines(repo, 'file1.txt', first_commit)
 
       assert(not err)
@@ -276,19 +269,16 @@ describe('git_show:', function()
     it('should handle renamed files', function()
       local first_commit = test_repo.get_head_commit(repo)
 
-      -- Rename file
       vim.fn.system({ 'git', '-C', repo, 'mv', 'file1.txt', 'renamed.txt' })
       test_repo.create_commit(repo, {
         add_all = true,
         message = 'Rename file',
       })
 
-      -- Old name at old commit should work
       local lines_old, err1 = git_show.lines(repo, 'file1.txt', first_commit)
       assert(not err1)
       eq(#lines_old, 3)
 
-      -- New name at HEAD should work
       local lines_new, err2 = git_show.lines(repo, 'renamed.txt', 'HEAD')
       assert(not err2)
       eq(#lines_new, 3)
@@ -317,10 +307,8 @@ describe('git_show:', function()
     end)
 
     it('should handle commit with empty string', function()
-      -- Empty string should work (means index/working tree)
       local lines, err = git_show.lines(repo, 'file1.txt', '')
 
-      -- Should succeed and return file content
       assert(not err, 'Should not error: ' .. vim.inspect(err))
       assert(lines, 'Should return lines')
       eq(#lines, 3)
@@ -337,16 +325,13 @@ describe('git_show:', function()
     end)
 
     it('should handle files added in middle of history', function()
-      -- file1.txt exists from initial commit
       local first_commit = test_repo.get_head_commit(repo)
 
-      -- Add new file
       test_repo.create_commit(repo, {
         files = { ['file3.txt'] = { 'new file' } },
         message = 'Add file3',
       })
 
-      -- file3.txt should not exist at first commit
       local lines, err = git_show.lines(repo, 'file3.txt', first_commit)
 
       assert(err, 'Should error because file3.txt did not exist yet')
@@ -359,7 +344,6 @@ describe('git_show:', function()
         message = 'Modify file',
       })
 
-      -- HEAD~1 should give original version
       local lines, err = git_show.lines(repo, 'file1.txt', 'HEAD~1')
 
       assert(not err)
@@ -367,7 +351,6 @@ describe('git_show:', function()
     end)
 
     it('should preserve line ending differences', function()
-      -- This is tricky with git, but test that we get back what's stored
       test_repo.write_file(repo .. '/endings.txt', { 'line1', 'line2' })
       test_repo.stage(repo, 'endings.txt')
       test_repo.create_commit(repo, {

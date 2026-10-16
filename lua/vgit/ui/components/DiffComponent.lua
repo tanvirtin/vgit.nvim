@@ -71,7 +71,6 @@ function DiffComponent:build_diff_render_state(diff)
     line_numbers, lines_changes = self:calculate_unified_line_numbers(diff)
   end
 
-  -- Pre-pad line number text so the viewport renderer just reads them
   if #line_numbers > 0 then
     local max_digits = string.len(tostring(#line_numbers)) + 1
     local pad_fmt = '%' .. max_digits .. 's'
@@ -97,8 +96,6 @@ function DiffComponent:render()
 
   self:mark_viewport_dirty()
 
-  -- Only clear signs; line numbers and text extmarks use stable IDs
-  -- and get overwritten in-place by the viewport renderer
   self:with_element(function(el)
     el:clear_extmark_signs()
   end)
@@ -124,7 +121,6 @@ function DiffComponent:render()
     el:enable_cursorline()
   end)
 
-  -- Attach once — the callback reads from self.state which we just updated
   self:_ensure_renderer_attached()
   self:render_folds()
 end

@@ -125,12 +125,10 @@ describe('Buffer:', function()
     it('should create a new buffer with valid bufnr', function()
       buffer = Buffer():create(false, true)
 
-      -- Verify buffer was created with a valid ID
       assert.is_number(buffer.bufnr, 'bufnr should be a number')
       assert.is_true(buffer.bufnr > 0, 'bufnr should be positive')
       assert.are_not.same(buffer.bufnr, bufnr, 'new buffer should have different ID')
 
-      -- Verify the buffer actually exists in Neovim
       assert.is_true(vim.api.nvim_buf_is_valid(buffer.bufnr), 'buffer should exist in Neovim')
     end)
   end)
@@ -221,11 +219,9 @@ describe('Buffer:', function()
 
   describe('modifiable caching in set_lines', function()
     it('should use cached modifiable state', function()
-      -- Set modifiable to true explicitly
       buffer:set_option('modifiable', true)
       assert.is_true(buffer._modifiable)
 
-      -- set_lines should work without calling nvim_buf_get_option
       buffer:set_lines({ 'test' })
       eq({ 'test' }, buffer:get_lines())
     end)
@@ -234,16 +230,13 @@ describe('Buffer:', function()
       buffer:set_option('modifiable', false)
       assert.is_false(buffer._modifiable)
 
-      -- set_lines should toggle modifiable around the set_lines call
       buffer:set_lines({ 'test' })
       eq({ 'test' }, buffer:get_lines())
     end)
 
     it('should lazily determine modifiable when not cached', function()
-      -- _modifiable starts as nil
       assert.is_nil(buffer._modifiable)
 
-      -- set_lines should query and cache
       buffer:set_lines({ 'hello' })
       assert.is_not_nil(buffer._modifiable)
       eq({ 'hello' }, buffer:get_lines())

@@ -2,7 +2,6 @@ local Element = require('vgit.ui.elements.Element')
 
 local eq = assert.are.same
 
--- Helper to create an element with valid floating window config
 local function create_element(overrides)
   overrides = overrides or {}
   return Element(vim.tbl_deep_extend('force', {
@@ -29,7 +28,6 @@ end
 
 describe('Element:', function()
   after_each(function()
-    -- Clean up all buffers/windows created during tests
     pcall(function()
       for _, win_id in ipairs(vim.api.nvim_list_wins()) do
         local config = vim.api.nvim_win_get_config(win_id)
@@ -314,7 +312,6 @@ describe('Element:', function()
       local el = create_element()
       el:mount()
       el:enable_cursorline()
-      -- Verify the option was set via window
       local ok, value = pcall(vim.api.nvim_get_option_value, 'cursorline', { win = el:get_window().win_id })
       if ok then assert.is_true(value) end
     end)

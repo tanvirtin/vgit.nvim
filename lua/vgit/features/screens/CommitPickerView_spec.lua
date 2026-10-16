@@ -1,6 +1,5 @@
 local eq = assert.are.same
 
--- Clear lazy cache and module cache to ensure fresh mocks
 package.loaded['vgit.core.lazy'] = nil
 package.loaded['vgit.features.screens.CommitPickerView'] = nil
 package.loaded['vgit.ui.components.SearchComponent'] = nil
@@ -13,7 +12,6 @@ package.loaded['vgit.git.GitTree'] = nil
 package.loaded['vgit.settings.scene'] = nil
 package.loaded['vgit.ui.display_service'] = nil
 
--- Stub modules before requiring CommitPickerView
 local display_service_show_diff_data = nil
 package.loaded['vgit.ui.display_service'] = {
   show_diff = function(data)
@@ -140,7 +138,6 @@ package.loaded['vgit.ui.Layout'] = {
 
 local CommitPickerView = require('vgit.features.screens.CommitPickerView')
 
--- Mock _render on the View prototype so CommitPickerView instances capture the call
 local original_render = CommitPickerView._render
 CommitPickerView._render = function(self, config)
   view_render_called = true
@@ -476,7 +473,6 @@ describe('CommitPickerView:', function()
       view:destroy()
       assert.is_true(view._destroyed)
 
-      -- Second call should be a no-op
       assert.has_no.errors(function()
         view:destroy()
       end)

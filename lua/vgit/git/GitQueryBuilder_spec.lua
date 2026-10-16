@@ -472,7 +472,6 @@ describe('GitQueryBuilder:', function()
     it('should auto-set command to raw', function()
       local builder = GitQueryBuilder('/my/repo')
       builder:raw_arg('rev-parse')
-      -- Should not error since command is set
       assert.has_no.errors(function()
         builder:raw_arg('--abbrev-ref')
       end)
@@ -482,7 +481,7 @@ describe('GitQueryBuilder:', function()
       local builder = GitQueryBuilder('/my/repo')
       builder:raw_arg(nil)
       local args = builder:to_args()
-      assert.are.equal(2, #args) -- only -C and repo
+      assert.are.equal(2, #args)
     end)
 
     it('should error on empty string', function()
@@ -545,7 +544,6 @@ describe('GitQueryBuilder:', function()
     it('should skip validation for raw commands', function()
       local builder = GitQueryBuilder('/my/repo')
       builder:raw_arg('rev-parse')
-      -- execute would call gitcli.run which is async, so we test _validate_query directly
       assert.has_no.errors(function()
         builder:_validate_query()
       end)
@@ -617,7 +615,6 @@ describe('GitQueryBuilder:', function()
       local builder = GitQueryBuilder('/my/repo'):log():paginate(5, 10):file('src/main.lua')
       local args = builder:to_args()
 
-      -- Should contain: -C, /my/repo, --no-pager, log, --color=never, -n, 5, --skip=10, --, src/main.lua
       assert.are.equal('-C', args[1])
       assert.are.equal('/my/repo', args[2])
       local cmd = builder:to_command()

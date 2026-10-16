@@ -15,7 +15,6 @@ function GitStatus:constructor(status)
   local old_filename = nil
   local filename = raw_path
 
-  -- Renames and copies use "old -> new" format
   local arrow_pos = raw_path:find(' -> ', 1, true)
   if arrow_pos then
     old_filename = raw_path:sub(1, arrow_pos - 1)

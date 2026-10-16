@@ -80,11 +80,9 @@ describe('DepthTree:', function()
         { id = 1, status = { filename = 'src' .. sep .. 'init.lua' }, type = 'changed' },
       })
       local result = tree:value()
-      -- Should have 'src' folder at root
       assert.are.equal(1, #result)
       assert.are.equal('src', result[1].value)
       assert.is_not_nil(result[1].items)
-      -- With 'init.lua' inside
       assert.are.equal(1, #result[1].items)
       assert.are.equal('init.lua', result[1].items[1].value)
     end)
@@ -138,10 +136,8 @@ describe('DepthTree:', function()
       })
       tree:sort()
       local result = tree:value()
-      -- First item should be the 'src' folder
       assert.is_not_nil(result[1].items)
       assert.are.equal('src', result[1].value)
-      -- Then files
       assert.is_nil(result[2].items)
       assert.is_nil(result[3].items)
     end)
@@ -192,7 +188,6 @@ describe('DepthTree:', function()
       tree:from_entries({
         { id = 1, status = { filename = 'src' .. sep .. 'init.lua' }, type = 'changed' },
       })
-      -- The 'src' folder has path = sep .. 'src'
       local parent = tree:find_parent_node({ parent = sep .. 'src' })
       assert.is_not_nil(parent)
       assert.are.equal('src', parent.value)

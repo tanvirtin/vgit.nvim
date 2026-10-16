@@ -13,7 +13,6 @@ function GitWorkingTree:constructor(repository)
   if not repository then error('GitWorkingTree requires a repository') end
 
   local root_path = repository:get_path()
-  -- Strip trailing slashes to prevent double-slash in path concatenation
   if root_path and #root_path > 1 then root_path = root_path:gsub('/+$', '') end
 
   local tree = {
@@ -145,7 +144,6 @@ function GitWorkingTree:relative_path(absolute_path)
   if not absolute_path then return nil end
 
   local relative = fs.make_relative(self._root_path, absolute_path)
-  -- make_relative returns absolute_path unchanged if it doesn't match
   if relative == absolute_path then return nil end
   return relative
 end

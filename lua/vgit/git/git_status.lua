@@ -48,8 +48,6 @@ function git_status.tree(reponame, opts)
     local status, path = line:match('(%w+)%s+(.+)')
     if not status then goto continue end
 
-    -- Normalize rename/copy status (e.g., R100 -> R, C100 -> C)
-    -- and convert tab-separated paths to arrow format for GitStatus
     local status_char = status:sub(1, 1)
     if (status_char == 'R' or status_char == 'C') and #status > 1 then
       local old_path, new_path = path:match('(.+)\t(.+)')

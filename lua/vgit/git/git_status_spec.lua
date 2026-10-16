@@ -95,7 +95,6 @@ describe('git_status:', function()
       assert(not err)
       eq(#files, 3)
 
-      -- Verify all statuses
       local statuses = {}
       for _, file in ipairs(files) do
         statuses[file.filename] = file.value
@@ -154,21 +153,18 @@ describe('git_status:', function()
 
   describe('tree()', function()
     it('detects changes between commits', function()
-      -- Create first commit
       test_repo.create_commit(repo, {
         files = { ['new1.txt'] = { 'first' } },
         message = 'First commit',
       })
       local first_commit = test_repo.get_head_commit(repo, false)
 
-      -- Create second commit
       test_repo.create_commit(repo, {
         files = { ['new2.txt'] = { 'second' } },
         message = 'Second commit',
       })
       local second_commit = test_repo.get_head_commit(repo, false)
 
-      -- Get tree diff
       local files, err = git_status.tree(repo, {
         commit_hash = second_commit,
         parent_hash = first_commit,
@@ -183,7 +179,6 @@ describe('git_status:', function()
     it('detects multiple file changes in single commit', function()
       local initial = test_repo.get_head_commit(repo, false)
 
-      -- Make multiple changes
       test_repo.modify_file(repo, 'file1.txt', { 'changed' })
       test_repo.write_file(repo .. '/new.txt', { 'new' })
       test_repo.stage(repo, '.')
@@ -212,7 +207,6 @@ describe('git_status:', function()
     end)
 
     it('handles initial commit with empty parent', function()
-      -- Create new repo with one commit
       local new_repo = test_repo.create_repo({
         initial_commit = true,
         files = { ['initial.txt'] = { 'content' } },

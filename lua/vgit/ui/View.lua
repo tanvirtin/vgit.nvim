@@ -377,8 +377,6 @@ end
 
 function View:on_git_change() end
 
--- Keymap registration helpers (Command Pattern)
-
 function View:_register_keymap(component, mode, key, handler)
   local fn, cleanup = event.debounce_async(handler, self.DEBOUNCE_MS or 100)
   table.insert(self._debounce_cleanups, cleanup)
@@ -397,8 +395,6 @@ function View:_confirm(prompt)
   decision = decision:lower()
   return decision == 'yes' or decision == 'y'
 end
-
--- Hunk navigation template methods (override in subclasses)
 
 function View:get_navigatable_component()
   if self._layout_type == 'split' then return self._current_component end
@@ -474,8 +470,6 @@ function View:hunk_down()
   local index, count = self:get_current_mark_index()
   if index then statusline.set_hunk({ index = index, count = count }) end
 end
-
--- Diff component factory method
 
 function View:_create_diff_component(opts, layout_type)
   local DiffComponent = require('vgit.ui.components.DiffComponent')

@@ -14,7 +14,6 @@ local build_file_diff_entries = require('vgit.cli.commands.build_file_diff_entri
 local diff_command = {}
 
 local function format_ref_for_display(ref)
-  -- Only truncate if it looks like a full commit hash (40 hex chars)
   if ref:match('^[a-f0-9]+$') and #ref == 40 then return ref:sub(1, 7) end
   return ref
 end
@@ -36,55 +35,39 @@ function diff_command.parse_args(args)
     if arg == '--staged' or arg == '--cached' then
       opts.staged = true
     elseif arg == '--buffer' then
-      -- --buffer flag (defaults to current buffer)
       opts.buffer_num = 0
     elseif arg:match('^%-%-buffer=') then
-      -- --buffer=N flag
       local buf_str = arg:match('^%-%-buffer=(.+)$')
       opts.buffer_num = tonumber(buf_str) or 0
     elseif arg == '--' then
-      -- Everything after -- is a file path
       opts.explicit_files = true
       for j = i + 1, #args do
         table.insert(opts.files, args[j])
       end
       break
     elseif arg:match('^%-%-') then
-      -- Other flags (--word-diff, --stat, etc.)
       table.insert(opts.flags, arg)
     elseif arg:match('^%-') then
-      -- Short flags (-w, -p, etc.)
       table.insert(opts.flags, arg)
     elseif arg:match('%.%.%.') then
-      -- Triple-dot range: A...B means (merge-base A B)..B
       table.insert(opts.refs, arg)
     elseif arg:match('%.%.') then
-      -- Double-dot range: A..B means A to B
       table.insert(opts.refs, arg)
     elseif arg:match('^HEAD') or arg:match('^@') then
-      -- HEAD variations: HEAD, HEAD~1, HEAD^, @{upstream}
       table.insert(opts.refs, arg)
     elseif arg:match('^[a-f0-9]+$') and #arg >= 7 and #arg <= 40 then
-      -- Looks like a commit hash (7-40 chars)
       table.insert(opts.refs, arg)
     elseif arg:match('^[a-zA-Z][a-zA-Z0-9_/-]*$') then
-      -- Could be branch name OR file without extension
-      -- Check for path separator to clarify
       if arg:match('/') then
-        -- Has slash - could be file path or remote branch (origin/main)
         if arg:match('^origin/') or arg:match('^upstream/') then
-          -- Remote branch
           table.insert(opts.refs, arg)
         else
-          -- File path with directory
           table.insert(opts.files, arg)
         end
       else
-        -- No slash - ambiguous (Makefile, README, main, feature)
         table.insert(opts.ambiguous, arg)
       end
     else
-      -- Assume it's a file path
       table.insert(opts.files, arg)
     end
   end
@@ -130,7 +113,7 @@ diff_command.execute = event.async(function(args)
     opts.cursor_line = window:get_lnum()
 
     table.insert(opts.files, filename)
-    opts.buffer_num = nil -- Clear to avoid confusion downstream
+    opts.buffer_num = nil
   end
 
   if opts.ambiguous and #opts.ambiguous > 0 then
@@ -166,7 +149,6 @@ diff_command.execute = event.async(function(args)
     opts.compare_ref = compare_ref
   end
 
-  -- TODO: Support for git diff output flags (e.g., --word-diff, --stat)
   if #opts.flags > 0 then
     console.info('Flag options not yet supported')
     return
@@ -180,7 +162,6 @@ diff_command.execute = event.async(function(args)
     return
   end
 
-  -- Get layout preference from scene setting
   opts.layout_type = scene_setting:get('diff_preference') or 'unified'
 
   local repo_path = repo:get_path()
@@ -195,9 +176,7 @@ diff_command.execute = event.async(function(args)
     local diff
     local old_filename = nil
 
-    -- Check if comparing refs or working tree
     if opts.base_ref and opts.compare_ref then
-      -- Ref comparison: VGit diff <file> HEAD^2..HEAD or HEAD^2 HEAD
       diff = repo:diff({
         type = 'range',
         filename = filename,
@@ -206,7 +185,6 @@ diff_command.execute = event.async(function(args)
         layout_type = opts.layout_type,
       })
     elseif opts.base_ref then
-      -- Single ref: VGit diff <file> HEAD^2 (compare HEAD^2 to HEAD)
       diff = repo:diff({
         type = 'range',
         filename = filename,
@@ -215,17 +193,13 @@ diff_command.execute = event.async(function(args)
         layout_type = opts.layout_type,
       })
     else
-      -- Working tree diff: VGit diff <file> [--staged]
       local from, to
       if opts.staged then
-        -- Staged changes: HEAD vs index (what's been git add'd)
         from = 'HEAD'
         to = 'index'
-        -- Look up old_filename from git status for renames
         local file_status = repo:file_status(filename)
         if file_status and file_status.old_filename then old_filename = file_status.old_filename end
       else
-        -- Unstaged changes: index vs disk (working tree changes)
         from = 'index'
         to = 'disk'
       end
@@ -240,8 +214,6 @@ diff_command.execute = event.async(function(args)
     end
 
     if diff then
-      -- is_live indicates whether staging/unstaging operations are allowed
-      -- Only true for working tree diffs (HEAD<>index or index<>disk)
       local is_live = not opts.base_ref
 
       data = {
@@ -256,12 +228,9 @@ diff_command.execute = event.async(function(args)
       }
     end
   elseif opts.base_ref then
-    -- Historical diff between refs with no specific file
-    -- VGit diff HEAD~1 or VGit diff HEAD~2..HEAD~1
     local from_ref = opts.base_ref
     local to_ref = opts.compare_ref or 'HEAD'
 
-    -- Get files that changed between the refs using git diff-tree
     local files, files_err = repo:diff_tree({
       commit_hash = to_ref,
       parent_hash = from_ref,
@@ -297,16 +266,11 @@ diff_command.execute = event.async(function(args)
   else
     data, err = repo:status(opts)
     if not err and data then
-      -- Filter entries based on --staged flag
-      -- git diff: shows only unstaged changes
-      -- git diff --staged: shows only staged changes
       local filtered_entries = {}
       for _, entry in ipairs(data.entries) do
         if opts.staged then
-          -- Only show staged changes
           if entry.title == 'Staged Changes' then table.insert(filtered_entries, entry) end
         else
-          -- Only show unstaged changes (and merge conflicts)
           if entry.title == 'Changes' or entry.title == 'Merge Changes' then table.insert(filtered_entries, entry) end
         end
       end

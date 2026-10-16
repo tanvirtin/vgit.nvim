@@ -86,11 +86,9 @@ describe('git_conflict:', function()
 
       eq(#conflicts, 2)
 
-      -- First conflict
       eq(conflicts[1].current.top, 2)
       eq(conflicts[1].incoming.bot, 6)
 
-      -- Second conflict
       eq(conflicts[2].current.top, 8)
       eq(conflicts[2].incoming.bot, 12)
     end)
@@ -157,10 +155,8 @@ describe('git_conflict:', function()
         '<<<<<<< HEAD',
         'current',
         '=======',
-        -- Missing >>>>>>> marker
       })
 
-      -- Should not parse incomplete conflict
       eq(#conflicts, 0)
     end)
 
@@ -204,10 +200,8 @@ describe('git_conflict:', function()
 
       eq(#conflicts, 2)
 
-      -- First conflict should have no ancestor
       eq(conflicts[1].ancestor.top, nil)
 
-      -- Second conflict should have ancestor
       assert(conflicts[2].ancestor.top)
     end)
   end)
@@ -221,7 +215,6 @@ describe('git_conflict:', function()
     end)
 
     it('should detect MERGE state from git directory', function()
-      --Create a merge conflict scenario
       test_repo.create_branch(repo, 'feature')
       test_repo.modify_file(repo, 'file1.txt', { 'feature change' })
       test_repo.stage(repo, 'file1.txt')
@@ -243,19 +236,16 @@ describe('git_conflict:', function()
       local status, err = git_conflict.status(repo)
 
       assert(not err)
-      -- May be MERGE or nil depending on whether merge conflicted
       assert(status == 'MERGE' or status == nil)
     end)
 
     it('should return CHERRY-PICK during cherry-pick conflict', function()
-      -- Create commits
       test_repo.create_commit(repo, {
         files = { ['file3.txt'] = { 'content' } },
         message = 'Commit to cherry-pick',
       })
       local commit_to_pick = test_repo.get_head_commit(repo)
 
-      -- Create another branch
       test_repo.create_branch(repo, 'other')
       test_repo.modify_file(repo, 'file3.txt', { 'conflicting' })
       test_repo.stage(repo, 'file3.txt')
@@ -264,13 +254,11 @@ describe('git_conflict:', function()
         message = 'Conflicting commit',
       })
 
-      -- Try cherry-pick (may conflict)
       vim.fn.system({ 'git', '-C', repo, 'cherry-pick', commit_to_pick })
 
       local status, err = git_conflict.status(repo)
 
       assert(not err)
-      -- May be CHERRY-PICK or nil depending on if conflict occurred
       assert(status == 'CHERRY-PICK' or status == nil)
     end)
 
@@ -292,7 +280,6 @@ describe('git_conflict:', function()
     end)
 
     it('should detect conflict state for files', function()
-      -- Create a merge scenario
       test_repo.create_branch(repo, 'feature')
       test_repo.modify_file(repo, 'file1.txt', { 'feature line' })
       test_repo.stage(repo, 'file1.txt')
@@ -314,12 +301,10 @@ describe('git_conflict:', function()
       local has_conflict, err = git_conflict.has_conflict(repo, 'file1.txt')
 
       assert(not err)
-      -- May be true or false depending on whether merge created conflict
       assert(has_conflict == true or has_conflict == false)
     end)
 
     it('should return false for non-conflicted file during merge', function()
-      -- Create a merge conflict on file1.txt
       test_repo.create_branch(repo, 'feature')
       test_repo.modify_file(repo, 'file1.txt', { 'feature' })
       test_repo.stage(repo, 'file1.txt')
@@ -338,7 +323,6 @@ describe('git_conflict:', function()
 
       vim.fn.system({ 'git', '-C', repo, 'merge', 'feature' })
 
-      -- file2.txt should not have conflict
       local has_conflict, err = git_conflict.has_conflict(repo, 'file2.txt')
 
       assert(not err)
@@ -364,7 +348,6 @@ describe('git_conflict:', function()
 
   describe('integration scenarios', function()
     it('should work with conflict detection workflow', function()
-      -- Create merge scenario
       test_repo.create_branch(repo, 'feature')
       test_repo.modify_file(repo, 'file1.txt', { 'feature content' })
       test_repo.stage(repo, 'file1.txt')
@@ -383,19 +366,15 @@ describe('git_conflict:', function()
 
       vim.fn.system({ 'git', '-C', repo, 'merge', 'feature' })
 
-      -- Check status (may or may not be in MERGE state)
       local _, err1 = git_conflict.status(repo)
       assert(not err1)
 
-      -- Check file conflict state
       local has_conflict, err2 = git_conflict.has_conflict(repo, 'file1.txt')
       assert(not err2)
 
-      -- If merge created conflict markers, we can parse them
       if has_conflict then
         local lines = vim.fn.readfile(repo .. '/file1.txt')
         local conflicts = git_conflict.parse(lines)
-        -- Should have parsed conflicts if markers exist
         assert(conflicts)
       end
     end)

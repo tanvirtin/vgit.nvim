@@ -413,7 +413,7 @@ describe('FileDiffView:', function()
 
       it('should return correct index when cursor inside a mark', function()
         local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 }, { top = 20, bot = 25 } }
-        setup_mock_diff(marks, 12) -- inside second mark
+        setup_mock_diff(marks, 12)
         local index, total = view:get_current_mark_index()
         eq(2, index)
         eq(3, total)
@@ -421,7 +421,7 @@ describe('FileDiffView:', function()
 
       it('should return previous index when cursor between marks', function()
         local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
-        setup_mock_diff(marks, 7) -- between marks
+        setup_mock_diff(marks, 7)
         local index, total = view:get_current_mark_index()
         eq(1, index)
         eq(2, total)
@@ -429,7 +429,7 @@ describe('FileDiffView:', function()
 
       it('should return last index when cursor after all marks', function()
         local marks = { { top = 1, bot = 5 }, { top = 10, bot = 15 } }
-        setup_mock_diff(marks, 50) -- after all marks
+        setup_mock_diff(marks, 50)
         local index, total = view:get_current_mark_index()
         eq(2, index)
         eq(2, total)
@@ -445,7 +445,7 @@ describe('FileDiffView:', function()
 
       it('should return correct index at mark boundary (top)', function()
         local marks = { { top = 5, bot = 10 } }
-        setup_mock_diff(marks, 5) -- exactly at top
+        setup_mock_diff(marks, 5)
         local index, total = view:get_current_mark_index()
         eq(1, index)
         eq(1, total)
@@ -453,7 +453,7 @@ describe('FileDiffView:', function()
 
       it('should return correct index at mark boundary (bot)', function()
         local marks = { { top = 5, bot = 10 } }
-        setup_mock_diff(marks, 10) -- exactly at bot
+        setup_mock_diff(marks, 10)
         local index, total = view:get_current_mark_index()
         eq(1, index)
         eq(1, total)
@@ -464,7 +464,7 @@ describe('FileDiffView:', function()
       it('should return early if diff_component is nil', function()
         setup_mock_diff({}, 1)
         view._diff_component = nil
-        view:hunk_down() -- should not error
+        view:hunk_down()
       end)
 
       it('should return early if diff_component is invalid', function()
@@ -472,7 +472,7 @@ describe('FileDiffView:', function()
         mock_diff.is_valid = function()
           return false
         end
-        view:hunk_down() -- should not error
+        view:hunk_down()
       end)
 
       it('should delegate to diff_component:hunk_down with alignment settings', function()
@@ -515,7 +515,7 @@ describe('FileDiffView:', function()
       it('should return early if diff_component is nil', function()
         setup_mock_diff({}, 1)
         view._diff_component = nil
-        view:hunk_up() -- should not error
+        view:hunk_up()
       end)
 
       it('should return early if diff_component is invalid', function()
@@ -523,7 +523,7 @@ describe('FileDiffView:', function()
         mock_diff.is_valid = function()
           return false
         end
-        view:hunk_up() -- should not error
+        view:hunk_up()
       end)
 
       it('should delegate to diff_component:hunk_up with alignment settings', function()
@@ -582,7 +582,6 @@ describe('FileDiffView:', function()
 
       diff_invariants.assert_unified_diff(diff)
 
-      -- Verify the diff has the shape FileDiffView:create expects
       assert.is_truthy(diff.lines)
       assert.is_truthy(diff.marks)
       assert.is_truthy(diff.hunks)
@@ -596,7 +595,6 @@ describe('FileDiffView:', function()
 
       diff_invariants.assert_split_diff(diff)
 
-      -- Verify the split structure FileDiffView uses
       assert.is_truthy(diff.current_lines)
       assert.is_truthy(diff.previous_lines)
       eq(#diff.current_lines, #diff.previous_lines)

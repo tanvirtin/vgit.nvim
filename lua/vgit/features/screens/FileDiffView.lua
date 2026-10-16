@@ -354,7 +354,6 @@ function FileDiffView:setup_keymaps()
   self:_setup_quit_keymap()
   self:_setup_hunk_navigation_keymaps()
 
-  -- Only set up staging/unstaging keymaps for live diffs (not historical)
   if self._opts.is_live then
     local stage_key = keymap.get_key(diff_keymaps.stage)
     if stage_key then

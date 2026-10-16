@@ -114,9 +114,6 @@ describe('GitIndex:', function()
       if repo then test_repo.cleanup(repo) end
     end)
 
-    -- -----------------------------------------------------------------------
-    -- is_clean
-    -- -----------------------------------------------------------------------
     describe('is_clean', function()
       it('should return true for a fresh repo after commit', function()
         local index = GitIndex(make_repo(repo))
@@ -147,9 +144,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- status
-    -- -----------------------------------------------------------------------
     describe('status', function()
       it('should return empty list for clean repo', function()
         local index = GitIndex(make_repo(repo))
@@ -181,9 +175,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- file_status
-    -- -----------------------------------------------------------------------
     describe('file_status', function()
       it('should return status for a specific modified file', function()
         test_repo.modify_file(repo, 'file1.txt', { 'changed' })
@@ -205,9 +196,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- add
-    -- -----------------------------------------------------------------------
     describe('add', function()
       it('should stage a modified file', function()
         test_repo.modify_file(repo, 'file1.txt', { 'modified content' })
@@ -231,7 +219,6 @@ describe('GitIndex:', function()
         local staged, _ = index:staged_files()
         eq(1, #staged)
 
-        -- modify another file and add it
         test_repo.modify_file(repo, 'file2.txt', { 'also modified' })
         index:add('file2.txt')
 
@@ -240,9 +227,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- add_all
-    -- -----------------------------------------------------------------------
     describe('add_all', function()
       it('should stage all modified files', function()
         test_repo.modify_file(repo, 'file1.txt', { 'changed one' })
@@ -261,14 +245,10 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- staged_files / unstaged_files
-    -- -----------------------------------------------------------------------
     describe('staged_files', function()
       it('should return only staged files', function()
         test_repo.modify_file(repo, 'file1.txt', { 'staged change' })
         test_repo.modify_file(repo, 'file2.txt', { 'unstaged change' })
-        -- Stage only file1
         test_repo.stage(repo, { 'file1.txt' })
 
         local index = GitIndex(make_repo(repo))
@@ -300,7 +280,6 @@ describe('GitIndex:', function()
         assert.is_nil(err1)
         eq(1, #staged1)
 
-        -- Second call should also return staged files
         local staged2, err2 = index:staged_files()
         assert.is_nil(err2)
         eq(1, #staged2)
@@ -345,9 +324,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- has_staged_changes / has_unstaged_changes
-    -- -----------------------------------------------------------------------
     describe('has_staged_changes', function()
       it('should return true when staged files exist', function()
         test_repo.modify_file(repo, 'file1.txt', { 'modified' })
@@ -410,9 +386,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- remove
-    -- -----------------------------------------------------------------------
     describe('remove', function()
       it('should unstage a staged file', function()
         test_repo.modify_file(repo, 'file1.txt', { 'changed' })
@@ -420,11 +393,9 @@ describe('GitIndex:', function()
 
         local index = GitIndex(make_repo(repo))
 
-        -- Confirm it is staged
         local has_before, _ = index:has_staged_changes()
         eq(true, has_before)
 
-        -- Remove (unstage) it
         local result, err = index:remove('file1.txt')
         assert.is_nil(err)
         eq(true, result)
@@ -433,7 +404,6 @@ describe('GitIndex:', function()
         assert.is_nil(has_err)
         eq(false, has_after)
 
-        -- But unstaged changes should still exist
         local has_unstaged, unstaged_err = index:has_unstaged_changes()
         assert.is_nil(unstaged_err)
         eq(true, has_unstaged)
@@ -454,9 +424,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- reset
-    -- -----------------------------------------------------------------------
     describe('reset', function()
       it('should unstage all staged files', function()
         test_repo.modify_file(repo, 'file1.txt', { 'changed one' })
@@ -465,11 +432,9 @@ describe('GitIndex:', function()
 
         local index = GitIndex(make_repo(repo))
 
-        -- Confirm both are staged
         local staged_before, _ = index:staged_files()
         eq(2, #staged_before)
 
-        -- Reset
         local result, err = index:reset()
         assert.is_nil(err)
         eq(true, result)
@@ -478,16 +443,12 @@ describe('GitIndex:', function()
         assert.is_nil(staged_err)
         eq(0, #staged_after)
 
-        -- But unstaged changes should still exist
         local unstaged, unstaged_err = index:unstaged_files()
         assert.is_nil(unstaged_err)
         eq(2, #unstaged)
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- commit
-    -- -----------------------------------------------------------------------
     describe('commit', function()
       it('should commit staged changes and leave repo clean', function()
         test_repo.modify_file(repo, 'file1.txt', { 'committed change' })
@@ -499,7 +460,6 @@ describe('GitIndex:', function()
         assert.is_nil(err)
         eq(true, result)
 
-        -- After commit, repo should be clean
         local clean, clean_err = index:is_clean()
         assert.is_nil(clean_err)
         eq(true, clean)
@@ -530,9 +490,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- can_commit
-    -- -----------------------------------------------------------------------
     describe('can_commit', function()
       it('should return true when staged changes exist', function()
         test_repo.modify_file(repo, 'file1.txt', { 'modified' })
@@ -564,9 +521,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- staged_hunks / unstaged_hunks
-    -- -----------------------------------------------------------------------
     describe('staged_hunks', function()
       it('should return hunks for a staged file', function()
         test_repo.modify_file(repo, 'file1.txt', { 'changed line one', 'line two', 'line three' })
@@ -613,9 +567,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- commit_dry_run
-    -- -----------------------------------------------------------------------
     describe('commit_dry_run', function()
       it('should return output without making a commit', function()
         test_repo.modify_file(repo, 'file1.txt', { 'changed' })
@@ -628,16 +579,12 @@ describe('GitIndex:', function()
         assert.is_not_nil(result)
         assert.is_true(#result > 0)
 
-        -- The dry run should not actually commit; staging should remain
         local has_staged, staged_err = index:has_staged_changes()
         assert.is_nil(staged_err)
         eq(true, has_staged)
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- staged_files always re-fetches
-    -- -----------------------------------------------------------------------
     describe('staged_files freshness', function()
       it('should reflect add changes immediately', function()
         test_repo.modify_file(repo, 'file1.txt', { 'modified' })
@@ -671,9 +618,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- unmerged_files
-    -- -----------------------------------------------------------------------
     describe('unmerged_files', function()
       it('should return empty list when no conflicts exist', function()
         local index = GitIndex(make_repo(repo))
@@ -684,9 +628,6 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- add_hunk / remove_hunk integration
-    -- -----------------------------------------------------------------------
     describe('add_hunk', function()
       it('should stage a specific hunk', function()
         test_repo.modify_file(repo, 'file1.txt', { 'changed line one', 'line two', 'line three' })
@@ -700,7 +641,6 @@ describe('GitIndex:', function()
         assert.is_nil(add_err)
         eq(true, result)
 
-        -- Verify it was staged
         local has, has_err = index:has_staged_changes()
         assert.is_nil(has_err)
         eq(true, has)
@@ -721,17 +661,12 @@ describe('GitIndex:', function()
         assert.is_nil(rm_err)
         eq(true, result)
 
-        -- Verify it was unstaged
-
         local has, has_err = index:has_staged_changes()
         assert.is_nil(has_err)
         eq(false, has)
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- file_status edge cases
-    -- -----------------------------------------------------------------------
     describe('file_status edge cases', function()
       it('should return status for a deleted file', function()
         test_repo.delete_file(repo, 'file1.txt')
@@ -756,16 +691,11 @@ describe('GitIndex:', function()
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- commit preserves unstaged changes
-    -- -----------------------------------------------------------------------
     describe('commit edge cases', function()
       it('should preserve unstaged changes on same file after commit', function()
-        -- First modification - stage it
         test_repo.modify_file(repo, 'file1.txt', { 'staged change' })
         test_repo.stage(repo, { 'file1.txt' })
 
-        -- Second modification - don't stage
         test_repo.modify_file(repo, 'file1.txt', { 'unstaged change on top' })
 
         local index = GitIndex(make_repo(repo))
@@ -774,59 +704,45 @@ describe('GitIndex:', function()
         assert.is_nil(err)
         eq(true, result)
 
-        -- After commit, there should still be unstaged changes
         local has_unstaged, unstaged_err = index:has_unstaged_changes()
         assert.is_nil(unstaged_err)
         eq(true, has_unstaged)
       end)
     end)
 
-    -- -----------------------------------------------------------------------
-    -- Full workflow integration
-    -- -----------------------------------------------------------------------
     describe('full workflow', function()
       it('should handle modify -> stage -> commit cycle', function()
         local index = GitIndex(make_repo(repo))
 
-        -- Start clean
         local clean1, _ = index:is_clean()
         eq(true, clean1)
 
-        -- Modify a file
         test_repo.modify_file(repo, 'file1.txt', { 'workflow change' })
 
-        -- Should no longer be clean
         local clean2, _ = index:is_clean()
         eq(false, clean2)
 
-        -- Should have unstaged changes, not staged
         local has_unstaged, _ = index:has_unstaged_changes()
         eq(true, has_unstaged)
 
         local has_staged, _ = index:has_staged_changes()
         eq(false, has_staged)
 
-        -- Stage the file via GitIndex:add
         index:add('file1.txt')
 
-        -- Now should have staged changes and no unstaged
         local has_staged2, _ = index:has_staged_changes()
         eq(true, has_staged2)
 
         local has_unstaged2, _ = index:has_unstaged_changes()
         eq(false, has_unstaged2)
 
-        -- Can commit should be true
-
         local can, _ = index:can_commit()
         eq(true, can)
 
-        -- Commit
         local result, err = index:commit('workflow commit')
         assert.is_nil(err)
         eq(true, result)
 
-        -- Should be clean again
         local clean3, _ = index:is_clean()
         eq(true, clean3)
       end)
@@ -836,21 +752,17 @@ describe('GitIndex:', function()
 
         test_repo.modify_file(repo, 'file1.txt', { 'cycle change' })
 
-        -- Stage
         index:add('file1.txt')
         local staged1, _ = index:staged_files()
         eq(1, #staged1)
 
-        -- Unstage
         index:remove('file1.txt')
         local staged2, _ = index:staged_files()
         eq(0, #staged2)
 
-        -- Unstaged should still show the change
         local unstaged, _ = index:unstaged_files()
         eq(1, #unstaged)
 
-        -- Restage
         index:add('file1.txt')
         local staged3, _ = index:staged_files()
         eq(1, #staged3)

@@ -48,7 +48,6 @@ describe('console:', function()
 
     it('should not include a log type bracket', function()
       local result = console.format('msg')
-      -- only one bracket pair: [VGit]
       local count = 0
       for _ in result:gmatch('%[') do
         count = count + 1

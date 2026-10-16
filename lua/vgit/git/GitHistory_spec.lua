@@ -110,18 +110,6 @@ describe('GitHistory:', function()
     local before_each = async.before_each
     local after_each = async.after_each
 
-    -- We create 4 commits total:
-    -- 1. Initial commit by Test User <test@example.com> with file.txt ('initial')
-    -- 2. 'fix: resolve login bug' by Alice <alice@example.com> with file2.txt
-    -- 3. 'feat: add dashboard' by Bob <bob@example.com> with file3.txt
-    -- 4. 'chore: update deps' by Alice <alice@example.com> with file4.txt
-    --
-    -- git log lists them newest-first, so order is:
-    --   index 1: chore: update deps (Alice)
-    --   index 2: feat: add dashboard (Bob)
-    --   index 3: fix: resolve login bug (Alice)
-    --   index 4: Initial commit (Test User)
-
     before_each(function()
       local err
       repo, err = test_repo.create_repo({
@@ -173,7 +161,6 @@ describe('GitHistory:', function()
         assert.is_nil(err1)
         local result2, err2 = history:commits()
         assert.is_nil(err2)
-        -- Same table reference means caching worked
         assert.is_true(rawequal(result1, result2))
       end)
 
@@ -307,7 +294,6 @@ describe('GitHistory:', function()
       it('should filter commits within a timestamp range', function()
         local history = GitHistory(make_repo(repo))
         local commits = history:commits()
-        -- Use the actual commit timestamps to define the range
         local min_ts = commits[#commits].timestamp
         local max_ts = commits[1].timestamp
         local filtered, err = history:by_date_range(min_ts, max_ts)
@@ -317,7 +303,6 @@ describe('GitHistory:', function()
 
       it('should return empty when range has no matches', function()
         local history = GitHistory(make_repo(repo))
-        -- Use a timestamp range far in the past
         local filtered, err = history:by_date_range(1000000000, 1000000001)
         assert.is_nil(err)
         eq(0, #filtered)
@@ -326,12 +311,10 @@ describe('GitHistory:', function()
       it('should filter to a single commit by exact timestamp', function()
         local history = GitHistory(make_repo(repo))
         local commits = history:commits()
-        -- Pick the timestamp of one specific commit
         local ts = commits[1].timestamp
         local filtered, err = history:by_date_range(ts, ts)
         assert.is_nil(err)
         assert.is_true(#filtered >= 1)
-        -- All returned commits should have matching timestamp
         for _, commit in ipairs(filtered) do
           eq(ts, commit.timestamp)
         end
@@ -349,10 +332,8 @@ describe('GitHistory:', function()
 
       it('should find multiple commits matching a pattern', function()
         local history = GitHistory(make_repo(repo))
-        -- Both 'fix:' and 'feat:' contain a colon-prefixed type
         local filtered, err = history:search('^%a+:')
         assert.is_nil(err)
-        -- chore: update deps, feat: add dashboard, fix: resolve login bug
         eq(3, #filtered)
       end)
 
@@ -385,7 +366,6 @@ describe('GitHistory:', function()
         local history = GitHistory(make_repo(repo))
         local result, err = history:authors()
         assert.is_nil(err)
-        -- Alice (alice@example.com), Bob (bob@example.com), Test User (test@example.com)
         eq(3, #result)
       end)
 
@@ -469,7 +449,6 @@ describe('GitHistory:', function()
 
         local more = history:load_more(1)
         eq(1, #more)
-        -- The newly loaded commit should be different from the first
         assert.are_not.equal(first_summary, more[1].summary)
 
         local total = history:count()
@@ -482,7 +461,6 @@ describe('GitHistory:', function()
 
         local more, err = history:load_more(100)
         assert.is_nil(err)
-        -- There are only 2 remaining commits after the initial 2
         eq(2, #more)
 
         local total = history:count()
@@ -495,7 +473,6 @@ describe('GitHistory:', function()
         assert.is_nil(err)
         eq(2, #result)
 
-        -- load_more initializes the cache, so count returns what was loaded
         local total = history:count()
         eq(2, total)
       end)
@@ -522,9 +499,7 @@ describe('GitHistory:', function()
 
         local second_result = history:commits()
         assert.is_not_nil(second_result)
-        -- After reset, should get a fresh table (not the same reference)
         assert.is_false(rawequal(first_result, second_result))
-        -- But the content should be the same
         eq(#first_result, #second_result)
       end)
 
@@ -533,18 +508,15 @@ describe('GitHistory:', function()
         local count_before = history:count()
         eq(4, count_before)
 
-        -- Add a new commit
         test_repo.create_commit(repo, {
           files = { ['file5.txt'] = { 'fifth' } },
           message = 'docs: add readme',
           author = 'Charlie <charlie@example.com>',
         })
 
-        -- Still cached at 4
         local cached_count = history:count()
         eq(4, cached_count)
 
-        -- Reset and re-fetch
         history:reset()
         local new_count = history:count()
         eq(5, new_count)
@@ -556,7 +528,6 @@ describe('GitHistory:', function()
         local history = GitHistory(make_repo(repo), { path = 'file2.txt' })
         local result, err = history:commits()
         assert.is_nil(err)
-        -- Only the commit that added file2.txt should appear
         eq(1, #result)
         eq('fix: resolve login bug', result[1].summary)
       end)
@@ -575,7 +546,6 @@ describe('GitHistory:', function()
       it('should use cached data for multiple operations', function()
         local history = GitHistory(make_repo(repo))
 
-        -- These should all work off the same cached commits
         local count = history:count()
         eq(4, count)
 

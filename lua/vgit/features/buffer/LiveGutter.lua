@@ -42,9 +42,6 @@ function LiveGutter:fetch(buffer)
     end
 
     buffer:generate_status()
-    -- `change`/`sync` updates arrive asynchronously, i.e. after Neovim has
-    -- already redrawn. Render here so stale signs are cleared immediately
-    -- instead of lingering until the next unrelated redraw.
     buffer:render_signs()
   end)
 end

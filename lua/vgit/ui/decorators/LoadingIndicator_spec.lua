@@ -147,13 +147,10 @@ describe('LoadingIndicator:', function()
 
       indicator:render(mock_element)
 
-      -- height=11, vertical_pad = floor((11-1)/2) = 5
-      -- 5 empty lines + 1 content line = 6 lines
       eq(6, #set_lines_data)
       for i = 1, 5 do
         eq('', set_lines_data[i])
       end
-      -- Last line should contain content (not empty)
       assert.is_true(#set_lines_data[6] > 0)
     end)
 
@@ -179,9 +176,7 @@ describe('LoadingIndicator:', function()
 
       indicator:render(mock_element)
 
-      -- height=1, vertical_pad = 0, so only 1 line
       eq(1, #set_lines_data)
-      -- Content line should have leading spaces for centering
       local line = set_lines_data[1]
       local leading_spaces = line:match('^(%s*)')
       assert.is_true(#leading_spaces > 0)
@@ -211,8 +206,7 @@ describe('LoadingIndicator:', function()
 
       assert.is_not_nil(highlight_data)
       eq('GitComment', highlight_data.hl)
-      -- row should be the vertical padding
-      eq(2, highlight_data.row) -- floor((5-1)/2) = 2
+      eq(2, highlight_data.row)
       assert.is_not_nil(highlight_data.col_range)
       eq(0, highlight_data.col_range.from)
     end)

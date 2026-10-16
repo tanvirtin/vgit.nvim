@@ -11,11 +11,9 @@ describe('GitPatch:', function()
 
       local patch = GitPatch('test.lua', hunk)
 
-      -- Verify it's a proper patch array with minimum required lines
       assert.is_table(patch)
       assert.is_true(#patch >= 5, 'patch should have at least 5 lines (headers + hunk + diff)')
 
-      -- Verify essential patch structure
       assert.is_truthy(patch[1]:match('^diff %-%-git'), 'first line should be diff header')
       assert.is_truthy(patch[2]:match('^index'), 'second line should be index')
       assert.is_truthy(patch[5]:match('^@@'), 'should contain hunk header')
@@ -74,7 +72,7 @@ describe('GitPatch:', function()
 
       local patch = GitPatch('file.txt', hunk)
 
-      eq(#patch, 9) -- 5 header lines + 4 diff lines
+      eq(#patch, 9)
       eq(patch[1], 'diff --git a/file.txt b/file.txt')
       eq(patch[2], 'index 000000..000000')
       eq(patch[3], '--- a/file.txt')
@@ -93,7 +91,6 @@ describe('GitPatch:', function()
 
       local patch = GitPatch('test.lua', hunk)
 
-      -- For add type, header should be recalculated
       assert.is_true(patch[5]:match('^@@ ') ~= nil)
       eq(patch[6], '+new line 1')
       eq(patch[7], '+new line 2')
@@ -118,7 +115,7 @@ describe('GitPatch:', function()
 
       local patch = GitPatch('test.lua', hunk)
 
-      eq(#patch, 5) -- Only header lines, no diff lines
+      eq(#patch, 5)
     end)
 
     it('should work with different file paths', function()
@@ -189,7 +186,7 @@ describe('GitPatch:', function()
 
       local patch = GitPatch('test.lua', hunk)
 
-      eq(#patch, 205) -- 5 header + 200 diff lines
+      eq(#patch, 205)
     end)
 
     it('should handle hunk with special characters in diff', function()
@@ -211,10 +208,8 @@ describe('GitPatch:', function()
 
       local patch = GitPatch('test.lua', hunk)
 
-      -- The header should be recalculated for add type
       local header = patch[5]
       assert.is_true(header:match('^@@ ') ~= nil)
-      -- Should contain the number of diff lines (5)
       assert.is_true(header:match(',5 @@') ~= nil)
     end)
 

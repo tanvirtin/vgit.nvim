@@ -132,8 +132,6 @@ function SplitDiffComponent:get_component(id)
   return nil
 end
 
--- Broadcast to both children
-
 function SplitDiffComponent:enable_cursorline()
   self:_for_both(function(c)
     c:enable_cursorline()
@@ -207,8 +205,6 @@ function SplitDiffComponent:attach_to_renderer(callback)
     c:attach_to_renderer(callback)
   end)
 end
-
--- Delegate to current child
 
 function SplitDiffComponent:get_lnum()
   if self.children.current then return self.children.current:get_lnum() end

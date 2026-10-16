@@ -110,8 +110,6 @@ local function has_binary_content(lines)
   if not lines then return false end
   for i = 1, math.min(#lines, 100) do
     local line = lines[i]
-    -- Check for NUL bytes (git show preserves them) and embedded newlines
-    -- (vim.fn.readfile converts NUL to \n in text mode)
     if line:find('\0', 1, true) or line:find('\n', 1, true) then return true end
   end
   return false
@@ -243,7 +241,6 @@ function DiffBuilder:build_multi_file_diffs(spec)
 
       if #file_hunks == 0 then return nil end
 
-      -- Always try to fetch the target-side content first
       local display_lines, original_lines, current_lines
       if spec.to == 'disk' then
         local repo_path = self._repository:get_path()
@@ -252,7 +249,6 @@ function DiffBuilder:build_multi_file_diffs(spec)
         current_lines = self._repository:file_lines(file_group.filename, spec.to or 'HEAD')
       end
 
-      -- File is truly deleted only when it doesn't exist on the target side
       local is_deleted = not current_lines
       if is_deleted then
         local all_removes = true

@@ -1,5 +1,3 @@
--- Standard utility functions used throughout the app.
-
 local lazy = require('vgit.core.lazy')
 
 local utils = {

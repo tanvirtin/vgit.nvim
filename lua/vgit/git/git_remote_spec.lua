@@ -13,7 +13,6 @@ describe('git_remote:', function()
   local remote_repo
 
   before_each(function()
-    -- Create main test repository
     local err
     repo, err = test_repo.create_repo({
       files = { ['README.md'] = 'Test repo' },
@@ -22,7 +21,6 @@ describe('git_remote:', function()
     assert.is_nil(err)
     assert.is_not_nil(repo)
 
-    -- Create a "remote" repository
     remote_repo, err = test_repo.create_repo({
       files = { ['remote.txt'] = 'Remote content' },
       initial_commit = true,
@@ -41,7 +39,6 @@ describe('git_remote:', function()
       local _, err = git_remote.add(repo:get_path(), 'origin', remote_repo:get_path())
       assert.is_nil(err)
 
-      -- Verify remote was added
       local remotes, list_err = git_remote.list(repo:get_path())
       assert.is_nil(list_err)
       assert.is_not_nil(remotes)
@@ -142,7 +139,6 @@ describe('git_remote:', function()
       local _, err = git_remote.remove(repo:get_path(), 'origin')
       assert.is_nil(err)
 
-      -- Verify removal
       local remotes, _ = git_remote.list(repo:get_path())
       assert.equals(0, #remotes)
     end)
@@ -162,7 +158,6 @@ describe('git_remote:', function()
       local _, err = git_remote.rename(repo:get_path(), 'origin', 'upstream')
       assert.is_nil(err)
 
-      -- Verify rename
       local remotes, _ = git_remote.list(repo:get_path())
       assert.equals(1, #remotes)
       assert.equals('upstream', remotes[1].name)
@@ -179,7 +174,6 @@ describe('git_remote:', function()
       local _, err = git_remote.set_url(repo:get_path(), 'origin', new_url)
       assert.is_nil(err)
 
-      -- Verify URL changed
       local url, _ = git_remote.get_url(repo:get_path(), 'origin')
       assert.equals(new_url, url)
     end)

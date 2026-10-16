@@ -29,8 +29,8 @@ describe('utils.math:', function()
   describe('uuid', function()
     it('should generate a valid UUID', function()
       local uuid = utils.math.uuid()
-      matches('^[0-9a-fA-F-]+$', uuid) -- Check if the UUID is in the correct format
-      eq(#uuid, 36) -- Check if the UUID has the correct length
+      matches('^[0-9a-fA-F-]+$', uuid)
+      eq(#uuid, 36)
     end)
   end)
 

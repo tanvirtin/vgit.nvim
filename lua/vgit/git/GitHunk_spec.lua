@@ -69,7 +69,6 @@ describe('GitHunk:', function()
     end)
 
     it('should accept header as array', function()
-      -- Header can be provided as {previous, current} arrays
       local hunk = GitHunk({ { 10, 5 }, { 10, 7 } })
 
       assert.is_not_nil(hunk, 'Hunk should be created from array')

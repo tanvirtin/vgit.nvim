@@ -256,7 +256,6 @@ function TreeComponent:generate_lines()
   local depth_0_item_counts = {}
   local foldable_list_shadow = {}
 
-  -- Clear shadow list
   self.state.shadow_list = {}
 
   local function track_closed_folder_item_count(list, depth)

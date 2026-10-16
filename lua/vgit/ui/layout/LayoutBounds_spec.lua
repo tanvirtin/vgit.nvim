@@ -112,49 +112,49 @@ describe('LayoutBounds:', function()
     it('should position top-center', function()
       local row, col = bounds:calculate_anchor_position('top-center', 40, 20)
       assert.are.equal(0, row)
-      assert.are.equal(80, col) -- (200 - 40) / 2
+      assert.are.equal(80, col)
     end)
 
     it('should position top-right', function()
       local row, col = bounds:calculate_anchor_position('top-right', 40, 20)
       assert.are.equal(0, row)
-      assert.are.equal(160, col) -- 200 - 40
+      assert.are.equal(160, col)
     end)
 
     it('should position center-left', function()
       local row, col = bounds:calculate_anchor_position('center-left', 40, 20)
-      assert.are.equal(40, row) -- (100 - 20) / 2
+      assert.are.equal(40, row)
       assert.are.equal(0, col)
     end)
 
     it('should position center', function()
       local row, col = bounds:calculate_anchor_position('center', 40, 20)
-      assert.are.equal(40, row) -- (100 - 20) / 2
-      assert.are.equal(80, col) -- (200 - 40) / 2
+      assert.are.equal(40, row)
+      assert.are.equal(80, col)
     end)
 
     it('should position center-right', function()
       local row, col = bounds:calculate_anchor_position('center-right', 40, 20)
       assert.are.equal(40, row)
-      assert.are.equal(160, col) -- 200 - 40
+      assert.are.equal(160, col)
     end)
 
     it('should position bottom-left', function()
       local row, col = bounds:calculate_anchor_position('bottom-left', 40, 20)
-      assert.are.equal(80, row) -- 100 - 20
+      assert.are.equal(80, row)
       assert.are.equal(0, col)
     end)
 
     it('should position bottom-center', function()
       local row, col = bounds:calculate_anchor_position('bottom-center', 40, 20)
-      assert.are.equal(80, row) -- 100 - 20
+      assert.are.equal(80, row)
       assert.are.equal(80, col)
     end)
 
     it('should position bottom-right', function()
       local row, col = bounds:calculate_anchor_position('bottom-right', 40, 20)
-      assert.are.equal(80, row) -- 100 - 20
-      assert.are.equal(160, col) -- 200 - 40
+      assert.are.equal(80, row)
+      assert.are.equal(160, col)
     end)
 
     it('should apply row offset for top anchor', function()
@@ -171,14 +171,14 @@ describe('LayoutBounds:', function()
 
     it('should apply offset for center anchor', function()
       local row, col = bounds:calculate_anchor_position('center', 40, 20, { row = 3, col = 7 })
-      assert.are.equal(43, row) -- 40 + 3
-      assert.are.equal(87, col) -- 80 + 7
+      assert.are.equal(43, row)
+      assert.are.equal(87, col)
     end)
 
     it('should subtract offset for bottom-right anchor', function()
       local row, col = bounds:calculate_anchor_position('bottom-right', 40, 20, { row = 5, col = 10 })
-      assert.are.equal(75, row) -- 100 - 20 - 5
-      assert.are.equal(150, col) -- 200 - 40 - 10
+      assert.are.equal(75, row)
+      assert.are.equal(150, col)
     end)
 
     it('should handle bounds with non-zero origin', function()
@@ -212,14 +212,14 @@ describe('LayoutBounds:', function()
 
     it('should apply min/max constraints from spec', function()
       local child = parent:child_bounds({ min_width = 60, max_height = 25 }, { width = 50, height = 30 })
-      assert.are.equal(60, child.width) -- clamped up from 50
-      assert.are.equal(25, child.height) -- clamped down from 30
+      assert.are.equal(60, child.width)
+      assert.are.equal(25, child.height)
     end)
 
     it('should position using anchor from spec', function()
       local child = parent:child_bounds({ anchor = 'center' }, { width = 40, height = 20 })
-      assert.are.equal(40, child.row) -- (100 - 20) / 2
-      assert.are.equal(80, child.col) -- (200 - 40) / 2
+      assert.are.equal(40, child.row)
+      assert.are.equal(80, child.col)
     end)
 
     it('should default row/col to parent origin when not allocated', function()
@@ -267,7 +267,6 @@ describe('LayoutBounds:', function()
       assert.are.equal(10, copy.col)
       assert.are.equal(80, copy.width)
       assert.are.equal(40, copy.height)
-      -- Clone is a distinct object
       assert.are_not.equal(original, copy)
     end)
   end)
@@ -276,10 +275,10 @@ describe('LayoutBounds:', function()
     it('should shrink by margin on all sides', function()
       local b = LayoutBounds({ row = 10, col = 20, width = 100, height = 50 })
       local s = b:shrink(5)
-      assert.are.equal(15, s.row) -- 10 + 5
-      assert.are.equal(25, s.col) -- 20 + 5
-      assert.are.equal(90, s.width) -- 100 - 10
-      assert.are.equal(40, s.height) -- 50 - 10
+      assert.are.equal(15, s.row)
+      assert.are.equal(25, s.col)
+      assert.are.equal(90, s.width)
+      assert.are.equal(40, s.height)
     end)
 
     it('should default margin to 0', function()

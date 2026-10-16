@@ -127,7 +127,6 @@ describe('LiveBlame:', function()
   end)
 end)
 
--- Integration tests using real git repos
 package.loaded['lint'] = package.loaded['lint'] or { try_lint = function() end }
 
 local test_repo = require('tests.helpers.test_repo')
@@ -182,7 +181,6 @@ describe('LiveBlame blame flow (integration):', function()
     assert.is_nil(blame_err)
     assert.is_not_nil(blame)
 
-    -- Blame should be cached in state
     assert.is_not_nil(git_buf.state.blames[1])
     assert.is_not_nil(git_buf.state.blames[1].commit_hash)
   end)
@@ -192,14 +190,11 @@ describe('LiveBlame blame flow (integration):', function()
     local git_buf = GitBuffer(bufnr)
     git_buf:sync()
 
-    -- Lock the buffer
     assert.is_true(git_buf:acquire())
 
-    -- Attempt blame — simulating what LiveBlame does (acquire returns false)
     local can_acquire = git_buf:acquire()
     assert.is_false(can_acquire)
 
-    -- Blames should remain empty
     assert.equals(0, vim.tbl_count(git_buf.state.blames))
 
     git_buf:release()
@@ -210,15 +205,11 @@ describe('LiveBlame blame flow (integration):', function()
     local git_buf = GitBuffer(bufnr)
     git_buf:sync()
 
-    -- Populate blame
     git_buf:blame(1)
     assert.is_not_nil(git_buf.state.blames[1])
 
-    -- Clear
     git_buf:clear_blames()
 
-    -- State should still have the blame data (clear_blames clears extmarks, not state)
-    -- This documents the actual behavior
     assert.is_not_nil(git_buf.state.blames[1])
   end)
 end)

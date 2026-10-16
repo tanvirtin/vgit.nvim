@@ -6,13 +6,10 @@ describe('git_buffer_store:', function()
   local mock_buffer
 
   before_each(function()
-    -- Clear the buffer store before each test
-    -- Note: This is internal but necessary for test isolation
     git_buffer_store.for_each(function(buf)
       git_buffer_store.remove(buf)
     end)
 
-    -- Create a mock buffer
     mock_buffer = {
       bufnr = 1,
       filename = 'test.txt',
@@ -31,7 +28,6 @@ describe('git_buffer_store:', function()
   end)
 
   after_each(function()
-    -- Clean up
     git_buffer_store.for_each(function(buf)
       git_buffer_store.remove(buf)
     end)
@@ -182,7 +178,7 @@ describe('git_buffer_store:', function()
 
     it('should handle adding duplicate bufnr', function()
       git_buffer_store.add({ bufnr = 1 })
-      git_buffer_store.add({ bufnr = 1 }) -- Replace
+      git_buffer_store.add({ bufnr = 1 })
 
       eq(git_buffer_store.size(), 1)
     end)
@@ -239,8 +235,6 @@ describe('git_buffer_store:', function()
       git_buffer_store.add({ bufnr = 1 })
       git_buffer_store.add({ bufnr = 2 })
 
-      -- This is a potential issue - modifying during iteration
-      -- Test that it doesn't crash
       local count = 0
       git_buffer_store.for_each(function(buffer)
         count = count + 1
@@ -412,7 +406,6 @@ describe('git_buffer_store:', function()
     end)
 
     it('should not error if no handlers registered', function()
-      -- Should not crash even without handlers
       git_buffer_store.dispatch(mock_buffer, 'attach')
     end)
 
@@ -421,24 +414,18 @@ describe('git_buffer_store:', function()
         error('Handler error')
       end)
 
-      git_buffer_store.on('attach', function()
-        -- This should still run even if previous handler errors
-        -- Though in practice, Lua error handling will stop execution
-      end)
+      git_buffer_store.on('attach', function() end)
 
-      -- Test that dispatch itself doesn't crash
       local success = pcall(function()
         git_buffer_store.dispatch(mock_buffer, 'attach')
       end)
 
-      -- Should error from handler
       eq(success, false)
     end)
   end)
 
   describe('current()', function()
     it('should return buffer for current bufnr', function()
-      -- Get actual current buffer
       local current_bufnr = vim.api.nvim_get_current_buf()
       local current_buffer = { bufnr = current_bufnr, data = 'current' }
 
@@ -457,13 +444,9 @@ describe('git_buffer_store:', function()
 
   describe('event lifecycle', function()
     it('should fire attach event when buffer added', function()
-      git_buffer_store.on('attach', function()
-        -- Intentionally empty - just testing event registration
-      end)
+      git_buffer_store.on('attach', function() end)
 
       git_buffer_store.add(mock_buffer)
-      -- Note: attach is fired by collect(), not add()
-      -- This test documents the expected behavior
     end)
 
     it('should fire change event on buffer modification', function()
@@ -523,7 +506,6 @@ describe('git_buffer_store:', function()
 
   describe('clear_buffers()', function()
     before_each(function()
-      -- Full reset to avoid stale event handlers accumulated by earlier tests
       git_buffer_store.reset()
     end)
 
@@ -593,7 +575,6 @@ describe('git_buffer_store:', function()
 
       git_buffer_store.add(buffer_with_cache)
 
-      -- Simulate the VGitChange handler's for_each logic
       git_buffer_store.for_each(function(buffer)
         buffer:clear_blob_cache()
         git_buffer_store.dispatch(buffer, 'sync')
@@ -610,7 +591,6 @@ describe('git_buffer_store:', function()
 
       git_buffer_store.add(buffer_without_cache)
 
-      -- Should error when clear_blob_cache is missing, catching the contract violation
       local success = pcall(function()
         git_buffer_store.for_each(function(buffer)
           buffer:clear_blob_cache()
@@ -653,12 +633,10 @@ describe('git_buffer_store:', function()
 
   describe('edge cases', function()
     it('should handle string bufnr conversion', function()
-      -- Store uses tostring(bufnr) internally
       local buffer1 = { bufnr = 1 }
 
       git_buffer_store.add(buffer1)
 
-      -- Should still retrieve with string bufnr
       local retrieved = git_buffer_store.get({ bufnr = '1' })
       assert(retrieved)
     end)
@@ -670,15 +648,12 @@ describe('git_buffer_store:', function()
         git_buffer_store.add(buffers[i])
       end
 
-      -- Verify all added
       eq(git_buffer_store.size(), 10)
 
-      -- Remove even numbered buffers
       for i = 2, 10, 2 do
         git_buffer_store.remove(buffers[i])
       end
 
-      -- Should have 5 odd numbered buffers left
       eq(git_buffer_store.size(), 5)
     end)
 
@@ -686,10 +661,8 @@ describe('git_buffer_store:', function()
       local buffer = { bufnr = 1, data = { value = 123 } }
       git_buffer_store.add(buffer)
 
-      -- Modify original
       buffer.data.value = 456
 
-      -- Retrieved should have same reference
       local retrieved = git_buffer_store.get(buffer)
       eq(retrieved.data.value, 456)
     end)
@@ -718,7 +691,6 @@ describe('git_buffer_store:', function()
 
       git_buffer_store.add(mock_buffer)
 
-      -- Rapidly dispatch events
       for i = 1, 100 do
         git_buffer_store.dispatch(mock_buffer, 'change')
       end
@@ -728,7 +700,6 @@ describe('git_buffer_store:', function()
   end)
 end)
 
--- Integration tests using real git repos and real GitBuffer instances
 package.loaded['lint'] = package.loaded['lint'] or { try_lint = function() end }
 
 local test_repo = require('tests.helpers.test_repo')
@@ -798,27 +769,21 @@ describe('git_buffer_store (integration with real GitBuffer):', function()
     local git_buffer = GitBuffer(bufnr)
     git_buffer:sync()
 
-    -- Populate blob cache via diff
     local _, err = git_buffer:diff()
     assert.is_nil(err)
-    -- After diff, live_hunks populates _blob_cache['index']
     assert.is_not_nil(git_buffer._git_file._blob_cache['index'])
 
-    -- Add to store
     git_buffer_store.add(git_buffer)
 
-    -- Simulate VGitChange loop
     git_buffer_store.for_each(function(buffer)
       buffer:clear_blob_cache()
     end)
 
-    -- Verify cache was cleared
     assert.is_table(git_buffer._git_file._blob_cache)
     assert.is_nil(git_buffer._git_file._blob_cache['index'])
   end)
 
   it('should return fresh hunks after cache clear and external stage', function()
-    -- Modify file
     test_repo.write_file(repo, 'test.txt', { 'modified 1', 'line 2', 'line 3' })
     local bufnr = create_buf(test_file)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
@@ -826,30 +791,24 @@ describe('git_buffer_store (integration with real GitBuffer):', function()
     local git_buffer = GitBuffer(bufnr)
     git_buffer:sync()
 
-    -- First diff should show hunks
     local hunks1, err1 = git_buffer:diff()
     assert.is_nil(err1)
     assert.is_table(hunks1)
     local count1 = #hunks1
 
-    -- Externally stage the file
     test_repo.stage(repo, 'test.txt')
 
-    -- Clear cache (as VGitChange would do)
     git_buffer:clear_blob_cache()
 
-    -- Diff again should show zero hunks (buffer matches staged content)
     local hunks2, err2 = git_buffer:diff()
     assert.is_nil(err2)
     assert.is_table(hunks2)
 
-    -- After staging, working tree matches index so no hunks
     assert.equals(0, #hunks2)
     assert.is_true(count1 > 0)
   end)
 
   it('should clear blob cache on multiple real GitBuffers', function()
-    -- Create a second file
     test_repo.write_file(repo, 'test2.txt', { 'content' })
     test_repo.create_commit(repo, {
       files = { 'test2.txt' },
@@ -865,14 +824,12 @@ describe('git_buffer_store (integration with real GitBuffer):', function()
     local git_buf2 = GitBuffer(bufnr2)
     git_buf2:sync()
 
-    -- Populate caches
     git_buf1:diff()
     git_buf2:diff()
 
     git_buffer_store.add(git_buf1)
     git_buffer_store.add(git_buf2)
 
-    -- Simulate VGitChange
     git_buffer_store.for_each(function(buffer)
       buffer:clear_blob_cache()
     end)

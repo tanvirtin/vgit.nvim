@@ -53,7 +53,6 @@ function git_submodule.list(reponame, opts)
   local result, err = query:execute()
   if err then return nil, err end
 
-  -- Parse output: " commit-hash path (tag/branch)" or "+commit-hash path (tag/branch)"
   local submodules = {}
   for _, line in ipairs(result) do
     local status_char = line:sub(1, 1)

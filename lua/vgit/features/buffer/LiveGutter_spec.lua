@@ -178,7 +178,6 @@ describe('LiveGutter:', function()
   end)
 end)
 
--- Integration tests using real git repos
 package.loaded['lint'] = package.loaded['lint'] or { try_lint = function() end }
 
 local test_repo = require('tests.helpers.test_repo')
@@ -262,12 +261,9 @@ describe('LiveGutter fetch (integration):', function()
 
     local instance = LiveGutter()
 
-    -- fetch (as the change handler does) must render signs itself, without
-    -- relying on a later redraw to invoke the decoration provider.
     instance:fetch(git_buf)
     assert(gutter_mark_count(bufnr) > 0, 'fetch should render signs for a modified buffer')
 
-    -- revert to the committed content: the stale sign must disappear
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'line 1', 'line 2', 'line 3' })
     instance:fetch(git_buf)
 
@@ -280,13 +276,10 @@ describe('LiveGutter fetch (integration):', function()
     local git_buf = GitBuffer(bufnr)
     git_buf:sync()
 
-    -- Delete the buffer to make it invalid
     vim.api.nvim_buf_delete(bufnr, { force = true })
-    -- Remove from cleanup list since already deleted
     created_bufnrs[#created_bufnrs] = nil
 
     local instance = LiveGutter()
-    -- Should not error
     instance:fetch(git_buf)
   end)
 
@@ -297,13 +290,11 @@ describe('LiveGutter fetch (integration):', function()
     local git_buf = GitBuffer(bufnr)
     git_buf:sync()
 
-    -- Lock the gutter operation
     git_buf:acquire('gutter')
 
     local instance = LiveGutter()
     instance:fetch(git_buf)
 
-    -- Signs should still be empty (fetch bailed due to lock)
     assert.is_table(git_buf.state.signs)
     assert.equals(0, #git_buf.state.signs)
 
@@ -328,7 +319,6 @@ describe('LiveGutter fetch (integration):', function()
   end)
 
   it('should reflect new state after external stage and cache clear', function()
-    -- Modify file
     test_repo.write_file(repo, 'test.txt', { 'modified 1', 'line 2', 'line 3' })
     local bufnr = create_buf(test_file)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
@@ -338,16 +328,13 @@ describe('LiveGutter fetch (integration):', function()
 
     local instance = LiveGutter()
 
-    -- First fetch shows signs
     instance:fetch(git_buf)
     local signs_before = #git_buf.state.signs
     assert(signs_before > 0, 'should have signs before staging')
 
-    -- Externally stage and clear cache
     test_repo.stage(repo, 'test.txt')
     git_buf:clear_blob_cache()
 
-    -- Second fetch should show no signs
     instance:fetch(git_buf)
     assert.equals(0, #git_buf.state.signs)
   end)

@@ -1,9 +1,6 @@
--- Stub vim functions that cause async scheduling issues in tests
--- (saved so they can be restored after each test to avoid cross-file pollution)
 local original_defer_fn = vim.defer_fn
 local original_cmd = vim.cmd
 
--- Save original package.loaded entries so they can be restored after each test
 local original_loaded = {
   ['vgit.core.event'] = package.loaded['vgit.core.event'],
   ['vgit.core.Window'] = package.loaded['vgit.core.Window'],
@@ -13,7 +10,6 @@ local original_loaded = {
   ['vgit.settings.live_gutter'] = package.loaded['vgit.settings.live_gutter'],
 }
 
--- Stubs for all dependencies
 local enabled_value = true
 local live_gutter_stub = {
   get = function(self, key)
@@ -99,7 +95,6 @@ local console_stub = {
   info = function() end,
 }
 
--- Install stubs BEFORE requiring Hunks
 package.loaded['vgit.core.event'] = event_stub
 package.loaded['vgit.core.Window'] = Window_stub
 package.loaded['vgit.core.navigation'] = navigation_stub
@@ -111,7 +106,6 @@ local Hunks = require('vgit.features.buffer.Hunks')
 
 local eq = assert.are.same
 
--- Helper to create a mock buffer with configurable behavior
 local function make_mock_buffer(opts)
   opts = opts or {}
   local buffer = {
@@ -163,7 +157,6 @@ local function make_mock_buffer(opts)
   return buffer
 end
 
--- Reset shared state before each test
 local function reset_state()
   enabled_value = true
   current_buffer = nil
@@ -184,7 +177,6 @@ describe('Hunks:', function()
   before_each(function()
     vim.defer_fn = function(fn, ms) end
     vim.cmd = function(cmd) end
-    -- Re-apply stubs (a prior test file may have restored originals to package.loaded)
     package.loaded['vgit.core.event'] = event_stub
     package.loaded['vgit.core.Window'] = Window_stub
     package.loaded['vgit.core.navigation'] = navigation_stub
@@ -198,7 +190,6 @@ describe('Hunks:', function()
   after_each(function()
     vim.defer_fn = original_defer_fn
     vim.cmd = original_cmd
-    -- Restore package.loaded so subsequent test files see real modules
     package.loaded['vgit.core.event'] = original_loaded['vgit.core.event']
     package.loaded['vgit.core.Window'] = original_loaded['vgit.core.Window']
     package.loaded['vgit.core.navigation'] = original_loaded['vgit.core.navigation']
@@ -424,7 +415,6 @@ describe('Hunks:', function()
     it('should return early when no current buffer', function()
       current_buffer = nil
       hunks_instance:stage_all()
-      -- No error thrown, no calls made
     end)
 
     it('should call buffer:stage()', function()
@@ -459,7 +449,6 @@ describe('Hunks:', function()
     it('should return early when no current buffer', function()
       current_buffer = nil
       hunks_instance:cursor_stage()
-      -- No error thrown
     end)
 
     it('should return early when buffer is modified', function()
@@ -518,7 +507,6 @@ describe('Hunks:', function()
     it('should return early when no current buffer', function()
       current_buffer = nil
       hunks_instance:unstage_all()
-      -- No error thrown
     end)
 
     it('should call buffer:unstage()', function()
@@ -545,7 +533,6 @@ describe('Hunks:', function()
     it('should return early when no current buffer', function()
       current_buffer = nil
       hunks_instance:reset_all()
-      -- No error thrown
     end)
 
     it('should return early when buffer has no hunks', function()
@@ -602,7 +589,6 @@ describe('Hunks:', function()
     it('should return early when no current buffer', function()
       current_buffer = nil
       hunks_instance:cursor_reset()
-      -- No error thrown
     end)
 
     it('should return early when buffer has no hunks', function()
@@ -623,9 +609,6 @@ describe('Hunks:', function()
           git_file_lines = original_lines,
         })
         hunks_instance:cursor_reset()
-        -- reset_all should have been called, which calls set_lines with git_file lines
-        -- But since the hunk also matches (top=0, bot=0 with lnum=1), cursor reset logic also runs.
-        -- The first set_lines call comes from reset_all
         assert.is_true(#current_buffer._set_lines_calls >= 1)
         eq(original_lines, current_buffer._set_lines_calls[1].lines)
       end)
@@ -638,8 +621,6 @@ describe('Hunks:', function()
           lines = { 'some content' },
         })
         hunks_instance:cursor_reset()
-        -- reset_all not triggered because buffer is not empty single line
-        -- But the hunk is still matched via the second loop (top=0 bot=0 lnum=1)
         local found_reset_all_call = false
         for _, call in ipairs(current_buffer._set_lines_calls) do
           if call.top == nil and call.bot == nil then found_reset_all_call = true end
@@ -657,7 +638,6 @@ describe('Hunks:', function()
           lines = { '' },
         })
         hunks_instance:cursor_reset()
-        -- reset_all not triggered because not all hunks are remove type
         local found_reset_all_call = false
         for _, call in ipairs(current_buffer._set_lines_calls) do
           if call.top == nil and call.bot == nil then found_reset_all_call = true end
@@ -680,7 +660,6 @@ describe('Hunks:', function()
         eq(1, #current_buffer._set_lines_calls)
         local call = current_buffer._set_lines_calls[1]
         eq({ 'old line 1', 'old line 2' }, call.lines)
-        -- For non-remove hunks: top - 1, bot
         eq(4, call.top)
         eq(10, call.bot)
       end)
@@ -695,7 +674,6 @@ describe('Hunks:', function()
         }
         current_buffer = make_mock_buffer({ hunks = { test_hunk }, lines = { 'content' } })
         hunks_instance:cursor_reset()
-        -- Find the set_lines call with top/bot (not the reset_all one)
         local found = false
         for _, call in ipairs(current_buffer._set_lines_calls) do
           if call.top ~= nil then
@@ -747,7 +725,6 @@ describe('Hunks:', function()
         hunks_instance:cursor_reset()
         eq(1, #current_buffer._set_lines_calls)
         eq({}, current_buffer._set_lines_calls[1].lines)
-        -- For non-remove hunks: top - 1, bot
         eq(4, current_buffer._set_lines_calls[1].top)
         eq(7, current_buffer._set_lines_calls[1].bot)
       end)
@@ -787,7 +764,6 @@ describe('Hunks:', function()
         local test_hunks = { hunk1, hunk2 }
         current_buffer = make_mock_buffer({ hunks = test_hunks })
         hunks_instance:cursor_reset()
-        -- The original hunks table should NOT be mutated (cursor_reset works on a copy)
         eq(2, #test_hunks)
         eq(hunk1, test_hunks[1])
         eq(hunk2, test_hunks[2])
@@ -815,10 +791,8 @@ describe('Hunks:', function()
           type = 'remove',
           diff = { '-line to restore' },
         }
-        -- Buffer has actual content so reset_all shortcut is not triggered
         current_buffer = make_mock_buffer({ hunks = { test_hunk }, lines = { 'existing content' } })
         hunks_instance:cursor_reset()
-        -- The hunk should be found via the (hunk.top == 0 and hunk.bot == 0 and lnum - 1 == hunk.top) condition
         local found = false
         for _, call in ipairs(current_buffer._set_lines_calls) do
           if call.top ~= nil then
@@ -842,10 +816,8 @@ describe('Hunks:', function()
         eq(1, #current_buffer._set_lines_calls)
         local call = current_buffer._set_lines_calls[1]
         eq({ 'removed' }, call.lines)
-        -- Non-remove hunk: top - 1, bot
         eq(19, call.top)
         eq(30, call.bot)
-        -- The original hunks table should NOT be mutated
         eq(3, #test_hunks)
         eq(hunk1, test_hunks[1])
         eq(hunk2, test_hunks[2])

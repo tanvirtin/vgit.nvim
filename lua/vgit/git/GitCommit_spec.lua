@@ -159,7 +159,7 @@ describe('GitCommit:', function()
     it('should return age from author_time', function()
       local commit = GitCommit({
         hash = 'abc1234',
-        author_time = os.time() - 3600, -- 1 hour ago
+        author_time = os.time() - 3600,
       })
 
       local age = commit:age()

@@ -10,9 +10,6 @@ describe('SplitDiffComponent:', function()
 
   after_each(ui_helper.cleanup_ui)
 
-  -- mount() creates child DiffComponents.
-  -- We then mount each child to create their Elements (simulating View rendering),
-  -- and call _element:mount() to open real Neovim windows for tests that need UI.
   local function create_split_component(overrides)
     overrides = overrides or {}
     local component = SplitDiffComponent(overrides.props or {})
@@ -26,7 +23,6 @@ describe('SplitDiffComponent:', function()
   end
 
   describe('calculate_split_line_numbers', function()
-    -- Pure logic tests: only need _line_number_calculator — no real UI required
     it('should separate lnum_changes by buftype', function()
       local component = SplitDiffComponent({})
       local diff = {
@@ -95,7 +91,6 @@ describe('SplitDiffComponent:', function()
   end)
 
   describe('on_props', function()
-    -- Tests that set_props triggers render when diff or filetype changes
     it('should trigger render when diff changes', function()
       local diff_ref = { lines = {} }
       local component = SplitDiffComponent({ diff = diff_ref, filetype = 'lua' })
@@ -194,7 +189,6 @@ describe('SplitDiffComponent:', function()
       component.children.previous = nil
       component.children.current = nil
 
-      -- should not error
       component:_for_both(function(c)
         c:test_method()
       end)
@@ -458,7 +452,6 @@ describe('SplitDiffComponent:', function()
       local component = SplitDiffComponent({})
       local result = component:calculate_split_line_numbers(diff)
 
-      -- Previous side should have void highlights for added lines
       local prev_void_count = 0
       for _, change in ipairs(result.previous.changes) do
         if change.lnum_change and change.lnum_change.type == 'void' then prev_void_count = prev_void_count + 1 end
@@ -473,7 +466,6 @@ describe('SplitDiffComponent:', function()
       local component = SplitDiffComponent({})
       local result = component:calculate_split_line_numbers(diff)
 
-      -- Current side should have void highlights for removed lines
       local curr_void_count = 0
       for _, change in ipairs(result.current.changes) do
         if change.lnum_change and change.lnum_change.type == 'void' then curr_void_count = curr_void_count + 1 end
@@ -500,7 +492,6 @@ describe('SplitDiffComponent:', function()
       local component = SplitDiffComponent({})
       local result = component:calculate_split_line_numbers(diff)
 
-      -- Check that highlight groups appear in the results
       local prev_hls = {}
       for _, ln in ipairs(result.previous.lines) do
         prev_hls[ln[2]] = true
@@ -509,9 +500,7 @@ describe('SplitDiffComponent:', function()
       for _, ln in ipairs(result.current.lines) do
         curr_hls[ln[2]] = true
       end
-      -- Previous side should have at least delete or context hl
       assert.is_true(prev_hls['GitSignsDelete'] ~= nil or prev_hls['GitLineNr'] ~= nil)
-      -- Current side should have at least add or context hl
       assert.is_true(curr_hls['GitSignsAdd'] ~= nil or curr_hls['GitLineNr'] ~= nil)
     end)
   end)

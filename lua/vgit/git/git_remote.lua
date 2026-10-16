@@ -16,7 +16,6 @@ function git_remote.list(reponame, opts)
   if err then return nil, err end
 
   if opts.verbose then
-    -- Parse verbose output: "origin  https://github.com/user/repo.git (fetch)"
     local remotes = {}
     local seen = {}
 
@@ -43,7 +42,6 @@ function git_remote.list(reponame, opts)
 
     return remotes, nil
   else
-    -- Simple list of remote names
     local remotes = {}
     for _, name in ipairs(result) do
       if name ~= '' then remotes[#remotes + 1] = { name = name } end
@@ -142,7 +140,6 @@ function git_remote.show(reponame, name)
   local result, err = GitQueryBuilder(reponame):raw_args('remote', 'show', name):execute()
   if err then return nil, err end
 
-  -- Parse the output
   local info = {
     name = name,
     fetch_url = nil,
@@ -168,7 +165,7 @@ function git_remote.show(reponame, name)
     elseif line:match('^%s*Local ref') then
       section = 'local_refs'
     elseif section and line:match('^%s+%S') then
-      local branch = line:match('^%s*(.-)%s*$') -- trim whitespace
+      local branch = line:match('^%s*(.-)%s*$')
       if section == 'remote_branches' then
         table.insert(info.remote_branches, branch)
       elseif section == 'local_branches' then
@@ -180,7 +177,6 @@ function git_remote.show(reponame, name)
   return info, nil
 end
 
--- Prune stale remote-tracking branches
 function git_remote.prune(reponame, name, opts)
   if not reponame then return nil, { 'reponame is required' } end
   if not name then return nil, { 'remote name is required' } end
@@ -195,7 +191,6 @@ function git_remote.prune(reponame, name, opts)
   return query:execute()
 end
 
--- Update remote-tracking branches
 function git_remote.update(reponame, opts)
   if not reponame then return nil, { 'reponame is required' } end
 

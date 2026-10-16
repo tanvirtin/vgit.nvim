@@ -17,7 +17,6 @@ function DiffViewportComponent:constructor(props)
   return instance
 end
 
--- Template methods for element configuration (override in subclasses)
 function DiffViewportComponent:get_buf_options()
   return {}
 end
@@ -85,8 +84,6 @@ function DiffViewportComponent:get_layout_spec()
   return LayoutSpec.view(self._element, self:get_layout_opts())
 end
 
--- Generate shared element delegation methods (chainable + return-value)
--- Exclude getters that are overridden below with fallback defaults
 define_single_element_methods(DiffViewportComponent, {
   exclude = {
     get_lines = true,
@@ -99,8 +96,6 @@ define_single_element_methods(DiffViewportComponent, {
   },
 })
 
--- Override getters with fallback defaults for viewport rendering
--- (viewport rendering runs hot and cannot nil-check every frame)
 define_getters_with_fallbacks(DiffViewportComponent, {
   get_lnum = 1,
   get_cursor = { 1, 0 },
@@ -122,8 +117,6 @@ function DiffViewportComponent:reset()
   self:reset_cursor()
   return self
 end
-
--- Hunk navigation
 
 function DiffViewportComponent:find_adjacent_mark_index(direction)
   local marks = self.state.marks
@@ -241,8 +234,6 @@ function DiffViewportComponent:get_relative_mark_index(lnum)
   return 1
 end
 
--- Viewport renderer (template method — override in subclasses)
-
 function DiffViewportComponent:render_viewport(top, bot) end
 
 function DiffViewportComponent:_ensure_renderer_attached()
@@ -252,8 +243,6 @@ function DiffViewportComponent:_ensure_renderer_attached()
     end)
   end)
 end
-
--- Utility
 
 function DiffViewportComponent:ensure_window_options()
   self:with_element(function(el)

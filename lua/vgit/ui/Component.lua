@@ -193,8 +193,6 @@ local function CreateComponent(config)
     end
   end
 
-  -- get_layout_spec
-
   if is_single then
     function Class:get_layout_spec()
       return LayoutSpec.view(self._element, config.layout_opts or { flex = 1 })
@@ -210,8 +208,6 @@ local function CreateComponent(config)
   return Class
 end
 
--- Component({config}) invokes the factory.
--- Give Component its own metatable so __call doesn't poison Object's lazy proxy.
 local object_proxy = getmetatable(Component)
 local component_mt = {}
 for k, v in pairs(object_proxy) do

@@ -27,11 +27,9 @@ describe('git_revert:', function()
 
   describe('revert', function()
     it('should revert a commit', function()
-      -- Get initial state
       local initial_commit = test_repo.get_head_commit(repo)
       assert.is_not_nil(initial_commit, 'Initial commit should exist')
 
-      -- Create a commit to revert
       local _, err = test_repo.create_commit(repo, {
         files = { ['unwanted.txt'] = 'unwanted content' },
         message = 'Unwanted commit',
@@ -42,19 +40,15 @@ describe('git_revert:', function()
       assert.is_not_nil(unwanted_commit, 'Unwanted commit should exist')
       assert.is_not_equal(initial_commit, unwanted_commit, 'New commit should be different from initial')
 
-      -- Verify file exists before revert
       local fs = require('vgit.core.fs')
       assert.is_true(fs.exists(repo:get_path() .. '/unwanted.txt'), 'File should exist before revert')
 
-      -- Revert the commit
       local result, revert_err = git_revert.revert(repo:get_path(), unwanted_commit)
       assert.is_nil(revert_err, 'Revert should not error: ' .. vim.inspect(revert_err))
       assert.is_not_nil(result, 'Revert should return result')
 
-      -- File should be gone after revert
       assert.is_false(fs.exists(repo:get_path() .. '/unwanted.txt'), 'File should not exist after revert')
 
-      -- Verify a new commit was created for the revert
       local final_commit = test_repo.get_head_commit(repo)
       assert.is_not_equal(unwanted_commit, final_commit, 'Revert should create a new commit')
       assert.is_not_equal(initial_commit, final_commit, 'Final commit should be different from initial')
@@ -63,7 +57,6 @@ describe('git_revert:', function()
     it('should revert multiple commits', function()
       local initial_commit = test_repo.get_head_commit(repo)
 
-      -- Create commits
       local _, err = test_repo.create_commit(repo, {
         files = { ['file1.txt'] = 'content 1' },
         message = 'Commit 1',
@@ -83,7 +76,6 @@ describe('git_revert:', function()
       assert.is_not_nil(commit2, 'Commit 2 should exist')
       assert.is_not_equal(commit1, commit2, 'Commits should be different')
 
-      -- Create a newer commit on top
       _, err = test_repo.create_commit(repo, {
         files = { ['keep.txt'] = 'keep this' },
         message = 'Keep this',
@@ -92,24 +84,19 @@ describe('git_revert:', function()
 
       local before_revert = test_repo.get_head_commit(repo)
 
-      -- Verify files exist before revert
       local fs = require('vgit.core.fs')
       assert.is_true(fs.exists(repo:get_path() .. '/file1.txt'), 'File1 should exist before revert')
       assert.is_true(fs.exists(repo:get_path() .. '/file2.txt'), 'File2 should exist before revert')
       assert.is_true(fs.exists(repo:get_path() .. '/keep.txt'), 'Keep file should exist before revert')
 
-      -- Revert both commits in reverse order
       local result, revert_err = git_revert.revert(repo:get_path(), { commit2, commit1 })
       assert.is_nil(revert_err, 'Revert should not error: ' .. vim.inspect(revert_err))
       assert.is_not_nil(result, 'Revert should return result')
 
-      -- Files should be gone
       assert.is_false(fs.exists(repo:get_path() .. '/file1.txt'), 'File1 should not exist after revert')
       assert.is_false(fs.exists(repo:get_path() .. '/file2.txt'), 'File2 should not exist after revert')
-      -- Keep file should still exist
       assert.is_true(fs.exists(repo:get_path() .. '/keep.txt'), 'Keep file should still exist after revert')
 
-      -- Verify new commits were created for the reverts
       local after_revert = test_repo.get_head_commit(repo)
       assert.is_not_equal(before_revert, after_revert, 'Revert should create new commits')
     end)
@@ -126,16 +113,13 @@ describe('git_revert:', function()
       local commit = test_repo.get_head_commit(repo)
       assert.is_not_equal(before_commit, commit, 'New commit should be created')
 
-      -- Revert with --no-commit
       local result, revert_err = git_revert.revert(repo:get_path(), commit, { no_commit = true })
       assert.is_nil(revert_err, 'Revert with no_commit should not error: ' .. vim.inspect(revert_err))
       assert.is_not_nil(result, 'Revert should return result')
 
-      -- Changes should be staged but not committed
       local index = repo:index()
       assert.is_true(index:has_staged_changes(), 'Should have staged changes after no-commit revert')
 
-      -- HEAD should not have moved
       local after_revert = test_repo.get_head_commit(repo)
       assert.equals(commit, after_revert, 'HEAD should not move with no-commit option')
     end)
@@ -165,7 +149,6 @@ describe('git_revert:', function()
     it('should handle abort when no revert in progress', function()
       local result, err = git_revert.abort(repo:get_path())
 
-      -- Should error since no revert in progress
       assert.is_not_nil(err, 'Should error when no revert in progress')
       assert.is_table(err, 'Error should be a table')
       assert.is_true(#err > 0, 'Error should contain messages')

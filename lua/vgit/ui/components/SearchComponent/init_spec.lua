@@ -1,6 +1,5 @@
 local eq = assert.are.same
 
--- Mock the event module
 package.loaded['vgit.core.event'] = {
   await = function() end,
   async = function(fn)
@@ -389,7 +388,6 @@ describe('SearchComponent:', function()
       sc.state.filtered_items = {}
       sc.state.selected_index = 1
 
-      -- Should not error
       sc:select()
       assert.is_false(called)
     end)
@@ -476,7 +474,6 @@ describe('SearchComponent:', function()
         on_select = function() end,
       })
 
-      -- Should not error
       sc:close()
     end)
   end)
@@ -513,7 +510,6 @@ describe('SearchComponent:', function()
         on_select = function() end,
       })
 
-      -- Should not error
       sc:on('BufWinLeave', function() end)
     end)
   end)
@@ -660,7 +656,6 @@ describe('SearchComponent:', function()
         on_select = function() end,
       })
 
-      -- Should not error
       sc:set_keymap('n', 'q', function() end, 'Quit')
     end)
   end)
@@ -672,7 +667,6 @@ describe('SearchComponent:', function()
         on_select = function() end,
       })
 
-      -- popup defaults to true (popup ~= false)
       assert.is_true(sc.props.popup ~= false)
     end)
 
@@ -719,7 +713,6 @@ describe('SearchComponent:', function()
       sc.state.filtered_items = { { label = 'a' } }
       sc.state.selected_index = 1
 
-      -- Should not error
       sc:_fire_on_move()
     end)
 

@@ -33,7 +33,6 @@ describe('git_worktree:', function()
       return execute_fn(self._args)
     end
 
-    -- Must return a callable table (not a function) because lazy() calls pairs() on it
     return setmetatable({}, {
       __call = function(_, reponame)
         local instance = setmetatable({ _reponame = reponame }, mt)

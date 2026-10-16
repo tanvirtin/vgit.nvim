@@ -29,7 +29,6 @@ function display_service.register_events()
   _event_cleanups[#_event_cleanups + 1] = event.custom_on('VGitChange', function()
     if active_view and active_view.on_git_change then
       active_view:on_git_change()
-      -- View may have destroyed itself (e.g. no more changes after commit)
       if active_view and active_view:is_destroyed() then active_view = nil end
     end
   end)

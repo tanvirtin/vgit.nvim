@@ -84,7 +84,7 @@ describe('Window:', function()
     end)
 
     it('should return {1, 0} if get_cursor fails', function()
-      win = Window(-1) -- Invalid window
+      win = Window(-1)
 
       local cursor = win:get_cursor()
       eq({ 1, 0 }, cursor)
@@ -269,7 +269,6 @@ describe('Window:', function()
     local big_buffer
 
     before_each(function()
-      -- Create a buffer with enough lines to scroll
       local lines = {}
       for i = 1, 100 do
         lines[i] = 'Line ' .. i

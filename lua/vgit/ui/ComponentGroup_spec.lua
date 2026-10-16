@@ -113,7 +113,6 @@ describe('ComponentGroup:', function()
     it('should clean up elements on unmount', function()
       local c = TestComponent({ name = 'a' })
       group:mount(c, {})
-      -- Mount element to create a real floating window
       c._element._plot.win_plot.relative = 'editor'
       c._element._plot.win_plot.width = 10
       c._element._plot.win_plot.height = 5
@@ -152,7 +151,6 @@ describe('ComponentGroup:', function()
       local b = TestComponent({ name = 'b' })
       group:mount(a, {})
       group:mount(b, {})
-      -- Mount elements so on() can register events on real buffers
       a._element._plot.win_plot.relative = 'editor'
       a._element._plot.win_plot.width = 10
       a._element._plot.win_plot.height = 5
@@ -177,7 +175,6 @@ describe('ComponentGroup:', function()
       local b = TestComponent({ name = 'b' })
       group:mount(a, {})
       group:mount(b, {})
-      -- Mount elements so set_keymap() can register on real buffers
       a._element._plot.win_plot.relative = 'editor'
       a._element._plot.win_plot.width = 10
       a._element._plot.win_plot.height = 5

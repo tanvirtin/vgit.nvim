@@ -3,7 +3,6 @@ local GitHunk = require('vgit.git.GitHunk')
 
 local eq = assert.are.same
 
--- Helper to create a hunk with diff lines
 local function make_hunk(header, diff_lines)
   local hunk = GitHunk(header)
   for _, line in ipairs(diff_lines or {}) do
@@ -105,7 +104,6 @@ describe('Diff:', function()
       assert.are.equal(2, result.stat.added)
       assert.are.equal(0, result.stat.removed)
 
-      -- lnum_changes should mark both lines as add
       local add_count = 0
       for _, lc in ipairs(result.lnum_changes) do
         if lc.type == 'add' then add_count = add_count + 1 end
@@ -124,8 +122,7 @@ describe('Diff:', function()
       assert.are.equal(0, result.stat.added)
       assert.are.equal(2, result.stat.removed)
 
-      -- Lines should have the removed lines inserted
-      assert.are.equal(6, #result.lines) -- 4 original + 2 inserted
+      assert.are.equal(6, #result.lines)
     end)
 
     it('should handle change hunk', function()
@@ -218,7 +215,6 @@ describe('Diff:', function()
       assert.are.equal(1, #result.marks)
       assert.are.equal('add', result.marks[1].type)
 
-      -- Previous lines should have void (empty string) where adds are
       local void_count = 0
       for _, lc in ipairs(result.lnum_changes) do
         if lc.type == 'void' and lc.buftype == 'previous' then void_count = void_count + 1 end
@@ -236,7 +232,6 @@ describe('Diff:', function()
       assert.are.equal(1, #result.marks)
       assert.are.equal('remove', result.marks[1].type)
 
-      -- Current lines should have void where removes are
       local void_count = 0
       for _, lc in ipairs(result.lnum_changes) do
         if lc.type == 'void' and lc.buftype == 'current' then void_count = void_count + 1 end
@@ -254,7 +249,6 @@ describe('Diff:', function()
       assert.are.equal(1, #result.marks)
       assert.are.equal('change', result.marks[1].type)
 
-      -- Should have both add and remove lnum_changes
       local has_add = false
       local has_remove = false
       for _, lc in ipairs(result.lnum_changes) do
@@ -266,7 +260,6 @@ describe('Diff:', function()
     end)
 
     it('should handle change hunk with unequal added/removed lines', function()
-      -- 1 line removed, 3 lines added — max_lines = 3, must pad
       local hunk = make_hunk('@@ -2,1 +2,3 @@', { '-old', '+new1', '+new2', '+new3' })
       local diff = Diff()
       local lines = { 'a', 'new1', 'new2', 'new3', 'c' }
@@ -351,7 +344,6 @@ describe('Diff:', function()
       assert.is_true(prev_found['removed1'])
       assert.is_true(prev_found['removed2'])
 
-      -- Those same positions in current_lines should be blank (void)
       local blank_count = 0
       for _, line in ipairs(result.current_lines) do
         if line == '' then blank_count = blank_count + 1 end
@@ -365,11 +357,9 @@ describe('Diff:', function()
       local lines = { 'a', 'new', 'c' }
       local result = diff:generate_split({ hunk }, lines)
 
-      -- Changed line: previous shows the removed content, current shows the added content
       assert.are.equal('old', result.previous_lines[2])
       assert.are.equal('new', result.current_lines[2])
 
-      -- Context lines are identical on both sides
       assert.are.equal('a', result.previous_lines[1])
       assert.are.equal('a', result.current_lines[1])
       assert.are.equal('c', result.previous_lines[3])
@@ -396,7 +386,6 @@ describe('Diff:', function()
       assert.is_not_nil(result.marks[1].top_relative)
       assert.is_not_nil(result.marks[1].bot_relative)
 
-      -- All lnum_changes should be remove
       for _, lc in ipairs(result.lnum_changes) do
         assert.are.equal('remove', lc.type)
       end
@@ -475,7 +464,7 @@ describe('Diff:', function()
 
       assert.are.equal(2, #result.marks)
       assert.are.equal(4, #result.current_lines)
-      assert.are.equal(8, #result.lnum_changes) -- 2 per diff line (remove + void)
+      assert.are.equal(8, #result.lnum_changes)
       assert.are.equal(0, result.stat.added)
       assert.are.equal(4, result.stat.removed)
       assert.is_not_nil(result.marks[1].top_relative)
@@ -502,7 +491,6 @@ describe('Diff:', function()
       assert.are.equal(7, result.marks[1].bot)
       assert.are.equal('conflict', result.marks[1].type)
 
-      -- Should have conflict_current_mark, conflict_current, conflict_middle, conflict_incoming, conflict_incoming_mark
       local types = {}
       for _, lc in ipairs(result.lnum_changes) do
         types[lc.type] = (types[lc.type] or 0) + 1
@@ -616,10 +604,8 @@ describe('Diff:', function()
       local lines = { '<<<', 'c1', '===', 'i1', '>>>', 'normal', '<<<', 'c2', '===', 'i2', '>>>' }
       local result = diff:generate_unified_conflict(conflicts, lines)
 
-      -- Line 6 ('normal') sits between the two conflicts and must be untouched
       assert.are.equal('normal', result.lines[6])
 
-      -- No lnum_change should reference line 6
       for _, lc in ipairs(result.lnum_changes) do
         assert.are_not.equal(6, lc.lnum)
       end
@@ -646,7 +632,6 @@ describe('Diff:', function()
       assert.is_not_nil(result.previous_lines)
       assert.is_not_nil(result.current_lines)
 
-      -- Should have void entries in the split view
       local void_count = 0
       for _, lc in ipairs(result.lnum_changes) do
         if lc.type == 'void' then void_count = void_count + 1 end
@@ -692,8 +677,6 @@ describe('Diff:', function()
     end)
 
     it('should erase conflict markers and content symmetrically from each panel', function()
-      -- current.top (<<<) erased from left; incoming.bot (>>>) erased from right
-      -- current content erased from left; incoming content erased from right
       local diff = Diff()
       local conflicts = {
         {
@@ -706,17 +689,14 @@ describe('Diff:', function()
       local lines = { '<<<', 'cur1', 'cur2', '===', 'inc1', 'inc2', '>>>' }
       local result = diff:generate_split_conflict(conflicts, lines)
 
-      -- Left panel: <<<<<<< marker and current content erased
-      assert.are.equal('', result.previous_lines[1]) -- current.top
-      assert.are.equal('', result.previous_lines[2]) -- current content
-      assert.are.equal('', result.previous_lines[3]) -- current content
+      assert.are.equal('', result.previous_lines[1])
+      assert.are.equal('', result.previous_lines[2])
+      assert.are.equal('', result.previous_lines[3])
 
-      -- Right panel: >>>>>>> marker and incoming content erased
-      assert.are.equal('', result.current_lines[5]) -- incoming content
-      assert.are.equal('', result.current_lines[6]) -- incoming content
-      assert.are.equal('', result.current_lines[7]) -- incoming.bot (>>>)
+      assert.are.equal('', result.current_lines[5])
+      assert.are.equal('', result.current_lines[6])
+      assert.are.equal('', result.current_lines[7])
 
-      -- Non-conflict lines untouched on both sides
       assert.are.equal('===', result.previous_lines[4])
       assert.are.equal('===', result.current_lines[4])
     end)
@@ -734,11 +714,9 @@ describe('Diff:', function()
       local lines = { '<<<', 'cur1', 'cur2', '===', 'inc1', 'inc2', '>>>' }
       local result = diff:generate_split_conflict(conflicts, lines)
 
-      -- Right panel (current_lines) shows HEAD/current content
       assert.are.equal('cur1', result.current_lines[2])
       assert.are.equal('cur2', result.current_lines[3])
 
-      -- Left panel (previous_lines) shows incoming content
       assert.are.equal('inc1', result.previous_lines[5])
       assert.are.equal('inc2', result.previous_lines[6])
     end)
@@ -761,15 +739,12 @@ describe('Diff:', function()
         seen[lc.type .. ':' .. lc.buftype] = true
       end
 
-      -- Current section signs go on the right (current) panel
       assert.is_true(seen['conflict_current_mark:current'])
       assert.is_true(seen['conflict_current:current'])
 
-      -- Middle separator appears on both panels
       assert.is_true(seen['conflict_middle:current'])
       assert.is_true(seen['conflict_middle:previous'])
 
-      -- Incoming section signs go on the left (previous) panel
       assert.is_true(seen['conflict_incoming:previous'])
       assert.is_true(seen['conflict_incoming_mark:previous'])
     end)
@@ -819,11 +794,9 @@ describe('Diff:', function()
 
       assert.are.equal(2, #result.marks)
 
-      -- Line 6 ('normal') is between the two conflicts — untouched on both panels
       assert.are.equal('normal', result.current_lines[6])
       assert.are.equal('normal', result.previous_lines[6])
 
-      -- No lnum_change should reference the non-conflict line
       for _, lc in ipairs(result.lnum_changes) do
         assert.are_not.equal(6, lc.lnum)
       end
@@ -971,7 +944,6 @@ describe('Diff:', function()
       assert.is_truthy(result.lnum_changes)
       assert.is_truthy(result.stat)
       invariants.assert_stat_consistency(result.stat, result.lnum_changes)
-      -- All lnum_changes should be remove
       for _, lc in ipairs(result.lnum_changes) do
         assert.are.equal('remove', lc.type)
       end
@@ -1051,7 +1023,6 @@ describe('Diff:', function()
 
       for _, lc in ipairs(result.lnum_changes) do
         if lc.type == 'void' then
-          -- Void lines should be at positions where the other side has content
           if lc.buftype == 'previous' then
             assert.are_not.equal(
               '',
@@ -1096,7 +1067,6 @@ describe('Diff:', function()
       invariants.assert_split_equal_length(result)
       invariants.assert_stat_consistency(result.stat, result.lnum_changes)
       invariants.assert_split_buftype_present(result.lnum_changes)
-      -- Current lines should all be empty
       for _, line in ipairs(result.current_lines) do
         assert.are.equal('', line)
       end
@@ -1118,59 +1088,47 @@ describe('Diff:', function()
     local invariants = require('tests.helpers.diff_invariants')
 
     it('back-to-back changes with no gap should produce ascending marks', function()
-      -- Two change hunks touching: hunk1 at line 1, hunk2 at line 2.
-      -- Tests src_pos tracking when there are zero lines between hunks.
       local h1 = make_hunk('@@ -1,1 +1,1 @@', { '-a', '+A' })
       local h2 = make_hunk('@@ -2,1 +2,1 @@', { '-b', '+B' })
       local result = Diff():generate_unified({ h1, h2 }, { 'A', 'B' })
 
       invariants.assert_unified_diff(result)
       eq(2, #result.marks)
-      -- Marks must be ascending — second mark starts after first ends
       assert.is_true(result.marks[2].top > result.marks[1].bot)
     end)
 
     it('change with many more removes than adds should have correct mark span', function()
-      -- 5 lines removed, 1 line added. The removed lines inflate new_lines.
-      -- mark.bot = top + diff_len - 1 = 1 + 6 - 1 = 6
       local h = make_hunk('@@ -1,1 +1,1 @@', { '-a', '-b', '-c', '-d', '-e', '+f' })
       local result = Diff():generate_unified({ h }, { 'f' })
 
       invariants.assert_unified_diff(result)
       eq(1, #result.marks)
-      -- Mark should cover all 6 output lines (5 removes + 1 add)
       eq(6, result.marks[1].bot - result.marks[1].top + 1)
       eq(5, result.stat.removed)
       eq(1, result.stat.added)
     end)
 
     it('change followed immediately by remove should track new_lines_added correctly', function()
-      -- change at 1 inserts extra remove lines, shifting subsequent positions
       local h1 = make_hunk('@@ -1,1 +1,1 @@', { '-old', '+new' })
       local h2 = make_hunk('@@ -3,1 +2,0 @@', { '-removed' })
       local result = Diff():generate_unified({ h1, h2 }, { 'new', 'b' })
 
       invariants.assert_unified_diff(result)
       eq(2, #result.marks)
-      -- All marks within [1, #lines]
       invariants.assert_marks_within_bounds(result.marks, #result.lines)
     end)
 
     it('remove at the very end of file should produce marks within bounds', function()
-      -- Remove after the last current line. The mark starts at top+1.
       local h = make_hunk('@@ -4,2 +3,0 @@', { '-x', '-y' })
       local result = Diff():generate_unified({ h }, { 'a', 'b', 'c' })
 
       invariants.assert_unified_diff(result)
-      -- Lines should be: a, b, c, x, y
       eq(5, #result.lines)
       eq('a', result.lines[1])
       eq('x', result.lines[4])
     end)
 
     it('add at line 1 followed by change at line 3 should keep marks ascending', function()
-      -- Add pushes all subsequent positions forward via new_lines_added=0 for add
-      -- (add doesn't increment new_lines_added, change does for its removes)
       local h1 = make_hunk('@@ -0,0 +1,2 @@', { '+new1', '+new2' })
       local h2 = make_hunk('@@ -1,1 +3,1 @@', { '-old', '+changed' })
       local result = Diff():generate_unified({ h1, h2 }, { 'new1', 'new2', 'changed', 'd' })
@@ -1180,7 +1138,6 @@ describe('Diff:', function()
     end)
 
     it('many adjacent add hunks should all produce separate ascending marks', function()
-      -- 5 single-line adds in sequence
       local hunks = {}
       local lines = {}
       for i = 1, 5 do
@@ -1199,7 +1156,7 @@ describe('Diff:', function()
       local result = Diff():generate_unified({ h }, { 'new' })
 
       invariants.assert_unified_diff(result)
-      assert.is_true(#result.lines >= 2) -- at least the removed and added line
+      assert.is_true(#result.lines >= 2)
       eq(1, result.stat.added)
       eq(1, result.stat.removed)
     end)
@@ -1219,7 +1176,6 @@ describe('Diff:', function()
       invariants.assert_unified_diff(result)
       eq(1, result.stat.removed)
       eq(20, result.stat.added)
-      -- All 21 lnum_changes should be within bounds
       invariants.assert_lnum_changes_within_bounds(result.lnum_changes, #result.lines)
     end)
 
@@ -1235,11 +1191,10 @@ describe('Diff:', function()
       invariants.assert_unified_diff(result)
       eq(20, result.stat.removed)
       eq(1, result.stat.added)
-      eq(21, #result.lines) -- 20 removed + 1 added
+      eq(21, #result.lines)
     end)
 
     it('three-hunk cascade: add, change, remove should produce valid output', function()
-      -- add at start, change in middle, remove at end
       local h1 = make_hunk('@@ -0,0 +1,1 @@', { '+header' })
       local h2 = make_hunk('@@ -2,1 +3,1 @@', { '-old_mid', '+new_mid' })
       local h3 = make_hunk('@@ -4,1 +4,0 @@', { '-tail' })
@@ -1268,14 +1223,12 @@ describe('Diff:', function()
       local result = Diff():generate_split({ h }, { 'f' })
 
       invariants.assert_split_diff(result)
-      -- Previous should have 5 real lines, current should have 1 real + 4 void
       local void_count = 0
       for _, line in ipairs(result.current_lines) do
         if line == '' then void_count = void_count + 1 end
       end
       assert.is_true(void_count >= 4)
 
-      -- Both sides equal length
       eq(#result.current_lines, #result.previous_lines)
     end)
 
@@ -1290,7 +1243,6 @@ describe('Diff:', function()
       local result = Diff():generate_split({ h }, current)
 
       invariants.assert_split_diff(result)
-      -- Previous should have 1 real + 9 voids
       local prev_void_count = 0
       for _, line in ipairs(result.previous_lines) do
         if line == '' then prev_void_count = prev_void_count + 1 end
@@ -1303,8 +1255,7 @@ describe('Diff:', function()
       local result = Diff():generate_split({ h }, { 'a', 'b', 'c' })
 
       invariants.assert_split_diff(result)
-      -- Current should have voids where removed lines were
-      eq(5, #result.current_lines) -- 3 original + 2 removed slots
+      eq(5, #result.current_lines)
     end)
 
     it('add then remove should keep both sides equal length', function()
@@ -1328,7 +1279,6 @@ describe('Diff:', function()
     end)
 
     it('mixed add/change/remove across file should maintain equal length', function()
-      -- add at 1, change at 3, remove at 5
       local h1 = make_hunk('@@ -0,0 +1,1 @@', { '+inserted' })
       local h2 = make_hunk('@@ -2,1 +3,1 @@', { '-was', '+now' })
       local h3 = make_hunk('@@ -4,1 +4,0 @@', { '-gone' })
@@ -1349,10 +1299,9 @@ describe('Diff:', function()
       local result = Diff():generate_split({ h }, { 'survivor' })
 
       invariants.assert_split_diff(result)
-      eq(20, #result.previous_lines) -- 20 real removed lines
-      eq(20, #result.current_lines) -- 1 real + 19 voids
+      eq(20, #result.previous_lines)
+      eq(20, #result.current_lines)
 
-      -- Verify void count
       local current_voids = 0
       for _, line in ipairs(result.current_lines) do
         if line == '' then current_voids = current_voids + 1 end
@@ -1384,7 +1333,6 @@ describe('Diff:', function()
 
       local lines, _, _, marks = PatchLineBuilder.build(entries)
 
-      -- Should still produce file header lines but no change marks
       assert.is_true(#lines > 0)
       eq(0, #marks)
     end)
@@ -1419,7 +1367,6 @@ describe('Diff:', function()
 
       local lines, _, _, marks = PatchLineBuilder.build(entries)
 
-      -- Only first file should contribute marks
       assert.is_true(#lines > 0)
       if #marks > 0 then invariants.assert_patch_marks(marks, #lines) end
     end)
@@ -1430,7 +1377,6 @@ describe('Diff:', function()
       for i = 1, 40 do
         current[i] = 'line' .. i
       end
-      -- Create 20 change hunks at even positions
       for i = 1, 20 do
         local pos = i * 2
         hunks[i] = make_hunk(string.format('@@ -%d,1 +%d,1 @@', pos, pos), { '-old' .. i, '+line' .. pos })

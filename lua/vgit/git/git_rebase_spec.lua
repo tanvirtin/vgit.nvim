@@ -27,10 +27,8 @@ describe('git_rebase:', function()
 
   describe('rebase', function()
     it('should rebase a branch onto another', function()
-      -- Record initial commit on main
       local base_commit = test_repo.get_head_commit(repo)
 
-      -- Create main branch commits
       local _, err = test_repo.create_commit(repo, {
         files = { ['main1.txt'] = 'main 1' },
         message = 'Main commit 1',
@@ -47,14 +45,12 @@ describe('git_rebase:', function()
       assert.is_not_nil(main_head, 'Main head commit should exist')
       assert.is_not_equal(base_commit, main_head, 'Main should have progressed')
 
-      -- Create feature branch from base
       _, err = test_repo.checkout(repo, base_commit)
       assert.is_nil(err, 'Failed to checkout base commit')
 
       _, err = test_repo.create_branch(repo, 'feature')
       assert.is_nil(err, 'Failed to create feature branch')
 
-      -- Add feature commits
       _, err = test_repo.create_commit(repo, {
         files = { ['feature.txt'] = 'feature content' },
         message = 'Feature commit',
@@ -64,12 +60,10 @@ describe('git_rebase:', function()
       local feature_commit = test_repo.get_head_commit(repo)
       assert.is_not_nil(feature_commit, 'Feature commit should exist')
 
-      -- Rebase feature onto main
       local refs = repo:refs()
       local main_branch, _ = refs:current_branch()
       if not main_branch or main_branch == 'feature' then main_branch = 'master' end
 
-      -- Switch back to determine main branch name
       _, err = test_repo.checkout(repo, main_branch)
       if err then
         _, err = test_repo.checkout(repo, 'main')
@@ -80,12 +74,10 @@ describe('git_rebase:', function()
       _, err = test_repo.checkout(repo, 'feature')
       assert.is_nil(err, 'Failed to checkout feature branch')
 
-      -- Rebase feature onto main
       local result, rebase_err = git_rebase.rebase(repo:get_path(), main_branch)
       assert.is_nil(rebase_err, 'Rebase should not error: ' .. vim.inspect(rebase_err))
       assert.is_not_nil(result, 'Rebase should return result')
 
-      -- Verify feature branch now contains main's commits
       local fs = require('vgit.core.fs')
       assert.is_true(fs.exists(repo:get_path() .. '/feature.txt'), 'Feature file should still exist')
       assert.is_true(fs.exists(repo:get_path() .. '/main1.txt'), 'Main1 file should exist after rebase')
@@ -93,7 +85,6 @@ describe('git_rebase:', function()
     end)
 
     it('should support rebase with interactive option', function()
-      -- Create base commit
       local _, err = test_repo.create_commit(repo, {
         files = { ['base.txt'] = 'base update' },
         message = 'Base update',
@@ -102,7 +93,6 @@ describe('git_rebase:', function()
 
       local base_commit = test_repo.get_head_commit(repo)
 
-      -- Create feature branch
       _, err = test_repo.create_branch(repo, 'feature')
       assert.is_nil(err, 'Failed to create feature branch')
 
@@ -117,7 +107,6 @@ describe('git_rebase:', function()
         env = { 'GIT_SEQUENCE_EDITOR=true' },
       })
 
-      -- With 'true' as editor, the rebase should succeed (accepts default todo)
       assert.is_nil(rebase_err, 'Interactive rebase should succeed with no-op editor: ' .. vim.inspect(rebase_err))
       assert.is_not_nil(result, 'Result should be returned')
     end)
@@ -184,7 +173,6 @@ describe('git_rebase:', function()
       assert.is_nil(err, 'Should not error')
       assert.is_table(status, 'Status should be a table')
 
-      -- Verify expected fields exist
       assert.is_not_nil(status.in_progress, 'Status should have in_progress field')
     end)
 
@@ -200,7 +188,6 @@ describe('git_rebase:', function()
     it('should handle abort when no rebase in progress', function()
       local result, err = git_rebase.abort(repo:get_path())
 
-      -- Should error since no rebase in progress
       assert.is_not_nil(err, 'Should error when no rebase in progress')
       assert.is_table(err, 'Error should be a table')
       assert.is_true(#err > 0, 'Error should contain messages')

@@ -194,7 +194,6 @@ function git_bisect.status(reponame)
   return status, nil
 end
 
--- Mark current commit with custom term
 function git_bisect.terms(reponame, term, commit)
   if not reponame then return nil, { 'reponame is required' } end
   if not term then return nil, { 'term is required' } end

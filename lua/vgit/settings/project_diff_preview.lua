@@ -3,7 +3,6 @@ local lazy = require('vgit.core.lazy')
 local Config = lazy('vgit.core.Config')
 
 return Config({
-  -- Alignment when jumping to a hunk: 'top', 'center', or 'bottom'
   hunk_alignment = 'center',
   keymaps = {
     commit = {

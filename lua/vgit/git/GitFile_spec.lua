@@ -73,8 +73,6 @@ describe('GitFile:generate_status', function()
   local GitFile_generate_status
 
   before_each(function()
-    -- Create a minimal object that has the generate_status method
-    -- without requiring the full GitFile constructor (which needs git)
     local GitFile = require('vgit.git.GitFile')
     GitFile_generate_status = function(hunks)
       local obj = { state = { hunks = hunks } }
@@ -114,7 +112,6 @@ describe('GitFile:generate_status', function()
   end)
 
   it('should count changes as min(added, removed)', function()
-    -- When added=3, removed=2: changed=min(3,2)=2, net_added=3-2=1, net_removed=0
     local hunks = {
       { stat = { added = 3, removed = 2 } },
     }
@@ -124,7 +121,6 @@ describe('GitFile:generate_status', function()
   end)
 
   it('should count changes when removed > added', function()
-    -- When added=2, removed=5: changed=min(2,5)=2, net_added=0, net_removed=3
     local hunks = {
       { stat = { added = 2, removed = 5 } },
     }
@@ -134,7 +130,6 @@ describe('GitFile:generate_status', function()
   end)
 
   it('should count equal added and removed as all changed', function()
-    -- When added=4, removed=4: changed=4, net_added=0, net_removed=0
     local hunks = {
       { stat = { added = 4, removed = 4 } },
     }
@@ -145,9 +140,9 @@ describe('GitFile:generate_status', function()
 
   it('should sum across multiple hunks', function()
     local hunks = {
-      { stat = { added = 5, removed = 0 } }, -- +5 added
-      { stat = { added = 0, removed = 3 } }, -- +3 removed
-      { stat = { added = 3, removed = 2 } }, -- +1 added, +2 changed
+      { stat = { added = 5, removed = 0 } },
+      { stat = { added = 0, removed = 3 } },
+      { stat = { added = 3, removed = 2 } },
     }
     local status = GitFile_generate_status(hunks)
 
@@ -156,8 +151,8 @@ describe('GitFile:generate_status', function()
 
   it('should handle multiple change hunks', function()
     local hunks = {
-      { stat = { added = 2, removed = 1 } }, -- changed=1, added=1
-      { stat = { added = 1, removed = 3 } }, -- changed=1, removed=2
+      { stat = { added = 2, removed = 1 } },
+      { stat = { added = 1, removed = 3 } },
     }
     local status = GitFile_generate_status(hunks)
 
@@ -198,14 +193,10 @@ describe('GitFile:generate_status', function()
     }
     local status = GitFile_generate_status(hunks)
 
-    -- Hunk 1: changed=50, added=50, removed=0
-    -- Hunk 2: changed=200, added=0, removed=100
     eq({ added = 50, changed = 250, removed = 100 }, status)
   end)
 end)
 
--- Integration tests using real git repos
--- Stub out modules that the user's Neovim config may require in autocmds
 package.loaded['lint'] = package.loaded['lint'] or { try_lint = function() end }
 
 local test_repo = require('tests.helpers.test_repo')
@@ -258,7 +249,6 @@ describe('GitFile (integration):', function()
       local lines2, err2 = git_file:_cached_blob_lines('index')
       assert.is_nil(err2)
 
-      -- Same reference (not a new table)
       assert.equals(lines1, lines2)
     end)
 
@@ -285,7 +275,6 @@ describe('GitFile (integration):', function()
       local lines2, err2 = git_file:_cached_blob_lines('index')
       assert.is_nil(err2)
       assert.is_table(lines2)
-      -- New reference after re-fetch
       assert.is_not.equals(ref1, git_file._blob_cache['index'])
     end)
   end)
@@ -303,7 +292,6 @@ describe('GitFile (integration):', function()
     it('should set blob_cache index to nil after stage', function()
       local git_file = GitFile(test_file)
 
-      -- Populate cache
       git_file:_cached_blob_lines('index')
       assert.is_not_nil(git_file._blob_cache['index'])
 
@@ -339,7 +327,6 @@ describe('GitFile (integration):', function()
     it('should stage hunk and set blob_cache index to nil', function()
       local git_file = GitFile(test_file)
 
-      -- Create a modification and get hunks
       local bufnr = vim.fn.bufadd(test_file)
       vim.fn.bufload(bufnr)
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'modified 1', 'line 2', 'line 3' })
@@ -349,7 +336,6 @@ describe('GitFile (integration):', function()
       assert.is_nil(hunks_err)
 
       if hunks and #hunks > 0 then
-        -- Cache should be populated from live_hunks
         assert.is_not_nil(git_file._blob_cache['index'])
 
         local _, err = git_file:stage_hunk(hunks[1])
@@ -359,18 +345,15 @@ describe('GitFile (integration):', function()
     end)
 
     it('should unstage hunk and set blob_cache index to nil', function()
-      -- First stage a modification
       test_repo.write_file(repo, 'test.txt', { 'modified 1', 'line 2', 'line 3' })
       test_repo.stage(repo, 'test.txt')
 
       local git_file = GitFile(test_file)
 
-      -- Get staged hunks via git_hunks
       local git_hunks = require('vgit.git.git_hunks')
       local hunks, _ = git_hunks.list(repo, { staged = true, filename = 'test.txt' })
 
       if hunks and #hunks > 0 then
-        -- Populate cache
         git_file:_cached_blob_lines('index')
         assert.is_not_nil(git_file._blob_cache['index'])
 
@@ -423,7 +406,6 @@ describe('GitFile (integration):', function()
       local current_lines = { 'modified 1', 'line 2', 'line 3' }
 
       git_file:live_hunks(current_lines)
-      -- After first call, cache should be populated
       assert.is_not_nil(git_file._blob_cache['index'])
 
       local hunks2, err2 = git_file:live_hunks(current_lines)

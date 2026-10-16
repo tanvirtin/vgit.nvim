@@ -31,7 +31,6 @@ describe('stash_command:', function()
     }
   end
 
-  -- Set up default mocks and return overridable table; call before each test.
   local function setup_defaults(overrides)
     overrides = overrides or {}
 
@@ -62,7 +61,6 @@ describe('stash_command:', function()
     package.loaded['vgit.cli.commands.stash'] = nil
   end)
 
-  -- Helper: load a fresh stash_command with current mocks
   local function load_cmd()
     package.loaded['vgit.cli.commands.stash'] = nil
     return require('vgit.cli.commands.stash')

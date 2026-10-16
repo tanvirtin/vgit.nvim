@@ -1,8 +1,6 @@
 local function define_single_element_methods(Class, opts)
   local exclude = opts and opts.exclude or {}
 
-  -- Chainable methods
-
   function Class:set_lines(lines)
     self:with_element(function(el)
       el:set_lines(lines)
@@ -191,8 +189,6 @@ local function define_single_element_methods(Class, opts)
     end)
     return self
   end
-
-  -- Return-value methods
 
   if not exclude.get_lines then
     function Class:get_lines()

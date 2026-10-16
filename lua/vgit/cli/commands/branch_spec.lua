@@ -56,9 +56,7 @@ describe('branch_command:', function()
 
     assert.is_not_nil(show_branch_data)
     eq('main', show_branch_data.current_branch)
-    -- Current branch should be first
     eq('main', show_branch_data.branches[1].name)
-    -- Rest should be alphabetical
     eq('develop', show_branch_data.branches[2].name)
     eq('feature', show_branch_data.branches[3].name)
   end)

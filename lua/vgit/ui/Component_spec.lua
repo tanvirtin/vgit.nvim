@@ -482,8 +482,6 @@ describe('Component:', function()
       })
       local instance = MyComponent({})
 
-      -- set_lines is NOT delegated for multi-element
-      -- It inherits from ComponentBase which doesn't have set_lines
       assert.is_nil(rawget(MyComponent, 'set_lines'))
     end)
   end)

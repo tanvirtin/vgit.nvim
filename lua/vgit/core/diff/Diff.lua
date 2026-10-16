@@ -401,7 +401,7 @@ function Diff:generate_unified(hunks, lines)
   local lines_len = #lines
   local hunks_len = #hunks
   local new_lines_added = 0
-  local src_pos = 1 -- next original line to copy
+  local src_pos = 1
 
   for i = 1, hunks_len do
     local hunk = hunks[i]
@@ -417,7 +417,6 @@ function Diff:generate_unified(hunks, lines)
     stat.removed = stat.removed + hunk_stat.removed
 
     if type == 'add' then
-      -- Copy original lines up to and including bot (added lines are already in lines[])
       for k = src_pos, orig_bot do
         new_lines_len = new_lines_len + 1
         new_lines[new_lines_len] = lines[k]
@@ -444,7 +443,6 @@ function Diff:generate_unified(hunks, lines)
     elseif type == 'remove' then
       local diff_len = #diff
 
-      -- Copy original lines up to and including top (the line before removed content)
       for k = src_pos, orig_top do
         new_lines_len = new_lines_len + 1
         new_lines[new_lines_len] = lines[k]
@@ -460,7 +458,6 @@ function Diff:generate_unified(hunks, lines)
         bot_relative = bot - new_lines_added,
       }
 
-      -- Append the removed lines (no shifting needed)
       local s = top
       for j = 1, diff_len do
         local line = diff[j]
@@ -481,7 +478,6 @@ function Diff:generate_unified(hunks, lines)
       local removed_lines, added_lines = hunk:parse_diff()
       local diff_len = #diff
 
-      -- Copy original lines up to but not including top (change replaces top..bot)
       for k = src_pos, orig_top - 1 do
         new_lines_len = new_lines_len + 1
         new_lines[new_lines_len] = lines[k]
@@ -496,7 +492,6 @@ function Diff:generate_unified(hunks, lines)
         bot_relative = bot - new_lines_added,
       }
 
-      -- First pass: append '-' lines (removed content, inserted before existing)
       local s = top
       local remove_idx = 0
       for j = 1, diff_len do
@@ -528,14 +523,12 @@ function Diff:generate_unified(hunks, lines)
         end
       end
 
-      -- Copy original lines for the '+' range (these ARE the added lines in the buffer)
       for k = orig_top, orig_bot do
         new_lines_len = new_lines_len + 1
         new_lines[new_lines_len] = lines[k]
       end
       src_pos = orig_bot + 1
 
-      -- Second pass: record lnum_changes for '+' lines
       local add_idx = 0
       for j = 1, diff_len do
         local line = diff[j]
@@ -567,7 +560,6 @@ function Diff:generate_unified(hunks, lines)
     end
   end
 
-  -- Copy remaining original lines after the last hunk
   for k = src_pos, lines_len do
     new_lines_len = new_lines_len + 1
     new_lines[new_lines_len] = lines[k]
@@ -608,7 +600,7 @@ function Diff:generate_split(hunks, lines)
 
   local lines_len = #lines
   local hunks_len = #hunks
-  local src_pos = 1 -- next original line to copy
+  local src_pos = 1
 
   for i = 1, hunks_len do
     local hunk = hunks[i]
@@ -624,14 +616,12 @@ function Diff:generate_split(hunks, lines)
     stat.removed = stat.removed + hunk_stat.removed
 
     if type == 'add' then
-      -- Copy original lines up to but not including top (added lines need void in previous)
       for k = src_pos, orig_top - 1 do
         current_len = current_len + 1
         current_lines[current_len] = lines[k]
         previous_len = previous_len + 1
         previous_lines[previous_len] = lines[k]
       end
-      -- Add the added lines: current gets the real lines, previous gets void
       for k = orig_top, orig_bot do
         current_len = current_len + 1
         current_lines[current_len] = lines[k]
@@ -666,7 +656,6 @@ function Diff:generate_split(hunks, lines)
     elseif type == 'remove' then
       local diff_len = #diff
 
-      -- Copy original lines up to and including orig_top (the line before removed content)
       for k = src_pos, orig_top do
         current_len = current_len + 1
         current_lines[current_len] = lines[k]
@@ -684,7 +673,6 @@ function Diff:generate_split(hunks, lines)
         bot_relative = bot - new_lines_added,
       }
 
-      -- Append removed lines: current gets void, previous gets the removed line
       local insert_top = top
       for j = 1, diff_len do
         local line = diff[j]
@@ -712,7 +700,6 @@ function Diff:generate_split(hunks, lines)
 
       marks[marks_len].bot = bot + diff_len
     elseif type == 'change' then
-      -- Copy original lines up to but not including orig_top
       for k = src_pos, orig_top - 1 do
         current_len = current_len + 1
         current_lines[current_len] = lines[k]
@@ -729,9 +716,7 @@ function Diff:generate_split(hunks, lines)
         top_relative = top - new_lines_added,
         bot_relative = bot - new_lines_added,
       }
-      -- Retrieve lines that have been removed and added without "-" and "+".
       local removed_lines, added_lines = hunk:parse_diff()
-      -- Max lines are the maximum number of lines found between added and removed lines.
       local max_lines
       if #removed_lines > #added_lines then
         max_lines = #removed_lines
@@ -739,11 +724,9 @@ function Diff:generate_split(hunks, lines)
         max_lines = #added_lines
       end
 
-      -- Track extra lines added for this change hunk
       local extra = max_lines - (orig_bot - orig_top + 1)
       if extra > 0 then new_lines_added = new_lines_added + extra end
 
-      -- Build the change region: max_lines rows for both sides
       for j = 1, max_lines do
         local added_line = added_lines[j]
         local removed_line = removed_lines[j]
@@ -817,7 +800,6 @@ function Diff:generate_split(hunks, lines)
     end
   end
 
-  -- Copy remaining original lines after the last hunk
   for k = src_pos, lines_len do
     current_len = current_len + 1
     current_lines[current_len] = lines[k]

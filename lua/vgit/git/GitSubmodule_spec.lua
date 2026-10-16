@@ -15,7 +15,6 @@ local function make_repo(path)
 end
 
 describe('GitSubmodule:', function()
-  -- Unit tests (no repo needed)
   describe('constructor', function()
     it('should error when repository is nil', function()
       assert.has_error(function()
@@ -83,7 +82,6 @@ describe('GitSubmodule:', function()
     end)
   end)
 
-  -- Integration tests
   describe('integration', function()
     local repo
     local source_repo
@@ -94,21 +92,18 @@ describe('GitSubmodule:', function()
     before_each(function()
       local err
 
-      -- Create source repo to be used as submodule
       source_repo, err = test_repo.create_repo({
         initial_commit = true,
         files = { ['lib.txt'] = { 'library content' } },
       })
       assert(not err, 'Failed to create source repo: ' .. tostring(err))
 
-      -- Create main repo
       repo, err = test_repo.create_repo({
         initial_commit = true,
         files = { ['main.txt'] = { 'main content' } },
       })
       assert(not err, 'Failed to create main repo: ' .. tostring(err))
 
-      -- Add submodule to main repo
       local _, sub_err = test_repo.add_submodule(repo, source_repo, 'libs/dep')
       assert(not sub_err, 'Failed to add submodule: ' .. tostring(sub_err))
     end)
@@ -184,7 +179,6 @@ describe('GitSubmodule:', function()
         assert.is_nil(err)
         assert.is_not_nil(hash)
         assert.is_true(type(hash) == 'string')
-        -- Git hashes are 40 hex chars
         assert.is_true(#hash == 40, 'Expected 40 char hash, got ' .. #hash)
         assert.is_true(hash:match('^[0-9a-f]+$') ~= nil)
       end)
@@ -196,9 +190,6 @@ describe('GitSubmodule:', function()
         local ref, err = sub:ref()
 
         assert.is_nil(err)
-        -- ref may or may not be set depending on the submodule state;
-        -- for a freshly added submodule it may be nil or a branch/tag name
-        -- we just verify no error occurs
       end)
     end)
 
@@ -212,7 +203,6 @@ describe('GitSubmodule:', function()
       it('should return false for a nonexistent submodule', function()
         local sub = GitSubmodule(make_repo(repo), 'nonexistent/path')
 
-        -- info() will error, is_initialized returns false on error
         assert.is_false(sub:is_initialized())
       end)
     end)
@@ -245,12 +235,10 @@ describe('GitSubmodule:', function()
       it('should invalidate cache after success', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- Populate cache
         local info, info_err = sub:info()
         assert.is_nil(info_err)
         assert.is_not_nil(sub._info)
 
-        -- Update should clear cache
         sub:update()
         assert.is_nil(sub._info)
       end)
@@ -268,12 +256,10 @@ describe('GitSubmodule:', function()
       it('should invalidate cache after success', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- Populate cache
         local info, info_err = sub:info()
         assert.is_nil(info_err)
         assert.is_not_nil(sub._info)
 
-        -- Sync should clear cache
         sub:sync()
         assert.is_nil(sub._info)
       end)
@@ -291,12 +277,10 @@ describe('GitSubmodule:', function()
       it('should invalidate cache after success', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- Populate cache
         local info, info_err = sub:info()
         assert.is_nil(info_err)
         assert.is_not_nil(sub._info)
 
-        -- Init should clear cache
         sub:init()
         assert.is_nil(sub._info)
       end)
@@ -314,12 +298,10 @@ describe('GitSubmodule:', function()
       it('should invalidate cache after success', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- Populate cache
         local info, info_err = sub:info()
         assert.is_nil(info_err)
         assert.is_not_nil(sub._info)
 
-        -- set_branch should clear cache
         sub:set_branch('main')
         assert.is_nil(sub._info)
       end)
@@ -337,12 +319,10 @@ describe('GitSubmodule:', function()
       it('should invalidate cache after success', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- Populate cache
         local info, info_err = sub:info()
         assert.is_nil(info_err)
         assert.is_not_nil(sub._info)
 
-        -- set_url should clear cache
         sub:set_url(source_repo)
         assert.is_nil(sub._info)
       end)
@@ -352,7 +332,6 @@ describe('GitSubmodule:', function()
       it('should succeed with force and clear cache', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- Populate cache
         local info, info_err = sub:info()
         assert.is_nil(info_err)
         assert.is_not_nil(sub._info)
@@ -361,14 +340,12 @@ describe('GitSubmodule:', function()
         assert.is_nil(err)
         eq(true, result)
 
-        -- Cache should be cleared after deinit
         assert.is_nil(sub._info)
       end)
 
       it('should succeed without force on clean submodule', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- deinit without force succeeds on clean submodule
         local result, err = sub:deinit()
 
         assert.is_nil(err)
@@ -380,7 +357,6 @@ describe('GitSubmodule:', function()
       it('should return true when submodule has local changes', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- Create a commit inside the submodule to make it "modified"
         vim.fn.system({
           'git',
           '-C',
@@ -392,7 +368,6 @@ describe('GitSubmodule:', function()
           'local-change',
         })
 
-        -- Reset cache to pick up new state
         sub:reset_cache()
         assert.is_true(sub:is_modified())
       end)
@@ -402,24 +377,19 @@ describe('GitSubmodule:', function()
       it('should clear cached info and allow re-fetch', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- Fetch and cache
         local info1, err1 = sub:info()
         assert.is_nil(err1)
         assert.is_not_nil(sub._info)
 
-        -- Reset cache
         sub:reset_cache()
         assert.is_nil(sub._info)
 
-        -- Re-fetch should produce fresh (but equivalent) data
         local info2, err2 = sub:info()
         assert.is_nil(err2)
         assert.is_not_nil(info2)
 
-        -- The re-fetched data should NOT be the same table reference
         assert.is_false(rawequal(info1, info2))
 
-        -- But the values should match
         eq(info1.path, info2.path)
         eq(info1.hash, info2.hash)
         eq(info1.status, info2.status)
@@ -430,14 +400,12 @@ describe('GitSubmodule:', function()
       it('should share cached info between status, hash, and ref calls', function()
         local sub = GitSubmodule(make_repo(repo), 'libs/dep')
 
-        -- First call populates cache
         local status, err = sub:status()
         assert.is_nil(err)
         assert.is_not_nil(sub._info)
 
         local cached_ref = sub._info
 
-        -- Subsequent calls should reuse the same cached table
         local hash, hash_err = sub:hash()
         assert.is_nil(hash_err)
         assert.is_true(rawequal(cached_ref, sub._info))

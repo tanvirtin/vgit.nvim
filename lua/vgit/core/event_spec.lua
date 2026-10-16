@@ -76,11 +76,9 @@ describe('event:', function()
       debounced()
       assert.are.equal(1, call_count)
 
-      -- Second call within cooldown should NOT execute immediately
       debounced()
       assert.are.equal(1, call_count)
 
-      -- Wait for debounce timer + schedule to fire
       vim.wait(200, function()
         return call_count >= 2
       end, 10)
@@ -106,8 +104,6 @@ describe('event:', function()
         call_count = call_count + 1
       end, 30)
 
-      -- Simulate an ongoing burst: keep calling for well past the interval
-      -- without letting a full quiet period elapse between calls.
       for _ = 1, 12 do
         vim.wait(20, function()
           return false
@@ -115,8 +111,6 @@ describe('event:', function()
         debounced()
       end
 
-      -- A pure trailing debounce would still be at 1 here (the leading call),
-      -- because the trailing run is pushed out by every call.
       assert.is_true(call_count >= 3, 'expected intermediate refreshes during the burst, got ' .. call_count)
 
       cleanup()
@@ -136,8 +130,6 @@ describe('event:', function()
         return false
       end, 10)
 
-      -- One leading run plus one trailing run; no duplicates for the 4
-      -- coalesced calls.
       assert.are.equal(2, call_count)
 
       cleanup()
@@ -152,14 +144,11 @@ describe('event:', function()
       debounced()
       assert.are.equal(1, call_count)
 
-      -- Second call schedules a deferred execution
       debounced()
       assert.are.equal(1, call_count)
 
-      -- Cleanup before timer fires
       cleanup()
 
-      -- Wait past the debounce period — deferred call should NOT fire
       vim.wait(150, function()
         return false
       end, 10)
@@ -270,7 +259,6 @@ describe('event:', function()
 
       cleanup()
 
-      -- Emitting again should not increment since autocmd was removed
       pcall(event.emit, 'TestCleanupEvent', {})
       assert.are.equal(1, call_count)
     end)
@@ -298,7 +286,6 @@ describe('event:', function()
 
       cleanup()
 
-      -- After cleanup, the autocmd should be removed
       vim.api.nvim_exec_autocmds('BufRead', { modeline = false })
       assert.are.equal(1, call_count)
     end)

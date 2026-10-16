@@ -3,8 +3,6 @@ local PatchLineBuilder = require('vgit.ui.components.PatchLineBuilder')
 
 local eq = assert.are.same
 
--- Unmounted helper: uses the real constructor which sets up annotators, viewport tracking, etc.
--- Supports optional state overrides applied after construction.
 local function create_patch_preview(overrides)
   local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
   overrides = overrides or {}
@@ -16,7 +14,6 @@ local function create_patch_preview(overrides)
   return component
 end
 
--- Mounted helper for tests that interact with the real element
 local function create_mounted_patch_preview(overrides)
   local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
   overrides = overrides or {}
@@ -24,19 +21,16 @@ local function create_mounted_patch_preview(overrides)
   local component = PatchPreviewComponent(overrides.props or {})
   ui_helper.mount({ component = component, mode = 'popup', width = 80, height = 40 })
 
-  -- Apply state overrides
   for k, v in pairs(overrides.state or {}) do
     component.state[k] = v
   end
 
-  -- Populate buffer with dummy lines so extmarks work
   local dummy = {}
   for i = 1, 30 do
     dummy[i] = ''
   end
   component._element:set_lines(dummy)
 
-  -- Reset viewport state for a clean test baseline
   component._viewport_dirty = true
   component._last_top = nil
   component._last_bot = nil
@@ -61,7 +55,6 @@ describe('PatchPreviewComponent:', function()
 
       local lines, line_metadata, file_sections, marks = PatchLineBuilder.build(entries)
 
-      -- File header produces: separator, filename, separator
       eq(3, #lines)
       assert.is_truthy(lines[1]:match('─'))
       eq('test.lua', lines[2])
@@ -102,30 +95,24 @@ describe('PatchPreviewComponent:', function()
 
       local lines, line_metadata, file_sections, marks = PatchLineBuilder.build(entries)
 
-      -- 3 (file header) + 1 (hunk header) + 4 (diff lines) = 8
-      -- trailing blank is removed
       eq(8, #lines)
 
-      -- Check hunk header
       eq('@@ -1,3 +1,4 @@', lines[4])
       eq('code', line_metadata[4].type)
       assert.is_true(line_metadata[4].is_header)
 
-      -- Check diff lines (prefixes stripped)
       eq('context line', lines[5])
       eq('removed line', lines[6])
       eq('added line', lines[7])
       eq('new line', lines[8])
 
-      -- Check lnum_change metadata
-      eq(nil, line_metadata[5].lnum_change) -- context
+      eq(nil, line_metadata[5].lnum_change)
       eq('remove', line_metadata[6].lnum_change.type)
       eq('add', line_metadata[7].lnum_change.type)
       eq('add', line_metadata[8].lnum_change.type)
 
-      -- Check marks (navigation markers)
       eq(1, #marks)
-      eq(4, marks[1].top) -- 1-indexed start of hunk (header line)
+      eq(4, marks[1].top)
       assert.is_true(marks[1].bot >= marks[1].top)
     end)
 
@@ -172,13 +159,10 @@ describe('PatchPreviewComponent:', function()
 
       local lines, line_metadata, file_sections, marks = PatchLineBuilder.build(entries)
 
-      -- Should have 3 marks (3 hunks)
       eq(3, #marks)
 
-      -- Should have 2 file sections
       assert.is_true(#file_sections >= 1)
 
-      -- All marks should have valid top/bot
       for _, mark in ipairs(marks) do
         assert.is_true(mark.top >= 1)
         assert.is_true(mark.bot >= mark.top)
@@ -204,7 +188,6 @@ describe('PatchPreviewComponent:', function()
 
       local lines, line_metadata = PatchLineBuilder.build(entries)
 
-      -- Find the diff content lines
       local found_code = false
       for i, meta in pairs(line_metadata) do
         if meta.type == 'code' and meta.filetype == 'lua' then found_code = true end
@@ -246,7 +229,6 @@ describe('PatchPreviewComponent:', function()
 
       local lines = PatchLineBuilder.build(entries)
 
-      -- Last line should not be empty (trailing blank removed)
       assert.are_not.equal('', lines[#lines])
     end)
   end)
@@ -281,22 +263,17 @@ describe('PatchPreviewComponent:', function()
 
       eq(#lines, #line_numbers)
 
-      -- Separators and filename: no line number (just spaces)
       eq('GitLineNr', line_numbers[1].hl)
       eq('GitLineNr', line_numbers[2].hl)
       eq('GitLineNr', line_numbers[3].hl)
 
-      -- Hunk header
       eq('GitPatchHeader', line_numbers[4].hl)
 
-      -- Context line: current line 1
       eq('GitLineNr', line_numbers[5].hl)
       assert.is_truthy(line_numbers[5].text:match('%d'))
 
-      -- Removed line: original line number with delete highlight
       eq('GitSignsDelete', line_numbers[6].hl)
 
-      -- Added lines: current line numbers with add highlight
       eq('GitSignsAdd', line_numbers[7].hl)
       eq('GitSignsAdd', line_numbers[8].hl)
     end)
@@ -330,8 +307,6 @@ describe('PatchPreviewComponent:', function()
 
       local _, _, _, _, line_numbers = PatchLineBuilder.build(entries)
 
-      -- Context line is at index 5 (3 file header lines + 1 hunk header + 1 context)
-      -- Should show line 20 (current start from hunk header)
       assert.is_truthy(line_numbers[5].text:match('20'))
     end)
 
@@ -348,7 +323,6 @@ describe('PatchPreviewComponent:', function()
 
       local _, _, _, _, line_numbers = PatchLineBuilder.build(entries)
 
-      -- All 3 file header lines should be GitLineNr
       for i = 1, #line_numbers do
         eq('GitLineNr', line_numbers[i].hl)
       end
@@ -387,7 +361,7 @@ describe('PatchPreviewComponent:', function()
       component:set_lnum(7)
 
       local idx = component:find_adjacent_mark_index('next')
-      eq(2, idx) -- next after current mark (index 1)
+      eq(2, idx)
     end)
 
     it('should wrap to 1 when at last mark going next', function()
@@ -404,7 +378,7 @@ describe('PatchPreviewComponent:', function()
       component:set_lnum(25)
 
       local idx = component:find_adjacent_mark_index('next')
-      eq(1, idx) -- wraps to first
+      eq(1, idx)
     end)
 
     it('should find previous mark when cursor is after last mark', function()
@@ -421,7 +395,7 @@ describe('PatchPreviewComponent:', function()
       component:set_lnum(25)
 
       local idx = component:find_adjacent_mark_index('prev')
-      eq(2, idx) -- last mark
+      eq(2, idx)
     end)
 
     it('should find previous mark when cursor is inside a mark', function()
@@ -438,7 +412,7 @@ describe('PatchPreviewComponent:', function()
       component:set_lnum(17)
 
       local idx = component:find_adjacent_mark_index('prev')
-      eq(1, idx) -- previous mark (index 2 - 1)
+      eq(1, idx)
     end)
 
     it('should wrap to last mark when before first mark going prev', function()
@@ -455,7 +429,7 @@ describe('PatchPreviewComponent:', function()
       component:set_lnum(1)
 
       local idx = component:find_adjacent_mark_index('prev')
-      eq(2, idx) -- wraps to last
+      eq(2, idx)
     end)
 
     it('should return nil for empty marks', function()
@@ -487,7 +461,7 @@ describe('PatchPreviewComponent:', function()
       component:set_lnum(12)
 
       local idx = component:find_adjacent_mark_index('next')
-      eq(2, idx) -- next mark after gap
+      eq(2, idx)
     end)
 
     it('should find prev mark when cursor is between marks', function()
@@ -582,17 +556,14 @@ describe('PatchPreviewComponent:', function()
         return orig_hl(self_el, opts)
       end
 
-      -- Render rows 0-1 (visible viewport)
       component:render_viewport(0, 1)
 
-      -- Should render 2 line numbers (rows 0 and 1)
       eq(2, #lnum_calls)
       eq(0, lnum_calls[1].row)
       eq('  1 ', lnum_calls[1].text)
       eq(1, lnum_calls[2].row)
       eq('  2 ', lnum_calls[2].text)
 
-      -- Should render 1 diff hl (row 0 line) + 1 diff hl (row 1 line) + 1 syntax hl (row 0)
       eq(3, #hl_calls)
     end)
 
@@ -608,7 +579,6 @@ describe('PatchPreviewComponent:', function()
         },
       })
 
-      -- Should not error
       component:render_viewport(0, 10)
     end)
   end)
@@ -637,11 +607,9 @@ describe('PatchPreviewComponent:', function()
         return orig_hl(self_el, opts)
       end
 
-      -- First call should render
       component:render_viewport(0, 0)
       local first_count = #hl_calls
 
-      -- Second call with same range should skip
       component:render_viewport(0, 0)
       eq(first_count, #hl_calls)
     end)
@@ -674,7 +642,6 @@ describe('PatchPreviewComponent:', function()
       component:render_viewport(0, 0)
       local first_count = #hl_calls
 
-      -- Different range should render
       component:render_viewport(0, 1)
       assert.is_true(#hl_calls > first_count)
     end)
@@ -705,7 +672,6 @@ describe('PatchPreviewComponent:', function()
       component:render_viewport(0, 0)
       local first_count = #hl_calls
 
-      -- Mark dirty, same range should re-render
       component._viewport_dirty = true
       component:render_viewport(0, 0)
       assert.is_true(#hl_calls > first_count)
@@ -733,7 +699,6 @@ describe('PatchPreviewComponent:', function()
       component:render_viewport(0, 5)
       eq(1, clear_called)
 
-      -- Change range to trigger re-render
       component:render_viewport(0, 10)
       eq(2, clear_called)
     end)
@@ -1007,7 +972,6 @@ describe('PatchPreviewComponent:', function()
 
       eq(2, #marks)
 
-      -- Both marks should point to lines that have changes
       for _, mark in ipairs(marks) do
         local has_change = false
         for lnum = mark.top, mark.bot do
@@ -1020,7 +984,6 @@ describe('PatchPreviewComponent:', function()
         assert.is_true(has_change)
       end
 
-      -- There should be a hunk header in the gap between marks
       local has_gap_header = false
       for lnum = marks[1].bot + 1, marks[2].top - 1 do
         local meta = line_metadata[lnum]
@@ -1192,7 +1155,6 @@ describe('PatchPreviewComponent:', function()
 
       local _, line_metadata = PatchLineBuilder.build(entries)
 
-      -- Check that remove type is preserved
       local found_remove = false
       for _, meta in pairs(line_metadata) do
         if meta.lnum_change and meta.lnum_change.type == 'remove' then found_remove = true end
@@ -1223,7 +1185,6 @@ describe('PatchPreviewComponent:', function()
         visited[#visited + 1] = mark.top
       end
 
-      -- Should visit mark 1, 2, 3, then wrap to 1
       eq(5, visited[1])
       eq(15, visited[2])
       eq(25, visited[3])
@@ -1251,7 +1212,6 @@ describe('PatchPreviewComponent:', function()
         visited[#visited + 1] = mark.top
       end
 
-      -- Should visit mark 3, 2, 1, then wrap to 3
       eq(25, visited[1])
       eq(15, visited[2])
       eq(5, visited[3])
@@ -1320,12 +1280,10 @@ describe('PatchPreviewComponent:', function()
         },
       })
 
-      -- Start in gap between mark 1 and 2
       component:set_lnum(12)
       local mark = component:hunk_down()
       eq(15, mark.top)
 
-      -- Start in gap between mark 2 and 3, go prev
       component:set_lnum(22)
       mark = component:hunk_up()
       eq(15, mark.top)

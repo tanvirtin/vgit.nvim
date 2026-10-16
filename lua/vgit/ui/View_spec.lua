@@ -65,7 +65,6 @@ describe('View:', function()
         LayoutSpec.view(child_view, { id = 'wrapper', flex = 1 }),
       })
       local result = view:_resolve_layout_spec(spec)
-      -- The child should have been replaced with the inner spec (VIEW wrapping element)
       assert.are.equal(LayoutSpec.Type.VIEW, result.children[1].type)
     end)
 
@@ -140,7 +139,6 @@ describe('View:', function()
     it('should recurse into a FLEX child and mount its nested components', function()
       local comp_a = TestComponent({ name = 'a' })
       local comp_b = TestComponent({ name = 'b' })
-      -- The horizontal node is a plain FLEX table (no .view) — old code silently skipped it
       local spec = LayoutSpec.vertical({
         LayoutSpec.horizontal({
           LayoutSpec.view(comp_a, { flex = 1 }),
@@ -156,7 +154,6 @@ describe('View:', function()
       local comp_a = TestComponent({ name = 'a' })
       local comp_b = TestComponent({ name = 'b' })
       local comp_c = TestComponent({ name = 'c' })
-      -- Mirrors the StashView split layout: nested horizontal inside vertical
       local spec = LayoutSpec.vertical({
         LayoutSpec.horizontal({
           LayoutSpec.view(comp_a, { flex = 1 }),
@@ -276,8 +273,6 @@ describe('View:', function()
     it('should not leave orphaned scratch buffers after render', function()
       local buf_count_before = #vim.api.nvim_list_bufs()
       view:_render({ component = TestComponent(), mode = 'screen' })
-      -- tabnew creates a scratch buffer; it should be deleted once VGit
-      -- sets its own buffer into the window, leaving only the component buffer
       assert.are.equal(buf_count_before + 1, #vim.api.nvim_list_bufs())
       view:destroy()
     end)

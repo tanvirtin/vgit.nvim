@@ -28,7 +28,6 @@ describe('GitRemote:', function()
     assert.is_nil(err)
     assert.is_not_nil(remote_repo)
 
-    -- Add remote to repo
     repo:add_remote('origin', remote_repo:get_path())
   end)
 
@@ -82,7 +81,6 @@ describe('GitRemote:', function()
       local _, err = remote:set_url(new_url)
       assert.is_nil(err)
 
-      -- Verify URL changed
       local url, _ = remote:url()
       assert.equals(new_url, url)
     end)
@@ -109,7 +107,6 @@ describe('GitRemote:', function()
     it('should get push URL', function()
       local remote = GitRemote(repo, 'origin')
       local url, err = remote:push_url()
-      -- Push URL might be same as fetch URL
       if not err then assert.is_not_nil(url) end
     end)
   end)
@@ -138,7 +135,6 @@ describe('GitRemote:', function()
       local _, err = remote:remove()
       assert.is_nil(err)
 
-      -- Verify removal
       local remotes, _ = repo:remotes()
       assert.equals(0, #remotes)
     end)
@@ -150,10 +146,8 @@ describe('GitRemote:', function()
       local _, err = remote:rename('upstream')
       assert.is_nil(err)
 
-      -- Verify name changed
       assert.equals('upstream', remote:name())
 
-      -- Verify in repository
       local remotes, _ = repo:remotes()
       assert.equals(1, #remotes)
       assert.equals('upstream', remotes[1]:name())
@@ -170,14 +164,11 @@ describe('GitRemote:', function()
     it('should clear cached data', function()
       local remote = GitRemote(repo, 'origin')
 
-      -- Load data to cache
       remote:url()
       remote:info()
 
-      -- Reset cache
       remote:reset_cache()
 
-      -- Should still work (reload from git)
       local url, err = remote:url()
       assert.is_nil(err)
       assert.is_not_nil(url)
@@ -189,7 +180,6 @@ describe('GitRemote:', function()
       local remote = GitRemote(repo, 'origin')
       local _, err = remote:fetch('nonexistent-refspec-xyz')
 
-      -- fetch with a bad refspec should error
       assert.is_not_nil(err)
     end)
   end)

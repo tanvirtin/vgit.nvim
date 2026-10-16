@@ -171,10 +171,6 @@ function event.debounce(fn, ms)
     argc = select('#', ...)
 
     if cooldown then
-      -- Coalesce subsequent calls, but do not push the run out indefinitely:
-      -- the timer below flushes the latest args at most every `ms` while the
-      -- burst is ongoing, so long edits stay reactive instead of freezing on
-      -- the state captured when the burst started.
       pending = true
       return
     end

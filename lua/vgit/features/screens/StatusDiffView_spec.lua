@@ -5,7 +5,6 @@ describe('StatusDiffView:', function()
   local StatusDiffView
   local save_package, restore_packages = require('tests.helpers.package_mock').create()
 
-  -- Helper to create a valid entry
   local function make_entry(opts)
     opts = opts or {}
     return {
@@ -19,7 +18,6 @@ describe('StatusDiffView:', function()
     }
   end
 
-  -- Helper to create valid data for create()
   local function make_data(opts)
     opts = opts or {}
     return {
@@ -43,14 +41,12 @@ describe('StatusDiffView:', function()
   end
 
   before_each(function()
-    -- Fresh require each test
     package.loaded['vgit.features.screens.StatusDiffView'] = nil
     StatusDiffView = require('vgit.features.screens.StatusDiffView')
   end)
 
   after_each(function()
     restore_packages()
-    -- Ensure event mock stays in place
     package.loaded['vgit.core.event'] = mock_event
   end)
   describe('Entry Validation', function()
@@ -157,13 +153,8 @@ describe('StatusDiffView:', function()
         assert.is_false(result)
       end)
 
-      -- Note: Tests that call create() with valid data would try to render real UI
-      -- and hang in headless mode. We test _process_entries_data indirectly through
-      -- the error cases above, and test opts setting separately below.
-
       it('should store layout_type from data in opts via _process_entries_data', function()
         local view = StatusDiffView()
-        -- Mock _create_view to avoid UI creation
         view._create_view = function()
           return true
         end
@@ -300,7 +291,6 @@ describe('StatusDiffView:', function()
         local component = view:_create_diff_component({})
 
         assert.is_not_nil(component)
-        -- Default is unified (DiffComponent), which lacks SplitDiffComponent methods
         assert.is_nil(component.calculate_split_line_numbers)
       end)
 
@@ -405,7 +395,6 @@ describe('StatusDiffView:', function()
 
         view:move_to_entry('test.lua', 'unstaged')
 
-        -- Verify predicate works correctly
         assert.is_not_nil(called_with)
         assert.is_true(called_with({ filename = 'test.lua' }, 'unstaged'))
         assert.is_false(called_with({ filename = 'test.lua' }, 'staged'))
@@ -417,7 +406,6 @@ describe('StatusDiffView:', function()
       it('should return true when entry of target type exists', function()
         setup_mock_tree({}, 1)
         mock_tree.move_to = function(_, predicate)
-          -- Simulate finding an entry
           if predicate({ filename = 'file1.lua' }, 'staged') then return { filename = 'file1.lua' } end
           return nil
         end
@@ -559,7 +547,7 @@ describe('StatusDiffView:', function()
           { top = 10, bot = 15 },
           { top = 20, bot = 25 },
         }
-        setup_mock_diff(marks, 12) -- cursor inside second mark
+        setup_mock_diff(marks, 12)
 
         local index, total = view:get_current_mark_index()
         eq(2, index)
@@ -571,10 +559,10 @@ describe('StatusDiffView:', function()
           { top = 1, bot = 5 },
           { top = 10, bot = 15 },
         }
-        setup_mock_diff(marks, 7) -- cursor between marks
+        setup_mock_diff(marks, 7)
 
         local index, total = view:get_current_mark_index()
-        eq(1, index) -- prev mark (max of 1, i-1)
+        eq(1, index)
         eq(2, total)
       end)
 
@@ -583,7 +571,7 @@ describe('StatusDiffView:', function()
           { top = 1, bot = 5 },
           { top = 10, bot = 15 },
         }
-        setup_mock_diff(marks, 100) -- cursor after all marks
+        setup_mock_diff(marks, 100)
 
         local index, total = view:get_current_mark_index()
         eq(2, index)
@@ -606,7 +594,6 @@ describe('StatusDiffView:', function()
     describe('hunk_down', function()
       it('should return early if diff_component is nil', function()
         view._diff_component = nil
-        -- Should not error
         view:hunk_down()
       end)
 
@@ -616,7 +603,6 @@ describe('StatusDiffView:', function()
             return false
           end,
         }
-        -- Should not error
         view:hunk_down()
       end)
 
@@ -626,7 +612,7 @@ describe('StatusDiffView:', function()
           { top = 1, bot = 5 },
           { top = 10, bot = 15 },
         }
-        setup_mock_diff(marks, 3) -- at first hunk
+        setup_mock_diff(marks, 3)
         mock_diff.hunk_down = function()
           called = true
         end
@@ -657,7 +643,7 @@ describe('StatusDiffView:', function()
           { top = 1, bot = 5 },
           { top = 10, bot = 15 },
         }
-        setup_mock_diff(marks, 12) -- at second hunk
+        setup_mock_diff(marks, 12)
         mock_diff.hunk_up = function()
           called = true
         end
@@ -719,7 +705,7 @@ describe('StatusDiffView:', function()
           moved_to = idx
         end
 
-        view:restore_hunk_position(10) -- exceeds 2 marks
+        view:restore_hunk_position(10)
         eq(2, moved_to)
       end)
 
@@ -842,7 +828,6 @@ describe('StatusDiffView:', function()
     end
 
     before_each(function()
-      -- Mock repository.current BEFORE requiring StatusDiffView
       save_package('vgit.git.repository')
       package.loaded['vgit.git.repository'] = {
         current = function()
@@ -850,7 +835,6 @@ describe('StatusDiffView:', function()
         end,
       }
 
-      -- Re-require StatusDiffView to pick up the mock
       package.loaded['vgit.features.screens.StatusDiffView'] = nil
       StatusDiffView = require('vgit.features.screens.StatusDiffView')
 
@@ -965,7 +949,6 @@ describe('StatusDiffView:', function()
           warn = function() end,
           debug = { error = function() end, warning = function() end },
         }
-        -- Re-require to pick up mock
         package.loaded['vgit.features.screens.StatusDiffView'] = nil
         StatusDiffView = require('vgit.features.screens.StatusDiffView')
         view = StatusDiffView()
@@ -1434,7 +1417,6 @@ describe('StatusDiffView:', function()
           return nil, 'repo error'
         end
 
-        -- Should not error
         view:stage_all()
         eq(0, #repo_calls)
       end)
@@ -1758,7 +1740,6 @@ describe('StatusDiffView:', function()
     describe('_handle_file_selection_change', function()
       it('should return early if destroyed', function()
         view._destroyed = true
-        -- Should not error
         view:_handle_file_selection_change({ entry = make_entry() })
       end)
 
@@ -1804,8 +1785,6 @@ describe('StatusDiffView:', function()
 
         view:_handle_file_selection_change({ entry = entry })
 
-        -- Verify diff was built (set_props was called through _handle_file_selection_change)
-        -- The entry is validated via _is_valid_entry
         assert.is_true(view:_is_valid_entry(entry))
       end)
     end)
@@ -1827,7 +1806,6 @@ describe('StatusDiffView:', function()
           return nil, 'error'
         end
 
-        -- Should not error
         view:refresh_data()
       end)
 
@@ -2107,7 +2085,6 @@ describe('StatusDiffView:', function()
       local view = StatusDiffView()
       local alignment = view:get_hunk_alignment()
 
-      -- Should be a valid alignment value
       local valid = { center = true, top = true, bottom = true }
       assert.is_true(valid[alignment] ~= nil)
     end)
@@ -2216,7 +2193,6 @@ describe('StatusDiffView:', function()
       local entry = make_entry({ type = 'unstaged', filename = 'test.lua' })
       local result = view:_build_entry_diff(entry, repo)
 
-      -- Marks should be identical — view layer must not mutate them
       eq(original_marks, result.marks)
     end)
 

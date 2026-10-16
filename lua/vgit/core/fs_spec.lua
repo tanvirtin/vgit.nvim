@@ -288,16 +288,12 @@ describe('fs:', function()
     end)
 
     it('should terminate and return nil when all suffixes are strippable but base has no filetype', function()
-      -- "only.bak" -> strip .bak -> "only" (no ext) -> break -> nil
       assert.is_nil(fs.detect_filetype('only.bak'))
-      -- "file.in.bak" -> strip .bak -> "file.in" -> strip .in -> "file" -> break -> nil
       assert.is_nil(fs.detect_filetype('file.in.bak'))
-      -- deeply chained: all strippable, no recognizable base
       assert.is_nil(fs.detect_filetype('noext.bak.in.orig.old'))
     end)
 
     it('should terminate correctly with a long chain of strippable suffixes before a real type', function()
-      -- 5 strippable suffixes before .rs; loop must run all 5 and still resolve
       eq('rust', fs.detect_filetype('example.rs.in.bak.orig.old.new'))
     end)
 

@@ -37,7 +37,6 @@ describe('git_commit:', function()
       assert(not err)
       assert(success)
 
-      -- Working tree should be clean
       local files = git_status.ls(repo)
       eq(#files, 0)
     end)
@@ -89,10 +88,8 @@ describe('git_commit:', function()
 
       local success, err = git_commit.create(repo, '')
 
-      -- Git should reject empty message
       assert(err, 'Should error on empty message')
       assert(not success, 'Should not succeed')
-      -- Git typically returns "Aborting commit" or similar for empty messages
     end)
 
     it('should handle very long message', function()
@@ -130,7 +127,6 @@ describe('git_commit:', function()
       assert(not err)
       eq(success, true)
 
-      -- Unstaged file should still be present
       local files = git_status.ls(repo)
       eq(#files, 1)
       eq(files[1].filename, 'unstaged.txt')
@@ -168,7 +164,6 @@ describe('git_commit:', function()
 
       local success, err = git_commit.create(repo, nil)
 
-      -- Should error when message is nil
       assert(err, 'Should error when description is missing')
       assert(not success, 'Should not succeed')
     end)
@@ -261,7 +256,6 @@ describe('git_commit:', function()
 
       git_commit.dry_run(repo)
 
-      -- File should still be staged (commit wasn't created)
       local files = git_status.ls(repo)
       eq(#files, 1)
       eq(files[1].value, 'M ')
@@ -277,18 +271,15 @@ describe('git_commit:', function()
       assert(not err)
       assert(result)
 
-      -- Result should mention the files
       local output = table.concat(result, '\n')
-      assert(output:match('file1.txt') or true) -- Format may vary
+      assert(output:match('file1.txt') or true)
     end)
 
     it('should return status even with no changes', function()
       local result, err = git_commit.dry_run(repo)
 
-      -- Should not error, but may return empty result
       assert(not err, 'Should not error: ' .. vim.inspect(err))
       assert(result, 'Should return result')
-      -- May be empty or contain status message
     end)
 
     it('should show nothing staged with unstaged changes', function()
@@ -296,7 +287,6 @@ describe('git_commit:', function()
 
       local result, err = git_commit.dry_run(repo)
 
-      -- Should succeed but show no staged changes
       assert(not err, 'Should not error: ' .. vim.inspect(err))
       assert(result, 'Should return result')
     end)
@@ -339,7 +329,6 @@ describe('git_commit:', function()
 
       git_commit.dry_run(repo)
 
-      -- File should still be staged
       local files = git_status.ls(repo)
       eq(#files, 1)
       eq(files[1].value, 'M ')
@@ -351,11 +340,9 @@ describe('git_commit:', function()
       test_repo.modify_file(repo, 'file1.txt', { 'modified' })
       test_repo.stage(repo, '.')
 
-      -- Dry run first
       local _, dry_err = git_commit.dry_run(repo)
       assert(not dry_err)
 
-      -- Then commit
       local success, err = git_commit.create(repo, 'Real commit')
       assert(not err)
       eq(success, true)

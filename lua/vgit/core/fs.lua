@@ -114,7 +114,6 @@ end
 
 function fs.absolute_path(base_path, relative_path)
   if relative_path:sub(1, 1) == '/' then return relative_path end
-  -- Strip trailing separators to prevent double-slash
   while #base_path > 1 and base_path:sub(-1) == fs.sep do
     base_path = base_path:sub(1, -2)
   end

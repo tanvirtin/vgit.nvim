@@ -162,7 +162,6 @@ describe('LayoutSpec:', function()
       eq(LayoutSpec.Anchor.CENTER, spec.anchor)
       eq(1, spec.zindex)
 
-      -- Child should be vertical flex
       eq(LayoutSpec.Type.FLEX, spec.child.type)
       eq(LayoutSpec.Direction.VERTICAL, spec.child.direction)
     end)

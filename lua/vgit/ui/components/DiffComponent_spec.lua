@@ -17,12 +17,10 @@ local function create_diff_component(overrides)
   local component = DiffComponent(overrides.props or {})
   ui_helper.mount({ component = component, mode = 'popup', width = 80, height = 40 })
 
-  -- Apply state overrides
   for k, v in pairs(overrides.state or {}) do
     component.state[k] = v
   end
 
-  -- Compute how many buffer lines are needed
   local max_line = 50
   if overrides.lnum and overrides.lnum > max_line then max_line = overrides.lnum + 5 end
   if overrides.state then
@@ -37,17 +35,14 @@ local function create_diff_component(overrides)
     end
   end
 
-  -- Populate buffer so cursor movement and extmarks work
   local dummy = {}
   for i = 1, max_line do
     dummy[i] = ''
   end
   component._element:set_lines(dummy)
 
-  -- Set initial cursor position
   if overrides.lnum then component:set_lnum(overrides.lnum) end
 
-  -- Reset viewport state for a clean test baseline
   component._viewport_dirty = true
   component._last_top = nil
   component._last_bot = nil
@@ -98,7 +93,7 @@ describe('DiffComponent:', function()
 
       local result = component:hunk_down()
       assert.is_not_nil(result)
-      eq(15, result.top) -- second mark
+      eq(15, result.top)
     end)
 
     it('should wrap to first mark when past last mark', function()
@@ -119,7 +114,7 @@ describe('DiffComponent:', function()
 
       local result = component:hunk_down()
       assert.is_not_nil(result)
-      eq(5, result.top) -- wraps to first
+      eq(5, result.top)
     end)
 
     it('should wrap when at last mark', function()
@@ -140,7 +135,6 @@ describe('DiffComponent:', function()
 
       local result = component:hunk_down()
       assert.is_not_nil(result)
-      -- mark_index would be 3, which wraps to 1
       eq(5, result.top)
     end)
 
@@ -180,7 +174,7 @@ describe('DiffComponent:', function()
 
       local result = component:hunk_down()
       assert.is_not_nil(result)
-      eq(15, result.top) -- mark 2
+      eq(15, result.top)
     end)
   end)
 
@@ -203,7 +197,7 @@ describe('DiffComponent:', function()
 
       local result = component:hunk_up()
       assert.is_not_nil(result)
-      eq(15, result.top) -- last mark
+      eq(15, result.top)
     end)
 
     it('should navigate to previous mark when cursor is inside a mark', function()
@@ -224,7 +218,7 @@ describe('DiffComponent:', function()
 
       local result = component:hunk_up()
       assert.is_not_nil(result)
-      eq(5, result.top) -- first mark
+      eq(5, result.top)
     end)
 
     it('should wrap to last mark when before first mark', function()
@@ -245,7 +239,7 @@ describe('DiffComponent:', function()
 
       local result = component:hunk_up()
       assert.is_not_nil(result)
-      eq(15, result.top) -- wraps to last
+      eq(15, result.top)
     end)
 
     it('should return nil for empty marks', function()
@@ -306,7 +300,7 @@ describe('DiffComponent:', function()
 
       local result = component:move_to_hunk(0)
       assert.is_not_nil(result)
-      eq(15, result.top) -- wraps to last
+      eq(15, result.top)
     end)
 
     it('should wrap index > #marks to first mark', function()
@@ -327,7 +321,7 @@ describe('DiffComponent:', function()
 
       local result = component:move_to_hunk(5)
       assert.is_not_nil(result)
-      eq(5, result.top) -- wraps to first
+      eq(5, result.top)
     end)
 
     it('should return nil for empty marks', function()
@@ -365,7 +359,7 @@ describe('DiffComponent:', function()
 
       local result = component:move_to_hunk(nil)
       assert.is_not_nil(result)
-      eq(5, result.top) -- first mark
+      eq(5, result.top)
     end)
   end)
 
@@ -606,13 +600,12 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      -- Render rows 1-3 (0-indexed), which map to line_numbers[2..4]
       component:render_viewport(1, 3)
 
       eq(3, #lnum_calls)
-      eq(1, lnum_calls[1].row) -- row 1 (0-indexed)
-      eq(2, lnum_calls[2].row) -- row 2 (0-indexed)
-      eq(3, lnum_calls[3].row) -- row 3 (0-indexed)
+      eq(1, lnum_calls[1].row)
+      eq(2, lnum_calls[2].row)
+      eq(3, lnum_calls[3].row)
     end)
 
     it('should not render line numbers when line_numbers is empty', function()
@@ -660,7 +653,6 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      -- Request range beyond line_numbers length (0-indexed)
       component:render_viewport(0, 99)
       eq(2, #lnum_calls)
     end)
@@ -690,11 +682,9 @@ describe('DiffComponent:', function()
         return orig(self_el, opts)
       end
 
-      -- First call should render (0-indexed)
       component:render_viewport(0, 2)
       eq(3, #lnum_calls)
 
-      -- Second call with same range should skip (no new calls)
       component:render_viewport(0, 2)
       eq(3, #lnum_calls)
     end)
@@ -727,7 +717,6 @@ describe('DiffComponent:', function()
       component:render_viewport(0, 2)
       eq(3, #lnum_calls)
 
-      -- Different range should render (0-indexed)
       component:render_viewport(2, 4)
       eq(6, #lnum_calls)
     end)
@@ -757,7 +746,6 @@ describe('DiffComponent:', function()
       component:render_viewport(0, 1)
       eq(2, #lnum_calls)
 
-      -- Mark dirty and re-render same range
       component._viewport_dirty = true
       component:render_viewport(0, 1)
       eq(4, #lnum_calls)
@@ -806,7 +794,6 @@ describe('DiffComponent:', function()
       local DiffComponent = require('vgit.ui.components.DiffComponent')
       local component = DiffComponent({})
 
-      -- Should not error when element is nil
       local ok = pcall(function()
         component:place_extmark_text({ row = 0 })
       end)
@@ -822,7 +809,6 @@ describe('DiffComponent:', function()
         end,
       }
 
-      -- Should not error when element is invalid
       local ok = pcall(function()
         component:place_extmark_sign({ col = 0 })
       end)
@@ -893,11 +879,8 @@ describe('DiffComponent:', function()
       local state = component:build_diff_render_state(diff)
 
       for i, lc in ipairs(state.lines_changes) do
-        -- line_number is always present (string)
         assert.is_not_nil(lc.line_number, string.format('lines_changes[%d] missing line_number', i))
-        -- lnum_change is nil for context lines, present for changed lines
       end
-      -- At least some entries should have non-nil lnum_change
       local has_change = false
       for _, lc in ipairs(state.lines_changes) do
         if lc.lnum_change then has_change = true end
@@ -917,7 +900,6 @@ describe('DiffComponent:', function()
       for _, ln in ipairs(state.line_numbers) do
         hl_groups[ln[2]] = true
       end
-      -- Should have at least context and change highlights
       assert.is_true(
         hl_groups['GitLineNr'] ~= nil or hl_groups['GitSignsAdd'] ~= nil or hl_groups['GitSignsDelete'] ~= nil
       )
@@ -950,7 +932,6 @@ describe('DiffComponent:', function()
     end)
 
     it('should produce folds for unified diff with distant hunks', function()
-      -- FoldCalculator requires line_count >= 28 and gap >= 10 between hunks
       local hunk1 = make_hunk('@@ -0,0 +1,1 @@', { '+added' })
       local hunk2 = make_hunk('@@ -35,1 +36,1 @@', { '-old', '+new' })
       local lines = {}
@@ -1029,7 +1010,6 @@ describe('DiffComponent:', function()
 
     it('should return real buffer lines when element is valid', function()
       local component = create_diff_component({})
-      -- Buffer was populated with 50 empty lines by create_diff_component
       local lines = component:get_lines()
       eq(50, #lines)
     end)
@@ -1064,7 +1044,6 @@ describe('DiffComponent:', function()
       eq(#diff.lines, #state.lines)
       eq(#diff.lines, #state.line_numbers)
       eq(#diff.lines, #state.lines_changes)
-      -- Should have 10 remove + 1 add lnum_changes
       local change_count = 0
       for _, lc in ipairs(state.lines_changes) do
         if lc.lnum_change then change_count = change_count + 1 end
@@ -1083,7 +1062,6 @@ describe('DiffComponent:', function()
 
       eq(3, #state.marks)
       eq(diff.marks, state.marks)
-      -- All marks ascending
       for i = 2, #state.marks do
         assert.is_true(state.marks[i].top > state.marks[i - 1].bot)
       end
@@ -1114,7 +1092,6 @@ describe('DiffComponent:', function()
 
       eq(#diff.lines, #state.lines)
       eq(3, #state.marks)
-      -- Verify line_numbers contains exactly #lines entries
       eq(#state.lines, #state.line_numbers)
     end)
 
@@ -1136,7 +1113,6 @@ describe('DiffComponent:', function()
       eq(20, #state.marks)
       eq(#diff.lines, #state.lines)
       eq(#diff.lines, #state.line_numbers)
-      -- Every mark must be within line bounds
       for _, mark in ipairs(state.marks) do
         assert.is_true(mark.top >= 1)
         assert.is_true(mark.bot <= #state.lines)
@@ -1147,7 +1123,6 @@ describe('DiffComponent:', function()
       local component = DiffComponent({})
       local state = component:build_diff_render_state(nil)
 
-      -- Should gracefully return empty state, not crash
       assert.is_not_nil(state)
       eq({}, state.lines)
       eq({}, state.marks)

@@ -418,7 +418,6 @@ describe('GitRepository:', function()
         assert.is_nil(err)
         assert.is_not_nil(result)
 
-        -- Verify file is staged
         local index = repo:index()
         local has_staged, staged_err = index:has_staged_changes()
         assert.is_nil(staged_err)
@@ -433,17 +432,14 @@ describe('GitRepository:', function()
 
         local repo = GitRepository.open(repo_path)
 
-        -- Verify it's staged first
         local index = repo:index()
         local has_staged, _ = index:has_staged_changes()
         assert.is_true(has_staged)
 
-        -- Unstage
         local result, err = repo:unstage_file('file.txt')
         assert.is_nil(err)
         assert.is_not_nil(result)
 
-        -- Verify it's no longer staged
         has_staged, _ = index:has_staged_changes()
         assert.is_false(has_staged)
       end)
@@ -459,7 +455,6 @@ describe('GitRepository:', function()
         assert.is_nil(err)
         assert.is_not_nil(result)
 
-        -- Verify repo is clean after commit
         local index = repo:index()
         local is_clean, clean_err = index:is_clean()
         assert.is_nil(clean_err)
@@ -504,10 +499,8 @@ describe('GitRepository:', function()
         repo:_ensure_initialized()
         assert.are.equal(GitRepository.State.VALID, repo._state)
 
-        -- Change path to something invalid (should not re-check)
         repo._path = '/nonexistent'
         repo:_ensure_initialized()
-        -- Still VALID because it doesn't re-check
         assert.are.equal(GitRepository.State.VALID, repo._state)
       end)
     end)
@@ -550,7 +543,6 @@ describe('GitRepository:', function()
 
     describe('discover', function()
       it('should find repo from nested subdirectory', function()
-        -- Create a subdirectory
         vim.fn.mkdir(repo_path .. '/subdir/nested', 'p')
 
         local repo, err = GitRepository.discover(repo_path .. '/subdir/nested')

@@ -38,7 +38,6 @@ describe('git_log:', function()
     end)
 
     it('should parse commit metadata correctly', function()
-      -- Create a second commit so we have a commit with a parent
       test_repo.create_commit(repo, {
         files = { ['file2.txt'] = { 'second commit' } },
         message = 'Second commit',
@@ -49,7 +48,7 @@ describe('git_log:', function()
 
       assert(not err)
       assert(log.commit_hash)
-      assert(log.parent_hash) -- Now we have a parent since this is the second commit
+      assert(log.parent_hash)
       assert(log.timestamp)
       assert(log.author_name)
       assert(log.author_email)
@@ -65,7 +64,6 @@ describe('git_log:', function()
     end)
 
     it('should retrieve commit by relative ref', function()
-      -- Create second commit
       test_repo.create_commit(repo, {
         files = { ['file2.txt'] = { 'second' } },
         message = 'Second commit',
@@ -79,7 +77,6 @@ describe('git_log:', function()
     end)
 
     it('should handle merge commits', function()
-      -- Create a branch and merge
       test_repo.create_branch(repo, 'feature')
       test_repo.create_commit(repo, {
         files = { ['feature.txt'] = { 'feature' } },
@@ -99,7 +96,6 @@ describe('git_log:', function()
 
       assert(not err)
       assert(log)
-      -- Merge commit should have parent hash
       assert(log.parent_hash and #log.parent_hash > 0)
     end)
 
@@ -109,7 +105,6 @@ describe('git_log:', function()
       local log, err = git_log.get(repo, commit_hash)
 
       assert(not err)
-      -- Initial commit has no parent hash (should be nil)
       assert(log.parent_hash == nil)
     end)
 
@@ -180,7 +175,6 @@ describe('git_log:', function()
 
   describe('list()', function()
     it('should list commits for repository', function()
-      -- Create multiple commits
       for i = 2, 5 do
         test_repo.create_commit(repo, {
           files = { ['file' .. i .. '.txt'] = { 'content ' .. i } },
@@ -192,7 +186,7 @@ describe('git_log:', function()
 
       assert(not err)
       assert(logs)
-      eq(#logs, 5) -- 1 initial + 4 new commits
+      eq(#logs, 5)
     end)
 
     it('should parse all commit metadata', function()
@@ -208,11 +202,10 @@ describe('git_log:', function()
 
       for i, log in ipairs(logs) do
         assert(log.commit_hash)
-        -- First commit (logs[1]) has a parent, initial commit (logs[2]) does not
         if i == 1 then
-          assert(log.parent_hash) -- Second commit has parent
+          assert(log.parent_hash)
         else
-          assert(log.parent_hash == nil) -- Initial commit has no parent
+          assert(log.parent_hash == nil)
         end
         assert(log.timestamp)
         assert(log.author_name)
@@ -222,7 +215,6 @@ describe('git_log:', function()
     end)
 
     it('should respect pagination count', function()
-      -- Create multiple commits
       for i = 2, 10 do
         test_repo.create_commit(repo, {
           files = { ['file' .. i .. '.txt'] = { 'content ' .. i } },
@@ -242,7 +234,6 @@ describe('git_log:', function()
     end)
 
     it('should respect pagination skip', function()
-      -- Create multiple commits
       for i = 2, 10 do
         test_repo.create_commit(repo, {
           files = { ['file' .. i .. '.txt'] = { 'content ' .. i } },
@@ -269,7 +260,6 @@ describe('git_log:', function()
       eq(#logs_first, 5)
       eq(#logs_second, 5)
 
-      -- First and second pages should have different commits
       assert(logs_first[1].commit_hash ~= logs_second[1].commit_hash)
     end)
 
@@ -294,7 +284,6 @@ describe('git_log:', function()
       })
 
       assert(not err)
-      -- Should include initial + 2 modifications of file1.txt
       eq(#logs, 3)
     end)
 
@@ -303,7 +292,6 @@ describe('git_log:', function()
 
       local logs, err = git_log.list(empty_repo)
 
-      -- Empty repo should error (no commits exist)
       assert(err, 'Should error on empty repository')
       assert(not logs, 'Should not return logs')
 
@@ -323,12 +311,10 @@ describe('git_log:', function()
       local logs, err = git_log.list(repo)
 
       assert(not err)
-      -- Most recent commit should be first
       eq(logs[1].commit_hash:sub(1, #commits[5]), commits[5])
     end)
 
     it('should handle very long history', function()
-      -- Create many commits
       for i = 2, 50 do
         test_repo.create_commit(repo, {
           files = { ['file' .. i .. '.txt'] = { 'content ' .. i } },
@@ -413,7 +399,6 @@ describe('git_log:', function()
     end)
 
     it('should combine pagination and filename filter', function()
-      -- Create commits for multiple files
       for i = 2, 10 do
         test_repo.create_commit(repo, {
           files = { ['file1.txt'] = { 'content ' .. i } },

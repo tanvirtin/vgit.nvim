@@ -14,27 +14,20 @@ describe('ConflictAnnotator:', function()
 
       local result = ConflictAnnotator.annotate(conflict)
 
-      -- Signs: 1 current mark + 2 current body + 1 middle + 2 incoming body + 1 incoming mark = 7
       eq(7, #result.signs)
 
-      -- Current mark
       eq({ row = 0, name = 'GitConflictCurrentMark' }, result.signs[1])
 
-      -- Current body lines 2-3
       eq({ row = 1, name = 'GitConflictCurrent' }, result.signs[2])
       eq({ row = 2, name = 'GitConflictCurrent' }, result.signs[3])
 
-      -- Middle
       eq({ row = 3, name = 'GitConflictMiddle' }, result.signs[4])
 
-      -- Incoming body lines 5-6
       eq({ row = 4, name = 'GitConflictIncoming' }, result.signs[5])
       eq({ row = 5, name = 'GitConflictIncoming' }, result.signs[6])
 
-      -- Incoming mark
       eq({ row = 6, name = 'GitConflictIncomingMark' }, result.signs[7])
 
-      -- Texts
       eq(2, #result.texts)
       eq('(Current Change)', result.texts[1].text)
       eq('GitComment', result.texts[1].hl)
@@ -57,7 +50,6 @@ describe('ConflictAnnotator:', function()
 
       local result = ConflictAnnotator.annotate(conflict)
 
-      -- Find ancestor signs
       local ancestor_mark_found = false
       local ancestor_body_count = 0
       for _, sign in ipairs(result.signs) do
@@ -79,9 +71,6 @@ describe('ConflictAnnotator:', function()
 
       local result = ConflictAnnotator.annotate(conflict)
 
-      -- Current: 1 mark, 0 body (top+1 > bot for single line)
-      -- Middle: 1 sign
-      -- Incoming: 0 body (top > bot-1 for single line), 1 mark
       eq(3, #result.signs)
       eq('GitConflictCurrentMark', result.signs[1].name)
       eq('GitConflictMiddle', result.signs[2].name)

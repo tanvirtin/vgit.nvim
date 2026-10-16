@@ -792,7 +792,6 @@ function StatusDiffView:setup_keymaps()
 
   self:_setup_quit_keymap()
 
-  -- Hunk-level operations on diff component
   local stage_hunk_key = keymap.get_key(diff_keymaps.stage_hunk)
   if stage_hunk_key then
     self:_register_keymap(self._diff_component, 'n', stage_hunk_key, function()
@@ -814,7 +813,6 @@ function StatusDiffView:setup_keymaps()
     end)
   end
 
-  -- File-level operations on diff component
   local stage_file_key = keymap.get_key(diff_keymaps.stage)
   if stage_file_key then
     self:_register_keymap(self._diff_component, 'n', stage_file_key, function()
@@ -1059,7 +1057,6 @@ function StatusDiffView:on_git_change()
   end
 
   if filename then
-    -- Try exact match (same section) first, then any section
     local found_type = nil
     self._tree_component:each_entry(function(status, et)
       if status.filename == filename then
