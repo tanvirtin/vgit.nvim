@@ -281,6 +281,33 @@ function StatusDiffView:move_to(query_fn)
   return self._tree_component:move_to(query_fn)
 end
 
+-- Flip the diff pane between the staged and unstaged version of the selected
+-- file by moving the tree selection to that file's other entry, if it exists.
+function StatusDiffView:toggle_view()
+  event.await()
+
+  local entry = self:get_current_entry()
+  if not self:_is_valid_entry(entry) then return end
+
+  local other_type
+  if entry.type == 'staged' then
+    other_type = 'unstaged'
+  elseif entry.type == 'unstaged' then
+    other_type = 'staged'
+  end
+  if not other_type then return end
+
+  local filename = entry.status.filename
+  local has_counterpart = false
+  self._tree_component:each_entry(function(status, entry_type)
+    if entry_type == other_type and status.filename == filename then has_counterpart = true end
+  end)
+  if not has_counterpart then return end
+
+  self:move_to_entry(filename, other_type)
+  self:_refresh_diff()
+end
+
 function StatusDiffView:_refresh_diff(hunk_index)
   self._diff_gen = self._diff_gen + 1
   local gen = self._diff_gen
@@ -873,6 +900,17 @@ function StatusDiffView:setup_keymaps()
     self._diff_component:set_keymap({ mode = 'n', key = stash_key }, stash_fn)
     if self._tree_component:is_valid() then
       self._tree_component:set_keymap({ mode = 'n', key = stash_key }, stash_fn)
+    end
+  end
+
+  local toggle_view_key = keymap.get_key(diff_keymaps.toggle_view)
+  if toggle_view_key then
+    local toggle_view_fn = function()
+      self:toggle_view()
+    end
+    self._diff_component:set_keymap({ mode = 'n', key = toggle_view_key }, toggle_view_fn)
+    if self._tree_component:is_valid() then
+      self._tree_component:set_keymap({ mode = 'n', key = toggle_view_key }, toggle_view_fn)
     end
   end
 

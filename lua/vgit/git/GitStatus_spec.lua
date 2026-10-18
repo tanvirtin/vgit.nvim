@@ -36,6 +36,44 @@ describe('GitStatus:', function()
       eq(status.filename, 'quoted file.txt')
     end)
 
+    it('should decode octal escapes into UTF-8 bytes', function()
+      local status = GitStatus('M  "caf\\303\\251.txt"')
+
+      eq(status.filename, 'café.txt')
+    end)
+
+    it('should decode escaped quotes and backslashes', function()
+      local status = GitStatus('M  "say \\"hi\\" and back\\\\slash.txt"')
+
+      eq(status.filename, 'say "hi" and back\\slash.txt')
+    end)
+
+    it('should decode escaped tabs', function()
+      local status = GitStatus('M  "a\\tb.txt"')
+
+      eq(status.filename, 'a\tb.txt')
+    end)
+
+    it('should not treat an escaped backslash followed by digits as an octal escape', function()
+      local status = GitStatus('M  "dir\\\\123.txt"')
+
+      eq(status.filename, 'dir\\123.txt')
+    end)
+
+    it('should keep a rename arrow inside a quoted name', function()
+      local status = GitStatus('R  "a -> b.txt" -> c.txt')
+
+      eq(status.old_filename, 'a -> b.txt')
+      eq(status.filename, 'c.txt')
+    end)
+
+    it('should decode both sides of a quoted rename', function()
+      local status = GitStatus('R  "old name.txt" -> "new \\303\\251.txt"')
+
+      eq(status.old_filename, 'old name.txt')
+      eq(status.filename, 'new é.txt')
+    end)
+
     it('should detect filetype from filename', function()
       local status = GitStatus('M  test.lua')
 

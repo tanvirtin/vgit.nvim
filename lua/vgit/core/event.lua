@@ -8,6 +8,9 @@ local _is_registered = false
 local _augroup_created = false
 local _dir_watcher_registered = false
 local _handle = nil
+-- Re-entrancy guards for event.emit, keyed by event name (see event.emit).
+local _emitting = {}
+local _pending = {}
 
 local function close_handle()
   if not _handle then return end
@@ -149,10 +152,36 @@ function event.custom_on(event_name, callback)
 end
 
 function event.emit(event_name, data)
-  vim.api.nvim_exec_autocmds({ 'User' }, {
+  -- A handler can synchronously pump the event loop: git calls block on
+  -- `Task:pwait`, which processes queued callbacks. If another emit of the same
+  -- event is queued (the fs watcher schedules one per .git write), it would run
+  -- nested inside the current emit, re-enter the handlers, and nest User
+  -- autocmds until Neovim raises E218. Coalesce re-entrant emits into a single
+  -- trailing emit so handlers never run nested.
+  if _emitting[event_name] then
+    _pending[event_name] = { data = data }
+    return
+  end
+
+  _emitting[event_name] = true
+  local ok, err = pcall(vim.api.nvim_exec_autocmds, { 'User' }, {
     pattern = event_name,
     data = data,
   })
+  _emitting[event_name] = nil
+
+  if not ok then
+    _pending[event_name] = nil
+    error(err, 0)
+  end
+
+  local pending = _pending[event_name]
+  if pending then
+    _pending[event_name] = nil
+    vim.schedule(function()
+      event.emit(event_name, pending.data)
+    end)
+  end
 end
 
 function event.debounce(fn, ms)
@@ -300,6 +329,12 @@ function event.reset()
   _is_registered = false
   _augroup_created = false
   _dir_watcher_registered = false
+  for name in pairs(_emitting) do
+    _emitting[name] = nil
+  end
+  for name in pairs(_pending) do
+    _pending[name] = nil
+  end
 end
 
 return event

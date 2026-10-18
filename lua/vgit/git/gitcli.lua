@@ -17,7 +17,7 @@ local function run_git(args, opts)
     end
   end
 
-  local effective_args = { '--no-optional-locks' }
+  local effective_args = { '--no-optional-locks', '-c', 'core.quotepath=false' }
   vim.list_extend(effective_args, config_args)
   vim.list_extend(effective_args, args)
 

@@ -339,6 +339,63 @@ describe('SearchComponent:', function()
   end)
 
   describe('select', function()
+    local function typed_input(text)
+      return {
+        is_valid = function()
+          return true
+        end,
+        get_lines = function()
+          return { text }
+        end,
+        set_lines = function() end,
+        set_cursor = function() end,
+      }
+    end
+
+    it('should filter by text typed but not yet processed before choosing', function()
+      local no_match_query = nil
+      local selected = nil
+      local sc = SearchComponent({
+        items = { { label = 'main', value = 'main' } },
+        on_select = function(value)
+          selected = value
+        end,
+        on_no_match = function(query)
+          no_match_query = query
+        end,
+      })
+      sc.state.filtered_items = { { label = 'main', value = 'main' } }
+      sc.state.selected_index = 1
+      sc.elements.input = typed_input('> newwt')
+
+      sc:select()
+
+      assert.is_nil(selected)
+      eq('newwt', no_match_query)
+    end)
+
+    it('should not trigger an async search when choosing', function()
+      local searched = false
+      local selected = nil
+      local sc = SearchComponent({
+        items = {},
+        on_search_async = function()
+          searched = true
+        end,
+        on_select = function(value)
+          selected = value
+        end,
+      })
+      sc.state.filtered_items = { { label = 'a', value = 'a' } }
+      sc.state.selected_index = 1
+      sc.elements.input = typed_input('> zzz')
+
+      sc:select()
+
+      assert.is_false(searched)
+      eq('a', selected)
+    end)
+
     it('should call on_select with the value of the selected item', function()
       local selected_value = nil
       local sc = SearchComponent({

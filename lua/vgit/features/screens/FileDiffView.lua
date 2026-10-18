@@ -31,8 +31,14 @@ function FileDiffView:constructor()
     layout_type = self.LAYOUT_UNIFIED,
   }
   instance._data = nil
+  instance._repo = nil
   instance._diff_component = nil
   return instance
+end
+
+function FileDiffView:_get_repo()
+  if self._repo then return self._repo, nil end
+  return repository.current()
 end
 
 function FileDiffView:get_navigatable_component()
@@ -48,7 +54,7 @@ function FileDiffView:get_hunk_alignment_offset()
 end
 
 function FileDiffView:_refresh_diff_data()
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -107,6 +113,7 @@ function FileDiffView:_process_file_data(data)
   }, self._opts)
 
   self._data = data
+  self._repo = data.repo
 
   local diff_data = {
     diff = data.diff,
@@ -214,7 +221,7 @@ function FileDiffView:reset_current()
   local filename = self._opts.filename
   if not filename then return end
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -239,7 +246,9 @@ function FileDiffView:open_file()
   self:destroy()
   event.await()
 
-  navigation.open_file(filename, mark.top_relative, 'center')
+  local repo = self:_get_repo()
+  local path = repo and fs.absolute_path(repo:get_path(), filename) or filename
+  navigation.open_file(path, mark.top_relative, 'center')
 end
 
 function FileDiffView:stage_hunk()
@@ -252,7 +261,7 @@ function FileDiffView:stage_hunk()
   local hunk, index = self._diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -280,7 +289,7 @@ function FileDiffView:unstage_hunk()
   local hunk, index = self._diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -305,7 +314,7 @@ function FileDiffView:stage_current()
   local filename = self._opts.filename
   if not filename then return end
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -327,7 +336,7 @@ function FileDiffView:unstage_current()
   local filename = self._opts.filename
   if not filename then return end
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return

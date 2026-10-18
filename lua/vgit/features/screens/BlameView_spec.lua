@@ -154,6 +154,49 @@ describe('BlameView:', function()
     it('should return false if filename is nil', function()
       eq(false, view:create({ blames = { {} }, lines = { 'line1' } }))
     end)
+
+    it('should return false if repo is nil', function()
+      eq(false, view:create({ blames = { {} }, lines = { 'line1' }, filename = 'test.lua' }))
+    end)
+  end)
+
+  describe('create', function()
+    local view
+    local repo
+
+    before_each(function()
+      view = BlameView()
+      repo = { name = 'repo' }
+      view._create_view = function()
+        return true
+      end
+      save_package('vgit.core.console')
+      package.loaded['vgit.core.console'] = {
+        error = function() end,
+        info = function() end,
+      }
+    end)
+
+    after_each(function()
+      restore_packages()
+    end)
+
+    it('should keep the repository it was given', function()
+      eq(true, view:create({ blames = { {} }, lines = { 'line1' }, filename = 'test.lua', repo = repo }))
+      eq(repo, view._repo)
+    end)
+
+    it('should record the filename and filetype', function()
+      view:create({ blames = { {} }, lines = { 'line1' }, filename = 'test.lua', filetype = 'lua', repo = repo })
+
+      eq({ filename = 'test.lua', filetype = 'lua' }, view._opts)
+    end)
+
+    it('should start with an empty history', function()
+      view:create({ blames = { {} }, lines = { 'line1' }, filename = 'test.lua', repo = repo })
+
+      eq({}, view._history_stack)
+    end)
   end)
 
   describe('blame_down', function()

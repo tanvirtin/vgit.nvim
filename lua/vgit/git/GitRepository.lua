@@ -479,13 +479,13 @@ function GitRepository:_get_worktree_dirs()
   if err or not worktrees then return {} end
 
   local repo_path = vim.fn.resolve(self._path)
+  local repo_prefix = repo_path:gsub('/+$', '') .. '/'
   local dirs = {}
 
   for _, wt in ipairs(worktrees) do
     local wt_path = vim.fn.resolve(wt.path)
-    if wt_path ~= repo_path and vim.startswith(wt_path, repo_path) then
-      local relative = wt_path:sub(#repo_path + 1)
-      if relative:sub(1, 1) == '/' then relative = relative:sub(2) end
+    if wt_path ~= repo_path and vim.startswith(wt_path, repo_prefix) then
+      local relative = wt_path:sub(#repo_prefix + 1)
       if relative ~= '' then dirs[#dirs + 1] = relative end
     end
   end

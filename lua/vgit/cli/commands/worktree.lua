@@ -75,7 +75,7 @@ worktree_command.execute = event.async(function(args)
       console.error('Path is required: VGit worktree switch <path>')
       return
     end
-    vim.cmd('cd ' .. vim.fn.fnameescape(opts.path))
+    repository.switch(opts.path)
     console.info('Switched to worktree: ' .. opts.path)
     return
   end

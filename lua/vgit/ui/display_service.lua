@@ -22,16 +22,21 @@ local _event_cleanups = {}
 local _showing = false
 local display_service = {}
 
+local function refresh_active_view()
+  if active_view and active_view.on_git_change then
+    active_view:on_git_change()
+    if active_view and active_view:is_destroyed() then active_view = nil end
+  end
+end
+
 function display_service.register_events()
   if _events_registered then return end
   _events_registered = true
 
-  _event_cleanups[#_event_cleanups + 1] = event.custom_on('VGitChange', function()
-    if active_view and active_view.on_git_change then
-      active_view:on_git_change()
-      if active_view and active_view:is_destroyed() then active_view = nil end
-    end
-  end)
+  _event_cleanups[#_event_cleanups + 1] = event.custom_on('VGitChange', refresh_active_view)
+
+  _event_cleanups[#_event_cleanups + 1] =
+    event.disposable_on({ 'FocusGained', 'BufWritePost' }, event.async(refresh_active_view))
 
   _event_cleanups[#_event_cleanups + 1] = event.custom_on('VGitDirChanged', function()
     if active_view and active_view.destroy then active_view:destroy() end
@@ -157,7 +162,7 @@ display_service.show_blame_view_for_file = event.async(function(filename)
   display_service.show_blame_view({
     filename = filename,
     filetype = filetype,
-    reponame = repo:get_path(),
+    repo = repo,
     blames = blames,
     lines = lines,
   })

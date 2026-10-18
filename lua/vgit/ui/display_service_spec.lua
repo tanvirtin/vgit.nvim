@@ -88,4 +88,46 @@ describe('display_service:', function()
       assert.is_nil(display_service.get_active_view())
     end)
   end)
+
+  describe('working tree refresh', function()
+    local function count_autocmds(name)
+      return #vim.api.nvim_get_autocmds({ event = name })
+    end
+
+    it('should register FocusGained and BufWritePost handlers', function()
+      local focus_before = count_autocmds('FocusGained')
+      local write_before = count_autocmds('BufWritePost')
+
+      display_service.register_events()
+
+      eq(focus_before + 1, count_autocmds('FocusGained'))
+      eq(write_before + 1, count_autocmds('BufWritePost'))
+    end)
+
+    it('should remove the handlers on reset', function()
+      local focus_before = count_autocmds('FocusGained')
+
+      display_service.register_events()
+      display_service.reset()
+
+      eq(focus_before, count_autocmds('FocusGained'))
+    end)
+
+    it('should not register the handlers twice', function()
+      local focus_before = count_autocmds('FocusGained')
+
+      display_service.register_events()
+      display_service.register_events()
+
+      eq(focus_before + 1, count_autocmds('FocusGained'))
+    end)
+
+    it('should not error when focus returns with no active view', function()
+      display_service.register_events()
+
+      local ok = pcall(vim.api.nvim_exec_autocmds, 'FocusGained', {})
+
+      assert.is_true(ok)
+    end)
+  end)
 end)

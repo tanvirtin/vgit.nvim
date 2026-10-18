@@ -156,7 +156,12 @@ diff_command.execute = event.async(function(args)
 
   event.await()
 
-  local repo, repo_err = repository.current()
+  local repo, repo_err
+  if opts.files[1] then
+    repo, repo_err = repository.for_path(opts.files[1])
+  else
+    repo, repo_err = repository.current()
+  end
   if repo_err then
     console.error(repo_err)
     return
@@ -220,6 +225,7 @@ diff_command.execute = event.async(function(args)
         type = 'file',
         diff = diff,
         filename = filename,
+        repo = repo,
         old_filename = old_filename,
         filetype = fs.detect_filetype(filename),
         layout_type = opts.layout_type,

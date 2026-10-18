@@ -53,6 +53,55 @@ describe('event:', function()
 
       assert.is_true(callback_called)
     end)
+
+    it('should not run handlers nested when a handler re-emits the same event', function()
+      local depth = 0
+      local max_depth = 0
+      local calls = 0
+
+      local group = vim.api.nvim_create_augroup('VGitReentryTest', { clear = true })
+      vim.api.nvim_create_autocmd('User', {
+        group = group,
+        pattern = 'ReentryEvent',
+        callback = function()
+          depth = depth + 1
+          if depth > max_depth then max_depth = depth end
+          calls = calls + 1
+          if calls == 1 then event.emit('ReentryEvent', { pass = 2 }) end
+          depth = depth - 1
+        end,
+      })
+
+      event.emit('ReentryEvent', { pass = 1 })
+      assert.are.equal(1, max_depth, 'handler must not run nested; reached depth ' .. max_depth)
+
+      vim.wait(200, function()
+        return calls >= 2
+      end, 10)
+      assert.are.equal(2, calls, 'the coalesced emit should run exactly once more')
+
+      vim.api.nvim_del_augroup_by_name('VGitReentryTest')
+    end)
+
+    it('should run handlers immediately again once the outer emit returns', function()
+      local calls = 0
+
+      local group = vim.api.nvim_create_augroup('VGitReentryTest2', { clear = true })
+      vim.api.nvim_create_autocmd('User', {
+        group = group,
+        pattern = 'ReentryEvent2',
+        callback = function()
+          calls = calls + 1
+        end,
+      })
+
+      event.emit('ReentryEvent2', {})
+      assert.are.equal(1, calls)
+      event.emit('ReentryEvent2', {})
+      assert.are.equal(2, calls)
+
+      vim.api.nvim_del_augroup_by_name('VGitReentryTest2')
+    end)
   end)
 
   describe('debounce', function()

@@ -1,0 +1,37 @@
+local scenario = require('tests.scenario')({ it = it })
+
+describe('scenario: worktree diff', function()
+  scenario.test('a diff of a file inside a linked worktree uses that worktree, not the cwd', function(s)
+    local main = s.world:repo('main', { ['file.txt'] = { 'base' } })
+    local feature = s.world:worktree(main, 'feature')
+    s.world:write(main .. '/file.txt', { 'main version' })
+    s.world:write(feature .. '/file.txt', { 'feature version' })
+
+    s.editor:cmd('cd ' .. main)
+    s.editor:cmd('edit ' .. feature .. '/file.txt')
+    s.editor:settle()
+    s.editor:cmd('VGit diff --buffer')
+    s.editor:await_text('feature version')
+    s.editor:settle()
+
+    assert.is_truthy(s.observe.contains(s, 'feature version'))
+    assert.is_nil(s.observe.screen(s):find('main version', 1, true))
+  end)
+
+  scenario.test('a diff opened after switching worktrees shows the switched worktree content', function(s)
+    local main = s.world:repo('main', { ['file.txt'] = { 'base' } })
+    local feature = s.world:worktree(main, 'feature')
+    s.world:write(main .. '/file.txt', { 'main version' })
+    s.world:write(feature .. '/file.txt', { 'feature version' })
+
+    s.editor:cmd('cd ' .. main)
+    s.editor:cmd('VGit worktree switch ' .. feature)
+    s.editor:await_text('Switched to worktree')
+    s.editor:dismiss()
+    s.editor:cmd('VGit diff')
+    s.editor:await_text('feature version')
+    s.editor:settle()
+
+    assert.is_truthy(s.observe.contains(s, 'feature version'))
+  end)
+end)

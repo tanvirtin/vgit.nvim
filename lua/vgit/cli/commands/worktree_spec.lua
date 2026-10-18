@@ -31,6 +31,7 @@ describe('worktree_command:', function()
         current = function()
           return make_mock_repo(overrides.repo_methods), nil
         end,
+        switch = function() end,
       }
 
     save_package('vgit.ui.display_service')
@@ -300,6 +301,65 @@ describe('worktree_command:', function()
       })
       load_cmd().execute({ 'remove', '/tmp/old-wt' })
       eq('Worktree removed: /tmp/old-wt', info_msg)
+    end)
+  end)
+
+  describe('switch', function()
+    it('should switch the repository to the target path', function()
+      local switched_to = nil
+
+      setup_defaults({
+        repository = {
+          current = function()
+            return make_mock_repo(), nil
+          end,
+          switch = function(path)
+            switched_to = path
+          end,
+        },
+        console = {
+          error = function() end,
+          info = function() end,
+        },
+      })
+
+      load_cmd().execute({ 'switch', '/tmp/feature-wt' })
+
+      eq('/tmp/feature-wt', switched_to)
+    end)
+
+    it('should show info on successful switch', function()
+      local info_msg = nil
+      setup_defaults({
+        console = {
+          error = function() end,
+          info = function(msg)
+            info_msg = msg
+          end,
+        },
+      })
+      load_cmd().execute({ 'switch', '/tmp/feature-wt' })
+      eq('Switched to worktree: /tmp/feature-wt', info_msg)
+    end)
+
+    it('should not switch when switch has no path', function()
+      local switched = false
+      setup_defaults({
+        repository = {
+          current = function()
+            return make_mock_repo(), nil
+          end,
+          switch = function()
+            switched = true
+          end,
+        },
+        console = {
+          error = function() end,
+          info = function() end,
+        },
+      })
+      load_cmd().execute({ 'switch' })
+      assert.is_false(switched)
     end)
   end)
 

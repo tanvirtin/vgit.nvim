@@ -63,7 +63,7 @@ local function execute_screen_blame(opts, repo, filename)
   display_service.show_blame_view({
     filename = filename,
     filetype = filetype,
-    reponame = repo:get_path(),
+    repo = repo,
     blames = blames,
     lines = lines,
   })

@@ -295,6 +295,8 @@ function SearchComponent:move(direction)
 end
 
 function SearchComponent:select()
+  if not self.props.on_search_async then self:_sync_query() end
+
   local items = self.state.filtered_items
 
   if #items == 0 then
@@ -321,32 +323,33 @@ function SearchComponent:get_selected_item()
   return items[self.state.selected_index]
 end
 
-function SearchComponent:_setup_input_tracking()
-  local prompt = self.props.prompt or '> '
+function SearchComponent:_sync_query()
+  if not self.elements.input or not self.elements.input:is_valid() then return end
 
+  local prompt = self.props.prompt or '> '
+  local line = self.elements.input:get_lines()[1] or ''
+
+  if not vim.startswith(line, prompt) then
+    self.elements.input:set_lines({ prompt })
+    self.elements.input:set_cursor({ 1, #prompt })
+    return
+  end
+
+  local query = line:sub(#prompt + 1)
+
+  if query ~= self.state.query then
+    self.state.query = query
+    self:_apply_filter()
+  end
+end
+
+function SearchComponent:_setup_input_tracking()
   self.elements.input:attach_to_changes({
     on_lines = event.async(function()
       event.await()
 
       if not self._mounted then return end
-      if not self.elements.input or not self.elements.input:is_valid() then return end
-
-      local lines = self.elements.input:get_lines()
-      local line = lines[1] or ''
-
-      if not vim.startswith(line, prompt) then
-        line = prompt
-        self.elements.input:set_lines({ line })
-        self.elements.input:set_cursor({ 1, #prompt })
-        return
-      end
-
-      local query = line:sub(#prompt + 1)
-
-      if query ~= self.state.query then
-        self.state.query = query
-        self:_apply_filter()
-      end
+      self:_sync_query()
     end),
   })
 end

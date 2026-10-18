@@ -57,6 +57,12 @@ function CommitView:start_insert()
   return self
 end
 
+function CommitView:destroy()
+  if self:is_destroyed() then return end
+  if self._component then self._component:stop_insert() end
+  View.destroy(self)
+end
+
 function CommitView:is_valid()
   if self._component then return self._component:is_valid() end
   return false

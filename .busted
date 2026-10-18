@@ -7,7 +7,7 @@ return {
     verbose = true,
     output = "gtest",
     pattern = "_spec%.lua$",
-    ROOT = { "lua/" },
+    ROOT = { "lua/", "tests/scenarios/" },
     helper = "tests/helper.lua",
   },
 }

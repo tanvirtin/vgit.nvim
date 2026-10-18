@@ -98,6 +98,16 @@ describe('gitcli:', function()
       assert.is_table(result)
     end)
 
+    it('should print non-ASCII paths verbatim', function()
+      local name = 'café.txt'
+      vim.fn.writefile({ 'x' }, repo:get_path() .. '/' .. name)
+
+      local result, err = gitcli.run({ '-C', repo:get_path(), 'status', '--short' })
+
+      assert.is_nil(err)
+      assert.is_truthy(table.concat(result, '\n'):find(name, 1, true))
+    end)
+
     it('should prepend --no-optional-locks to every command', function()
       local result, err, code = gitcli.run({ '-C', repo:get_path(), 'status', '--porcelain' })
 

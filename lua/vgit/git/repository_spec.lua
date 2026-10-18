@@ -130,6 +130,105 @@ describe('repository:', function()
     end)
   end)
 
+  describe('for_path', function()
+    it('should discover from an existing path', function()
+      local directory = vim.fn.tempname()
+      vim.fn.mkdir(directory, 'p')
+      local filepath = directory .. '/file.lua'
+      vim.fn.writefile({ 'content' }, filepath)
+
+      local discovered_path
+      package.loaded['vgit.git.GitRepository'].discover = function(path)
+        discovered_path = path
+        return {}, nil
+      end
+
+      repository.for_path(filepath)
+
+      eq(vim.fn.fnamemodify(filepath, ':p'), discovered_path)
+      vim.fn.delete(directory, 'rf')
+    end)
+
+    it('should discover from the parent of a missing file', function()
+      local directory = vim.fn.tempname()
+      vim.fn.mkdir(directory, 'p')
+      local filepath = directory .. '/deleted.lua'
+
+      local discovered_path
+      package.loaded['vgit.git.GitRepository'].discover = function(path)
+        discovered_path = path
+        return {}, nil
+      end
+
+      repository.for_path(filepath)
+
+      local expected_path = vim.fn.fnamemodify(directory, ':p'):gsub('/+$', '')
+      eq(expected_path, discovered_path)
+      vim.fn.delete(directory, 'rf')
+    end)
+
+    it('should discover from the nearest existing ancestor of a missing nested path', function()
+      local directory = vim.fn.tempname()
+      vim.fn.mkdir(directory, 'p')
+      local filepath = directory .. '/gone/deeper/deleted.lua'
+
+      local discovered_path
+      package.loaded['vgit.git.GitRepository'].discover = function(path)
+        discovered_path = path
+        return {}, nil
+      end
+
+      repository.for_path(filepath)
+
+      local expected_path = vim.fn.fnamemodify(directory, ':p'):gsub('/+$', '')
+      eq(expected_path, discovered_path)
+      vim.fn.delete(directory, 'rf')
+    end)
+
+    it('should require a path', function()
+      local repo, err = repository.for_path(nil)
+
+      assert.is_nil(repo)
+      eq({ 'path is required' }, err)
+    end)
+  end)
+
+  describe('switch', function()
+    local original_fs
+    local original_git_repo
+
+    before_each(function()
+      original_fs = package.loaded['vgit.core.fs']
+      original_git_repo = package.loaded['vgit.git.git_repo']
+    end)
+
+    after_each(function()
+      package.loaded['vgit.core.fs'] = original_fs
+      package.loaded['vgit.git.git_repo'] = original_git_repo
+    end)
+
+    it('should drop caches before changing directory', function()
+      local order = {}
+      package.loaded['vgit.git.git_repo'] = {
+        clear_cache = function()
+          order[#order + 1] = 'clear_cache:' .. tostring(repository.is_loaded())
+        end,
+      }
+      package.loaded['vgit.core.fs'] = {
+        chdir = function(path)
+          order[#order + 1] = 'chdir:' .. path
+        end,
+      }
+      package.loaded['vgit.git.repository'] = nil
+      repository = require('vgit.git.repository')
+      repository.current()
+
+      repository.switch('/some/worktree')
+
+      eq({ 'clear_cache:false', 'chdir:/some/worktree' }, order)
+    end)
+  end)
+
   describe('invalidate', function()
     it('should clear the cached instance', function()
       repository.current()

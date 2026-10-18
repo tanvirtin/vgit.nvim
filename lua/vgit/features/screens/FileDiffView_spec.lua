@@ -255,6 +255,31 @@ describe('FileDiffView:', function()
       end)
     end)
 
+    describe('_refresh_diff_data with a bound repository', function()
+      it('should keep using the repository that produced the file diff', function()
+        local used_repo = nil
+        local bound_repo = {
+          index = function()
+            return {
+              unstaged_hunks = function()
+                return {}
+              end,
+            }
+          end,
+          diff = function(self)
+            used_repo = self
+            return { lines = { 'line1' }, hunks = { {} }, marks = { {} } }
+          end,
+        }
+        view._repo = bound_repo
+
+        local result = view:_refresh_diff_data()
+
+        assert.is_not_nil(result)
+        eq(bound_repo, used_repo)
+      end)
+    end)
+
     describe('toggle_view', function()
       it('should call _refresh_diff with hunk_index 1', function()
         local reconcile_opts = nil

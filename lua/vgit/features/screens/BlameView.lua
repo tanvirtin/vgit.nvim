@@ -4,7 +4,6 @@ local View = lazy('vgit.ui.View')
 local event = lazy('vgit.core.event')
 local keymap = lazy('vgit.core.keymap')
 local console = lazy('vgit.core.console')
-local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local display_service = lazy('vgit.ui.display_service')
@@ -39,7 +38,6 @@ function BlameView:constructor()
   instance._opts = {
     filename = nil,
     filetype = nil,
-    reponame = nil,
   }
   return instance
 end
@@ -65,18 +63,16 @@ function BlameView:create(data)
     return false
   end
 
+  if not data.repo then
+    console.error('[BlameView] No repository')
+    return false
+  end
+
   self._opts = {
     filename = data.filename,
     filetype = data.filetype,
-    reponame = data.reponame,
   }
-
-  local repo, repo_err = repository.open(data.reponame)
-  if repo_err then
-    console.error('[BlameView] Failed to open repository: ' .. tostring(repo_err))
-    return false
-  end
-  self._repo = repo
+  self._repo = data.repo
 
   self._current_blames = data.blames
   self._current_commit = nil
@@ -275,15 +271,9 @@ function BlameView:show_commit_diff()
   local parent_hash = blame.parent_hash or (commit_hash .. '~1')
   local filename = blame.filename or self._opts.filename
 
-  local repo, repo_err = repository.current()
-  if repo_err then
-    console.error(repo_err)
-    return
-  end
-
   local layout_type = scene_setting:get('diff_preference') or 'unified'
 
-  local diff, diff_err = repo:diff({
+  local diff, diff_err = self._repo:diff({
     type = 'blame',
     filename = filename,
     old_filename = blame.old_filename,
@@ -315,9 +305,7 @@ function BlameView:show_commit_diff()
 end
 
 function BlameView:_fetch_commit_diffs(commit_hash)
-  local repo, repo_err = repository.current()
-  if repo_err then return nil, repo_err end
-
+  local repo = self._repo
   local tree = repo:tree(commit_hash)
 
   local commit, commit_err = tree:commit()
