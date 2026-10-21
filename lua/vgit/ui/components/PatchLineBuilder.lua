@@ -1,13 +1,15 @@
 local separator = string.rep('─', 60)
 local CONTEXT = 3
 
-local function compute_visible_ranges(marks, total_lines)
+local function compute_visible_ranges(marks, total_lines, context)
   if not marks or #marks == 0 then return {} end
+
+  context = context or CONTEXT
 
   local ranges = {}
   for _, mark in ipairs(marks) do
-    local range_start = math.max(1, mark.top - CONTEXT)
-    local range_end = math.min(total_lines, mark.bot + CONTEXT)
+    local range_start = math.max(1, mark.top - context)
+    local range_end = math.min(total_lines, mark.bot + context)
     ranges[#ranges + 1] = { range_start, range_end }
   end
 
@@ -234,17 +236,19 @@ local function process_diff_file(ctx, entry)
 
   flush_file_section(ctx)
 
-  ctx.lines[#ctx.lines + 1] = separator
-  ctx.line_metadata[#ctx.lines] = { type = 'separator' }
-  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+  if entry.header ~= false then
+    ctx.lines[#ctx.lines + 1] = separator
+    ctx.line_metadata[#ctx.lines] = { type = 'separator' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
 
-  ctx.lines[#ctx.lines + 1] = raw_filename
-  ctx.line_metadata[#ctx.lines] = { type = 'filename', filename = raw_filename }
-  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+    ctx.lines[#ctx.lines + 1] = raw_filename
+    ctx.line_metadata[#ctx.lines] = { type = 'filename', filename = raw_filename }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
 
-  ctx.lines[#ctx.lines + 1] = separator
-  ctx.line_metadata[#ctx.lines] = { type = 'separator' }
-  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+    ctx.lines[#ctx.lines + 1] = separator
+    ctx.line_metadata[#ctx.lines] = { type = 'separator' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+  end
 
   ctx.file_section = {
     filetype = filetype,
@@ -270,7 +274,7 @@ local function process_diff_file(ctx, entry)
     if not buftype or lc.buftype == buftype then lnum_change_map[lc.lnum] = lc end
   end
 
-  local visible_ranges = compute_visible_ranges(diff.marks, #display_lines)
+  local visible_ranges = compute_visible_ranges(diff.marks, #display_lines, entry.context)
 
   if #visible_ranges == 0 then
     ctx.lines[#ctx.lines + 1] = ''
@@ -325,6 +329,8 @@ local function process_diff_file(ctx, entry)
         syntax_mapping = { source = 'current', source_line = ctx.curr_lnum, display_row = display_row }
       end
 
+      local old_lnum = change_type ~= 'add' and change_type ~= 'void' and ctx.orig_lnum or nil
+      local new_lnum = change_type ~= 'remove' and change_type ~= 'void' and ctx.curr_lnum or nil
       local lnum_val = track_lnum(ctx, change_type, syntax_mapping)
 
       ctx.line_metadata[#ctx.lines] = {
@@ -332,6 +338,8 @@ local function process_diff_file(ctx, entry)
         filetype = filetype,
         lnum_change = lc,
         file_lnum = lnum_val,
+        old_lnum = old_lnum,
+        new_lnum = new_lnum,
         filename = filename,
       }
     end

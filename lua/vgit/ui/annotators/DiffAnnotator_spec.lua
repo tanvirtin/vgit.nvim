@@ -61,7 +61,7 @@ describe('DiffAnnotator:', function()
       assert.is_nil(result)
     end)
 
-    it('should produce texts from word_diff for add type', function()
+    it('should mark the changed words of an add line as byte ranges', function()
       local result = DiffAnnotator.annotate_word({
         lnum_change = {
           lnum = 2,
@@ -72,12 +72,8 @@ describe('DiffAnnotator:', function()
           },
         },
       }, 2)
-      assert.is_not_nil(result)
       assert.are.equal(1, result.row)
-      assert.are.equal(0, result.col)
-      assert.are.equal(2, #result.texts)
-      eq({ 'hello ', nil }, result.texts[1])
-      eq({ 'world', 'GitWordAdd' }, result.texts[2])
+      eq({ { col_start = 6, col_end = 11, hl_group = 'GitWordAdd' } }, result.ranges)
     end)
 
     it('should use GitWordDelete for remove type', function()
@@ -91,8 +87,7 @@ describe('DiffAnnotator:', function()
           },
         },
       }, 3)
-      eq({ 'deleted', 'GitWordDelete' }, result.texts[1])
-      eq({ ' text', nil }, result.texts[2])
+      eq({ { col_start = 0, col_end = 7, hl_group = 'GitWordDelete' } }, result.ranges)
     end)
 
     it('should skip operation 1 (insertions in other side)', function()
@@ -107,9 +102,7 @@ describe('DiffAnnotator:', function()
           },
         },
       }, 1)
-      assert.are.equal(2, #result.texts)
-      eq({ 'same', nil }, result.texts[1])
-      eq({ 'changed', 'GitWordAdd' }, result.texts[2])
+      eq({ { col_start = 4, col_end = 11, hl_group = 'GitWordAdd' } }, result.ranges)
     end)
 
     it('should handle empty word_diff', function()
@@ -120,8 +113,14 @@ describe('DiffAnnotator:', function()
           word_diff = {},
         },
       }, 1)
-      assert.is_not_nil(result)
-      assert.are.equal(0, #result.texts)
+      eq({}, result.ranges)
+    end)
+
+    it('should count bytes, so ranges stay right after multibyte text', function()
+      eq(
+        { { col_start = 5, col_end = 6, hl_group = 'GitWordAdd' } },
+        DiffAnnotator.word_ranges({ { 0, 'é = ' }, { -1, 'x' } }, 'add')
+      )
     end)
   end)
 end)

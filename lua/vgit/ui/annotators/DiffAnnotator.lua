@@ -29,19 +29,25 @@ function DiffAnnotator.annotate_line(line_changes)
   return marks
 end
 
-function DiffAnnotator.word_diff_to_texts(word_diff, change_type)
-  local texts = {}
+DiffAnnotator.WORD_PRIORITY = 150
+
+function DiffAnnotator.word_ranges(word_diff, change_type)
+  local ranges = {}
+  local hl = change_type == 'remove' and 'GitWordDelete' or 'GitWordAdd'
+  local col = 0
+
   for j = 1, #word_diff do
-    local segment = word_diff[j]
-    local operation, fragment = unpack(segment)
+    local operation, fragment = unpack(word_diff[j])
+
     if operation == -1 then
-      local hl = change_type == 'remove' and 'GitWordDelete' or 'GitWordAdd'
-      texts[#texts + 1] = { fragment, hl }
+      ranges[#ranges + 1] = { col_start = col, col_end = col + #fragment, hl_group = hl }
+      col = col + #fragment
     elseif operation == 0 then
-      texts[#texts + 1] = { fragment, nil }
+      col = col + #fragment
     end
   end
-  return texts
+
+  return ranges
 end
 
 function DiffAnnotator.annotate_word(line_changes, lnum)
@@ -52,8 +58,7 @@ function DiffAnnotator.annotate_word(line_changes, lnum)
   if not word_diff then return nil end
 
   return {
-    texts = DiffAnnotator.word_diff_to_texts(word_diff, lnum_change.type),
-    col = 0,
+    ranges = DiffAnnotator.word_ranges(word_diff, lnum_change.type),
     row = lnum - 1,
   }
 end
