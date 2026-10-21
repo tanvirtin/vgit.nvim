@@ -20,6 +20,14 @@ local events = {
 }
 local is_registered = false
 
+local function update_branch(repo)
+  if not repo then return end
+  local refs = repo:refs()
+  if not refs then return end
+  local branch = refs:current_branch()
+  if branch then statusline.set_branch(branch) end
+end
+
 local git_buffer_store = {}
 
 git_buffer_store.register_events = event.async(function()
@@ -37,14 +45,7 @@ git_buffer_store.register_events = event.async(function()
       git_buffer_store.dispatch(buffer, 'sync')
     end)
 
-    local repo = repository.get_cached()
-    if repo then
-      local refs = repo:refs()
-      if refs then
-        local branch = refs:current_branch()
-        if branch then statusline.set_branch(branch) end
-      end
-    end
+    update_branch(repository.get_cached())
   end)
 
   event.custom_on('VGitDirChanged', function()
@@ -54,11 +55,13 @@ git_buffer_store.register_events = event.async(function()
     for _, buffer in ipairs(buffers_module.list()) do
       if buffer:is_valid() then git_buffer_store.collect(buffer.bufnr) end
     end
+    update_branch(repository.current())
   end)
 
   for _, buffer in ipairs(buffers_module.list()) do
     if buffer:is_valid() then git_buffer_store.collect(buffer.bufnr) end
   end
+  update_branch(repository.current())
 end)
 
 git_buffer_store.for_each = function(callback)

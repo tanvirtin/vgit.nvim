@@ -189,4 +189,18 @@ describe('scenario: configuration', function()
       assert.are.same(0, #ctx.observe.signs(ctx))
     end,
   })
+
+  scenario.flow('the statusline knows the branch before any git change', {
+    files = { ['f.txt'] = { 'one' } },
+    steps = {
+      { cd = '$repo' },
+      { edit = 'f.txt' },
+      {
+        wait_until = function(ctx)
+          return ctx.editor.terminal:rpc_eval('require(\'vgit.statusline\').get_branch()') == 'main'
+        end,
+        desc = 'branch main in the statusline',
+      },
+    },
+  })
 end)
