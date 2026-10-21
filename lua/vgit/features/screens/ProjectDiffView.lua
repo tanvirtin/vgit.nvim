@@ -364,7 +364,7 @@ function ProjectDiffView:setup_keymaps()
 
   self:_setup_hunk_navigation_keymaps()
 
-  local blame_key = keymap.get_key(project_diff_view_keymaps.blame)
+  local blame_key = not (self._data and self._data.is_content) and keymap.get_key(project_diff_view_keymaps.blame)
   if blame_key then
     local blame_fn = self:_make_debounced(function()
       self:show_blame_view()
@@ -378,6 +378,8 @@ function ProjectDiffView:setup_keymaps()
   for _, component in ipairs(self:_get_all_diff_components()) do
     if component and component:is_valid() then component:on_click({ [2] = double_click_fn }) end
   end
+
+  self:_setup_custom_keymaps(self._data and self._data.keymaps)
 end
 
 function ProjectDiffView:_mount_unified_view()
@@ -455,18 +457,23 @@ function ProjectDiffView:_append_diff(diff_file_entries)
 end
 
 function ProjectDiffView:_create_view(data)
-  local layout_type = scene_setting:get('diff_preference') or self.LAYOUT_UNIFIED
+  local layout_type = data.layout_type or scene_setting:get('diff_preference') or self.LAYOUT_UNIFIED
 
   self._layout_type = layout_type
 
-  self._repo = data.repo
-  local repo, err = self:_get_repo()
-  if err then
-    console.error('Failed to get repository: ' .. tostring(err))
-    return false
-  end
+  local repo
 
-  self._repo = repo
+  if not data.is_content then
+    self._repo = data.repo
+    local err
+    repo, err = self:_get_repo()
+    if err then
+      console.error('Failed to get repository: ' .. tostring(err))
+      return false
+    end
+
+    self._repo = repo
+  end
 
   if layout_type == self.LAYOUT_SPLIT then
     self:_mount_split_view()

@@ -379,6 +379,20 @@ function View:_setup_hunk_navigation_keymaps()
   end
 end
 
+function View:_setup_custom_keymaps(keymaps)
+  for _, config in ipairs(keymaps or {}) do
+    self:set_keymap({
+      {
+        mode = config.mode or 'n',
+        key = config.key,
+        handler = function()
+          config.handler(self)
+        end,
+      },
+    })
+  end
+end
+
 function View:get_context()
   return self._context
 end

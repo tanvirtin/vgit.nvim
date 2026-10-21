@@ -3,8 +3,11 @@ local lazy = require('vgit.core.lazy')
 local fs = lazy('vgit.core.fs')
 local Diff = lazy('vgit.core.diff.Diff')
 local git_hunks = lazy('vgit.git.git_hunks')
+local sign = lazy('vgit.core.sign')
 local highlight = lazy('vgit.core.highlight')
 local git_setting = lazy('vgit.settings.git')
+local scene_setting = lazy('vgit.settings.scene')
+local display_service = lazy('vgit.ui.display_service')
 local DiffAnnotator = lazy('vgit.ui.annotators.DiffAnnotator')
 local PatchLineBuilder = lazy('vgit.ui.components.PatchLineBuilder')
 local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
@@ -21,7 +24,7 @@ local function ensure_highlights()
 
   highlights_registered = true
 
-  if vim.tbl_isempty(highlight.get_hl_by_name('GitWordAdd')) then highlight.register_module() end
+  if vim.tbl_isempty(highlight.get_hl_by_name('GitWordAdd')) then highlight.register_module(sign.register_module) end
 end
 
 local function filetype_of(file)
@@ -187,6 +190,58 @@ function api.patch_text(files, opts)
   end
 
   return out
+end
+
+function api.show(spec)
+  ensure_highlights()
+
+  local files = spec.files or {}
+
+  if #files == 0 then return false end
+
+  local layout = spec.layout or scene_setting:get('diff_preference') or 'unified'
+
+  if #files == 1 then
+    local file = files[1]
+
+    display_service.show_diff({
+      type = 'file',
+      is_content = true,
+      is_live = false,
+      cursor_line = true,
+      target_hunk_index = 1,
+      filename = file.filename,
+      filetype = filetype_of(file),
+      layout_type = layout,
+      diff = api.diff(file.old_lines or {}, file.new_lines or {}, { layout = layout }),
+      keymaps = spec.keymaps,
+    })
+
+    return true
+  end
+
+  local entries = {}
+
+  for _, file in ipairs(files) do
+    local old_lines, new_lines = file.old_lines or {}, file.new_lines or {}
+
+    entries[#entries + 1] = {
+      status = { filename = file.filename, filetype = filetype_of(file) },
+      diff = api.diff(old_lines, new_lines, { layout = layout }),
+      original_lines = old_lines,
+      current_lines = new_lines,
+    }
+  end
+
+  display_service.show_diff({
+    type = 'files',
+    is_content = true,
+    layout_type = layout,
+    entries = { { entries = entries } },
+    keymaps = spec.keymaps,
+  })
+
+  return true
 end
 
 return api

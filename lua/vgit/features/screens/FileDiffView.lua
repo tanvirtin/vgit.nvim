@@ -27,6 +27,7 @@ function FileDiffView:constructor()
     old_filename = nil,
     is_staged = false,
     is_live = true,
+    is_content = false,
     cursor_line = false,
     layout_type = self.LAYOUT_UNIFIED,
   }
@@ -108,6 +109,7 @@ function FileDiffView:_process_file_data(data)
     old_filename = data.old_filename,
     is_staged = data.is_staged,
     is_live = data.is_live,
+    is_content = data.is_content,
     cursor_line = data.cursor_line,
     layout_type = data.layout_type,
   }, self._opts)
@@ -246,7 +248,7 @@ function FileDiffView:open_file()
   self:destroy()
   event.await()
 
-  local repo = self:_get_repo()
+  local repo = not self._opts.is_content and self:_get_repo()
   local path = repo and fs.absolute_path(repo:get_path(), filename) or filename
   navigation.open_file(path, mark.top_relative, 'center')
 end
@@ -411,9 +413,14 @@ function FileDiffView:setup_keymaps()
   self:_register_keymap(self._diff_component, 'n', '<enter>', function()
     self:open_file()
   end)
-  self:_register_keymap(self._diff_component, 'n', 'b', function()
-    self:show_blame_view()
-  end)
+
+  if not self._opts.is_content then
+    self:_register_keymap(self._diff_component, 'n', 'b', function()
+      self:show_blame_view()
+    end)
+  end
+
+  self:_setup_custom_keymaps(self._data and self._data.keymaps)
 end
 
 return FileDiffView

@@ -474,4 +474,37 @@ Detailed configuration example: >
         })
 
 ==============================================================================
+LIBRARY                                                         *vgit-library*
+
+`require('vgit.api')` exposes vgit's diffing and diff views for any two texts.
+It needs no git repository and works before |vgit-setup|.
+
+api.diff({old_lines}, {new_lines}, {opts})                    *vgit.api.diff()*
+    Diff two line arrays. {opts}.layout is "unified" (default) or "split".
+    Returns the diff: lines, hunks, marks and stat.
+
+api.patch({files}, {opts})                                   *vgit.api.patch()*
+    Lay out a patch for {files}, a list of
+    `{ filename, filetype, old_lines, new_lines }`. {opts}:
+      header   false leaves out the file name rows
+      context  lines of context around each change (default 3)
+      syntax   false leaves out treesitter captures
+    Returns `{ lines, rows, highlights, stat }`. rows[i] is
+    `{ kind, old_lnum, new_lnum, filename, number }`, where kind is one of
+    "context", "add", "remove", "hunk", "file" or "blank". highlights are
+    `{ row, col_start, col_end, hl_group, line }` relative to row 0: line
+    backgrounds, changed words (GitWordAdd, GitWordDelete) and syntax.
+
+api.patch_text({files}, {opts})                         *vgit.api.patch_text()*
+    A classic unified diff of {files} as a list of lines.
+
+api.show({spec})                                              *vgit.api.show()*
+    Open vgit's diff view for in-memory content. One file opens in the file
+    diff view, several in the project diff view; repository actions are left
+    out. {spec}:
+      files    as for |vgit.api.patch()|
+      layout   "unified" or "split" (default: scene.diff_preference)
+      keymaps  list of `{ mode, key, handler = function(view) end }`
+
+==============================================================================
 vim:tw=78:ts=8:ft=help:norl:

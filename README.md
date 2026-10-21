@@ -444,6 +444,40 @@ require('vgit').setup({
 </details>
 
 
+## Library API
+
+`require('vgit.api')` lets other plugins use vgit's diffing and diff views for any two texts. It needs no git repository and works before `setup()` is called.
+
+```lua
+local api = require('vgit.api')
+
+-- A diff of two line arrays: lines, hunks, marks and stats.
+local diff = api.diff(old_lines, new_lines, { layout = 'unified' })
+
+-- A patch ready to draw into any buffer at any row.
+local patch = api.patch({ { filename = 'a.lua', old_lines = old_lines, new_lines = new_lines } }, {
+  header = false, -- leave out the file name rows
+  context = 3,    -- lines of context around each change
+  syntax = true,  -- include treesitter captures for the file's language
+})
+-- patch.lines:      the text, one entry per row (removed lines have no '-')
+-- patch.rows[i]:    { kind = 'context'|'add'|'remove'|'hunk'|'file'|'blank', old_lnum, new_lnum, filename, number }
+-- patch.highlights: { row, col_start, col_end, hl_group, line } relative to row 0:
+--                   line backgrounds, changed words (GitWordAdd/GitWordDelete) and syntax
+-- patch.stat:       { added, removed }
+
+-- A classic unified diff, for plain-text readers.
+local text = api.patch_text({ { filename = 'a.lua', old_lines = old_lines, new_lines = new_lines } })
+
+-- vgit's diff views for in-memory content: one file opens in the file diff view,
+-- several in the project diff view. Repository actions (stage, reset, blame) are left out.
+api.show({
+  files = { { filename = 'a.lua', old_lines = old_lines, new_lines = new_lines } },
+  layout = 'split', -- defaults to settings.scene.diff_preference
+  keymaps = { { mode = 'n', key = 'a', handler = function(view) end } },
+})
+```
+
 ## Status Line
 
 Use `b:vgit_status`, a table containing the current buffer's number of `added`, `removed`, `changed` lines.
