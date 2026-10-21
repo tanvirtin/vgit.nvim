@@ -62,7 +62,7 @@ end
 function World:repo(name, files)
   local dir = self.root .. '/' .. name
   utils.mkdir_p(dir)
-  self:git(dir, 'init', '-q')
+  self:git(dir, 'init', '-q', '-b', 'main')
   self:git(dir, 'config', 'user.name', 'Scenario')
   self:git(dir, 'config', 'user.email', 'scenario@example.test')
 
