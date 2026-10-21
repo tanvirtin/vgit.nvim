@@ -39,6 +39,7 @@ branch_command.execute = event.async(function()
   end)
 
   display_service.show_branch({
+    repo = repo,
     branches = branches,
     current_branch = current_branch,
   })

@@ -117,22 +117,15 @@ describe('BranchView:', function()
     local function setup_mocks(opts)
       opts = opts or {}
 
-      save_package('vgit.git.repository')
-      package.loaded['vgit.git.repository'] = {
-        current = function()
-          if opts.repo_err then return nil, opts.repo_err end
+      local repo = {
+        refs = function()
           return {
-            refs = function()
-              return {
-                checkout_new_branch = function(_, name)
-                  if opts.on_checkout then opts.on_checkout(name) end
-                  if opts.checkout_err then return nil, opts.checkout_err end
-                  return true, nil
-                end,
-              }
+            checkout_new_branch = function(_, name)
+              if opts.on_checkout then opts.on_checkout(name) end
+              if opts.checkout_err then return nil, opts.checkout_err end
+              return true, nil
             end,
-          },
-            nil
+          }
         end,
       }
 
@@ -151,11 +144,12 @@ describe('BranchView:', function()
 
       package.loaded['vgit.features.screens.BranchView'] = nil
       BranchView = require('vgit.features.screens.BranchView')
+      return repo
     end
 
     it('should do nothing for nil query', function()
       local checkout_called = false
-      setup_mocks({
+      local repo = setup_mocks({
         input_response = 'y',
         on_checkout = function()
           checkout_called = true
@@ -163,6 +157,7 @@ describe('BranchView:', function()
       })
 
       local view = BranchView()
+      view._repo = repo
       view:_on_no_match(nil)
 
       assert.is_false(checkout_called)
@@ -170,7 +165,7 @@ describe('BranchView:', function()
 
     it('should do nothing for empty query', function()
       local checkout_called = false
-      setup_mocks({
+      local repo = setup_mocks({
         input_response = 'y',
         on_checkout = function()
           checkout_called = true
@@ -178,6 +173,7 @@ describe('BranchView:', function()
       })
 
       local view = BranchView()
+      view._repo = repo
       view:_on_no_match('')
 
       assert.is_false(checkout_called)
@@ -185,7 +181,7 @@ describe('BranchView:', function()
 
     it('should abort when user responds with n', function()
       local checkout_called = false
-      setup_mocks({
+      local repo = setup_mocks({
         input_response = 'n',
         on_checkout = function()
           checkout_called = true
@@ -193,6 +189,7 @@ describe('BranchView:', function()
       })
 
       local view = BranchView()
+      view._repo = repo
       view:_on_no_match('new-branch')
 
       assert.is_false(checkout_called)
@@ -200,7 +197,7 @@ describe('BranchView:', function()
 
     it('should abort when user responds with empty string', function()
       local checkout_called = false
-      setup_mocks({
+      local repo = setup_mocks({
         input_response = '',
         on_checkout = function()
           checkout_called = true
@@ -208,6 +205,7 @@ describe('BranchView:', function()
       })
 
       local view = BranchView()
+      view._repo = repo
       view:_on_no_match('new-branch')
 
       assert.is_false(checkout_called)
@@ -215,7 +213,7 @@ describe('BranchView:', function()
 
     it('should create and checkout branch on y response', function()
       local checkout_name = nil
-      setup_mocks({
+      local repo = setup_mocks({
         input_response = 'y',
         on_checkout = function(name)
           checkout_name = name
@@ -223,6 +221,7 @@ describe('BranchView:', function()
       })
 
       local view = BranchView()
+      view._repo = repo
       view:_on_no_match('new-branch')
 
       eq('new-branch', checkout_name)
@@ -230,7 +229,7 @@ describe('BranchView:', function()
 
     it('should create and checkout branch on yes response', function()
       local checkout_name = nil
-      setup_mocks({
+      local repo = setup_mocks({
         input_response = 'yes',
         on_checkout = function(name)
           checkout_name = name
@@ -238,6 +237,7 @@ describe('BranchView:', function()
       })
 
       local view = BranchView()
+      view._repo = repo
       view:_on_no_match('new-branch')
 
       eq('new-branch', checkout_name)
@@ -245,7 +245,7 @@ describe('BranchView:', function()
 
     it('should show success message after creation', function()
       local info_msg = nil
-      setup_mocks({
+      local repo = setup_mocks({
         input_response = 'y',
         on_info = function(msg)
           info_msg = msg
@@ -253,6 +253,7 @@ describe('BranchView:', function()
       })
 
       local view = BranchView()
+      view._repo = repo
       view:_on_no_match('feature-x')
 
       eq('Created and switched to branch feature-x', info_msg)
@@ -260,7 +261,7 @@ describe('BranchView:', function()
 
     it('should show error when branch creation fails', function()
       local error_msg = nil
-      setup_mocks({
+      local repo = setup_mocks({
         input_response = 'y',
         checkout_err = { 'fatal: branch already exists' },
         on_error = function(msg)
@@ -269,45 +270,24 @@ describe('BranchView:', function()
       })
 
       local view = BranchView()
+      view._repo = repo
       view:_on_no_match('existing-branch')
 
       eq({ 'fatal: branch already exists' }, error_msg)
-    end)
-
-    it('should show error when repo not found', function()
-      local error_msg = nil
-      setup_mocks({
-        input_response = 'y',
-        repo_err = 'not a git repository',
-        on_error = function(msg)
-          error_msg = msg
-        end,
-      })
-
-      local view = BranchView()
-      view:_on_no_match('new-branch')
-
-      eq('not a git repository', error_msg)
     end)
   end)
   describe('_on_select', function()
     it('should checkout the selected branch', function()
       local checkout_name = nil
 
-      save_package('vgit.git.repository')
-      package.loaded['vgit.git.repository'] = {
-        current = function()
+      local repo = {
+        refs = function()
           return {
-            refs = function()
-              return {
-                checkout = function(_, name)
-                  checkout_name = name
-                  return true, nil
-                end,
-              }
+            checkout = function(_, name)
+              checkout_name = name
+              return true, nil
             end,
-          },
-            nil
+          }
         end,
       }
 
@@ -321,6 +301,7 @@ describe('BranchView:', function()
       BranchView = require('vgit.features.screens.BranchView')
 
       local view = BranchView()
+      view._repo = repo
       view:_on_select('feature-branch')
 
       eq('feature-branch', checkout_name)
@@ -329,24 +310,18 @@ describe('BranchView:', function()
     it('should show error when checkout fails', function()
       local error_msg = nil
 
-      save_package('vgit.git.repository')
-      package.loaded['vgit.git.repository'] = {
-        current = function()
+      local repo = {
+        refs = function()
           return {
-            refs = function()
-              return {
-                checkout = function()
-                  return nil,
-                    {
-                      'error: Your local changes would be overwritten by checkout:',
-                      '\tfile.lua',
-                      'Please commit your changes or stash them.',
-                    }
-                end,
-              }
+            checkout = function()
+              return nil,
+                {
+                  'error: Your local changes would be overwritten by checkout:',
+                  '\tfile.lua',
+                  'Please commit your changes or stash them.',
+                }
             end,
-          },
-            nil
+          }
         end,
       }
 
@@ -362,6 +337,7 @@ describe('BranchView:', function()
       BranchView = require('vgit.features.screens.BranchView')
 
       local view = BranchView()
+      view._repo = repo
       view:_on_select('bad-branch')
 
       eq(3, #error_msg)
@@ -371,19 +347,13 @@ describe('BranchView:', function()
     it('should show success message on checkout', function()
       local info_msg = nil
 
-      save_package('vgit.git.repository')
-      package.loaded['vgit.git.repository'] = {
-        current = function()
+      local repo = {
+        refs = function()
           return {
-            refs = function()
-              return {
-                checkout = function()
-                  return true, nil
-                end,
-              }
+            checkout = function()
+              return true, nil
             end,
-          },
-            nil
+          }
         end,
       }
 
@@ -399,6 +369,7 @@ describe('BranchView:', function()
       BranchView = require('vgit.features.screens.BranchView')
 
       local view = BranchView()
+      view._repo = repo
       view:_on_select('develop')
 
       eq('Switched to branch develop', info_msg)
@@ -407,20 +378,14 @@ describe('BranchView:', function()
     it('should not checkout when value is nil', function()
       local checkout_called = false
 
-      save_package('vgit.git.repository')
-      package.loaded['vgit.git.repository'] = {
-        current = function()
+      local repo = {
+        refs = function()
           return {
-            refs = function()
-              return {
-                checkout = function()
-                  checkout_called = true
-                  return true, nil
-                end,
-              }
+            checkout = function()
+              checkout_called = true
+              return true, nil
             end,
-          },
-            nil
+          }
         end,
       }
 
@@ -434,6 +399,7 @@ describe('BranchView:', function()
       BranchView = require('vgit.features.screens.BranchView')
 
       local view = BranchView()
+      view._repo = repo
       view:_on_select(nil)
 
       assert.is_false(checkout_called)

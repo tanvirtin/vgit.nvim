@@ -37,6 +37,11 @@ function StatusDiffView:constructor()
   return instance
 end
 
+function StatusDiffView:_get_repo()
+  if self._repo then return self._repo, nil end
+  return repository.current()
+end
+
 function StatusDiffView:_is_valid_entry(entry)
   if not entry then return false end
   if not entry.status then return false end
@@ -106,7 +111,7 @@ function StatusDiffView:reset_hunk()
   local filename = entry.status.filename
   local next_file = self:find_next_file(filename, 'unstaged')
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -318,7 +323,7 @@ function StatusDiffView:_refresh_diff(hunk_index)
   local entry = self:get_current_entry()
   if not self:_is_valid_entry(entry) then return false end
 
-  local repo, repo_err = repository.current()
+  local repo, repo_err = self:_get_repo()
   if repo_err then
     console.debug.error(repo_err)
     return false
@@ -358,7 +363,7 @@ function StatusDiffView:stage_hunk()
   local hunk, hunk_index = self._diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -389,7 +394,7 @@ function StatusDiffView:unstage_hunk()
   local hunk, hunk_index = self._diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -416,7 +421,7 @@ function StatusDiffView:stage_entry(opts)
   local filename = entry.status.filename
   local next_file = self:find_next_file(filename, 'unstaged')
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -451,7 +456,7 @@ function StatusDiffView:unstage_entry(opts)
   local filename = entry.status.filename
   local next_file = self:find_next_file(filename, 'staged')
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -490,7 +495,7 @@ function StatusDiffView:reset_entry()
   local entry_type = entry.type
   local next_file = self:find_next_file(filename, entry_type)
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -549,7 +554,7 @@ function StatusDiffView:_confirm_commit()
     return
   end
 
-  local repo, repo_err = repository.current()
+  local repo, repo_err = self:_get_repo()
   if repo_err then
     console.debug.error(repo_err)
     return
@@ -663,7 +668,7 @@ function StatusDiffView:_handle_file_selection_change(item)
     return
   end
 
-  local repo, repo_err = repository.current()
+  local repo, repo_err = self:_get_repo()
   if repo_err then
     console.debug.error(repo_err)
     return
@@ -725,7 +730,7 @@ function StatusDiffView:_handle_file_selection_change(item)
 end
 
 function StatusDiffView:stage_all()
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -742,7 +747,7 @@ function StatusDiffView:stage_all()
 end
 
 function StatusDiffView:unstage_all()
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -762,7 +767,7 @@ function StatusDiffView:reset_all()
   event.await()
   if not self:_confirm('Are you sure you want to discard all changes? (y/N) ') then return end
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return
@@ -789,7 +794,7 @@ end
 function StatusDiffView:refresh_data()
   event.await()
 
-  local repo, err = repository.current()
+  local repo, err = self:_get_repo()
   if err then return end
 
   local data, status_err = repo:status(self._opts)
@@ -947,7 +952,8 @@ function StatusDiffView:_setup_double_click_open()
 end
 
 function StatusDiffView:_create_view(data)
-  local repo, err = repository.current()
+  self._repo = data.repo
+  local repo, err = self:_get_repo()
   if err then
     console.debug.error(err)
     return false

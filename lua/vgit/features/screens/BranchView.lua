@@ -2,7 +2,6 @@ local lazy = require('vgit.core.lazy')
 
 local View = lazy('vgit.ui.View')
 local console = lazy('vgit.core.console')
-local repository = lazy('vgit.git.repository')
 local SearchComponent = lazy('vgit.ui.components.SearchComponent')
 
 local BranchView = View:extend()
@@ -10,6 +9,7 @@ local BranchView = View:extend()
 function BranchView:constructor()
   local instance = View.constructor(self)
   instance._search_component = nil
+  instance._repo = nil
   return instance
 end
 
@@ -36,6 +36,7 @@ function BranchView:create(data)
   if type(data) ~= 'table' then return false end
   if not data.branches or #data.branches == 0 then return false end
 
+  self._repo = data.repo
   local items = self:_build_items(data.branches, data.current_branch)
 
   self._search_component = SearchComponent({
@@ -73,13 +74,7 @@ function BranchView:_on_select(value)
 
   if not value then return end
 
-  local repo, repo_err = repository.current()
-  if repo_err then
-    console.error(repo_err)
-    return
-  end
-
-  local refs = repo:refs()
+  local refs = self._repo:refs()
   local _, err = refs:checkout(value)
 
   if err then
@@ -97,13 +92,7 @@ function BranchView:_on_no_match(query)
 
   if not self:_confirm(string.format('Branch \'%s\' does not exist. Create it? (y/N) ', query)) then return end
 
-  local repo, repo_err = repository.current()
-  if repo_err then
-    console.error(repo_err)
-    return
-  end
-
-  local refs = repo:refs()
+  local refs = self._repo:refs()
   local _, err = refs:checkout_new_branch(query)
 
   if err then

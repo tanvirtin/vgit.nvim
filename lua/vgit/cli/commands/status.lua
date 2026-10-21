@@ -43,6 +43,7 @@ status_command.execute = event.async(function()
 
   local transformed_data = {
     type = 'status',
+    repo = repo,
     entries = data.entries,
     layout_type = layout_type,
     current_filename = current_filename,

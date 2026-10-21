@@ -120,21 +120,19 @@ return function(busted)
 
   -- Declarative flow: a table with `arrange`/`repo`+`files`+`staged`+`changes`,
   -- a `steps` list, and `expect`. See tests/scenario/dsl.lua for the shape.
+  -- A flow with `known_bug = 'reason'` passes while it fails, and fails once the
+  -- bug is fixed so the marker gets removed.
   function scenario.flow(name, spec)
-    busted.it(name, function()
+    local title = spec.known_bug and (name .. ' [known bug: ' .. spec.known_bug .. ']') or name
+    busted.it(title, function()
       local ok, report = run(function(ctx)
         dsl.execute(ctx, spec)
       end, { config = spec.config, timeout = spec.timeout })
+      if spec.known_bug then
+        if ok then error('known bug no longer reproduces; remove known_bug from this flow', 0) end
+        return
+      end
       if not ok then error(report, 0) end
-    end)
-  end
-
-  -- Passes while the bug reproduces; fails once it is fixed so the test gets promoted.
-  function scenario.known_bug(name, reason, second, third)
-    local opts, fn = split(second, third)
-    busted.it(name .. ' [known bug: ' .. reason .. ']', function()
-      local ok = run(fn, opts)
-      if ok then error('known bug no longer reproduces; promote this to scenario.test', 0) end
     end)
   end
 

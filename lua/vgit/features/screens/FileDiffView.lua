@@ -354,7 +354,8 @@ end
 function FileDiffView:show_blame_view()
   local filename = self._opts.filename
   if not filename then return end
-  display_service.show_blame_view_for_file(filename)
+  local repo = self:_get_repo()
+  display_service.show_blame_view_for_file(filename, repo)
 end
 
 function FileDiffView:setup_keymaps()

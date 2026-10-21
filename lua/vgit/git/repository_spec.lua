@@ -1,5 +1,13 @@
 local eq = assert.are.same
 
+local function fake_repo(path)
+  return {
+    get_path = function()
+      return path or '/repo'
+    end,
+  }
+end
+
 describe('repository:', function()
   local repository
   local original_git_repository
@@ -7,9 +15,7 @@ describe('repository:', function()
   before_each(function()
     original_git_repository = package.loaded['vgit.git.GitRepository']
 
-    local mock_repo_instance = {
-      reset = function() end,
-    }
+    local mock_repo_instance = fake_repo()
 
     package.loaded['vgit.git.GitRepository'] = {
       discover = function()
@@ -70,7 +76,7 @@ describe('repository:', function()
 
       package.loaded['vgit.git.GitRepository'].discover = function()
         discover_called = true
-        return { reset = function() end }, nil
+        return fake_repo(), nil
       end
 
       package.loaded['vgit.git.repository'] = nil
@@ -114,7 +120,7 @@ describe('repository:', function()
       package.loaded['vgit.git.GitRepository'].discover = function()
         call_count = call_count + 1
         if call_count == 1 then return nil, { 'error' } end
-        return { reset = function() end }, nil
+        return fake_repo(), nil
       end
 
       package.loaded['vgit.git.repository'] = nil
@@ -127,6 +133,79 @@ describe('repository:', function()
       local repo2, err2 = repository.current()
       assert.is_not_nil(repo2)
       assert.is_nil(err2)
+    end)
+  end)
+
+  describe('current with a file open', function()
+    local directory
+    local filepath
+
+    before_each(function()
+      directory = vim.fn.resolve(vim.fn.tempname())
+      vim.fn.mkdir(directory, 'p')
+      filepath = directory .. '/file.lua'
+      vim.fn.writefile({ 'content' }, filepath)
+      vim.cmd.edit(filepath)
+    end)
+
+    after_each(function()
+      vim.cmd('silent! %bwipeout!')
+      vim.fn.delete(directory, 'rf')
+    end)
+
+    it('should use the repo of the current file', function()
+      package.loaded['vgit.git.GitRepository'].discover = function(path)
+        if path then return fake_repo('/file-repo'), nil end
+        return fake_repo('/cwd-repo'), nil
+      end
+
+      local repo = repository.current()
+
+      eq('/file-repo', repo:get_path())
+    end)
+
+    it('should fall back to the working directory when the file is outside a repo', function()
+      package.loaded['vgit.git.GitRepository'].discover = function(path)
+        if path then return nil, { 'not a git repository' } end
+        return fake_repo('/cwd-repo'), nil
+      end
+
+      local repo = repository.current()
+
+      eq('/cwd-repo', repo:get_path())
+    end)
+
+    it('should ignore buffers that are not files', function()
+      vim.bo.buftype = 'nofile'
+      package.loaded['vgit.git.GitRepository'].discover = function(path)
+        if path then return fake_repo('/file-repo'), nil end
+        return fake_repo('/cwd-repo'), nil
+      end
+
+      local repo = repository.current()
+
+      eq('/cwd-repo', repo:get_path())
+    end)
+
+    it('should return the same instance for the same repo', function()
+      package.loaded['vgit.git.GitRepository'].discover = function()
+        return fake_repo('/file-repo'), nil
+      end
+
+      local repo1 = repository.current()
+      local repo2 = repository.current()
+
+      assert.are.equal(repo1, repo2)
+    end)
+
+    it('should remember the last repo it resolved', function()
+      package.loaded['vgit.git.GitRepository'].discover = function()
+        return fake_repo('/file-repo'), nil
+      end
+
+      local repo = repository.current()
+
+      assert.are.equal(repo, repository.get_cached())
     end)
   end)
 
@@ -259,7 +338,7 @@ describe('repository:', function()
       local repo1 = repository.current()
       repository.invalidate()
 
-      local new_mock = { reset = function() end }
+      local new_mock = fake_repo()
       package.loaded['vgit.git.GitRepository'].discover = function()
         return new_mock, nil
       end

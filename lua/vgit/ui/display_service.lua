@@ -3,7 +3,6 @@ local lazy = require('vgit.core.lazy')
 local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
-local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local HunkLensView = lazy('vgit.features.lenses.HunkLensView')
 local BlameLensView = lazy('vgit.features.lenses.BlameLensView')
@@ -139,14 +138,8 @@ display_service.show_blame_view = event.async(function(data)
   show_view(BlameView, data, 'blame view')
 end)
 
-display_service.show_blame_view_for_file = event.async(function(filename)
-  if not filename then return end
-
-  local repo, err = repository.current()
-  if err then
-    console.debug.error(err)
-    return
-  end
+display_service.show_blame_view_for_file = event.async(function(filename, repo)
+  if not filename or not repo then return end
 
   local filetype = fs.detect_filetype(filename)
 

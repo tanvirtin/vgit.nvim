@@ -160,10 +160,13 @@ end)
 
 ## Known bugs
 
-When a flow reproduces a bug you cannot fix yet, capture it with
-`scenario.known_bug(name, reason, fn)`. It **passes while the bug reproduces and
-fails once it is fixed**, prompting you to promote it to `scenario.test`. This
-keeps the suite green while preserving the reproduction.
+When a flow reproduces a bug you cannot fix yet, add `known_bug = 'reason'` to it.
+It **passes while the bug reproduces and fails once it is fixed**, prompting you to
+remove the marker. This keeps the suite green while preserving the reproduction.
+
+A known bug passes on any failure, including a typo in the flow. Run it once without
+the marker and check that it fails for the reason you expect, and where you can, keep
+a passing flow with the same steps in a setting that works.
 
 ## Gotchas
 
@@ -210,6 +213,6 @@ The harness exists to serve scenarios, not the other way round.
 1. Find the behaviour: a keymap (`lua/vgit/settings/*.lua`), a command
    (`lua/vgit/cli/commands/*.lua`), or a view (`lua/vgit/features/screens/*.lua`).
 2. Write a `scenario.flow` that reproduces the user path.
-3. If it fails, decide: fix the code, or record `scenario.known_bug`, or fix the
+3. If it fails, decide: fix the code, or mark it `known_bug`, or fix the
    test if the expectation was wrong.
 4. Verify: the flow, then the whole scenario suite, then the affected unit specs.

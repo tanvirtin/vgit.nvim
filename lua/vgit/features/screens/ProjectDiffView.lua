@@ -267,7 +267,7 @@ function ProjectDiffView:show_blame_view()
   local file_info = self._line_to_file_map[lnum]
   if not file_info or not file_info.filename then return end
 
-  display_service.show_blame_view_for_file(file_info.filename)
+  display_service.show_blame_view_for_file(file_info.filename, self._repo)
 end
 
 function ProjectDiffView:setup_keymaps()
