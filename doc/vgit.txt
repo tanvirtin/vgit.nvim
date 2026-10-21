@@ -489,11 +489,13 @@ api.patch({files}, {opts})                                   *vgit.api.patch()*
       header   false leaves out the file name rows
       context  lines of context around each change (default 3)
       syntax   false leaves out treesitter captures
-    Returns `{ lines, rows, highlights, stat }`. rows[i] is
+    Returns `{ lines, rows, highlights, words, stat }`. rows[i] is
     `{ kind, old_lnum, new_lnum, filename, number }`, where kind is one of
     "context", "add", "remove", "hunk", "file" or "blank". highlights are
     `{ row, col_start, col_end, hl_group, line }` relative to row 0: line
-    backgrounds, changed words (GitWordAdd, GitWordDelete) and syntax.
+    backgrounds and syntax. words are the changed words as
+    `{ row, col, texts }` overlay chunks (GitWordAdd, GitWordDelete); draw
+    them with `hl_mode = "combine"` so they show above line backgrounds.
 
 api.patch_text({files}, {opts})                         *vgit.api.patch_text()*
     A classic unified diff of {files} as a list of lines.

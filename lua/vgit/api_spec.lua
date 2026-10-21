@@ -70,16 +70,14 @@ describe('vgit.api:', function()
       eq('a.txt', patch.lines[2])
     end)
 
-    it('should give line backgrounds and changed words as highlights relative to the patch', function()
+    it('should give line backgrounds as highlights and changed words as overlays, relative to the patch', function()
       local patch = api.patch({
         { filename = 'a.txt', old_lines = { 'local x = 1' }, new_lines = { 'local x = 2' } },
       }, { header = false, syntax = false })
 
-      local function has(row, group, from, to)
+      local function has(row, group)
         for _, hl in ipairs(patch.highlights) do
-          if hl.row == row and hl.hl_group == group and (not from or (hl.col_start == from and hl.col_end == to)) then
-            return true
-          end
+          if hl.row == row and hl.hl_group == group then return true end
         end
 
         return false
@@ -87,8 +85,10 @@ describe('vgit.api:', function()
 
       assert.is_true(has(0, 'GitSignsDeleteLn'))
       assert.is_true(has(1, 'GitSignsAddLn'))
-      assert.is_true(has(0, 'GitWordDelete', 10, 11))
-      assert.is_true(has(1, 'GitWordAdd', 10, 11))
+      eq({
+        { row = 0, col = 10, texts = { { '1', 'GitWordDelete' } } },
+        { row = 1, col = 10, texts = { { '2', 'GitWordAdd' } } },
+      }, patch.words)
     end)
 
     it('should map syntax captures from each side onto the patch rows', function()

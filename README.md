@@ -463,7 +463,10 @@ local patch = api.patch({ { filename = 'a.lua', old_lines = old_lines, new_lines
 -- patch.lines:      the text, one entry per row (removed lines have no '-')
 -- patch.rows[i]:    { kind = 'context'|'add'|'remove'|'hunk'|'file'|'blank', old_lnum, new_lnum, filename, number }
 -- patch.highlights: { row, col_start, col_end, hl_group, line } relative to row 0:
---                   line backgrounds, changed words (GitWordAdd/GitWordDelete) and syntax
+--                   line backgrounds and syntax
+-- patch.words:      { row, col, texts } changed words as overlay virt_text chunks
+--                   (GitWordAdd/GitWordDelete); draw them with hl_mode = 'combine'
+--                   so they show above line backgrounds and keep syntax colours
 -- patch.stat:       { added, removed }
 
 -- A classic unified diff, for plain-text readers.

@@ -29,8 +29,6 @@ function DiffAnnotator.annotate_line(line_changes)
   return marks
 end
 
-DiffAnnotator.WORD_PRIORITY = 150
-
 function DiffAnnotator.word_ranges(word_diff, change_type)
   local ranges = {}
   local hl = change_type == 'remove' and 'GitWordDelete' or 'GitWordAdd'

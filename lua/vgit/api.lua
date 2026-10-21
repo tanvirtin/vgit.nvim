@@ -64,23 +64,19 @@ local function kind_of(meta)
   return 'context'
 end
 
-local function add_word_ranges(highlights, line_metadata)
+local function word_overlays(lines, line_metadata)
+  local words = {}
+
   for i, meta in ipairs(line_metadata) do
     local lnum_change = meta and meta.lnum_change
     local word_diff = lnum_change and Diff.word_diff(lnum_change)
+    local overlay = word_diff
+      and DiffAnnotator.word_overlay(lines[i], DiffAnnotator.word_ranges(word_diff, lnum_change.type))
 
-    if word_diff then
-      for _, range in ipairs(DiffAnnotator.word_ranges(word_diff, lnum_change.type)) do
-        highlights[#highlights + 1] = {
-          row = i - 1,
-          col_start = range.col_start,
-          col_end = range.col_end,
-          hl_group = range.hl_group,
-          priority = DiffAnnotator.WORD_PRIORITY,
-        }
-      end
-    end
+    if overlay then words[#words + 1] = { row = i - 1, col = overlay.col, texts = overlay.texts } end
   end
+
+  return words
 end
 
 local function add_syntax(highlights, lines, file_sections)
@@ -139,8 +135,6 @@ function api.patch(files, opts)
   local lines, line_metadata, file_sections, _, line_numbers = PatchLineBuilder.build(entries)
   local highlights = DiffStyleAnnotator.annotate(lines, line_metadata)
 
-  add_word_ranges(highlights, line_metadata)
-
   if opts.syntax ~= false then add_syntax(highlights, lines, file_sections) end
 
   local rows = {}
@@ -157,7 +151,13 @@ function api.patch(files, opts)
     }
   end
 
-  return { lines = lines, rows = rows, highlights = highlights, stat = stat }
+  return {
+    lines = lines,
+    rows = rows,
+    highlights = highlights,
+    words = word_overlays(lines, line_metadata),
+    stat = stat,
+  }
 end
 
 function api.patch_text(files, opts)
