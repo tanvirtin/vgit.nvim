@@ -448,9 +448,9 @@ require('vgit').setup({
 
 Use `b:vgit_status`, a table containing the current buffer's number of `added`, `removed`, `changed` lines.
 
-Example:
+Example, showing `+added ~changed -removed` in git buffers and nothing elsewhere:
 ```viml
-set statusline+=%{get(b:,'vgit_status','')}
+set statusline+=%{exists('b:vgit_status')?printf('+%d\ ~%d\ -%d',b:vgit_status.added,b:vgit_status.changed,b:vgit_status.removed):''}
 ```
 
 **API**
