@@ -565,7 +565,13 @@ function GitRepository:status(opts)
   local statuses, err = working_tree:status()
   if err then return nil, err end
 
-  local worktree_dirs = self:_get_worktree_dirs()
+  local worktree_dirs = {}
+  for _, status in ipairs(statuses) do
+    if vim.endswith(status.filename, '/') then
+      worktree_dirs = self:_get_worktree_dirs()
+      break
+    end
+  end
 
   local staged_files = {}
   local changed_files = {}

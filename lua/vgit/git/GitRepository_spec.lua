@@ -555,6 +555,53 @@ describe('GitRepository:', function()
       end)
     end)
 
+    describe('status with nested worktrees', function()
+      local git_worktree = require('vgit.git.git_worktree')
+      local original_list
+      local list_calls
+
+      before_each(function()
+        original_list = git_worktree.list
+        list_calls = 0
+        git_worktree.list = function(...)
+          list_calls = list_calls + 1
+          return original_list(...)
+        end
+      end)
+
+      after_each(function()
+        git_worktree.list = original_list
+      end)
+
+      local function status_filenames(repo)
+        local data, err = repo:status()
+        assert.is_nil(err)
+        local filenames = {}
+        for _, section in ipairs(data.entries) do
+          for _, entry in ipairs(section.entries) do
+            filenames[#filenames + 1] = entry.status.filename
+          end
+        end
+        table.sort(filenames)
+        return filenames
+      end
+
+      it('should not list worktrees when no nested repository shows up', function()
+        test_repo.write_file(repo_path, 'file.txt', { 'changed' })
+
+        eq({ 'file.txt' }, status_filenames(GitRepository.open(repo_path)))
+        eq(0, list_calls)
+      end)
+
+      it('should hide a worktree nested inside the repository', function()
+        vim.fn.system({ 'git', '-C', repo_path, 'worktree', 'add', '-q', 'nested', '-b', 'side' })
+        test_repo.write_file(repo_path, 'file.txt', { 'changed' })
+
+        eq({ 'file.txt' }, status_filenames(GitRepository.open(repo_path)))
+        eq(1, list_calls)
+      end)
+    end)
+
     describe('status with filename', function()
       it('should return status for a specific file when modified', function()
         test_repo.write_file(repo_path, 'file.txt', { 'changed content' })

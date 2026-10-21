@@ -21,19 +21,15 @@ end
 
 function GitRef:current()
   if not self._current then
-    local result, err = GitQueryBuilder(self._repo_path):raw_args('rev-parse', '--abbrev-ref', 'HEAD'):execute()
+    local result, err = GitQueryBuilder(self._repo_path):raw_args('rev-parse', 'HEAD', '--abbrev-ref', 'HEAD'):execute()
 
     if err then return nil, err end
 
-    local branch_name = result[1]
-
-    local hash_result, hash_err = GitQueryBuilder(self._repo_path):raw_args('rev-parse', 'HEAD'):execute()
-
-    if hash_err then return nil, hash_err end
+    local branch_name = result[2]
 
     self._current = {
       name = branch_name,
-      hash = hash_result[1],
+      hash = result[1],
       is_detached = branch_name == 'HEAD',
     }
   end

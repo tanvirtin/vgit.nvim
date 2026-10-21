@@ -80,6 +80,35 @@ describe('GitStatus:', function()
       eq(status.filetype, 'lua')
     end)
 
+    it('should detect the filetype on first access and only once', function()
+      local fs = require('vgit.core.fs')
+      local original_detect = fs.detect_filetype
+      local calls = 0
+      fs.detect_filetype = function(filename)
+        calls = calls + 1
+        return original_detect(filename)
+      end
+
+      local status = GitStatus('M  test.lua')
+      local before_access = calls
+      local first, second = status.filetype, status.filetype
+      fs.detect_filetype = original_detect
+
+      eq(0, before_access)
+      eq(1, calls)
+      eq('lua', first)
+      eq('lua', second)
+    end)
+
+    it('should keep filetype read-only', function()
+      local status = GitStatus('M  test.lua')
+      local _ = status.filetype
+
+      assert.has_error(function()
+        status.filetype = 'text'
+      end)
+    end)
+
     it('should parse deleted file', function()
       local status = GitStatus(' D deleted.lua')
 

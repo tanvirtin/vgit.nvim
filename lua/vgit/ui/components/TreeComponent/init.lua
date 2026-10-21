@@ -286,8 +286,7 @@ function TreeComponent:generate_lines()
       if item.entry and item.entry.status then
         local status = item.entry.status
         local filename = status.filename
-        local filetype = status.filetype
-        local icon, icon_hl = icons.get(filename, filetype)
+        local icon, icon_hl = icons.get(vim.fs.basename(filename), filename:match('%.([^./]+)$'))
 
         if status.old_filename then
           value = string.format(

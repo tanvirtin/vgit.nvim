@@ -76,8 +76,6 @@ function GitStatus:constructor(status)
     filename = GitStatus:read_path(raw_path, next_pos + #GitStatus.ARROW)
   end
 
-  local filetype = fs.detect_filetype(filename)
-
   return {
     ['$id'] = utils.math.uuid(),
     ['$value'] = value,
@@ -85,8 +83,14 @@ function GitStatus:constructor(status)
     ['$second'] = second,
     ['$filename'] = filename,
     ['$old_filename'] = old_filename,
-    ['$filetype'] = filetype,
   }
+end
+
+function GitStatus:__index(key)
+  if key == 'filetype' and rawget(self, '$filetype') == nil then
+    rawset(self, '$filetype', fs.detect_filetype(rawget(self, '$filename')))
+  end
+  return Object.__index(self, key)
 end
 
 function GitStatus:parse(status)
