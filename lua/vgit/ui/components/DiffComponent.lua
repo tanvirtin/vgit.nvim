@@ -143,8 +143,6 @@ function DiffComponent:render_viewport(top, bot)
   if self:is_viewport_unchanged(top, bot) then return end
 
   local rendered = self:with_element(function(el)
-    el:clear_extmark_highlights(top, bot)
-
     local lines_changes = self.state.lines_changes
     local line_numbers = self.state.line_numbers
 
@@ -188,16 +186,8 @@ function DiffComponent:render_viewport(top, bot)
         end
 
         local word_marks = DiffAnnotator.annotate_word(line_changes, idx)
-        if word_marks then
-          for _, range in ipairs(word_marks.ranges) do
-            el:place_extmark_highlight({
-              hl = range.hl_group,
-              row = word_marks.row,
-              col_range = { from = range.col_start, to = range.col_end },
-              priority = DiffAnnotator.WORD_PRIORITY,
-            })
-          end
-        end
+        local overlay = word_marks and DiffAnnotator.word_overlay(self.state.lines[idx], word_marks.ranges)
+        if overlay then el:place_extmark_text({ row = word_marks.row, col = overlay.col, texts = overlay.texts }) end
       end
     end
 

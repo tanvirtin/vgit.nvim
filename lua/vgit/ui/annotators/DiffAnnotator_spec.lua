@@ -48,6 +48,22 @@ describe('DiffAnnotator:', function()
     end)
   end)
 
+  describe('word_overlay', function()
+    it('should cover the changed span, leaving the unchanged gaps uncoloured so syntax shows through', function()
+      local overlay = DiffAnnotator.word_overlay('local x = 12 + y', {
+        { col_start = 6, col_end = 7, hl_group = 'GitWordAdd' },
+        { col_start = 11, col_end = 12, hl_group = 'GitWordAdd' },
+      })
+
+      eq(6, overlay.col)
+      eq({ { 'x', 'GitWordAdd' }, { ' = 1', nil }, { '2', 'GitWordAdd' } }, overlay.texts)
+    end)
+
+    it('should return nil when nothing changed', function()
+      assert.is_nil(DiffAnnotator.word_overlay('same', {}))
+    end)
+  end)
+
   describe('annotate_word', function()
     it('should return nil when lnum_change is nil', function()
       local result = DiffAnnotator.annotate_word({}, 1)

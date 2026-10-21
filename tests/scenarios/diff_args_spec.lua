@@ -211,7 +211,9 @@ describe('scenario: project diff word highlights', function()
   local function word_highlight_at_cursor(ctx)
     local line = ctx.observe.cursor(ctx)[1]
     for _, mark in ipairs(ctx.observe.extmarks(ctx, line)) do
-      if mark.hl == 'GitWordAdd' then return true end
+      for _, hl in ipairs(mark.virt_hl or {}) do
+        if hl == 'GitWordAdd' then return true end
+      end
     end
     return false
   end

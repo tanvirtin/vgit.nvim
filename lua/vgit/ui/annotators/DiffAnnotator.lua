@@ -50,6 +50,22 @@ function DiffAnnotator.word_ranges(word_diff, change_type)
   return ranges
 end
 
+function DiffAnnotator.word_overlay(line, ranges)
+  if not line or #ranges == 0 then return nil end
+
+  local texts = {}
+  local col = ranges[1].col_start
+
+  for _, range in ipairs(ranges) do
+    if range.col_start > col then texts[#texts + 1] = { line:sub(col + 1, range.col_start), nil } end
+
+    texts[#texts + 1] = { line:sub(range.col_start + 1, range.col_end), range.hl_group }
+    col = range.col_end
+  end
+
+  return { col = ranges[1].col_start, texts = texts }
+end
+
 function DiffAnnotator.annotate_word(line_changes, lnum)
   local lnum_change = line_changes.lnum_change
   if not lnum_change then return nil end

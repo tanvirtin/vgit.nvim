@@ -292,14 +292,11 @@ function PatchPreviewComponent:render_viewport(top, bot)
 
       local word_diff = meta and meta.lnum_change and Diff.word_diff(meta.lnum_change)
       if word_diff then
-        for _, range in ipairs(DiffAnnotator.word_ranges(word_diff, meta.lnum_change.type)) do
-          el:place_extmark_highlight({
-            hl = range.hl_group,
-            row = row,
-            col_range = { from = range.col_start, to = range.col_end },
-            priority = DiffAnnotator.WORD_PRIORITY,
-          })
-        end
+        local overlay = DiffAnnotator.word_overlay(
+          self.state.lines[row + 1],
+          DiffAnnotator.word_ranges(word_diff, meta.lnum_change.type)
+        )
+        if overlay then el:place_extmark_text({ row = row, col = overlay.col, texts = overlay.texts }) end
       end
 
       local diff_hls = diff_hl_map[row]
