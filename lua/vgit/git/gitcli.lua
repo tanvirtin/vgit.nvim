@@ -32,6 +32,7 @@ local function run_git(args, opts)
       command = 'git',
       args = effective_args,
       env = spawn_env,
+      stdin = opts.stdin,
       on_stderr = function(line)
         err[#err + 1] = line
       end,

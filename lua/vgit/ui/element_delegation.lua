@@ -1,9 +1,9 @@
 local function define_single_element_methods(Class, opts)
   local exclude = opts and opts.exclude or {}
 
-  function Class:set_lines(lines)
+  function Class:set_lines(lines, top, bot)
     self:with_element(function(el)
-      el:set_lines(lines)
+      el:set_lines(lines, top, bot)
     end)
     return self
   end

@@ -17,6 +17,14 @@ local hunks_setting = lazy('vgit.settings.hunks')
 
 local View = Object:extend()
 
+local function with_buftype(hunk_entries, buftype)
+  local entries = {}
+  for _, entry in ipairs(hunk_entries) do
+    entries[#entries + 1] = vim.tbl_extend('force', entry, { buftype = buftype })
+  end
+  return entries
+end
+
 function View:constructor()
   return {
     _destroyed = false,
@@ -426,27 +434,29 @@ function View:_set_keymap_all_components(mode, key, handler)
   end
 end
 
-function View:_set_hunk_entries(hunk_entries)
+function View:_for_each_diff_component(hunk_entries, fn)
   if self._layout_type == 'split' then
     if self._previous_component and self._previous_component:is_valid() then
-      local previous_entries = {}
-      for _, entry in ipairs(hunk_entries) do
-        previous_entries[#previous_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'previous' })
-      end
-      self._previous_component:set_props({ hunk_entries = previous_entries })
+      fn(self._previous_component, with_buftype(hunk_entries, 'previous'))
     end
     if self._current_component and self._current_component:is_valid() then
-      local current_entries = {}
-      for _, entry in ipairs(hunk_entries) do
-        current_entries[#current_entries + 1] = vim.tbl_extend('force', entry, { buftype = 'current' })
-      end
-      self._current_component:set_props({ hunk_entries = current_entries })
+      fn(self._current_component, with_buftype(hunk_entries, 'current'))
     end
-  else
-    if self._patch_component and self._patch_component:is_valid() then
-      self._patch_component:set_props({ hunk_entries = hunk_entries })
-    end
+  elseif self._patch_component and self._patch_component:is_valid() then
+    fn(self._patch_component, hunk_entries)
   end
+end
+
+function View:_set_hunk_entries(hunk_entries)
+  self:_for_each_diff_component(hunk_entries, function(component, entries)
+    component:set_props({ hunk_entries = entries })
+  end)
+end
+
+function View:_append_hunk_entries(hunk_entries)
+  self:_for_each_diff_component(hunk_entries, function(component, entries)
+    component:append_hunk_entries(entries)
+  end)
 end
 
 function View:get_current_mark_index()

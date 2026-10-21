@@ -7,6 +7,7 @@ local GitFile = lazy('vgit.git.GitFile')
 local GitBlob = lazy('vgit.git.GitBlob')
 local GitTree = lazy('vgit.git.GitTree')
 local git_log = lazy('vgit.git.git_log')
+local git_show = lazy('vgit.git.git_show')
 local GitIndex = lazy('vgit.git.GitIndex')
 local git_repo = lazy('vgit.git.git_repo')
 local DiffBuilder = lazy('vgit.core.diff')
@@ -409,6 +410,55 @@ function GitRepository:file_lines(filename, commit)
   self:_ensure_initialized()
   local blob = GitBlob(self, filename, commit)
   return blob:lines()
+end
+
+function GitRepository:batch_file_lines(objects)
+  self:_ensure_initialized()
+  return git_show.batch_lines(self:get_path(), objects)
+end
+
+function GitRepository:range_file_diffs(files, spec)
+  self:_ensure_initialized()
+
+  local from = spec.from
+  local to = spec.to
+  local objects = {}
+  for _, file in ipairs(files) do
+    objects[#objects + 1] = { filename = file.old_filename or file.filename, commit = from }
+    objects[#objects + 1] = { filename = file.filename, commit = to }
+  end
+
+  local blobs, err = self:batch_file_lines(objects)
+  if err then return nil, err end
+
+  local entries = {}
+  for i, file in ipairs(files) do
+    local original_lines = blobs[2 * i - 1]
+    local current_lines = blobs[2 * i]
+
+    local diff = self:diff({
+      type = 'range',
+      filename = file.filename,
+      old_filename = file.old_filename,
+      from = from,
+      to = to,
+      layout_type = spec.layout_type,
+      lines = { original = original_lines, current = current_lines },
+    })
+
+    if diff then
+      entries[#entries + 1] = {
+        filename = file.filename,
+        filetype = file.filetype or 'text',
+        diff = diff,
+        status = file,
+        original_lines = original_lines or {},
+        current_lines = current_lines or {},
+      }
+    end
+  end
+
+  return entries, nil
 end
 
 function GitRepository:stage_file(filename)

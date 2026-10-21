@@ -3,7 +3,6 @@ local lazy = require('vgit.core.lazy')
 local View = lazy('vgit.ui.View')
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
-local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
 local GitCommit = lazy('vgit.git.GitCommit')
@@ -144,12 +143,7 @@ CommitPickerView._on_select = event.async(function(self, value)
 
   event.await()
 
-  local repo, repo_err = repository.current()
-  if repo_err then
-    console.error(repo_err)
-    return
-  end
-
+  local repo = self._repo
   local tree = repo:tree(value)
 
   local commit, commit_err = tree:commit()
@@ -175,45 +169,9 @@ CommitPickerView._on_select = event.async(function(self, value)
   local from_ref = parent_hash ~= '' and parent_hash or GitCommit.EMPTY_TREE_HASH
   local to_ref = commit.commit_hash or commit.hash
 
-  local funcs = {}
-  for _, file in ipairs(files) do
-    local filename = file.filename
-    local file_old_filename = file.old_filename
-
-    table.insert(funcs, function()
-      local diff = repo:diff({
-        type = 'range',
-        filename = filename,
-        old_filename = file_old_filename,
-        from = from_ref,
-        to = to_ref,
-        layout_type = layout_type,
-      })
-
-      if not diff then return nil end
-
-      local from_filename = file_old_filename or filename
-      return {
-        filename = filename,
-        filetype = file.get_filetype and file:get_filetype() or 'text',
-        diff = diff,
-        status = file,
-        original_lines = repo:file_lines(from_filename, from_ref) or {},
-        current_lines = repo:file_lines(filename, to_ref) or {},
-      }
-    end)
-  end
-
-  local results = event.all(funcs)
-
   local entries = {}
-  for i = 1, #funcs do
-    if results[i] then table.insert(entries, results[i]) end
-  end
-
-  if #entries == 0 then
-    console.info('No diffs available for commit ' .. value)
-    return
+  for _, file in ipairs(files) do
+    entries[#entries + 1] = { status = file, range = { from = from_ref, to = to_ref } }
   end
 
   local commit_info = {
@@ -226,6 +184,7 @@ CommitPickerView._on_select = event.async(function(self, value)
 
   local data = {
     type = 'files',
+    repo = repo,
     entries = {
       {
         title = string.format('Commit: %s', (commit_info.hash or ''):sub(1, 7)),

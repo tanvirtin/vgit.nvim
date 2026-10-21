@@ -48,6 +48,25 @@ describe('Spawn:', function()
     end)
   end)
 
+  describe('line splitting across chunks', function()
+    it('joins a line spread over several chunks and flushes the unterminated tail', function()
+      local spawn = Spawn({ command = 'true', args = {} })
+      local output = {}
+      local push = function(line)
+        output[#output + 1] = line
+      end
+
+      spawn:process_chunk('he', spawn.stdout_buffer, push)
+      spawn:process_chunk('ll', spawn.stdout_buffer, push)
+      spawn:process_chunk('o\n\nwor', spawn.stdout_buffer, push)
+      spawn:process_chunk('ld', spawn.stdout_buffer, push)
+      eq({ 'hello', '' }, output)
+
+      spawn:flush(spawn.stdout_buffer, push)
+      eq({ 'hello', '', 'world' }, output)
+    end)
+  end)
+
   describe('start', function()
     it('spawns process and pipes stdout', function()
       local stdout = {}
@@ -70,6 +89,29 @@ describe('Spawn:', function()
       end, 50)
       assert.is_true(exited, 'on_exit should have been called')
       assert.is_true(#stdout > 0, 'should have received stdout output')
+    end)
+
+    it('writes stdin to the process', function()
+      local stdout = {}
+      local exited = false
+
+      Spawn({
+        command = 'cat',
+        args = {},
+        stdin = 'first\nsecond\n',
+        on_stderr = function() end,
+        on_stdout = function(line)
+          if line ~= '' then table.insert(stdout, line) end
+        end,
+        on_exit = function()
+          exited = true
+        end,
+      }):start()
+
+      vim.wait(5000, function()
+        return exited
+      end, 50)
+      assert.are.same({ 'first', 'second' }, stdout)
     end)
 
     it('pipes stderr correctly', function()

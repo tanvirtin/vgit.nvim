@@ -69,6 +69,9 @@ local event = {
   async = safe_async_void,
   promisify = async.wrap,
   await = async.wrap(vim.schedule, 1),
+  idle = async.wrap(function(callback)
+    vim.defer_fn(callback, 1)
+  end, 1),
 }
 
 function event.all(funcs, opts)

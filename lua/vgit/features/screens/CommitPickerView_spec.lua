@@ -7,7 +7,6 @@ package.loaded['vgit.ui.View'] = nil
 package.loaded['vgit.ui.Layout'] = nil
 package.loaded['vgit.core.event'] = nil
 package.loaded['vgit.git.git_log'] = nil
-package.loaded['vgit.git.repository'] = nil
 package.loaded['vgit.git.GitTree'] = nil
 package.loaded['vgit.settings.scene'] = nil
 package.loaded['vgit.ui.display_service'] = nil
@@ -42,11 +41,6 @@ local mock_repo = {
         return mock_tree_files, nil
       end,
     }
-  end,
-}
-package.loaded['vgit.git.repository'] = {
-  current = function()
-    return mock_repo, nil
   end,
 }
 package.loaded['vgit.git.GitTree'] = setmetatable({}, {
@@ -350,7 +344,7 @@ describe('CommitPickerView:', function()
   end)
 
   describe('_on_select', function()
-    it('should build diff data and call display_service.show_diff', function()
+    it('should hand the commit files to display_service.show_diff for loading', function()
       mock_tree_commit = {
         commit_hash = 'abc1234567890',
         parent_hash = 'def0000000000',
@@ -371,7 +365,7 @@ describe('CommitPickerView:', function()
       }
 
       local view = CommitPickerView()
-      view:create(make_data())
+      view:create(make_data({ repo = mock_repo }))
 
       view._destroyed = false
       view:_on_select('abc1234567890')
@@ -382,7 +376,10 @@ describe('CommitPickerView:', function()
       eq('abc1234567890', display_service_show_diff_data.commit_info.hash)
       eq(1, #display_service_show_diff_data.entries)
       eq(1, #display_service_show_diff_data.entries[1].entries)
-      eq('file.lua', display_service_show_diff_data.entries[1].entries[1].filename)
+      local pending = display_service_show_diff_data.entries[1].entries[1]
+      eq('file.lua', pending.status.filename)
+      eq({ from = 'def0000000000', to = 'abc1234567890' }, pending.range)
+      eq(mock_repo, display_service_show_diff_data.repo)
     end)
 
     it('should handle nil value gracefully', function()

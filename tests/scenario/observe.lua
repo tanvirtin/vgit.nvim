@@ -74,9 +74,12 @@ function observe.extmarks(ctx, lnum)
       local marks = vim.api.nvim_buf_get_extmarks(0, -1, {%d, 0}, {%d, -1}, { details = true })
       for _, mark in ipairs(marks) do
         local d = mark[4]
-        local virt = {}
-        for _, chunk in ipairs(d.virt_text or {}) do virt[#virt + 1] = chunk[1] end
-        out[#out + 1] = { hl = d.hl_group, virt_text = table.concat(virt), sign_hl = d.sign_hl_group }
+        local virt, virt_hl = {}, {}
+        for _, chunk in ipairs(d.virt_text or {}) do
+          virt[#virt + 1] = chunk[1]
+          if chunk[2] then virt_hl[#virt_hl + 1] = chunk[2] end
+        end
+        out[#out + 1] = { hl = d.hl_group, virt_text = table.concat(virt), virt_hl = virt_hl, sign_hl = d.sign_hl_group }
       end
       return out
     end)()

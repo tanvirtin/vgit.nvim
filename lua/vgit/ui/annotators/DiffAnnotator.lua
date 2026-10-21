@@ -1,5 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
+local Diff = lazy('vgit.core.diff.Diff')
 local signs_setting = lazy('vgit.settings.signs')
 
 local DiffAnnotator = {}
@@ -47,7 +48,7 @@ function DiffAnnotator.annotate_word(line_changes, lnum)
   local lnum_change = line_changes.lnum_change
   if not lnum_change then return nil end
 
-  local word_diff = lnum_change.word_diff
+  local word_diff = Diff.word_diff(lnum_change)
   if not word_diff then return nil end
 
   return {

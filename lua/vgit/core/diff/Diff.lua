@@ -9,6 +9,31 @@ local MAX_LINES = 4
 
 local Diff = Object:extend()
 
+local function compute_word_diff(removed_line, added_line)
+  local d = dmp.diff_main(removed_line, added_line)
+  dmp.diff_cleanupSemantic(d)
+  return d
+end
+
+local function invert_word_diff(d)
+  local inverted = {}
+  for i, segment in ipairs(d) do
+    inverted[i] = { -segment[1], segment[2] }
+  end
+  return inverted
+end
+
+function Diff.word_diff(lnum_change)
+  if lnum_change.word_diff then return lnum_change.word_diff end
+
+  local pair = lnum_change.word_pair
+  if not pair then return nil end
+
+  if not pair.diff then pair.diff = compute_word_diff(pair.removed, pair.added) end
+  lnum_change.word_diff = lnum_change.type == 'add' and invert_word_diff(pair.diff) or pair.diff
+  return lnum_change.word_diff
+end
+
 function Diff:constructor()
   return {
     hunks = {},
@@ -494,13 +519,14 @@ function Diff:generate_unified(hunks, lines)
 
       local s = top
       local remove_idx = 0
+      local word_pairs = {}
       for j = 1, diff_len do
         local line = diff[j]
         local cleaned_line = line:sub(2, #line)
         local line_type = line:sub(1, 1)
 
         if line_type == '-' then
-          local word_diff = nil
+          local word_pair = nil
           remove_idx = remove_idx + 1
 
           new_lines_added = new_lines_added + 1
@@ -508,16 +534,15 @@ function Diff:generate_unified(hunks, lines)
           new_lines[new_lines_len] = cleaned_line
 
           if #removed_lines == #added_lines and #added_lines < MAX_LINES then
-            local d = dmp.diff_main(cleaned_line, added_lines[remove_idx])
-            dmp.diff_cleanupSemantic(d)
-            word_diff = d
+            word_pair = { removed = cleaned_line, added = added_lines[remove_idx] }
+            word_pairs[remove_idx] = word_pair
           end
           lnum_changes_len = lnum_changes_len + 1
           lnum_changes[lnum_changes_len] = {
             lnum = s,
             type = 'remove',
             buftype = 'current',
-            word_diff = word_diff,
+            word_pair = word_pair,
           }
           s = s + 1
         end
@@ -531,26 +556,17 @@ function Diff:generate_unified(hunks, lines)
 
       local add_idx = 0
       for j = 1, diff_len do
-        local line = diff[j]
-        local cleaned_line = line:sub(2, #line)
-        local line_type = line:sub(1, 1)
+        local line_type = diff[j]:sub(1, 1)
 
         if line_type == '+' then
-          local word_diff = nil
           add_idx = add_idx + 1
-
-          if #removed_lines == #added_lines and #added_lines < MAX_LINES then
-            local d = dmp.diff_main(cleaned_line, removed_lines[add_idx])
-            dmp.diff_cleanupSemantic(d)
-            word_diff = d
-          end
 
           lnum_changes_len = lnum_changes_len + 1
           lnum_changes[lnum_changes_len] = {
             lnum = s,
             type = 'add',
             buftype = 'current',
-            word_diff = word_diff,
+            word_pair = word_pairs[add_idx],
           }
           s = s + 1
         end
@@ -737,39 +753,28 @@ function Diff:generate_split(hunks, lines)
         previous_len = previous_len + 1
         previous_lines[previous_len] = removed_line or void_line
 
+        local word_pair = nil
+        if removed_line and added_line and #removed_lines == #added_lines and #added_lines < MAX_LINES then
+          word_pair = { removed = removed_line, added = added_line }
+        end
+
         if removed_line then
-          local word_diff = nil
-
-          if #removed_lines == #added_lines and #added_lines < MAX_LINES then
-            local d = dmp.diff_main(removed_line, added_lines[j])
-            dmp.diff_cleanupSemantic(d)
-            word_diff = d
-          end
-
           lnum_changes_len = lnum_changes_len + 1
           lnum_changes[lnum_changes_len] = {
             lnum = out_lnum,
             buftype = 'previous',
             type = 'remove',
-            word_diff = word_diff,
+            word_pair = word_pair,
           }
         end
 
         if added_line then
-          local word_diff = nil
-
-          if #removed_lines == #added_lines and #added_lines < MAX_LINES then
-            local d = dmp.diff_main(added_line, removed_lines[j])
-            dmp.diff_cleanupSemantic(d)
-            word_diff = d
-          end
-
           lnum_changes_len = lnum_changes_len + 1
           lnum_changes[lnum_changes_len] = {
             lnum = out_lnum,
             buftype = 'current',
             type = 'add',
-            word_diff = word_diff,
+            word_pair = word_pair,
           }
         end
 

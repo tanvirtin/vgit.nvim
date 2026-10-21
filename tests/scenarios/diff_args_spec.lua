@@ -175,3 +175,112 @@ describe('scenario: repository states', function()
     expect = { git_status = ' M a.txt\n M b.txt' },
   })
 end)
+
+describe('scenario: project diff syntax', function()
+  local files, changes = {}, {}
+  for i = 1, 40 do
+    local name = string.format('m%02d.lua', i)
+    files[name] = { 'local value = ' .. i }
+    changes[name] = { 'local changed_' .. i .. ' = ' .. i }
+  end
+
+  local function syntax_at_cursor(ctx)
+    local line = ctx.observe.cursor(ctx)[1]
+    for _, mark in ipairs(ctx.observe.extmarks(ctx, line)) do
+      if mark.hl and mark.hl:sub(1, 1) == '@' then return true end
+    end
+    return false
+  end
+
+  scenario.flow('code is highlighted in the first file and in a file far below it', {
+    files = files,
+    changes = changes,
+    steps = {
+      { cd = '$repo' },
+      { cmd = 'VGit diff' },
+      { await_text = 'changed_1 ' },
+      { keys = '/changed_1 <CR>' },
+      { wait_until = syntax_at_cursor, desc = 'syntax highlight in the first file' },
+      { keys = '/changed_40<CR>' },
+      { wait_until = syntax_at_cursor, desc = 'syntax highlight in the last file' },
+    },
+  })
+end)
+
+describe('scenario: project diff word highlights', function()
+  local function word_highlight_at_cursor(ctx)
+    local line = ctx.observe.cursor(ctx)[1]
+    for _, mark in ipairs(ctx.observe.extmarks(ctx, line)) do
+      for _, hl in ipairs(mark.virt_hl or {}) do
+        if hl == 'GitWordAdd' then return true end
+      end
+    end
+    return false
+  end
+
+  for _, layout in ipairs({ 'unified', 'split' }) do
+    scenario.flow('the changed word is highlighted in the ' .. layout .. ' layout', {
+      config = { settings = { scene = { diff_preference = layout } } },
+      files = { ['a.txt'] = { 'keep this', 'value is old', 'keep that' } },
+      history = { { message = 'change', files = { ['a.txt'] = { 'keep this', 'value is new', 'keep that' } } } },
+      steps = {
+        { cd = '$repo' },
+        { cmd = 'VGit diff HEAD~1' },
+        { await_text = 'value is new' },
+        { keys = '/value is new<CR>' },
+        { wait_until = word_highlight_at_cursor, desc = 'GitWordAdd on the changed line' },
+      },
+    })
+  end
+end)
+
+describe('scenario: project diff progressive loading', function()
+  local files, changed = {}, {}
+  for i = 1, 120 do
+    local name = string.format('f%03d.txt', i)
+    files[name] = { 'line one', string.format('value %03d', i) }
+    changed[name] = { 'line one', string.format('changed %03d', i) }
+  end
+
+  local function last_file_loaded(ctx)
+    for _, line in ipairs(ctx.observe.buffer_lines(ctx) or {}) do
+      if line == 'changed 120' then return true end
+    end
+    return false
+  end
+
+  for _, layout in ipairs({ 'unified', 'split' }) do
+    scenario.flow('a file loaded in a later batch jumps to its line in the ' .. layout .. ' layout', {
+      config = { settings = { scene = { diff_preference = layout } } },
+      files = files,
+      history = { { message = 'change every file', files = changed } },
+      steps = {
+        { cd = '$repo' },
+        { cmd = 'VGit diff HEAD~1' },
+        { await_text = 'changed 001' },
+        { wait_until = last_file_loaded, desc = 'the last file to be loaded' },
+        { keys = '/changed 120<CR>' },
+        { keys = '<CR>' },
+        { settle = 800 },
+      },
+      assert = function(ctx)
+        local terminal = ctx.editor.terminal
+        assert.is_truthy(terminal:rpc_eval('vim.api.nvim_buf_get_name(0)'):find('f120.txt', 1, true))
+        assert.are.same(2, ctx.observe.cursor(ctx)[1])
+      end,
+    })
+  end
+
+  scenario.flow('closing the view while files are still loading leaves no errors', {
+    files = files,
+    history = { { message = 'change every file', files = changed } },
+    steps = {
+      { cd = '$repo' },
+      { cmd = 'VGit diff HEAD~1' },
+      { await_text = 'changed 001' },
+      { keys = '<Esc>' },
+      { settle = 1500 },
+    },
+    expect = { screen_hasnt = { 'changed 001' } },
+  })
+end)

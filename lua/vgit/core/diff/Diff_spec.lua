@@ -190,9 +190,31 @@ describe('Diff:', function()
 
       assert.is_not_nil(remove_lc)
       assert.is_not_nil(add_lc)
-      assert.is_not_nil(remove_lc.word_diff)
-      assert.is_not_nil(add_lc.word_diff)
+      assert.is_not_nil(Diff.word_diff(remove_lc))
+      assert.is_not_nil(Diff.word_diff(add_lc))
     end)
+
+    for _, layout in ipairs({ 'unified', 'split' }) do
+      it('should give each side of a ' .. layout .. ' change a word diff of its own line', function()
+        local hunk = make_hunk('@@ -2,1 +2,1 @@', { '-local x = 1', '+local yy = 1' })
+        local result = Diff():generate({ hunk }, { 'a', 'local yy = 1', 'c' }, layout)
+
+        local own = {}
+        for _, lc in ipairs(result.lnum_changes) do
+          if Diff.word_diff(lc) then
+            local text, changed = {}, {}
+            for _, segment in ipairs(Diff.word_diff(lc)) do
+              if segment[1] ~= 1 then text[#text + 1] = segment[2] end
+              if segment[1] == -1 then changed[#changed + 1] = segment[2] end
+            end
+            own[lc.type] = { table.concat(text), table.concat(changed) }
+          end
+        end
+
+        eq({ 'local x = 1', 'x' }, own.remove)
+        eq({ 'local yy = 1', 'yy' }, own.add)
+      end)
+    end
   end)
 
   describe('generate_split', function()

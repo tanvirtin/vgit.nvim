@@ -355,8 +355,12 @@ local function process_diff_file(ctx, entry)
   ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
 end
 
+local function lnum_width(max_lnum)
+  return math.max(3, string.len(tostring(max_lnum)))
+end
+
 local function format_line_numbers(raw_lnums, max_lnum)
-  local max_digits = math.max(3, string.len(tostring(max_lnum)))
+  local max_digits = lnum_width(max_lnum)
   local lnum_fmt = '%' .. max_digits .. 'd '
   local empty_text = string.rep(' ', max_digits + 1)
 
@@ -373,6 +377,9 @@ local function format_line_numbers(raw_lnums, max_lnum)
 end
 
 local PatchLineBuilder = {}
+
+PatchLineBuilder.lnum_width = lnum_width
+PatchLineBuilder.format_line_numbers = format_line_numbers
 
 function PatchLineBuilder.build(hunk_entries)
   local ctx = {
@@ -407,7 +414,13 @@ function PatchLineBuilder.build(hunk_entries)
     table.remove(ctx.raw_lnums)
   end
 
-  return ctx.lines, ctx.line_metadata, ctx.file_sections, ctx.marks, format_line_numbers(ctx.raw_lnums, ctx.max_lnum)
+  return ctx.lines,
+    ctx.line_metadata,
+    ctx.file_sections,
+    ctx.marks,
+    format_line_numbers(ctx.raw_lnums, ctx.max_lnum),
+    ctx.raw_lnums,
+    ctx.max_lnum
 end
 
 return PatchLineBuilder

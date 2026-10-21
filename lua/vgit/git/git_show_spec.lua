@@ -364,4 +364,55 @@ describe('git_show:', function()
       eq(#lines, 2)
     end)
   end)
+
+  describe('batch_lines()', function()
+    local function commit_raw(files)
+      for name, content in pairs(files) do
+        local f = assert(io.open(repo .. '/' .. name, 'wb'))
+        f:write(content)
+        f:close()
+      end
+      test_repo.create_commit(repo, { message = 'raw' })
+    end
+
+    it('should return the same lines as lines() for every object', function()
+      commit_raw({
+        ['empty.txt'] = '',
+        ['no_eol.txt'] = 'a\nb',
+        ['blank_end.txt'] = 'a\n\n',
+        ['only_newline.txt'] = '\n',
+      })
+      local objects = {
+        { filename = 'file1.txt', commit = 'HEAD' },
+        { filename = 'empty.txt', commit = 'HEAD' },
+        { filename = 'no_eol.txt', commit = 'HEAD' },
+        { filename = 'blank_end.txt', commit = 'HEAD' },
+        { filename = 'only_newline.txt', commit = 'HEAD' },
+        { filename = 'file2.txt', commit = 'HEAD~1' },
+        { filename = 'file1.txt', commit = 'index' },
+      }
+
+      local batch, err = git_show.batch_lines(repo, objects)
+
+      assert(not err)
+      for i, object in ipairs(objects) do
+        eq(git_show.lines(repo, object.filename, object.commit), batch[i])
+      end
+    end)
+
+    it('should return nil for objects that do not exist', function()
+      local batch, err = git_show.batch_lines(repo, {
+        { filename = 'missing.txt', commit = 'HEAD' },
+        { filename = 'file2.txt', commit = 'HEAD' },
+      })
+
+      assert(not err)
+      assert.is_nil(batch[1])
+      eq({ 'single line' }, batch[2])
+    end)
+
+    it('should return an empty list without spawning git for no objects', function()
+      eq({}, git_show.batch_lines(repo, {}))
+    end)
+  end)
 end)

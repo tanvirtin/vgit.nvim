@@ -583,6 +583,47 @@ describe('PatchPreviewComponent:', function()
     end)
   end)
 
+  describe('lazy syntax highlighting', function()
+    local function lua_section(row)
+      return {
+        filetype = 'lua',
+        original_lines = {},
+        current_lines = { 'local x = 1' },
+        start_row = row,
+        end_row = row,
+        syntax_mappings = { { source = 'current', source_line = 1, display_row = row } },
+      }
+    end
+
+    local function wait_for_syntax(component)
+      vim.wait(1000, function()
+        return not component._syntax_pending
+      end)
+    end
+
+    it('should only parse the sections inside the rendered viewport', function()
+      local first = lua_section(0)
+      local second = lua_section(25)
+      local component = create_mounted_patch_preview({
+        state = { _syntax_sections = { first, second } },
+      })
+
+      component:render_viewport(0, 5)
+      wait_for_syntax(component)
+
+      assert.is_true(first.syntax_resolved)
+      assert.is_nil(second.syntax_resolved)
+      assert.is_not_nil(component.state._syntax_hl_map[0])
+      assert.is_nil(component.state._syntax_hl_map[25])
+
+      component:render_viewport(20, 29)
+      wait_for_syntax(component)
+
+      assert.is_true(second.syntax_resolved)
+      assert.is_not_nil(component.state._syntax_hl_map[25])
+    end)
+  end)
+
   describe('viewport dirty tracking', function()
     it('should skip render_viewport when viewport is unchanged', function()
       local hl_calls = {}
@@ -1160,6 +1201,82 @@ describe('PatchPreviewComponent:', function()
         if meta.lnum_change and meta.lnum_change.type == 'remove' then found_remove = true end
       end
       assert.is_true(found_remove, 'should have remove lnum_change in line_metadata')
+    end)
+  end)
+
+  describe('append_hunk_entries', function()
+    local Diff = require('vgit.core.diff.Diff')
+    local GitHunk = require('vgit.git.GitHunk')
+    local PatchPreviewComponent = require('vgit.ui.components.PatchPreviewComponent')
+
+    local function file_entry(name, total, changed_at)
+      local lines = {}
+      for i = 1, total do
+        lines[i] = 'line ' .. i
+      end
+      lines[changed_at] = 'changed'
+      local hunk = GitHunk(string.format('@@ -%d,1 +%d,1 @@', changed_at, changed_at))
+      hunk:push('-line ' .. changed_at)
+      hunk:push('+changed')
+      return {
+        type = 'diff_file',
+        filename = name,
+        filetype = 'lua',
+        original_lines = {},
+        current_lines = lines,
+        diff = Diff():generate_unified({ hunk }, lines),
+      }
+    end
+
+    local function mounted(entries)
+      local component = PatchPreviewComponent({ hunk_entries = {} })
+      ui_helper.mount({ component = component, mode = 'popup', width = 80, height = 40 })
+      component:set_props({ hunk_entries = entries })
+      return component
+    end
+
+    local function snapshot(component)
+      local state = component.state
+      local sections = {}
+      for _, section in ipairs(state._syntax_sections) do
+        local rows = {}
+        for _, mapping in ipairs(section.syntax_mappings) do
+          rows[#rows + 1] = mapping.display_row
+        end
+        sections[#sections + 1] = { section.start_row, section.end_row, rows }
+      end
+      return {
+        lines = state.lines,
+        buffer = component:get_lines(),
+        line_metadata = state.line_metadata,
+        marks = state.marks,
+        line_numbers = state._line_numbers,
+        diff_hl_map = state._diff_hl_map,
+        sections = sections,
+      }
+    end
+
+    it('should end in the same state as rendering every entry at once', function()
+      local function entries()
+        return { file_entry('a.lua', 20, 5), file_entry('b.lua', 1500, 1200), file_entry('c.lua', 30, 2) }
+      end
+      local all = entries()
+      local full = mounted(all)
+
+      local parts = entries()
+      local appended = mounted({ parts[1] })
+      appended:append_hunk_entries({ parts[2] })
+      appended:append_hunk_entries({ parts[3] })
+
+      eq(snapshot(full), snapshot(appended))
+      eq(3, #appended.props.hunk_entries)
+    end)
+
+    it('should render normally when nothing is shown yet', function()
+      local component = mounted({})
+      component:append_hunk_entries({ file_entry('a.lua', 10, 3) })
+
+      eq(snapshot(mounted({ file_entry('a.lua', 10, 3) })), snapshot(component))
     end)
   end)
 

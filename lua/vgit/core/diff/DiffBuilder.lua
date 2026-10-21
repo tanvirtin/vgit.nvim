@@ -143,6 +143,8 @@ function DiffBuilder:_get_range_lines(spec)
 
   assertion.assert(filename, 'filename is required')
 
+  if spec.lines then return spec.lines.original, spec.lines.current end
+
   local original_lines = self._repository:file_lines(old_filename or filename, from)
   local current_lines
 
@@ -306,7 +308,7 @@ function DiffBuilder:build(spec)
 
   if not spec.filename then return self:build_multi_file_diffs(spec) end
 
-  if fs.is_dir(fs.absolute_path(self._repository:get_path(), spec.filename)) then return end
+  if not spec.lines and fs.is_dir(fs.absolute_path(self._repository:get_path(), spec.filename)) then return end
   if type == 'conflict' then return self:_build_conflict_diff(spec) end
 
   local original_lines, current_lines = self:_get_lines(spec)

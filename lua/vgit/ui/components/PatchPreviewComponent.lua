@@ -2,6 +2,7 @@ local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
 local symbols_setting = lazy('vgit.settings.symbols')
+local Diff = lazy('vgit.core.diff.Diff')
 local DiffAnnotator = lazy('vgit.ui.annotators.DiffAnnotator')
 local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
 local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
@@ -14,6 +15,7 @@ function PatchPreviewComponent:constructor(props)
   local instance = DiffViewportComponent.constructor(self, props)
   instance._syntax_mapping_annotator = SyntaxMappingAnnotator()
   instance._render_gen = 0
+  instance._syntax_pending = false
   return instance
 end
 
@@ -55,7 +57,10 @@ function PatchPreviewComponent:get_initial_state()
     marks = {},
     _diff_hl_map = {},
     _syntax_hl_map = {},
+    _syntax_sections = {},
     _line_numbers = {},
+    _raw_lnums = {},
+    _max_lnum = 0,
   }
 end
 
@@ -79,17 +84,23 @@ function PatchPreviewComponent:render()
     self.state.marks = {}
     self.state._diff_hl_map = {}
     self.state._syntax_hl_map = {}
+    self.state._syntax_sections = {}
     self.state._line_numbers = {}
+    self.state._raw_lnums = {}
+    self.state._max_lnum = 0
     self:clear_lines()
     self:reset_cursor()
     return
   end
 
-  local lines, line_metadata, file_sections, marks, line_numbers = PatchLineBuilder.build(hunk_entries)
+  local lines, line_metadata, file_sections, marks, line_numbers, raw_lnums, max_lnum =
+    PatchLineBuilder.build(hunk_entries)
   self.state.lines = lines
   self.state.line_metadata = line_metadata
   self.state.marks = marks or {}
   self.state._line_numbers = line_numbers or {}
+  self.state._raw_lnums = raw_lnums or {}
+  self.state._max_lnum = max_lnum or 0
 
   if #lines == 0 then
     self:clear_lines()
@@ -106,18 +117,117 @@ function PatchPreviewComponent:render()
   self.state._diff_hl_map = self:_build_highlight_map(diff_highlights)
 
   self.state._syntax_hl_map = {}
-  local sections = file_sections
+  self.state._syntax_sections = file_sections
+
+  self:_ensure_renderer_attached()
+end
+
+function PatchPreviewComponent:append_hunk_entries(hunk_entries)
+  if not hunk_entries or #hunk_entries == 0 then return end
+
+  local state = self.state
+  if #state.lines == 0 then
+    local all_entries = vim.list_extend(vim.list_extend({}, self.props.hunk_entries or {}), hunk_entries)
+    self:set_props({ hunk_entries = all_entries })
+    return
+  end
+
+  local lines, line_metadata, file_sections, marks, _, raw_lnums, max_lnum = PatchLineBuilder.build(hunk_entries)
+  if #lines == 0 then return end
+
+  vim.list_extend(self.props.hunk_entries, hunk_entries)
+
+  local blank_row = #state.lines
+  local row_offset = blank_row + 1
+
+  state.lines[blank_row + 1] = ''
+  state.line_metadata[blank_row + 1] = { type = 'blank' }
+  state._raw_lnums[blank_row + 1] = { lnum = nil, hl = 'GitLineNr' }
+  for i, line in ipairs(lines) do
+    state.lines[row_offset + i] = line
+    state.line_metadata[row_offset + i] = line_metadata[i]
+    state._raw_lnums[row_offset + i] = raw_lnums[i]
+  end
+
+  for _, mark in ipairs(marks) do
+    state.marks[#state.marks + 1] = { top = mark.top + row_offset, bot = mark.bot + row_offset }
+  end
+
+  for _, section in ipairs(file_sections) do
+    section.start_row = section.start_row + row_offset
+    section.end_row = section.end_row + row_offset
+    for _, mapping in ipairs(section.syntax_mappings) do
+      mapping.display_row = mapping.display_row + row_offset
+    end
+    state._syntax_sections[#state._syntax_sections + 1] = section
+  end
+
+  local diff_hl_map = state._diff_hl_map
+  for _, hl in ipairs(DiffStyleAnnotator.annotate(lines, line_metadata)) do
+    hl.row = hl.row + row_offset
+    local row_hls = diff_hl_map[hl.row]
+    if not row_hls then
+      row_hls = {}
+      diff_hl_map[hl.row] = row_hls
+    end
+    row_hls[#row_hls + 1] = hl
+  end
+
+  local previous_width = PatchLineBuilder.lnum_width(state._max_lnum)
+  state._max_lnum = math.max(state._max_lnum, max_lnum)
+  if PatchLineBuilder.lnum_width(state._max_lnum) ~= previous_width then
+    state._line_numbers = PatchLineBuilder.format_line_numbers(state._raw_lnums, state._max_lnum)
+  else
+    local appended = PatchLineBuilder.format_line_numbers(
+      vim.list_slice(state._raw_lnums, blank_row + 1, #state._raw_lnums),
+      state._max_lnum
+    )
+    for i, line_number in ipairs(appended) do
+      state._line_numbers[blank_row + i] = line_number
+    end
+  end
+
+  table.insert(lines, 1, '')
+  self:with_element(function(el)
+    el:set_lines(lines, blank_row, blank_row)
+  end)
+  self:mark_viewport_dirty()
+end
+
+function PatchPreviewComponent:_unresolved_sections(top, bot)
+  local unresolved = {}
+  for _, section in ipairs(self.state._syntax_sections or {}) do
+    if section.start_row > bot then break end
+    if not section.syntax_resolved and section.end_row >= top then unresolved[#unresolved + 1] = section end
+  end
+  return unresolved
+end
+
+function PatchPreviewComponent:_schedule_syntax(top, bot)
+  if self._syntax_pending or #self:_unresolved_sections(top, bot) == 0 then return end
+
+  self._syntax_pending = true
   local gen = self._render_gen
   event.async(function()
     event.await()
+    self._syntax_pending = false
     if not self._mounted or self._render_gen ~= gen then return end
-    local syntax_highlights = self:_compute_syntax_highlights_from_full_files(sections)
-    if not self._mounted or self._render_gen ~= gen then return end
-    self.state._syntax_hl_map = self:_build_highlight_map(syntax_highlights)
-    self:mark_viewport_dirty()
-  end)()
 
-  self:_ensure_renderer_attached()
+    top = self._last_top or top
+    bot = self._last_bot or bot
+    local highlights = {}
+    for _, section in ipairs(self:_unresolved_sections(top, bot)) do
+      self:_resolve_section_syntax(highlights, section)
+      section.syntax_resolved = true
+    end
+
+    local syntax_hl_map = self.state._syntax_hl_map
+    for row, hls in pairs(self:_build_highlight_map(highlights)) do
+      syntax_hl_map[row] = hls
+    end
+    self:mark_viewport_dirty()
+    self:render_viewport(top, bot)
+  end)()
 end
 
 function PatchPreviewComponent:_resolve_section_syntax(result, section)
@@ -137,16 +247,6 @@ function PatchPreviewComponent:_resolve_section_syntax(result, section)
   for _, hl in ipairs(highlights) do
     result[#result + 1] = hl
   end
-end
-
-function PatchPreviewComponent:_compute_syntax_highlights_from_full_files(file_sections)
-  local all_highlights = {}
-
-  for _, section in ipairs(file_sections or {}) do
-    self:_resolve_section_syntax(all_highlights, section)
-  end
-
-  return all_highlights
 end
 
 function PatchPreviewComponent:_build_highlight_map(highlights)
@@ -190,8 +290,9 @@ function PatchPreviewComponent:render_viewport(top, bot)
         })
       end
 
-      if meta and meta.lnum_change and meta.lnum_change.word_diff then
-        local texts = DiffAnnotator.word_diff_to_texts(meta.lnum_change.word_diff, meta.lnum_change.type)
+      local word_diff = meta and meta.lnum_change and Diff.word_diff(meta.lnum_change)
+      if word_diff then
+        local texts = DiffAnnotator.word_diff_to_texts(word_diff, meta.lnum_change.type)
         if #texts > 0 then el:place_extmark_text({ row = row, col = 0, texts = texts }) end
       end
 
@@ -238,7 +339,10 @@ function PatchPreviewComponent:render_viewport(top, bot)
     return true
   end)
 
-  if rendered then self:commit_viewport(top, bot) end
+  if rendered then
+    self:commit_viewport(top, bot)
+    self:_schedule_syntax(top, bot)
+  end
 end
 
 function PatchPreviewComponent:get_line_metadata(lnum)
@@ -289,6 +393,7 @@ function PatchPreviewComponent:reset()
   self.state.line_metadata = {}
   self.state._diff_hl_map = {}
   self.state._syntax_hl_map = {}
+  self.state._syntax_sections = {}
   return self
 end
 

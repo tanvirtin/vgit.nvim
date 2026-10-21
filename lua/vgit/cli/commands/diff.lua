@@ -9,7 +9,6 @@ local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
 local normalize_file_path = require('vgit.cli.commands.normalize_file_path')
-local build_file_diff_entries = require('vgit.cli.commands.build_file_diff_entries')
 
 local diff_command = {}
 
@@ -252,15 +251,14 @@ diff_command.execute = event.async(function(args)
       return
     end
 
-    local entries = build_file_diff_entries(repo, files, from_ref, to_ref, opts.layout_type)
-
-    if #entries == 0 then
-      console.info('No diffs available between ' .. from_ref .. ' and ' .. to_ref)
-      return
+    local entries = {}
+    for _, file in ipairs(files) do
+      entries[#entries + 1] = { status = file, range = { from = from_ref, to = to_ref } }
     end
 
     data = {
       type = 'files',
+      repo = repo,
       entries = {
         {
           title = string.format('Changes: %s..%s', format_ref_for_display(from_ref), format_ref_for_display(to_ref)),

@@ -68,6 +68,24 @@ describe('DiffBuilder:', function()
     end)
   end)
 
+  describe('_get_range_lines with prefetched lines', function()
+    it('should use the given lines without reading from git', function()
+      repository.file_lines = function()
+        error('file_lines should not be called')
+      end
+
+      local original, current = builder:_get_range_lines({
+        filename = 'test.lua',
+        from = 'HEAD~1',
+        to = 'HEAD',
+        lines = { original = nil, current = { 'added' } },
+      })
+
+      assert.is_nil(original)
+      eq({ 'added' }, current)
+    end)
+  end)
+
   describe('_get_range_lines with working_tree to', function()
     it('should get unstaged lines from filesystem vs index', function()
       local spec = {

@@ -1,10 +1,16 @@
 local module_cache = {}
 
+local loaded = package.loaded
+
 local function lazy(mod_path)
   if module_cache[mod_path] then return module_cache[mod_path] end
 
   local proxy = {}
   local resolved = false
+
+  local function module()
+    return loaded[mod_path] or require(mod_path)
+  end
 
   local function resolve()
     if resolved then return end
@@ -18,15 +24,15 @@ local function lazy(mod_path)
   setmetatable(proxy, {
     __index = function(_, k)
       if not resolved then resolve() end
-      return require(mod_path)[k]
+      return module()[k]
     end,
     __newindex = function(_, k, v)
       if not resolved then resolve() end
-      require(mod_path)[k] = v
+      module()[k] = v
     end,
     __call = function(_, ...)
       if not resolved then resolve() end
-      local mod = require(mod_path)
+      local mod = module()
       local mt = getmetatable(mod)
       if mt then
         local call_fn = rawget(mt, '__call')

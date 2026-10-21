@@ -409,6 +409,47 @@ describe('GitRepository:', function()
       end)
     end)
 
+    describe('batch_file_lines', function()
+      it('should return the lines of each requested blob in order', function()
+        local repo = GitRepository.open(repo_path)
+        local results, err = repo:batch_file_lines({
+          { filename = 'missing.txt', commit = 'HEAD' },
+          { filename = 'file.txt', commit = 'HEAD' },
+        })
+        assert.is_nil(err)
+        assert.is_nil(results[1])
+        eq({ 'line one', 'line two', 'line three' }, results[2])
+      end)
+    end)
+
+    describe('range_file_diffs', function()
+      it('should diff each file between two refs and skip files without a diff', function()
+        test_repo.create_commit(repo_path, {
+          files = {
+            ['file.txt'] = { 'line one', 'changed', 'line three' },
+            ['added.txt'] = { 'brand new' },
+          },
+          message = 'second',
+        })
+
+        local repo = GitRepository.open(repo_path)
+        local entries, err = repo:range_file_diffs({
+          { filename = 'file.txt', filetype = 'text' },
+          { filename = 'added.txt' },
+          { filename = 'missing.txt' },
+        }, { from = 'HEAD~1', to = 'HEAD', layout_type = 'unified' })
+
+        assert.is_nil(err)
+        eq(2, #entries)
+        eq('file.txt', entries[1].filename)
+        eq({ 'line one', 'line two', 'line three' }, entries[1].original_lines)
+        eq({ 'line one', 'changed', 'line three' }, entries[1].current_lines)
+        eq('added.txt', entries[2].filename)
+        eq({}, entries[2].original_lines)
+        eq('text', entries[2].filetype)
+      end)
+    end)
+
     describe('stage_file', function()
       it('should stage a modified file', function()
         test_repo.write_file(repo_path, 'file.txt', { 'modified line' })

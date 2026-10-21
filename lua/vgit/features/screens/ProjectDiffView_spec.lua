@@ -443,6 +443,96 @@ describe('ProjectDiffView:', function()
     end)
   end)
 
+  describe('progressive loading', function()
+    local function pending_entry(filename, from, to)
+      return { status = { filename = filename, filetype = 'lua' }, range = { from = from or 'A', to = to or 'B' } }
+    end
+
+    local function view_with_repo(calls)
+      local view = ProjectDiffView()
+      view._layout_type = 'unified'
+      view._repo = {
+        range_file_diffs = function(_, files, spec)
+          calls[#calls + 1] = { files = files, from = spec.from, to = spec.to }
+          local diffs = {}
+          for _, file in ipairs(files) do
+            diffs[#diffs + 1] = { status = file, diff = { lines = {} } }
+          end
+          return diffs, nil
+        end,
+      }
+      return view
+    end
+
+    it('should collect only entries that carry a range', function()
+      local view = ProjectDiffView()
+      local pending = view:_collect_pending({
+        entries = {
+          {
+            entries = {
+              pending_entry('a.lua'),
+              { status = { filename = 'b.lua' }, type = 'unstaged' },
+              pending_entry('c.lua'),
+            },
+          },
+        },
+      })
+
+      eq(2, #pending)
+      eq('a.lua', pending[1].status.filename)
+      eq('c.lua', pending[2].status.filename)
+    end)
+
+    it('should load batches in order and never mix ranges in one batch', function()
+      local calls = {}
+      local view = view_with_repo(calls)
+      local pending = {
+        index = 1,
+        pending_entry('a.lua'),
+        pending_entry('b.lua'),
+        pending_entry('c.lua', 'X', 'Y'),
+      }
+
+      local first = view:_load_batch(pending, 5)
+      local second = view:_load_batch(pending, 5)
+
+      eq({ 'a.lua', 'b.lua' }, { first[1].filename, first[2].filename })
+      eq('c.lua', second[1].filename)
+      eq({ 'A', 'B' }, { calls[1].from, calls[1].to })
+      eq({ 'X', 'Y' }, { calls[2].from, calls[2].to })
+      assert.is_false(view:_has_pending(pending))
+    end)
+
+    it('should respect the batch size', function()
+      local calls = {}
+      local view = view_with_repo(calls)
+      local pending = { index = 1, pending_entry('a.lua'), pending_entry('b.lua'), pending_entry('c.lua') }
+
+      eq(2, #view:_load_batch(pending, 2))
+      assert.is_true(view:_has_pending(pending))
+      eq(1, #view:_load_batch(pending, 2))
+    end)
+
+    it('should stop loading once the view is destroyed', function()
+      local calls = {}
+      local view = view_with_repo(calls)
+      local appended = 0
+      view._append_diff = function()
+        appended = appended + 1
+      end
+      local pending = { index = 1, pending_entry('a.lua'), pending_entry('b.lua') }
+
+      view:_load_remaining(pending)
+      view._update_gen = view._update_gen + 1
+      vim.wait(200, function()
+        return false
+      end)
+
+      eq(0, #calls)
+      eq(0, appended)
+    end)
+  end)
+
   describe('get_navigatable_component', function()
     it('should return current_component for split layout', function()
       local view = ProjectDiffView()

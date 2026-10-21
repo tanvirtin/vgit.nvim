@@ -53,7 +53,7 @@ function DiffStyleAnnotator._annotate_header(line, row)
   return highlights
 end
 
-function DiffStyleAnnotator._annotate_line(result, line, meta, row)
+function DiffStyleAnnotator._annotate_line(result, line, meta, row, scene_hls)
   if not meta then return end
 
   if meta.type == 'separator' then
@@ -76,7 +76,7 @@ function DiffStyleAnnotator._annotate_line(result, line, meta, row)
       result[#result + 1] = hl
     end
   else
-    local hl_group = signs_setting:get('usage').scene[change_type]
+    local hl_group = scene_hls[change_type]
     if hl_group then
       result[#result + 1] = { row = row, hl_group = hl_group, line = true }
     elseif change_type ~= 'void' then
@@ -87,9 +87,10 @@ end
 
 function DiffStyleAnnotator.annotate(lines, line_metadata)
   local diff_highlights = {}
+  local scene_hls = signs_setting:get('usage').scene
 
   for i, line in ipairs(lines) do
-    DiffStyleAnnotator._annotate_line(diff_highlights, line, line_metadata[i], i - 1)
+    DiffStyleAnnotator._annotate_line(diff_highlights, line, line_metadata[i], i - 1, scene_hls)
   end
 
   return diff_highlights

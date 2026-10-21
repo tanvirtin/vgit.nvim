@@ -17,8 +17,27 @@ local PatchPreviewComponent = lazy('vgit.ui.components.PatchPreviewComponent')
 local ProjectDiffView = View:extend()
 
 ProjectDiffView.DEBOUNCE_MS = 100
+ProjectDiffView.FIRST_BATCH_SIZE = 20
+ProjectDiffView.BATCH_SIZE = 50
 ProjectDiffView.LAYOUT_SPLIT = 'split'
 ProjectDiffView.LAYOUT_UNIFIED = 'unified'
+
+local function to_diff_file_entry(file_entry)
+  local status = file_entry.status
+  if not status or not status.filename then return nil end
+
+  local display_filename = status.filename
+  if status.old_filename then display_filename = status.old_filename .. ' -> ' .. status.filename end
+
+  return {
+    type = 'diff_file',
+    filename = display_filename,
+    filetype = status.filetype,
+    diff = file_entry.diff,
+    original_lines = file_entry.original_lines or {},
+    current_lines = file_entry.current_lines or {},
+  }
+end
 
 function ProjectDiffView:constructor()
   local instance = View.constructor(self)
@@ -64,6 +83,11 @@ function ProjectDiffView:create(data)
   return self:_create_view(data)
 end
 
+function ProjectDiffView:_get_repo()
+  if self._repo then return self._repo, nil end
+  return repository.current()
+end
+
 function ProjectDiffView:_classify_entries(data)
   local has_staged = false
   local has_unstaged = false
@@ -71,7 +95,7 @@ function ProjectDiffView:_classify_entries(data)
 
   for _, section in ipairs(data.entries or {}) do
     for _, file_entry in ipairs(section.entries or {}) do
-      if not file_entry.diff and file_entry.status then
+      if not file_entry.diff and not file_entry.range and file_entry.status then
         local entry_type = file_entry.type
         if entry_type == 'unmerged' then
           conflict_entries[#conflict_entries + 1] = file_entry
@@ -87,11 +111,12 @@ function ProjectDiffView:_classify_entries(data)
   return has_staged, has_unstaged, conflict_entries
 end
 
-function ProjectDiffView:_build_line_to_file_map(component)
-  local line_to_file_map = {}
+function ProjectDiffView:_build_line_to_file_map(component, from_lnum, line_to_file_map)
+  line_to_file_map = line_to_file_map or {}
   local line_metadata = component:get_all_line_metadata()
 
-  for lnum, meta in pairs(line_metadata) do
+  for lnum = from_lnum or 1, #line_metadata do
+    local meta = line_metadata[lnum]
     if meta and meta.filename then
       line_to_file_map[lnum] = {
         filename = meta.filename,
@@ -199,27 +224,73 @@ function ProjectDiffView:_collect_precomputed_entries(data)
 
   for _, section in ipairs(data.entries or {}) do
     for _, file_entry in ipairs(section.entries or {}) do
-      if file_entry.diff then
-        local status = file_entry.status
-        if status and status.filename then
-          local display_filename = status.filename
-          if status.old_filename then
-            display_filename = status.old_filename .. ' -> ' .. status.filename
-          end
-          entries[#entries + 1] = {
-            type = 'diff_file',
-            filename = display_filename,
-            filetype = status.filetype,
-            diff = file_entry.diff,
-            original_lines = file_entry.original_lines or {},
-            current_lines = file_entry.current_lines or {},
-          }
-        end
-      end
+      if file_entry.diff then entries[#entries + 1] = to_diff_file_entry(file_entry) end
     end
   end
 
   return entries
+end
+
+function ProjectDiffView:_collect_pending(data)
+  local pending = { index = 1 }
+
+  for _, section in ipairs(data.entries or {}) do
+    for _, file_entry in ipairs(section.entries or {}) do
+      if file_entry.range and file_entry.status then pending[#pending + 1] = file_entry end
+    end
+  end
+
+  return pending
+end
+
+function ProjectDiffView:_load_batch(pending, size)
+  local first = pending[pending.index]
+  if not first then return {} end
+
+  local files = {}
+  local range = first.range
+  while #files < size do
+    local file_entry = pending[pending.index]
+    if not file_entry or file_entry.range.from ~= range.from or file_entry.range.to ~= range.to then break end
+    files[#files + 1] = file_entry.status
+    pending.index = pending.index + 1
+  end
+
+  local file_diffs, err = self._repo:range_file_diffs(files, {
+    from = range.from,
+    to = range.to,
+    layout_type = self._layout_type,
+  })
+  if err then
+    console.debug.error(err)
+    return {}
+  end
+
+  local entries = {}
+  for _, file_diff in ipairs(file_diffs) do
+    entries[#entries + 1] = to_diff_file_entry(file_diff)
+  end
+  return entries
+end
+
+function ProjectDiffView:_has_pending(pending)
+  return pending[pending.index] ~= nil
+end
+
+function ProjectDiffView:_load_remaining(pending)
+  local gen = self._update_gen
+
+  event.async(function()
+    while self:_has_pending(pending) do
+      event.idle()
+      if self:is_destroyed() or gen ~= self._update_gen then return end
+
+      local entries = self:_load_batch(pending, self.BATCH_SIZE)
+      if self:is_destroyed() or gen ~= self._update_gen then return end
+
+      if #entries > 0 then self:_append_diff(entries) end
+    end
+  end)()
 end
 
 function ProjectDiffView:get_hunk_alignment()
@@ -277,7 +348,9 @@ function ProjectDiffView:setup_keymaps()
 
   local jump_key = keymap.get_key(project_diff_view_keymaps.jump)
   if jump_key then
-    local jump_fn = self:_make_debounced(function() self:jump_to_file() end)
+    local jump_fn = self:_make_debounced(function()
+      self:jump_to_file()
+    end)
     self:_set_keymap_all_components('n', jump_key, jump_fn)
   end
 
@@ -293,7 +366,9 @@ function ProjectDiffView:setup_keymaps()
 
   local blame_key = keymap.get_key(project_diff_view_keymaps.blame)
   if blame_key then
-    local blame_fn = self:_make_debounced(function() self:show_blame_view() end)
+    local blame_fn = self:_make_debounced(function()
+      self:show_blame_view()
+    end)
     self:_set_keymap_all_components('n', blame_key, blame_fn)
   end
 
@@ -357,12 +432,26 @@ function ProjectDiffView:_mount_split_view()
   if self._current_component and self._current_component:is_valid() then self._current_component:focus() end
 end
 
+function ProjectDiffView:_map_component()
+  return self._layout_type == self.LAYOUT_SPLIT and self._current_component or self._patch_component
+end
+
 function ProjectDiffView:_refresh_diff(diff_file_entries)
   self._diff_file_entries = diff_file_entries
   self:_set_hunk_entries(diff_file_entries)
 
-  local map_component = self._layout_type == self.LAYOUT_SPLIT and self._current_component or self._patch_component
+  local map_component = self:_map_component()
   if map_component then self._line_to_file_map = self:_build_line_to_file_map(map_component) end
+end
+
+function ProjectDiffView:_append_diff(diff_file_entries)
+  local map_component = self:_map_component()
+  local from_lnum = map_component and #map_component:get_all_line_metadata() + 1
+
+  vim.list_extend(self._diff_file_entries, diff_file_entries)
+  self:_append_hunk_entries(diff_file_entries)
+
+  if map_component then self:_build_line_to_file_map(map_component, from_lnum, self._line_to_file_map) end
 end
 
 function ProjectDiffView:_create_view(data)
@@ -370,7 +459,8 @@ function ProjectDiffView:_create_view(data)
 
   self._layout_type = layout_type
 
-  local repo, err = repository.current()
+  self._repo = data.repo
+  local repo, err = self:_get_repo()
   if err then
     console.error('Failed to get repository: ' .. tostring(err))
     return false
@@ -387,6 +477,10 @@ function ProjectDiffView:_create_view(data)
   self._loading_indicator:start(self:_get_all_diff_components())
 
   local diff_file_entries = self:_build_diff_file_entries(repo, data)
+  local pending = self:_collect_pending(data)
+  repeat
+    vim.list_extend(diff_file_entries, self:_load_batch(pending, self.FIRST_BATCH_SIZE))
+  until #diff_file_entries > 0 or not self:_has_pending(pending)
 
   self._loading_indicator:stop()
 
@@ -398,6 +492,7 @@ function ProjectDiffView:_create_view(data)
   end
 
   self:_refresh_diff(diff_file_entries)
+  if self:_has_pending(pending) then self:_load_remaining(pending) end
 
   return true
 end

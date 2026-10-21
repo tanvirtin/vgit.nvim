@@ -7,7 +7,6 @@ local GitCommit = lazy('vgit.git.GitCommit')
 local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
-local build_file_diff_entries = require('vgit.cli.commands.build_file_diff_entries')
 
 local show_command = {}
 
@@ -73,11 +72,9 @@ show_command.execute = event.async(function(args)
   local from_ref = parent_hash ~= '' and parent_hash or GitCommit.EMPTY_TREE_HASH
   local to_ref = commit.commit_hash or commit.hash
 
-  local entries = build_file_diff_entries(repo, files, from_ref, to_ref, layout_type)
-
-  if #entries == 0 then
-    console.info('No diffs available for commit ' .. opts.commit)
-    return
+  local entries = {}
+  for _, file in ipairs(files) do
+    entries[#entries + 1] = { status = file, range = { from = from_ref, to = to_ref } }
   end
 
   local commit_info = {
@@ -90,6 +87,7 @@ show_command.execute = event.async(function(args)
 
   local data = {
     type = 'files',
+    repo = repo,
     entries = {
       {
         title = string.format('Commit: %s', (commit_info.hash or ''):sub(1, 7)),

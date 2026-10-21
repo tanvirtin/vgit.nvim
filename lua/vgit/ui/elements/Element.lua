@@ -93,9 +93,9 @@ function Element:is_valid()
   return self._mounted and self._buffer and self._buffer:is_valid() and self._window and self._window:is_valid()
 end
 
-function Element:set_lines(lines)
+function Element:set_lines(lines, top, bot)
   if not self:is_valid() then return self end
-  self._buffer:set_lines(lines)
+  self._buffer:set_lines(lines, top, bot)
   return self
 end
 
