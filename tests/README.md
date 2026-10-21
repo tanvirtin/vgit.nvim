@@ -97,7 +97,7 @@ Each step is one of:
 | `{ await_text = t }` | wait until the screen shows `t` |
 | `{ await_filetype = ft }` | wait until the current buffer's filetype is `ft` |
 | `{ snap = name }` | capture the screen under a name |
-| `{ dismiss = true }` | wait for a "Press ENTER" prompt and clear it |
+| `{ dismiss = true }` | let the screen settle, then clear a "Press ENTER" prompt if one is showing |
 | `{ settle = ms }` | wait for the screen to stop changing (default timeout) |
 | `{ edit = path }` | `:edit path` |
 | `{ write = { path, lines } }` | change a file on disk mid-flow (live gutter, external edits) |
@@ -180,7 +180,9 @@ a passing flow with the same steps in a setting that works.
   `console.info('Switched to worktree: ' .. path)`) overflows the command line
   and blocks the child at "Press ENTER". Until it is cleared the child does not
   service RPC, so `observe.*` returns `nil`. Call `{ dismiss = true }` (or
-  `editor:dismiss()`) like a real user would.
+  `editor:dismiss()`) like a real user would. Whether a message overflows
+  depends on the path length and terminal width, so never assert that the
+  prompt appears: wait for the message, then dismiss.
 - **The commit buffer opens in insert mode.** Type the message directly; do not
   prefix `i`. Cancel is normal-mode `q`, so send `<Esc>q`.
 - **File-diff hunks are chosen by the cursor line.** There are no hunk-nav

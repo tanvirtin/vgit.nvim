@@ -15,8 +15,9 @@ describe('scenario: worktree CLI', function()
           return 'VGit worktree switch ' .. ctx.feature
         end,
       },
-      -- The switch reports the full path, which overflows the message line and
-      -- raises "Press ENTER"; clear it like a user would before reading state.
+      -- The switch reports the full path, which can overflow the message line
+      -- and raise "Press ENTER"; clear it like a user would before reading state.
+      { await_text = 'Switched to worktree:' },
       { dismiss = true },
     },
     assert = function(ctx)

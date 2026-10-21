@@ -77,15 +77,6 @@ function Editor:dismiss(timeout_ms)
   return true
 end
 
--- Waits until the child is blocked at a hit-enter prompt, then clears it.
--- Prefer this over dismiss() when a prompt is expected: it tolerates the prompt
--- taking a moment to appear instead of racing it.
-function Editor:wait_for_prompt(timeout_ms)
-  self:wait_for(function()
-    return self.terminal:at_hit_enter()
-  end, 'a "Press ENTER" prompt', timeout_ms)
-end
-
 -- Sends a key sequence in answer to a prompt and waits for the screen to settle.
 function Editor:answer(sequence, timeout_ms)
   self:keys(sequence)

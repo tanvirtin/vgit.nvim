@@ -184,7 +184,7 @@ local function step(ctx, st)
   elseif st.snap then
     ctx._snaps[st.snap] = observe.frame(ctx)
   elseif st.dismiss then
-    ctx.editor:wait_for_prompt(st.settle_ms)
+    ctx.editor:settle(st.settle_ms)
     ctx.editor:dismiss()
   elseif st.settle then
     ctx.editor:settle(type(st.settle) == 'number' and st.settle or nil)
