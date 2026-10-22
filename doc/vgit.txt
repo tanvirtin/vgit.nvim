@@ -156,6 +156,23 @@ keymaps:
 Navigation works in both diff views and associated tables.
 
 ==============================================================================
+REPOSITORIES                                                 *vgit-repositories*
+
+VGit finds the repositories of the workspace: the repository of the working
+directory, the repositories in its immediate child folders (except
+`node_modules`), and the repository of the open file.
+
+- `:VGit status` groups changes by repository when there is more than one.
+  Staging, resetting and committing act on the repository of the selected
+  file or group.
+- `:VGit diff` shows the changes of every repository, with each path prefixed
+  by its repository's name.
+- Commands for one repository, such as `:VGit log`, use the repository of the
+  open file. With no file open in a folder of repositories, they ask which
+  one to use.
+- `g:vgit_branch` follows the repository of the focused buffer.
+
+==============================================================================
 STATUS                                                             *vgit-status*
 
 Use `b:vgit_status`, a table containing the current buffer's number of `added`,

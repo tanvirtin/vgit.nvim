@@ -7,20 +7,21 @@ local utils_math = lazy('vgit.core.utils.math')
 local _is_registered = false
 local _augroup_created = false
 local _dir_watcher_registered = false
-local _handle = nil
+local _handles = {}
 -- Re-entrancy guards for event.emit, keyed by event name (see event.emit).
 local _emitting = {}
 local _pending = {}
 
-local function close_handle()
-  if not _handle then return end
-  pcall(function()
-    _handle:stop()
-  end)
-  pcall(function()
-    _handle:close()
-  end)
-  _handle = nil
+local function close_handles()
+  for _, handle in pairs(_handles) do
+    pcall(function()
+      handle:stop()
+    end)
+    pcall(function()
+      handle:close()
+    end)
+  end
+  _handles = {}
 end
 
 local function ensure_augroup()
@@ -72,6 +73,9 @@ local event = {
   idle = async.wrap(function(callback)
     vim.defer_fn(callback, 1)
   end, 1),
+  sleep = async.wrap(function(ms, callback)
+    vim.defer_fn(callback, ms)
+  end, 2),
 }
 
 function event.all(funcs, opts)
@@ -162,6 +166,8 @@ function event.emit(event_name, data)
   -- autocmds until Neovim raises E218. Coalesce re-entrant emits into a single
   -- trailing emit so handlers never run nested.
   if _emitting[event_name] then
+    local pending = _pending[event_name]
+    if pending and not vim.deep_equal(pending.data, data) then data = nil end
     _pending[event_name] = { data = data }
     return
   end
@@ -273,28 +279,19 @@ function event.debounce_trailing_async(fn, ms)
   return event.debounce_trailing(event.async(fn), ms)
 end
 
-local function _start_watcher()
-  close_handle()
-
-  if not git_repo.exists() then return end
-
-  local git_dirname = git_repo.discover(nil, { git_dirname = true })
-  if not git_dirname then return end
+function event.watch(git_dirname)
+  if not git_dirname or _handles[git_dirname] then return end
 
   local handle = vim.uv.new_fs_event()
   if not handle then return end
 
-  local ok = handle:start(git_dirname, {}, function(err, filename, ev_name)
+  local ok = handle:start(git_dirname, {}, function(err, filename)
     if err then return end
     if not filename then return end
     if filename:match('index%.lock$') then return end
 
     vim.schedule(function()
-      event.emit('VGitChange', {
-        git_dir = git_dirname,
-        filename = filename,
-        event_name = ev_name,
-      })
+      event.emit('VGitChange', { git_dir = git_dirname })
     end)
   end)
 
@@ -303,7 +300,12 @@ local function _start_watcher()
     return
   end
 
-  _handle = handle
+  _handles[git_dirname] = handle
+end
+
+local function _start_watcher()
+  close_handles()
+  event.watch(git_repo.git_dir(git_repo.discover()))
 end
 
 function event.register_module()
@@ -313,7 +315,7 @@ function event.register_module()
   _start_watcher()
 
   event.on({ 'VimLeavePre' }, function()
-    close_handle()
+    close_handles()
   end)
 
   if not _dir_watcher_registered then
@@ -328,7 +330,7 @@ function event.register_module()
 end
 
 function event.reset()
-  close_handle()
+  close_handles()
   _is_registered = false
   _augroup_created = false
   _dir_watcher_registered = false

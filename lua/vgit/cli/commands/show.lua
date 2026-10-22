@@ -4,9 +4,9 @@ local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
 local GitTree = lazy('vgit.git.GitTree')
 local GitCommit = lazy('vgit.git.GitCommit')
-local repository = lazy('vgit.git.repository')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
+local resolve_repository = require('vgit.cli.commands.resolve_repository')
 
 local show_command = {}
 
@@ -41,7 +41,7 @@ show_command.execute = event.async(function(args)
 
   event.await()
 
-  local repo, repo_err = repository.current()
+  local repo, repo_err = resolve_repository()
   if repo_err then
     console.error(repo_err)
     return

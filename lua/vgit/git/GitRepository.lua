@@ -84,6 +84,12 @@ function GitRepository.discover(path)
   return repo, nil
 end
 
+function GitRepository.at(path)
+  local repo = GitRepository(path)
+  repo._state = GitRepository.State.VALID
+  return repo
+end
+
 function GitRepository.open(path)
   if not path then return nil, { 'path is required' } end
 
@@ -113,6 +119,10 @@ end
 
 function GitRepository:get_path()
   return self._path
+end
+
+function GitRepository:get_name()
+  return vim.fs.basename(self._path)
 end
 
 function GitRepository:is_ignored(filename)
@@ -559,12 +569,20 @@ function GitRepository:status(opts)
     return git_status.ls(self._path, opts.filename)
   end
 
+  return self:start_status(opts):wait()
+end
+
+function GitRepository:start_status(opts)
+  opts = opts or {}
   local working_tree = self:working_tree()
   assertion.assert(working_tree, 'No working tree found')
 
-  local statuses, err = working_tree:status()
-  if err then return nil, err end
+  return working_tree:start_status():map(function(statuses)
+    return self:_group_statuses(statuses, opts), nil
+  end)
+end
 
+function GitRepository:_group_statuses(statuses, opts)
   local worktree_dirs = {}
   for _, status in ipairs(statuses) do
     if vim.endswith(status.filename, '/') then
@@ -581,20 +599,20 @@ function GitRepository:status(opts)
     if self:_is_worktree_path(status.filename, worktree_dirs) then return end
     if status:is_unmerged() then
       local id = utils.math.uuid()
-      local data = { id = id, status = status, type = 'unmerged' }
+      local data = { id = id, status = status, type = 'unmerged', repo = self }
       table.insert(unmerged_files, data)
       return
     end
 
     if status:is_staged() then
       local id = utils.math.uuid()
-      local data = { id = id, status = status, type = 'staged' }
+      local data = { id = id, status = status, type = 'staged', repo = self }
       table.insert(staged_files, data)
     end
 
     if status:is_unstaged() then
       local id = utils.math.uuid()
-      local data = { id = id, status = status, type = 'unstaged' }
+      local data = { id = id, status = status, type = 'unstaged', repo = self }
       table.insert(changed_files, data)
     end
   end)

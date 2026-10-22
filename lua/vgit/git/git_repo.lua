@@ -1,5 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
+local fs = lazy('vgit.core.fs')
 local gitcli = lazy('vgit.git.gitcli')
 local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
@@ -64,12 +65,30 @@ end
 function git_repo.git_dir(reponame)
   if not reponame then return nil, { 'reponame is required' } end
 
+  local dot_git = reponame .. '/.git'
+  if fs.is_dir(dot_git) then return dot_git end
+
+  local lines = fs.read_file(dot_git)
+  local gitdir = lines and lines[1] and lines[1]:match('^gitdir: (.+)$')
+  if gitdir then return vim.uv.fs_realpath(fs.absolute_path(reponame, gitdir)) end
+
   local result, err = GitQueryBuilder(reponame):raw_args('rev-parse', '--git-dir'):execute()
   if err or #result == 0 then return nil, err or { 'git directory not found' } end
 
   local dir = result[1]
   if not vim.startswith(dir, '/') then dir = reponame .. '/' .. dir end
   return dir
+end
+
+function git_repo.branch(reponame)
+  local git_dir, err = git_repo.git_dir(reponame)
+  if not git_dir then return nil, err end
+
+  local lines = fs.read_file(git_dir .. '/HEAD')
+  local head = lines and lines[1]
+  if not head then return nil, { 'HEAD not found' } end
+
+  return head:match('^ref: refs/heads/(.+)$') or head:sub(1, 7), nil
 end
 
 function git_repo.exists(filepath)

@@ -1,5 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
+local async = lazy('vgit.core.async')
 local event = lazy('vgit.core.event')
 local LogFormatter = lazy('vgit.core.console.LogFormatter')
 
@@ -49,6 +50,11 @@ console.input = function(prompt)
   if not ok then return nil end
 
   return result
+end
+
+console.select = function(items, opts)
+  event.await()
+  return async.wrap(vim.ui.select, 3)(items, opts)
 end
 
 console.cleanup = event.async(function()

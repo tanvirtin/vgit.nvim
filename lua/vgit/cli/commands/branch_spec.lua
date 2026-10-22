@@ -69,6 +69,9 @@ describe('branch_command:', function()
       current = function()
         return nil, 'not a git repository'
       end,
+      list = function()
+        return {}
+      end,
     }
 
     save_package('vgit.ui.display_service')

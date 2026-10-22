@@ -481,6 +481,15 @@ api.show({
 })
 ```
 
+## Multiple Repositories
+
+Open Neovim in a folder of repositories, or in a repository that contains other repositories, and VGit finds them the way VS Code does: the repository you are in, the repositories in its immediate child folders (except `node_modules`), and the repository of the open file.
+
+- `:VGit status` shows a group for each repository with changes. Staging, resetting and committing act on the repository of the selected file or group.
+- `:VGit diff` shows the changes of every repository, with each path prefixed by its repository's name.
+- Commands for one repository, such as `:VGit log`, `:VGit branch` and `:VGit stash`, use the repository of the open file. With no file open in a folder of repositories, they ask which one to use.
+- `g:vgit_branch` follows the repository of the focused buffer.
+
 ## Status Line
 
 Use `b:vgit_status`, a table containing the current buffer's number of `added`, `removed`, `changed` lines.

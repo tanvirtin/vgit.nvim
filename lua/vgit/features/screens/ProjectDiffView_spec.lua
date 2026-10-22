@@ -488,6 +488,7 @@ describe('ProjectDiffView:', function()
       local view = view_with_repo(calls)
       local pending = {
         index = 1,
+        repo = view._repo,
         pending_entry('a.lua'),
         pending_entry('b.lua'),
         pending_entry('c.lua', 'X', 'Y'),
@@ -506,7 +507,8 @@ describe('ProjectDiffView:', function()
     it('should respect the batch size', function()
       local calls = {}
       local view = view_with_repo(calls)
-      local pending = { index = 1, pending_entry('a.lua'), pending_entry('b.lua'), pending_entry('c.lua') }
+      local pending =
+        { index = 1, repo = view._repo, pending_entry('a.lua'), pending_entry('b.lua'), pending_entry('c.lua') }
 
       eq(2, #view:_load_batch(pending, 2))
       assert.is_true(view:_has_pending(pending))
@@ -520,9 +522,9 @@ describe('ProjectDiffView:', function()
       view._append_diff = function()
         appended = appended + 1
       end
-      local pending = { index = 1, pending_entry('a.lua'), pending_entry('b.lua') }
+      local pending = { index = 1, repo = view._repo, pending_entry('a.lua'), pending_entry('b.lua') }
 
-      view:_load_remaining(pending)
+      view:_load_remaining({ index = 1, pending = pending })
       view._update_gen = view._update_gen + 1
       vim.wait(200, function()
         return false
@@ -530,6 +532,59 @@ describe('ProjectDiffView:', function()
 
       eq(0, #calls)
       eq(0, appended)
+    end)
+
+    it('should load each repo group after the previous one', function()
+      local calls = {}
+      local view = view_with_repo(calls)
+      local queue = {
+        index = 1,
+        { repo = view._repo, entries = { { entries = { pending_entry('a.lua') } } } },
+        { repo = view._repo, entries = { { entries = { pending_entry('b.lua') } } } },
+      }
+
+      view:_next_entries(queue, 5)
+      local first = view:_next_entries(queue, 5)
+      view:_next_entries(queue, 5)
+      local second = view:_next_entries(queue, 5)
+
+      eq('a.lua', first[1].filename)
+      eq('b.lua', second[1].filename)
+      assert.is_false(view:_has_next(queue))
+    end)
+  end)
+
+  describe('_attach_repo', function()
+    local function repo_at(path)
+      return {
+        get_path = function()
+          return path
+        end,
+        get_name = function()
+          return vim.fs.basename(path)
+        end,
+      }
+    end
+
+    it('should prefix files with their repo name when several repos are shown', function()
+      local view = ProjectDiffView()
+      view._is_multi_repo = true
+      local repo = repo_at('/ws/beta')
+
+      local entries = view:_attach_repo({ { filename = 'old.lua -> new.lua', path = 'new.lua' } }, repo)
+
+      eq('beta/old.lua -> beta/new.lua', entries[1].filename)
+      eq({ repo = repo, filename = 'new.lua' }, view._sources['beta/new.lua'])
+    end)
+
+    it('should keep paths as they are for a single repo', function()
+      local view = ProjectDiffView()
+      local repo = repo_at('/ws/alpha')
+
+      local entries = view:_attach_repo({ { filename = 'a.lua', path = 'a.lua' } }, repo)
+
+      eq('a.lua', entries[1].filename)
+      eq({ repo = repo, filename = 'a.lua' }, view._sources['a.lua'])
     end)
   end)
 

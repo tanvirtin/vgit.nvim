@@ -6,9 +6,11 @@ local Window = lazy('vgit.core.Window')
 local Buffer = lazy('vgit.core.Buffer')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
+local GitStatusStream = lazy('vgit.git.GitStatusStream')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
 local normalize_file_path = require('vgit.cli.commands.normalize_file_path')
+local resolve_repository = require('vgit.cli.commands.resolve_repository')
 
 local diff_command = {}
 
@@ -72,6 +74,46 @@ function diff_command.parse_args(args)
   end
 
   return opts
+end
+
+local function working_tree_sections(entries, staged)
+  local sections = {}
+  for _, entry in ipairs(entries) do
+    if staged then
+      if entry.title == 'Staged Changes' then sections[#sections + 1] = entry end
+    else
+      if entry.title == 'Changes' or entry.title == 'Merge Changes' then sections[#sections + 1] = entry end
+    end
+  end
+  return sections
+end
+
+local function show_empty(staged)
+  display_service.show_diff({
+    type = 'empty',
+    message = staged and 'No staged changes' or 'No unstaged changes',
+  })
+end
+
+local function show_repos(repos, opts)
+  local stream = GitStatusStream(repos, {
+    select_sections = function(sections)
+      return working_tree_sections(sections, opts.staged)
+    end,
+  })
+
+  local groups = stream:next()
+
+  if #groups == 0 then return show_empty(opts.staged) end
+
+  display_service.show_diff({
+    type = 'files',
+    repo = groups[1].repo,
+    groups = groups,
+    stream = stream,
+    entries = groups,
+    layout_type = opts.layout_type,
+  })
 end
 
 local function normalize_refs(refs)
@@ -155,18 +197,23 @@ diff_command.execute = event.async(function(args)
 
   event.await()
 
+  opts.layout_type = scene_setting:get('diff_preference') or 'unified'
+
+  if not opts.files[1] and not opts.base_ref then
+    local repos = repository.list()
+    if #repos > 1 then return show_repos(repos, opts) end
+  end
+
   local repo, repo_err
   if opts.files[1] then
     repo, repo_err = repository.for_path(opts.files[1])
   else
-    repo, repo_err = repository.current()
+    repo, repo_err = resolve_repository()
   end
   if repo_err then
     console.error(repo_err)
     return
   end
-
-  opts.layout_type = scene_setting:get('diff_preference') or 'unified'
 
   local repo_path = repo:get_path()
   for i, filepath in ipairs(opts.files) do
@@ -270,25 +317,12 @@ diff_command.execute = event.async(function(args)
   else
     data, err = repo:status(opts)
     if not err and data then
-      local filtered_entries = {}
-      for _, entry in ipairs(data.entries) do
-        if opts.staged then
-          if entry.title == 'Staged Changes' then table.insert(filtered_entries, entry) end
-        else
-          if entry.title == 'Changes' or entry.title == 'Merge Changes' then table.insert(filtered_entries, entry) end
-        end
-      end
-
-      if #filtered_entries == 0 then
-        display_service.show_diff({
-          type = 'empty',
-          message = opts.staged and 'No staged changes' or 'No unstaged changes',
-        })
-        return
-      end
+      local filtered_entries = working_tree_sections(data.entries, opts.staged)
+      if #filtered_entries == 0 then return show_empty(opts.staged) end
 
       data = {
         type = 'files',
+        repo = repo,
         entries = filtered_entries,
         layout_type = opts.layout_type,
       }

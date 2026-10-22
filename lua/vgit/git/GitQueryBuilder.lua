@@ -308,9 +308,12 @@ function GitQueryBuilder:to_command()
 end
 
 function GitQueryBuilder:execute(opts)
+  return self:start(opts):wait()
+end
+
+function GitQueryBuilder:start(opts)
   self:_validate_query()
-  local args = self:to_args()
-  return gitcli.run(args, opts)
+  return gitcli.start(self:to_args(), opts)
 end
 
 function GitQueryBuilder:_validate_query()

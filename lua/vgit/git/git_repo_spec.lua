@@ -106,6 +106,35 @@ describe('git_repo:', function()
     end)
   end)
 
+  describe('git_dir()', function()
+    it('should read the git dir of a repo from disk', function()
+      eq(repo .. '/.git', git_repo.git_dir(repo))
+    end)
+
+    it('should follow a .git file to the git dir it points at', function()
+      local worktree = vim.fn.tempname()
+      vim.fn.mkdir(worktree, 'p')
+      vim.fn.writefile({ 'gitdir: ' .. repo .. '/.git' }, worktree .. '/.git')
+
+      eq(vim.uv.fs_realpath(repo .. '/.git'), git_repo.git_dir(worktree))
+      vim.fn.delete(worktree, 'rf')
+    end)
+  end)
+
+  describe('branch()', function()
+    it('should read the checked out branch', function()
+      vim.fn.writefile({ 'ref: refs/heads/feature/x' }, repo .. '/.git/HEAD')
+
+      eq('feature/x', git_repo.branch(repo))
+    end)
+
+    it('should give the short hash of a detached HEAD', function()
+      vim.fn.writefile({ '0123456789abcdef0123456789abcdef01234567' }, repo .. '/.git/HEAD')
+
+      eq('0123456', git_repo.branch(repo))
+    end)
+  end)
+
   describe('exists()', function()
     it('should return true for repo directory', function()
       local exists = git_repo.exists(repo)

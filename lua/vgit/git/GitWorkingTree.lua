@@ -172,4 +172,8 @@ function GitWorkingTree:status()
   return git_status.ls(self._root_path)
 end
 
+function GitWorkingTree:start_status()
+  return git_status.start(self._root_path)
+end
+
 return GitWorkingTree

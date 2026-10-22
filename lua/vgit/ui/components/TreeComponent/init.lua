@@ -125,19 +125,28 @@ function TreeComponent:create_node(entry)
   return node
 end
 
-function TreeComponent:_build_processed_list()
-  local list = self.state.list
+function TreeComponent:_process_list(list)
   local processed = {}
   for i = 1, #list do
     local fold = list[i]
-    if fold.items and #fold.items > 0 and fold.items[1].status then
-      local sorted_items = self._depth_tree:from_entries(fold.items):sort():value()
-      processed[i] = { value = fold.value, open = fold.open, items = sorted_items, entry = fold.entry }
+    local items = fold.items
+    if items and #items > 0 and (items[1].status or items[1].items) then
+      processed[i] = {
+        value = fold.value,
+        open = fold.open,
+        entry = fold.entry,
+        repo = fold.repo,
+        items = items[1].status and self._depth_tree:from_entries(items):sort():value() or self:_process_list(items),
+      }
     else
       processed[i] = fold
     end
   end
-  self._processed_list = processed
+  return processed
+end
+
+function TreeComponent:_build_processed_list()
+  self._processed_list = self:_process_list(self.state.list)
 end
 
 function TreeComponent:set_list(list)
@@ -177,7 +186,7 @@ function TreeComponent:find_entry(callback)
     local status = node.entry and node.entry.status or nil
     if not status then return false end
     local entry_type = node.entry.type
-    return callback(status, entry_type, lnum) == true
+    return callback(status, entry_type, lnum, node.entry) == true
   end)
 end
 
@@ -186,7 +195,7 @@ function TreeComponent:each_entry(callback)
     local status = node.entry and node.entry.status or nil
     if not status then return false end
     local entry_type = node.entry.type
-    callback(status, entry_type, lnum)
+    callback(status, entry_type, lnum, node.entry)
   end)
 end
 
@@ -248,28 +257,20 @@ end
 function TreeComponent:generate_lines()
   local spacing = 1
   local current_lnum = 0
-  local depth_0_lnum = 0
-  local item_count_for_depth_0 = 0
 
   local hls = {}
   local virtual_texts = {}
-  local depth_0_item_counts = {}
   local foldable_list_shadow = {}
 
   self.state.shadow_list = {}
 
-  local function track_closed_folder_item_count(list, depth)
-    if not list then return end
-
+  local function count_files(list)
+    local count = 0
     for i = 1, #list do
-      local item = list[i]
-      local items = item.items
-      if items then
-        track_closed_folder_item_count(items, depth + 1)
-      else
-        item_count_for_depth_0 = item_count_for_depth_0 + 1
-      end
+      local items = list[i].items
+      count = count + (items and count_files(items) or 1)
     end
+    return count
   end
 
   local function generate_lines_recursive(list, depth)
@@ -314,11 +315,6 @@ function TreeComponent:generate_lines()
       end
 
       current_lnum = current_lnum + 1
-
-      if depth == 0 then
-        depth_0_lnum = current_lnum
-        item_count_for_depth_0 = 0
-      end
 
       self.state.shadow_list[current_lnum] = item
 
@@ -392,19 +388,17 @@ function TreeComponent:generate_lines()
           },
         }
 
-        if item.open then
-          generate_lines_recursive(items, depth + 1)
-        else
-          track_closed_folder_item_count(items, depth + 1)
-        end
-        if depth == 0 then
-          depth_0_item_counts[#depth_0_item_counts + 1] = {
-            lnum = depth_0_lnum,
-            count = item_count_for_depth_0,
+        if not item.entry then
+          virtual_texts[#virtual_texts + 1] = {
+            type = 'after',
+            hl = 'GitSignsChange',
+            lnum = current_lnum,
+            text = tostring(count_files(items)),
           }
         end
+
+        if item.open then generate_lines_recursive(items, depth + 1) end
       else
-        item_count_for_depth_0 = item_count_for_depth_0 + 1
         foldable_list_shadow[#foldable_list_shadow + 1] = string.format('%s%s', indentation, value)
       end
     end
@@ -419,16 +413,6 @@ function TreeComponent:generate_lines()
   if not self._processed_list or #self._processed_list == 0 then self:_build_processed_list() end
 
   generate_lines_recursive(self._processed_list, 0)
-
-  for i = 1, #depth_0_item_counts do
-    local depth_0_item_count = depth_0_item_counts[i]
-    virtual_texts[#virtual_texts + 1] = {
-      type = 'after',
-      hl = 'GitSignsChange',
-      lnum = depth_0_item_count.lnum,
-      text = tostring(depth_0_item_count.count),
-    }
-  end
 
   self.state.hls = hls
   self.state.virtual_texts = virtual_texts

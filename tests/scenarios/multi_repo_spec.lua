@@ -30,6 +30,15 @@ local function alpha_history(ctx)
   ctx.world:history(ctx.repo, { { message = 'alpha work', files = { ['a.txt'] = edited() } } })
 end
 
+local function change_both(ctx)
+  change_alpha(ctx)
+  ctx.world:write(ctx.ws .. '/beta/b.txt', { 'dos' })
+end
+
+local function status_of(ctx, name)
+  return ctx.world:git(ctx.ws .. '/' .. name, 'status', '--porcelain')
+end
+
 local function from_both(name, case)
   for _, where in ipairs({ 'repo', 'ws' }) do
     local steps = { { cd = '$' .. where } }
@@ -278,15 +287,219 @@ describe('scenario: a folder of repos', function()
   })
 
   scenario.flow(':VGit status with no file open lists the changes of every repo', {
+    arrange = workspace(change_both),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit status' },
+      { expect = { screen_has = { 'alpha (main)', 'a.txt', 'beta (main)', 'b.txt' } } },
+    },
+  })
+
+  scenario.flow(':VGit status hides the repos without changes', {
+    arrange = workspace(change_alpha),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit status' },
+      { expect = { screen_has = { 'alpha (main)', 'a.txt' }, screen_hasnt = { 'beta' } } },
+    },
+  })
+
+  scenario.flow('the grouped status stages a file in its own repo', {
+    arrange = workspace(change_both),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit status' },
+      { await_text = 'b.txt' },
+      { search = 'b.txt' },
+      { keys = 's' },
+      {
+        expect = {
+          assert = function(ctx)
+            assert.are.same('M  b.txt', status_of(ctx, 'beta'))
+            assert.are.same(' M a.txt', status_of(ctx, 'alpha'))
+          end,
+        },
+      },
+    },
+  })
+
+  scenario.flow('the grouped status tells apart files with the same name', {
     arrange = workspace(function(ctx)
+      ctx.world:git(ctx.ws .. '/beta', 'mv', 'b.txt', 'a.txt')
+      ctx.world:git(ctx.ws .. '/beta', 'commit', '-qm', 'rename')
+      ctx.world:write(ctx.ws .. '/beta/a.txt', { 'dos' })
       change_alpha(ctx)
-      ctx.world:write(ctx.ws .. '/beta/b.txt', { 'dos' })
     end),
     steps = {
       { cd = '$ws' },
       { cmd = 'VGit status' },
-      { expect = { screen_has = { 'alpha', 'a.txt', 'beta', 'b.txt' } } },
+      { await_text = 'beta (main)' },
+      { search = 'beta (main)' },
+      { keys = 'j' },
+      { keys = 'j' },
+      { keys = 's' },
+      {
+        expect = {
+          assert = function(ctx)
+            assert.are.same('M  a.txt', status_of(ctx, 'beta'))
+            assert.are.same(' M a.txt', status_of(ctx, 'alpha'))
+          end,
+        },
+      },
+      { expect = { screen_has = { 'Staged Changes' } } },
     },
-    known_bug = 'status shows one repo, not a group per repo',
+  })
+
+  scenario.flow('stage all from a repo group stages only that repo', {
+    arrange = workspace(change_both),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit status' },
+      { await_text = 'beta (main)' },
+      { search = 'beta (main)' },
+      { keys = 'S' },
+      {
+        expect = {
+          assert = function(ctx)
+            assert.are.same('M  b.txt', status_of(ctx, 'beta'))
+            assert.are.same(' M a.txt', status_of(ctx, 'alpha'))
+          end,
+        },
+      },
+    },
+  })
+
+  scenario.flow('the grouped status commits to the repo of the selected file', {
+    arrange = workspace(function(ctx)
+      change_both(ctx)
+      ctx.world:git(ctx.ws .. '/beta', 'add', 'b.txt')
+    end),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit status' },
+      { await_text = 'b.txt' },
+      { search = 'b.txt' },
+      { keys = 'C' },
+      { keys = 'beta commit<C-s>' },
+      {
+        expect = {
+          assert = function(ctx)
+            assert.are.same('beta commit', ctx.world:git(ctx.ws .. '/beta', 'log', '-1', '--format=%s'))
+            assert.are.same('initial', ctx.world:git(ctx.ws .. '/alpha', 'log', '-1', '--format=%s'))
+          end,
+        },
+      },
+    },
+  })
+
+  scenario.flow(':VGit diff with no file open shows the changes of every repo', {
+    arrange = workspace(change_both),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit diff' },
+      { expect = { screen_has = { 'alpha/a.txt', 'CHANGED', 'beta/b.txt', 'dos' } } },
+    },
+  })
+
+  scenario.flow('the multi-repo diff jumps to a file in its own repo', {
+    arrange = workspace(change_both),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit diff' },
+      { await_text = 'beta/b.txt' },
+      { search = '^.*dos' },
+      { keys = '<CR>' },
+      {
+        expect = {
+          assert = function(ctx)
+            local name = ctx.editor.terminal:rpc_eval('vim.api.nvim_buf_get_name(0)')
+            assert.is_truthy(name:find('/beta/b.txt', 1, true), 'opened ' .. name)
+          end,
+        },
+      },
+    },
+  })
+
+  scenario.flow('the multi-repo diff blames a file in its own repo', {
+    arrange = workspace(change_both),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit diff' },
+      { await_text = 'beta/b.txt' },
+      { search = '^.*dos' },
+      { keys = 'b' },
+      { expect = { screen_has = { 'initial' } } },
+    },
+  })
+
+  scenario.flow(':VGit log with no file open asks which repo to use', {
+    arrange = workspace(alpha_history),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit log' },
+      { await_text = 'Choose a repository' },
+      { expect = { screen_has = { '1: alpha', '2: beta' } } },
+      { keys = '1<CR>' },
+      { expect = { screen_has = { 'alpha work' } } },
+    },
+  })
+
+  scenario.flow(':VGit branch with no file open lists the branches of the chosen repo', {
+    arrange = workspace(function(ctx)
+      ctx.world:git(ctx.ws .. '/beta', 'branch', 'beta-only')
+    end),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit branch' },
+      { await_text = 'Choose a repository' },
+      { keys = '2<CR>' },
+      { expect = { screen_has = { 'beta-only' } } },
+    },
+  })
+
+  scenario.flow('the statusline branch follows the repo of the focused buffer', {
+    arrange = workspace(function(ctx)
+      ctx.world:git(ctx.ws .. '/beta', 'checkout', '-qb', 'feature')
+    end),
+    steps = {
+      { cd = '$ws' },
+      { edit = '$repo/a.txt' },
+      { edit = '$ws/beta/b.txt' },
+      {
+        expect = {
+          assert = function(ctx)
+            assert.are.same('feature', ctx.editor.terminal:rpc_eval('vim.g.vgit_branch'))
+          end,
+        },
+      },
+      { cmd = 'buffer a.txt' },
+      {
+        expect = {
+          assert = function(ctx)
+            assert.are.same('main', ctx.editor.terminal:rpc_eval('vim.g.vgit_branch'))
+          end,
+        },
+      },
+    },
+  })
+
+  scenario.flow('enter on a file in the grouped status opens it from its repo', {
+    arrange = workspace(change_both),
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit status' },
+      { await_text = 'b.txt' },
+      { search = 'b.txt' },
+      { keys = '<CR>' },
+      {
+        expect = {
+          assert = function(ctx)
+            local name = ctx.editor.terminal:rpc_eval('vim.api.nvim_buf_get_name(0)')
+            assert.is_truthy(name:find('/beta/b.txt', 1, true), 'opened ' .. name)
+          end,
+        },
+      },
+      { expect = { screen_has = { 'dos' } } },
+    },
   })
 end)

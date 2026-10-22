@@ -2,15 +2,15 @@ local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
 local console = lazy('vgit.core.console')
-local repository = lazy('vgit.git.repository')
 local CommitView = lazy('vgit.features.screens.CommitView')
+local resolve_repository = require('vgit.cli.commands.resolve_repository')
 
 local commit_command = {}
 
 commit_command.execute = event.async(function()
   event.await()
 
-  local repo, repo_err = repository.current()
+  local repo, repo_err = resolve_repository()
   if repo_err then
     console.error(repo_err)
     return

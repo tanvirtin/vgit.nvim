@@ -6,6 +6,7 @@ local Buffer = lazy('vgit.core.Buffer')
 local Window = lazy('vgit.core.Window')
 local console = lazy('vgit.core.console')
 local repository = lazy('vgit.git.repository')
+local GitStatusStream = lazy('vgit.git.GitStatusStream')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
 
@@ -18,20 +19,29 @@ status_command.execute = event.async(function()
 
   event.await()
 
+  local repos = repository.list()
   local repo, repo_err = repository.current()
-  if repo_err then
+  if repo_err and #repos == 0 then
     console.error(repo_err)
     return
   end
+  repo = repo or repos[1]
 
-  local data, err = repo:status({})
-
-  if err then
-    console.error(err)
-    return
+  local entries, stream
+  if #repos > 1 then
+    stream = GitStatusStream(repos)
+    entries = stream:next()
+  else
+    local data, err = repo:status({})
+    if err then
+      console.error(err)
+      return
+    end
+    entries = data and data.entries
+    repos = nil
   end
 
-  if not data or not data.entries or #data.entries == 0 then
+  if not entries or #entries == 0 then
     console.info('No changes to display')
     return
   end
@@ -44,7 +54,9 @@ status_command.execute = event.async(function()
   local transformed_data = {
     type = 'status',
     repo = repo,
-    entries = data.entries,
+    repos = repos,
+    stream = stream,
+    entries = entries,
     layout_type = layout_type,
     current_filename = current_filename,
     cursor_lnum = cursor_lnum,

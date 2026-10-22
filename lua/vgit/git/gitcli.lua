@@ -2,6 +2,7 @@ local lazy = require('vgit.core.lazy')
 
 local env = lazy('vgit.core.env')
 local Spawn = lazy('vgit.core.Spawn')
+local GitTask = lazy('vgit.git.GitTask')
 local console = lazy('vgit.core.console')
 
 local gitcli = {}
@@ -74,13 +75,19 @@ local function wait_failure(args, reason)
   return { string.format('git command did not complete (%s): %s', tostring(reason), cmd) }
 end
 
-function gitcli.run(args, opts)
+function gitcli.start(args, opts)
   opts = opts or {}
 
-  local ok, result, err, code = gitcli.task(args, opts):pwait(opts.timeout)
-  if not ok then return nil, wait_failure(args, result), nil end
+  return GitTask(gitcli.task(args, opts), function(task)
+    local ok, result, err, code = task:pwait(opts.timeout)
+    if not ok then return nil, wait_failure(args, result), nil end
 
-  return result, err, code
+    return result, err, code
+  end)
+end
+
+function gitcli.run(args, opts)
+  return gitcli.start(args, opts):wait()
 end
 
 return gitcli

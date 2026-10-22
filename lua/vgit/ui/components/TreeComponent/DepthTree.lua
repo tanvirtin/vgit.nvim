@@ -60,23 +60,6 @@ function DepthTree:create_node(entry)
   return self:create_folder_node(entry)
 end
 
-function DepthTree:find_parent_node(entry)
-  local function _find(tree)
-    if not tree then return nil end
-
-    for i = 1, #tree do
-      local node = tree[i]
-
-      if node.entry.path == entry.parent then return node end
-
-      local found = _find(node.items)
-      if found then return found end
-    end
-  end
-
-  return _find(self._tree)
-end
-
 function DepthTree:sort()
   local function sort_tree(list)
     local folders = {}
@@ -98,7 +81,7 @@ function DepthTree:sort()
     table.sort(folders, sort_fn)
     table.sort(files, sort_fn)
 
-    return utils.list.merge(folders, files)
+    return utils.list.concat(folders, files)
   end
 
   local function _sort_tree(tree)
@@ -142,6 +125,7 @@ function DepthTree:from_entries(entries)
         path = path,
         depth = depth,
         type = entry_type,
+        repo = entry.repo,
         parent = parent_folder_name,
         current = current_folder_name,
         status = j == #segmented_folders and status or nil,
@@ -165,16 +149,19 @@ function DepthTree:from_entries(entries)
   end
   table.sort(depths)
 
+  local nodes_by_path = {}
   for _, depth in ipairs(depths) do
     local entries_at_depth = normalized_entries_by_depth[depth]
     for j = 1, #entries_at_depth do
       local entry = entries_at_depth[j]
-      local parent_node = self:find_parent_node(entry)
+      local parent_node = nodes_by_path[entry.parent]
+      local node = self:create_node(entry)
+      nodes_by_path[entry.path] = node
 
       if parent_node then
-        parent_node.items[#parent_node.items + 1] = self:create_node(entry)
+        parent_node.items[#parent_node.items + 1] = node
       else
-        self._tree[#self._tree + 1] = self:create_node(entry)
+        self._tree[#self._tree + 1] = node
       end
     end
   end

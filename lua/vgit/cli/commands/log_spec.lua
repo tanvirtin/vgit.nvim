@@ -63,6 +63,9 @@ describe('log_command:', function()
         current = function()
           return nil, 'Not a git repository'
         end,
+        list = function()
+          return {}
+        end,
       },
       console = {
         error = function(msg)

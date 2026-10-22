@@ -133,6 +133,9 @@ describe('worktree_command:', function()
           current = function()
             return nil, 'not a git repository'
           end,
+          list = function()
+            return {}
+          end,
         },
         console = {
           error = function(msg)

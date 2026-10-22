@@ -219,7 +219,7 @@ describe('repository:', function()
       local discovered_path
       package.loaded['vgit.git.GitRepository'].discover = function(path)
         discovered_path = path
-        return {}, nil
+        return fake_repo(), nil
       end
 
       repository.for_path(filepath)
@@ -236,7 +236,7 @@ describe('repository:', function()
       local discovered_path
       package.loaded['vgit.git.GitRepository'].discover = function(path)
         discovered_path = path
-        return {}, nil
+        return fake_repo(), nil
       end
 
       repository.for_path(filepath)
@@ -254,7 +254,7 @@ describe('repository:', function()
       local discovered_path
       package.loaded['vgit.git.GitRepository'].discover = function(path)
         discovered_path = path
-        return {}, nil
+        return fake_repo(), nil
       end
 
       repository.for_path(filepath)
@@ -269,6 +269,56 @@ describe('repository:', function()
 
       assert.is_nil(repo)
       eq({ 'path is required' }, err)
+    end)
+  end)
+
+  describe('list', function()
+    local cwd
+
+    before_each(function()
+      cwd = vim.uv.cwd()
+    end)
+
+    after_each(function()
+      vim.fn.chdir(cwd)
+    end)
+
+    it('should list the repos in the child folders of a folder that is not a repo', function()
+      local directory = vim.fn.tempname()
+      vim.fn.mkdir(directory .. '/beta/.git', 'p')
+      vim.fn.mkdir(directory .. '/node_modules/pkg/.git', 'p')
+      vim.fn.mkdir(directory .. '/plain', 'p')
+      vim.fn.mkdir(directory .. '/alpha', 'p')
+      vim.fn.writefile({ 'gitdir: elsewhere' }, directory .. '/alpha/.git')
+      vim.fn.chdir(directory)
+      local root = vim.uv.cwd()
+
+      package.loaded['vgit.git.GitRepository'].discover = function()
+        return nil, { 'not a git repository' }
+      end
+      package.loaded['vgit.git.GitRepository'].at = fake_repo
+
+      local paths = vim.tbl_map(function(repo)
+        return repo:get_path()
+      end, repository.list())
+
+      eq({ root .. '/alpha', root .. '/beta' }, paths)
+      vim.fn.delete(directory, 'rf')
+    end)
+
+    it('should list a repo once when the folder and a child resolve to it', function()
+      local directory = vim.fn.tempname()
+      vim.fn.mkdir(directory .. '/child/.git', 'p')
+      vim.fn.chdir(directory)
+
+      local root = vim.uv.cwd()
+      package.loaded['vgit.git.GitRepository'].discover = function()
+        return fake_repo(root .. '/child'), nil
+      end
+      package.loaded['vgit.git.GitRepository'].at = fake_repo
+
+      eq(1, #repository.list())
+      vim.fn.delete(directory, 'rf')
     end)
   end)
 
@@ -289,6 +339,7 @@ describe('repository:', function()
     it('should drop caches before changing directory', function()
       local order = {}
       package.loaded['vgit.git.git_repo'] = {
+        git_dir = function() end,
         clear_cache = function()
           order[#order + 1] = 'clear_cache:' .. tostring(repository.is_loaded())
         end,

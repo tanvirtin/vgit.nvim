@@ -1,5 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
+local fs = lazy('vgit.core.fs')
 local View = lazy('vgit.ui.View')
 local utils = lazy('vgit.core.utils')
 local event = lazy('vgit.core.event')
@@ -32,6 +33,7 @@ local function to_diff_file_entry(file_entry)
   return {
     type = 'diff_file',
     filename = display_filename,
+    path = status.filename,
     filetype = status.filetype,
     diff = file_entry.diff,
     original_lines = file_entry.original_lines or {},
@@ -49,6 +51,8 @@ function ProjectDiffView:constructor()
   instance._current_component = nil
   instance._diff_file_entries = {}
   instance._line_to_file_map = {}
+  instance._sources = {}
+  instance._is_multi_repo = false
   instance._update_gen = 0
   instance._loading_indicator = LoadingIndicator()
   return instance
@@ -170,6 +174,7 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
         all_entries[#all_entries + 1] = {
           type = 'diff_file',
           filename = fd.filename,
+          path = fd.filename,
           filetype = fd.filetype,
           diff = fd.diff,
           original_lines = fd.original_lines,
@@ -186,6 +191,7 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
         all_entries[#all_entries + 1] = {
           type = 'diff_file',
           filename = fd.filename,
+          path = fd.filename,
           filetype = fd.filetype,
           diff = fd.diff,
           original_lines = fd.original_lines,
@@ -202,6 +208,7 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
       all_entries[#all_entries + 1] = {
         type = 'diff_file',
         filename = entry.status.filename,
+        path = entry.status.filename,
         filetype = entry.status.filetype,
         diff = diff,
         original_lines = {},
@@ -256,7 +263,7 @@ function ProjectDiffView:_load_batch(pending, size)
     pending.index = pending.index + 1
   end
 
-  local file_diffs, err = self._repo:range_file_diffs(files, {
+  local file_diffs, err = pending.repo:range_file_diffs(files, {
     from = range.from,
     to = range.to,
     layout_type = self._layout_type,
@@ -270,22 +277,62 @@ function ProjectDiffView:_load_batch(pending, size)
   for _, file_diff in ipairs(file_diffs) do
     entries[#entries + 1] = to_diff_file_entry(file_diff)
   end
+  return self:_attach_repo(entries, pending.repo)
+end
+
+function ProjectDiffView:_attach_repo(entries, repo)
+  if not repo then return entries end
+
+  local prefix = self._is_multi_repo and repo:get_name() .. fs.sep or ''
+  for _, entry in ipairs(entries) do
+    entry.filename = prefix .. entry.filename:gsub(' %-> ', ' -> ' .. prefix)
+    local source = { repo = repo, filename = entry.path or entry.filename }
+    self._sources[entry.filename] = source
+    self._sources[entry.filename:match('^.+ %-> (.+)$') or entry.filename] = source
+  end
   return entries
+end
+
+function ProjectDiffView:_next_entries(queue, size)
+  if queue.pending and self:_has_pending(queue.pending) then return self:_load_batch(queue.pending, size) end
+
+  if not queue[queue.index] and queue.stream then
+    for _, group in ipairs(queue.stream:collect()) do
+      if #group.entries > 0 then queue[#queue + 1] = group end
+    end
+    if not queue[queue.index] then
+      event.sleep(5)
+      return {}
+    end
+  end
+
+  local group = queue[queue.index]
+  if not group then return {} end
+  queue.index = queue.index + 1
+
+  queue.pending = self:_collect_pending(group)
+  queue.pending.repo = group.repo
+  return self:_attach_repo(self:_build_diff_file_entries(group.repo, group), group.repo)
+end
+
+function ProjectDiffView:_has_next(queue)
+  if queue.pending and self:_has_pending(queue.pending) then return true end
+  return queue[queue.index] ~= nil or (queue.stream ~= nil and not queue.stream:is_done())
 end
 
 function ProjectDiffView:_has_pending(pending)
   return pending[pending.index] ~= nil
 end
 
-function ProjectDiffView:_load_remaining(pending)
+function ProjectDiffView:_load_remaining(queue)
   local gen = self._update_gen
 
   event.async(function()
-    while self:_has_pending(pending) do
+    while self:_has_next(queue) do
       event.idle()
       if self:is_destroyed() or gen ~= self._update_gen then return end
 
-      local entries = self:_load_batch(pending, self.BATCH_SIZE)
+      local entries = self:_next_entries(queue, self.BATCH_SIZE)
       if self:is_destroyed() or gen ~= self._update_gen then return end
 
       if #entries > 0 then self:_append_diff(entries) end
@@ -320,6 +367,8 @@ function ProjectDiffView:jump_to_file()
   if not file_info or not file_info.filename then return end
 
   local filename = file_info.filename
+  local source = self._sources[filename]
+  if source then filename = fs.absolute_path(source.repo:get_path(), source.filename) end
   local target_lnum = file_info.lnum or 1
 
   self:destroy()
@@ -338,7 +387,8 @@ function ProjectDiffView:show_blame_view()
   local file_info = self._line_to_file_map[lnum]
   if not file_info or not file_info.filename then return end
 
-  display_service.show_blame_view_for_file(file_info.filename, self._repo)
+  local source = self._sources[file_info.filename] or { repo = self._repo, filename = file_info.filename }
+  display_service.show_blame_view_for_file(source.filename, source.repo)
 end
 
 function ProjectDiffView:setup_keymaps()
@@ -483,11 +533,14 @@ function ProjectDiffView:_create_view(data)
 
   self._loading_indicator:start(self:_get_all_diff_components())
 
-  local diff_file_entries = self:_build_diff_file_entries(repo, data)
-  local pending = self:_collect_pending(data)
+  self._is_multi_repo = data.groups ~= nil
+  local queue = { index = 1, stream = data.stream }
+  vim.list_extend(queue, data.groups or { { repo = repo, entries = data.entries } })
+
+  local diff_file_entries = {}
   repeat
-    vim.list_extend(diff_file_entries, self:_load_batch(pending, self.FIRST_BATCH_SIZE))
-  until #diff_file_entries > 0 or not self:_has_pending(pending)
+    vim.list_extend(diff_file_entries, self:_next_entries(queue, self.FIRST_BATCH_SIZE))
+  until #diff_file_entries > 0 or not self:_has_next(queue)
 
   self._loading_indicator:stop()
 
@@ -499,7 +552,7 @@ function ProjectDiffView:_create_view(data)
   end
 
   self:_refresh_diff(diff_file_entries)
-  if self:_has_pending(pending) then self:_load_remaining(pending) end
+  if self:_has_next(queue) then self:_load_remaining(queue) end
 
   return true
 end

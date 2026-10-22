@@ -22,9 +22,7 @@ local is_registered = false
 
 local function update_branch(repo)
   if not repo then return end
-  local refs = repo:refs()
-  if not refs then return end
-  local branch = refs:current_branch()
+  local branch = git_repo.branch(repo:get_path())
   if branch then statusline.set_branch(branch) end
 end
 
@@ -38,6 +36,10 @@ git_buffer_store.register_events = event.async(function()
     git_buffer_store.collect()
   end)
 
+  event.on({ 'BufEnter' }, function()
+    if vim.bo.buftype == '' then update_branch(repository.current()) end
+  end)
+
   event.custom_on('VGitChange', function()
     git_repo.clear_cache()
     git_buffer_store.for_each(function(buffer)
@@ -45,7 +47,7 @@ git_buffer_store.register_events = event.async(function()
       git_buffer_store.dispatch(buffer, 'sync')
     end)
 
-    update_branch(repository.get_cached())
+    update_branch(repository.current())
   end)
 
   event.custom_on('VGitDirChanged', function()
@@ -176,6 +178,7 @@ git_buffer_store.register_buffer = function(git_buffer)
   end
 
   git_buffer_store.add(git_buffer)
+  repository.for_path(git_buffer:get_name())
 
   git_buffer
     :attach_to_changes({

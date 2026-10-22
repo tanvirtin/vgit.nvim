@@ -1303,7 +1303,7 @@ describe('StatusDiffView:', function()
         assert.is_false(destroy_called)
       end)
 
-      it('should call destroy and fs.open with filename', function()
+      it('should call destroy and fs.open with the path inside the repo', function()
         local destroy_called = false
         local opened_file = nil
 
@@ -1316,6 +1316,9 @@ describe('StatusDiffView:', function()
           open = function(filename)
             opened_file = filename
           end,
+          absolute_path = function(base_path, relative_path)
+            return base_path .. '/' .. relative_path
+          end,
         }
 
         package.loaded['vgit.features.screens.StatusDiffView'] = nil
@@ -1326,14 +1329,20 @@ describe('StatusDiffView:', function()
         end
         view._tree_component = {
           get_selected_entry = function()
-            return make_entry({ filename = 'open_me.lua' })
+            local entry = make_entry({ filename = 'open_me.lua' })
+            entry.repo = {
+              get_path = function()
+                return '/repo'
+              end,
+            }
+            return entry
           end,
         }
 
         view:open_file()
 
         assert.is_true(destroy_called)
-        eq('open_me.lua', opened_file)
+        eq('/repo/open_me.lua', opened_file)
       end)
     end)
   end)
@@ -1392,6 +1401,9 @@ describe('StatusDiffView:', function()
         each_entry = function() end,
         move_to = function() end,
         get_selected_entry = function()
+          return nil
+        end,
+        get_current_list_item = function()
           return nil
         end,
       }

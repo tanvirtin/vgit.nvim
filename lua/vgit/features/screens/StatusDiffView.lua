@@ -1,5 +1,6 @@
 local lazy = require('vgit.core.lazy')
 
+local fs = lazy('vgit.core.fs')
 local View = lazy('vgit.ui.View')
 local utils = lazy('vgit.core.utils')
 local event = lazy('vgit.core.event')
@@ -7,6 +8,7 @@ local keymap = lazy('vgit.core.keymap')
 local console = lazy('vgit.core.console')
 local navigation = lazy('vgit.core.navigation')
 local repository = lazy('vgit.git.repository')
+local GitStatusStream = lazy('vgit.git.GitStatusStream')
 local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local statusline = lazy('vgit.core.statusline_state')
@@ -17,9 +19,54 @@ local status_diff_view_setting = lazy('vgit.settings.status_diff_view')
 local StatusDiffView = View:extend()
 
 StatusDiffView.DEBOUNCE_MS = 100
+StatusDiffView.STREAM_APPLY_MS = 100
 StatusDiffView.TREE_WIDTH = 50
 StatusDiffView.LAYOUT_SPLIT = 'split'
 StatusDiffView.LAYOUT_UNIFIED = 'unified'
+
+local function in_repo(entry, repo)
+  return not repo or not entry or not entry.repo or entry.repo == repo
+end
+
+local function repo_title(group)
+  local name = group.repo:get_name()
+  if not group.branch then return name end
+  return string.format('%s (%s)', name, group.branch)
+end
+
+local function merge_groups(entries, groups)
+  local replaced = {}
+  for _, group in ipairs(groups) do
+    replaced[group.repo] = true
+  end
+
+  local merged = vim.tbl_filter(function(group)
+    return not replaced[group.repo]
+  end, entries)
+  for _, group in ipairs(groups) do
+    if #group.entries > 0 then merged[#merged + 1] = group end
+  end
+  table.sort(merged, function(a, b)
+    return a.repo:get_path() < b.repo:get_path()
+  end)
+
+  return merged
+end
+
+local function to_folds(sections, repo)
+  local folds = {}
+  for _, section in ipairs(sections) do
+    local is_repo = section.repo ~= nil
+    folds[#folds + 1] = {
+      open = true,
+      value = is_repo and repo_title(section) or section.title,
+      metadata = {},
+      repo = section.repo or repo,
+      items = is_repo and to_folds(section.entries, section.repo) or section.entries,
+    }
+  end
+  return folds
+end
 
 function StatusDiffView:constructor()
   local instance = View.constructor(self)
@@ -28,18 +75,35 @@ function StatusDiffView:constructor()
   }
   instance._data = nil
   instance._repo = nil
+  instance._repos = nil
+  instance._entries = nil
   instance._diff_component = nil
   instance._tree_component = nil
   instance._commit_view = nil
   instance._refreshing = false
   instance._skip_on_move = false
   instance._diff_gen = 0
+  instance._stream_gen = 0
   return instance
 end
 
-function StatusDiffView:_get_repo()
+function StatusDiffView:_get_repo(entry)
+  if entry and entry.repo then return entry.repo, nil end
   if self._repo then return self._repo, nil end
   return repository.current()
+end
+
+function StatusDiffView:_get_selected_repo()
+  local item = self._tree_component and self._tree_component:get_current_list_item()
+  return self:_get_repo(item and (item.entry or item))
+end
+
+function StatusDiffView:_sections_for(repo)
+  local entries = self._entries or {}
+  for _, group in ipairs(entries) do
+    if group.repo == repo then return group.entries end
+  end
+  return entries
 end
 
 function StatusDiffView:_is_valid_entry(entry)
@@ -66,9 +130,9 @@ function StatusDiffView:get_hunk_alignment_offset()
   return status_diff_view_setting:get('hunk_alignment_offset') or 0
 end
 
-function StatusDiffView:_after_hunk_operation(entry_type, filename, hunk_index, fallback_fn)
+function StatusDiffView:_after_hunk_operation(entry_type, filename, hunk_index, fallback_fn, repo)
   self._refreshing = true
-  local has_data = self:refresh_data()
+  local has_data = self:refresh_data(repo)
   if has_data == false then
     self._refreshing = false
     self:destroy()
@@ -76,12 +140,12 @@ function StatusDiffView:_after_hunk_operation(entry_type, filename, hunk_index, 
   end
 
   local still_has_entries = false
-  self._tree_component:each_entry(function(status, et)
-    if et == entry_type and status.filename == filename then still_has_entries = true end
+  self._tree_component:each_entry(function(status, et, _, entry)
+    if et == entry_type and status.filename == filename and in_repo(entry, repo) then still_has_entries = true end
   end)
 
   if still_has_entries then
-    self:move_to_entry(filename, entry_type)
+    self:move_to_entry(filename, entry_type, repo)
     self._refreshing = false
     self:_refresh_diff()
     self:restore_hunk_position(hunk_index)
@@ -109,9 +173,9 @@ function StatusDiffView:reset_hunk()
   if not self:_confirm('Are you sure you want to discard this hunk? (y/N) ') then return end
 
   local filename = entry.status.filename
-  local next_file = self:find_next_file(filename, 'unstaged')
+  local next_file, next_repo = self:find_next_file(filename, 'unstaged', entry.repo)
 
-  local repo, err = self:_get_repo()
+  local repo, err = self:_get_repo(entry)
   if err then
     console.debug.error(err)
     return
@@ -125,30 +189,34 @@ function StatusDiffView:reset_hunk()
 
   self:_after_hunk_operation('unstaged', filename, hunk_index, function()
     if next_file then
-      self:move_to_entry(next_file, 'unstaged')
+      self:move_to_entry(next_file, 'unstaged', next_repo)
     else
       self:_navigate_to_preferred_entry('unstaged', 'staged')
     end
-  end)
+  end, repo)
 end
 
-function StatusDiffView:find_next_file(filename, target_type)
+function StatusDiffView:find_next_file(filename, target_type, repo)
   local next_filename = nil
+  local next_repo = nil
   local found_current = false
 
-  self._tree_component:each_entry(function(status, entry_type)
+  self._tree_component:each_entry(function(status, entry_type, _, entry)
     if entry_type == target_type then
-      if found_current and not next_filename then next_filename = status.filename end
-      if status.filename == filename then found_current = true end
+      if found_current and not next_filename then
+        next_filename = status.filename
+        next_repo = entry and entry.repo
+      end
+      if status.filename == filename and in_repo(entry, repo) then found_current = true end
     end
   end)
 
-  return next_filename
+  return next_filename, next_repo
 end
 
-function StatusDiffView:move_to_entry(filename, entry_type)
-  return self._tree_component:move_to(function(status, et)
-    return status.filename == filename and et == entry_type
+function StatusDiffView:move_to_entry(filename, entry_type, repo)
+  return self._tree_component:move_to(function(status, et, _, entry)
+    return status.filename == filename and et == entry_type and in_repo(entry, repo)
   end)
 end
 
@@ -178,9 +246,9 @@ function StatusDiffView:_navigate_to_preferred_entry(preferred_type, fallback_ty
   end
 end
 
-function StatusDiffView:refresh_and_navigate(navigate_fn)
+function StatusDiffView:refresh_and_navigate(navigate_fn, repo)
   self._refreshing = true
-  local has_data = self:refresh_data()
+  local has_data = self:refresh_data(repo)
   if has_data == false then
     self._refreshing = false
     self:destroy()
@@ -273,6 +341,9 @@ function StatusDiffView:_process_entries_data(data)
   self._data = data
 
   local entries_data = {
+    repo = data.repo,
+    repos = data.repos,
+    stream = data.stream,
     entries = data.entries,
     layout_type = self._opts.layout_type,
     current_filename = data.current_filename,
@@ -304,12 +375,14 @@ function StatusDiffView:toggle_view()
 
   local filename = entry.status.filename
   local has_counterpart = false
-  self._tree_component:each_entry(function(status, entry_type)
-    if entry_type == other_type and status.filename == filename then has_counterpart = true end
+  self._tree_component:each_entry(function(status, entry_type, _, other)
+    if entry_type == other_type and status.filename == filename and in_repo(other, entry.repo) then
+      has_counterpart = true
+    end
   end)
   if not has_counterpart then return end
 
-  self:move_to_entry(filename, other_type)
+  self:move_to_entry(filename, other_type, entry.repo)
   self:_refresh_diff()
 end
 
@@ -323,7 +396,7 @@ function StatusDiffView:_refresh_diff(hunk_index)
   local entry = self:get_current_entry()
   if not self:_is_valid_entry(entry) then return false end
 
-  local repo, repo_err = self:_get_repo()
+  local repo, repo_err = self:_get_repo(entry)
   if repo_err then
     console.debug.error(repo_err)
     return false
@@ -363,7 +436,7 @@ function StatusDiffView:stage_hunk()
   local hunk, hunk_index = self._diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  local repo, err = self:_get_repo()
+  local repo, err = self:_get_repo(entry)
   if err then
     console.debug.error(err)
     return
@@ -377,9 +450,11 @@ function StatusDiffView:stage_hunk()
 
   self:_after_hunk_operation('unstaged', filename, hunk_index, function()
     if not self:_move_to_first_entry_of_type('unstaged') then
-      if not self:move_to_entry(filename, 'staged') then self:_navigate_to_preferred_entry('staged', 'unstaged') end
+      if not self:move_to_entry(filename, 'staged', repo) then
+        self:_navigate_to_preferred_entry('staged', 'unstaged')
+      end
     end
-  end)
+  end, repo)
 end
 
 function StatusDiffView:unstage_hunk()
@@ -394,7 +469,7 @@ function StatusDiffView:unstage_hunk()
   local hunk, hunk_index = self._diff_component:get_hunk_under_cursor()
   if not hunk then return end
 
-  local repo, err = self:_get_repo()
+  local repo, err = self:_get_repo(entry)
   if err then
     console.debug.error(err)
     return
@@ -408,9 +483,11 @@ function StatusDiffView:unstage_hunk()
 
   self:_after_hunk_operation('staged', filename, hunk_index, function()
     if not self:_move_to_first_entry_of_type('staged') then
-      if not self:move_to_entry(filename, 'unstaged') then self:_navigate_to_preferred_entry('unstaged', 'staged') end
+      if not self:move_to_entry(filename, 'unstaged', repo) then
+        self:_navigate_to_preferred_entry('unstaged', 'staged')
+      end
     end
-  end)
+  end, repo)
 end
 
 function StatusDiffView:stage_entry(opts)
@@ -419,9 +496,9 @@ function StatusDiffView:stage_entry(opts)
   if entry.type ~= 'unstaged' then return end
 
   local filename = entry.status.filename
-  local next_file = self:find_next_file(filename, 'unstaged')
+  local next_file, next_repo = self:find_next_file(filename, 'unstaged', entry.repo)
 
-  local repo, err = self:_get_repo()
+  local repo, err = self:_get_repo(entry)
   if err then
     console.debug.error(err)
     return
@@ -437,15 +514,17 @@ function StatusDiffView:stage_entry(opts)
 
   self:refresh_and_navigate(function()
     if follow_same_file then
-      if not self:move_to_entry(filename, 'staged') then self:_navigate_to_preferred_entry('staged', 'unstaged') end
+      if not self:move_to_entry(filename, 'staged', repo) then
+        self:_navigate_to_preferred_entry('staged', 'unstaged')
+      end
     else
       if next_file then
-        self:move_to_entry(next_file, 'unstaged')
+        self:move_to_entry(next_file, 'unstaged', next_repo)
       else
         self:_navigate_to_preferred_entry('unstaged', 'staged')
       end
     end
-  end)
+  end, repo)
 end
 
 function StatusDiffView:unstage_entry(opts)
@@ -454,9 +533,9 @@ function StatusDiffView:unstage_entry(opts)
   if entry.type ~= 'staged' then return end
 
   local filename = entry.status.filename
-  local next_file = self:find_next_file(filename, 'staged')
+  local next_file, next_repo = self:find_next_file(filename, 'staged', entry.repo)
 
-  local repo, err = self:_get_repo()
+  local repo, err = self:_get_repo(entry)
   if err then
     console.debug.error(err)
     return
@@ -472,15 +551,17 @@ function StatusDiffView:unstage_entry(opts)
 
   self:refresh_and_navigate(function()
     if follow_same_file then
-      if not self:move_to_entry(filename, 'unstaged') then self:_navigate_to_preferred_entry('unstaged', 'staged') end
+      if not self:move_to_entry(filename, 'unstaged', repo) then
+        self:_navigate_to_preferred_entry('unstaged', 'staged')
+      end
     else
       if next_file then
-        self:move_to_entry(next_file, 'staged')
+        self:move_to_entry(next_file, 'staged', next_repo)
       else
         self:_navigate_to_preferred_entry('staged', 'unstaged')
       end
     end
-  end)
+  end, repo)
 end
 
 function StatusDiffView:reset_entry()
@@ -493,9 +574,9 @@ function StatusDiffView:reset_entry()
 
   local filename = entry.status.filename
   local entry_type = entry.type
-  local next_file = self:find_next_file(filename, entry_type)
+  local next_file, next_repo = self:find_next_file(filename, entry_type, entry.repo)
 
-  local repo, err = self:_get_repo()
+  local repo, err = self:_get_repo(entry)
   if err then
     console.debug.error(err)
     return
@@ -517,11 +598,11 @@ function StatusDiffView:reset_entry()
 
   self:refresh_and_navigate(function()
     if next_file then
-      self:move_to_entry(next_file, entry_type)
+      self:move_to_entry(next_file, entry_type, next_repo)
     else
       self:_navigate_to_preferred_entry('unstaged', 'staged')
     end
-  end)
+  end, repo)
 end
 
 function StatusDiffView:_is_commit_split_open()
@@ -535,7 +616,7 @@ function StatusDiffView:_close_commit_split()
   end
 end
 
-function StatusDiffView:_confirm_commit()
+function StatusDiffView:_confirm_commit(repo)
   if not self._commit_view or not self._commit_view:is_valid() then return end
   local lines = self._commit_view:get_lines()
 
@@ -554,10 +635,13 @@ function StatusDiffView:_confirm_commit()
     return
   end
 
-  local repo, repo_err = self:_get_repo()
-  if repo_err then
-    console.debug.error(repo_err)
-    return
+  if not repo then
+    local repo_err
+    repo, repo_err = self:_get_repo()
+    if repo_err then
+      console.debug.error(repo_err)
+      return
+    end
   end
 
   local _, err = repo:commit(message)
@@ -585,7 +669,13 @@ function StatusDiffView:commit()
   lines[#lines + 1] = '# Press ' .. confirm_key .. ' to confirm, ' .. cancel_key .. ' to cancel.'
   lines[#lines + 1] = '# Lines starting with # will be ignored.'
 
-  local refs = self._repo:refs()
+  local repo, err = self:_get_selected_repo()
+  if err then
+    console.debug.error(err)
+    return
+  end
+
+  local refs = repo:refs()
   if refs then
     local branch = refs:current_branch()
     if branch then
@@ -594,14 +684,12 @@ function StatusDiffView:commit()
     end
   end
 
-  if self._data and self._data.entries then
-    for _, group in ipairs(self._data.entries) do
-      if group.entries and #group.entries > 0 then
-        lines[#lines + 1] = '#'
-        lines[#lines + 1] = '# ' .. group.title .. ':'
-        for _, entry in ipairs(group.entries) do
-          if entry.status then lines[#lines + 1] = '#   ' .. entry.status.value .. ' ' .. entry.status.filename end
-        end
+  for _, group in ipairs(self:_sections_for(repo)) do
+    if group.entries and #group.entries > 0 then
+      lines[#lines + 1] = '#'
+      lines[#lines + 1] = '# ' .. group.title .. ':'
+      for _, entry in ipairs(group.entries) do
+        if entry.status then lines[#lines + 1] = '#   ' .. entry.status.value .. ' ' .. entry.status.filename end
       end
     end
   end
@@ -612,7 +700,7 @@ function StatusDiffView:commit()
     confirm_key = confirm_key,
     cancel_key = cancel_key,
     on_confirm = function()
-      self:_confirm_commit()
+      self:_confirm_commit(repo)
     end,
     on_cancel = function()
       self:_close_commit_split()
@@ -630,6 +718,8 @@ function StatusDiffView:open_file()
   if not self:_is_valid_entry(entry) then return end
 
   local filename = entry.status.filename
+  local repo = self:_get_repo(entry)
+  if repo then filename = fs.absolute_path(repo:get_path(), filename) end
   local mark = self._diff_component and self._diff_component:get_current_mark_under_cursor()
 
   self:destroy()
@@ -668,7 +758,7 @@ function StatusDiffView:_handle_file_selection_change(item)
     return
   end
 
-  local repo, repo_err = self:_get_repo()
+  local repo, repo_err = self:_get_repo(entry)
   if repo_err then
     console.debug.error(repo_err)
     return
@@ -730,7 +820,7 @@ function StatusDiffView:_handle_file_selection_change(item)
 end
 
 function StatusDiffView:stage_all()
-  local repo, err = self:_get_repo()
+  local repo, err = self:_get_selected_repo()
   if err then
     console.debug.error(err)
     return
@@ -743,11 +833,11 @@ function StatusDiffView:stage_all()
 
   self:refresh_and_navigate(function()
     if not self:_move_to_first_entry_of_type('staged') then self:_move_to_first_entry() end
-  end)
+  end, repo)
 end
 
 function StatusDiffView:unstage_all()
-  local repo, err = self:_get_repo()
+  local repo, err = self:_get_selected_repo()
   if err then
     console.debug.error(err)
     return
@@ -760,14 +850,14 @@ function StatusDiffView:unstage_all()
 
   self:refresh_and_navigate(function()
     if not self:_move_to_first_entry_of_type('unstaged') then self:_move_to_first_entry() end
-  end)
+  end, repo)
 end
 
 function StatusDiffView:reset_all()
   event.await()
   if not self:_confirm('Are you sure you want to discard all changes? (y/N) ') then return end
 
-  local repo, err = self:_get_repo()
+  local repo, err = self:_get_selected_repo()
   if err then
     console.debug.error(err)
     return
@@ -779,7 +869,7 @@ function StatusDiffView:reset_all()
   end
 
   self._refreshing = true
-  local has_data = self:refresh_data()
+  local has_data = self:refresh_data(repo)
   if has_data == false then
     self._refreshing = false
     self:destroy()
@@ -791,31 +881,85 @@ function StatusDiffView:reset_all()
   self:_refresh_diff()
 end
 
-function StatusDiffView:refresh_data()
+function StatusDiffView:_load_entries(repo)
+  if self._repos then
+    local repos = repo and { repo } or self._repos
+    return merge_groups(repo and self._entries or {}, GitStatusStream(repos):wait()), nil
+  end
+
+  local current, err = self:_get_repo()
+  if err then return nil, err end
+
+  local data, status_err = current:status(self._opts)
+  if status_err then return nil, status_err end
+
+  return data and data.entries, nil
+end
+
+function StatusDiffView:_set_entries(entries)
+  self._entries = entries
+  self._tree_component:set_list(to_folds(entries))
+end
+
+function StatusDiffView:refresh_data(repo)
   event.await()
 
-  local repo, err = self:_get_repo()
-  if err then return end
-
-  local data, status_err = repo:status(self._opts)
-  if status_err then
-    console.debug.error(status_err)
+  local entries, err = self:_load_entries(repo)
+  if err then
+    console.debug.error(err)
     return
   end
 
-  if not data or utils.object.is_empty(data.entries) then return false end
+  if not entries or utils.object.is_empty(entries) then return false end
 
-  local file_groups = {}
-  for _, entry in ipairs(data.entries) do
-    file_groups[#file_groups + 1] = {
-      open = true,
-      value = entry.title,
-      metadata = {},
-      items = entry.entries,
-    }
+  self:_set_entries(entries)
+end
+
+function StatusDiffView:_stream_repos(stream)
+  self._stream_gen = self._stream_gen + 1
+  local gen = self._stream_gen
+
+  local groups = {}
+  local applied_at = vim.uv.now()
+  while not stream:is_done() do
+    event.sleep(GitStatusStream.POLL_MS)
+    if self:is_destroyed() or gen ~= self._stream_gen then return false end
+
+    vim.list_extend(groups, stream:collect())
+    if #groups > 0 and (stream:is_done() or vim.uv.now() - applied_at >= self.STREAM_APPLY_MS) then
+      self:_merge_groups(groups)
+      groups = {}
+      applied_at = vim.uv.now()
+    end
   end
 
-  self._tree_component:set_list(file_groups)
+  return not self:is_destroyed()
+end
+
+function StatusDiffView:_merge_groups(groups)
+  local entries = merge_groups(self._entries, groups)
+  if #entries == 0 then
+    self:destroy()
+    return
+  end
+
+  local item = self._tree_component:get_current_list_item()
+  self._refreshing = true
+  self:_set_entries(entries)
+  if item then self:_reselect(item) end
+  self._refreshing = false
+end
+
+function StatusDiffView:_reselect(item)
+  local _, lnum = self._tree_component:find_list_item(function(other)
+    if item.entry and other.entry then
+      return other.entry.repo == item.entry.repo
+        and other.entry.type == item.entry.type
+        and other.entry.path == item.entry.path
+    end
+    return not item.entry and not other.entry and other.repo == item.repo and other.value == item.value
+  end)
+  if lnum and lnum ~= self._tree_component:get_lnum() then self._tree_component:set_lnum(lnum) end
 end
 
 function StatusDiffView:setup_keymaps()
@@ -887,14 +1031,19 @@ function StatusDiffView:setup_keymaps()
   local stash_key = keymap.get_key(diff_keymaps.stash)
   if stash_key then
     local stash_fn = self:_make_debounced(function()
-      local _, err = self._repo:stash_add()
+      local repo, repo_err = self:_get_selected_repo()
+      if repo_err then
+        console.debug.error(repo_err)
+        return
+      end
+      local _, err = repo:stash_add()
       if err then
         console.error(err[1] or tostring(err))
         return
       end
       console.info('Changes stashed')
       self._refreshing = true
-      local has_data = self:refresh_data()
+      local has_data = self:refresh_data(repo)
       if has_data == false then
         self._refreshing = false
         self:destroy()
@@ -960,16 +1109,10 @@ function StatusDiffView:_create_view(data)
   end
 
   self._repo = repo
+  self._repos = data.repos
+  self._entries = data.entries
 
-  local file_groups = {}
-  for _, entry in ipairs(data.entries) do
-    file_groups[#file_groups + 1] = {
-      open = true,
-      value = entry.title,
-      metadata = {},
-      items = entry.entries,
-    }
-  end
+  local file_groups = to_folds(data.entries)
 
   local diff_keymaps = status_diff_view_setting:get('keymaps')
   local tree_keymaps = {
@@ -1065,12 +1208,12 @@ function StatusDiffView:_create_view(data)
 
     local moved = false
     if data.current_filename then
-      moved = self._tree_component:move_to(function(status, entry_type)
-        return status.filename == data.current_filename and entry_type == 'unstaged'
+      moved = self._tree_component:move_to(function(status, entry_type, _, entry)
+        return status.filename == data.current_filename and entry_type == 'unstaged' and in_repo(entry, repo)
       end)
       if not moved then
-        moved = self._tree_component:move_to(function(status)
-          return status.filename == data.current_filename
+        moved = self._tree_component:move_to(function(status, _, _, entry)
+          return status.filename == data.current_filename and in_repo(entry, repo)
         end)
       end
     end
@@ -1083,27 +1226,41 @@ function StatusDiffView:_create_view(data)
     end
   end
 
+  if data.stream then event.async(self._stream_repos)(self, data.stream) end
+
   return true
 end
 
-function StatusDiffView:on_git_change()
+function StatusDiffView:on_git_change(data)
   if self._refreshing then return end
+
+  local changed_repo = data and data.git_dir and repository.for_git_dir(data.git_dir)
+  if self._repos and not changed_repo then
+    if self:_stream_repos(GitStatusStream(self._repos)) then self:_refresh_diff() end
+    return
+  end
 
   local entry = self:get_current_entry()
   local filename = entry and entry.status and entry.status.filename
   local entry_type = entry and entry.type
+  local repo = entry and entry.repo
 
-  local has_data = self:refresh_data()
+  local has_data = self:refresh_data(changed_repo)
 
   if has_data == false then
     self:destroy()
     return
   end
 
+  if self._repos and entry and changed_repo ~= repo then
+    self:move_to_entry(filename, entry_type, repo)
+    return
+  end
+
   if filename then
     local found_type = nil
-    self._tree_component:each_entry(function(status, et)
-      if status.filename == filename then
+    self._tree_component:each_entry(function(status, et, _, other)
+      if status.filename == filename and in_repo(other, repo) then
         if et == entry_type then
           found_type = entry_type
         elseif not found_type then
@@ -1113,7 +1270,7 @@ function StatusDiffView:on_git_change()
     end)
 
     if found_type then
-      self:move_to_entry(filename, found_type)
+      self:move_to_entry(filename, found_type, repo)
       self:_refresh_diff()
     else
       self:_move_to_first_entry()

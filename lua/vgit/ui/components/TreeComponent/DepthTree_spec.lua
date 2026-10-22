@@ -181,25 +181,4 @@ describe('DepthTree:', function()
       assert.are.equal('z.lua', src.items[2].value)
     end)
   end)
-
-  describe('find_parent_node', function()
-    it('should find parent by path', function()
-      local tree = DepthTree()
-      tree:from_entries({
-        { id = 1, status = { filename = 'src' .. sep .. 'init.lua' }, type = 'changed' },
-      })
-      local parent = tree:find_parent_node({ parent = sep .. 'src' })
-      assert.is_not_nil(parent)
-      assert.are.equal('src', parent.value)
-    end)
-
-    it('should return nil when parent is not found', function()
-      local tree = DepthTree()
-      tree:from_entries({
-        { id = 1, status = { filename = 'file.lua' }, type = 'changed' },
-      })
-      local parent = tree:find_parent_node({ parent = sep .. 'nonexistent' })
-      assert.is_nil(parent)
-    end)
-  end)
 end)

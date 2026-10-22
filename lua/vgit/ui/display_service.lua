@@ -21,9 +21,9 @@ local _event_cleanups = {}
 local _showing = false
 local display_service = {}
 
-local function refresh_active_view()
+local function refresh_active_view(args)
   if active_view and active_view.on_git_change then
-    active_view:on_git_change()
+    active_view:on_git_change(args and args.data)
     if active_view and active_view:is_destroyed() then active_view = nil end
   end
 end

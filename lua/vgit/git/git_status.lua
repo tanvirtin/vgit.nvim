@@ -6,25 +6,21 @@ local GitQueryBuilder = lazy('vgit.git.GitQueryBuilder')
 
 local git_status = {}
 
+function git_status.start(reponame, filename)
+  return GitQueryBuilder(reponame):status():file(filename or '.'):start():map(function(result)
+    local files = {}
+    for i = 1, #result do
+      files[i] = GitStatus(result[i])
+    end
+    return files, nil
+  end)
+end
+
 function git_status.ls(reponame, filename)
   if not reponame then return nil, { 'reponame is required' } end
 
-  local query = GitQueryBuilder(reponame):status()
-
-  if filename then
-    query:file(filename)
-  else
-    query:file('.')
-  end
-
-  local result, err = query:execute()
+  local files, err = git_status.start(reponame, filename):wait()
   if err then return nil, err end
-
-  local result_len = #result
-  local files = {}
-  for i = 1, result_len do
-    files[i] = GitStatus(result[i])
-  end
 
   if filename then return files[1], nil end
   return files, nil

@@ -1,19 +1,43 @@
 local lazy = require('vgit.core.lazy')
 
 local fs = lazy('vgit.core.fs')
+local event = lazy('vgit.core.event')
 local git_repo = lazy('vgit.git.git_repo')
 local GitRepository = lazy('vgit.git.GitRepository')
 
+local IGNORED_FOLDERS = { ['.git'] = true, node_modules = true }
+
 local _instances = {}
+local _by_git_dir = {}
 local _last = nil
 
 local repository = {}
 
-local function remember(repo)
+local function intern(repo)
   local path = repo:get_path()
-  if not _instances[path] then _instances[path] = repo end
-  _last = _instances[path]
+  if not _instances[path] then
+    _instances[path] = repo
+    local git_dir = git_repo.git_dir(path)
+    if git_dir then _by_git_dir[git_dir] = repo end
+    event.watch(git_dir)
+  end
+  return _instances[path]
+end
+
+local function remember(repo)
+  _last = intern(repo)
   return _last
+end
+
+local function child_repos(dirname)
+  local repos = {}
+  for name, type in vim.fs.dir(dirname) do
+    local path = dirname .. '/' .. name
+    if type == 'directory' and not IGNORED_FOLDERS[name] and fs.exists(path .. '/.git') then
+      repos[#repos + 1] = GitRepository.at(vim.uv.fs_realpath(path))
+    end
+  end
+  return repos
 end
 
 local function current_filepath()
@@ -36,6 +60,39 @@ function repository.current()
   return remember(repo), nil
 end
 
+function repository.list()
+  local repos = {}
+  local seen = {}
+
+  local function add(repo)
+    if not repo then return end
+    repo = intern(repo)
+    local path = repo:get_path()
+    if seen[path] then return end
+    seen[path] = true
+    repos[#repos + 1] = repo
+  end
+
+  local filepath = current_filepath()
+  if filepath then add(repository.for_path(filepath)) end
+
+  local cwd = vim.uv.cwd()
+  add(GitRepository.discover(cwd))
+  for _, repo in ipairs(child_repos(cwd)) do
+    add(repo)
+  end
+
+  table.sort(repos, function(a, b)
+    return a:get_path() < b:get_path()
+  end)
+
+  return repos
+end
+
+function repository.for_git_dir(git_dir)
+  return _by_git_dir[git_dir]
+end
+
 function repository.for_path(path)
   if not path or path == '' then return nil, { 'path is required' } end
 
@@ -46,11 +103,14 @@ function repository.for_path(path)
     absolute_path = parent
   end
 
-  return GitRepository.discover(absolute_path)
+  local repo, err = GitRepository.discover(absolute_path)
+  if err then return nil, err end
+  return intern(repo), nil
 end
 
 function repository.invalidate()
   _instances = {}
+  _by_git_dir = {}
   _last = nil
 end
 
