@@ -199,6 +199,8 @@ function expect(ctx, spec)
   local e = spec.expect
   if not e then return end
 
+  if e.assert then e.assert(ctx) end
+
   if e.git_status ~= nil then assert.are.same(e.git_status, ctx.world:git(ctx.repo, 'status', '--porcelain')) end
 
   for _, text in ipairs(e.screen_has or {}) do
