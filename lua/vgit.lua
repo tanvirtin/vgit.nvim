@@ -163,6 +163,10 @@ local setup_done = false
 
 function controller.setup(config)
   if setup_done then return end
+  if not vim.async then
+    vim.notify('VGit requires Neovim 0.13+ for vim.async, found ' .. tostring(vim.version()), vim.log.levels.ERROR)
+    return
+  end
   setup_done = true
 
   configure_settings(config)

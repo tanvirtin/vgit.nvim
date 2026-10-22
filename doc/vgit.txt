@@ -5,7 +5,7 @@ A Git integration plugin for Neovim that enhances your Git experience visually.
 ==============================================================================
 REQUIREMENTS                                                 *vgit-requirements*
 
-- Neovim >= 0.10.0
+- Neovim >= 0.13 (VGit uses `vim.async`)
 - Git >= 2.18.0
 
 License: MIT

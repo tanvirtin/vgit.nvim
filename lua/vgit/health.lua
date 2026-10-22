@@ -2,10 +2,12 @@ local health = {}
 
 health.check = function()
   vim.health.start('Neovim version')
-  local v = vim.version()
-  local version_str = string.format('%d.%d.%d', v.major, v.minor, v.patch)
-  if v.major == 0 and v.minor < 10 then
-    vim.health.error('Neovim >= 0.10.0 is required, found ' .. version_str, { 'Upgrade Neovim to 0.10.0 or later' })
+  local version_str = tostring(vim.version())
+  if not vim.async then
+    vim.health.error(
+      'Neovim 0.13+ is required for vim.async, found ' .. version_str,
+      { 'Upgrade Neovim to 0.13 or later' }
+    )
   else
     vim.health.ok('Neovim ' .. version_str)
   end

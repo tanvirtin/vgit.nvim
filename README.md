@@ -84,7 +84,7 @@ Enable live blame annotations directly in your editor to see the author and comm
 
 **Requirements**
 ---
-- Neovim `0.10+`
+- Neovim `0.13+` (VGit uses `vim.async`)
 - Git `2.18.0+`
 - Supported Operating Systems:
     - `linux-gnu*`
