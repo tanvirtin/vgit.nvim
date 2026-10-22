@@ -286,6 +286,36 @@ describe('scenario: a folder of repos', function()
     },
   })
 
+  scenario.flow('a commit outside the editor updates only the buffers of its repo', {
+    arrange = workspace(function(ctx)
+      change_alpha(ctx)
+      ctx.world:write(ctx.ws .. '/beta/b.txt', { 'dos' })
+    end),
+    steps = {
+      { cd = '$ws' },
+      { edit = '$ws/beta/b.txt' },
+      { expect = { signs = { { lnum = 1 } } } },
+      { edit = '$repo/a.txt' },
+      { expect = { signs = { { lnum = 5 } } } },
+      {
+        run = function(ctx)
+          ctx.world:git(ctx.ws .. '/beta', 'commit', '-qam', 'external commit')
+        end,
+      },
+      { settle = 2000 },
+      { expect = { signs = { { lnum = 5 } } } },
+      { cmd = 'buffer b.txt' },
+      {
+        expect = {
+          assert = function(ctx)
+            assert.are.same(0, #ctx.observe.signs(ctx))
+          end,
+        },
+        settle_ms = 8000,
+      },
+    },
+  })
+
   scenario.flow(':VGit status with no file open lists the changes of every repo', {
     arrange = workspace(change_both),
     steps = {

@@ -557,80 +557,6 @@ describe('git_buffer_store:', function()
     end)
   end)
 
-  describe('VGitChange sync flow', function()
-    it('should call clear_blob_cache on buffers during sync iteration', function()
-      local cache_cleared = false
-      local sync_dispatched = false
-
-      local buffer_with_cache = {
-        bufnr = 10,
-        clear_blob_cache = function()
-          cache_cleared = true
-        end,
-      }
-
-      git_buffer_store.on('sync', function()
-        sync_dispatched = true
-      end)
-
-      git_buffer_store.add(buffer_with_cache)
-
-      git_buffer_store.for_each(function(buffer)
-        buffer:clear_blob_cache()
-        git_buffer_store.dispatch(buffer, 'sync')
-      end)
-
-      eq(cache_cleared, true)
-      eq(sync_dispatched, true)
-    end)
-
-    it('should handle buffers without clear_blob_cache gracefully', function()
-      local buffer_without_cache = {
-        bufnr = 11,
-      }
-
-      git_buffer_store.add(buffer_without_cache)
-
-      local success = pcall(function()
-        git_buffer_store.for_each(function(buffer)
-          buffer:clear_blob_cache()
-        end)
-      end)
-
-      eq(success, false)
-    end)
-
-    it('should clear blob cache and dispatch sync for all buffers', function()
-      local cleared = {}
-      local synced = {}
-
-      for i = 1, 3 do
-        git_buffer_store.add({
-          bufnr = 20 + i,
-          clear_blob_cache = function(self)
-            cleared[#cleared + 1] = self.bufnr
-          end,
-        })
-      end
-
-      git_buffer_store.on('sync', function(buffer)
-        synced[#synced + 1] = buffer.bufnr
-      end)
-
-      git_buffer_store.for_each(function(buffer)
-        buffer:clear_blob_cache()
-        git_buffer_store.dispatch(buffer, 'sync')
-      end)
-
-      table.sort(cleared)
-      table.sort(synced)
-
-      eq(#cleared, 3)
-      eq(#synced, 3)
-      eq(cleared, synced)
-    end)
-  end)
-
   describe('edge cases', function()
     it('should handle string bufnr conversion', function()
       local buffer1 = { bufnr = 1 }
@@ -712,6 +638,7 @@ describe('git_buffer_store (integration with real GitBuffer):', function()
   local after_each = async.after_each
 
   local GitBuffer = require('vgit.git.GitBuffer')
+  local git_repo = require('vgit.git.git_repo')
   local git_buffer_store = require('vgit.git.git_buffer_store')
   local repo
   local test_file
@@ -743,6 +670,50 @@ describe('git_buffer_store (integration with real GitBuffer):', function()
     created_bufnrs[#created_bufnrs + 1] = bufnr
     return bufnr
   end
+
+  describe('sync', function()
+    local other_repo
+
+    before_each(function()
+      local err
+      other_repo, err = test_repo.create_repo({ initial_commit = true, files = { ['other.txt'] = { 'other' } } })
+      assert(not err, 'Failed to create test repo')
+    end)
+
+    after_each(function()
+      if other_repo then test_repo.cleanup(other_repo) end
+    end)
+
+    local function register(filepath)
+      local bufnr = create_buf(filepath)
+      git_buffer_store.register_buffer(git_buffer_store.create_and_validate_buffer(bufnr))
+      return bufnr
+    end
+
+    local function synced_by(git_dir)
+      local synced = {}
+      git_buffer_store.on('sync', function(buffer)
+        synced[#synced + 1] = buffer.bufnr
+      end)
+      git_buffer_store.sync(git_dir)
+      table.sort(synced)
+      return synced
+    end
+
+    it('should sync only the buffers of the repo that changed', function()
+      register(test_file)
+      local other_bufnr = register(other_repo .. '/other.txt')
+
+      eq({ other_bufnr }, synced_by(git_repo.git_dir(vim.uv.fs_realpath(other_repo))))
+    end)
+
+    it('should sync every buffer when the changed repo is unknown', function()
+      local bufnrs = { register(test_file), register(other_repo .. '/other.txt') }
+      table.sort(bufnrs)
+
+      eq(bufnrs, synced_by(nil))
+    end)
+  end)
 
   it('should create real GitBuffer with clear_blob_cache method', function()
     local bufnr = create_buf(test_file)

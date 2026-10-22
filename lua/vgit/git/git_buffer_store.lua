@@ -11,6 +11,7 @@ local repository = lazy('vgit.git.repository')
 local statusline = lazy('vgit.core.statusline_state')
 
 local buffers = {}
+local repo_paths = {}
 local events = {
   sync = {},
   attach = {},
@@ -40,13 +41,8 @@ git_buffer_store.register_events = event.async(function()
     if vim.bo.buftype == '' then update_branch(repository.current()) end
   end)
 
-  event.custom_on('VGitChange', function()
-    git_repo.clear_cache()
-    git_buffer_store.for_each(function(buffer)
-      buffer:clear_blob_cache()
-      git_buffer_store.dispatch(buffer, 'sync')
-    end)
-
+  event.custom_on('VGitChange', function(args)
+    git_buffer_store.sync(args.data and args.data.git_dir)
     update_branch(repository.current())
   end)
 
@@ -65,6 +61,17 @@ git_buffer_store.register_events = event.async(function()
   end
   update_branch(repository.current())
 end)
+
+git_buffer_store.sync = function(git_dir)
+  local changed = git_dir and repository.for_git_dir(git_dir)
+  local changed_path = changed and changed:get_path()
+
+  git_buffer_store.for_each(function(buffer)
+    if changed_path and repo_paths[tostring(buffer.bufnr)] ~= changed_path then return end
+    buffer:clear_blob_cache()
+    git_buffer_store.dispatch(buffer, 'sync')
+  end)
+end
 
 git_buffer_store.for_each = function(callback)
   for _, git_buffer in pairs(buffers) do
@@ -105,6 +112,7 @@ git_buffer_store.remove = function(buffer)
   if not buffer then return end
 
   buffers[bufnr] = nil
+  repo_paths[bufnr] = nil
 
   return buffer
 end
@@ -139,10 +147,12 @@ end
 
 git_buffer_store.clear_buffers = function()
   buffers = {}
+  repo_paths = {}
 end
 
 git_buffer_store.reset = function()
   buffers = {}
+  repo_paths = {}
   events = {
     sync = {},
     attach = {},
@@ -178,7 +188,8 @@ git_buffer_store.register_buffer = function(git_buffer)
   end
 
   git_buffer_store.add(git_buffer)
-  repository.for_path(git_buffer:get_name())
+  local repo = repository.for_path(git_buffer:get_name())
+  repo_paths[tostring(git_buffer.bufnr)] = repo and repo:get_path()
 
   git_buffer
     :attach_to_changes({
