@@ -80,6 +80,12 @@ describe('GitStatus:', function()
       eq(status.filetype, 'lua')
     end)
 
+    it('should have no filetype for an unknown name without an extension', function()
+      local status = GitStatus('?? notes')
+
+      assert.is_nil(status.filetype)
+    end)
+
     it('should detect the filetype on first access and only once', function()
       local fs = require('vgit.core.fs')
       local original_detect = fs.detect_filetype

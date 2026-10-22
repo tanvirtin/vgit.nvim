@@ -88,7 +88,7 @@ end
 
 function GitStatus:__index(key)
   if key == 'filetype' and rawget(self, '$filetype') == nil then
-    rawset(self, '$filetype', fs.detect_filetype(rawget(self, '$filename')))
+    rawset(self, '$filetype', (fs.detect_filetype(rawget(self, '$filename'))))
   end
   return Object.__index(self, key)
 end
