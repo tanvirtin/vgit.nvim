@@ -2,6 +2,7 @@ local lazy = require('vgit.core.lazy')
 
 local fs = lazy('vgit.core.fs')
 local Diff = lazy('vgit.core.diff.Diff')
+local patch = lazy('vgit.core.patch')
 local git_hunks = lazy('vgit.git.git_hunks')
 local sign = lazy('vgit.core.sign')
 local highlight = lazy('vgit.core.highlight')
@@ -9,7 +10,6 @@ local git_setting = lazy('vgit.settings.git')
 local scene_setting = lazy('vgit.settings.scene')
 local display_service = lazy('vgit.ui.display_service')
 local DiffAnnotator = lazy('vgit.ui.annotators.DiffAnnotator')
-local PatchLineBuilder = lazy('vgit.ui.components.PatchLineBuilder')
 local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
 local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
 
@@ -133,30 +133,32 @@ function api.patch(files, opts)
     }
   end
 
-  local lines, line_metadata, file_sections, _, line_numbers = PatchLineBuilder.build(entries)
-  local highlights = DiffStyleAnnotator.annotate(lines, line_metadata)
+  local layout = patch.build(entries, {
+    style = DiffStyleAnnotator.annotate,
+    words = word_overlays,
+  })
 
-  if opts.syntax ~= false then add_syntax(highlights, lines, file_sections) end
+  if opts.syntax ~= false then add_syntax(layout.highlights, layout.lines, layout.file_sections) end
 
   local rows = {}
 
-  for i = 1, #lines do
-    local meta = line_metadata[i]
+  for i = 1, #layout.lines do
+    local meta = layout.line_metadata[i]
 
     rows[i] = {
       kind = kind_of(meta),
       old_lnum = meta and meta.old_lnum,
       new_lnum = meta and meta.new_lnum,
       filename = meta and meta.filename,
-      number = line_numbers[i],
+      number = layout.line_numbers[i],
     }
   end
 
   return {
-    lines = lines,
+    lines = layout.lines,
     rows = rows,
-    highlights = highlights,
-    words = word_overlays(lines, line_metadata),
+    highlights = layout.highlights,
+    words = layout.words,
     stat = stat,
   }
 end

@@ -1,12 +1,13 @@
 local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
+local patch = lazy('vgit.core.patch')
 local symbols_setting = lazy('vgit.settings.symbols')
 local DiffAnnotator = lazy('vgit.ui.annotators.DiffAnnotator')
 local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
 local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
 local DiffViewportComponent = lazy('vgit.ui.DiffViewportComponent')
-local PatchLineBuilder = lazy('vgit.ui.components.PatchLineBuilder')
+local PatchLineBuilder = lazy('vgit.core.patch.PatchLineBuilder')
 
 local PatchPreviewComponent = DiffViewportComponent:extend()
 
@@ -92,14 +93,14 @@ function PatchPreviewComponent:render()
     return
   end
 
-  local lines, line_metadata, file_sections, marks, line_numbers, raw_lnums, max_lnum =
-    PatchLineBuilder.build(hunk_entries)
+  local layout = patch.build(hunk_entries, { style = DiffStyleAnnotator.annotate })
+  local lines = layout.lines
   self.state.lines = lines
-  self.state.line_metadata = line_metadata
-  self.state.marks = marks or {}
-  self.state._line_numbers = line_numbers or {}
-  self.state._raw_lnums = raw_lnums or {}
-  self.state._max_lnum = max_lnum or 0
+  self.state.line_metadata = layout.line_metadata
+  self.state.marks = layout.marks or {}
+  self.state._line_numbers = layout.line_numbers or {}
+  self.state._raw_lnums = layout.raw_lnums or {}
+  self.state._max_lnum = layout.max_lnum or 0
 
   if #lines == 0 then
     self:clear_lines()
@@ -112,11 +113,10 @@ function PatchPreviewComponent:render()
     el:enable_cursorline()
   end)
 
-  local diff_highlights = DiffStyleAnnotator.annotate(lines, line_metadata)
-  self.state._diff_hl_map = self:_build_highlight_map(diff_highlights)
+  self.state._diff_hl_map = self:_build_highlight_map(layout.highlights)
 
   self.state._syntax_hl_map = {}
-  self.state._syntax_sections = file_sections
+  self.state._syntax_sections = layout.file_sections
 
   self:_ensure_renderer_attached()
 end
@@ -131,7 +131,8 @@ function PatchPreviewComponent:append_hunk_entries(hunk_entries)
     return
   end
 
-  local lines, line_metadata, file_sections, marks, _, raw_lnums, max_lnum = PatchLineBuilder.build(hunk_entries)
+  local layout = patch.build(hunk_entries, { style = DiffStyleAnnotator.annotate })
+  local lines = layout.lines
   if #lines == 0 then return end
 
   vim.list_extend(self.props.hunk_entries, hunk_entries)
@@ -144,15 +145,15 @@ function PatchPreviewComponent:append_hunk_entries(hunk_entries)
   state._raw_lnums[blank_row + 1] = { lnum = nil, hl = 'GitLineNr' }
   for i, line in ipairs(lines) do
     state.lines[row_offset + i] = line
-    state.line_metadata[row_offset + i] = line_metadata[i]
-    state._raw_lnums[row_offset + i] = raw_lnums[i]
+    state.line_metadata[row_offset + i] = layout.line_metadata[i]
+    state._raw_lnums[row_offset + i] = layout.raw_lnums[i]
   end
 
-  for _, mark in ipairs(marks) do
+  for _, mark in ipairs(layout.marks) do
     state.marks[#state.marks + 1] = { top = mark.top + row_offset, bot = mark.bot + row_offset }
   end
 
-  for _, section in ipairs(file_sections) do
+  for _, section in ipairs(layout.file_sections) do
     section.start_row = section.start_row + row_offset
     section.end_row = section.end_row + row_offset
     for _, mapping in ipairs(section.syntax_mappings) do
@@ -162,7 +163,7 @@ function PatchPreviewComponent:append_hunk_entries(hunk_entries)
   end
 
   local diff_hl_map = state._diff_hl_map
-  for _, hl in ipairs(DiffStyleAnnotator.annotate(lines, line_metadata)) do
+  for _, hl in ipairs(layout.highlights) do
     hl.row = hl.row + row_offset
     local row_hls = diff_hl_map[hl.row]
     if not row_hls then
@@ -173,7 +174,7 @@ function PatchPreviewComponent:append_hunk_entries(hunk_entries)
   end
 
   local previous_width = PatchLineBuilder.lnum_width(state._max_lnum)
-  state._max_lnum = math.max(state._max_lnum, max_lnum)
+  state._max_lnum = math.max(state._max_lnum, layout.max_lnum)
   if PatchLineBuilder.lnum_width(state._max_lnum) ~= previous_width then
     state._line_numbers = PatchLineBuilder.format_line_numbers(state._raw_lnums, state._max_lnum)
   else
