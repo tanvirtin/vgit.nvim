@@ -50,7 +50,8 @@ function api.diff(old_lines, new_lines, opts)
 
   if opts.groups then ensure_highlights() end
 
-  local data = vgit_diff.data(old_lines, new_lines, opts)
+  local diff_opts = vim.tbl_extend('force', { algorithm = git_setting:get('algorithm') }, opts)
+  local data = vgit_diff.data(old_lines, new_lines, diff_opts)
 
   if opts.groups then data.words = map_word_groups(data.words) end
 
@@ -132,6 +133,7 @@ function api.patch(files, opts)
     words = opts.groups and word_overlays or nil,
     header = opts.header,
     context = opts.context or api.CONTEXT,
+    algorithm = opts.algorithm or git_setting:get('algorithm'),
   })
 
   if opts.syntax then add_syntax(layout.highlights, layout.lines, layout.file_sections) end
@@ -202,7 +204,11 @@ function api.show(spec)
       filename = file.filename,
       filetype = filetype_of(file),
       layout_type = layout,
-      diff = vgit_diff.compute(file.old_lines or {}, file.new_lines or {}, { layout = layout }),
+      diff = vgit_diff.compute(
+        file.old_lines or {},
+        file.new_lines or {},
+        { layout = layout, algorithm = git_setting:get('algorithm') }
+      ),
       keymaps = spec.keymaps,
     })
 
@@ -216,7 +222,7 @@ function api.show(spec)
 
     entries[#entries + 1] = {
       status = { filename = file.filename, filetype = filetype_of(file) },
-      diff = vgit_diff.compute(old_lines, new_lines, { layout = layout }),
+      diff = vgit_diff.compute(old_lines, new_lines, { layout = layout, algorithm = git_setting:get('algorithm') }),
       original_lines = old_lines,
       current_lines = new_lines,
     }

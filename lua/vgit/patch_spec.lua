@@ -31,4 +31,14 @@ describe('vgit.patch:', function()
     eq('add', data.rows[2].number.role)
     eq({ added = 1, removed = 1 }, data.stat)
   end)
+
+  it('should use the pure engine when asked', function()
+    local data = patch.data({
+      { filename = 'a.txt', old_lines = { 'local x = 1' }, new_lines = { 'local x = 2' } },
+    }, { header = false, engine = 'lua' })
+
+    eq('remove', data.rows[1].kind)
+    eq('add', data.rows[2].kind)
+    eq({ added = 1, removed = 1 }, data.stat)
+  end)
 end)

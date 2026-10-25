@@ -504,7 +504,9 @@ LIBRARY                                                         *vgit-library*
 `require('vgit.api')` exposes vgit's diffing and diff views for any two texts.
 It needs no git repository and works before |vgit-setup|. The data is plain
 tables with `schema = 1`; `require('vgit.diff')` and `require('vgit.patch')`
-expose the same projections without the Neovim adapter.
+expose the same projections without the Neovim adapter. The line engine is
+`vim.diff` inside Neovim and a pure-Lua Myers diff elsewhere; pass
+`engine = 'lua'` to force the pure engine.
 
 api.diff({old_lines}, {new_lines}, {opts})                    *vgit.api.diff()*
     Diff two line arrays. {opts}.layout is "unified" (default) or "split".

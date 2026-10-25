@@ -1,6 +1,55 @@
 local object = {}
 
-object.is_empty = vim.tbl_isempty
+local function is_empty(o)
+  return next(o) == nil
+end
+
+local function deep_merge(a, b, keep)
+  local out = {}
+
+  for k, v in pairs(a) do
+    out[k] = v
+  end
+
+  for k, v in pairs(b) do
+    if type(out[k]) == 'table' and type(v) == 'table' then
+      out[k] = deep_merge(out[k], v, keep)
+    elseif not (keep and out[k] ~= nil) then
+      out[k] = v
+    end
+  end
+
+  return out
+end
+
+local function shallow_extend(a, b)
+  local out = {}
+
+  for k, v in pairs(a) do
+    out[k] = v
+  end
+
+  for k, v in pairs(b) do
+    out[k] = v
+  end
+
+  return out
+end
+
+local function deep_clone(value)
+  if type(value) ~= 'table' then return value end
+
+  local out = {}
+
+  for k, v in pairs(value) do
+    out[k] = deep_clone(v)
+  end
+
+  return out
+end
+
+object.is_empty = is_empty
+object.deep_clone = deep_clone
 
 function object.first(o)
   o = o or {}
@@ -28,7 +77,7 @@ function object.defaults(o, ...)
   local objects = { ... }
 
   for i = 1, #objects do
-    o = vim.tbl_deep_extend('keep', o, objects[i])
+    o = deep_merge(o, objects[i], true)
   end
 
   return o
@@ -39,7 +88,7 @@ function object.assign(o, ...)
   local objects = { ... }
 
   for i = 1, #objects do
-    o = vim.tbl_deep_extend('force', o, objects[i])
+    o = deep_merge(o, objects[i], false)
   end
 
   return o
@@ -64,7 +113,7 @@ function object.extend(o, ...)
   local objects = { ... }
 
   for i = 1, #objects do
-    o = vim.tbl_extend('force', o, objects[i])
+    o = shallow_extend(o, objects[i])
   end
 
   return o
@@ -75,7 +124,7 @@ function object.merge(...)
   local objects = { ... }
 
   for i = 1, #objects do
-    o = vim.tbl_deep_extend('force', o, objects[i])
+    o = deep_merge(o, objects[i], false)
   end
 
   return o
@@ -111,12 +160,8 @@ function object.values(o)
   return values
 end
 
-function object.deep_clone(o)
-  return vim.deepcopy(o, true)
-end
-
 function object.clone(config_object)
-  return vim.tbl_extend('force', {}, config_object)
+  return shallow_extend({}, config_object)
 end
 
 function object.each(o, callback)

@@ -22,4 +22,11 @@ describe('vgit.diff:', function()
     eq({ buftype = 'current', lnum = 1, col = 10, texts = { { '2', 'word_add' } } }, words.current)
     eq({ added = 1, removed = 1 }, data.stat)
   end)
+
+  it('should use the pure engine when asked', function()
+    local data = diff.data({ 'a', 'b' }, { 'a', 'c' }, { layout = 'split', engine = 'lua' })
+
+    eq(1, data.schema)
+    eq({ added = 1, removed = 1 }, data.stat)
+  end)
 end)

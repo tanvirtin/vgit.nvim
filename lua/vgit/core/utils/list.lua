@@ -1,8 +1,37 @@
 local list = {}
 
-list.is_list = vim.islist
+local function is_list(value)
+  if type(value) ~= 'table' then return false end
 
-list.is_empty = vim.tbl_isempty
+  local count = 0
+
+  for key in pairs(value) do
+    if type(key) ~= 'number' or key < 1 or key % 1 ~= 0 then return false end
+    count = count + 1
+  end
+
+  return count == #value
+end
+
+local function is_empty(value)
+  return next(value) == nil
+end
+
+local function deep_clone(value)
+  if type(value) ~= 'table' then return value end
+
+  local out = {}
+
+  for k, v in pairs(value) do
+    out[k] = deep_clone(v)
+  end
+
+  return out
+end
+
+list.is_list = is_list
+
+list.is_empty = is_empty
 
 function list.join(l, with)
   local result = ''
@@ -37,7 +66,7 @@ function list.concat(a, ...)
 end
 
 function list.merge(t, ...)
-  local a = vim.deepcopy(t)
+  local a = deep_clone(t)
   local lists = { ... }
 
   for i = 1, #lists do

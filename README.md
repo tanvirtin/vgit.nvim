@@ -446,7 +446,7 @@ require('vgit').setup({
 
 ## Library API
 
-`require('vgit.api')` lets other plugins use vgit's diffing and diff views for any two texts. It needs no git repository and works before `setup()` is called. The data is plain tables with `schema = 1`; `require('vgit.diff')` and `require('vgit.patch')` expose the same projections without the Neovim adapter.
+`require('vgit.api')` lets other plugins use vgit's diffing and diff views for any two texts. It needs no git repository and works before `setup()` is called. The data is plain tables with `schema = 1`; `require('vgit.diff')` and `require('vgit.patch')` expose the same projections without the Neovim adapter. The line engine is `vim.diff` inside Neovim and a pure-Lua Myers diff elsewhere; pass `engine = 'lua'` to force the pure engine.
 
 ```lua
 local api = require('vgit.api')

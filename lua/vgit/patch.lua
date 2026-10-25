@@ -44,7 +44,7 @@ local function build_entries(files, opts)
       type = 'diff_file',
       filename = file.filename,
       filetype = file.filetype or '',
-      diff = vgit_diff.compute(old_lines, new_lines),
+      diff = vgit_diff.compute(old_lines, new_lines, opts),
       original_lines = old_lines,
       current_lines = new_lines,
       header = opts.header,

@@ -1,4 +1,19 @@
+local list = require('vgit.core.utils.list')
+
 local assertion = {}
+
+local function inspect(value)
+  if vim and vim.inspect then return vim.inspect(value) end
+  if type(value) ~= 'table' then return tostring(value) end
+
+  local parts = {}
+
+  for i = 1, #value do
+    parts[#parts + 1] = inspect(value[i])
+  end
+
+  return '{' .. table.concat(parts, ', ') .. '}'
+end
 
 function assertion.assert(cond, msg)
   if type(cond) == 'function' then cond = cond() end
@@ -22,7 +37,7 @@ function assertion.assert_types(value, types)
     if type(value) == t then passed = true end
   end
 
-  assertion.assert(passed, string.format('type error :: expected %s', vim.inspect(types)))
+  assertion.assert(passed, string.format('type error :: expected %s', inspect(types)))
 
   return assertion
 end
@@ -64,7 +79,7 @@ function assertion.assert_table(value)
 end
 
 function assertion.assert_list(value)
-  assertion.assert(vim.islist(value), 'type error :: expected list')
+  assertion.assert(list.is_list(value), 'type error :: expected list')
 
   return assertion
 end

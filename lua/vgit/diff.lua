@@ -1,7 +1,7 @@
 local lazy = require('vgit.core.lazy')
 
 local Diff = lazy('vgit.core.diff.Diff')
-local git_hunks = lazy('vgit.git.git_hunks')
+local engine = lazy('vgit.core.diff.engine')
 local core_words = lazy('vgit.core.words')
 
 local diff = {}
@@ -12,14 +12,14 @@ function diff.compute(old_lines, new_lines, opts)
   local layout = opts.layout or 'unified'
 
   if #old_lines == 0 and #new_lines > 0 then
-    return Diff():generate(git_hunks.custom(new_lines, { untracked = true }), new_lines, layout)
+    return Diff():generate(engine.custom(new_lines, { untracked = true }), new_lines, layout)
   end
 
   if #new_lines == 0 and #old_lines > 0 then
-    return Diff():generate(git_hunks.custom(old_lines, { deleted = true }), old_lines, layout, { is_deleted = true })
+    return Diff():generate(engine.custom(old_lines, { deleted = true }), old_lines, layout, { is_deleted = true })
   end
 
-  return Diff():generate(git_hunks.live(nil, old_lines, new_lines), new_lines, layout)
+  return Diff():generate(engine.live(old_lines, new_lines, opts), new_lines, layout)
 end
 
 local function change_line(change)
