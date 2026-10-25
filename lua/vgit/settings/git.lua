@@ -7,4 +7,7 @@ return Config({
   algorithm = 'myers',
   fallback_cwd = '',
   fallback_args = {},
+  auto_repository_detection = true,
+  repository_scan_max_depth = 1,
+  repository_scan_ignored_folders = { 'node_modules' },
 })

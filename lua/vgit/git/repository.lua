@@ -3,9 +3,8 @@ local lazy = require('vgit.core.lazy')
 local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
 local git_repo = lazy('vgit.git.git_repo')
+local git_setting = lazy('vgit.settings.git')
 local GitRepository = lazy('vgit.git.GitRepository')
-
-local IGNORED_FOLDERS = { ['.git'] = true, node_modules = true }
 
 local _instances = {}
 local _by_git_dir = {}
@@ -29,14 +28,43 @@ local function remember(repo)
   return _last
 end
 
-local function child_repos(dirname)
-  local repos = {}
+local function sub_folder_repos(dirname, depth, ignored, repos)
+  if depth <= 0 then return end
+
   for name, type in vim.fs.dir(dirname) do
-    local path = dirname .. '/' .. name
-    if type == 'directory' and not IGNORED_FOLDERS[name] and fs.exists(path .. '/.git') then
-      repos[#repos + 1] = GitRepository.at(vim.uv.fs_realpath(path))
+    if type == 'directory' and name ~= '.git' and not ignored[name] then
+      local path = dirname .. '/' .. name
+      if fs.exists(path .. '/.git') then repos[#repos + 1] = GitRepository.at(vim.uv.fs_realpath(path)) end
+      sub_folder_repos(path, depth - 1, ignored, repos)
     end
   end
+end
+
+local function open_buffer_repos()
+  local repos = {}
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[bufnr].buflisted and vim.bo[bufnr].buftype == '' and vim.api.nvim_buf_get_name(bufnr) ~= '' then
+      local root = vim.fs.root(bufnr, '.git')
+      if root then repos[#repos + 1] = GitRepository.at(vim.uv.fs_realpath(root)) end
+    end
+  end
+  return repos
+end
+
+local function detected_repos(cwd)
+  local detection = git_setting:get('auto_repository_detection')
+  local repos = {}
+
+  if detection == true or detection == 'sub_folders' then
+    local ignored = {}
+    for _, name in ipairs(git_setting:get('repository_scan_ignored_folders')) do
+      ignored[name] = true
+    end
+    sub_folder_repos(cwd, git_setting:get('repository_scan_max_depth'), ignored, repos)
+  end
+
+  if detection == true or detection == 'open_buffers' then vim.list_extend(repos, open_buffer_repos()) end
+
   return repos
 end
 
@@ -78,7 +106,7 @@ function repository.list()
 
   local cwd = vim.uv.cwd()
   add(GitRepository.discover(cwd))
-  for _, repo in ipairs(child_repos(cwd)) do
+  for _, repo in ipairs(detected_repos(cwd)) do
     add(repo)
   end
 

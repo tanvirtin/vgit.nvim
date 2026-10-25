@@ -274,51 +274,99 @@ describe('repository:', function()
 
   describe('list', function()
     local cwd
+    local directory
+    local root
+    local git_setting = require('vgit.settings.git')
+    local defaults
+
+    local function paths()
+      return vim.tbl_map(function(repo)
+        return repo:get_path()
+      end, repository.list())
+    end
+
+    local function make_repo(path)
+      vim.fn.mkdir(directory .. '/' .. path .. '/.git', 'p')
+    end
 
     before_each(function()
       cwd = vim.uv.cwd()
-    end)
-
-    after_each(function()
-      vim.fn.chdir(cwd)
-    end)
-
-    it('should list the repos in the child folders of a folder that is not a repo', function()
-      local directory = vim.fn.tempname()
-      vim.fn.mkdir(directory .. '/beta/.git', 'p')
-      vim.fn.mkdir(directory .. '/node_modules/pkg/.git', 'p')
-      vim.fn.mkdir(directory .. '/plain', 'p')
-      vim.fn.mkdir(directory .. '/alpha', 'p')
-      vim.fn.writefile({ 'gitdir: elsewhere' }, directory .. '/alpha/.git')
+      defaults = vim.deepcopy(git_setting.data)
+      directory = vim.fn.tempname()
+      vim.fn.mkdir(directory, 'p')
       vim.fn.chdir(directory)
-      local root = vim.uv.cwd()
+      root = vim.uv.cwd()
 
       package.loaded['vgit.git.GitRepository'].discover = function()
         return nil, { 'not a git repository' }
       end
       package.loaded['vgit.git.GitRepository'].at = fake_repo
+    end)
 
-      local paths = vim.tbl_map(function(repo)
-        return repo:get_path()
-      end, repository.list())
-
-      eq({ root .. '/alpha', root .. '/beta' }, paths)
+    after_each(function()
+      git_setting.data = defaults
+      vim.cmd('silent! %bwipeout!')
+      vim.fn.chdir(cwd)
       vim.fn.delete(directory, 'rf')
     end)
 
-    it('should list a repo once when the folder and a child resolve to it', function()
-      local directory = vim.fn.tempname()
-      vim.fn.mkdir(directory .. '/child/.git', 'p')
-      vim.fn.chdir(directory)
+    it('should list the repos in the child folders of a folder that is not a repo', function()
+      make_repo('beta')
+      make_repo('node_modules/pkg')
+      vim.fn.mkdir(directory .. '/plain', 'p')
+      vim.fn.mkdir(directory .. '/alpha', 'p')
+      vim.fn.writefile({ 'gitdir: elsewhere' }, directory .. '/alpha/.git')
 
-      local root = vim.uv.cwd()
+      eq({ root .. '/alpha', root .. '/beta' }, paths())
+    end)
+
+    it('should scan as many folder levels as repository_scan_max_depth', function()
+      make_repo('org/deep')
+      eq({}, paths())
+
+      git_setting:assign({ repository_scan_max_depth = 2 })
+      eq({ root .. '/org/deep' }, paths())
+    end)
+
+    it('should skip the folders in repository_scan_ignored_folders', function()
+      make_repo('vendor')
+      make_repo('node_modules')
+      git_setting:assign({ repository_scan_ignored_folders = { 'vendor' } })
+
+      eq({ root .. '/node_modules' }, paths())
+    end)
+
+    it('should list the repos of open buffers', function()
+      vim.fn.mkdir(directory .. '/elsewhere/project/.git', 'p')
+      vim.fn.writefile({ 'x' }, directory .. '/elsewhere/project/file.txt')
+      vim.cmd('badd ' .. vim.fn.fnameescape(directory .. '/elsewhere/project/file.txt'))
+
+      eq({ root .. '/elsewhere/project' }, paths())
+    end)
+
+    it('should follow auto_repository_detection', function()
+      make_repo('child')
+      vim.fn.mkdir(directory .. '/elsewhere/project/.git', 'p')
+      vim.fn.writefile({ 'x' }, directory .. '/elsewhere/project/file.txt')
+      vim.cmd('badd ' .. vim.fn.fnameescape(directory .. '/elsewhere/project/file.txt'))
+
+      git_setting:assign({ auto_repository_detection = 'sub_folders' })
+      eq({ root .. '/child' }, paths())
+
+      git_setting:assign({ auto_repository_detection = 'open_buffers' })
+      eq({ root .. '/elsewhere/project' }, paths())
+
+      git_setting:assign({ auto_repository_detection = false })
+      eq({}, paths())
+    end)
+
+    it('should list a repo once when the folder and a child resolve to it', function()
+      make_repo('child')
       package.loaded['vgit.git.GitRepository'].discover = function()
         return fake_repo(root .. '/child'), nil
       end
-      package.loaded['vgit.git.GitRepository'].at = fake_repo
 
       eq(1, #repository.list())
-      vim.fn.delete(directory, 'rf')
     end)
   end)
 

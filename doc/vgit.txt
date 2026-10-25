@@ -159,8 +159,16 @@ Navigation works in both diff views and associated tables.
 REPOSITORIES                                                 *vgit-repositories*
 
 VGit finds the repositories of the workspace: the repository of the working
-directory, the repositories in its immediate child folders (except
-`node_modules`), and the repository of the open file.
+directory, the repositories in its child folders, and the repositories of
+open buffers. The repository of the working directory and of the current file
+are always used. Detection is configured under `settings.git`:
+
+- `auto_repository_detection`: `true` (default), `'sub_folders'`,
+  `'open_buffers'` or `false`.
+- `repository_scan_max_depth`: how many folder levels below the working
+  directory to search. Default `1`.
+- `repository_scan_ignored_folders`: folder names that are never searched.
+  Default `{ 'node_modules' }`.
 
 - `:VGit status` groups changes by repository when there is more than one.
   Staging, resetting and committing act on the repository of the selected

@@ -325,6 +325,30 @@ describe('scenario: a folder of repos', function()
     },
   })
 
+  scenario.flow(':VGit status finds repos deeper down when the scan depth allows it', {
+    arrange = workspace(function(ctx)
+      local deep = ctx.world:repo('org/gamma', { ['g.txt'] = { 'uno' } })
+      ctx.world:write(deep .. '/g.txt', { 'tres' })
+    end),
+    config = { settings = { git = { repository_scan_max_depth = 2 } } },
+    steps = {
+      { cd = '$ws' },
+      { cmd = 'VGit status' },
+      { expect = { screen_has = { 'gamma (main)', 'g.txt' } } },
+    },
+  })
+
+  scenario.flow(':VGit status lists the repo of an open buffer outside the working directory', {
+    arrange = workspace(change_both),
+    steps = {
+      { cd = '$repo' },
+      { edit = '$ws/beta/b.txt' },
+      { edit = '$repo/a.txt' },
+      { cmd = 'VGit status' },
+      { expect = { screen_has = { 'alpha (main)', 'a.txt', 'beta (main)', 'b.txt' } } },
+    },
+  })
+
   scenario.flow(':VGit status hides the repos without changes', {
     arrange = workspace(change_alpha),
     steps = {
