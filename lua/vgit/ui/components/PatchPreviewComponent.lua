@@ -2,7 +2,6 @@ local lazy = require('vgit.core.lazy')
 
 local event = lazy('vgit.core.event')
 local symbols_setting = lazy('vgit.settings.symbols')
-local Diff = lazy('vgit.core.diff.Diff')
 local DiffAnnotator = lazy('vgit.ui.annotators.DiffAnnotator')
 local DiffStyleAnnotator = lazy('vgit.ui.annotators.DiffStyleAnnotator')
 local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
@@ -290,14 +289,8 @@ function PatchPreviewComponent:render_viewport(top, bot)
         })
       end
 
-      local word_diff = meta and meta.lnum_change and Diff.word_diff(meta.lnum_change)
-      if word_diff then
-        local overlay = DiffAnnotator.word_overlay(
-          self.state.lines[row + 1],
-          DiffAnnotator.word_ranges(word_diff, meta.lnum_change.type)
-        )
-        if overlay then el:place_extmark_text({ row = row, col = overlay.col, texts = overlay.texts }) end
-      end
+      local overlay = DiffAnnotator.word_overlay_for(meta and meta.lnum_change, self.state.lines[row + 1])
+      if overlay then el:place_extmark_text({ row = row, col = overlay.col, texts = overlay.texts }) end
 
       local diff_hls = diff_hl_map[row]
       if diff_hls then

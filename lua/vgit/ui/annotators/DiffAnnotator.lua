@@ -64,17 +64,25 @@ function DiffAnnotator.word_overlay(line, ranges)
   return { col = ranges[1].col_start, texts = texts }
 end
 
-function DiffAnnotator.annotate_word(line_changes, lnum)
-  local lnum_change = line_changes.lnum_change
-  if not lnum_change then return nil end
-
-  local word_diff = Diff.word_diff(lnum_change)
+function DiffAnnotator.word_ranges_for(lnum_change)
+  local word_diff = lnum_change and Diff.word_diff(lnum_change)
   if not word_diff then return nil end
 
-  return {
-    ranges = DiffAnnotator.word_ranges(word_diff, lnum_change.type),
-    row = lnum - 1,
-  }
+  return DiffAnnotator.word_ranges(word_diff, lnum_change.type)
+end
+
+function DiffAnnotator.annotate_word(line_changes, lnum)
+  local ranges = DiffAnnotator.word_ranges_for(line_changes.lnum_change)
+  if not ranges then return nil end
+
+  return { ranges = ranges, row = lnum - 1 }
+end
+
+function DiffAnnotator.word_overlay_for(lnum_change, line)
+  local ranges = DiffAnnotator.word_ranges_for(lnum_change)
+  if not ranges then return nil end
+
+  return DiffAnnotator.word_overlay(line, ranges)
 end
 
 return DiffAnnotator

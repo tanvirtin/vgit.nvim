@@ -64,6 +64,36 @@ describe('DiffAnnotator:', function()
     end)
   end)
 
+  describe('word_overlay_for', function()
+    it('should build the overlay from a change and its line', function()
+      eq(
+        { col = 6, texts = { { 'world', 'GitWordAdd' } } },
+        DiffAnnotator.word_overlay_for({
+          type = 'add',
+          word_diff = {
+            { 0, 'hello ' },
+            { -1, 'world' },
+          },
+        }, 'hello world')
+      )
+    end)
+
+    it('should use GitWordDelete for a removed line', function()
+      eq(
+        { col = 0, texts = { { 'old', 'GitWordDelete' } } },
+        DiffAnnotator.word_overlay_for({
+          type = 'remove',
+          word_diff = { { -1, 'old' } },
+        }, 'old')
+      )
+    end)
+
+    it('should return nil when there is no change or no word diff', function()
+      assert.is_nil(DiffAnnotator.word_overlay_for(nil, 'x'))
+      assert.is_nil(DiffAnnotator.word_overlay_for({ type = 'add' }, 'x'))
+    end)
+  end)
+
   describe('annotate_word', function()
     it('should return nil when lnum_change is nil', function()
       local result = DiffAnnotator.annotate_word({}, 1)
