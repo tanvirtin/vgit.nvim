@@ -2,6 +2,7 @@ local lazy = require('vgit.core.lazy')
 
 local fs = lazy('vgit.core.fs')
 local event = lazy('vgit.core.event')
+local console = lazy('vgit.core.console')
 local git_repo = lazy('vgit.git.git_repo')
 local git_setting = lazy('vgit.settings.git')
 local GitRepository = lazy('vgit.git.GitRepository')
@@ -9,6 +10,9 @@ local GitRepository = lazy('vgit.git.GitRepository')
 local _instances = {}
 local _by_git_dir = {}
 local _last = nil
+
+local DETECTION = { sub_folders = true, open_buffers = true }
+local warned_detection = false
 
 local repository = {}
 
@@ -51,8 +55,25 @@ local function open_buffer_repos()
   return repos
 end
 
-local function detected_repos(cwd)
+local function detection_setting()
   local detection = git_setting:get('auto_repository_detection')
+
+  if detection == true or detection == false or DETECTION[detection] then return detection end
+
+  if not warned_detection then
+    warned_detection = true
+    console.warn(
+      ('auto_repository_detection must be true, false, "sub_folders" or "open_buffers"; got %s'):format(
+        vim.inspect(detection)
+      )
+    )
+  end
+
+  return false
+end
+
+local function detected_repos(cwd)
+  local detection = detection_setting()
   local repos = {}
 
   if detection == true or detection == 'sub_folders' then

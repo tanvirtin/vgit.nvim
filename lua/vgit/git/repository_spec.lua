@@ -276,6 +276,7 @@ describe('repository:', function()
     local cwd
     local directory
     local root
+    local buffers
     local git_setting = require('vgit.settings.git')
     local defaults
 
@@ -289,9 +290,17 @@ describe('repository:', function()
       vim.fn.mkdir(directory .. '/' .. path .. '/.git', 'p')
     end
 
+    local function open_buffer(path)
+      vim.fn.writefile({ 'x' }, path)
+      local bufnr = vim.fn.bufadd(path)
+      vim.bo[bufnr].buflisted = true
+      buffers[#buffers + 1] = bufnr
+    end
+
     before_each(function()
       cwd = vim.uv.cwd()
       defaults = vim.deepcopy(git_setting.data)
+      buffers = {}
       directory = vim.fn.tempname()
       vim.fn.mkdir(directory, 'p')
       vim.fn.chdir(directory)
@@ -305,7 +314,11 @@ describe('repository:', function()
 
     after_each(function()
       git_setting.data = defaults
-      vim.cmd('silent! %bwipeout!')
+
+      for _, bufnr in ipairs(buffers) do
+        vim.cmd('silent! bwipeout! ' .. bufnr)
+      end
+
       vim.fn.chdir(cwd)
       vim.fn.delete(directory, 'rf')
     end)
@@ -338,8 +351,7 @@ describe('repository:', function()
 
     it('should list the repos of open buffers', function()
       vim.fn.mkdir(directory .. '/elsewhere/project/.git', 'p')
-      vim.fn.writefile({ 'x' }, directory .. '/elsewhere/project/file.txt')
-      vim.cmd('badd ' .. vim.fn.fnameescape(directory .. '/elsewhere/project/file.txt'))
+      open_buffer(directory .. '/elsewhere/project/file.txt')
 
       eq({ root .. '/elsewhere/project' }, paths())
     end)
@@ -347,8 +359,7 @@ describe('repository:', function()
     it('should follow auto_repository_detection', function()
       make_repo('child')
       vim.fn.mkdir(directory .. '/elsewhere/project/.git', 'p')
-      vim.fn.writefile({ 'x' }, directory .. '/elsewhere/project/file.txt')
-      vim.cmd('badd ' .. vim.fn.fnameescape(directory .. '/elsewhere/project/file.txt'))
+      open_buffer(directory .. '/elsewhere/project/file.txt')
 
       git_setting:assign({ auto_repository_detection = 'sub_folders' })
       eq({ root .. '/child' }, paths())
@@ -357,6 +368,13 @@ describe('repository:', function()
       eq({ root .. '/elsewhere/project' }, paths())
 
       git_setting:assign({ auto_repository_detection = false })
+      eq({}, paths())
+    end)
+
+    it('should ignore an unknown auto_repository_detection value', function()
+      make_repo('child')
+      git_setting:assign({ auto_repository_detection = 'unknown' })
+
       eq({}, paths())
     end)
 
