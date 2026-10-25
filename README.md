@@ -454,6 +454,10 @@ local api = require('vgit.api')
 -- A diff of two line arrays: lines, hunks, marks and stats.
 local diff = api.diff(old_lines, new_lines, { layout = 'unified' })
 
+-- The changed words of one side of a split diff: pass an entry of
+-- diff.lnum_changes and that side's line.
+local words = api.words(change, line) -- { col, texts } or nil
+
 -- A patch ready to draw into any buffer at any row.
 local patch = api.patch({ { filename = 'a.lua', old_lines = old_lines, new_lines = new_lines } }, {
   header = false, -- leave out the file name rows

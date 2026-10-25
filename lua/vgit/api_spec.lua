@@ -106,6 +106,24 @@ describe('vgit.api:', function()
     end)
   end)
 
+  describe('words', function()
+    it('should overlay the changed words of each side of a split diff', function()
+      local diff = api.diff({ 'local a = 1' }, { 'local a = 2' }, { layout = 'split' })
+      local overlays = {}
+
+      for _, change in ipairs(diff.lnum_changes) do
+        local line = change.buftype == 'previous' and diff.previous_lines[change.lnum]
+          or diff.current_lines[change.lnum]
+
+        overlays[change.type] = api.words(change, line)
+      end
+
+      eq({ col = 10, texts = { { '1', 'GitWordDelete' } } }, overlays.remove)
+      eq({ col = 10, texts = { { '2', 'GitWordAdd' } } }, overlays.add)
+      eq(nil, api.words(nil, 'x'))
+    end)
+  end)
+
   describe('patch_text', function()
     it('should give a classic unified diff for plain-text readers', function()
       eq(

@@ -64,14 +64,19 @@ local function kind_of(meta)
   return 'context'
 end
 
+function api.words(lnum_change, line)
+  local word_diff = lnum_change and Diff.word_diff(lnum_change)
+
+  if not word_diff then return nil end
+
+  return DiffAnnotator.word_overlay(line, DiffAnnotator.word_ranges(word_diff, lnum_change.type))
+end
+
 local function word_overlays(lines, line_metadata)
   local words = {}
 
   for i, meta in ipairs(line_metadata) do
-    local lnum_change = meta and meta.lnum_change
-    local word_diff = lnum_change and Diff.word_diff(lnum_change)
-    local overlay = word_diff
-      and DiffAnnotator.word_overlay(lines[i], DiffAnnotator.word_ranges(word_diff, lnum_change.type))
+    local overlay = api.words(meta and meta.lnum_change, lines[i])
 
     if overlay then words[#words + 1] = { row = i - 1, col = overlay.col, texts = overlay.texts } end
   end

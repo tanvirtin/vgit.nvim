@@ -508,6 +508,11 @@ api.diff({old_lines}, {new_lines}, {opts})                    *vgit.api.diff()*
     Diff two line arrays. {opts}.layout is "unified" (default) or "split".
     Returns the diff: lines, hunks, marks and stat.
 
+api.words({lnum_change}, {line})                             *vgit.api.words()*
+    The changed words of one side of a split diff. {lnum_change} is an
+    entry of `diff.lnum_changes`; {line} is that side's text. Returns
+    `{ col, texts }` or nil. Draw it with `hl_mode = "combine"`.
+
 api.patch({files}, {opts})                                   *vgit.api.patch()*
     Lay out a patch for {files}, a list of
     `{ filename, filetype, old_lines, new_lines }`. {opts}:
