@@ -93,7 +93,7 @@ function PatchPreviewComponent:render()
     return
   end
 
-  local layout = patch.build(hunk_entries, { style = DiffStyleAnnotator.annotate })
+  local layout = patch.build(hunk_entries, { style = DiffStyleAnnotator.annotate, words = false })
   local lines = layout.lines
   self.state.lines = lines
   self.state.line_metadata = layout.line_metadata
@@ -131,7 +131,7 @@ function PatchPreviewComponent:append_hunk_entries(hunk_entries)
     return
   end
 
-  local layout = patch.build(hunk_entries, { style = DiffStyleAnnotator.annotate })
+  local layout = patch.build(hunk_entries, { style = DiffStyleAnnotator.annotate, words = false })
   local lines = layout.lines
   if #lines == 0 then return end
 

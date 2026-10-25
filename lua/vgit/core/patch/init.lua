@@ -1,4 +1,6 @@
 local PatchLineBuilder = require('vgit.core.patch.PatchLineBuilder')
+local core_style = require('vgit.core.style')
+local core_words = require('vgit.core.words')
 
 local patch = {}
 
@@ -9,6 +11,11 @@ function patch.build(entries, opts)
 
   local lines, line_metadata, file_sections, marks, line_numbers, raw_lnums, max_lnum = PatchLineBuilder.build(entries)
 
+  local highlights = (opts.style or core_style.annotate)(lines, line_metadata)
+  local words = {}
+
+  if opts.words ~= false then words = (opts.words or core_words.overlays)(lines, line_metadata) end
+
   return {
     lines = lines,
     line_metadata = line_metadata,
@@ -17,8 +24,8 @@ function patch.build(entries, opts)
     line_numbers = line_numbers,
     raw_lnums = raw_lnums,
     max_lnum = max_lnum,
-    highlights = opts.style and opts.style(lines, line_metadata) or {},
-    words = opts.words and opts.words(lines, line_metadata) or {},
+    highlights = highlights,
+    words = words,
   }
 end
 

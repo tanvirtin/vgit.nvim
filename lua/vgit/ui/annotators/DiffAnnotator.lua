@@ -1,9 +1,12 @@
 local lazy = require('vgit.core.lazy')
 
 local Diff = lazy('vgit.core.diff.Diff')
+local core_words = lazy('vgit.core.words')
 local signs_setting = lazy('vgit.settings.signs')
 
 local DiffAnnotator = {}
+
+local WORD_GROUPS = { word_add = 'GitWordAdd', word_delete = 'GitWordDelete' }
 
 function DiffAnnotator.annotate_line(line_changes)
   local lnum_change = line_changes.lnum_change
@@ -30,38 +33,21 @@ function DiffAnnotator.annotate_line(line_changes)
 end
 
 function DiffAnnotator.word_ranges(word_diff, change_type)
-  local ranges = {}
-  local hl = change_type == 'remove' and 'GitWordDelete' or 'GitWordAdd'
-  local col = 0
+  local mapped = {}
 
-  for j = 1, #word_diff do
-    local operation, fragment = unpack(word_diff[j])
-
-    if operation == -1 then
-      ranges[#ranges + 1] = { col_start = col, col_end = col + #fragment, hl_group = hl }
-      col = col + #fragment
-    elseif operation == 0 then
-      col = col + #fragment
-    end
+  for _, range in ipairs(core_words.ranges(word_diff, change_type)) do
+    mapped[#mapped + 1] = {
+      col_start = range.col_start,
+      col_end = range.col_end,
+      hl_group = WORD_GROUPS[range.role],
+    }
   end
 
-  return ranges
+  return mapped
 end
 
 function DiffAnnotator.word_overlay(line, ranges)
-  if not line or #ranges == 0 then return nil end
-
-  local texts = {}
-  local col = ranges[1].col_start
-
-  for _, range in ipairs(ranges) do
-    if range.col_start > col then texts[#texts + 1] = { line:sub(col + 1, range.col_start), nil } end
-
-    texts[#texts + 1] = { line:sub(range.col_start + 1, range.col_end), range.hl_group }
-    col = range.col_end
-  end
-
-  return { col = ranges[1].col_start, texts = texts }
+  return core_words.overlay(line, ranges)
 end
 
 function DiffAnnotator.word_ranges_for(lnum_change)
