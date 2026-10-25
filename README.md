@@ -446,32 +446,32 @@ require('vgit').setup({
 
 ## Library API
 
-`require('vgit.api')` lets other plugins use vgit's diffing and diff views for any two texts. It needs no git repository and works before `setup()` is called.
+`require('vgit.api')` lets other plugins use vgit's diffing and diff views for any two texts. It needs no git repository and works before `setup()` is called. The data is plain tables with `schema = 1`; `require('vgit.diff')` and `require('vgit.patch')` expose the same projections without the Neovim adapter.
 
 ```lua
 local api = require('vgit.api')
 
--- A diff of two line arrays: lines, hunks, marks and stats.
-local diff = api.diff(old_lines, new_lines, { layout = 'unified' })
-
--- The changed words of one side of a split diff: pass an entry of
--- diff.lnum_changes and that side's line.
-local words = api.words(change, line) -- { col, texts } or nil
+-- A diff of two line arrays: plain data with schema = 1.
+local diff = api.diff(old_lines, new_lines, { layout = 'split' })
+-- diff.changes[i]: { lnum, buftype, type }
+-- diff.words[i]:   { buftype, lnum, col, texts } -- word_add/word_delete roles
+-- diff.stat:       { added, removed }
 
 -- A patch ready to draw into any buffer at any row.
 local patch = api.patch({ { filename = 'a.lua', old_lines = old_lines, new_lines = new_lines } }, {
   header = false, -- leave out the file name rows
   context = 3,    -- lines of context around each change
-  syntax = true,  -- include treesitter captures for the file's language
+  syntax = true,  -- include Neovim treesitter captures for the file's language
+  groups = true,  -- map semantic roles to vgit's Git* groups
 })
 -- patch.lines:      the text, one entry per row (removed lines have no '-')
 -- patch.rows[i]:    { kind = 'context'|'add'|'remove'|'hunk'|'file'|'blank', old_lnum, new_lnum, filename, number }
--- patch.highlights: { row, col_start, col_end, hl_group, line } relative to row 0:
---                   line backgrounds and syntax
--- patch.words:      { row, col, texts } changed words as overlay virt_text chunks
---                   (GitWordAdd/GitWordDelete); draw them with hl_mode = 'combine'
---                   so they show above line backgrounds and keep syntax colours
+-- patch.highlights: { row, col_start, col_end, role, line } relative to row 0:
+--                   line backgrounds, changed words and syntax
+-- patch.words:      { row, col, texts } changed words as overlay virt_text chunks;
+--                   texts use word_add/word_delete roles
 -- patch.stat:       { added, removed }
+-- with groups = true, highlights and words carry Git* names and number is { text, hl }
 
 -- A classic unified diff, for plain-text readers.
 local text = api.patch_text({ { filename = 'a.lua', old_lines = old_lines, new_lines = new_lines } })

@@ -73,7 +73,7 @@ describe('vgit.api:', function()
     it('should give line backgrounds as highlights and changed words as overlays, relative to the patch', function()
       local patch = api.patch({
         { filename = 'a.txt', old_lines = { 'local x = 1' }, new_lines = { 'local x = 2' } },
-      }, { header = false, syntax = false })
+      }, { header = false, syntax = false, groups = true })
 
       local function has(row, group)
         for _, hl in ipairs(patch.highlights) do
@@ -91,10 +91,33 @@ describe('vgit.api:', function()
       }, patch.words)
     end)
 
+    it('should give semantic roles by default', function()
+      local patch = api.patch({
+        { filename = 'a.txt', old_lines = { 'local x = 1' }, new_lines = { 'local x = 2' } },
+      }, { header = false })
+
+      local function has(row, role)
+        for _, hl in ipairs(patch.highlights) do
+          if hl.row == row and hl.role == role then return true end
+        end
+
+        return false
+      end
+
+      assert.is_true(has(0, 'remove'))
+      assert.is_true(has(1, 'add'))
+      eq({
+        { row = 0, col = 10, texts = { { '1', 'word_delete' } } },
+        { row = 1, col = 10, texts = { { '2', 'word_add' } } },
+      }, patch.words)
+      eq('remove', patch.rows[1].number.role)
+      eq('add', patch.rows[2].number.role)
+    end)
+
     it('should map syntax captures from each side onto the patch rows', function()
       local patch = api.patch({
         { filename = 'a.lua', old_lines = { 'local x = 1' }, new_lines = { 'local y = 1' } },
-      }, { header = false })
+      }, { header = false, syntax = true })
 
       local rows = {}
 
@@ -107,20 +130,28 @@ describe('vgit.api:', function()
   end)
 
   describe('words', function()
-    it('should overlay the changed words of each side of a split diff', function()
+    it('should give the changed words of each side of a split diff', function()
       local diff = api.diff({ 'local a = 1' }, { 'local a = 2' }, { layout = 'split' })
-      local overlays = {}
+      local words = {}
 
-      for _, change in ipairs(diff.lnum_changes) do
-        local line = change.buftype == 'previous' and diff.previous_lines[change.lnum]
-          or diff.current_lines[change.lnum]
-
-        overlays[change.type] = api.words(change, line)
+      for _, word in ipairs(diff.words) do
+        words[word.buftype] = word
       end
 
-      eq({ col = 10, texts = { { '1', 'GitWordDelete' } } }, overlays.remove)
-      eq({ col = 10, texts = { { '2', 'GitWordAdd' } } }, overlays.add)
-      eq(nil, api.words(nil, 'x'))
+      eq({ buftype = 'previous', lnum = 1, col = 10, texts = { { '1', 'word_delete' } } }, words.previous)
+      eq({ buftype = 'current', lnum = 1, col = 10, texts = { { '2', 'word_add' } } }, words.current)
+    end)
+
+    it('should map word roles to Git groups when asked', function()
+      local diff = api.diff({ 'local a = 1' }, { 'local a = 2' }, { layout = 'split', groups = true })
+      local words = {}
+
+      for _, word in ipairs(diff.words) do
+        words[word.buftype] = word
+      end
+
+      eq({ { '1', 'GitWordDelete' } }, words.previous.texts)
+      eq({ { '2', 'GitWordAdd' } }, words.current.texts)
     end)
   end)
 

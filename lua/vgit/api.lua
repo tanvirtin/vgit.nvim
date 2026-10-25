@@ -1,9 +1,8 @@
 local lazy = require('vgit.core.lazy')
 
 local fs = lazy('vgit.core.fs')
-local Diff = lazy('vgit.core.diff.Diff')
-local patch = lazy('vgit.core.patch')
-local git_hunks = lazy('vgit.git.git_hunks')
+local vgit_diff = lazy('vgit.diff')
+local vgit_patch = lazy('vgit.patch')
 local sign = lazy('vgit.core.sign')
 local highlight = lazy('vgit.core.highlight')
 local git_setting = lazy('vgit.settings.git')
@@ -16,6 +15,8 @@ local SyntaxMappingAnnotator = lazy('vgit.ui.annotators.SyntaxMappingAnnotator')
 local api = {}
 
 api.CONTEXT = 3
+
+local WORD_GROUP = { word_add = 'GitWordAdd', word_delete = 'GitWordDelete' }
 
 local highlights_registered = false
 
@@ -34,38 +35,26 @@ local function filetype_of(file)
   return fs.detect_filetype(file.filename) or ''
 end
 
+local function map_word_groups(words)
+  for _, word in ipairs(words or {}) do
+    for _, text in ipairs(word.texts or {}) do
+      text[2] = WORD_GROUP[text[2]] or text[2]
+    end
+  end
+
+  return words
+end
+
 function api.diff(old_lines, new_lines, opts)
   opts = opts or {}
 
-  ensure_highlights()
+  if opts.groups then ensure_highlights() end
 
-  local layout = opts.layout or 'unified'
+  local data = vgit_diff.data(old_lines, new_lines, opts)
 
-  if #old_lines == 0 and #new_lines > 0 then
-    return Diff():generate(git_hunks.custom(new_lines, { untracked = true }), new_lines, layout)
-  end
+  if opts.groups then data.words = map_word_groups(data.words) end
 
-  if #new_lines == 0 and #old_lines > 0 then
-    return Diff():generate(git_hunks.custom(old_lines, { deleted = true }), old_lines, layout, { is_deleted = true })
-  end
-
-  return Diff():generate(git_hunks.live(nil, old_lines, new_lines), new_lines, layout)
-end
-
-local function kind_of(meta)
-  if not meta or meta.type == 'blank' then return 'blank' end
-  if meta.type ~= 'code' then return 'file' end
-  if meta.is_header then return 'hunk' end
-
-  local change = meta.lnum_change and meta.lnum_change.type
-
-  if change == 'add' or change == 'remove' or change == 'void' then return change end
-
-  return 'context'
-end
-
-function api.words(lnum_change, line)
-  return DiffAnnotator.word_overlay_for(lnum_change, line)
+  return data
 end
 
 local function word_overlays(lines, line_metadata)
@@ -107,61 +96,57 @@ local function add_syntax(highlights, lines, file_sections)
   annotator:dispose()
 end
 
+local function stat_of(entries)
+  local stat = { added = 0, removed = 0 }
+
+  for _, entry in ipairs(entries) do
+    local s = entry.diff and entry.diff.stat
+
+    if s then
+      stat.added = stat.added + (s.added or 0)
+      stat.removed = stat.removed + (s.removed or 0)
+    end
+  end
+
+  return stat
+end
+
 function api.patch(files, opts)
   opts = opts or {}
 
-  local entries, stat = {}, { added = 0, removed = 0 }
+  if opts.groups or opts.syntax then ensure_highlights() end
+
+  local prepared = {}
 
   for _, file in ipairs(files) do
-    local old_lines, new_lines = file.old_lines or {}, file.new_lines or {}
-    local diff = api.diff(old_lines, new_lines)
-
-    if diff.stat then
-      stat.added = stat.added + diff.stat.added
-      stat.removed = stat.removed + diff.stat.removed
-    end
-
-    entries[#entries + 1] = {
-      type = 'diff_file',
+    prepared[#prepared + 1] = {
       filename = file.filename,
       filetype = filetype_of(file),
-      diff = diff,
-      original_lines = old_lines,
-      current_lines = new_lines,
-      header = opts.header,
-      context = opts.context or api.CONTEXT,
+      old_lines = file.old_lines,
+      new_lines = file.new_lines,
     }
   end
 
-  local layout = patch.build(entries, {
-    style = DiffStyleAnnotator.annotate,
-    words = word_overlays,
+  local layout = vgit_patch.build(prepared, {
+    style = opts.groups and DiffStyleAnnotator.annotate or nil,
+    words = opts.groups and word_overlays or nil,
+    header = opts.header,
+    context = opts.context or api.CONTEXT,
   })
 
-  if opts.syntax ~= false then add_syntax(layout.highlights, layout.lines, layout.file_sections) end
+  if opts.syntax then add_syntax(layout.highlights, layout.lines, layout.file_sections) end
 
-  local rows = {}
+  local data = vgit_patch.project(layout, { stat = stat_of(layout.entries) })
 
-  for i = 1, #layout.lines do
-    local meta = layout.line_metadata[i]
-    local number = layout.line_numbers[i]
+  if opts.groups then
+    for _, row in ipairs(data.rows) do
+      local number = row.number
 
-    rows[i] = {
-      kind = kind_of(meta),
-      old_lnum = meta and meta.old_lnum,
-      new_lnum = meta and meta.new_lnum,
-      filename = meta and meta.filename,
-      number = number and { text = number.text, hl = DiffStyleAnnotator.line_group(number.role) } or nil,
-    }
+      if number then row.number = { text = number.text, hl = DiffStyleAnnotator.line_group(number.role) } end
+    end
   end
 
-  return {
-    lines = layout.lines,
-    rows = rows,
-    highlights = layout.highlights,
-    words = layout.words,
-    stat = stat,
-  }
+  return data
 end
 
 function api.patch_text(files, opts)
@@ -217,7 +202,7 @@ function api.show(spec)
       filename = file.filename,
       filetype = filetype_of(file),
       layout_type = layout,
-      diff = api.diff(file.old_lines or {}, file.new_lines or {}, { layout = layout }),
+      diff = vgit_diff.compute(file.old_lines or {}, file.new_lines or {}, { layout = layout }),
       keymaps = spec.keymaps,
     })
 
@@ -231,7 +216,7 @@ function api.show(spec)
 
     entries[#entries + 1] = {
       status = { filename = file.filename, filetype = filetype_of(file) },
-      diff = api.diff(old_lines, new_lines, { layout = layout }),
+      diff = vgit_diff.compute(old_lines, new_lines, { layout = layout }),
       original_lines = old_lines,
       current_lines = new_lines,
     }
