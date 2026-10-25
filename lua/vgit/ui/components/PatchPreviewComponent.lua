@@ -142,7 +142,7 @@ function PatchPreviewComponent:append_hunk_entries(hunk_entries)
 
   state.lines[blank_row + 1] = ''
   state.line_metadata[blank_row + 1] = { type = 'blank' }
-  state._raw_lnums[blank_row + 1] = { lnum = nil, hl = 'GitLineNr' }
+  state._raw_lnums[blank_row + 1] = { lnum = nil, role = 'context' }
   for i, line in ipairs(lines) do
     state.lines[row_offset + i] = line
     state.line_metadata[row_offset + i] = layout.line_metadata[i]
@@ -273,11 +273,13 @@ function PatchPreviewComponent:render_viewport(top, bot)
 
     for row = top, bot do
       local ln = line_numbers[row + 1]
-      if ln then el:place_extmark_lnum({
-        row = row,
-        hl = ln.hl,
-        text = ln.text,
-      }) end
+      if ln then
+        el:place_extmark_lnum({
+          row = row,
+          hl = DiffStyleAnnotator.line_group(ln.role),
+          text = ln.text,
+        })
+      end
 
       local meta = line_metadata[row + 1]
       if meta and meta.lnum_change and meta.lnum_change.type == 'void' then

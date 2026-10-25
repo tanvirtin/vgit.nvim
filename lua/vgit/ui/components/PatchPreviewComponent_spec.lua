@@ -263,19 +263,19 @@ describe('PatchPreviewComponent:', function()
 
       eq(#lines, #line_numbers)
 
-      eq('GitLineNr', line_numbers[1].hl)
-      eq('GitLineNr', line_numbers[2].hl)
-      eq('GitLineNr', line_numbers[3].hl)
+      eq('context', line_numbers[1].role)
+      eq('context', line_numbers[2].role)
+      eq('context', line_numbers[3].role)
 
-      eq('GitPatchHeader', line_numbers[4].hl)
+      eq('header', line_numbers[4].role)
 
-      eq('GitLineNr', line_numbers[5].hl)
+      eq('context', line_numbers[5].role)
       assert.is_truthy(line_numbers[5].text:match('%d'))
 
-      eq('GitSignsDelete', line_numbers[6].hl)
+      eq('remove', line_numbers[6].role)
 
-      eq('GitSignsAdd', line_numbers[7].hl)
-      eq('GitSignsAdd', line_numbers[8].hl)
+      eq('add', line_numbers[7].role)
+      eq('add', line_numbers[8].role)
     end)
 
     it('should return empty line numbers for empty entries', function()
@@ -324,7 +324,7 @@ describe('PatchPreviewComponent:', function()
       local _, _, _, _, line_numbers = PatchLineBuilder.build(entries)
 
       for i = 1, #line_numbers do
-        eq('GitLineNr', line_numbers[i].hl)
+        eq('context', line_numbers[i].role)
       end
     end)
   end)
@@ -537,9 +537,9 @@ describe('PatchPreviewComponent:', function()
             [0] = { { row = 0, hl_group = '@keyword', col_start = 0, col_end = 5 } },
           },
           _line_numbers = {
-            { text = '  1 ', hl = 'GitLineNr' },
-            { text = '  2 ', hl = 'GitSignsDelete' },
-            { text = '  3 ', hl = 'GitSignsAdd' },
+            { text = '  1 ', role = 'context' },
+            { text = '  2 ', role = 'remove' },
+            { text = '  3 ', role = 'add' },
           },
         },
       })
@@ -637,7 +637,7 @@ describe('PatchPreviewComponent:', function()
           },
           _syntax_hl_map = {},
           _line_numbers = {
-            { text = '  1 ', hl = 'GitLineNr' },
+            { text = '  1 ', role = 'context' },
           },
         },
       })
@@ -668,8 +668,8 @@ describe('PatchPreviewComponent:', function()
           },
           _syntax_hl_map = {},
           _line_numbers = {
-            { text = '  1 ', hl = 'GitLineNr' },
-            { text = '  2 ', hl = 'GitLineNr' },
+            { text = '  1 ', role = 'context' },
+            { text = '  2 ', role = 'context' },
           },
         },
       })
@@ -699,7 +699,7 @@ describe('PatchPreviewComponent:', function()
           },
           _syntax_hl_map = {},
           _line_numbers = {
-            { text = '  1 ', hl = 'GitLineNr' },
+            { text = '  1 ', role = 'context' },
           },
         },
       })

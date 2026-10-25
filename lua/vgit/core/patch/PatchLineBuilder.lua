@@ -71,7 +71,7 @@ local function track_lnum(ctx, change_type, syntax_mapping)
   if change_type == 'remove' then
     lnum_val = ctx.orig_lnum
     if lnum_val > ctx.max_lnum then ctx.max_lnum = lnum_val end
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, hl = 'GitSignsDelete' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, role = 'remove' }
     if syntax_mapping and ctx.file_section then
       local sm = ctx.file_section.syntax_mappings
       sm[#sm + 1] = syntax_mapping
@@ -80,18 +80,18 @@ local function track_lnum(ctx, change_type, syntax_mapping)
   elseif change_type == 'add' then
     lnum_val = ctx.curr_lnum
     if lnum_val > ctx.max_lnum then ctx.max_lnum = lnum_val end
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, hl = 'GitSignsAdd' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, role = 'add' }
     if syntax_mapping and ctx.file_section then
       local sm = ctx.file_section.syntax_mappings
       sm[#sm + 1] = syntax_mapping
     end
     ctx.curr_lnum = ctx.curr_lnum + 1
   elseif change_type == 'void' then
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
   else
     lnum_val = ctx.curr_lnum
     if lnum_val > ctx.max_lnum then ctx.max_lnum = lnum_val end
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, hl = 'GitLineNr' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = lnum_val, role = 'context' }
     if syntax_mapping and ctx.file_section then
       local sm = ctx.file_section.syntax_mappings
       sm[#sm + 1] = syntax_mapping
@@ -107,15 +107,15 @@ local function process_file_header(ctx, entry)
 
   ctx.lines[#ctx.lines + 1] = separator
   ctx.line_metadata[#ctx.lines] = { type = 'separator' }
-  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
 
   ctx.lines[#ctx.lines + 1] = entry.filename or 'unknown'
   ctx.line_metadata[#ctx.lines] = { type = 'filename', filename = entry.filename }
-  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
 
   ctx.lines[#ctx.lines + 1] = separator
   ctx.line_metadata[#ctx.lines] = { type = 'separator' }
-  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
 
   ctx.file_section = {
     filetype = entry.filetype,
@@ -159,7 +159,7 @@ local function process_diff_content(ctx, entry)
 
   ctx.lines[#ctx.lines + 1] = ''
   ctx.line_metadata[#ctx.lines] = { type = 'blank' }
-  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
 end
 
 local function process_hunk(ctx, entry)
@@ -175,7 +175,7 @@ local function process_hunk(ctx, entry)
 
     ctx.lines[#ctx.lines + 1] = hunk.header
     ctx.line_metadata[#ctx.lines] = { type = 'code', filetype = filetype, is_header = true, hunk_header = hunk.header }
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitPatchHeader' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'header' }
   end
 
   for i, diff_line in ipairs(hunk.diff or {}) do
@@ -224,7 +224,7 @@ local function process_hunk(ctx, entry)
 
   ctx.lines[#ctx.lines + 1] = ''
   ctx.line_metadata[#ctx.lines] = { type = 'blank' }
-  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
 end
 
 local function process_diff_file(ctx, entry)
@@ -239,15 +239,15 @@ local function process_diff_file(ctx, entry)
   if entry.header ~= false then
     ctx.lines[#ctx.lines + 1] = separator
     ctx.line_metadata[#ctx.lines] = { type = 'separator' }
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
 
     ctx.lines[#ctx.lines + 1] = raw_filename
     ctx.line_metadata[#ctx.lines] = { type = 'filename', filename = raw_filename }
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
 
     ctx.lines[#ctx.lines + 1] = separator
     ctx.line_metadata[#ctx.lines] = { type = 'separator' }
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
   end
 
   ctx.file_section = {
@@ -279,7 +279,7 @@ local function process_diff_file(ctx, entry)
   if #visible_ranges == 0 then
     ctx.lines[#ctx.lines + 1] = ''
     ctx.line_metadata[#ctx.lines] = { type = 'blank' }
-    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+    ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
     return
   end
 
@@ -308,7 +308,7 @@ local function process_diff_file(ctx, entry)
       local header = string.format('@@ -%d +%d @@', ctx.orig_lnum, ctx.curr_lnum)
       ctx.lines[#ctx.lines + 1] = header
       ctx.line_metadata[#ctx.lines] = { type = 'code', filetype = filetype, is_header = true, hunk_header = header }
-      ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitPatchHeader' }
+      ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'header' }
     end
 
     for i = range[1], range[2] do
@@ -360,7 +360,7 @@ local function process_diff_file(ctx, entry)
 
   ctx.lines[#ctx.lines + 1] = ''
   ctx.line_metadata[#ctx.lines] = { type = 'blank' }
-  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, hl = 'GitLineNr' }
+  ctx.raw_lnums[#ctx.raw_lnums + 1] = { lnum = nil, role = 'context' }
 end
 
 local function lnum_width(max_lnum)
@@ -375,9 +375,9 @@ local function format_line_numbers(raw_lnums, max_lnum)
   local line_numbers = {}
   for _, entry in ipairs(raw_lnums) do
     if entry.lnum then
-      line_numbers[#line_numbers + 1] = { text = string.format(lnum_fmt, entry.lnum), hl = entry.hl }
+      line_numbers[#line_numbers + 1] = { text = string.format(lnum_fmt, entry.lnum), role = entry.role }
     else
-      line_numbers[#line_numbers + 1] = { text = empty_text, hl = entry.hl }
+      line_numbers[#line_numbers + 1] = { text = empty_text, role = entry.role }
     end
   end
 

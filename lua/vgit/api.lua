@@ -144,13 +144,14 @@ function api.patch(files, opts)
 
   for i = 1, #layout.lines do
     local meta = layout.line_metadata[i]
+    local number = layout.line_numbers[i]
 
     rows[i] = {
       kind = kind_of(meta),
       old_lnum = meta and meta.old_lnum,
       new_lnum = meta and meta.new_lnum,
       filename = meta and meta.filename,
-      number = layout.line_numbers[i],
+      number = number and { text = number.text, hl = DiffStyleAnnotator.line_group(number.role) } or nil,
     }
   end
 

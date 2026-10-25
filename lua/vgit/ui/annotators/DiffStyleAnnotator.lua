@@ -1,99 +1,57 @@
 local lazy = require('vgit.core.lazy')
 
+local core_style = require('vgit.core.style')
 local signs_setting = lazy('vgit.settings.signs')
 
 local DiffStyleAnnotator = {}
 
-function DiffStyleAnnotator._annotate_header(line, row)
-  local highlights = {}
+local GROUPS = {
+  separator = 'GitPatchSeparator',
+  filename = 'GitPatchFileHeader',
+  header = 'GitPatchHeader',
+  header_marker = 'GitPatchHeaderMarker',
+  header_remove = 'GitPatchHeaderRemove',
+  header_add = 'GitPatchHeaderAdd',
+  context = 'GitPatchContext',
+}
 
-  highlights[#highlights + 1] = {
-    row = row,
-    hl_group = 'GitPatchHeader',
-    line = true,
-  }
+local LINE_GROUPS = {
+  add = 'GitSignsAdd',
+  remove = 'GitSignsDelete',
+  context = 'GitLineNr',
+  header = 'GitPatchHeader',
+}
 
-  highlights[#highlights + 1] = {
-    row = row,
-    col_start = 0,
-    col_end = 2,
-    hl_group = 'GitPatchHeaderMarker',
-  }
+local function map(highlights, scene_hls)
+  local result = {}
 
-  local minus_start, minus_end = line:find('%-[%d,]+')
-  if minus_start then
-    highlights[#highlights + 1] = {
-      row = row,
-      col_start = minus_start - 1,
-      col_end = minus_end,
-      hl_group = 'GitPatchHeaderRemove',
-    }
+  for _, hl in ipairs(highlights) do
+    local group = GROUPS[hl.role] or scene_hls[hl.role]
+
+    if group then
+      result[#result + 1] = {
+        row = hl.row,
+        col_start = hl.col_start,
+        col_end = hl.col_end,
+        hl_group = group,
+        line = hl.line,
+      }
+    end
   end
 
-  local plus_start, plus_end = line:find('%+[%d,]+')
-  if plus_start then
-    highlights[#highlights + 1] = {
-      row = row,
-      col_start = plus_start - 1,
-      col_end = plus_end,
-      hl_group = 'GitPatchHeaderAdd',
-    }
-  end
-
-  local close_start = line:find(' @@', plus_end or minus_end or 2)
-  if close_start then
-    highlights[#highlights + 1] = {
-      row = row,
-      col_start = close_start,
-      col_end = close_start + 2,
-      hl_group = 'GitPatchHeaderMarker',
-    }
-  end
-
-  return highlights
+  return result
 end
 
-function DiffStyleAnnotator._annotate_line(result, line, meta, row, scene_hls)
-  if not meta then return end
-
-  if meta.type == 'separator' then
-    result[#result + 1] = { row = row, hl_group = 'GitPatchSeparator', line = true }
-    return
-  end
-
-  if meta.type == 'filename' then
-    result[#result + 1] = { row = row, hl_group = 'GitPatchFileHeader', line = true }
-    return
-  end
-
-  if meta.type ~= 'code' then return end
-
-  local change_type = meta.lnum_change and meta.lnum_change.type
-
-  if meta.is_header then
-    local header_highlights = DiffStyleAnnotator._annotate_header(line, row)
-    for _, hl in ipairs(header_highlights) do
-      result[#result + 1] = hl
-    end
-  else
-    local hl_group = scene_hls[change_type]
-    if hl_group then
-      result[#result + 1] = { row = row, hl_group = hl_group, line = true }
-    elseif change_type ~= 'void' then
-      result[#result + 1] = { row = row, hl_group = 'GitPatchContext', line = true }
-    end
-  end
+function DiffStyleAnnotator._annotate_header(line, row)
+  return map(core_style.header(line, row), {})
 end
 
 function DiffStyleAnnotator.annotate(lines, line_metadata)
-  local diff_highlights = {}
-  local scene_hls = signs_setting:get('usage').scene
+  return map(core_style.annotate(lines, line_metadata), signs_setting:get('usage').scene)
+end
 
-  for i, line in ipairs(lines) do
-    DiffStyleAnnotator._annotate_line(diff_highlights, line, line_metadata[i], i - 1, scene_hls)
-  end
-
-  return diff_highlights
+function DiffStyleAnnotator.line_group(role)
+  return LINE_GROUPS[role] or 'GitLineNr'
 end
 
 return DiffStyleAnnotator
