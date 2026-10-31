@@ -122,7 +122,7 @@ function api.patch(files, opts)
   for _, file in ipairs(files) do
     prepared[#prepared + 1] = {
       filename = file.filename,
-      filetype = filetype_of(file),
+      filetype = opts.syntax and filetype_of(file) or nil,
       old_lines = file.old_lines,
       new_lines = file.new_lines,
     }

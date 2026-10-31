@@ -70,6 +70,33 @@ describe('vgit.api:', function()
       eq('a.txt', patch.lines[2])
     end)
 
+    it('should detect filetypes only when syntax highlighting is asked for', function()
+      local fs = require('vgit.core.fs')
+      local detect = fs.detect_filetype
+      local calls = 0
+      local file = { filename = 'a.lua', old_lines = { 'local a = 1' }, new_lines = { 'local a = 2' } }
+
+      fs.detect_filetype = function(...)
+        calls = calls + 1
+        return detect(...)
+      end
+
+      local ok, err = pcall(function()
+        local plain = api.patch({ file }, { header = false, groups = true })
+
+        eq(0, calls)
+        eq({ 'remove', 'add' }, kinds(plain))
+
+        api.patch({ file }, { header = false, syntax = true })
+
+        eq(1, calls)
+      end)
+
+      fs.detect_filetype = detect
+
+      assert(ok, err)
+    end)
+
     it('should give line backgrounds as highlights and changed words as overlays, relative to the patch', function()
       local patch = api.patch({
         { filename = 'a.txt', old_lines = { 'local x = 1' }, new_lines = { 'local x = 2' } },
