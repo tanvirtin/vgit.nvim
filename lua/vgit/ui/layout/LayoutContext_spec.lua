@@ -70,4 +70,39 @@ describe('LayoutContext:', function()
       eq(50, dims1.height)
     end)
   end)
+
+  describe('restore_window_options', function()
+    local win
+
+    before_each(function()
+      vim.cmd('enew!')
+      vim.go.number = true
+      win = vim.api.nvim_get_current_win()
+      vim.api.nvim_set_option_value('number', false, { scope = 'local', win = win })
+    end)
+
+    after_each(function()
+      vim.api.nvim_set_option_value('number', true, { scope = 'local', win = win })
+    end)
+
+    it('puts the captured options back on the same buffer', function()
+      local ctx = LayoutContext({ mode = 'split' })
+
+      vim.api.nvim_set_option_value('number', true, { scope = 'local', win = win })
+      ctx:restore_window_options()
+
+      eq(false, vim.api.nvim_get_option_value('number', { win = win }))
+    end)
+
+    it('leaves another buffer\'s own options alone', function()
+      local ctx = LayoutContext({ mode = 'split' })
+      local other = vim.api.nvim_create_buf(true, true)
+
+      vim.api.nvim_win_set_buf(win, other)
+      vim.api.nvim_set_option_value('number', true, { scope = 'local', win = win })
+      ctx:restore_window_options()
+
+      eq(true, vim.api.nvim_get_option_value('number', { win = win }))
+    end)
+  end)
 end)

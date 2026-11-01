@@ -150,12 +150,46 @@ describe('Window:', function()
     end)
   end)
 
+  describe('open_screen', function()
+    it('sets window options locally, without changing the global defaults', function()
+      local number, cursorline = vim.go.number, vim.go.cursorline
+
+      vim.go.number, vim.go.cursorline = true, true
+      vim.cmd('botright 5split')
+      win = Window.open_screen(buffer, { win_options = { number = false, cursorline = false } })
+
+      local after_number, after_cursorline = vim.go.number, vim.go.cursorline
+
+      vim.go.number, vim.go.cursorline = number, cursorline
+
+      assert.is_false(win:get_option('number'))
+      assert.is_true(after_number)
+      assert.is_true(after_cursorline)
+    end)
+  end)
+
   describe('set_option', function()
     it('should set a window option', function()
       win = Window:open(buffer, default_float_opts)
       win:set_option('wrap', false)
 
       assert.is_false(vim.api.nvim_get_option_value('wrap', { win = win.win_id }))
+    end)
+
+    it('keeps the global default unchanged', function()
+      local number = vim.go.number
+
+      vim.go.number = true
+      vim.cmd('split')
+      win = Window.get_current()
+      win:set_option('number', false)
+
+      local after = vim.go.number
+
+      vim.go.number = number
+
+      assert.is_false(win:get_option('number'))
+      assert.is_true(after)
     end)
   end)
 
@@ -198,6 +232,23 @@ describe('Window:', function()
 
       assert.is_false(vim.api.nvim_get_option_value('wrap', { win = win.win_id }))
       assert.is_true(vim.api.nvim_get_option_value('number', { win = win.win_id }))
+    end)
+
+    it('keeps the global defaults unchanged', function()
+      local number, cursorline = vim.go.number, vim.go.cursorline
+
+      vim.go.number, vim.go.cursorline = true, true
+      vim.cmd('split')
+      win = Window.get_current()
+      win:assign_options({ number = false, cursorline = false })
+
+      local after_number, after_cursorline = vim.go.number, vim.go.cursorline
+
+      vim.go.number, vim.go.cursorline = number, cursorline
+
+      assert.is_false(win:get_option('number'))
+      assert.is_true(after_number)
+      assert.is_true(after_cursorline)
     end)
   end)
 
