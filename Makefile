@@ -1,9 +1,19 @@
-.PHONY: test test-filter test-file lint format format-check check ci install-deps clean setup-hooks
+.PHONY: test test-unit test-scenario test-filter test-file lint format format-check check ci install-deps clean setup-hooks
 
 LUA_VERSION ?= 5.1
 
+# Unit specs and scenario specs run in separate processes: the scenarios spawn
+# real editors, and a fresh process keeps them away from whatever three thousand
+# unit tests leave behind in the one that ran before them.
 test:
-	GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always vusted
+	$(MAKE) test-unit
+	$(MAKE) test-scenario
+
+test-unit:
+	GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always vusted lua/
+
+test-scenario:
+	GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always vusted tests/
 
 test-filter:
 	GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always vusted --filter="$(FILTER)"

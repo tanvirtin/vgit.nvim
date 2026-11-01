@@ -3,7 +3,11 @@ local Terminal = require('tests.scenario.terminal')
 local Editor = {}
 Editor.__index = Editor
 
-local DEFAULT_TIMEOUT_MS = 5000
+-- A step waits this long for the child's screen to change. CI runners are
+-- slower than a laptop and the blame and project-diff screens take a while to
+-- paint there, so the wait is generous; the scenario watchdog still bounds a
+-- test that is truly stuck.
+local DEFAULT_TIMEOUT_MS = 15000
 
 function Editor.start(opts)
   local terminal = Terminal.start(opts)
@@ -41,10 +45,7 @@ function Editor:wait_for(predicate, description, timeout_ms)
   while vim.uv.now() < deadline do
     if predicate() then return end
     if not self.terminal:is_alive() then
-      error(
-        string.format('child exited (code %s) while waiting for %s', tostring(self.terminal._exit_code), description),
-        2
-      )
+      error(string.format('%s while waiting for %s', self.terminal:death(), description), 2)
     end
     vim.wait(20)
   end

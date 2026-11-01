@@ -93,6 +93,16 @@ function Terminal:send(sequence)
   vim.fn.chansend(self.job, keys.encode(sequence))
 end
 
+-- jobwait() answers -3 both for a child killed by a signal and for a job whose
+-- terminal buffer was wiped, and the two want different fixes. Say which it is.
+function Terminal:death()
+  if vim.api.nvim_buf_is_valid(self.bufnr) then
+    return string.format('child exited (code %s)', tostring(self._exit_code))
+  end
+
+  return string.format('the terminal buffer was wiped while the child ran (code %s)', tostring(self._exit_code))
+end
+
 function Terminal:lines()
   return vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
 end
