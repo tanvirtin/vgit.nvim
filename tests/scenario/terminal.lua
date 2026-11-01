@@ -30,10 +30,15 @@ function Terminal.start(opts)
   local bufnr = vim.api.nvim_get_current_buf()
 
   -- stty -ixon so <C-s> reaches Neovim instead of being eaten as pty XOFF flow control.
+  -- `exec` would leave one process, but then a child killed by a signal leaves
+  -- no trace: jobwait() answers -3 for every signal, and the shell that could
+  -- name the signal is gone. Keep the shell, have it print the status on the
+  -- child's own screen, and pass the status on so jobwait() still reports it.
   local argv = {
     'sh',
     '-c',
-    'stty -ixon 2>/dev/null; exec "$@"',
+    'stty -ixon 2>/dev/null; "$@"; status=$?; '
+      .. '[ "$status" -eq 0 ] || printf "\\n[child exited: %d]\\n" "$status" >&2; exit "$status"',
     'sh',
     vim.v.progpath,
     '--clean',
