@@ -381,9 +381,14 @@ describe('Component:', function()
   end)
 
   describe('viewport', function()
-    it('should have viewport tracking methods when viewport = true', function()
-      local MyComponent = Component({ viewport = true })
-      local instance = MyComponent({})
+    local ViewportComponent
+
+    before_each(function()
+      ViewportComponent = require('vgit.ui.ViewportComponent')
+    end)
+
+    it('should have viewport tracking methods on a viewport component', function()
+      local instance = ViewportComponent({})
 
       assert.is_function(instance.mark_viewport_dirty)
       assert.is_function(instance.is_viewport_unchanged)
@@ -391,9 +396,8 @@ describe('Component:', function()
       assert.is_function(instance.ensure_renderer_attached)
     end)
 
-    it('should initialize viewport state when viewport = true', function()
-      local MyComponent = Component({ viewport = true })
-      local instance = MyComponent({})
+    it('should initialize viewport state', function()
+      local instance = ViewportComponent({})
 
       assert.is_true(instance._viewport_dirty)
       assert.is_nil(instance._last_top)
@@ -402,8 +406,7 @@ describe('Component:', function()
     end)
 
     it('should support viewport dirty tracking', function()
-      local MyComponent = Component({ viewport = true })
-      local instance = MyComponent({})
+      local instance = ViewportComponent({})
 
       assert.is_true(instance._viewport_dirty)
       instance:commit_viewport(1, 10)
@@ -413,76 +416,23 @@ describe('Component:', function()
       assert.is_false(instance:is_viewport_unchanged(1, 10))
     end)
 
-    it('should not have viewport methods when viewport is not set', function()
+    it('should forget what it drew when it unmounts', function()
+      local instance = mount_component(ViewportComponent({}))
+
+      instance:commit_viewport(1, 10)
+      instance:unmount()
+
+      assert.is_true(instance._viewport_dirty)
+      assert.is_nil(instance._last_top)
+      assert.is_false(instance._renderer_attached)
+    end)
+
+    it('should not have viewport methods on a declared component', function()
       local MyComponent = Component({})
       local instance = MyComponent({})
 
       assert.is_nil(instance._viewport_dirty)
       assert.is_nil(rawget(getmetatable(instance), 'mark_viewport_dirty'))
-    end)
-  end)
-
-  describe('multi-element', function()
-    it('should create elements from config', function()
-      local MyComponent = Component({
-        elements = {
-          input = { buf_options = { modifiable = true, buflisted = false, bufhidden = 'wipe' } },
-          list = { buf_options = { modifiable = false, buflisted = false, bufhidden = 'wipe' } },
-        },
-      })
-      local instance = MyComponent({})
-      instance:mount()
-
-      assert.is_not_nil(instance.elements.input)
-      assert.is_not_nil(instance.elements.list)
-    end)
-
-    it('should call layout() for get_layout_spec', function()
-      local MyComponent = Component({
-        elements = {
-          input = {},
-          list = {},
-        },
-      })
-
-      function MyComponent:layout(spec)
-        return spec.vertical({
-          spec.view(self.elements.input, { height = 1 }),
-          spec.view(self.elements.list, { flex = 1 }),
-        })
-      end
-
-      local instance = MyComponent({})
-      instance:mount()
-      local spec = instance:get_layout_spec()
-
-      eq('flex', spec.type)
-      eq(2, #spec.children)
-    end)
-
-    it('should clean up elements on unmount', function()
-      local MyComponent = Component({
-        elements = {
-          input = { buf_options = { modifiable = true, buflisted = false, bufhidden = 'wipe' } },
-          list = {},
-        },
-      })
-      local instance = MyComponent({})
-      instance:mount()
-      instance._mounted = true
-      instance:unmount()
-
-      eq({}, instance.elements)
-      assert.is_false(instance:is_mounted())
-    end)
-
-    it('should not have auto-delegated methods', function()
-      local MyComponent = Component({
-        elements = { a = {} },
-      })
-      local instance = MyComponent({})
-
-      assert.is_nil(rawget(MyComponent, 'set_lines'))
     end)
   end)
 

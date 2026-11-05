@@ -1,16 +1,25 @@
 local lazy = require('vgit.core.lazy')
 
-local Component = lazy('vgit.ui.Component')
+local ElementComponent = lazy('vgit.ui.ElementComponent')
 
-local ViewportComponent = Component:extend()
+local ViewportComponent = ElementComponent:extend()
 
 function ViewportComponent:constructor(props)
-  local instance = Component.constructor(self, props)
+  local instance = ElementComponent.constructor(self, props)
   instance._viewport_dirty = true
   instance._last_top = nil
   instance._last_bot = nil
   instance._renderer_attached = false
   return instance
+end
+
+function ViewportComponent:_release_element()
+  self._renderer_attached = false
+  self._viewport_dirty = true
+  self._last_top = nil
+  self._last_bot = nil
+
+  ElementComponent._release_element(self)
 end
 
 function ViewportComponent:mark_viewport_dirty()
