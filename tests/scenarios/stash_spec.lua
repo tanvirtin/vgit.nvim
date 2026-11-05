@@ -36,4 +36,72 @@ describe('scenario: stash view actions', function()
       assert.is_truthy(ctx.world:git(ctx.repo, 'stash', 'list'):find('wip apply', 1, true))
     end,
   })
+
+  scenario.flow('drop asks first, and declining keeps the stash', {
+    files = { ['file.txt'] = { 'base' } },
+    changes = { ['file.txt'] = { 'stashed edit' } },
+    stashes = { 'wip drop' },
+    steps = {
+      { open = 'stash' },
+      { await_text = 'wip drop' },
+      { focus = 'diff' },
+      { keys = 'd' },
+      { await_text = 'Drop {0}?' },
+      { keys = 'n<CR>' },
+    },
+    assert = function(ctx)
+      assert.is_truthy(ctx.world:git(ctx.repo, 'stash', 'list'):find('wip drop', 1, true))
+    end,
+  })
+
+  scenario.flow('drop removes the stash when confirmed', {
+    files = { ['file.txt'] = { 'base' } },
+    changes = { ['file.txt'] = { 'stashed edit' } },
+    stashes = { 'wip drop' },
+    steps = {
+      { open = 'stash' },
+      { await_text = 'wip drop' },
+      { focus = 'diff' },
+      { keys = 'd' },
+      { await_text = 'Drop {0}?' },
+      { keys = 'y<CR>' },
+    },
+    assert = function(ctx)
+      assert.are.same('', ctx.world:git(ctx.repo, 'stash', 'list'))
+    end,
+  })
+
+  scenario.flow('clear asks first, and declining keeps the stash', {
+    files = { ['file.txt'] = { 'base' } },
+    changes = { ['file.txt'] = { 'stashed edit' } },
+    stashes = { 'wip clear' },
+    steps = {
+      { open = 'stash' },
+      { await_text = 'wip clear' },
+      { focus = 'diff' },
+      { keys = 'D' },
+      { await_text = 'Clear all stashes?' },
+      { keys = 'n<CR>' },
+    },
+    assert = function(ctx)
+      assert.is_truthy(ctx.world:git(ctx.repo, 'stash', 'list'):find('wip clear', 1, true))
+    end,
+  })
+
+  scenario.flow('clear removes the stash when confirmed', {
+    files = { ['file.txt'] = { 'base' } },
+    changes = { ['file.txt'] = { 'stashed edit' } },
+    stashes = { 'wip clear' },
+    steps = {
+      { open = 'stash' },
+      { await_text = 'wip clear' },
+      { focus = 'diff' },
+      { keys = 'D' },
+      { await_text = 'Clear all stashes?' },
+      { keys = 'y<CR>' },
+    },
+    assert = function(ctx)
+      assert.are.same('', ctx.world:git(ctx.repo, 'stash', 'list'))
+    end,
+  })
 end)

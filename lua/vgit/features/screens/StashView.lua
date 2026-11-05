@@ -217,12 +217,16 @@ function StashView:setup_keymaps()
     {
       key = keymaps.drop,
       fn = self:_make_debounced(function()
+        local revision = self:_get_current_revision()
+        if not revision then return end
+        if not self:_confirm('Drop ' .. self:_format_stash_index(revision) .. '? (y/N) ') then return end
         self:_stash_action_with_revision(git_stash.drop, 'Stash dropped: ')
       end),
     },
     {
       key = keymaps.clear,
       fn = self:_make_debounced(function()
+        if not self:_confirm('Clear all stashes? (y/N) ') then return end
         local _, err = git_stash.clear(self._repo:get_path())
         if err then
           console.error(err[1] or tostring(err))
