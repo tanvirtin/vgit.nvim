@@ -247,6 +247,32 @@ controller.execute_command = event.async(function(args)
   vim.notify(string.format('VGit: Unknown command "%s"', cmd), vim.log.levels.ERROR)
 end)
 
+local PORCELAIN_COMMANDS = {
+  'diff',
+  'blame',
+  'hunk',
+  'status',
+  'show',
+  'branch',
+  'log',
+  'stash',
+  'worktree',
+  'commit',
+  'debug',
+}
+
+local SUBCOMMANDS = {
+  debug = { 'on', 'off', 'status', 'open' },
+  stash = { 'add', 'apply', 'pop', 'drop', 'clear' },
+  worktree = { 'add', 'remove', 'switch' },
+}
+
+local function matching(candidates, prefix)
+  return vim.tbl_filter(function(candidate)
+    return vim.startswith(candidate, prefix)
+  end, candidates)
+end
+
 function controller.autocomplete(arg_lead, cmd_line, _)
   local split_cmd = vim.split(cmd_line, '%s+')
 
@@ -254,20 +280,14 @@ function controller.autocomplete(arg_lead, cmd_line, _)
     local commands = controller.commands()
     local all_commands = vim.tbl_keys(commands)
 
-    vim.list_extend(all_commands, { 'diff', 'blame', 'hunk', 'status', 'show', 'branch', 'debug' })
+    vim.list_extend(all_commands, PORCELAIN_COMMANDS)
 
-    return vim.tbl_filter(function(cmd)
-      return vim.startswith(cmd, arg_lead)
-    end, all_commands)
+    return matching(all_commands, arg_lead)
   end
 
   local cmd = split_cmd[2]
-  if cmd == 'debug' then
-    local subcommands = { 'on', 'off', 'status', 'open' }
-    return vim.tbl_filter(function(sub)
-      return vim.startswith(sub, arg_lead)
-    end, subcommands)
-  end
+  local subcommands = SUBCOMMANDS[cmd]
+  if subcommands then return matching(subcommands, arg_lead) end
 
   if cmd == 'diff' or cmd == 'blame' or cmd == 'hunk' then
     local porcelain = git_porcelain()

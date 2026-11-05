@@ -149,6 +149,49 @@ describe('scenario: conflicts', function()
 end)
 
 describe('scenario: commands', function()
+  scenario.flow('completion lists every command and its subcommands', {
+    files = { ['f.txt'] = { 'one' } },
+    steps = {
+      { cd = '$repo' },
+      { dismiss = true },
+      {
+        wait_until = function(ctx)
+          return ctx.editor.terminal:rpc_eval('vim.fn.exists(":VGit")') == '2'
+        end,
+        desc = 'the VGit command to be defined',
+      },
+      {
+        run = function(ctx)
+          local function complete(line)
+            return ctx.editor.terminal:rpc_eval_json(string.format('vim.fn.getcompletion(%q, "cmdline")', line))
+          end
+
+          local commands = complete('VGit ')
+          for _, name in ipairs({
+            'diff',
+            'blame',
+            'hunk',
+            'status',
+            'show',
+            'branch',
+            'log',
+            'stash',
+            'worktree',
+            'commit',
+          }) do
+            assert.is_truthy(
+              vim.tbl_contains(commands, name),
+              string.format('completion should offer %q, got %s', name, vim.inspect(commands))
+            )
+          end
+
+          assert.are.same({ 'add', 'apply', 'pop', 'drop', 'clear' }, complete('VGit stash '))
+          assert.are.same({ 'add', 'remove', 'switch' }, complete('VGit worktree '))
+        end,
+      },
+    },
+  })
+
   scenario.flow('show displays the diff of HEAD', {
     files = { ['f.txt'] = { 'one' } },
     history = { { message = 'edit f', files = { ['f.txt'] = { 'two' } } } },
