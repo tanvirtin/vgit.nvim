@@ -5,36 +5,32 @@ local Element = lazy('vgit.ui.elements.Element')
 local Component = lazy('vgit.ui.Component')
 local SearchFilter = lazy('vgit.core.SearchFilter')
 
-local SearchComponent = Component({
-  on_mount = function(self)
-    local prompt = self.props.prompt or '> '
-    self.elements.input:set_lines({ prompt })
+local SearchComponent = Component:extend()
 
-    self:_setup_input_tracking()
-    self:_setup_keymaps()
-    self:_apply_filter()
+function SearchComponent:on_mount()
+  local prompt = self.props.prompt or '> '
+  self.elements.input:set_lines({ prompt })
 
-    if self.props.popup == false then
-      self.elements.list:on('CursorMoved', function()
-        if not self._mounted then return end
-        local cursor = self.elements.list:get_cursor()
-        if not cursor then return end
-        local lnum = cursor[1]
-        if lnum ~= self.state.selected_index then
-          self.state.selected_index = lnum
-          self:_fire_on_move()
-        end
-      end)
-    end
+  self:_setup_input_tracking()
+  self:_setup_keymaps()
+  self:_apply_filter()
 
-    self.elements.input:focus()
-    self.elements.input:start_insert()
-  end,
+  if self.props.popup == false then
+    self.elements.list:on('CursorMoved', function()
+      if not self._mounted then return end
+      local cursor = self.elements.list:get_cursor()
+      if not cursor then return end
+      local lnum = cursor[1]
+      if lnum ~= self.state.selected_index then
+        self.state.selected_index = lnum
+        self:_fire_on_move()
+      end
+    end)
+  end
 
-  on_unmount = function(self)
-    if self.elements.input then self.elements.input:stop_insert() end
-  end,
-})
+  self.elements.input:focus()
+  self.elements.input:start_insert()
+end
 
 function SearchComponent:constructor(props)
   local instance = SearchComponent.super.constructor(self, props)

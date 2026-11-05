@@ -1,22 +1,27 @@
 local lazy = require('vgit.core.lazy')
 
-local Component = lazy('vgit.ui.Component')
+local ElementComponent = lazy('vgit.ui.ElementComponent')
 local git_blame = lazy('vgit.git.git_blame')
 
-local BlameGutterComponent = Component({
-  win_options = {
+local BlameGutterComponent = ElementComponent:extend()
+
+function BlameGutterComponent:get_win_options()
+  return {
     winhl = 'Normal:GitBackground',
     signcolumn = 'no',
     wrap = false,
     number = false,
     cursorline = true,
-  },
-  win_plot = { focusable = false },
+  }
+end
 
-  on_props = function(self, prev_props)
-    if self.props.blames ~= prev_props.blames then self:render() end
-  end,
-})
+function BlameGutterComponent:get_win_plot()
+  return { focusable = false }
+end
+
+function BlameGutterComponent:on_props(prev_props)
+  if self.props.blames ~= prev_props.blames then self:render() end
+end
 
 function BlameGutterComponent:get_layout_spec()
   local LayoutSpec = require('vgit.ui.layout.LayoutSpec')

@@ -4,44 +4,46 @@ local fs = lazy('vgit.core.fs')
 local utils = lazy('vgit.core.utils')
 local event = lazy('vgit.core.event')
 local icons = lazy('vgit.core.icons')
-local Component = lazy('vgit.ui.Component')
+local ElementComponent = lazy('vgit.ui.ElementComponent')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
 local symbols_setting = lazy('vgit.settings.symbols')
 local DepthTree = lazy('vgit.ui.components.TreeComponent.DepthTree')
 
-local TreeComponent = Component({
-  win_options = {
+local TreeComponent = ElementComponent:extend()
+
+function TreeComponent:get_win_options()
+  return {
     cursorline = true,
     number = false,
     relativenumber = false,
     wrap = false,
-  },
+  }
+end
 
-  on_mount = function(self)
-    self:render()
+function TreeComponent:on_mount()
+  self:render()
 
-    self:with_element(function(el)
-      if not self._keymaps_setup then
-        el:set_keymap('n', '<enter>', function()
-          local item = self:get_current_list_item()
-          if not item then return end
-          self:toggle_current_list_item()
-          if self._on_enter_callback then self._on_enter_callback(item) end
-        end, 'Enter item')
+  self:with_element(function(el)
+    if not self._keymaps_setup then
+      el:set_keymap('n', '<enter>', function()
+        local item = self:get_current_list_item()
+        if not item then return end
+        self:toggle_current_list_item()
+        if self._on_enter_callback then self._on_enter_callback(item) end
+      end, 'Enter item')
 
-        if self.props.keymaps then self:setup_keymaps(self.props.keymaps, self.props.keymap_handlers) end
+      if self.props.keymaps then self:setup_keymaps(self.props.keymaps, self.props.keymap_handlers) end
 
-        el:on('CursorMoved', function()
-          if self._rendering then return end
-          local item = self:get_current_list_item()
-          if self._on_move_callback then self._on_move_callback(item) end
-        end)
+      el:on('CursorMoved', function()
+        if self._rendering then return end
+        local item = self:get_current_list_item()
+        if self._on_move_callback then self._on_move_callback(item) end
+      end)
 
-        self._keymaps_setup = true
-      end
-    end)
-  end,
-})
+      self._keymaps_setup = true
+    end
+  end)
+end
 
 function TreeComponent:constructor(props)
   local instance = TreeComponent.super.constructor(self, props)

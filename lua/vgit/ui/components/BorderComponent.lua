@@ -1,17 +1,23 @@
 local lazy = require('vgit.core.lazy')
 
-local Component = lazy('vgit.ui.Component')
+local ElementComponent = lazy('vgit.ui.ElementComponent')
 
-local BorderComponent = Component({
-  win_options = function(props)
-    return {
-      winhl = props.winhl or 'Normal:VGitBorder',
-      cursorline = false,
-      cursorcolumn = false,
-    }
-  end,
-  win_plot = { focusable = false },
-  layout_opts = { height = 1 },
-})
+local BorderComponent = ElementComponent:extend()
+
+function BorderComponent:get_win_options()
+  return {
+    winhl = self.props.winhl or 'Normal:VGitBorder',
+    cursorline = false,
+    cursorcolumn = false,
+  }
+end
+
+function BorderComponent:get_win_plot()
+  return { focusable = false }
+end
+
+function BorderComponent:get_layout_opts()
+  return { height = 1 }
+end
 
 return BorderComponent

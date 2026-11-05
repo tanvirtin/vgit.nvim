@@ -1,34 +1,36 @@
 local lazy = require('vgit.core.lazy')
-local Component = lazy('vgit.ui.Component')
+local CompositeComponent = lazy('vgit.ui.CompositeComponent')
 local DiffComponent = lazy('vgit.ui.components.DiffComponent')
 local LineNumberCalculator = lazy('vgit.ui.calculators.LineNumberCalculator')
 
-local SplitDiffComponent = Component({
-  children = {
+local SplitDiffComponent = CompositeComponent:extend()
+
+function SplitDiffComponent:get_child_classes()
+  return {
     previous = DiffComponent,
     current = DiffComponent,
-  },
+  }
+end
 
-  on_mount = function(self)
-    self.children.previous:set_win_option('scrollbind', true)
-    self.children.previous:set_win_option('cursorbind', true)
-    self.children.current:set_win_option('scrollbind', true)
-    self.children.current:set_win_option('cursorbind', true)
+function SplitDiffComponent:on_mount()
+  self.children.previous:set_win_option('scrollbind', true)
+  self.children.previous:set_win_option('cursorbind', true)
+  self.children.current:set_win_option('scrollbind', true)
+  self.children.current:set_win_option('cursorbind', true)
 
-    if self.props.win_options then
-      for k, v in pairs(self.props.win_options) do
-        self.children.previous:set_win_option(k, v)
-        self.children.current:set_win_option(k, v)
-      end
+  if self.props.win_options then
+    for k, v in pairs(self.props.win_options) do
+      self.children.previous:set_win_option(k, v)
+      self.children.current:set_win_option(k, v)
     end
+  end
 
-    self:render()
-  end,
+  self:render()
+end
 
-  on_props = function(self, prev_props)
-    if self.props.diff ~= prev_props.diff or self.props.filetype ~= prev_props.filetype then self:render() end
-  end,
-})
+function SplitDiffComponent:on_props(prev_props)
+  if self.props.diff ~= prev_props.diff or self.props.filetype ~= prev_props.filetype then self:render() end
+end
 
 function SplitDiffComponent:get_initial_state()
   return {

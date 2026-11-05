@@ -1,21 +1,26 @@
 local lazy = require('vgit.core.lazy')
 
-local Component = lazy('vgit.ui.Component')
+local ElementComponent = lazy('vgit.ui.ElementComponent')
 
-local BlameContentComponent = Component({
-  win_options = {
+local BlameContentComponent = ElementComponent:extend()
+
+function BlameContentComponent:get_win_options()
+  return {
     winhl = 'Normal:GitBackground',
     signcolumn = 'no',
     wrap = false,
     number = true,
     cursorline = true,
-  },
-  layout_opts = { flex = 1, focus = true },
+  }
+end
 
-  on_props = function(self, prev_props)
-    if self.props.lines ~= prev_props.lines or self.props.filetype ~= prev_props.filetype then self:render() end
-  end,
-})
+function BlameContentComponent:get_layout_opts()
+  return { flex = 1, focus = true }
+end
+
+function BlameContentComponent:on_props(prev_props)
+  if self.props.lines ~= prev_props.lines or self.props.filetype ~= prev_props.filetype then self:render() end
+end
 
 function BlameContentComponent:render()
   self:with_element(function(el)

@@ -64,15 +64,4 @@ end
 
 function Component:with_element() end
 
-local object_proxy = getmetatable(Component)
-local component_mt = {}
-for k, v in pairs(object_proxy) do
-  component_mt[k] = v
-end
-component_mt.__call = function(_, config)
-  return require('vgit.ui.declare_component')(config)
-end
-setmetatable(component_mt, { __index = object_proxy })
-setmetatable(Component, component_mt)
-
 return Component

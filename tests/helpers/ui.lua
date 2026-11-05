@@ -1,15 +1,14 @@
-local Component = require('vgit.ui.Component')
+local ElementComponent = require('vgit.ui.ElementComponent')
 local View = require('vgit.ui.View')
 local Element = require('vgit.ui.elements.Element')
 local LayoutSpec = require('vgit.ui.layout.LayoutSpec')
 
 local M = {}
 
-local TestComponent = Component({})
+local TestComponent = ElementComponent:extend()
 
 function TestComponent:constructor(props)
-  local Base = getmetatable(TestComponent)
-  local instance = Base.constructor(self, props)
+  local instance = TestComponent.super.constructor(self, props)
   instance._log = {}
   return instance
 end

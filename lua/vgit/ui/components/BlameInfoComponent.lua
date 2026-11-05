@@ -1,23 +1,28 @@
 local lazy = require('vgit.core.lazy')
 
-local Component = lazy('vgit.ui.Component')
+local ElementComponent = lazy('vgit.ui.ElementComponent')
 
-local BlameInfoComponent = Component({
-  win_options = {
+local BlameInfoComponent = ElementComponent:extend()
+
+function BlameInfoComponent:get_win_options()
+  return {
     winhl = 'Normal:GitBackground',
     cursorline = false,
     wrap = false,
-  },
-  layout_opts = { height = 3 },
+  }
+end
 
-  on_mount = function(self)
-    self:render()
-  end,
+function BlameInfoComponent:get_layout_opts()
+  return { height = 3 }
+end
 
-  on_props = function(self, prev_props)
-    if self.props.blame ~= prev_props.blame then self:render() end
-  end,
-})
+function BlameInfoComponent:on_mount()
+  self:render()
+end
+
+function BlameInfoComponent:on_props(prev_props)
+  if self.props.blame ~= prev_props.blame then self:render() end
+end
 
 function BlameInfoComponent:render()
   local blame = self.props.blame
