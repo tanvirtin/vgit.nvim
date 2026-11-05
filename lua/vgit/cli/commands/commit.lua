@@ -60,12 +60,11 @@ commit_command.execute = event.async(function()
         if not vim.startswith(line, '#') then message_lines[#message_lines + 1] = line end
       end
 
-      commit_view:destroy()
-
       local message = table.concat(message_lines, '\n')
       message = message:match('^%s*(.-)%s*$') or ''
 
       if message == '' then
+        commit_view:destroy()
         console.info('Commit cancelled: empty message')
         return
       end
@@ -76,6 +75,7 @@ commit_command.execute = event.async(function()
         return
       end
 
+      commit_view:destroy()
       console.info('Changes committed successfully')
     end,
     on_cancel = function()

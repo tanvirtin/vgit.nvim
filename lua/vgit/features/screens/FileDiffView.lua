@@ -218,19 +218,24 @@ function FileDiffView:reset_current()
   if self._opts.is_staged then return end
 
   event.await()
-  if not self:_confirm('Are you sure you want to discard all unstaged changes? (y/N) ') then return end
 
   local filename = self._opts.filename
   if not filename then return end
 
   local repo, err = self:_get_repo()
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
+
+  local is_tracked = repo:working_tree():is_tracked(filename)
+  local prompt = is_tracked == false and string.format('Delete untracked file \'%s\'? (y/N) ', filename)
+    or 'Are you sure you want to discard all unstaged changes? (y/N) '
+  if not self:_confirm(prompt) then return end
+
   local _, reset_err = repo:reset(filename)
   if reset_err then
-    console.debug.error(reset_err)
+    console.error('Failed to reset file: ' .. (reset_err[1] or tostring(reset_err)))
     return
   end
 
@@ -265,13 +270,13 @@ function FileDiffView:stage_hunk()
 
   local repo, err = self:_get_repo()
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   local _, stage_err = repo:stage_hunk(filename, hunk)
   if stage_err then
-    console.debug.error(stage_err)
+    console.error('Failed to stage hunk: ' .. (stage_err[1] or tostring(stage_err)))
     return
   end
 
@@ -293,13 +298,13 @@ function FileDiffView:unstage_hunk()
 
   local repo, err = self:_get_repo()
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   local _, unstage_err = repo:unstage_hunk(filename, hunk)
   if unstage_err then
-    console.debug.error(unstage_err)
+    console.error('Failed to unstage hunk: ' .. (unstage_err[1] or tostring(unstage_err)))
     return
   end
 
@@ -318,13 +323,13 @@ function FileDiffView:stage_current()
 
   local repo, err = self:_get_repo()
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   local _, stage_err = repo:stage_file(filename)
   if stage_err then
-    console.debug.error(stage_err)
+    console.error('Failed to stage file: ' .. (stage_err[1] or tostring(stage_err)))
     return
   end
 
@@ -340,13 +345,13 @@ function FileDiffView:unstage_current()
 
   local repo, err = self:_get_repo()
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   local _, unstage_err = repo:unstage_file(filename)
   if unstage_err then
-    console.debug.error(unstage_err)
+    console.error('Failed to unstage file: ' .. (unstage_err[1] or tostring(unstage_err)))
     return
   end
 

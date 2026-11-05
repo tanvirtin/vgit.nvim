@@ -91,7 +91,10 @@ local console_stub = {
       console_error_msg = msg
     end,
   },
-  error = function() end,
+  error = function(msg)
+    console_error_called = true
+    console_error_msg = msg
+  end,
   info = function() end,
 }
 
@@ -423,14 +426,14 @@ describe('Hunks:', function()
       assert.is_true(current_buffer._stage_called)
     end)
 
-    it('should call console.debug.error when stage returns an error', function()
+    it('should call console.error when stage returns an error', function()
       current_buffer = make_mock_buffer({ stage_err = 'stage failed' })
       hunks_instance:stage_all()
       assert.is_true(console_error_called)
       eq('stage failed', console_error_msg)
     end)
 
-    it('should not call console.debug.error when stage succeeds', function()
+    it('should not call console.error when stage succeeds', function()
       current_buffer = make_mock_buffer()
       hunks_instance:stage_all()
       assert.is_false(console_error_called)
@@ -465,7 +468,7 @@ describe('Hunks:', function()
       assert.is_false(current_buffer._stage_hunk_called)
     end)
 
-    it('should call console.debug.error when untracked buffer stage fails', function()
+    it('should call console.error when untracked buffer stage fails', function()
       current_buffer = make_mock_buffer({ is_tracked = false, stage_err = 'untracked error' })
       hunks_instance:cursor_stage()
       assert.is_true(console_error_called)
@@ -489,7 +492,7 @@ describe('Hunks:', function()
       assert.is_false(current_buffer._stage_hunk_called)
     end)
 
-    it('should call console.debug.error when stage_hunk returns an error', function()
+    it('should call console.error when stage_hunk returns an error', function()
       window_lnum = 7
       local test_hunk = { top = 5, bot = 10, type = 'add', diff = {} }
       current_buffer = make_mock_buffer({
@@ -515,14 +518,14 @@ describe('Hunks:', function()
       assert.is_true(current_buffer._unstage_called)
     end)
 
-    it('should call console.debug.error when unstage returns an error', function()
+    it('should call console.error when unstage returns an error', function()
       current_buffer = make_mock_buffer({ unstage_err = 'unstage failed' })
       hunks_instance:unstage_all()
       assert.is_true(console_error_called)
       eq('unstage failed', console_error_msg)
     end)
 
-    it('should not call console.debug.error when unstage succeeds', function()
+    it('should not call console.error when unstage succeeds', function()
       current_buffer = make_mock_buffer()
       hunks_instance:unstage_all()
       assert.is_false(console_error_called)
@@ -558,7 +561,7 @@ describe('Hunks:', function()
       eq(original_lines, current_buffer._set_lines_calls[1].lines)
     end)
 
-    it('should call console.debug.error when git_file:lines returns an error', function()
+    it('should call console.error when git_file:lines returns an error', function()
       current_buffer = make_mock_buffer({
         hunks = { { top = 1, bot = 3, type = 'change', diff = {} } },
         git_file_lines_err = 'file read error',

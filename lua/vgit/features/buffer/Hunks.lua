@@ -72,7 +72,7 @@ function Hunks:stage_all()
   if not buffer then return end
 
   local _, err = buffer:stage()
-  if err then return console.debug.error(err) end
+  if err then return console.error(err) end
 end
 
 function Hunks:cursor_stage()
@@ -91,7 +91,7 @@ function Hunks:cursor_stage()
 
   if not buffer:is_tracked() then
     local _, err = buffer:stage()
-    if err then return console.debug.error(err) end
+    if err then return console.error(err) end
     return
   end
 
@@ -99,7 +99,7 @@ function Hunks:cursor_stage()
   if not hunk then return end
 
   local _, err = buffer:stage_hunk(hunk)
-  if err then return console.debug.error(err) end
+  if err then return console.error(err) end
 end
 
 function Hunks:unstage_all()
@@ -108,7 +108,7 @@ function Hunks:unstage_all()
   if not buffer then return end
 
   local _, err = buffer:unstage()
-  if err then return console.debug.error(err) end
+  if err then return console.error(err) end
 end
 
 function Hunks:reset_all()
@@ -120,7 +120,7 @@ function Hunks:reset_all()
   if not hunks or #hunks == 0 then return end
 
   local lines, err = buffer:get_file_lines()
-  if err then return console.debug.error(err) end
+  if err then return console.error(err) end
 
   buffer:set_lines(lines)
 end

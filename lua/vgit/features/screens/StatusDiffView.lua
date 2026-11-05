@@ -177,13 +177,13 @@ function StatusDiffView:reset_hunk()
 
   local repo, err = self:_get_repo(entry)
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   local _, reset_err = repo:reset_hunk(filename, hunk)
   if reset_err then
-    console.debug.error(string.format('[StatusDiffView] reset_hunk failed: %s', reset_err))
+    console.error('Failed to reset hunk: ' .. (reset_err[1] or tostring(reset_err)))
     return
   end
 
@@ -438,13 +438,13 @@ function StatusDiffView:stage_hunk()
 
   local repo, err = self:_get_repo(entry)
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   local _, stage_err = repo:stage_hunk(filename, hunk)
   if stage_err then
-    console.debug.error(string.format('[StatusDiffView] stage_hunk failed: %s', stage_err))
+    console.error('Failed to stage hunk: ' .. (stage_err[1] or tostring(stage_err)))
     return
   end
 
@@ -471,13 +471,13 @@ function StatusDiffView:unstage_hunk()
 
   local repo, err = self:_get_repo(entry)
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   local _, unstage_err = repo:unstage_hunk(filename, hunk)
   if unstage_err then
-    console.debug.error(string.format('[StatusDiffView] unstage_hunk failed: %s', unstage_err))
+    console.error('Failed to unstage hunk: ' .. (unstage_err[1] or tostring(unstage_err)))
     return
   end
 
@@ -500,13 +500,13 @@ function StatusDiffView:stage_entry(opts)
 
   local repo, err = self:_get_repo(entry)
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   local _, stage_err = repo:stage_file(filename)
   if stage_err then
-    console.debug.error(stage_err)
+    console.error('Failed to stage file: ' .. (stage_err[1] or tostring(stage_err)))
     return
   end
 
@@ -537,13 +537,13 @@ function StatusDiffView:unstage_entry(opts)
 
   local repo, err = self:_get_repo(entry)
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   local _, unstage_err = repo:unstage_file(filename)
   if unstage_err then
-    console.debug.error(unstage_err)
+    console.error('Failed to unstage file: ' .. (unstage_err[1] or tostring(unstage_err)))
     return
   end
 
@@ -569,30 +569,40 @@ function StatusDiffView:reset_entry()
   if not self:_is_valid_entry(entry) then return end
   if entry.type ~= 'unstaged' and entry.type ~= 'staged' then return end
 
-  event.await()
-  if not self:_confirm('Are you sure you want to discard changes? (y/N) ') then return end
-
   local filename = entry.status.filename
   local entry_type = entry.type
+
+  event.await()
+
+  local status_value = entry.status.value or ''
+  local prompt
+  if status_value == '??' then
+    prompt = string.format('Delete untracked file \'%s\'? (y/N) ', filename)
+  elseif entry_type == 'staged' and status_value:sub(1, 1) == 'A' then
+    prompt = string.format('Unstage and delete new file \'%s\'? (y/N) ', filename)
+  else
+    prompt = 'Are you sure you want to discard changes? (y/N) '
+  end
+  if not self:_confirm(prompt) then return end
   local next_file, next_repo = self:find_next_file(filename, entry_type, entry.repo)
 
   local repo, err = self:_get_repo(entry)
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
   if entry_type == 'staged' then
     local _, unstage_err = repo:unstage_file(filename)
     if unstage_err then
-      console.debug.error(unstage_err)
+      console.error('Failed to unstage file: ' .. (unstage_err[1] or tostring(unstage_err)))
       return
     end
   end
 
   local _, reset_err = repo:reset(filename)
   if reset_err then
-    console.debug.error(reset_err)
+    console.error('Failed to reset file: ' .. (reset_err[1] or tostring(reset_err)))
     return
   end
 
@@ -625,12 +635,11 @@ function StatusDiffView:_confirm_commit(repo)
     if not vim.startswith(line, '#') then message_lines[#message_lines + 1] = line end
   end
 
-  self:_close_commit_split()
-
   local message = table.concat(message_lines, '\n')
   message = message:match('^%s*(.-)%s*$') or ''
 
   if message == '' then
+    self:_close_commit_split()
     console.info('Commit cancelled: empty message')
     return
   end
@@ -639,17 +648,18 @@ function StatusDiffView:_confirm_commit(repo)
     local repo_err
     repo, repo_err = self:_get_repo()
     if repo_err then
-      console.debug.error(repo_err)
+      console.error(repo_err)
       return
     end
   end
 
   local _, err = repo:commit(message)
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
+  self:_close_commit_split()
   console.info('Changes committed successfully')
 end
 
@@ -822,12 +832,12 @@ end
 function StatusDiffView:stage_all()
   local repo, err = self:_get_selected_repo()
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
   local _, stage_err = repo:stage_all()
   if stage_err then
-    console.debug.error(stage_err)
+    console.error('Failed to stage all changes: ' .. (stage_err[1] or tostring(stage_err)))
     return
   end
 
@@ -839,12 +849,12 @@ end
 function StatusDiffView:unstage_all()
   local repo, err = self:_get_selected_repo()
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
   local _, unstage_err = repo:unstage_all()
   if unstage_err then
-    console.debug.error(unstage_err)
+    console.error('Failed to unstage all changes: ' .. (unstage_err[1] or tostring(unstage_err)))
     return
   end
 
@@ -855,16 +865,16 @@ end
 
 function StatusDiffView:reset_all()
   event.await()
-  if not self:_confirm('Are you sure you want to discard all changes? (y/N) ') then return end
+  if not self:_confirm('Discard all changes and permanently delete untracked files? (y/N) ') then return end
 
   local repo, err = self:_get_selected_repo()
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
   local _, reset_err = repo:reset('.')
   if reset_err then
-    console.debug.error(reset_err)
+    console.error('Failed to reset changes: ' .. (reset_err[1] or tostring(reset_err)))
     return
   end
 

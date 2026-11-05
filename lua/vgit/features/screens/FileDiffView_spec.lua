@@ -80,6 +80,13 @@ describe('FileDiffView:', function()
         diff = function()
           return { lines = { 'line1' }, hunks = { {} }, marks = { {} } }
         end,
+        working_tree = function()
+          return {
+            is_tracked = function()
+              return true
+            end,
+          }
+        end,
         reset = function() end,
         stage_hunk = function() end,
         unstage_hunk = function() end,
