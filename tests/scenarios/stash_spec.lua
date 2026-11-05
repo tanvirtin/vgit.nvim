@@ -46,7 +46,7 @@ describe('scenario: stash view actions', function()
       { await_text = 'wip drop' },
       { focus = 'diff' },
       { keys = 'd' },
-      { await_text = 'Drop {0}?' },
+      { await_text = 'Drop stash@{0}?' },
       { keys = 'n<CR>' },
     },
     assert = function(ctx)
@@ -63,7 +63,7 @@ describe('scenario: stash view actions', function()
       { await_text = 'wip drop' },
       { focus = 'diff' },
       { keys = 'd' },
-      { await_text = 'Drop {0}?' },
+      { await_text = 'Drop stash@{0}?' },
       { keys = 'y<CR>' },
     },
     assert = function(ctx)

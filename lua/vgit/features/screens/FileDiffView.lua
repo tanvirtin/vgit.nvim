@@ -228,7 +228,12 @@ function FileDiffView:reset_current()
     return
   end
 
-  local is_tracked = repo:working_tree():is_tracked(filename)
+  local is_tracked, tracked_err = repo:working_tree():is_tracked(filename)
+  if tracked_err then
+    console.error(tracked_err)
+    return
+  end
+
   local prompt = is_tracked == false and string.format('Delete untracked file \'%s\'? (y/N) ', filename)
     or 'Are you sure you want to discard all unstaged changes? (y/N) '
   if not self:_confirm(prompt) then return end

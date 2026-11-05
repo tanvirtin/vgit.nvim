@@ -20,7 +20,7 @@ commit_command.execute = event.async(function()
   local cancel_key = 'q'
 
   local lines = { '' }
-  lines[#lines + 1] = '# Press ' .. confirm_key .. ' to confirm, ' .. cancel_key .. ' to cancel.'
+  lines[#lines + 1] = '# Press ' .. confirm_key .. ' to confirm, <Esc>' .. cancel_key .. ' to cancel.'
   lines[#lines + 1] = '# Lines starting with # will be ignored.'
 
   local refs = repo:refs()

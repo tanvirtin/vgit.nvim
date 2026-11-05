@@ -219,7 +219,7 @@ function StashView:setup_keymaps()
       fn = self:_make_debounced(function()
         local revision = self:_get_current_revision()
         if not revision then return end
-        if not self:_confirm('Drop ' .. self:_format_stash_index(revision) .. '? (y/N) ') then return end
+        if not self:_confirm('Drop ' .. revision .. '? (y/N) ') then return end
         self:_stash_action_with_revision(git_stash.drop, 'Stash dropped: ')
       end),
     },

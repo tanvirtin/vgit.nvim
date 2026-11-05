@@ -39,6 +39,7 @@ describe('scenario: interactive flows', function()
       { open = 'status' },
       { keys = 'C' },
       { await_filetype = 'gitcommit' },
+      { await_text = '<Esc>q to cancel' },
       { keys = '<Esc>q' },
     },
     expect = {

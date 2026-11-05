@@ -322,6 +322,7 @@ describe('scenario: commands', function()
     steps = {
       { cd = '$repo' },
       { cmd = 'VGit commit' },
+      { await_text = '<Esc>q to cancel' },
       { settle = 800 },
       { keys = 'my message<C-s>' },
       { settle = 800 },

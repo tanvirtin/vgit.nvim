@@ -676,12 +676,12 @@ function StatusDiffView:commit()
   local cancel_key = keymap.get_key(diff_keymaps.commit_cancel) or 'q'
 
   local lines = { '' }
-  lines[#lines + 1] = '# Press ' .. confirm_key .. ' to confirm, ' .. cancel_key .. ' to cancel.'
+  lines[#lines + 1] = '# Press ' .. confirm_key .. ' to confirm, <Esc>' .. cancel_key .. ' to cancel.'
   lines[#lines + 1] = '# Lines starting with # will be ignored.'
 
   local repo, err = self:_get_selected_repo()
   if err then
-    console.debug.error(err)
+    console.error(err)
     return
   end
 
@@ -1043,7 +1043,7 @@ function StatusDiffView:setup_keymaps()
     local stash_fn = self:_make_debounced(function()
       local repo, repo_err = self:_get_selected_repo()
       if repo_err then
-        console.debug.error(repo_err)
+        console.error(repo_err)
         return
       end
       local _, err = repo:stash_add()
