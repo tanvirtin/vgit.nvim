@@ -9,32 +9,37 @@ local live_blame_setting = lazy('vgit.settings.live_blame')
 
 local LiveBlame = Object:extend()
 
-function LiveBlame:constructor()
-  local debounced_blame, debounced_blame_cleanup = event.debounce_async(function(buffer)
-    if not live_blame_setting:get('enabled') then return end
+-- Shared by the debounced path and the explicit render path, so toggling live
+-- blame on paints the current buffer instead of waiting for the next CursorHold.
+local function blame_buffer(buffer)
+  if not live_blame_setting:get('enabled') then return end
 
-    buffer = buffer or git_buffer_store.current()
-    if not buffer then return end
+  buffer = buffer or git_buffer_store.current()
+  if not buffer then return end
 
-    event.await()
+  event.await()
+  if not buffer:is_valid() then return end
+  local conflicts = buffer:get_conflicts()
+  if #conflicts ~= 0 then return end
+
+  buffer:with_lock('blame', function()
     if not buffer:is_valid() then return end
-    local conflicts = buffer:get_conflicts()
-    if #conflicts ~= 0 then return end
 
-    buffer:with_lock('blame', function()
-      if not buffer:is_valid() then return end
+    local _, config_err = buffer:config()
+    if config_err then return console.debug.error(config_err) end
 
-      local _, config_err = buffer:config()
-      if config_err then return console.debug.error(config_err) end
+    local lnum = navigation.get_current_lnum()
 
-      local lnum = navigation.get_current_lnum()
+    local _, blame_err = buffer:blame(lnum)
+    if blame_err then return console.debug.error(blame_err) end
 
-      local _, blame_err = buffer:blame(lnum)
-      if blame_err then return console.debug.error(blame_err) end
+    buffer:render_blames()
+  end)
+end
 
-      buffer:render_blames()
-    end)
-  end, live_blame_setting:get('debounce_ms'))
+function LiveBlame:constructor()
+  local debounced_blame, debounced_blame_cleanup =
+    event.debounce_async(blame_buffer, live_blame_setting:get('debounce_ms'))
 
   return {
     _name = 'Live Blame',
@@ -47,6 +52,12 @@ function LiveBlame:reset()
   git_buffer_store.for_each(function(git_buffer)
     git_buffer:clear_blames()
   end)
+end
+
+-- Paints blame for the current buffer right away, used when the feature is
+-- turned on and there is no CursorHold to wait for.
+function LiveBlame:render()
+  blame_buffer()
 end
 
 function LiveBlame:cleanup()

@@ -85,7 +85,11 @@ local toggle_live_blame = event.async(function()
   if blames_enabled then live_blame:cleanup() end
 
   live_blame_setting:set('enabled', not blames_enabled)
-  live_blame:reset()
+  if blames_enabled then
+    live_blame:reset()
+  else
+    live_blame:render()
+  end
 end)
 
 local toggle_live_gutter = event.async(function()

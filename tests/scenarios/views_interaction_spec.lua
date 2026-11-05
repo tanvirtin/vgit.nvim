@@ -218,6 +218,32 @@ describe('scenario: live blame', function()
       },
     },
   })
+
+  scenario.test('turning live blame back on paints without waiting for CursorHold', function(s)
+    local main = s.world:repo('main', { ['f.txt'] = { 'one', 'two' } })
+    s.world:history(main, { { message = 'touch line one', files = { ['f.txt'] = { 'ONE', 'two' } } } })
+
+    -- A CursorHold must not be what paints the blame; only the toggle may.
+    s.editor:cmd('set updatetime=100000')
+    s.editor:cmd('cd ' .. main)
+    s.editor:cmd('edit f.txt')
+    s.editor:settle(600)
+
+    local function blamed()
+      for _, mark in ipairs(s.observe.extmarks(s, 1)) do
+        if mark.virt_text and mark.virt_text:find('touch line one', 1, true) then return true end
+      end
+      return false
+    end
+
+    s.editor:cmd('VGit toggle_live_blame')
+    s.editor:settle(400)
+    assert.is_false(blamed(), 'blame should be cleared while the feature is off')
+
+    s.editor:cmd('VGit toggle_live_blame')
+    s.editor:settle(600)
+    assert.is_true(blamed(), 'enabling live blame should paint the current line right away')
+  end)
 end)
 
 describe('scenario: worktree view', function()
