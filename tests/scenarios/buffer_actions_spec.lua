@@ -99,6 +99,23 @@ describe('scenario: conflicts', function()
     expect = { screen_has = { 'f.txt' } },
   })
 
+  scenario.flow('staging a file that still has conflict markers is refused with a message', {
+    files = { ['f.txt'] = { 'base' } },
+    conflict = conflict,
+    steps = { { open = 'status' }, { keys = 's' }, { settle = 600 } },
+    expect = { screen_has = { 'Resolve the conflicts' }, git_status = 'UU f.txt' },
+  })
+
+  scenario.flow('staging a conflicted file whose markers are gone marks it resolved', {
+    files = { ['f.txt'] = { 'base' } },
+    conflict = conflict,
+    arrange = function(ctx)
+      ctx.world:write(ctx.repo .. '/f.txt', { 'resolved' })
+    end,
+    steps = { { open = 'status' }, { keys = 's' }, { settle = 600 } },
+    expect = { git_status = 'M  f.txt' },
+  })
+
   scenario.flow('accept current keeps our side of the conflict', {
     files = { ['f.txt'] = { 'base' } },
     conflict = conflict,

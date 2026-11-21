@@ -8,6 +8,7 @@ local keymap = lazy('vgit.core.keymap')
 local console = lazy('vgit.core.console')
 local navigation = lazy('vgit.core.navigation')
 local repository = lazy('vgit.git.repository')
+local git_conflict = lazy('vgit.git.git_conflict')
 local GitStatusStream = lazy('vgit.git.GitStatusStream')
 local hunks_setting = lazy('vgit.settings.hunks')
 local LayoutSpec = lazy('vgit.ui.layout.LayoutSpec')
@@ -493,9 +494,20 @@ end
 function StatusDiffView:stage_entry(opts)
   local entry = self:get_current_entry()
   if not self:_is_valid_entry(entry) then return end
-  if entry.type ~= 'unstaged' then return end
 
   local filename = entry.status.filename
+
+  if entry.type == 'unmerged' then
+    local repo = self:_get_repo(entry)
+    local lines = repo and fs.read_file(fs.absolute_path(repo:get_path(), filename))
+    if lines and #git_conflict.parse(lines) > 0 then
+      console.warn(string.format('Resolve the conflicts in \'%s\' before staging it', filename))
+      return
+    end
+  elseif entry.type ~= 'unstaged' then
+    return
+  end
+
   local next_file, next_repo = self:find_next_file(filename, 'unstaged', entry.repo)
 
   local repo, err = self:_get_repo(entry)
