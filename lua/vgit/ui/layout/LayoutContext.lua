@@ -2,6 +2,7 @@ local lazy = require('vgit.core.lazy')
 
 local Object = lazy('vgit.core.Object')
 local Window = lazy('vgit.core.Window')
+local LensRoom = lazy('vgit.ui.layout.LensRoom')
 local LayoutBounds = lazy('vgit.ui.layout.LayoutBounds')
 
 local LayoutContext = Object:extend()
@@ -106,33 +107,36 @@ function LayoutContext:create_parent_bounds()
 end
 
 function LayoutContext:create_lens_bounds(viewport_bounds)
-  local cursor_row = vim.fn.winline() - 1
+  local win_id = self.original_win_id or vim.api.nvim_get_current_win()
 
-  local lens_start_row = cursor_row + 1
+  if not vim.api.nvim_win_is_valid(win_id) then return viewport_bounds end
 
-  local available_height = viewport_bounds.height - lens_start_row
+  self:release_room()
 
-  local dims = self:get_dimensions()
-  local requested_height = dims.height or available_height
+  local room = LensRoom.reserve(win_id, self:get_dimensions().height)
 
-  local final_row = lens_start_row
-  local final_height = requested_height
-
-  if requested_height > available_height then
-    local overflow = requested_height - available_height
-    final_row = math.max(0, lens_start_row - overflow)
-    final_height = math.min(requested_height, viewport_bounds.height)
-  end
+  self.room = room
 
   return LayoutBounds({
-    row = final_row,
-    col = 0,
-    width = viewport_bounds.width,
-    height = final_height,
+    row = room.row,
+    col = room.col,
+    width = room.width,
+    height = room.height,
   })
 end
 
+function LayoutContext:release_room()
+  if not self.room then return self end
+
+  LensRoom.release(self.room)
+  self.room = nil
+
+  return self
+end
+
 function LayoutContext:restore_window_options()
+  self:release_room()
+
   if not self.original_win_options then return end
 
   local win

@@ -105,4 +105,96 @@ describe('LayoutContext:', function()
       eq(true, vim.api.nvim_get_option_value('number', { win = win }))
     end)
   end)
+
+  describe('lens room', function()
+    local LensRoom
+    local lines, columns, buf
+
+    local function marks()
+      return vim.api.nvim_buf_get_extmarks(buf, LensRoom.NAMESPACE, 0, -1, {})
+    end
+
+    before_each(function()
+      LensRoom = require('vgit.ui.layout.LensRoom')
+      columns, lines = vim.o.columns, vim.o.lines
+      vim.o.columns, vim.o.lines = 120, 40
+      vim.cmd('silent! tabonly!')
+      vim.cmd('silent! only!')
+      vim.cmd('enew!')
+      buf = vim.api.nvim_get_current_buf()
+
+      local text = {}
+
+      for i = 1, 100 do
+        text[i] = 'line ' .. i
+      end
+
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, text)
+      vim.api.nvim_win_set_cursor(0, { 10, 0 })
+      vim.cmd('redraw')
+    end)
+
+    after_each(function()
+      vim.api.nvim_buf_clear_namespace(buf, LensRoom.NAMESPACE, 0, -1)
+      vim.o.columns, vim.o.lines = columns, lines
+    end)
+
+    it('places a lens under the cursor line of its own window, over room reserved for it', function()
+      local ctx = LayoutContext({ mode = 'lens', height = 8 })
+      local bounds = ctx:create_parent_bounds()
+
+      eq(8, bounds.height)
+      eq(vim.api.nvim_win_get_position(0)[1] + vim.fn.winline(), bounds.row)
+      eq(vim.api.nvim_win_get_width(0), bounds.width)
+      eq(1, #marks())
+
+      ctx:release_room()
+    end)
+
+    it('keeps the lens inside a split window instead of spanning the editor', function()
+      vim.cmd('botright vsplit')
+      vim.api.nvim_win_set_buf(0, buf)
+      vim.api.nvim_win_set_cursor(0, { 10, 0 })
+      vim.cmd('redraw')
+
+      local ctx = LayoutContext({ mode = 'lens', height = 8 })
+      local bounds = ctx:create_parent_bounds()
+
+      assert.is_true(bounds.col > 0)
+      eq(vim.api.nvim_win_get_width(0), bounds.width)
+
+      ctx:release_room()
+    end)
+
+    it('gives the room back when released, and again when the window options are restored', function()
+      local ctx = LayoutContext({ mode = 'lens', height = 8 })
+
+      ctx:create_parent_bounds()
+      ctx:release_room()
+      eq(0, #marks())
+
+      ctx:create_parent_bounds()
+      eq(1, #marks())
+      ctx:restore_window_options()
+      eq(0, #marks())
+    end)
+
+    it('keeps only one room when the bounds are asked for twice', function()
+      local ctx = LayoutContext({ mode = 'lens', height = 8 })
+
+      ctx:create_parent_bounds()
+      ctx:create_parent_bounds()
+
+      eq(1, #marks())
+      ctx:release_room()
+    end)
+
+    it('reserves nothing for a popup, which is not anchored to the cursor', function()
+      local ctx = LayoutContext({ mode = 'popup', height = 8 })
+
+      ctx:create_parent_bounds()
+
+      eq(0, #marks())
+    end)
+  end)
 end)
