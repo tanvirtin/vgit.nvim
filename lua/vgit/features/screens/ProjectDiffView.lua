@@ -96,12 +96,15 @@ function ProjectDiffView:_classify_entries(data)
   local has_staged = false
   local has_unstaged = false
   local conflict_entries = {}
+  local untracked_filenames = {}
 
   for _, section in ipairs(data.entries or {}) do
     for _, file_entry in ipairs(section.entries or {}) do
       if not file_entry.diff and not file_entry.range and file_entry.status then
         local entry_type = file_entry.type
-        if entry_type == 'unmerged' then
+        if file_entry.status.value == '??' then
+          untracked_filenames[#untracked_filenames + 1] = file_entry.status.filename
+        elseif entry_type == 'unmerged' then
           conflict_entries[#conflict_entries + 1] = file_entry
         elseif entry_type == 'staged' then
           has_staged = true
@@ -112,7 +115,7 @@ function ProjectDiffView:_classify_entries(data)
     end
   end
 
-  return has_staged, has_unstaged, conflict_entries
+  return has_staged, has_unstaged, conflict_entries, untracked_filenames
 end
 
 function ProjectDiffView:_build_line_to_file_map(component, from_lnum, line_to_file_map)
@@ -134,7 +137,7 @@ end
 
 function ProjectDiffView:_build_diff_file_entries(repo, data)
   local layout_type = self._layout_type or self.LAYOUT_UNIFIED
-  local has_staged, has_unstaged, conflict_entries = self:_classify_entries(data)
+  local has_staged, has_unstaged, conflict_entries, untracked_filenames = self:_classify_entries(data)
 
   local fetch_funcs = {}
   local staged_fn_idx = nil
@@ -151,6 +154,14 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
     unstaged_fn_idx = #fetch_funcs + 1
     fetch_funcs[#fetch_funcs + 1] = function()
       return repo:diff({ type = 'range', to = 'disk', layout_type = layout_type })
+    end
+  end
+
+  local untracked_fn_idx = nil
+  if #untracked_filenames > 0 then
+    untracked_fn_idx = #fetch_funcs + 1
+    fetch_funcs[#fetch_funcs + 1] = function()
+      return repo:untracked_file_diffs(untracked_filenames, { layout_type = layout_type })
     end
   end
 
@@ -198,6 +209,20 @@ function ProjectDiffView:_build_diff_file_entries(repo, data)
           current_lines = fd.current_lines,
         }
       end
+    end
+  end
+
+  if untracked_fn_idx then
+    for _, fd in ipairs(fetch_results[untracked_fn_idx] or {}) do
+      all_entries[#all_entries + 1] = {
+        type = 'diff_file',
+        filename = fd.filename,
+        path = fd.filename,
+        filetype = fd.filetype,
+        diff = fd.diff,
+        original_lines = fd.original_lines,
+        current_lines = fd.current_lines,
+      }
     end
   end
 

@@ -300,6 +300,29 @@ function DiffBuilder:build_multi_file_diffs(spec)
   return file_diffs
 end
 
+function DiffBuilder:build_untracked_file_diffs(spec)
+  local layout_type = spec.layout_type or 'unified'
+  local repo_path = self._repository:get_path()
+
+  local file_diffs = {}
+  for _, filename in ipairs(spec.filenames) do
+    local path = fs.absolute_path(repo_path, filename)
+    local lines = not fs.is_dir(path) and fs.read_file(path) or nil
+
+    if lines and #lines > 0 and not has_binary_content(lines) then
+      file_diffs[#file_diffs + 1] = {
+        filename = filename,
+        filetype = fs.detect_filetype(filename),
+        original_lines = {},
+        current_lines = lines,
+        diff = Diff():generate(git_hunks.custom(lines, { untracked = true }), lines, layout_type),
+      }
+    end
+  end
+
+  return file_diffs
+end
+
 function DiffBuilder:build(spec)
   local type = spec.type
   local layout_type = spec.layout_type or 'unified'

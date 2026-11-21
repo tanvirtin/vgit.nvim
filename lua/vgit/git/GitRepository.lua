@@ -737,4 +737,11 @@ function GitRepository:diff(spec, opts)
   return builder:build(diff_spec)
 end
 
+function GitRepository:untracked_file_diffs(filenames, spec)
+  self:_ensure_initialized()
+
+  local diff_spec = vim.tbl_extend('force', { filenames = filenames }, spec or {})
+  return DiffBuilder(self):build_untracked_file_diffs(diff_spec)
+end
+
 return GitRepository
