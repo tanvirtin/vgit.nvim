@@ -80,12 +80,8 @@ describe('FileDiffView:', function()
         diff = function()
           return { lines = { 'line1' }, hunks = { {} }, marks = { {} } }
         end,
-        working_tree = function()
-          return {
-            is_tracked = function()
-              return true
-            end,
-          }
+        file_status = function()
+          return { value = 'M ' }
         end,
         reset = function() end,
         stage_hunk = function() end,
@@ -391,6 +387,39 @@ describe('FileDiffView:', function()
         view:reset_current()
 
         assert.is_false(reconcile_called)
+      end)
+
+      local function prompt_for(status_value)
+        local prompt
+        save_package('vgit.core.console')
+        package.loaded['vgit.core.console'] = {
+          input = function(message)
+            prompt = message
+            return 'n'
+          end,
+          error = function() end,
+          warn = function() end,
+        }
+        package.loaded['vgit.features.screens.FileDiffView'] = nil
+        FileDiffView = require('vgit.features.screens.FileDiffView')
+        view = FileDiffView()
+        view._diff_component = mock_diff
+        view._opts.filename = 'test.lua'
+        view._opts.is_staged = false
+        mock_repo.file_status = function()
+          return { value = status_value }
+        end
+
+        view:reset_current()
+        return prompt
+      end
+
+      it('should offer to delete only files that are untracked', function()
+        assert.is_truthy(prompt_for('??'):find('Delete untracked file', 1, true))
+      end)
+
+      it('should not offer to delete a file added to the index and then modified', function()
+        assert.is_truthy(prompt_for('AM'):find('discard all unstaged changes', 1, true))
       end)
     end)
   end)
