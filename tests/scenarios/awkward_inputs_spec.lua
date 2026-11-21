@@ -178,3 +178,13 @@ describe('scenario: layout preferences', function()
     expect = { screen_has = { 'old line', 'new line' } },
   })
 end)
+
+describe('scenario: unsupported command options', function()
+  scenario.test('show names the option it does not support', function(s)
+    local repo = s.world:repo('main', { ['a.txt'] = { 'a' } })
+
+    s.editor:cmd('cd ' .. repo)
+    s.editor:cmd('VGit show --stat')
+    s.editor:await_text('Unsupported option: --stat', 3000)
+  end)
+end)

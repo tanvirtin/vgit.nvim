@@ -136,7 +136,7 @@ blame_command.execute = event.async(function(args)
   local opts = blame_command.parse_args(args)
 
   if #opts.flags > 0 then
-    console.info('Flag options not yet supported')
+    console.info(string.format('Unsupported option: %s', table.concat(opts.flags, ' ')))
     return
   end
 

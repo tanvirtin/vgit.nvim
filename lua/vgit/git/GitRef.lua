@@ -37,6 +37,11 @@ function GitRef:current()
   return self._current, nil
 end
 
+function GitRef:has_commits()
+  local _, err = GitQueryBuilder(self._repo_path):raw_args('rev-parse', '--verify', 'HEAD'):execute()
+  return not err
+end
+
 function GitRef:current_branch()
   local current, err = self:current()
   if err then return nil, err end

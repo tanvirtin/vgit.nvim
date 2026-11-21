@@ -191,7 +191,7 @@ diff_command.execute = event.async(function(args)
   end
 
   if #opts.flags > 0 then
-    console.info('Flag options not yet supported')
+    console.info(string.format('Unsupported option: %s', table.concat(opts.flags, ' ')))
     return
   end
 

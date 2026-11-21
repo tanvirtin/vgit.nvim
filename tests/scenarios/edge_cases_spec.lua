@@ -157,3 +157,31 @@ describe('scenario: external changes while a view is open', function()
     expect = { git_status = ' M a.txt' },
   })
 end)
+
+describe('scenario: a repository with no commits', function()
+  local function unborn(s)
+    local dir = s.world.root .. '/unborn'
+    vim.fn.mkdir(dir, 'p')
+    s.world:git(dir, 'init', '-q', '-b', 'main')
+    s.world:write(dir .. '/new.txt', { 'hello' })
+    s.editor:cmd('cd ' .. dir)
+    return dir
+  end
+
+  for _, command in ipairs({ 'log', 'show' }) do
+    scenario.test('VGit ' .. command .. ' says there are no commits yet', function(s)
+      unborn(s)
+      s.editor:cmd('VGit ' .. command)
+      s.editor:await_text('No commits yet', 3000)
+      s.editor:await_no_text('fatal', 500)
+    end)
+  end
+
+  for _, command in ipairs({ 'status', 'diff', 'stash', 'branch', 'blame' }) do
+    scenario.test('VGit ' .. command .. ' does not error', function(s)
+      unborn(s)
+      s.editor:cmd('VGit ' .. command)
+      s.editor:settle(800)
+    end)
+  end
+end)

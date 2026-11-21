@@ -20,6 +20,10 @@ log_command.execute = event.async(function()
 
   local commits, commits_err = history:commits()
   if commits_err then
+    if not repo:refs():has_commits() then
+      console.info('No commits yet')
+      return
+    end
     console.error(commits_err)
     return
   end

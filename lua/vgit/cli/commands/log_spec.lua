@@ -17,6 +17,13 @@ describe('log_command:', function()
           end,
         }
       end,
+      refs = overrides.refs or function()
+        return {
+          has_commits = function()
+            return true
+          end,
+        }
+      end,
     }
   end
 
@@ -106,6 +113,43 @@ describe('log_command:', function()
     log_command.execute()
 
     eq('Failed to read log', last_error)
+  end)
+
+  it('should say there are no commits yet, not report an error, in a repo without any', function()
+    local last_error, last_info = nil, nil
+
+    setup_defaults({
+      repo_methods = {
+        history = function()
+          return {
+            commits = function()
+              return nil, 'fatal: your current branch has no commits yet'
+            end,
+          }
+        end,
+        refs = function()
+          return {
+            has_commits = function()
+              return false
+            end,
+          }
+        end,
+      },
+      console = {
+        error = function(msg)
+          last_error = msg
+        end,
+        info = function(msg)
+          last_info = msg
+        end,
+      },
+    })
+
+    local log_command = load_cmd()
+    log_command.execute()
+
+    eq(nil, last_error)
+    eq('No commits yet', last_info)
   end)
 
   it('should show info when no commits found', function()

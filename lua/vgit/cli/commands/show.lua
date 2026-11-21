@@ -35,7 +35,7 @@ show_command.execute = event.async(function(args)
   local opts = show_command.parse_args(args)
 
   if #opts.flags > 0 then
-    console.info('Flag options not yet supported')
+    console.info(string.format('Unsupported option: %s', table.concat(opts.flags, ' ')))
     return
   end
 
@@ -51,6 +51,10 @@ show_command.execute = event.async(function(args)
 
   local commit, commit_err = tree:commit()
   if commit_err then
+    if not repo:refs():has_commits() then
+      console.info('No commits yet')
+      return
+    end
     console.error('Failed to get commit info: ' .. (commit_err[1] or tostring(commit_err)))
     return
   end
